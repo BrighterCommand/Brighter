@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Import Project="TechTalk.SpecFlow.tasks"/>
+
+  <!-- this setting is to workaround the bug in VS (does not detect changes during the pre-build event)
+       see: https://connect.microsoft.com/VisualStudio/feedback/ViewFeedback.aspx?FeedbackID=423670&wa=wsignin1.0
+  -->
+  <PropertyGroup>
+    <UseHostCompilerIfAvailable>false</UseHostCompilerIfAvailable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ShowTrace Condition="'$(ShowTrace)'==''">false</ShowTrace>
+    
+    <OverwriteReadOnlyFiles Condition="'$(OverwriteReadOnlyFiles)'==''">false</OverwriteReadOnlyFiles>
+    <ForceGeneration Condition="'$(ForceGeneration)'==''">false</ForceGeneration>
+    <VerboseOutput Condition="'$(VerboseOutput)'==''">false</VerboseOutput>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(BuildServerMode)' == ''">
+    <BuildServerMode Condition="'$(BuildingInsideVisualStudio)'=='true'">false</BuildServerMode>
+    <BuildServerMode Condition="'$(BuildingInsideVisualStudio)'!='true'">true</BuildServerMode>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <BuildDependsOn>
+      UpdateFeatureFilesInProject;
+      $(BuildDependsOn)
+    </BuildDependsOn>
+    <RebuildDependsOn>
+      SwitchToForceGenerate;
+      $(RebuildDependsOn)
+    </RebuildDependsOn>
+  </PropertyGroup>
+
+  <Target Name="SwitchToForceGenerate">
+    <PropertyGroup>
+      <ForceGeneration>true</ForceGeneration>
+      <OnlyUpdateIfChanged>true</OnlyUpdateIfChanged>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="UpdateFeatureFilesInProject">
+    <GenerateAll
+      ShowTrace="$(ShowTrace)"
+
+      BuildServerMode="$(BuildServerMode)"
+      OverwriteReadOnlyFiles="$(OverwriteReadOnlyFiles)"
+      
+      ProjectPath="$(MSBuildProjectFullPath)"
+      ForceGeneration="$(ForceGeneration)"
+      VerboseOutput="$(VerboseOutput)"
+      />
+    
+  </Target>
+
+</Project>
