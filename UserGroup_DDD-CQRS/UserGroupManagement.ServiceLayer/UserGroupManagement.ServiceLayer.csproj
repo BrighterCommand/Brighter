@@ -40,6 +40,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommandProcessor\ChainOfRepsonsibility.cs" />
+    <Compile Include="CommandProcessor\ChainofResponsibilityBuilder.cs" />
     <Compile Include="CommandHandlers\IHandleCommands.cs" />
     <Compile Include="CommandHandlers\ScheduleMeetingCommandHandler.cs" />
     <Compile Include="Commands\Command.cs" />
