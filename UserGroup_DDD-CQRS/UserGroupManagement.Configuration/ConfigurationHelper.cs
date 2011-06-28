@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using UserGroupManagement.CommandHandlers;
-using UserGroupManagement.Commands;
+using UserGroupManagement.ServiceLayer.CommandHandlers;
+using UserGroupManagement.ServiceLayer.Commands;
 
 namespace UserGroupManagement.Configuration
 {

@@ -5,3 +5,5 @@ C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.ServiceLayer\bi
 C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.ServiceLayer\bin\Debug\UserGroupManagement.Domain.pdb
 C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.ServiceLayer\obj\Debug\UserGroupManagement.ServiceLayer.dll
 C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.ServiceLayer\obj\Debug\UserGroupManagement.ServiceLayer.pdb
+C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.ServiceLayer\bin\Debug\UserGroupManagement.Infrastructure.dll
+C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.ServiceLayer\bin\Debug\UserGroupManagement.Infrastructure.pdb

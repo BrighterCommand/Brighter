@@ -31,9 +31,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Fohjin.DDD.Reporting">
-      <HintPath>..\Lib\Fohjin.DDD.Reporting.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.SQLite, Version=1.0.66.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=x86">
@@ -48,22 +45,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ConfigurationHelper.cs" />
-    <Compile Include="DomainDatabaseBootStrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ReportingDatabaseBootStrapper.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\UserGroupManagement.CommandHandlers\UserGroupManagement.CommandHandlers.csproj">
-      <Project>{E56F9FBB-6060-4545-96C6-2B24E884E670}</Project>
-      <Name>UserGroupManagement.CommandHandlers</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\UserGroupManagement.Commands\UserGroupManagement.Commands.csproj">
-      <Project>{56986E7E-1E45-4991-BE23-56749A0E0F19}</Project>
-      <Name>UserGroupManagement.Commands</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\UserGroupManagement.Reporting.Dto\UserGroupManagement.Reporting.Dto.csproj">
-      <Project>{5083CF6A-EF4A-4984-BC5F-72352283ADDF}</Project>
-      <Name>UserGroupManagement.Reporting.Dto</Name>
+    <ProjectReference Include="..\UserGroupManagement.ServiceLayer\UserGroupManagement.ServiceLayer.csproj">
+      <Project>{A056F023-D432-42AE-8029-BB6B84828704}</Project>
+      <Name>UserGroupManagement.ServiceLayer</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

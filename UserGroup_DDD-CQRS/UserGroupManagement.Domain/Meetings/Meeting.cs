@@ -1,95 +1,50 @@
 ﻿using System;
-using Fohjin.DDD.EventStore;
-using Fohjin.DDD.EventStore.Aggregate;
-using Fohjin.DDD.EventStore.Storage.Memento;
-using UserGroupManagement.Domain.Momentos;
-using UserGroupManagement.Events.Meeting;
+using UserGroupManagement.Infrastructure.Domain;
 
 namespace UserGroupManagement.Domain.Meetings
 {
-    public class Meeting : BaseAggregateRoot<IDomainEvent>, IOrginator, IEquatable<Meeting>
+    public class Meeting : IAggregateRoot  
     {
         private DateTime meetingTime;
         private Guid locationId;
         private Guid speakerId;
         private int capacity;
 
+        private Guid _id;
+
+        private int _version;
+
         public Meeting(Guid meetingId, DateTime on, Guid locationId, Guid speakerId, int capacity)
             :this()
         {
-            Apply(new MeetingScheduledEvent(meetingId, on, locationId, speakerId, capacity));
         }
 
         public Meeting()
         {
-            RegisterEvents();
+        }
+ 
+        public Guid SisoId
+        {
+            get { return _id; }
         }
 
-  
-        public IMemento CreateMemento()
+        public int Version
         {
-            return new MeetingMemento(meetingTime, locationId, speakerId, capacity);
+            get { return _version; }
         }
 
-        public void SetMemento(IMemento memento)
+        public int Lock(int expectedVersion)
         {
-            var meetingMemento = (MeetingMemento) memento;
-            meetingTime = meetingMemento.MeetingTime;
-            locationId = meetingMemento.LocationId;
-            speakerId = meetingMemento.SpeakerId;
-            capacity = meetingMemento.Capacity;
-        }   
-        
-        private void RegisterEvents()
-        {
-            RegisterEvent<MeetingScheduledEvent>(OnMeetingBeingScheduled);
+            throw new NotImplementedException();
         }
 
-        private void OnMeetingBeingScheduled(MeetingScheduledEvent meetingScheduledEvent)
-        {
-            Id = meetingScheduledEvent.MeetingId;
-            meetingTime = meetingScheduledEvent.MeetingTime;
-            locationId = meetingScheduledEvent.LocationId;
-            speakerId = meetingScheduledEvent.SpeakerId;
-            capacity = meetingScheduledEvent.Capacity;
-        }
-
-        public bool Equals(Meeting other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return (other.Id.Equals(Id) && other.meetingTime.Equals(meetingTime) && other.locationId.Equals(locationId) && other.speakerId.Equals(speakerId) && other.capacity == capacity);
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != typeof (Meeting)) return false;
-            return Equals((Meeting) obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int result = meetingTime.GetHashCode();
-                result = (result*397) ^ Id.GetHashCode();
-                result = (result*397) ^ locationId.GetHashCode();
-                result = (result*397) ^ speakerId.GetHashCode();
-                result = (result*397) ^ capacity;
-                return result;
-            }
-        }
-
-        public static bool operator ==(Meeting left, Meeting right)
-        {
-            return Equals(left, right);
-        }
-
-        public static bool operator !=(Meeting left, Meeting right)
-        {
-            return !Equals(left, right);
-        }
+        //private void OnMeetingBeingScheduled(MeetingScheduledEvent meetingScheduledEvent)
+        //{
+        //    Id = meetingScheduledEvent.MeetingId;
+        //    meetingTime = meetingScheduledEvent.MeetingTime;
+        //    locationId = meetingScheduledEvent.LocationId;
+        //    speakerId = meetingScheduledEvent.SpeakerId;
+        //    capacity = meetingScheduledEvent.Capacity;
+        //}
     }
 }

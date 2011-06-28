@@ -2,44 +2,30 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
-using SpecUnit;
-using UserGroupManagement.Commands;
+using Machine.Specifications;
 using UserGroupManagement.Configuration;
+using UserGroupManagement.ServiceLayer.Commands;
 
 namespace UserGroupManagement.Tests.Configuration.ConcerningConfigurationHelper
 {
-    [Concern(typeof(ConfigurationHelper))]
-    [TestFixture]
-    public class WhenLookingForAllTheCommands : ContextSpecification
+    [Subject(typeof(ConfigurationHelper))]
+    public class WhenLookingForAllTheCommands 
     {
-        private readonly ConfigurationHelper configurationHelper = new ConfigurationHelper();
-        private List<Type> commandList;
-        private IEnumerable<Type> foundCommands;
+        private static readonly ConfigurationHelper configurationHelper = new ConfigurationHelper();
+        private static List<Type> commandList;
+        private static IEnumerable<Type> foundCommands;
 
-        protected override void Context()
+        private Establish context = () =>
         {
             commandList = Assembly.Load("UserGroupManagement.Commands")
                 .GetExportedTypes()
                 .Where(expT => expT.BaseType == typeof (Command))
                 .ToList();
-        }
+        };
 
-        protected override void Because()
-        {
-            foundCommands = configurationHelper.FindCommands();
-        }
+        Because of = () => foundCommands = configurationHelper.FindCommands();
 
-        [Test]
-        public void ShouldFindAtLeastOneCommand()
-        {
-            foundCommands.Count().ShouldBeGreaterThan(0);
-        }
-
-        [Test]
-        public void ShouldFindAllCommandsInTheSameAssemblyAsTheBaseCommand()
-        {
-            foundCommands.Where(found => commandList.Where(target => target.FullName == found.FullName).Any() == false).Any().ShouldBeFalse();
-        }
+        It should_find_at_least_one_command = () => foundCommands.Count().ShouldBeGreaterThan(0);
+        It should_find_all_commands_in_the_same_assembly_as_the_base_command = () => foundCommands.Where(found => commandList.Where(target => target.FullName == found.FullName).Any() == false).Any().ShouldBeFalse();
     }
 }
