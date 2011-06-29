@@ -19,7 +19,7 @@ namespace UserGroupManagement.Configuration
 
         public IEnumerable<Type> FindCommandHandlers()
         {
-            return typeof(IHandleCommands<>)
+            return typeof(IHandleRequests<>)
                .Assembly
                .GetExportedTypes()
                 .Where(
@@ -27,7 +27,7 @@ namespace UserGroupManagement.Configuration
                     expT.GetInterfaces().Any(
                         exptInterface =>
                         exptInterface.IsGenericType &&
-                        exptInterface.GetGenericTypeDefinition() == typeof(IHandleCommands<>)))
+                        exptInterface.GetGenericTypeDefinition() == typeof(IHandleRequests<>)))
                 .ToList();
  
         }

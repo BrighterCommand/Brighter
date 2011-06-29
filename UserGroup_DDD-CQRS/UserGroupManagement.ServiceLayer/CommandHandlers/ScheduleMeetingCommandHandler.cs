@@ -1,9 +1,10 @@
-﻿using UserGroupManagement.Domain.Meetings;
+﻿using System;
+using UserGroupManagement.Domain.Meetings;
 using UserGroupManagement.ServiceLayer.Commands;
 
 namespace UserGroupManagement.ServiceLayer.CommandHandlers
 {
-    public class ScheduleMeetingCommandHandler : IHandleCommands<ScheduleMeetingCommand>
+    public class ScheduleMeetingCommandHandler : RequestHandler<ScheduleMeetingCommand>
     {
         //private readonly IDomainRepository<IDomainEvent> repository;
 
@@ -12,7 +13,7 @@ namespace UserGroupManagement.ServiceLayer.CommandHandlers
         //    this.repository = repository;
         //}
 
-        public void Handle(ScheduleMeetingCommand command)
+        public override ScheduleMeetingCommand Handle(ScheduleMeetingCommand command)
         {
         //    var meeting = new MeetingFactory().Schedule(command.MeetingId, command.On, command.LocationId, command.SpeakerId, command.Capacity);
 
@@ -21,7 +22,9 @@ namespace UserGroupManagement.ServiceLayer.CommandHandlers
         //    //events from meeting?
         //    //AddNewSessionToSpeakerProfile(meeting.Id);
         //    //AddLocationUsage(meeting.Id)
-
+            return base.Handle(command);
         }
+
+  
     }
 }

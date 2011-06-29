@@ -3,7 +3,7 @@ using UserGroupManagement.ServiceLayer.Events.Speaker;
 
 namespace UserGroupManagement.ServiceLayer.Events.Meeting
 {
-    public class MeetingScheduledEvent : DomainEvent
+    public class MeetingScheduledEvent : IDomainEvent
     {
         public Guid MeetingId { get; private set; }
         public DateTime MeetingTime { get; private set; }

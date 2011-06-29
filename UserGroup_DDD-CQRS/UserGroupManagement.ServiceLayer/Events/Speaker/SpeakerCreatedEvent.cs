@@ -2,7 +2,7 @@
 
 namespace UserGroupManagement.ServiceLayer.Events.Speaker
 {
-    public class SpeakerCreatedEvent : DomainEvent
+    public class SpeakerCreatedEvent : IDomainEvent
     {
         public Guid SpeakerId { get; private set; }
         public string Name { get; private set; }
