@@ -1,6 +1,8 @@
-﻿namespace UserGroupManagement.ServiceLayer.Events.Speaker
+﻿using UserGroupManagement.ServiceLayer.Common;
+
+namespace UserGroupManagement.ServiceLayer.Events.Speaker
 {
-    public class DomainEvent
+    public interface IDomainEvent : IRequest
     {
     }
 }

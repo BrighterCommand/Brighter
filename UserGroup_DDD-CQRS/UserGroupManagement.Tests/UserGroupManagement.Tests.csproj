@@ -31,6 +31,15 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Castle.Core">
+      <HintPath>..\Lib\Castle.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Castle.MicroKernel">
+      <HintPath>..\Lib\Castle.MicroKernel.dll</HintPath>
+    </Reference>
+    <Reference Include="Castle.Windsor">
+      <HintPath>..\Lib\Castle.Windsor.dll</HintPath>
+    </Reference>
     <Reference Include="Machine.Specifications">
       <HintPath>..\Lib\Machine.Specifications.dll</HintPath>
     </Reference>
@@ -51,9 +60,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommandProcessor\CommandProcessor.cs" />
-    <Compile Include="Commands\ShouldHaveCommandHandlerForCommand.cs" />
-    <Compile Include="Configuration\ConcerningConfigurationHelper\WhenLookingForAllTheCommandHandlers.cs" />
-    <Compile Include="Configuration\ConcerningConfigurationHelper\WhenLookingForAllTheCommands.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

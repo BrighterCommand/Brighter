@@ -3,7 +3,7 @@ using UserGroupManagement.ServiceLayer.Events.Speaker;
 
 namespace UserGroupManagement.ServiceLayer.Events.Location
 {
-    public class LocationCreatedEvent : DomainEvent
+    public class LocationCreatedEvent : IDomainEvent
     {
         public Guid LocationId { get; private set; }
         public string LocationName { get; private set; }

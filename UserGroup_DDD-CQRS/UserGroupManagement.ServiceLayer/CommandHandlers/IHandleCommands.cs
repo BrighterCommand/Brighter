@@ -1,9 +1,12 @@
-﻿using UserGroupManagement.ServiceLayer.Commands;
+﻿using UserGroupManagement.ServiceLayer.CommandProcessor;
+using UserGroupManagement.ServiceLayer.Common;
 
 namespace UserGroupManagement.ServiceLayer.CommandHandlers
 {
-    public interface IHandleCommands<in TCommand> where TCommand : class, ICommand
+    public interface IHandleRequests<TRequest> where TRequest : class, IRequest
     {
-        void Handle(TCommand command);
+        void AddToChain(ChainPathExplorer pathExplorer);
+        TRequest Handle(TRequest request);
+        IHandleRequests<TRequest> Successor { set; }
     }
 }
