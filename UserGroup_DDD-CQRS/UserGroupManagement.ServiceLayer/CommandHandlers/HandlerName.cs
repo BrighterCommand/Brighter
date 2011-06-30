@@ -2,10 +2,16 @@
 {
     public class HandlerName
     {
-        public string Name {get; private set; }
+        private readonly string _name;
+
         public HandlerName(string name)
         {
-            Name = name;
+            _name = name;
+        }
+
+        public override string ToString()
+        {
+            return _name;
         }
     }
 }
