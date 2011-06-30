@@ -1,10 +1,22 @@
 ﻿using System;
-using UserGroupManagement.ServiceLayer.CommandHandlers;
 
 namespace UserGroupManagement.ServiceLayer.CommandProcessor
 {
-    public abstract class RequestHandlerRequiredDecoratorAttribute : Attribute
+    [AttributeUsage(AttributeTargets.Method)]
+    public abstract class RequestHandlerAttribute : Attribute
     {
-        public abstract Type GetDecoratorType();
+        private readonly int _step;
+
+        protected RequestHandlerAttribute(int step)
+        {
+            _step = step;
+        }
+
+        public int Step
+        {
+            get { return _step; }
+        }
+
+        public abstract Type GetHandlerType();
     }
 }

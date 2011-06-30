@@ -24,7 +24,5 @@ namespace UserGroupManagement.ServiceLayer.CommandHandlers
         //    //AddLocationUsage(meeting.Id)
             return base.Handle(command);
         }
-
-  
     }
 }

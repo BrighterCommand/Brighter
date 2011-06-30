@@ -9,7 +9,7 @@ using UserGroupManagement.ServiceLayer.Common;
 
 namespace UserGroupManagement.ServiceLayer.CommandProcessor
 {
-    public class ChainofResponsibilityBuilder<TRequest> where TRequest: class, IRequest
+    public class ChainofResponsibilityBuilder<TRequest> where TRequest : class, IRequest
     {
         private readonly IWindsorContainer _container;
 
@@ -20,21 +20,26 @@ namespace UserGroupManagement.ServiceLayer.CommandProcessor
 
         public IHandleRequests<TRequest> Build()
         {
-            return AddDecorators(GetHandler());
+            return BuildChain(GetHandler());
         }
 
         IHandleRequests<TRequest> GetHandler()
         {
             var handlers = _container.ResolveAll(GetHandlerType());
-            if (handlers.Length > 0)
-                throw new ArgumentOutOfRangeException(string.Format("More than one implicit handler found for command: {0}", typeof(TRequest)));
+
+            CheckForMissingHandler(handlers);
 
             return (IHandleRequests<TRequest>)handlers.GetValue(0);
         }
 
-        //TODO: Static warning is usually a sign that we are missing a class - refactor when tess pass
+        private void CheckForMissingHandler(Array handlers)
+        {
+            if (handlers.Length == 0)
+            {
+                throw new ArgumentOutOfRangeException(string.Format("No implicit handler found for command: {0}", typeof(TRequest)));
+            }
+        }
 
-        [DebuggerStepThrough]
         Type GetHandlerType()
         {
             var messageType = typeof(TRequest);
@@ -42,41 +47,40 @@ namespace UserGroupManagement.ServiceLayer.CommandProcessor
             return handlerGenericType.MakeGenericType(messageType);
         }
 
-        private  IHandleRequests<TRequest> AddDecorators(IHandleRequests<TRequest> implicitHandler)
+        private  IHandleRequests<TRequest> BuildChain(IHandleRequests<TRequest> implicitHandler)
         {
             var lastInChain = implicitHandler;
-            var attributeTypes = GetDecoratorAttributesonHandler(FindHandlerMethod(implicitHandler)); 
-            attributeTypes.ForEach(attributeType =>
+            var attributes = GetOtherHandlersInChain(FindHandlerMethod(implicitHandler)).OrderByDescending(attribute => attribute.Step); 
+            foreach (var attribute in attributes) 
             {
-                IHandleRequests<TRequest> decorator = CreateDecorator(attributeType);
+                IHandleRequests<TRequest> decorator = CreateRequestHandler(attribute);
                 decorator.Successor = lastInChain;
                 lastInChain = decorator;
-            });
+            }
             return lastInChain;
         }
 
-        [DebuggerStepThrough]
-        private IHandleRequests<TRequest> CreateDecorator(Attribute attributeType)
+        private IHandleRequests<TRequest> CreateRequestHandler(RequestHandlerAttribute attribute)
         {
-            var attribute = (RequestHandlerRequiredDecoratorAttribute)Activator.CreateInstance(attributeType.GetType());
-            var decoratorType = attribute.GetDecoratorType().MakeGenericType(typeof (TRequest));
-            var parameters = decoratorType.GetConstructors()[0].GetParameters().Select(param => _container.Resolve(param.ParameterType)).ToArray();
-            return (IHandleRequests<TRequest>) Activator.CreateInstance(decoratorType, parameters);
+            var handlerType = attribute.GetHandlerType().MakeGenericType(typeof(TRequest));
+            var parameters = handlerType.GetConstructors()[0].GetParameters().Select(param => _container.Resolve(param.ParameterType)).ToArray();
+            return (IHandleRequests<TRequest>)Activator.CreateInstance(handlerType, parameters);
         }
 
-        [DebuggerStepThrough]
-        private List<Attribute> GetDecoratorAttributesonHandler(MethodInfo targetMethod)
+        private IEnumerable<RequestHandlerAttribute> GetOtherHandlersInChain(MethodInfo targetMethod)
         {
-             return targetMethod.GetCustomAttributes(true)
+            var customAttributes = targetMethod.GetCustomAttributes(true);
+            return customAttributes
                      .Select(attr => (Attribute)attr)
-                     .Where(a => a.GetType().BaseType == typeof(RequestHandlerRequiredDecoratorAttribute))
+                     .Cast<RequestHandlerAttribute>()
+                     .Where(a => a.GetType().BaseType == typeof(RequestHandlerAttribute))
                      .ToList();
         }
 
-        [DebuggerStepThrough]
-        private static MethodInfo FindHandlerMethod(IHandleRequests<TRequest> targetHandler)
+        private MethodInfo FindHandlerMethod(IHandleRequests<TRequest> targetHandler)
         {
-            return targetHandler.GetType().GetMethods()
+            var methods = targetHandler.GetType().GetMethods();
+            return methods
                 .Where(method => method.Name == "Handle")
                 .Where(method => method.GetParameters().Count() == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest))
                 .SingleOrDefault();
