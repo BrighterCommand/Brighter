@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommandHandlers\HandlerName.cs" />
+    <Compile Include="CommandHandlers\HandlerTiming.cs" />
     <Compile Include="CommandHandlers\RequestHandler.cs" />
     <Compile Include="CommandProcessor\ChainOfRepsonsibility.cs" />
     <Compile Include="CommandProcessor\ChainofResponsibilityBuilder.cs" />
