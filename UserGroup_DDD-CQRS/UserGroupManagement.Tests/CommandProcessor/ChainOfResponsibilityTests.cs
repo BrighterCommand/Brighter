@@ -192,7 +192,7 @@ namespace UserGroupManagement.Tests.CommandProcessor
 
         Because of = () => chainOfResponsibility = chainBuilder.Build();
 
-        private It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyValidationHandler`1|MyDoubleDecoratedHandler|MyLoggingHander`1|");
+        private It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHander`1|");
 
         private static ChainPathExplorer GetChain()
         {
@@ -202,7 +202,7 @@ namespace UserGroupManagement.Tests.CommandProcessor
         }
     }
 
-       #region Handlers and Commands
+    #region Handlers and Commands
 
     internal class MyPostLoggingHandlerAttribute : RequestHandlerAttribute
     {
@@ -227,22 +227,6 @@ namespace UserGroupManagement.Tests.CommandProcessor
         public override Type GetHandlerType()
         {
             return typeof(MyValidationHandler<>);
-        }
-    }
-
-    internal class MyPreValidationHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
-    {
-        public override TRequest Handle(TRequest request)
-        {
-            return request;
-        }
-    }
-
-    internal class MyPostLoggingHander<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
-    {
-        public override TRequest Handle(TRequest request)
-        {
-            return request;
         }
     }
 
