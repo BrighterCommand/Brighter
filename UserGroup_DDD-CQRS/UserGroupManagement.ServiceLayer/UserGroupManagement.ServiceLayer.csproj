@@ -57,7 +57,9 @@
     <Compile Include="CommandHandlers\IHandleCommands.cs" />
     <Compile Include="CommandHandlers\ScheduleMeetingCommandHandler.cs" />
     <Compile Include="CommandProcessor\ChainPathExplorer.cs" />
+    <Compile Include="CommandProcessor\HandlerFactory.cs" />
     <Compile Include="CommandProcessor\RequestHandlerRequiredDecoratorAttribute.cs" />
+    <Compile Include="CommandProcessor\RequestHandlers.cs" />
     <Compile Include="Commands\Command.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="Commands\ScheduleMeetingCommand.cs" />

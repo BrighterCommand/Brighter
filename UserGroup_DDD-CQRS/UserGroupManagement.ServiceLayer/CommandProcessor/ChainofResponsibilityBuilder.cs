@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Castle.Windsor;
@@ -12,10 +11,16 @@ namespace UserGroupManagement.ServiceLayer.CommandProcessor
     public class ChainofResponsibilityBuilder<TRequest> where TRequest : class, IRequest
     {
         private readonly IWindsorContainer _container;
+        private readonly Type _implicithandlerType;
 
         public ChainofResponsibilityBuilder(IWindsorContainer container)
         {
             _container = container;
+
+            var handlerGenericType = typeof(IHandleRequests<>);
+
+            _implicithandlerType = handlerGenericType.MakeGenericType(typeof(TRequest));
+
         }
 
         public IHandleRequests<TRequest> Build()
@@ -25,47 +30,47 @@ namespace UserGroupManagement.ServiceLayer.CommandProcessor
 
         IHandleRequests<TRequest> GetHandler()
         {
-            var handlers = _container.ResolveAll(GetHandlerType());
+             
+            var handlers = new RequestHandlers<TRequest>(_container.ResolveAll(_implicithandlerType));
 
-            CheckForMissingHandler(handlers);
+            handlers.CheckForMissingHandler();
 
-            return (IHandleRequests<TRequest>)handlers.GetValue(0);
+            return handlers.First();
         }
 
-        private void CheckForMissingHandler(Array handlers)
+        private IHandleRequests<TRequest> BuildChain(IHandleRequests<TRequest> implicitHandler)
         {
-            if (handlers.Length == 0)
+            var preAttributes = GetOtherHandlersInChain(FindHandlerMethod(implicitHandler)).Where(attribute => attribute.Timing == HandlerTiming.Before).OrderByDescending(attribute => attribute.Step); 
+            var firstInChain = PushOntoChain(preAttributes, implicitHandler);
+            var postAttributes = GetOtherHandlersInChain(FindHandlerMethod(implicitHandler)).Where(attribute => attribute.Timing == HandlerTiming.After).OrderByDescending(attribute => attribute.Step);
+            AppendToChain(postAttributes, implicitHandler);
+            return firstInChain;
+        }
+
+        private void AppendToChain(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler)
+        {
+            var lastInChain = implicitHandler;
+            foreach (var attribute in attributes) 
             {
-                throw new ArgumentOutOfRangeException(string.Format("No implicit handler found for command: {0}", typeof(TRequest)));
+                var decorator = new HandlerFactory<TRequest>(attribute, _container).CreateRequestHandler();
+                lastInChain.Successor = decorator;
+                lastInChain = decorator;
             }
         }
 
-        Type GetHandlerType()
+        private IHandleRequests<TRequest> PushOntoChain(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInChain)
         {
-            var messageType = typeof(TRequest);
-            var handlerGenericType = typeof(IHandleRequests<>);
-            return handlerGenericType.MakeGenericType(messageType);
-        }
-
-        private  IHandleRequests<TRequest> BuildChain(IHandleRequests<TRequest> implicitHandler)
-        {
-            var lastInChain = implicitHandler;
-            var attributes = GetOtherHandlersInChain(FindHandlerMethod(implicitHandler)).OrderByDescending(attribute => attribute.Step); 
             foreach (var attribute in attributes) 
             {
-                IHandleRequests<TRequest> decorator = CreateRequestHandler(attribute);
+                var decorator = new HandlerFactory<TRequest>(attribute, _container).CreateRequestHandler();
                 decorator.Successor = lastInChain;
                 lastInChain = decorator;
             }
             return lastInChain;
         }
 
-        private IHandleRequests<TRequest> CreateRequestHandler(RequestHandlerAttribute attribute)
-        {
-            var handlerType = attribute.GetHandlerType().MakeGenericType(typeof(TRequest));
-            var parameters = handlerType.GetConstructors()[0].GetParameters().Select(param => _container.Resolve(param.ParameterType)).ToArray();
-            return (IHandleRequests<TRequest>)Activator.CreateInstance(handlerType, parameters);
-        }
+
+        //REFACTOR: no this access, methodinfo needs a wrapper that has this behavior; could be an extenstionmethod
 
         private IEnumerable<RequestHandlerAttribute> GetOtherHandlersInChain(MethodInfo targetMethod)
         {
@@ -76,6 +81,8 @@ namespace UserGroupManagement.ServiceLayer.CommandProcessor
                      .Where(a => a.GetType().BaseType == typeof(RequestHandlerAttribute))
                      .ToList();
         }
+
+        //REFACTOR: no this access, targethandler needs a wrapper for this behavior or extension method 
 
         private MethodInfo FindHandlerMethod(IHandleRequests<TRequest> targetHandler)
         {
