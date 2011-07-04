@@ -4,6 +4,9 @@ using UserGroupManagement.ServiceLayer.Common;
 
 namespace UserGroupManagement.ServiceLayer.CommandHandlers
 {
+    using System.Linq;
+    using System.Reflection;
+
     public abstract class RequestHandler<TRequest> : IHandleRequests<TRequest> where TRequest : class, IRequest
     {
         private IHandleRequests<TRequest> _successor;
@@ -37,5 +40,13 @@ namespace UserGroupManagement.ServiceLayer.CommandHandlers
            return new HandlerName(this.GetType().Name);
        }
 
+       internal MethodInfo FindHandlerMethod()
+       {
+            var methods = GetType().GetMethods();
+            return methods
+                .Where(method => method.Name == "Handle")
+                .Where(method => method.GetParameters().Count() == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest))
+                .SingleOrDefault();
+       }
     }
 }
