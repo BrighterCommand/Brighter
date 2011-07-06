@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Castle.Windsor;
-using UserGroupManagement.ServiceLayer.Common;
 using UserGroupManagement.ServiceLayer.CommandHandlers;
 using UserGroupManagement.ServiceLayer.CommandProcessor.ReflectionExtensionMethods;
+using UserGroupManagement.ServiceLayer.Common;
 
 namespace UserGroupManagement.ServiceLayer.CommandProcessor
 {
@@ -24,19 +23,24 @@ namespace UserGroupManagement.ServiceLayer.CommandProcessor
 
         }
 
-        public IHandleRequests<TRequest> Build()
+        public Chains<TRequest> Build()
         {
-            return BuildChain(GetHandler());
-        }
-
-        RequestHandler<TRequest> GetHandler()
-        {
-             
-            var handlers = new RequestHandlers<TRequest>(_container.ResolveAll(_implicithandlerType));
-
+            var handlers = GetHandlers();
+            
             handlers.CheckForMissingHandler();
 
-            return (RequestHandler<TRequest>)handlers.First();
+            var chains = new Chains<TRequest>();
+            foreach (var handler in handlers)
+            {
+                chains.Add(BuildChain(handler));
+            }
+
+            return chains;
+        }
+
+        private RequestHandlers<TRequest> GetHandlers()
+        {
+            return new RequestHandlers<TRequest>(_container.ResolveAll(_implicithandlerType));
         }
 
         private IHandleRequests<TRequest> BuildChain(RequestHandler<TRequest> implicitHandler)
@@ -78,10 +82,5 @@ namespace UserGroupManagement.ServiceLayer.CommandProcessor
             }
             return lastInChain;
         }
-
-
-        //REFACTOR: no this access, targethandler needs a wrapper for this behavior or extension method 
-
- 
     }
 }

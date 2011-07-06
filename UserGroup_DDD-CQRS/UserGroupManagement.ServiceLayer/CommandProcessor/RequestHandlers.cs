@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using UserGroupManagement.ServiceLayer.CommandHandlers;
 using UserGroupManagement.ServiceLayer.Common;
 
 namespace UserGroupManagement.ServiceLayer.CommandProcessor
 {
+    using System.Collections;
+    using System.Linq;
 
-    internal class RequestHandlers<TRequest> where TRequest : class, IRequest
+    internal class RequestHandlers<TRequest> : IEnumerable<RequestHandler<TRequest>>
+        where TRequest : class, IRequest
     {
         private readonly Array _handlers;
 
@@ -22,9 +26,19 @@ namespace UserGroupManagement.ServiceLayer.CommandProcessor
             }
         }
 
-        internal IHandleRequests<TRequest> First()
+        internal RequestHandler<TRequest> First()
         {
-            return (IHandleRequests<TRequest>)_handlers.GetValue(0);
+            return (RequestHandler<TRequest>)_handlers.GetValue(0);
+        }
+
+        public IEnumerator<RequestHandler<TRequest>> GetEnumerator()
+        {
+            return _handlers.Cast<RequestHandler<TRequest>>().GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

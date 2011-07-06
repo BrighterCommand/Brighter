@@ -1,15 +1,15 @@
 ﻿using System;
+using System.Linq;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using Machine.Specifications;
 using UserGroupManagement.ServiceLayer.CommandHandlers;
 using UserGroupManagement.ServiceLayer.CommandProcessor;
 using UserGroupManagement.ServiceLayer.Commands;
+using UserGroupManagement.ServiceLayer.Common;
 
 namespace UserGroupManagement.Tests.CommandProcessor
 {
-    using UserGroupManagement.ServiceLayer.Common;
-
     [Subject(typeof(ChainofResponsibilityBuilder<>))]
     public class When_Finding_A_Handler_For_A_Command
     {
@@ -27,7 +27,7 @@ namespace UserGroupManagement.Tests.CommandProcessor
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container); 
         };
 
-        Because of = () => chainOfResponsibility = chainBuilder.Build();
+        Because of = () => chainOfResponsibility = chainBuilder.Build().First();
 
         It should_return_the_my_command_handler_as_the_implicit_handler = () => chainOfResponsibility.ShouldBeOfType(typeof(MyCommandHandler));
         It should_be_the_only_element_in_the_chain = () => GetChain().ToString().ShouldEqual("MyCommandHandler|");
@@ -70,7 +70,7 @@ namespace UserGroupManagement.Tests.CommandProcessor
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
 
-        Because of = () => chainOfResponsibility = chainBuilder.Build();
+        Because of = () => chainOfResponsibility = chainBuilder.Build().First();
 
         It should_include_my_command_handler_filter_in_the_chain = () => GetChain().ToString().Contains("MyImplicitHandler").ShouldBeTrue();
         It should_include_my_logging_handler_in_the_chain = () => GetChain().ToString().Contains("MyLoggingHander").ShouldBeTrue();
@@ -98,7 +98,7 @@ namespace UserGroupManagement.Tests.CommandProcessor
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
 
-        Because of = () => chainOfResponsibility = chainBuilder.Build();
+        Because of = () => chainOfResponsibility = chainBuilder.Build().First();
 
         private It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyLoggingHander`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
 
@@ -190,7 +190,7 @@ namespace UserGroupManagement.Tests.CommandProcessor
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
 
-        Because of = () => chainOfResponsibility = chainBuilder.Build();
+        Because of = () => chainOfResponsibility = chainBuilder.Build().First();
 
         private It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHander`1|");
 
