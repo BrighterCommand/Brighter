@@ -1,0 +1,7 @@
+C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Domain\obj\Debug\ResolveAssemblyReference.cache
+C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Domain\bin\Debug\UserGroupManagement.Domain.dll
+C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Domain\bin\Debug\UserGroupManagement.Domain.pdb
+C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Domain\obj\Debug\UserGroupManagement.Domain.dll
+C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Domain\obj\Debug\UserGroupManagement.Domain.pdb
+C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Domain\bin\Debug\UserGroupManagement.Infrastructure.dll
+C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Domain\bin\Debug\UserGroupManagement.Infrastructure.pdb
