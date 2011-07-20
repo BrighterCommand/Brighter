@@ -1,21 +1,21 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserGroupManagement.Tests", "UserGroupManagement.Tests\UserGroupManagement.Tests.csproj", "{567B365E-F777-40D6-A6C1-EB9970FA9542}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.configuration", "paramore.configuration\paramore.configuration.csproj", "{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserGroupManagement.Features", "UserGroupManagement.Features\UserGroupManagement.Features.csproj", "{A278C10C-E42A-4403-841F-4BA25F853146}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.domain", "paramore.domain\paramore.domain.csproj", "{41D1C746-9959-403C-956E-F4538CA72A83}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserGroupManagement.Configuration", "UserGroupManagement.Configuration\UserGroupManagement.Configuration.csproj", "{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.features", "paramore.features\paramore.features.csproj", "{A278C10C-E42A-4403-841F-4BA25F853146}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserGroupManagement.Domain", "UserGroupManagement.Domain\UserGroupManagement.Domain.csproj", "{41D1C746-9959-403C-956E-F4538CA72A83}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.services", "paramore.services\paramore.services.csproj", "{A056F023-D432-42AE-8029-BB6B84828704}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserGroupManagement.ServiceLayer", "UserGroupManagement.ServiceLayer\UserGroupManagement.ServiceLayer.csproj", "{A056F023-D432-42AE-8029-BB6B84828704}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.tests", "paramore.tests\paramore.tests.csproj", "{567B365E-F777-40D6-A6C1-EB9970FA9542}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserGroupManagement.Utility", "UserGroupManagement.Utility\UserGroupManagement.Utility.csproj", "{5A5A059A-133C-46DB-A959-826EEE178D64}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.utility", "paramore.utility\paramore.utility.csproj", "{5A5A059A-133C-46DB-A959-826EEE178D64}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserGroupManagement.Infrastructure", "UserGroupManagement.Infrastructure\UserGroupManagement.Infrastructure.csproj", "{A29960CC-7A28-4C4C-B52A-EEDF32168205}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.web", "paramore.web\paramore.web.csproj", "{D8AA39E4-1EE9-41AC-94C9-81477F660A07}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserGroupManagement.Web", "UserGroupManagement.Web\UserGroupManagement.Web.csproj", "{D8AA39E4-1EE9-41AC-94C9-81477F660A07}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.infrastructure", "paramore.infrastructure\paramore.infrastructure.csproj", "{A29960CC-7A28-4C4C-B52A-EEDF32168205}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,14 +23,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{567B365E-F777-40D6-A6C1-EB9970FA9542}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{567B365E-F777-40D6-A6C1-EB9970FA9542}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{567B365E-F777-40D6-A6C1-EB9970FA9542}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{567B365E-F777-40D6-A6C1-EB9970FA9542}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A278C10C-E42A-4403-841F-4BA25F853146}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A278C10C-E42A-4403-841F-4BA25F853146}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A278C10C-E42A-4403-841F-4BA25F853146}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A278C10C-E42A-4403-841F-4BA25F853146}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -39,22 +31,30 @@ Global
 		{41D1C746-9959-403C-956E-F4538CA72A83}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{41D1C746-9959-403C-956E-F4538CA72A83}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{41D1C746-9959-403C-956E-F4538CA72A83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A278C10C-E42A-4403-841F-4BA25F853146}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A278C10C-E42A-4403-841F-4BA25F853146}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A278C10C-E42A-4403-841F-4BA25F853146}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A278C10C-E42A-4403-841F-4BA25F853146}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A056F023-D432-42AE-8029-BB6B84828704}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A056F023-D432-42AE-8029-BB6B84828704}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A056F023-D432-42AE-8029-BB6B84828704}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A056F023-D432-42AE-8029-BB6B84828704}.Release|Any CPU.Build.0 = Release|Any CPU
+		{567B365E-F777-40D6-A6C1-EB9970FA9542}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{567B365E-F777-40D6-A6C1-EB9970FA9542}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{567B365E-F777-40D6-A6C1-EB9970FA9542}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{567B365E-F777-40D6-A6C1-EB9970FA9542}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5A5A059A-133C-46DB-A959-826EEE178D64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5A5A059A-133C-46DB-A959-826EEE178D64}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A5A059A-133C-46DB-A959-826EEE178D64}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A5A059A-133C-46DB-A959-826EEE178D64}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D8AA39E4-1EE9-41AC-94C9-81477F660A07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D8AA39E4-1EE9-41AC-94C9-81477F660A07}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D8AA39E4-1EE9-41AC-94C9-81477F660A07}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D8AA39E4-1EE9-41AC-94C9-81477F660A07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

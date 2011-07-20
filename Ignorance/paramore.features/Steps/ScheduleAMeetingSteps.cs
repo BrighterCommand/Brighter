@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Runtime.Serialization.Formatters.Binary;
 using TechTalk.SpecFlow;
-using UserGroupManagement.ServiceLayer.CommandHandlers;
-using UserGroupManagement.ServiceLayer.Commands;
 
-namespace UserGroupManagement.Features.Steps
+namespace Paramore.Features.Steps
 {
     [Binding]
     public class ScheduleAMeetingSteps
@@ -14,7 +11,6 @@ namespace UserGroupManagement.Features.Steps
         private DateTime meetingDate;
         private int capacity;
         private static readonly Guid MEETING_ID = Guid.NewGuid();
-        private ScheduleMeetingCommandHandler handler;
         private const string DATA_BASE_FILE = "domainDataBase.db3";
 
 
@@ -46,11 +42,11 @@ namespace UserGroupManagement.Features.Steps
         [When(@"I schedule a meeting")]
         public void WhenIScheduleAMeeting()
         {
-            var scheduleMeetingCommand = new ScheduleMeetingCommand(MEETING_ID, meetingDate, locationId, speakerId, capacity);
+            //var scheduleMeetingCommand = new ScheduleMeetingCommand(MEETING_ID, meetingDate, locationId, speakerId, capacity);
 
             //new DomainDatabaseBootStrapper().ReCreateDatabaseSchema();
 
-            var sqliteConnectionString = string.Format("Data Source={0}", DATA_BASE_FILE);
+            //var sqliteConnectionString = string.Format("Data Source={0}", DATA_BASE_FILE);
 
             //handler = new ScheduleMeetingCommandHandler(repository);
 

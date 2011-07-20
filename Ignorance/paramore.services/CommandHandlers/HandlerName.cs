@@ -1,4 +1,4 @@
-﻿namespace UserGroupManagement.ServiceLayer.CommandHandlers
+﻿namespace Paramore.Services.CommandHandlers
 {
     public class HandlerName
     {

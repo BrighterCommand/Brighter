@@ -8,8 +8,8 @@
     <ProjectGuid>{41D1C746-9959-403C-956E-F4538CA72A83}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>UserGroupManagement.Domain</RootNamespace>
-    <AssemblyName>UserGroupManagement.Domain</AssemblyName>
+    <RootNamespace>Paramore.Domain</RootNamespace>
+    <AssemblyName>Paramore.Domain</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -58,9 +59,9 @@
     <Compile Include="Speakers\SpeakerName.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\UserGroupManagement.Infrastructure\UserGroupManagement.Infrastructure.csproj">
+    <ProjectReference Include="..\paramore.infrastructure\paramore.infrastructure.csproj">
       <Project>{A29960CC-7A28-4C4C-B52A-EEDF32168205}</Project>
-      <Name>UserGroupManagement.Infrastructure</Name>
+      <Name>paramore.infrastructure</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -1,4 +1,4 @@
-﻿namespace UserGroupManagement.Domain.Common
+namespace Paramore.Domain.Common
 {
     public class PhoneNumber
     {

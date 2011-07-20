@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace UserGroupManagement.ServiceLayer.Events.Speaker
+namespace Paramore.Services.Events.Speaker
 {
     public class SpeakerCreatedEvent : IDomainEvent
     {

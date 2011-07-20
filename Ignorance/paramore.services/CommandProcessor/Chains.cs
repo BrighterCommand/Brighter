@@ -1,9 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UserGroupManagement.ServiceLayer.CommandHandlers;
-using UserGroupManagement.ServiceLayer.Common;
+using Paramore.Services.CommandHandlers;
+using Paramore.Services.Common;
 
-namespace UserGroupManagement.ServiceLayer.CommandProcessor
+namespace Paramore.Services.CommandProcessor
 {
 
     public class Chains<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest

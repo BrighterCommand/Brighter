@@ -1,4 +1,4 @@
-﻿namespace UserGroupManagement.Domain.Speakers
+namespace Paramore.Domain.Speakers
 {
     public class SpeakerBio
     {

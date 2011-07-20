@@ -1,12 +1,12 @@
-﻿using UserGroupManagement.Domain.Common;
+using Paramore.Domain.Common;
 
-namespace UserGroupManagement.Domain.Speakers
+namespace Paramore.Domain.Speakers
 {
     public class SpeakerFactory
     {
         public Speaker Create(SpeakerName speakerName, SpeakerBio speakerBio, PhoneNumber phoneNumber, EmailAddress emailAddress)
         {
-            return new Speaker(speakerName, speakerBio, phoneNumber, emailAddress);
+            return new Speaker();
         }
     }
 }

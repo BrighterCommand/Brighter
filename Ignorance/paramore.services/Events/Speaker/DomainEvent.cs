@@ -1,6 +1,6 @@
-﻿using UserGroupManagement.ServiceLayer.Common;
+﻿using Paramore.Services.Common;
 
-namespace UserGroupManagement.ServiceLayer.Events.Speaker
+namespace Paramore.Services.Events.Speaker
 {
     public interface IDomainEvent : IRequest
     {

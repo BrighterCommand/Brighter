@@ -8,8 +8,8 @@
     <ProjectGuid>{567B365E-F777-40D6-A6C1-EB9970FA9542}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>UserGroupManagement.Tests</RootNamespace>
-    <AssemblyName>UserGroupManagement.Tests</AssemblyName>
+    <RootNamespace>Paramore.Tests</RootNamespace>
+    <AssemblyName>Paramore.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -63,21 +64,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\UserGroupManagement.Configuration\UserGroupManagement.Configuration.csproj">
-      <Project>{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC}</Project>
-      <Name>UserGroupManagement.Configuration</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\UserGroupManagement.Domain\UserGroupManagement.Domain.csproj">
-      <Project>{41D1C746-9959-403C-956E-F4538CA72A83}</Project>
-      <Name>UserGroupManagement.Domain</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\UserGroupManagement.ServiceLayer\UserGroupManagement.ServiceLayer.csproj">
-      <Project>{A056F023-D432-42AE-8029-BB6B84828704}</Project>
-      <Name>UserGroupManagement.ServiceLayer</Name>
-    </ProjectReference>
+    <Folder Include="Domain\" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Domain\" />
+    <ProjectReference Include="..\paramore.services\paramore.services.csproj">
+      <Project>{A056F023-D432-42AE-8029-BB6B84828704}</Project>
+      <Name>paramore.services</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -1,7 +1,7 @@
 ﻿using System.Text;
-using UserGroupManagement.ServiceLayer.CommandHandlers;
+using Paramore.Services.CommandHandlers;
 
-namespace UserGroupManagement.ServiceLayer.CommandProcessor
+namespace Paramore.Services.CommandProcessor
 {
     public class ChainPathExplorer
     {

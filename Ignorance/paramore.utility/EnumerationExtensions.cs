@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace UserGroupManagement.Utility
+namespace Paramore.Utility
 {
     public static class EnumerationExtensions
     {

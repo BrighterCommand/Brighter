@@ -1,9 +1,8 @@
 ﻿using System;
+using Paramore.Services.CommandHandlers;
 
-namespace UserGroupManagement.ServiceLayer.CommandProcessor
+namespace Paramore.Services.CommandProcessor
 {
-    using UserGroupManagement.ServiceLayer.CommandHandlers;
-
     [AttributeUsage(AttributeTargets.Method)]
     public abstract class RequestHandlerAttribute : Attribute
     {

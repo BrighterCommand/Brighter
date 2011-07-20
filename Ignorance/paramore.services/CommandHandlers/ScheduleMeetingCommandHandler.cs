@@ -1,8 +1,6 @@
-﻿using System;
-using UserGroupManagement.Domain.Meetings;
-using UserGroupManagement.ServiceLayer.Commands;
+﻿using Paramore.Services.Commands;
 
-namespace UserGroupManagement.ServiceLayer.CommandHandlers
+namespace Paramore.Services.CommandHandlers
 {
     public class ScheduleMeetingCommandHandler : RequestHandler<ScheduleMeetingCommand>
     {

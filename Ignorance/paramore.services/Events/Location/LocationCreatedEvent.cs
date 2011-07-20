@@ -1,7 +1,7 @@
 ﻿using System;
-using UserGroupManagement.ServiceLayer.Events.Speaker;
+using Paramore.Services.Events.Speaker;
 
-namespace UserGroupManagement.ServiceLayer.Events.Location
+namespace Paramore.Services.Events.Location
 {
     public class LocationCreatedEvent : IDomainEvent
     {

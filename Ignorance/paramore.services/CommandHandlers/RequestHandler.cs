@@ -1,12 +1,10 @@
-﻿using System;
-using UserGroupManagement.ServiceLayer.CommandProcessor;
-using UserGroupManagement.ServiceLayer.Common;
+﻿using System.Linq;
+using System.Reflection;
+using Paramore.Services.CommandProcessor;
+using Paramore.Services.Common;
 
-namespace UserGroupManagement.ServiceLayer.CommandHandlers
+namespace Paramore.Services.CommandHandlers
 {
-    using System.Linq;
-    using System.Reflection;
-
     public abstract class RequestHandler<TRequest> : IHandleRequests<TRequest> where TRequest : class, IRequest
     {
         private IHandleRequests<TRequest> _successor;
@@ -37,7 +35,7 @@ namespace UserGroupManagement.ServiceLayer.CommandHandlers
 
        protected HandlerName Name()
        {
-           return new HandlerName(this.GetType().Name);
+           return new HandlerName(GetType().Name);
        }
 
        internal MethodInfo FindHandlerMethod()

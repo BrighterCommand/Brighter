@@ -1,7 +1,7 @@
-﻿using UserGroupManagement.ServiceLayer.CommandProcessor;
-using UserGroupManagement.ServiceLayer.Common;
+﻿using Paramore.Services.CommandProcessor;
+using Paramore.Services.Common;
 
-namespace UserGroupManagement.ServiceLayer.CommandHandlers
+namespace Paramore.Services.CommandHandlers
 {
     public interface IHandleRequests<TRequest> where TRequest : class, IRequest
     {

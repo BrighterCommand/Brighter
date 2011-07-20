@@ -8,8 +8,8 @@
     <ProjectGuid>{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>UserGroupManagement.Configuration</RootNamespace>
-    <AssemblyName>UserGroupManagement.Configuration</AssemblyName>
+    <RootNamespace>Paramore.Configuration</RootNamespace>
+    <AssemblyName>Paramore.Configuration</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -48,9 +49,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\UserGroupManagement.ServiceLayer\UserGroupManagement.ServiceLayer.csproj">
+    <ProjectReference Include="..\paramore.services\paramore.services.csproj">
       <Project>{A056F023-D432-42AE-8029-BB6B84828704}</Project>
-      <Name>UserGroupManagement.ServiceLayer</Name>
+      <Name>paramore.services</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

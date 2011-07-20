@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using Castle.Windsor;
-using UserGroupManagement.ServiceLayer.CommandHandlers;
-using UserGroupManagement.ServiceLayer.CommandProcessor.ReflectionExtensionMethods;
-using UserGroupManagement.ServiceLayer.Common;
+using Paramore.Services.CommandHandlers;
+using Paramore.Services.CommandProcessor.ReflectionExtensionMethods;
+using Paramore.Services.Common;
 
-namespace UserGroupManagement.ServiceLayer.CommandProcessor
+namespace Paramore.Services.CommandProcessor
 {
     public class ChainofResponsibilityBuilder<TRequest> where TRequest : class, IRequest
     {
@@ -47,15 +47,13 @@ namespace UserGroupManagement.ServiceLayer.CommandProcessor
         {
             var preAttributes = implicitHandler.FindHandlerMethod()
                 .GetOtherHandlersInChain()
-                .Where(attribute => attribute.Timing == HandlerTiming.Before)
-                .OrderByDescending(attribute => attribute.Step); 
+                .Where(attribute => attribute.Timing == HandlerTiming.Before).OrderByDescending(attribute => attribute.Step); 
 
             var firstInChain = PushOntoChain(preAttributes, implicitHandler);
             
             var postAttributes = implicitHandler.FindHandlerMethod()
                 .GetOtherHandlersInChain()
-                .Where(attribute => attribute.Timing == HandlerTiming.After)
-                .OrderByDescending(attribute => attribute.Step);
+                .Where(attribute => attribute.Timing == HandlerTiming.After).OrderByDescending(attribute => attribute.Step);
 
             AppendToChain(postAttributes, implicitHandler);
             return firstInChain;

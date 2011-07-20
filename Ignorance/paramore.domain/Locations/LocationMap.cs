@@ -1,6 +1,6 @@
-﻿using System;
+using System;
 
-namespace UserGroupManagement.Domain.Locations
+namespace Paramore.Domain.Locations
 {
     public class LocationMap
     {

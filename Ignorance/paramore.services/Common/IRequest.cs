@@ -1,4 +1,4 @@
-﻿namespace UserGroupManagement.ServiceLayer.Common
+﻿namespace Paramore.Services.Common
 {
     public interface IRequest
     {
