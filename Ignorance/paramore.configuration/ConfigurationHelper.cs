@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using UserGroupManagement.ServiceLayer.CommandHandlers;
-using UserGroupManagement.ServiceLayer.Commands;
+using Paramore.Services.CommandHandlers;
+using Paramore.Services.Commands;
 
-namespace UserGroupManagement.Configuration
+namespace Paramore.Configuration
 {
     public class ConfigurationHelper
     {

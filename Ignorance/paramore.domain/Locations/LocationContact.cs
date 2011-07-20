@@ -1,6 +1,6 @@
-﻿using UserGroupManagement.Domain.Common;
+using Paramore.Domain.Common;
 
-namespace UserGroupManagement.Domain.Locations
+namespace Paramore.Domain.Locations
 {
     public class LocationContact
     {

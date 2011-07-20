@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace UserGroupManagement.ServiceLayer.CommandHandlers
+﻿namespace Paramore.Services.CommandHandlers
 {
     public enum HandlerTiming
     {

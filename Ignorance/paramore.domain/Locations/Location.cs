@@ -1,55 +1,30 @@
-﻿using System;
-using UserGroupManagement.Domain.Common;
-using UserGroupManagement.Infrastructure.Domain;
+using System;
+using Paramore.Infrastructure.Domain;
 
-namespace UserGroupManagement.Domain.Locations
+namespace Paramore.Domain.Locations
 {
     public class Location : IAggregateRoot 
     {
-        private LocationName locationName;
-        private Address address;
-        private LocationMap map;
-        private LocationContact locationContact;
-
-        private Guid _id;
-
-        private int _version;
-
-        public Location(LocationName locationName, Address address, LocationMap map, LocationContact locationContact)
-            : this()
-        {
-  
-        }
-
-        public Location()
-        {
-        }
+        //private LocationName locationName;
+        //private Address address;
+        //private LocationMap map;
+        //private LocationContact locationContact;
+        private Guid id = Guid.Empty;
+        private int version = 0;
 
         public Guid SisoId
         {
-            get { return _id; }
+            get { return id; }
         }
 
         public int Version
         {
-            get { return _version; }
+            get { return version; }
         }
 
         public int Lock(int expectedVersion)
         {
-            throw new NotImplementedException();
+            return 0; 
         }
-
-        //private void OnLocationCreated(LocationCreatedEvent locationCreatedEvent)
-        //{
-        //    Id = locationCreatedEvent.Id;
-        //    locationName = new LocationName(locationCreatedEvent.LocationName);
-        //    address = new Address(locationCreatedEvent.StreetNumber, locationCreatedEvent.Street, locationCreatedEvent.City, locationCreatedEvent.PostalCode);
-        //    map = new LocationMap(new Uri(locationCreatedEvent.Map));
-        //    locationContact = new LocationContact(
-        //        new ContactName(locationCreatedEvent.ContactName), 
-        //        new EmailAddress(locationCreatedEvent.ContactEmail), 
-        //        new PhoneNumber(locationCreatedEvent.ContactPhoneNumber));
-        //}
     }
 }

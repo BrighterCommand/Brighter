@@ -1,4 +1,4 @@
-﻿namespace UserGroupManagement.Domain.Locations
+namespace Paramore.Domain.Locations
 {
     public class LocationName
     {

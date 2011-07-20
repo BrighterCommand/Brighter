@@ -1,50 +1,30 @@
-﻿using System;
-using UserGroupManagement.Infrastructure.Domain;
+using System;
+using Paramore.Infrastructure.Domain;
 
-namespace UserGroupManagement.Domain.Meetings
+namespace Paramore.Domain.Meetings
 {
     public class Meeting : IAggregateRoot  
     {
-        private DateTime meetingTime;
-        private Guid locationId;
-        private Guid speakerId;
-        private int capacity;
+        //private DateTime meeting;
+        //private Guid locationId;
+        //private Guid speakerId;
+        //private int capacity;
+        private Guid id = Guid.Empty;
+        private int version = 0;
 
-        private Guid _id;
-
-        private int _version;
-
-        public Meeting(Guid meetingId, DateTime on, Guid locationId, Guid speakerId, int capacity)
-            :this()
-        {
-        }
-
-        public Meeting()
-        {
-        }
- 
         public Guid SisoId
         {
-            get { return _id; }
+            get { return id; }
         }
 
         public int Version
         {
-            get { return _version; }
+            get { return version; }
         }
 
         public int Lock(int expectedVersion)
         {
-            throw new NotImplementedException();
+            return 0;
         }
-
-        //private void OnMeetingBeingScheduled(MeetingScheduledEvent meetingScheduledEvent)
-        //{
-        //    Id = meetingScheduledEvent.MeetingId;
-        //    meetingTime = meetingScheduledEvent.MeetingTime;
-        //    locationId = meetingScheduledEvent.LocationId;
-        //    speakerId = meetingScheduledEvent.SpeakerId;
-        //    capacity = meetingScheduledEvent.Capacity;
-        //}
     }
 }

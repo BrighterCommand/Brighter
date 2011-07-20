@@ -1,12 +1,12 @@
-﻿using UserGroupManagement.Domain.Common;
+using Paramore.Domain.Common;
 
-namespace UserGroupManagement.Domain.Locations
+namespace Paramore.Domain.Locations
 {
     public class LocationFactory
     {
         public Location Create(LocationName locationName, Address address, LocationMap map, LocationContact locationContact)
         {
-            return new Location(locationName, address, map, locationContact);
+            return new Location();
         }
     }
 }

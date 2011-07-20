@@ -1,4 +1,4 @@
-﻿namespace UserGroupManagement.ServiceLayer.CommandProcessor
+﻿namespace Paramore.Services.CommandProcessor
 {
     public class ChainOfResponsibility
     {

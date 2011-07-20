@@ -1,7 +1,7 @@
 ﻿using System;
-using UserGroupManagement.ServiceLayer.Events.Speaker;
+using Paramore.Services.Events.Speaker;
 
-namespace UserGroupManagement.ServiceLayer.Events.Meeting
+namespace Paramore.Services.Events.Meeting
 {
     public class MeetingScheduledEvent : IDomainEvent
     {

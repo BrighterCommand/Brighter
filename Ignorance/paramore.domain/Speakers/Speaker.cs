@@ -1,51 +1,30 @@
-﻿using System;
-using UserGroupManagement.Domain.Common;
-using UserGroupManagement.Infrastructure.Domain;
+using System;
+using Paramore.Infrastructure.Domain;
 
-namespace UserGroupManagement.Domain.Speakers
+namespace Paramore.Domain.Speakers
 {
     public class Speaker : IAggregateRoot
     {
-        private SpeakerBio speakerBio;
-        private PhoneNumber phoneNumber;
-        private EmailAddress emailAddress;
-        private SpeakerName speakerName;
-
-        private Guid _id;
-
-        private int _version;
-
-        public Speaker()
-        {
-        }
- 
-        public Speaker(SpeakerName speakerName, SpeakerBio speakerBio, PhoneNumber phoneNumber, EmailAddress emailAddress)
-            : this()
-        {
-        }
+        //private SpeakerBio bio;
+        //private PhoneNumber phoneNumber;
+        //private EmailAddress emailAddress;
+        //private SpeakerName speakerName;
+        private Guid id = Guid.Empty;
+        private int version = 0;
 
         public Guid SisoId
         {
-            get { return _id; }
+            get { return id; }
         }
 
         public int Version
         {
-            get { return _version; }
+            get { return version; }
         }
 
         public int Lock(int expectedVersion)
         {
-            throw new NotImplementedException();
+            return 0; 
         }
-
-        //private void OnNewSpeakerCreated(SpeakerCreatedEvent speakerCreatedEvent)
-        //{
-        //    Id = speakerCreatedEvent.Id;
-        //    speakerBio = new SpeakerBio(speakerCreatedEvent.Biography);
-        //    phoneNumber = new PhoneNumber(speakerCreatedEvent.PhoneNumber);
-        //    emailAddress = new EmailAddress(speakerCreatedEvent.Email);
-        //    speakerName = new SpeakerName(speakerCreatedEvent.Name);
-        //}
     }
 }

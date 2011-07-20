@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using UserGroupManagement.ServiceLayer.CommandHandlers;
-using UserGroupManagement.ServiceLayer.Common;
+using System.Collections;
+using System.Linq;
+using Paramore.Services.CommandHandlers;
+using Paramore.Services.Common;
 
-namespace UserGroupManagement.ServiceLayer.CommandProcessor
+namespace Paramore.Services.CommandProcessor
 {
-    using System.Collections;
-    using System.Linq;
-
     internal class RequestHandlers<TRequest> : IEnumerable<RequestHandler<TRequest>>
         where TRequest : class, IRequest
     {
@@ -20,7 +19,7 @@ namespace UserGroupManagement.ServiceLayer.CommandProcessor
 
         internal void CheckForMissingHandler()
         {
-            if (this._handlers.Length == 0)
+            if (_handlers.Length == 0)
             {
                 throw new ArgumentOutOfRangeException(string.Format("No implicit handler found for command: {0}", typeof(TRequest)));
             }

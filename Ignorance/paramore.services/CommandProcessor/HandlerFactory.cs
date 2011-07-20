@@ -1,13 +1,11 @@
-﻿namespace UserGroupManagement.ServiceLayer.CommandProcessor
+﻿using System;
+using System.Linq;
+using Castle.Windsor;
+using Paramore.Services.CommandHandlers;
+using Paramore.Services.Common;
+
+namespace Paramore.Services.CommandProcessor
 {
-    using System;
-    using System.Linq;
-
-    using Castle.Windsor;
-
-    using UserGroupManagement.ServiceLayer.CommandHandlers;
-    using UserGroupManagement.ServiceLayer.Common;
-
     internal class HandlerFactory<TRequest> where TRequest : class, IRequest
     {
         private readonly RequestHandlerAttribute _attribute;

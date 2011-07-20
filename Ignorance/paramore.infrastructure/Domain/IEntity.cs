@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace UserGroupManagement.Infrastructure.Domain
+namespace Paramore.Infrastructure.Domain
 {
     public interface IEntity
     {

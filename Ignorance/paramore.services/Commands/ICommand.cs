@@ -1,7 +1,7 @@
 ﻿using System;
-using UserGroupManagement.ServiceLayer.Common;
+using Paramore.Services.Common;
 
-namespace UserGroupManagement.ServiceLayer.Commands
+namespace Paramore.Services.Commands
 {
     public interface ICommand : IRequest
     {

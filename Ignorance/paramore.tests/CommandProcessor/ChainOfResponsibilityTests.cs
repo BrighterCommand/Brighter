@@ -3,18 +3,18 @@ using System.Linq;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using Machine.Specifications;
-using UserGroupManagement.ServiceLayer.CommandHandlers;
-using UserGroupManagement.ServiceLayer.CommandProcessor;
-using UserGroupManagement.ServiceLayer.Commands;
-using UserGroupManagement.ServiceLayer.Common;
+using Paramore.Services.CommandHandlers;
+using Paramore.Services.CommandProcessor;
+using Paramore.Services.Commands;
+using Paramore.Services.Common;
 
-namespace UserGroupManagement.Tests.CommandProcessor
+namespace Paramore.Tests.CommandProcessor
 {
     [Subject(typeof(ChainofResponsibilityBuilder<>))]
     public class When_Finding_A_Handler_For_A_Command
     {
-        private static ChainofResponsibilityBuilder<MyCommand> chainBuilder;
-        private static IHandleRequests<MyCommand> chainOfResponsibility;
+        private static ChainofResponsibilityBuilder<MyCommand> CHAIN_BUILDER;
+        private static IHandleRequests<MyCommand> CHAIN_OF_RESPONSIBILITY;
 
         Establish context = () =>
         {
@@ -24,18 +24,18 @@ namespace UserGroupManagement.Tests.CommandProcessor
                     Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyCommandHandler>()
                 );
 
-            chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container); 
+            CHAIN_BUILDER = new ChainofResponsibilityBuilder<MyCommand>(container); 
         };
 
-        Because of = () => chainOfResponsibility = chainBuilder.Build().First();
+        Because of = () => CHAIN_OF_RESPONSIBILITY = CHAIN_BUILDER.Build().First();
 
-        It should_return_the_my_command_handler_as_the_implicit_handler = () => chainOfResponsibility.ShouldBeOfType(typeof(MyCommandHandler));
+        It should_return_the_my_command_handler_as_the_implicit_handler = () => CHAIN_OF_RESPONSIBILITY.ShouldBeOfType(typeof(MyCommandHandler));
         It should_be_the_only_element_in_the_chain = () => GetChain().ToString().ShouldEqual("MyCommandHandler|");
 
         private static ChainPathExplorer GetChain()
         {
             var chainpathExplorer = new ChainPathExplorer();
-            chainOfResponsibility.AddToChain(chainpathExplorer);
+            CHAIN_OF_RESPONSIBILITY.AddToChain(chainpathExplorer);
             return chainpathExplorer;
         }
     }
@@ -49,7 +49,7 @@ namespace UserGroupManagement.Tests.CommandProcessor
         }
     }
 
-    internal class MyCommand : ICommand
+    internal class MyCommand : ICommand, IRequest
     {
         public Guid Id { get; set; }
     }
