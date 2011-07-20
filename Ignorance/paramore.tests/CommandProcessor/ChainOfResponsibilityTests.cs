@@ -13,8 +13,8 @@ namespace Paramore.Tests.CommandProcessor
     [Subject(typeof(ChainofResponsibilityBuilder<>))]
     public class When_Finding_A_Handler_For_A_Command
     {
-        private static ChainofResponsibilityBuilder<MyCommand> CHAIN_BUILDER;
-        private static IHandleRequests<MyCommand> CHAIN_OF_RESPONSIBILITY;
+        private static ChainofResponsibilityBuilder<MyCommand> Chain_Builder;
+        private static IHandleRequests<MyCommand> Chain_Of_Responsibility;
 
         Establish context = () =>
         {
@@ -24,18 +24,18 @@ namespace Paramore.Tests.CommandProcessor
                     Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyCommandHandler>()
                 );
 
-            CHAIN_BUILDER = new ChainofResponsibilityBuilder<MyCommand>(container); 
+            Chain_Builder = new ChainofResponsibilityBuilder<MyCommand>(container); 
         };
 
-        Because of = () => CHAIN_OF_RESPONSIBILITY = CHAIN_BUILDER.Build().First();
+        Because of = () => Chain_Of_Responsibility = Chain_Builder.Build().First();
 
-        It should_return_the_my_command_handler_as_the_implicit_handler = () => CHAIN_OF_RESPONSIBILITY.ShouldBeOfType(typeof(MyCommandHandler));
+        It should_return_the_my_command_handler_as_the_implicit_handler = () => Chain_Of_Responsibility.ShouldBeOfType(typeof(MyCommandHandler));
         It should_be_the_only_element_in_the_chain = () => GetChain().ToString().ShouldEqual("MyCommandHandler|");
 
         private static ChainPathExplorer GetChain()
         {
             var chainpathExplorer = new ChainPathExplorer();
-            CHAIN_OF_RESPONSIBILITY.AddToChain(chainpathExplorer);
+            Chain_Of_Responsibility.AddToChain(chainpathExplorer);
             return chainpathExplorer;
         }
     }
