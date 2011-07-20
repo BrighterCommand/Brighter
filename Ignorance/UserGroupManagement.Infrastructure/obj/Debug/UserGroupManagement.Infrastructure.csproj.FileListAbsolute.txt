@@ -1,5 +1,0 @@
-C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Infrastructure\bin\Debug\UserGroupManagement.Infrastructure.dll
-C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Infrastructure\bin\Debug\UserGroupManagement.Infrastructure.pdb
-C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Infrastructure\obj\Debug\ResolveAssemblyReference.cache
-C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Infrastructure\obj\Debug\UserGroupManagement.Infrastructure.dll
-C:\Users\ian\OSS\Paramore\UserGroup_DDD-CQRS\UserGroupManagement.Infrastructure\obj\Debug\UserGroupManagement.Infrastructure.pdb
