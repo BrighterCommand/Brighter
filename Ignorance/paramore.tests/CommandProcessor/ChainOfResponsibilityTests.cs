@@ -100,7 +100,7 @@ namespace Paramore.Tests.CommandProcessor
 
         Because of = () => chainOfResponsibility = chainBuilder.Build().First();
 
-        private It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyLoggingHander`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
+        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyLoggingHander`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
 
         private static ChainPathExplorer GetChain()
         {
@@ -192,7 +192,7 @@ namespace Paramore.Tests.CommandProcessor
 
         Because of = () => chainOfResponsibility = chainBuilder.Build().First();
 
-        private It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHander`1|");
+        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHander`1|");
 
         private static ChainPathExplorer GetChain()
         {
