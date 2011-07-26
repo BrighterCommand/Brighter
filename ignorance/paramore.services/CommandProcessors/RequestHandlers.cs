@@ -5,7 +5,7 @@ using System.Linq;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.Common;
 
-namespace Paramore.Services.CommandProcessor
+namespace Paramore.Services.CommandProcessors
 {
     internal class RequestHandlers<TRequest> : IEnumerable<RequestHandler<TRequest>>
         where TRequest : class, IRequest
@@ -15,14 +15,6 @@ namespace Paramore.Services.CommandProcessor
         internal RequestHandlers(Array handlers)
         {
             _handlers = handlers;
-        }
-
-        internal void CheckForMissingHandler()
-        {
-            if (_handlers.Length == 0)
-            {
-                throw new ArgumentOutOfRangeException(string.Format("No implicit handler found for command: {0}", typeof(TRequest)));
-            }
         }
 
         internal RequestHandler<TRequest> First()

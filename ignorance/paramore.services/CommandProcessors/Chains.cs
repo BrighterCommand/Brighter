@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.Common;
 
-namespace Paramore.Services.CommandProcessor
+namespace Paramore.Services.CommandProcessors
 {
 
     public class Chains<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest
