@@ -4,7 +4,7 @@ using Castle.Windsor;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.Common;
 
-namespace Paramore.Services.CommandProcessor
+namespace Paramore.Services.CommandProcessors
 {
     internal class HandlerFactory<TRequest> where TRequest : class, IRequest
     {

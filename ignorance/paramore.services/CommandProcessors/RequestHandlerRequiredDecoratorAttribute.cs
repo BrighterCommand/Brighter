@@ -1,7 +1,7 @@
 ﻿using System;
 using Paramore.Services.CommandHandlers;
 
-namespace Paramore.Services.CommandProcessor
+namespace Paramore.Services.CommandProcessors
 {
     [AttributeUsage(AttributeTargets.Method)]
     public abstract class RequestHandlerAttribute : Attribute

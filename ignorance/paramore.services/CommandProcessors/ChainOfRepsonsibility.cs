@@ -1,4 +1,4 @@
-﻿namespace Paramore.Services.CommandProcessor
+﻿namespace Paramore.Services.CommandProcessors
 {
     public class ChainOfResponsibility
     {

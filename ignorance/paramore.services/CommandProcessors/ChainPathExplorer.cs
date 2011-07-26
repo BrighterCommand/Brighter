@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using Paramore.Services.CommandHandlers;
 
-namespace Paramore.Services.CommandProcessor
+namespace Paramore.Services.CommandProcessors
 {
     public class ChainPathExplorer
     {

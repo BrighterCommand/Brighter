@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Paramore.Services.CommandProcessor.ReflectionExtensionMethods
+namespace Paramore.Services.CommandProcessors.ReflectionExtensionMethods
 {
     internal static class ReflectionExtensions
     {

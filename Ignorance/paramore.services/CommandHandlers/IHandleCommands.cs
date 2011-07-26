@@ -1,11 +1,11 @@
-﻿using Paramore.Services.CommandProcessor;
+﻿using Paramore.Services.CommandProcessors;
 using Paramore.Services.Common;
 
 namespace Paramore.Services.CommandHandlers
 {
     public interface IHandleRequests<TRequest> where TRequest : class, IRequest
     {
-        void AddToChain(ChainPathExplorer pathExplorer);
+        void DescribePath(ChainPathExplorer pathExplorer);
         TRequest Handle(TRequest request);
         IHandleRequests<TRequest> Successor { set; }
     }

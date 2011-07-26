@@ -1,14 +1,12 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using Machine.Specifications;
 using Paramore.Services.CommandHandlers;
-using Paramore.Services.CommandProcessor;
-using Paramore.Services.Commands;
-using Paramore.Services.Common;
+using Paramore.Services.CommandProcessors;
+using Paramore.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Tests.CommandProcessor
+namespace Paramore.Tests.CommandProcessors
 {
     [Subject(typeof(ChainofResponsibilityBuilder<>))]
     public class When_Finding_A_Handler_For_A_Command
@@ -35,25 +33,10 @@ namespace Paramore.Tests.CommandProcessor
         private static ChainPathExplorer GetChain()
         {
             var chainpathExplorer = new ChainPathExplorer();
-            Chain_Of_Responsibility.AddToChain(chainpathExplorer);
+            Chain_Of_Responsibility.DescribePath(chainpathExplorer);
             return chainpathExplorer;
         }
     }
-
-    #region Handlers and Commands
-    internal class MyCommandHandler : RequestHandler<MyCommand>
-    {
-        public override MyCommand  Handle(MyCommand request)
-        {
-            return base.Handle(request);
-        }
-    }
-
-    internal class MyCommand : ICommand, IRequest
-    {
-        public Guid Id { get; set; }
-    }
-    #endregion
 
     [Subject(typeof(ChainofResponsibilityBuilder<>))]
     public class When_A_Handler_Is_Part_of_A_Chain_of_Repsonsibility
@@ -78,7 +61,7 @@ namespace Paramore.Tests.CommandProcessor
         private static ChainPathExplorer GetChain()
         {
             var chainpathExplorer = new ChainPathExplorer();
-            chainOfResponsibility.AddToChain(chainpathExplorer);
+            chainOfResponsibility.DescribePath(chainpathExplorer);
             return chainpathExplorer;
         }
     }
@@ -105,75 +88,10 @@ namespace Paramore.Tests.CommandProcessor
         private static ChainPathExplorer GetChain()
         {
             var chainpathExplorer = new ChainPathExplorer();
-            chainOfResponsibility.AddToChain(chainpathExplorer);
+            chainOfResponsibility.DescribePath(chainpathExplorer);
             return chainpathExplorer;
         }
     }
-
-    #region Handlers and Commands
-
-    internal class MyLoggingHandlerAttribute : RequestHandlerAttribute
-    {
-        public MyLoggingHandlerAttribute(int step)
-            : base(step)
-        {
-        }
-
-        public override Type GetHandlerType()
-        {
-            return typeof(MyLoggingHander<>);
-        }
-    }
-
-    internal class MyValidationHandlerAttribute : RequestHandlerAttribute
-    {
-        public MyValidationHandlerAttribute(int step)
-            : base(step)
-        {
-        }
-
-        public override Type GetHandlerType()
-        {
-            return typeof(MyValidationHandler<>);
-        }
-    }
-
-    internal class MyValidationHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
-    {
-        public override TRequest Handle(TRequest request)
-        {
-            return request;
-        }
-    }
-
-    internal class MyLoggingHander<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
-    {
-        public override TRequest Handle(TRequest request)
-        {
-            return request;
-        }
-    }
-
-    internal class MyImplicitHandler : RequestHandler<MyCommand>
-    {
-        [MyLoggingHandler(step:1)]
-        public override MyCommand Handle(MyCommand request)
-        {
-            return base.Handle(request);
-        }
-    }
-
-    internal class MyDoubleDecoratedHandler : RequestHandler<MyCommand>
-    {
-        [MyValidationHandler(step:2)]
-        [MyLoggingHandler(step:1)]
-        public override MyCommand Handle(MyCommand request)
-        {
-            return base.Handle(request);
-        }
-    }
-
-    #endregion
 
     [Subject(typeof(ChainofResponsibilityBuilder<>))]
     public class When_Building_A_Chain_of_Repsonsibility_Allow_Pre_And_Post_Tasks
@@ -197,49 +115,9 @@ namespace Paramore.Tests.CommandProcessor
         private static ChainPathExplorer GetChain()
         {
             var chainpathExplorer = new ChainPathExplorer();
-            chainOfResponsibility.AddToChain(chainpathExplorer);
+            chainOfResponsibility.DescribePath(chainpathExplorer);
             return chainpathExplorer;
         }
     }
-
-    #region Handlers and Commands
-
-    internal class MyPostLoggingHandlerAttribute : RequestHandlerAttribute
-    {
-        public MyPostLoggingHandlerAttribute(int step, HandlerTiming timing)
-            : base(step, timing)
-        {
-        }
-
-        public override Type GetHandlerType()
-        {
-            return typeof(MyLoggingHander<>);
-        }
-    }
-
-    internal class MyPreValidationHandlerAttribute : RequestHandlerAttribute
-    {
-        public MyPreValidationHandlerAttribute(int step, HandlerTiming timing)
-            : base(step, timing)
-        {
-        }
-
-        public override Type GetHandlerType()
-        {
-            return typeof(MyValidationHandler<>);
-        }
-    }
-
-    internal class MyPreAndPostDecoratedHandler : RequestHandler<MyCommand>
-    {
-        [MyPreValidationHandlerAttribute(step: 2, timing: HandlerTiming.Before)]
-        [MyPostLoggingHandlerAttribute(step: 1, timing: HandlerTiming.After)]
-        public override MyCommand Handle(MyCommand request)
-        {
-            return base.Handle(request);
-        }
-    }
-
-    #endregion
     
 }

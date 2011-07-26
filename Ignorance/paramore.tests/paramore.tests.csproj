@@ -41,6 +41,9 @@
     <Reference Include="Castle.Windsor">
       <HintPath>..\Lib\Castle.Windsor.dll</HintPath>
     </Reference>
+    <Reference Include="FakeItEasy">
+      <HintPath>..\Lib\FakeItEasy.dll</HintPath>
+    </Reference>
     <Reference Include="Machine.Specifications, Version=0.4.21.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Lib\Machine.Specifications.dll</HintPath>
@@ -48,9 +51,6 @@
     <Reference Include="nunit.framework, Version=2.5.5.10112, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Lib\nunit.framework.dll</HintPath>
-    </Reference>
-    <Reference Include="Rhino.Mocks">
-      <HintPath>..\Lib\Rhino.Mocks.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -61,7 +61,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CommandProcessor\ChainOfResponsibilityTests.cs" />
+    <Compile Include="CommandProcessors\ChainOfResponsibilityTests.cs" />
+    <Compile Include="CommandProcessors\CommandProcessorTests.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyCommand.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyCommandHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyDoubleDecoratedHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyImplicitHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyLoggingHander.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyLoggingHandlerAttribute.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyPostLoggingHandlerAttribute.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyPreAndPostDecoratedHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyPreValidationHandlerAttribute.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyValidationHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyValidationHandlerAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

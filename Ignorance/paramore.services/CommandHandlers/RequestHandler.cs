@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using System.Reflection;
-using Paramore.Services.CommandProcessor;
+using Paramore.Services.CommandProcessors;
 using Paramore.Services.Common;
 
 namespace Paramore.Services.CommandHandlers
@@ -14,12 +14,12 @@ namespace Paramore.Services.CommandHandlers
             set { _successor = value; }
         }
 
-        public void AddToChain(ChainPathExplorer pathExplorer)
+        public void DescribePath(ChainPathExplorer pathExplorer)
         {
             pathExplorer.AddToPath(Name());
             if (_successor != null)
             {
-                _successor.AddToChain(pathExplorer);
+                _successor.DescribePath(pathExplorer);
             }
         }
 
