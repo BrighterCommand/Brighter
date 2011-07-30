@@ -54,11 +54,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommandProcessors\ChainOfResponsibilityTests.cs" />
@@ -66,6 +62,8 @@
     <Compile Include="CommandProcessors\TestDoubles\MyCommand.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyCommandHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyDoubleDecoratedHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyEvent.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyEventHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyImplicitHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyLoggingHander.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyLoggingHandlerAttribute.cs" />

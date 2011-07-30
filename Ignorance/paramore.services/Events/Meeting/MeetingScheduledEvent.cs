@@ -1,9 +1,8 @@
 ﻿using System;
-using Paramore.Services.Events.Speaker;
 
 namespace Paramore.Services.Events.Meeting
 {
-    public class MeetingScheduledEvent : IDomainEvent
+    public class MeetingScheduledEvent : Event
     {
         public Guid MeetingId { get; private set; }
         public DateTime MeetingTime { get; private set; }

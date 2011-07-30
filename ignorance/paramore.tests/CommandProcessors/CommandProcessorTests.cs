@@ -12,13 +12,10 @@ namespace Paramore.Tests.CommandProcessors
     public class When_sending_a_command_to_the_processor
     {
         static CommandProcessor commandProcessor;
-        static MyCommand myCommand;
+        static readonly MyCommand myCommand = new MyCommand();
 
         Establish context = () =>
         {
-            MyCommandHandler.SetUp();
-            myCommand = new MyCommand(Guid.NewGuid()); 
-            
             var container = new WindsorContainer();
             container.Register(Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyCommandHandler>());
             
@@ -35,14 +32,11 @@ namespace Paramore.Tests.CommandProcessors
     public class When_there_are_multiple_possible_command_handlers
     {
         static CommandProcessor commandProcessor;
-        static MyCommand myCommand;
+        static readonly MyCommand myCommand = new MyCommand();
         private static Exception exception;
 
         Establish context = () =>
         {
-            MyCommandHandler.SetUp();
-            myCommand = new MyCommand(Guid.NewGuid()); 
-            
             var container = new WindsorContainer();
             container.Register(Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyCommandHandler>());
             container.Register(Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyImplicitHandler>());
@@ -61,16 +55,12 @@ namespace Paramore.Tests.CommandProcessors
     public class When_there_are_no_command_handlers
     {
         static CommandProcessor commandProcessor;
-        static MyCommand myCommand;
+        static readonly MyCommand myCommand = new MyCommand();
         private static Exception exception;
 
         Establish context = () =>
         {
-            MyCommandHandler.SetUp();
-            myCommand = new MyCommand(Guid.NewGuid()); 
-            
             var container = new WindsorContainer();
-            
             commandProcessor = new CommandProcessor(container);
 
         };
@@ -79,5 +69,40 @@ namespace Paramore.Tests.CommandProcessors
 
         It should_fail_because_multiple_recievers_found = () => exception.ShouldBeOfType(typeof (ArgumentException));
         It should_have_an_error_message_that_tells_you_why = () => exception.ShouldContainErrorMessage("No command handler was found for the typeof command Paramore.Tests.CommandProcessors.TestDoubles.MyCommand - a command should have only one handler."); 
+    }
+
+    [Subject("Basic event publishing")]
+    public class When_publishing_an_event_to_the_processor
+    {
+        static CommandProcessor commandProcessor;
+        static readonly MyEvent myEvent = new MyEvent();
+
+        Establish context = () =>
+        {
+            var container = new WindsorContainer();
+            container.Register(Component.For<IHandleRequests<MyEvent>>().ImplementedBy<MyEventHandler>());
+            
+            commandProcessor = new CommandProcessor(container);
+        };
+
+        Because of = () => commandProcessor.Publish(myEvent);
+
+        It should_publish_the_command_to_the_event_handlers = () => MyEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();
+    }
+
+    public class When_there_are_no_subscribers
+    {
+        static CommandProcessor commandProcessor;
+        static readonly MyEvent myEvent = new MyEvent();
+        static Exception exception;
+
+        Establish context = () =>
+        {
+            commandProcessor = new CommandProcessor(new WindsorContainer());                                    
+        };
+
+        Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
+
+        It should_not_throw_an_exception = () => exception.ShouldBeNull();
     }
 }

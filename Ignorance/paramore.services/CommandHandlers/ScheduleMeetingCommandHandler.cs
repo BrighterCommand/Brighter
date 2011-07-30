@@ -1,4 +1,5 @@
 ﻿using Paramore.Services.Commands;
+using Paramore.Services.Commands.Meeting;
 
 namespace Paramore.Services.CommandHandlers
 {

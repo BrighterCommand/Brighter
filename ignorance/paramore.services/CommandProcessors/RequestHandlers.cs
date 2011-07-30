@@ -10,21 +10,21 @@ namespace Paramore.Services.CommandProcessors
     internal class RequestHandlers<TRequest> : IEnumerable<RequestHandler<TRequest>>
         where TRequest : class, IRequest
     {
-        private readonly Array _handlers;
+        private readonly Array handlers;
 
         internal RequestHandlers(Array handlers)
         {
-            _handlers = handlers;
+            this.handlers = handlers;
         }
 
         internal RequestHandler<TRequest> First()
         {
-            return (RequestHandler<TRequest>)_handlers.GetValue(0);
+            return (RequestHandler<TRequest>)handlers.GetValue(0);
         }
 
         public IEnumerator<RequestHandler<TRequest>> GetEnumerator()
         {
-            return _handlers.Cast<RequestHandler<TRequest>>().GetEnumerator();
+            return handlers.Cast<RequestHandler<TRequest>>().GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

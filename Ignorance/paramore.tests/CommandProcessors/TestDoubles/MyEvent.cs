@@ -1,12 +1,11 @@
 using System;
-using Paramore.Services.Commands;
-using Paramore.Services.Common;
+using Paramore.Services.Events;
 
 namespace Paramore.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyCommand : ICommand, IRequest
+    internal class MyEvent : Event
     {
-        public MyCommand()
+        public MyEvent()
         {
             Id = Guid.NewGuid();
         }

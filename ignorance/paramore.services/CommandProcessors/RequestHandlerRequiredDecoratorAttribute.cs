@@ -6,24 +6,24 @@ namespace Paramore.Services.CommandProcessors
     [AttributeUsage(AttributeTargets.Method)]
     public abstract class RequestHandlerAttribute : Attribute
     {
-        private readonly int _step;
+        private readonly int step;
 
-        private readonly HandlerTiming _timing;
+        private readonly HandlerTiming timing;
 
         protected RequestHandlerAttribute(int step, HandlerTiming timing = HandlerTiming.Before)
         {
-            _step = step;
-            _timing = timing;
+            this.step = step;
+            this.timing = timing;
         }
 
         public int Step
         {
-            get { return _step; }
+            get { return step; }
         }
 
         public HandlerTiming Timing
         {
-            get { return _timing; }
+            get { return timing; }
         }
 
         public abstract Type GetHandlerType();
