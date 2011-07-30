@@ -5,16 +5,16 @@ namespace Paramore.Services.CommandProcessors
 {
     public class ChainPathExplorer
     {
-        private readonly StringBuilder _buffer = new StringBuilder();
+        private readonly StringBuilder buffer = new StringBuilder();
 
         public void AddToPath(HandlerName handlerName)
         {
-            _buffer.AppendFormat("{0}|", handlerName);
+            buffer.AppendFormat("{0}|", handlerName);
         }
 
         public override string ToString()
         {
-            return _buffer.ToString();
+            return buffer.ToString();
         }
     }
 }

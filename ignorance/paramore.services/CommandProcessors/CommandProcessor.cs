@@ -1,23 +1,23 @@
 using System;
-using System.ComponentModel;
 using System.Linq;
 using Castle.Windsor;
 using Paramore.Services.Common;
+using Paramore.Utility;
 
 namespace Paramore.Services.CommandProcessors
 {
     public class CommandProcessor
     {
-        private readonly IWindsorContainer _container;
+        private readonly IWindsorContainer container;
 
         public CommandProcessor(IWindsorContainer container)
         {
-            _container = container;
+            this.container = container;
         }
 
         public void Send<T>(T command) where T : class, IRequest
         {
-            var builder = new ChainofResponsibilityBuilder<T>(_container);
+            var builder = new ChainofResponsibilityBuilder<T>(container);
             var handlerChain = builder.Build();
 
             var handlerCount = handlerChain.Count();
@@ -28,6 +28,14 @@ namespace Paramore.Services.CommandProcessors
                 throw new ArgumentException(string.Format("No command handler was found for the typeof command {0} - a command should have only one handler.", typeof(T))); 
 
             handlerChain.First().Handle(command);
+        }
+
+        public void Publish<T>(T @event) where T : class, IRequest
+        {
+            var builder = new ChainofResponsibilityBuilder<T>(container);
+            var handlerChain = builder.Build();
+
+            handlerChain.Each(chain => chain.Handle(@event));
         }
     }
 }

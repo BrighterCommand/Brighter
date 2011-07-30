@@ -10,16 +10,16 @@ namespace Paramore.Services.CommandProcessors
 {
     public class ChainofResponsibilityBuilder<TRequest> : IChainofResponsibilityBuilder<TRequest> where TRequest : class, IRequest
     {
-        private readonly IWindsorContainer _container;
-        private readonly Type _implicithandlerType;
+        private readonly IWindsorContainer container;
+        private readonly Type implicithandlerType;
 
         public ChainofResponsibilityBuilder(IWindsorContainer container)
         {
-            _container = container;
+            this.container = container;
 
             var handlerGenericType = typeof(IHandleRequests<>);
 
-            _implicithandlerType = handlerGenericType.MakeGenericType(typeof(TRequest));
+            implicithandlerType = handlerGenericType.MakeGenericType(typeof(TRequest));
 
         }
 
@@ -38,7 +38,7 @@ namespace Paramore.Services.CommandProcessors
 
         private RequestHandlers<TRequest> GetHandlers()
         {
-            return new RequestHandlers<TRequest>(_container.ResolveAll(_implicithandlerType));
+            return new RequestHandlers<TRequest>(container.ResolveAll(implicithandlerType));
         }
 
         private IHandleRequests<TRequest> BuildChain(RequestHandler<TRequest> implicitHandler)
@@ -66,7 +66,7 @@ namespace Paramore.Services.CommandProcessors
             var lastInChain = implicitHandler;
             foreach (var attribute in attributes) 
             {
-                var decorator = new HandlerFactory<TRequest>(attribute, _container).CreateRequestHandler();
+                var decorator = new HandlerFactory<TRequest>(attribute, container).CreateRequestHandler();
                 lastInChain.Successor = decorator;
                 lastInChain = decorator;
             }
@@ -76,7 +76,7 @@ namespace Paramore.Services.CommandProcessors
         {
             foreach (var attribute in attributes) 
             {
-                var decorator = new HandlerFactory<TRequest>(attribute, _container).CreateRequestHandler();
+                var decorator = new HandlerFactory<TRequest>(attribute, container).CreateRequestHandler();
                 decorator.Successor = lastInChain;
                 lastInChain = decorator;
             }

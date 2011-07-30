@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Paramore.Services.Commands
+namespace Paramore.Services.Commands.Meeting
 {
     [Serializable]
     public class ScheduleMeetingCommand : Command

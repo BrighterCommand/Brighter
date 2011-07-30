@@ -44,16 +44,11 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommandHandlers\HandlerName.cs" />
     <Compile Include="CommandHandlers\HandlerTiming.cs" />
     <Compile Include="CommandHandlers\RequestHandler.cs" />
-    <Compile Include="CommandProcessors\ChainOfRepsonsibility.cs" />
     <Compile Include="CommandProcessors\ChainofResponsibilityBuilder.cs" />
     <Compile Include="CommandHandlers\IHandleCommands.cs" />
     <Compile Include="CommandHandlers\ScheduleMeetingCommandHandler.cs" />
@@ -67,15 +62,18 @@
     <Compile Include="CommandProcessors\RequestHandlers.cs" />
     <Compile Include="Commands\Command.cs" />
     <Compile Include="Commands\ICommand.cs" />
-    <Compile Include="Commands\ScheduleMeetingCommand.cs" />
-    <Compile Include="Events\Location\LocationCreatedEvent.cs" />
+    <Compile Include="Commands\Meeting\ScheduleMeetingCommand.cs" />
+    <Compile Include="Events\Event.cs" />
     <Compile Include="Events\Meeting\MeetingScheduledEvent.cs" />
-    <Compile Include="Events\Speaker\DomainEvent.cs" />
     <Compile Include="Common\IRequest.cs" />
-    <Compile Include="Events\Speaker\SpeakerCreatedEvent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\paramore.utility\paramore.utility.csproj">
+      <Project>{5A5A059A-133C-46DB-A959-826EEE178D64}</Project>
+      <Name>paramore.utility</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

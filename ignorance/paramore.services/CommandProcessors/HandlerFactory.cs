@@ -8,21 +8,21 @@ namespace Paramore.Services.CommandProcessors
 {
     internal class HandlerFactory<TRequest> where TRequest : class, IRequest
     {
-        private readonly RequestHandlerAttribute _attribute;
-        private readonly IWindsorContainer _container;
-        private readonly Type _messageType;
+        private readonly RequestHandlerAttribute attribute;
+        private readonly IWindsorContainer container;
+        private readonly Type messageType;
 
         public HandlerFactory(RequestHandlerAttribute attribute, IWindsorContainer container)
         {
-            _attribute = attribute;
-            _container = container;
-            _messageType = typeof(TRequest);
+            this.attribute = attribute;
+            this.container = container;
+            messageType = typeof(TRequest);
         }
 
         public IHandleRequests<TRequest> CreateRequestHandler()
         {
-            var handlerType = _attribute.GetHandlerType().MakeGenericType(_messageType);
-            var parameters = handlerType.GetConstructors()[0].GetParameters().Select(param => _container.Resolve(param.ParameterType)).ToArray();
+            var handlerType = attribute.GetHandlerType().MakeGenericType(messageType);
+            var parameters = handlerType.GetConstructors()[0].GetParameters().Select(param => container.Resolve(param.ParameterType)).ToArray();
             return (IHandleRequests<TRequest>)Activator.CreateInstance(handlerType, parameters);
         }
     }

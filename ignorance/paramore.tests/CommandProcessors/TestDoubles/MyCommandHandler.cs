@@ -4,7 +4,12 @@ namespace Paramore.Tests.CommandProcessors.TestDoubles
 {
     internal class MyCommandHandler : RequestHandler<MyCommand>
     {
-        private static MyCommand _command;
+        private static MyCommand command;
+
+        public MyCommandHandler()
+        {
+            command = null;
+        }
 
         public override MyCommand  Handle(MyCommand request)
         {
@@ -12,19 +17,14 @@ namespace Paramore.Tests.CommandProcessors.TestDoubles
             return base.Handle(request);
         }
 
-        public static void SetUp()
-        {
-            _command = null;
-        }
-
         public static bool ShouldRecieve(MyCommand expectedCommand)
         {
-            return (_command != null) && (expectedCommand.Id == _command.Id);
+            return (command != null) && (expectedCommand.Id == command.Id);
         }
 
         private void LogCommand(MyCommand request)
         {
-            _command = request;
+            command = request;
         }
     }
 }
