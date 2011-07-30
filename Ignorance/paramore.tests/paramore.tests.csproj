@@ -67,6 +67,7 @@
     <Compile Include="CommandProcessors\TestDoubles\MyImplicitHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyLoggingHander.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyLoggingHandlerAttribute.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyOtherEventHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyPostLoggingHandlerAttribute.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyPreAndPostDecoratedHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyPreValidationHandlerAttribute.cs" />

@@ -90,6 +90,7 @@ namespace Paramore.Tests.CommandProcessors
         It should_publish_the_command_to_the_event_handlers = () => MyEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();
     }
 
+    [Subject("An event may have no subscribers")]
     public class When_there_are_no_subscribers
     {
         static CommandProcessor commandProcessor;
@@ -105,4 +106,25 @@ namespace Paramore.Tests.CommandProcessors
 
         It should_not_throw_an_exception = () => exception.ShouldBeNull();
     }
+
+    [Subject("An event with multiple subscribers")]
+    public class When_there_are_multiple_subscribers
+    {
+        static CommandProcessor commandProcessor;
+        static readonly MyEvent myEvent = new MyEvent();
+        static Exception exception;
+
+        Establish context = () =>
+                                {
+                                    IWindsorContainer container = new WindsorContainer();
+                                    container.Register(Component.For<IHandleRequests<MyEvent>>().ImplementedBy<MyEventHandler>());
+                                    container.Register(Component.For<IHandleRequests<MyEvent>>().ImplementedBy<MyOtherEventHandler>());
+                                    commandProcessor = new CommandProcessor(container);
+                                };
+
+        Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
+
+        It should_not_throw_an_exception = () => exception.ShouldBeNull();
+        It should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.ShouldRecieve(myEvent).ShouldBeTrue(); 
+        It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();}
 }
