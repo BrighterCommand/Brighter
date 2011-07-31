@@ -2,7 +2,7 @@ using System;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandProcessors;
 
-namespace Paramore.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Tests.services.CommandProcessors.TestDoubles
 {
     internal class MyPostLoggingHandlerAttribute : RequestHandlerAttribute
     {

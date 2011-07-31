@@ -1,7 +1,7 @@
 ﻿using System;
 using Paramore.Services.Common;
 
-namespace Paramore.Services.Commands
+namespace Paramore.Services.CommandProcessors
 {
     public interface ICommand : IRequest
     {

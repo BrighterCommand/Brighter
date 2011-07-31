@@ -1,6 +1,6 @@
 using Paramore.Services.Common;
 
-namespace Paramore.Services.Events
+namespace Paramore.Services.CommandProcessors
 {
     public class Event : IRequest
     {

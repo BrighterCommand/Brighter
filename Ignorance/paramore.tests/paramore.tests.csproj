@@ -57,28 +57,35 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CommandProcessors\ChainOfResponsibilityTests.cs" />
-    <Compile Include="CommandProcessors\CommandProcessorTests.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyCommand.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyCommandHandler.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyDoubleDecoratedHandler.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyEvent.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyEventHandler.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyImplicitHandler.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyLoggingHander.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyLoggingHandlerAttribute.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyOtherEventHandler.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyPostLoggingHandlerAttribute.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyPreAndPostDecoratedHandler.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyPreValidationHandlerAttribute.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyValidationHandler.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyValidationHandlerAttribute.cs" />
+    <Compile Include="services\CommandHandlers\Meetings\ScheduleMeetingCommandHandlerTests.cs" />
+    <Compile Include="services\CommandProcessors\ChainOfResponsibilityTests.cs" />
+    <Compile Include="services\CommandProcessors\CommandProcessorTests.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyCommand.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyCommandHandler.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyDoubleDecoratedHandler.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyEvent.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyEventHandler.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyImplicitHandler.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyLoggingHander.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyLoggingHandlerAttribute.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyOtherEventHandler.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyPostLoggingHandlerAttribute.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyPreAndPostDecoratedHandler.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyPreValidationHandlerAttribute.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyValidationHandler.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyValidationHandlerAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <Folder Include="Domain\" />
-  </ItemGroup>
-  <ItemGroup>
+    <ProjectReference Include="..\paramore.domain\paramore.domain.csproj">
+      <Project>{41D1C746-9959-403C-956E-F4538CA72A83}</Project>
+      <Name>paramore.domain</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.infrastructure\paramore.infrastructure.csproj">
+      <Project>{A29960CC-7A28-4C4C-B52A-EEDF32168205}</Project>
+      <Name>paramore.infrastructure</Name>
+    </ProjectReference>
     <ProjectReference Include="..\paramore.services\paramore.services.csproj">
       <Project>{A056F023-D432-42AE-8029-BB6B84828704}</Project>
       <Name>paramore.services</Name>

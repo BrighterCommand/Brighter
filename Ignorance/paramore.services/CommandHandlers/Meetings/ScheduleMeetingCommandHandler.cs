@@ -1,16 +1,18 @@
-﻿using Paramore.Services.Commands;
+﻿using Paramore.Domain.Meetings;
+using Paramore.Infrastructure.Domain;
+using Paramore.Services.Commands;
 using Paramore.Services.Commands.Meeting;
 
 namespace Paramore.Services.CommandHandlers
 {
     public class ScheduleMeetingCommandHandler : RequestHandler<ScheduleMeetingCommand>
     {
-        //private readonly IDomainRepository<IDomainEvent> repository;
+        private IRepository<Meeting> repository;
 
-        //public ScheduleMeetingCommandHandler(IDomainRepository<IDomainEvent> repository)
-        //{
-        //    this.repository = repository;
-        //}
+        public ScheduleMeetingCommandHandler(IRepository<Meeting> repository)
+        {
+            this.repository = repository;
+        }
 
         public override ScheduleMeetingCommand Handle(ScheduleMeetingCommand command)
         {

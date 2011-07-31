@@ -1,4 +1,5 @@
 ﻿using System;
+using Paramore.Services.CommandProcessors;
 
 namespace Paramore.Services.Events.Meeting
 {

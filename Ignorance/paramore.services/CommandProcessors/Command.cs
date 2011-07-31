@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Paramore.Services.Commands
+namespace Paramore.Services.CommandProcessors
 {
     [Serializable]
     public class Command : ICommand

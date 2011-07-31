@@ -1,6 +1,6 @@
 using Paramore.Services.CommandHandlers;
 
-namespace Paramore.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Tests.services.CommandProcessors.TestDoubles
 {
     internal class MyCommandHandler : RequestHandler<MyCommand>
     {

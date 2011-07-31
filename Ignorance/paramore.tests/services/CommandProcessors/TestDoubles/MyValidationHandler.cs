@@ -1,7 +1,7 @@
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.Common;
 
-namespace Paramore.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Tests.services.CommandProcessors.TestDoubles
 {
     internal class MyValidationHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {

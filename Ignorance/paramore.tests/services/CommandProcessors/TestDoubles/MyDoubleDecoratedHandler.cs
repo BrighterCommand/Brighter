@@ -1,9 +1,10 @@
 using Paramore.Services.CommandHandlers;
 
-namespace Paramore.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Tests.services.CommandProcessors.TestDoubles
 {
-    internal class MyImplicitHandler : RequestHandler<MyCommand>
+    internal class MyDoubleDecoratedHandler : RequestHandler<MyCommand>
     {
+        [MyValidationHandler(step:2)]
         [MyLoggingHandler(step:1)]
         public override MyCommand Handle(MyCommand request)
         {

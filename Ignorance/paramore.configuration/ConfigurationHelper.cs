@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Services.CommandHandlers;
+using Paramore.Services.CommandProcessors;
 using Paramore.Services.Commands;
 
 namespace Paramore.Configuration

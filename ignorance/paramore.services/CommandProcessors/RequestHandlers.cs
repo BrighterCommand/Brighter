@@ -17,11 +17,6 @@ namespace Paramore.Services.CommandProcessors
             this.handlers = handlers;
         }
 
-        internal RequestHandler<TRequest> First()
-        {
-            return (RequestHandler<TRequest>)handlers.GetValue(0);
-        }
-
         public IEnumerator<RequestHandler<TRequest>> GetEnumerator()
         {
             return handlers.Cast<RequestHandler<TRequest>>().GetEnumerator();
