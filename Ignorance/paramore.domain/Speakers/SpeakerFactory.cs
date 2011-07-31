@@ -1,4 +1,7 @@
+using System;
 using Paramore.Domain.Common;
+using Paramore.Infrastructure.Domain;
+using Version = Paramore.Infrastructure.Domain.Version;
 
 namespace Paramore.Domain.Speakers
 {
@@ -6,7 +9,7 @@ namespace Paramore.Domain.Speakers
     {
         public Speaker Create(SpeakerName speakerName, SpeakerBio speakerBio, PhoneNumber phoneNumber, EmailAddress emailAddress)
         {
-            return new Speaker();
+            return new Speaker(new Id(), new Version());
         }
     }
 }

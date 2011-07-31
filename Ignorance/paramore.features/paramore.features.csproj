@@ -32,6 +32,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Castle.Core, Version=1.2.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL" />
+    <Reference Include="Castle.MicroKernel, Version=2.1.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Lib\Castle.MicroKernel.dll</HintPath>
+    </Reference>
+    <Reference Include="Castle.Windsor, Version=2.1.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL" />
     <Reference Include="nunit.framework, Version=2.5.5.10112, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Lib\nunit.framework.dll</HintPath>
@@ -39,8 +45,9 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="TechTalk.SpecFlow">
-      <HintPath>..\Lib\TechTalk.SpecFlow.dll</HintPath>
+    <Reference Include="TechTalk.SpecFlow, Version=1.2.0.0, Culture=neutral, PublicKeyToken=0778194805d6db41, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files\TechTalk\SpecFlow\TechTalk.SpecFlow.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -51,8 +58,12 @@
       <DependentUpon>ScheduleAMeeting.feature</DependentUpon>
     </Compile>
     <Compile Include="Steps\ScheduleAMeetingSteps.cs" />
+    <Compile Include="Tools\FuzzyDateParser.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="ScheduleAMeeting.feature">
       <Generator>SpecFlowSingleFileGenerator</Generator>
       <LastGenOutput>ScheduleAMeeting.feature.cs</LastGenOutput>

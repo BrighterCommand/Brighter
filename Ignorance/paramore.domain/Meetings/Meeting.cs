@@ -1,30 +1,24 @@
 using System;
+using Paramore.Domain.Common;
 using Paramore.Infrastructure.Domain;
+using Version = Paramore.Infrastructure.Domain.Version;
 
 namespace Paramore.Domain.Meetings
 {
-    public class Meeting : IAggregateRoot  
+    public class Meeting : Aggregate  
     {
-        //private DateTime meeting;
-        //private Guid locationId;
-        //private Guid speakerId;
-        //private int capacity;
-        private Guid id = Guid.Empty;
-        private int version = 0;
+        private MeetingDate meeting;
+        private Id location;
+        private Id speaker;
+        private Capacity capacity;
 
-        public Guid SisoId
+        public Meeting(MeetingDate meeting, Id location, Id speaker, Capacity capacity, Version version, Id id)
+            :base(id, version)
         {
-            get { return id; }
-        }
-
-        public int Version
-        {
-            get { return version; }
-        }
-
-        public int Lock(int expectedVersion)
-        {
-            return 0;
+            this.meeting = meeting;
+            this.location = location;
+            this.speaker = speaker;
+            this.capacity = capacity;
         }
     }
 }

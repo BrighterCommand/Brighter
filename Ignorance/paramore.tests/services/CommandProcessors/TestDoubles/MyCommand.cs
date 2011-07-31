@@ -1,8 +1,8 @@
 using System;
-using Paramore.Services.Commands;
+using Paramore.Services.CommandProcessors;
 using Paramore.Services.Common;
 
-namespace Paramore.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Tests.services.CommandProcessors.TestDoubles
 {
     internal class MyCommand : ICommand, IRequest
     {

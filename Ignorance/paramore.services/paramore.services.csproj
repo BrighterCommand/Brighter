@@ -51,7 +51,7 @@
     <Compile Include="CommandHandlers\RequestHandler.cs" />
     <Compile Include="CommandProcessors\ChainofResponsibilityBuilder.cs" />
     <Compile Include="CommandHandlers\IHandleCommands.cs" />
-    <Compile Include="CommandHandlers\ScheduleMeetingCommandHandler.cs" />
+    <Compile Include="CommandHandlers\Meetings\ScheduleMeetingCommandHandler.cs" />
     <Compile Include="CommandProcessors\ChainPathExplorer.cs" />
     <Compile Include="CommandProcessors\Chains.cs" />
     <Compile Include="CommandProcessors\CommandProcessor.cs" />
@@ -60,15 +60,23 @@
     <Compile Include="CommandProcessors\ReflectionExtensionMethods\ReflectionExtensionMethods.cs" />
     <Compile Include="CommandProcessors\RequestHandlerRequiredDecoratorAttribute.cs" />
     <Compile Include="CommandProcessors\RequestHandlers.cs" />
-    <Compile Include="Commands\Command.cs" />
-    <Compile Include="Commands\ICommand.cs" />
+    <Compile Include="CommandProcessors\Command.cs" />
+    <Compile Include="CommandProcessors\ICommand.cs" />
     <Compile Include="Commands\Meeting\ScheduleMeetingCommand.cs" />
-    <Compile Include="Events\Event.cs" />
+    <Compile Include="CommandProcessors\Event.cs" />
     <Compile Include="Events\Meeting\MeetingScheduledEvent.cs" />
     <Compile Include="Common\IRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\paramore.domain\paramore.domain.csproj">
+      <Project>{41D1C746-9959-403C-956E-F4538CA72A83}</Project>
+      <Name>paramore.domain</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.infrastructure\paramore.infrastructure.csproj">
+      <Project>{A29960CC-7A28-4C4C-B52A-EEDF32168205}</Project>
+      <Name>paramore.infrastructure</Name>
+    </ProjectReference>
     <ProjectReference Include="..\paramore.utility\paramore.utility.csproj">
       <Project>{5A5A059A-133C-46DB-A959-826EEE178D64}</Project>
       <Name>paramore.utility</Name>

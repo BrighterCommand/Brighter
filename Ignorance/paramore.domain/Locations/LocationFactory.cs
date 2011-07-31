@@ -1,4 +1,5 @@
 using Paramore.Domain.Common;
+using Paramore.Infrastructure.Domain;
 
 namespace Paramore.Domain.Locations
 {
@@ -6,7 +7,7 @@ namespace Paramore.Domain.Locations
     {
         public Location Create(LocationName locationName, Address address, LocationMap map, LocationContact locationContact)
         {
-            return new Location();
+            return new Location(new Id(), new Version());
         }
     }
 }

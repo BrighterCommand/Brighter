@@ -1,4 +1,10 @@
 ﻿using System;
+using Castle.Windsor;
+using Castle.MicroKernel.Registration;
+using Paramore.Features.Tools;
+using Paramore.Services.CommandHandlers;
+using Paramore.Services.CommandProcessors;
+using Paramore.Services.Commands.Meeting;
 using TechTalk.SpecFlow;
 
 namespace Paramore.Features.Steps
@@ -6,51 +12,52 @@ namespace Paramore.Features.Steps
     [Binding]
     public class ScheduleAMeetingSteps
     {
-        private Guid speakerId;
-        private Guid locationId;
-        private DateTime meetingDate;
-        private int capacity;
-        private static readonly Guid MEETING_ID = Guid.NewGuid();
-        private const string DATA_BASE_FILE = "domainDataBase.db3";
+        private readonly ScheduleMeetingCommand scheduleMeetingCommand = new ScheduleMeetingCommand(Guid.NewGuid());
+        private CommandProcessor commandProcessor;
 
-
-        [Given(@"I have a speaker")]
-        public void GivenIHaveASpeaker()
+        [BeforeFeature]
+        public void SetUp()
         {
-            speakerId = Guid.NewGuid();
+            var container = new WindsorContainer();
+            container.Register(Component.For<IHandleRequests<ScheduleMeetingCommand>>().ImplementedBy<ScheduleMeetingCommandHandler>());
+            commandProcessor = new CommandProcessor(container);
         }
 
-        [Given(@"I have a venue")]
-        public void GivenIHaveAVenue()
+        [Given(@"I have a speaker (.*)")]
+        public void GivenIHaveASpeaker(string speakerName)
         {
-            locationId = Guid.NewGuid();
+            //lookup the speaker - just use SQL to do this, via a thin read layer - grab the Id
         }
 
-        [Given(@"I have a meeting date")]
-        public void GivenIHaveAMeetingDate()
+        [Given(@"I have a venue (.*)")]
+        public void GivenIHaveAVenue(string venueName)
         {
-            meetingDate = DateTime.Now;
+            //lookkup the venue - just use SQL to do this, via a thin read layer - grab the id
         }
 
-        [Given(@"I have a capacity")]
-        public void GivenIHaveACapacity()
+        [Given(@"I have a meeting date (.*)")]
+        public void GivenIHaveAMeetingDate(string dateOfMeeting)
         {
-            capacity = 100;
+            scheduleMeetingCommand.On = FuzzyDateTime.Parse(dateOfMeeting);
+        }
+
+        [Given(@"I have a capacity ((\d+))")]
+        public void GivenIHaveACapacity(int seats)
+        {
+            scheduleMeetingCommand.Capacity = seats;
         }
  
 
         [When(@"I schedule a meeting")]
         public void WhenIScheduleAMeeting()
         {
-            //var scheduleMeetingCommand = new ScheduleMeetingCommand(MEETING_ID, meetingDate, locationId, speakerId, capacity);
+            
 
             //new DomainDatabaseBootStrapper().ReCreateDatabaseSchema();
 
             //var sqliteConnectionString = string.Format("Data Source={0}", DATA_BASE_FILE);
 
-            //handler = new ScheduleMeetingCommandHandler(repository);
-
-            //bus.Publish(scheduleMeetingCommand);
+            commandProcessor.Send(scheduleMeetingCommand);
 
             //how do we publish to report, directly or via command handler. Looks like by using transaction handler we go through unit of work whose commit method fires events to BUS
             //so if we have event and then save they get re-ublished and report canpick up

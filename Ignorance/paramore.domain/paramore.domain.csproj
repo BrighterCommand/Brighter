@@ -37,6 +37,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common\Aggregate.cs" />
     <Compile Include="Common\EmailAddress.cs" />
     <Compile Include="Common\PhoneNumber.cs" />
     <Compile Include="Common\Address.cs" />
@@ -46,7 +47,10 @@
     <Compile Include="Locations\LocationFactory.cs" />
     <Compile Include="Locations\LocationMap.cs" />
     <Compile Include="Locations\LocationName.cs" />
+    <Compile Include="Meetings\Capacity.cs" />
+    <Compile Include="Meetings\IMeetingFactory.cs" />
     <Compile Include="Meetings\Meeting.cs" />
+    <Compile Include="Meetings\MeetingDate.cs" />
     <Compile Include="Meetings\MeetingFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Speakers\Speaker.cs" />

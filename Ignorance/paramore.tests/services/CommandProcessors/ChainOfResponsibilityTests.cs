@@ -4,9 +4,9 @@ using Castle.Windsor;
 using Machine.Specifications;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandProcessors;
-using Paramore.Tests.CommandProcessors.TestDoubles;
+using Paramore.Tests.services.CommandProcessors.TestDoubles;
 
-namespace Paramore.Tests.CommandProcessors
+namespace Paramore.Tests.services.CommandProcessors
 {
     [Subject(typeof(ChainofResponsibilityBuilder<>))]
     public class When_Finding_A_Handler_For_A_Command

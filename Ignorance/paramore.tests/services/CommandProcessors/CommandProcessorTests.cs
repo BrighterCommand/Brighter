@@ -4,9 +4,9 @@ using Castle.Windsor;
 using Machine.Specifications;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandProcessors;
-using Paramore.Tests.CommandProcessors.TestDoubles;
+using Paramore.Tests.services.CommandProcessors.TestDoubles;
 
-namespace Paramore.Tests.CommandProcessors
+namespace Paramore.Tests.services.CommandProcessors
 {
     [Subject("Basic send of a command")]
     public class When_sending_a_command_to_the_processor

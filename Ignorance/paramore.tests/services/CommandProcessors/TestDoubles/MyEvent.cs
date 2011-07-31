@@ -1,7 +1,7 @@
 using System;
-using Paramore.Services.Events;
+using Paramore.Services.CommandProcessors;
 
-namespace Paramore.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Tests.services.CommandProcessors.TestDoubles
 {
     internal class MyEvent : Event
     {
