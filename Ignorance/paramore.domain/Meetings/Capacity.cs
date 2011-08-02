@@ -9,6 +9,11 @@ namespace Paramore.Domain.Meetings
             this.capacity = capacity;
         }
 
+        public static implicit operator int(Capacity capacity)
+        {
+            return capacity.capacity;
+        }
+
         public bool Equals(Capacity other)
         {
             if (ReferenceEquals(null, other)) return false;
