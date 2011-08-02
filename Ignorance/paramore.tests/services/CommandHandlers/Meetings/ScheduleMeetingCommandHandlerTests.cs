@@ -15,7 +15,7 @@ namespace Paramore.Tests.services.CommandHandlers.Meetings
         static ScheduleMeetingCommandHandler scheduleMeetingCommandHandler;
         static ScheduleMeetingCommand newMeetingRequest;
         static IRepository<Meeting> repository;
-        static IMeetingFactory factory;
+        static IScheduler factory;
         static readonly Guid id = Guid.NewGuid();
         static readonly DateTime @on = DateTime.Today;
         static readonly Guid location = Guid.NewGuid();
@@ -25,12 +25,12 @@ namespace Paramore.Tests.services.CommandHandlers.Meetings
         Establish context = () =>
         {
             repository = A.Fake<IRepository<Meeting>>();
-            factory = A.Fake<IMeetingFactory>();
+            factory = A.Fake<IScheduler>();
 
             newMeetingRequest = new ScheduleMeetingCommand(id, @on, location, speaker, capacity);
 
             A.CallTo(() => factory.Schedule(new Id(id), new MeetingDate(@on), new Id(location), new Id(speaker), new Capacity(capacity)))
-                .Returns(new Meeting(new MeetingDate(@on), new Id(location), new Id(speaker), new Capacity(capacity), new Version(), new Id(id)));
+                .Returns(new Meeting(new MeetingDate(@on), new Id(location), new Id(speaker), new Tickets(new Capacity(capacity)), new Version(), new Id(id)));
 
             scheduleMeetingCommandHandler = new ScheduleMeetingCommandHandler(repository);                                        
         };

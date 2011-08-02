@@ -11,4 +11,4 @@ Scenario: Schedule a meeting
 	When I schedule a meeting
 	Then the new meeting should be open for registration
 	And the date should be "10-AUG-2011"
-	And 100 tickets should be available
+	And 150 tickets should be available

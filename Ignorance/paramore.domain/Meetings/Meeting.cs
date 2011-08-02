@@ -10,15 +10,15 @@ namespace Paramore.Domain.Meetings
         private MeetingDate meeting;
         private Id location;
         private Id speaker;
-        private Capacity capacity;
+        private Tickets tickets;
 
-        public Meeting(MeetingDate meeting, Id location, Id speaker, Capacity capacity, Version version, Id id)
+        public Meeting(MeetingDate meeting, Id location, Id speaker, Tickets tickets, Version version, Id id)
             :base(id, version)
         {
             this.meeting = meeting;
             this.location = location;
             this.speaker = speaker;
-            this.capacity = capacity;
+            this.tickets = tickets;
         }
     }
 }
