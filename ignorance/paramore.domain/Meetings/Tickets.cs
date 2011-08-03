@@ -1,8 +1,9 @@
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Paramore.Domain.Meetings
 {
-    public class Tickets
+    public class Tickets : IEnumerable<Ticket>
     {
         private readonly IList<Ticket> _tickets = new List<Ticket>();
 
@@ -17,6 +18,16 @@ namespace Paramore.Domain.Meetings
         public int Count
         {
             get { return _tickets.Count; }
+        }
+
+        public IEnumerator<Ticket> GetEnumerator()
+        {
+            return _tickets.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

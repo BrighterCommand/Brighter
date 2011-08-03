@@ -48,12 +48,15 @@
     <Compile Include="Locations\LocationMap.cs" />
     <Compile Include="Locations\LocationName.cs" />
     <Compile Include="Meetings\Capacity.cs" />
+    <Compile Include="Meetings\FiftyPercentOverbookingPolicy.cs" />
     <Compile Include="Meetings\IBookingPolicy.cs" />
     <Compile Include="Meetings\IScheduler.cs" />
+    <Compile Include="Meetings\ITicketIssuer.cs" />
     <Compile Include="Meetings\Meeting.cs" />
     <Compile Include="Meetings\MeetingDate.cs" />
     <Compile Include="Meetings\Scheduler.cs" />
     <Compile Include="Meetings\Ticket.cs" />
+    <Compile Include="Meetings\TicketIssuer.cs" />
     <Compile Include="Meetings\Tickets.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Speakers\Speaker.cs" />

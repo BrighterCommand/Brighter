@@ -2,18 +2,18 @@ using Paramore.Infrastructure.Domain;
 using Version = Paramore.Infrastructure.Domain.Version;
 namespace Paramore.Domain.Meetings
 {
-    public class Scheduler : IScheduler
+    internal class Scheduler : IScheduler
     {
-        private readonly IBookingPolicy _bookingPolicy;
+        private readonly IOverbookingPolicy _overbookingPolicy;
 
-        public Scheduler(IBookingPolicy bookingPolicy)
+        public Scheduler(IOverbookingPolicy _overbookingPolicy)
         {
-            _bookingPolicy = bookingPolicy;
+            this._overbookingPolicy = _overbookingPolicy;
         }
 
         public Meeting Schedule(Id meetingId, MeetingDate on, Id location, Id speaker, Capacity capacity)
         {
-            var tickets = _bookingPolicy.AllocateTickets(capacity);
+            var tickets = _overbookingPolicy.AllocateTickets(capacity);
             
             return new Meeting(meeting: on, location: location, speaker: speaker, tickets: tickets, version: new Version(), id: meetingId);
 

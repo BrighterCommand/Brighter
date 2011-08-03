@@ -11,22 +11,22 @@ namespace Paramore.Tests.domain.Meetings
     {
         static Scheduler scheduler;
         static Capacity capacity;
-        static IBookingPolicy bookingPolicy;
+        static IOverbookingPolicy _overbookingPolicy;
 
         Establish context = () =>
                                 {
                                     capacity = new Capacity(10);
-                                    bookingPolicy = A.Fake<IBookingPolicy>();
+                                    _overbookingPolicy = A.Fake<IOverbookingPolicy>();
                                     var tickets = new Tickets(capacity);
-                                    A.CallTo(() => bookingPolicy.AllocateTickets(capacity)).Returns(tickets);
+                                    A.CallTo(() => _overbookingPolicy.AllocateTickets(capacity)).Returns(tickets);
 
-                                    scheduler = new Scheduler(bookingPolicy);
+                                    scheduler = new Scheduler(_overbookingPolicy);
 
                                 };
 
         Because of = () => scheduler.Schedule(new Id(Guid.NewGuid()), new MeetingDate(DateTime.Today), new Id(Guid.NewGuid()), new Id(Guid.NewGuid()), capacity);
 
-        It should_call_the_booking_policy_to_allocate_tickets = () => A.CallTo(() => bookingPolicy.AllocateTickets(capacity)).MustHaveHappened();
+        It should_call_the_booking_policy_to_allocate_tickets = () => A.CallTo(() => _overbookingPolicy.AllocateTickets(capacity)).MustHaveHappened();
 
     }
 }
