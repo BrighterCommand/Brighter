@@ -57,7 +57,9 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="domain\Meetings\OverbookingPolicyTests.cs" />
     <Compile Include="domain\Meetings\SchedulerTests.cs" />
+    <Compile Include="domain\Meetings\TicketIssuerTests.cs" />
     <Compile Include="services\CommandHandlers\Meetings\ScheduleMeetingCommandHandlerTests.cs" />
     <Compile Include="services\CommandProcessors\ChainOfResponsibilityTests.cs" />
     <Compile Include="services\CommandProcessors\CommandProcessorTests.cs" />
