@@ -3,6 +3,7 @@ using Castle.Windsor;
 using Castle.MicroKernel.Registration;
 using Paramore.Features.Tools;
 using Paramore.Services.CommandHandlers;
+using Paramore.Services.CommandHandlers.Meetings;
 using Paramore.Services.CommandProcessors;
 using Paramore.Services.Commands.Meeting;
 using TechTalk.SpecFlow;

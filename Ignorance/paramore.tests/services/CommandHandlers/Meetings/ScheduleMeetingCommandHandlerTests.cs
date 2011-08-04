@@ -4,6 +4,7 @@ using Machine.Specifications;
 using Paramore.Domain.Meetings;
 using Paramore.Infrastructure.Domain;
 using Paramore.Services.CommandHandlers;
+using Paramore.Services.CommandHandlers.Meetings;
 using Paramore.Services.Commands.Meeting;
 using Version = Paramore.Infrastructure.Domain.Version;
 
@@ -32,7 +33,7 @@ namespace Paramore.Tests.services.CommandHandlers.Meetings
             A.CallTo(() => factory.Schedule(new Id(id), new MeetingDate(@on), new Id(location), new Id(speaker), new Capacity(capacity)))
                 .Returns(new Meeting(new MeetingDate(@on), new Id(location), new Id(speaker), new Tickets(new Capacity(capacity)), new Version(), new Id(id)));
 
-            scheduleMeetingCommandHandler = new ScheduleMeetingCommandHandler(repository);                                        
+            scheduleMeetingCommandHandler = new ScheduleMeetingCommandHandler(repository, factory);                                        
         };
 
         Because of = () => scheduleMeetingCommandHandler.Handle(command: newMeetingRequest);
