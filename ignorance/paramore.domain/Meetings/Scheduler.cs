@@ -2,7 +2,7 @@ using Paramore.Infrastructure.Domain;
 using Version = Paramore.Infrastructure.Domain.Version;
 namespace Paramore.Domain.Meetings
 {
-    internal class Scheduler : IScheduler
+    public class Scheduler : IScheduler
     {
         private readonly IOverbookingPolicy _overbookingPolicy;
 

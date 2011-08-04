@@ -2,7 +2,7 @@ using System;
 
 namespace Paramore.Domain.Meetings
 {
-    internal class FiftyPercentOverbookingPolicy : IOverbookingPolicy
+    public class FiftyPercentOverbookingPolicy : IOverbookingPolicy
     {
         private readonly ITicketIssuer _ticketIssuer;
 
@@ -13,8 +13,8 @@ namespace Paramore.Domain.Meetings
 
         public Tickets AllocateTickets(Capacity capacity)
         {
-            var totalTickets = new Capacity(Convert.ToInt32((int)capacity * 1.5));
-            return _ticketIssuer.Issue(capacity);
+            var total = new Capacity(Convert.ToInt32((int)capacity * 1.5));
+            return _ticketIssuer.Issue(total);
         }
     }
 }
