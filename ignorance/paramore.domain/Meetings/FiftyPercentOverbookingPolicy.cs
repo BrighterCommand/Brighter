@@ -2,11 +2,11 @@ using System;
 
 namespace Paramore.Domain.Meetings
 {
-    public class FiftyPercentOverbookingPolicy : IOverbookingPolicy
+    public class FiftyPercentOverbookingPolicy : IAmAnOverbookingPolicy
     {
-        private readonly ITicketIssuer _ticketIssuer;
+        private readonly IIssueTickets _ticketIssuer;
 
-        public FiftyPercentOverbookingPolicy(ITicketIssuer ticketIssuer)
+        public FiftyPercentOverbookingPolicy(IIssueTickets ticketIssuer)
         {
             _ticketIssuer = ticketIssuer;
         }

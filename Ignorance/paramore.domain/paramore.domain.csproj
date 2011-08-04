@@ -49,9 +49,9 @@
     <Compile Include="Locations\LocationName.cs" />
     <Compile Include="Meetings\Capacity.cs" />
     <Compile Include="Meetings\FiftyPercentOverbookingPolicy.cs" />
-    <Compile Include="Meetings\IBookingPolicy.cs" />
+    <Compile Include="Meetings\IAmAnOverbookingPolicy.cs" />
     <Compile Include="Meetings\IScheduler.cs" />
-    <Compile Include="Meetings\ITicketIssuer.cs" />
+    <Compile Include="Meetings\IIssueTickets.cs" />
     <Compile Include="Meetings\Meeting.cs" />
     <Compile Include="Meetings\MeetingDate.cs" />
     <Compile Include="Meetings\Scheduler.cs" />

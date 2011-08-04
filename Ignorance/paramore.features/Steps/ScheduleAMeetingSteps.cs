@@ -1,7 +1,10 @@
 ﻿using System;
 using Castle.Windsor;
 using Castle.MicroKernel.Registration;
+using Paramore.Domain.Meetings;
 using Paramore.Features.Tools;
+using Paramore.Infrastructure.Domain;
+using Paramore.Infrastructure.Raven;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandHandlers.Meetings;
 using Paramore.Services.CommandProcessors;
@@ -14,13 +17,15 @@ namespace Paramore.Features.Steps
     public class ScheduleAMeetingSteps
     {
         private readonly ScheduleMeetingCommand scheduleMeetingCommand = new ScheduleMeetingCommand(Guid.NewGuid());
-        private CommandProcessor commandProcessor;
+        private static CommandProcessor commandProcessor;
 
         [BeforeFeature]
-        public void SetUp()
+        public static void SetUp()
         {
             var container = new WindsorContainer();
-            container.Register(Component.For<IHandleRequests<ScheduleMeetingCommand>>().ImplementedBy<ScheduleMeetingCommandHandler>());
+            container.Register(Component.For<IHandleRequests<ScheduleMeetingCommand>>().ImplementedBy<ScheduleMeetingCommandHandler>().LifeStyle.Transient);
+            container.Register(Component.For<IAmAUnitOfWorkFactory>().ImplementedBy<UnitOfWorkFactory>().LifeStyle.Singleton);
+            container.Register(Component.For<IRepository<Meeting, MeetingDTO>>().ImplementedBy<Repository<Meeting, MeetingDTO>>().LifeStyle.Transient);
             commandProcessor = new CommandProcessor(container);
         }
 
@@ -52,12 +57,6 @@ namespace Paramore.Features.Steps
         [When(@"I schedule a meeting")]
         public void WhenIScheduleAMeeting()
         {
-            
-
-            //new DomainDatabaseBootStrapper().ReCreateDatabaseSchema();
-
-            //var sqliteConnectionString = string.Format("Data Source={0}", DATA_BASE_FILE);
-
             commandProcessor.Send(scheduleMeetingCommand);
 
             //how do we publish to report, directly or via command handler. Looks like by using transaction handler we go through unit of work whose commit method fires events to BUS

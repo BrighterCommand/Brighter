@@ -33,19 +33,27 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="SisoDb">
-      <HintPath>..\Lib\SisoDb.dll</HintPath>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Raven.Client.Lightweight">
+      <HintPath>..\Lib\Raven.Client.Lightweight.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Domain\Id.cs" />
+    <Compile Include="Domain\IUnitOfWork.cs" />
     <Compile Include="Domain\Version.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Domain\IAggregateRoot.cs" />
     <Compile Include="Domain\IEntity.cs" />
     <Compile Include="Domain\IRepository.cs" />
+    <Compile Include="Raven\BootstrapRaven.cs" />
+    <Compile Include="Raven\IAmADataObject.cs" />
+    <Compile Include="Raven\IAmAUnitOfWorkFactory.cs" />
+    <Compile Include="Raven\RavenSessionFactory.cs" />
+    <Compile Include="Raven\Repository.cs" />
+    <Compile Include="Raven\UnitOfWork.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Domain\Repositories\" />

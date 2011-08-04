@@ -11,12 +11,12 @@ namespace Paramore.Tests.domain.Meetings
     {
         static Scheduler scheduler;
         static Capacity capacity;
-        static IOverbookingPolicy _overbookingPolicy;
+        static IAmAnOverbookingPolicy _overbookingPolicy;
 
         Establish context = () =>
                                 {
                                     capacity = new Capacity(10);
-                                    _overbookingPolicy = A.Fake<IOverbookingPolicy>();
+                                    _overbookingPolicy = A.Fake<IAmAnOverbookingPolicy>();
                                     var tickets = new Tickets(capacity);
                                     A.CallTo(() => _overbookingPolicy.AllocateTickets(capacity)).Returns(tickets);
 

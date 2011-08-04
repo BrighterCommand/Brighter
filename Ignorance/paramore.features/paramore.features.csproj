@@ -33,6 +33,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Castle.Core, Version=1.2.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL" />
+    <Reference Include="Castle.DynamicProxy2">
+      <HintPath>..\Lib\Castle.DynamicProxy2.dll</HintPath>
+    </Reference>
     <Reference Include="Castle.MicroKernel, Version=2.1.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Lib\Castle.MicroKernel.dll</HintPath>
@@ -69,6 +72,14 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\paramore.domain\paramore.domain.csproj">
+      <Project>{41D1C746-9959-403C-956E-F4538CA72A83}</Project>
+      <Name>paramore.domain</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.infrastructure\paramore.infrastructure.csproj">
+      <Project>{A29960CC-7A28-4C4C-B52A-EEDF32168205}</Project>
+      <Name>paramore.infrastructure</Name>
+    </ProjectReference>
     <ProjectReference Include="..\paramore.services\paramore.services.csproj">
       <Project>{A056F023-D432-42AE-8029-BB6B84828704}</Project>
       <Name>paramore.services</Name>
