@@ -1,10 +1,11 @@
 using System;
 using Paramore.Infrastructure.Domain;
+using Paramore.Infrastructure.Raven;
 using Version = Paramore.Infrastructure.Domain.Version;
 
 namespace Paramore.Domain.Common
 {
-    public class Aggregate : IAggregateRoot
+    public abstract class Aggregate<TDataObject> : IAmAnAggregateRoot<TDataObject> where TDataObject : IAmADataObject
     {
         protected Id id;
         protected Version version;
@@ -20,10 +21,7 @@ namespace Paramore.Domain.Common
             get { return id; }
         }
 
-        public Guid SisoId
-        {
-            get { return id; }
-        }
+        public abstract TDataObject ToDTO();
 
         public Version Version
         {

@@ -1,6 +1,6 @@
 namespace Paramore.Domain.Meetings
 {
-    public interface ITicketIssuer
+    public interface IIssueTickets
     {
         Tickets Issue(Capacity capacity);
     }

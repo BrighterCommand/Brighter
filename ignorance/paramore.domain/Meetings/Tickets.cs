@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Paramore.Domain.Meetings
 {
@@ -13,6 +14,11 @@ namespace Paramore.Domain.Meetings
             {
                 _tickets.Add(new Ticket());
             }
+        }
+
+        public Tickets(IEnumerable<TicketDTO> tickets)
+        {
+            _tickets = tickets.Select((ticket) => new Ticket()).ToList();
         }
 
         public int Count
@@ -29,5 +35,11 @@ namespace Paramore.Domain.Meetings
         {
             return GetEnumerator();
         }
+
+        public List<TicketDTO> ToDTO()
+        {
+            return _tickets.Select((ticket) => ticket.ToDTO()).ToList();
+        }
     }
+
 }

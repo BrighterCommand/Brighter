@@ -3,7 +3,7 @@ using FakeItEasy;
 using Machine.Specifications;
 using Paramore.Domain.Meetings;
 using Paramore.Infrastructure.Domain;
-using Paramore.Services.CommandHandlers;
+using Paramore.Infrastructure.Raven;
 using Paramore.Services.CommandHandlers.Meetings;
 using Paramore.Services.Commands.Meeting;
 using Version = Paramore.Infrastructure.Domain.Version;
@@ -15,8 +15,10 @@ namespace Paramore.Tests.services.CommandHandlers.Meetings
     {
         static ScheduleMeetingCommandHandler scheduleMeetingCommandHandler;
         static ScheduleMeetingCommand newMeetingRequest;
-        static IRepository<Meeting> repository;
-        static IScheduler factory;
+        static IRepository<Meeting, MeetingDTO> repository;
+        static IScheduler scheduler;
+        static IAmAUnitOfWorkFactory uoWFactory;
+        static IUnitOfWork uow;
         static readonly Guid id = Guid.NewGuid();
         static readonly DateTime @on = DateTime.Today;
         static readonly Guid location = Guid.NewGuid();
@@ -25,15 +27,19 @@ namespace Paramore.Tests.services.CommandHandlers.Meetings
 
         Establish context = () =>
         {
-            repository = A.Fake<IRepository<Meeting>>();
-            factory = A.Fake<IScheduler>();
+            repository = A.Fake<IRepository<Meeting, MeetingDTO>>();
+            scheduler = A.Fake<IScheduler>();
+            uoWFactory = A.Fake<IAmAUnitOfWorkFactory>();
+            uow = A.Fake<IUnitOfWork>();
 
             newMeetingRequest = new ScheduleMeetingCommand(id, @on, location, speaker, capacity);
 
-            A.CallTo(() => factory.Schedule(new Id(id), new MeetingDate(@on), new Id(location), new Id(speaker), new Capacity(capacity)))
+            A.CallTo(() => scheduler.Schedule(new Id(id), new MeetingDate(@on), new Id(location), new Id(speaker), new Capacity(capacity)))
                 .Returns(new Meeting(new MeetingDate(@on), new Id(location), new Id(speaker), new Tickets(new Capacity(capacity)), new Version(), new Id(id)));
 
-            scheduleMeetingCommandHandler = new ScheduleMeetingCommandHandler(repository, factory);                                        
+            A.CallTo(() => uoWFactory.CreateUnitOfWork()).Returns(uow);
+
+            scheduleMeetingCommandHandler = new ScheduleMeetingCommandHandler(scheduler, repository, uoWFactory);                                        
         };
 
         Because of = () => scheduleMeetingCommandHandler.Handle(command: newMeetingRequest);
@@ -41,6 +47,13 @@ namespace Paramore.Tests.services.CommandHandlers.Meetings
         It should_add_a_meeting_to_the_repository = () => A.CallTo(() => repository.Add(A<Meeting>.Ignored)).MustHaveHappened();
 
         It should_ask_the_factory_to_create_an_instance_of_a_Meeting = () => 
-            A.CallTo(() => factory.Schedule(new Id(id), new MeetingDate(@on), new Id(location), new Id(speaker), new Capacity(capacity))).MustHaveHappened();
+            A.CallTo(() => scheduler.Schedule(new Id(id), new MeetingDate(@on), new Id(location), new Id(speaker), new Capacity(capacity))).MustHaveHappened();
+
+        It should_ask_the_session_factory_for_a_unit_of_work =
+            () => A.CallTo(() => uoWFactory.CreateUnitOfWork()).MustHaveHappened();
+
+        It should_commit_the_unit_of_work =
+            () => A.CallTo(() => uow.Commit()).MustHaveHappened();
+
     }
 }

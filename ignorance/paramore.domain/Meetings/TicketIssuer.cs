@@ -1,6 +1,6 @@
 namespace Paramore.Domain.Meetings
 {
-    public class TicketIssuer : ITicketIssuer
+    public class TicketIssuer : IIssueTickets
     {
         public Tickets Issue(Capacity capacity)
         {

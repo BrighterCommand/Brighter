@@ -1,10 +1,11 @@
 using Paramore.Domain.Common;
 using Paramore.Infrastructure.Domain;
+using Paramore.Infrastructure.Raven;
 using Version = Paramore.Infrastructure.Domain.Version;
 
 namespace Paramore.Domain.Speakers
 {
-    public class Speaker : Aggregate
+    public class Speaker : Aggregate<SpeakerDTO>
     {
         //private SpeakerBio bio;
         //private PhoneNumber phoneNumber;
@@ -13,5 +14,14 @@ namespace Paramore.Domain.Speakers
         public Speaker(Id id, Version version) : base(id, version)
         {
         }
+
+        public override SpeakerDTO ToDTO()
+        {
+            throw new System.NotImplementedException();
+        }
+    }
+
+    public class SpeakerDTO : IAmADataObject
+    {
     }
 }

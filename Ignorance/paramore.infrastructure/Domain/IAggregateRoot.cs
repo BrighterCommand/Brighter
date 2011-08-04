@@ -1,11 +1,10 @@
-﻿using System;
-using Version = Paramore.Infrastructure.Domain.Version;
+﻿using Paramore.Infrastructure.Raven;
 
 namespace Paramore.Infrastructure.Domain
 {
-    public interface IAggregateRoot : IEntity
+    public interface IAmAnAggregateRoot<out T> : IEntity<T> where T : IAmADataObject
     {
-        Version Version { get; }
         Version Lock(Version expectedVersion);
+        Version Version { get; }
     }
 }

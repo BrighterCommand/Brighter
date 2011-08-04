@@ -8,11 +8,11 @@ namespace Paramore.Tests.domain.Meetings
     public class OverbookingPolicyTests
     {
         static FiftyPercentOverbookingPolicy bookingPolicy;
-        static ITicketIssuer ticketIssuer;
+        static IIssueTickets ticketIssuer;
 
         Establish context = () =>
         {
-            ticketIssuer = A.Fake<ITicketIssuer>();
+            ticketIssuer = A.Fake<IIssueTickets>();
             A.CallTo(() => ticketIssuer.Issue(new Capacity(150))).Returns(new Tickets(new Capacity(150)));    
             bookingPolicy = new FiftyPercentOverbookingPolicy(ticketIssuer);
         };
