@@ -7,11 +7,11 @@ namespace Paramore.Domain.Speakers
 {
     public class Speaker : Aggregate<SpeakerDTO>
     {
-        //private SpeakerBio bio;
-        //private PhoneNumber phoneNumber;
-        //private EmailAddress emailAddress;
-        //private SpeakerName speakerName;
-        public Speaker(Id id, Version version) : base(id, version)
+        private SpeakerBio bio;
+        private PhoneNumber phoneNumber;
+        private EmailAddress emailAddress;
+        private Name _name;
+        public Speaker(Id id, Name name, SpeakerBio bio, Version version) : base(id, version)
         {
         }
 
