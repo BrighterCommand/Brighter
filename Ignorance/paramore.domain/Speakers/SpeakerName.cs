@@ -1,10 +1,10 @@
 namespace Paramore.Domain.Speakers
 {
-    public class SpeakerName
+    public class Name
     {
         public string Name { get; private set;}
 
-        public SpeakerName(string name)
+        public Name(string name)
         {
             this.Name = name;
         }

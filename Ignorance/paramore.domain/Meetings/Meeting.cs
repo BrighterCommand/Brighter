@@ -39,11 +39,6 @@ namespace Paramore.Domain.Meetings
         }
     }
 
-    #region MeetingDTO
-    
-    //If we want to encapsulate and still use RavenDb's LINQ query support we need to seperate the document structure from the entity
-    //This goes 'over-the-wire' to RavenDb if we don't host anyway
-
     public class MeetingDTO : IAmADataObject
     {
         public MeetingDTO(Id meetingId, MeetingDate meeting, Id location, Id speaker, IEnumerable<TicketDTO> tickets, Version version)
@@ -63,6 +58,4 @@ namespace Paramore.Domain.Meetings
         public List<TicketDTO> Tickets { get; set; }
         public int Version { get; set; }
     }
-
-    #endregion
 }

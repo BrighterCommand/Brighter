@@ -7,7 +7,7 @@ namespace Paramore.Domain.Speakers
 {
     public class SpeakerFactory
     {
-        public Speaker Create(SpeakerName speakerName, SpeakerBio speakerBio, PhoneNumber phoneNumber, EmailAddress emailAddress)
+        public Speaker Create(Name _name, SpeakerBio speakerBio, PhoneNumber phoneNumber, EmailAddress emailAddress)
         {
             return new Speaker(new Id(), new Version());
         }
