@@ -38,7 +38,8 @@ namespace Paramore.Services.CommandProcessors
 
         private RequestHandlers<TRequest> GetHandlers()
         {
-            return new RequestHandlers<TRequest>(container.ResolveAll(implicithandlerType));
+            var handlers = container.ResolveAll(implicithandlerType);
+            return new RequestHandlers<TRequest>(handlers);
         }
 
         private IHandleRequests<TRequest> BuildChain(RequestHandler<TRequest> implicitHandler)

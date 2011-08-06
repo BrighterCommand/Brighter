@@ -11,8 +11,13 @@ namespace Paramore.Domain.Speakers
         private PhoneNumber phoneNumber;
         private EmailAddress emailAddress;
         private Name _name;
-        public Speaker(Id id, Name name, SpeakerBio bio, Version version) : base(id, version)
+
+        public Speaker(Id id, Version version, SpeakerBio bio, PhoneNumber phoneNumber, EmailAddress emailAddress, Name name) : base(id, version)
         {
+            this.bio = bio;
+            this.phoneNumber = phoneNumber;
+            this.emailAddress = emailAddress;
+            _name = name;
         }
 
         public override SpeakerDTO ToDTO()

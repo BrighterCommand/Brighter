@@ -1,10 +1,11 @@
 ﻿using System;
 using Paramore.Services.CommandProcessors;
+using Paramore.Services.Common;
 
 namespace Paramore.Services.Commands.Meeting
 {
     [Serializable]
-    public class ScheduleMeetingCommand : Command
+    public class ScheduleMeetingCommand : Command, IRequest
     {
         public DateTime On { get; set; }
         public Guid LocationId { get; set; }

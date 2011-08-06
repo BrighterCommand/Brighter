@@ -2,6 +2,8 @@
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using Machine.Specifications;
+using Paramore.Infrastructure.Domain;
+using Paramore.Infrastructure.Raven;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandProcessors;
 using Paramore.Tests.services.CommandProcessors.TestDoubles;
@@ -36,6 +38,38 @@ namespace Paramore.Tests.services.CommandProcessors
             Chain_Of_Responsibility.DescribePath(chainpathExplorer);
             return chainpathExplorer;
         }
+    }
+
+    [Subject(typeof(ChainofResponsibilityBuilder<>))]
+    public class When_Finding_A_Hander_That_Has_Dependencies
+    {
+        private static ChainofResponsibilityBuilder<MyCommand> Chain_Builder;
+        private static IHandleRequests<MyCommand> Chain_Of_Responsibility;
+
+        Establish context = () =>
+        {
+            var container = new WindsorContainer();
+
+            container.Register(
+                    Component.For<IUnitOfWork>().ImplementedBy<MyUnitOfWork>(),
+                    Component.For<IRepository<MyEntity, MyEntityDTO>>().ImplementedBy<Repository<MyEntity, MyEntityDTO>>(),
+                    Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyDependentCommandHandler>()
+                );
+
+            Chain_Builder = new ChainofResponsibilityBuilder<MyCommand>(container);
+        };
+
+        Because of = () => Chain_Of_Responsibility = Chain_Builder.Build().First();
+
+        It should_return_the_command_handler_as_the_implicit_handler = () => Chain_Of_Responsibility.ShouldBeOfType(typeof(MyDependentCommandHandler));
+        It should_be_the_only_element_in_the_chain = () => GetChain().ToString().ShouldEqual("MyDependentCommandHandler|");
+
+        private static ChainPathExplorer GetChain()
+        {
+            var chainpathExplorer = new ChainPathExplorer();
+            Chain_Of_Responsibility.DescribePath(chainpathExplorer);
+            return chainpathExplorer;
+        }      
     }
 
     [Subject(typeof(ChainofResponsibilityBuilder<>))]

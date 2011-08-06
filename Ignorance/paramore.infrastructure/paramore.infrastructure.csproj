@@ -51,7 +51,7 @@
     <Compile Include="Raven\BootstrapRaven.cs" />
     <Compile Include="Raven\IAmADataObject.cs" />
     <Compile Include="Raven\IAmAUnitOfWorkFactory.cs" />
-    <Compile Include="Raven\RavenSessionFactory.cs" />
+    <Compile Include="Raven\UnitOfWorkFactory.cs" />
     <Compile Include="Raven\Repository.cs" />
     <Compile Include="Raven\UnitOfWork.cs" />
   </ItemGroup>
