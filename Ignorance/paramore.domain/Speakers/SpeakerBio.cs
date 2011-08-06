@@ -2,11 +2,16 @@ namespace Paramore.Domain.Speakers
 {
     public class SpeakerBio
     {
-        public string Biography { get; private set; }
+        private string bio; 
 
         public SpeakerBio(string biography)
         {
-            this.Biography = biography;
+            this.bio = biography;
+        }
+
+        public static implicit operator string(SpeakerBio speakerBio)
+        {
+            return speakerBio.bio;
         }
     }
 }

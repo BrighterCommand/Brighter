@@ -2,11 +2,16 @@ namespace Paramore.Domain.Common
 {
     public class PhoneNumber
     {
-        public string Number { get; private set; }
+        private string number;
 
         public PhoneNumber(string number)
         {
-            this.Number = number;
+            this.number = number;
+        }
+
+        public static implicit operator string(PhoneNumber phoneNumber)
+        {
+            return phoneNumber.number;
         }
     }
 }
