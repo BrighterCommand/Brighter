@@ -3,7 +3,10 @@ using Castle.MicroKernel;
 using Castle.MicroKernel.LifecycleConcerns;
 using Castle.Windsor;
 using Castle.MicroKernel.Registration;
+using Paramore.Domain.Common;
 using Paramore.Domain.Meetings;
+using Paramore.Domain.Speakers;
+using Paramore.Domain.Venues;
 using Paramore.Features.Tools;
 using Paramore.Infrastructure.Domain;
 using Paramore.Infrastructure.Raven;
@@ -15,6 +18,7 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using TechTalk.SpecFlow;
+using Version = Paramore.Infrastructure.Domain.Version;
 
 namespace Paramore.Features.Steps
 {
@@ -24,6 +28,8 @@ namespace Paramore.Features.Steps
         private readonly ScheduleMeetingCommand scheduleMeetingCommand = new ScheduleMeetingCommand(Guid.NewGuid());
         private static CommandProcessor commandProcessor;
         private static WindsorContainer container;
+        private Id speakerId;
+        private Id venueId;
 
         [BeforeFeature]
         public static void SetUp()
@@ -32,9 +38,9 @@ namespace Paramore.Features.Steps
             container.AddFacility<Castle.Facilities.FactorySupport.FactorySupportFacility>();
             container.Register(Component.For<IDocumentStore>().ImplementedBy<DocumentStore>()
                                 .DependsOn(new {connectionStringName = "RavenServer"})
-                                .OnCreate(DoInitialisation)
+                                .OnCreate(RavenConnection.DoInitialisation)
                                 .LifeStyle.Singleton,
-                               Component.For<IUnitOfWork>().UsingFactoryMethod(GetUnitOfWork).LifeStyle.Transient,
+                               Component.For<IUnitOfWork>().UsingFactoryMethod(RavenConnection.GetUnitOfWork).LifeStyle.Transient,
                                Component.For<IAmAUnitOfWorkFactory>().ImplementedBy<UnitOfWorkFactory>().LifeStyle.Singleton,
                                Component.For<IRepository<Meeting, MeetingDTO>>().ImplementedBy<Repository<Meeting, MeetingDTO>>().LifeStyle.PerThread,
                                Component.For<IIssueTickets>().ImplementedBy<TicketIssuer>(),
@@ -44,29 +50,39 @@ namespace Paramore.Features.Steps
             commandProcessor = new CommandProcessor(container);
         }
 
-        static IUnitOfWork GetUnitOfWork(IKernel kernel)
-        {
-            var factory = kernel.Resolve<IAmAUnitOfWorkFactory>();
-            return factory.CreateUnitOfWork();
-        }
-
-
-        public static void DoInitialisation(IKernel kernel, IDocumentStore store)
-        {
-            store.Initialize();
-            //IndexCreation.CreateIndexes(typeof(EventSeries_ByName).Assembly, store);
-        }
-
         [Given(@"I have a speaker (.*)")]
         public void GivenIHaveASpeaker(string speakerName)
         {
-            //lookup the speaker - just use SQL to do this, via a thin read layer - grab the Id
+            using (var uow = container.Resolve<IAmAUnitOfWorkFactory>().CreateUnitOfWork())
+            {
+                speakerId = new Id(Guid.NewGuid());
+                uow.Add(new SpeakerDTO(
+                            speakerId,
+                            new Version(),
+                            new SpeakerBio("Augusta Ada King, Countess of Lovelace (10 December 1815 – 27 November 1852), born Augusta Ada Byron, was an English writer chiefly known for her work on Charles Babbage's early mechanical general-purpose computer, the analytical engine."),
+                            new PhoneNumber("888-888-8888"),
+                            new EmailAddress("augusta@lovelace.org"),
+                            new Name("Augusta Ada King, Countess of Lovelace")));
+                uow.Commit();
+            }
         }
 
         [Given(@"I have a venue (.*)")]
         public void GivenIHaveAVenue(string venueName)
         {
-            //lookkup the venue - just use SQL to do this, via a thin read layer - grab the id
+            using (var uow = container.Resolve<IAmAUnitOfWorkFactory>().CreateUnitOfWork())
+            {
+                venueId = new Id(Guid.NewGuid());
+                var venue = new VenueDTO(
+                    venueId, 
+                    new Version(), 
+                    new VenueName("The American Bar, The Savoy Hotel"),
+                    new Address(new Street("The Strand"), new City("London"), new PostCode("WC2R 0EU")),
+                    new VenueMap(new Uri("http://www.fairmont.com/savoy/MapAndDirections.htm")),
+                    new VenueContact(new ContactName("Athena Cripps"), new EmailAddress("Athena.Cripps@fairmont.com"), new PhoneNumber(" +44 (0)20 7420 2492")));
+                uow.Add(venue);
+                uow.Commit();
+            }
         }
 
         [Given(@"I have a meeting date (.*)")]

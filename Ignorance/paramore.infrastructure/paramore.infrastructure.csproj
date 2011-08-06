@@ -33,6 +33,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Castle.Core">
+      <HintPath>..\paramore.features\bin\Debug\Castle.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Castle.MicroKernel">
+      <HintPath>..\Lib\Castle.MicroKernel.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Raven.Client.Lightweight">
       <HintPath>..\Lib\Raven.Client.Lightweight.dll</HintPath>
@@ -48,7 +54,7 @@
     <Compile Include="Domain\IAggregateRoot.cs" />
     <Compile Include="Domain\IEntity.cs" />
     <Compile Include="Domain\IRepository.cs" />
-    <Compile Include="Raven\BootstrapRaven.cs" />
+    <Compile Include="Raven\RavenConnection.cs" />
     <Compile Include="Raven\IAmADataObject.cs" />
     <Compile Include="Raven\IAmAUnitOfWorkFactory.cs" />
     <Compile Include="Raven\UnitOfWorkFactory.cs" />

@@ -2,11 +2,17 @@ namespace Paramore.Domain.Speakers
 {
     public class Name
     {
-        public string Fullname { get; private set;}
+        private string fullname; 
 
         public Name(string name)
         {
-            this.Fullname = name;
+            this.fullname = name;
         }
+
+        public static implicit operator string(Name name)
+        {
+            return name.fullname;
+        }
+
     }
 }

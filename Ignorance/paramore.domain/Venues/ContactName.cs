@@ -1,4 +1,4 @@
-namespace Paramore.Domain.Locations
+namespace Paramore.Domain.Venues
 {
     public class ContactName
     {

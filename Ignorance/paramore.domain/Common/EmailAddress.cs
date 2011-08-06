@@ -2,11 +2,16 @@
 {
     public class EmailAddress
     {
-        public string Email { get; private set;}
+        private string email;
 
         public EmailAddress(string email)
         {
-            this.Email = email;
+            this.email = email;
+        }
+
+        public static implicit operator string(EmailAddress emailAddress)
+        {
+            return emailAddress.email;
         }
     }
 }
