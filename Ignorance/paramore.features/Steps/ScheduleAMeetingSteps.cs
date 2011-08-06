@@ -1,4 +1,6 @@
 ﻿using System;
+using Castle.MicroKernel;
+using Castle.MicroKernel.LifecycleConcerns;
 using Castle.Windsor;
 using Castle.MicroKernel.Registration;
 using Paramore.Domain.Meetings;
@@ -9,6 +11,9 @@ using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandHandlers.Meetings;
 using Paramore.Services.CommandProcessors;
 using Paramore.Services.Commands.Meeting;
+using Raven.Client;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
 using TechTalk.SpecFlow;
 
 namespace Paramore.Features.Steps
@@ -18,15 +23,38 @@ namespace Paramore.Features.Steps
     {
         private readonly ScheduleMeetingCommand scheduleMeetingCommand = new ScheduleMeetingCommand(Guid.NewGuid());
         private static CommandProcessor commandProcessor;
+        private static WindsorContainer container;
 
         [BeforeFeature]
         public static void SetUp()
         {
-            var container = new WindsorContainer();
-            container.Register(Component.For<IHandleRequests<ScheduleMeetingCommand>>().ImplementedBy<ScheduleMeetingCommandHandler>().LifeStyle.Transient);
-            container.Register(Component.For<IAmAUnitOfWorkFactory>().ImplementedBy<UnitOfWorkFactory>().LifeStyle.Singleton);
-            container.Register(Component.For<IRepository<Meeting, MeetingDTO>>().ImplementedBy<Repository<Meeting, MeetingDTO>>().LifeStyle.Transient);
+            container = new WindsorContainer();
+            container.AddFacility<Castle.Facilities.FactorySupport.FactorySupportFacility>();
+            container.Register(Component.For<IDocumentStore>().ImplementedBy<DocumentStore>()
+                                .DependsOn(new {connectionStringName = "RavenServer"})
+                                .OnCreate(DoInitialisation)
+                                .LifeStyle.Singleton,
+                               Component.For<IUnitOfWork>().UsingFactoryMethod(GetUnitOfWork).LifeStyle.Transient,
+                               Component.For<IAmAUnitOfWorkFactory>().ImplementedBy<UnitOfWorkFactory>().LifeStyle.Singleton,
+                               Component.For<IRepository<Meeting, MeetingDTO>>().ImplementedBy<Repository<Meeting, MeetingDTO>>().LifeStyle.PerThread,
+                               Component.For<IIssueTickets>().ImplementedBy<TicketIssuer>(),
+                               Component.For<IAmAnOverbookingPolicy>().ImplementedBy<FiftyPercentOverbookingPolicy>().LifeStyle.Transient,
+                               Component.For<IScheduler>().ImplementedBy<Scheduler>().LifeStyle.PerThread,
+                               Component.For<IHandleRequests<ScheduleMeetingCommand>>().ImplementedBy<ScheduleMeetingCommandHandler>().LifeStyle.Transient);
             commandProcessor = new CommandProcessor(container);
+        }
+
+        static IUnitOfWork GetUnitOfWork(IKernel kernel)
+        {
+            var factory = kernel.Resolve<IAmAUnitOfWorkFactory>();
+            return factory.CreateUnitOfWork();
+        }
+
+
+        public static void DoInitialisation(IKernel kernel, IDocumentStore store)
+        {
+            store.Initialize();
+            //IndexCreation.CreateIndexes(typeof(EventSeries_ByName).Assembly, store);
         }
 
         [Given(@"I have a speaker (.*)")]
@@ -47,8 +75,8 @@ namespace Paramore.Features.Steps
             scheduleMeetingCommand.On = FuzzyDateTime.Parse(dateOfMeeting);
         }
 
-        [Given(@"I have a capacity ((\d+))")]
-        public void GivenIHaveACapacity(int seats)
+        [Given(@"I have a capacity of (\d+)")]
+        public void GivenIHaveACapacityOf(int seats)
         {
             scheduleMeetingCommand.Capacity = seats;
         }
@@ -68,6 +96,18 @@ namespace Paramore.Features.Steps
         public void ThenTheNewMeetingShouldBeOpenForRegistration()
         {
             //var sut = reportingRepository.GetByExample<MeetingDetailsReport>(new { MeetingTime = meetingDate }).FirstOrDefault();
+        }
+
+        [Then(@"the date should be (.*)")]
+        public void ThenTheDateShouldBe(string dateOfMeeting)
+        {
+            ScenarioContext.Current.Pending();
+        }
+
+        [Then(@"(.*) tickets should be available")]
+        public void ThenTicketsShouldBeAvailable(int noOfTickets)
+        {
+            ScenarioContext.Current.Pending();
         }
 
 

@@ -1,13 +1,13 @@
 using Paramore.Infrastructure.Domain;
-using Raven.Client.Document;
+using Raven.Client;
 
 namespace Paramore.Infrastructure.Raven
 {
     public class UnitOfWorkFactory : IAmAUnitOfWorkFactory
     {
-        private readonly DocumentStore _documentStore;
+        private readonly IDocumentStore _documentStore;
 
-        public UnitOfWorkFactory(DocumentStore documentStore)
+        public UnitOfWorkFactory(IDocumentStore documentStore)
         {
             _documentStore = documentStore;
         }

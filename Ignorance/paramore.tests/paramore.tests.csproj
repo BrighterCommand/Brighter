@@ -63,6 +63,8 @@
     <Compile Include="services\CommandHandlers\Meetings\ScheduleMeetingCommandHandlerTests.cs" />
     <Compile Include="services\CommandProcessors\ChainOfResponsibilityTests.cs" />
     <Compile Include="services\CommandProcessors\CommandProcessorTests.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyDependentCommandHandler.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyEntity.cs" />
     <Compile Include="services\CommandProcessors\TestDoubles\MyCommand.cs" />
     <Compile Include="services\CommandProcessors\TestDoubles\MyCommandHandler.cs" />
     <Compile Include="services\CommandProcessors\TestDoubles\MyDoubleDecoratedHandler.cs" />
@@ -75,6 +77,7 @@
     <Compile Include="services\CommandProcessors\TestDoubles\MyPostLoggingHandlerAttribute.cs" />
     <Compile Include="services\CommandProcessors\TestDoubles\MyPreAndPostDecoratedHandler.cs" />
     <Compile Include="services\CommandProcessors\TestDoubles\MyPreValidationHandlerAttribute.cs" />
+    <Compile Include="services\CommandProcessors\TestDoubles\MyUnitOfWorkFactory.cs" />
     <Compile Include="services\CommandProcessors\TestDoubles\MyValidationHandler.cs" />
     <Compile Include="services\CommandProcessors\TestDoubles\MyValidationHandlerAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

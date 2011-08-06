@@ -4,11 +4,11 @@ namespace Paramore.Domain.Locations
 {
     public class LocationMap
     {
-        public Uri Map { get; private set; }
+        private readonly Uri map;
 
         public LocationMap(Uri map)
         {
-            Map = map;
+            this.map = map;
         }
     }
 }
