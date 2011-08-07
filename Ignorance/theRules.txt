@@ -1,11 +1,16 @@
 Well more guidelines than rules...
 From Object Calisthenitics in Thoughtworks Anthology
+...And then modified for the sanity (see the a or b...)
 1: Only use one level of indentation per method
 2: Don't use the else keyword
 3: Wrap all primitives and strings
-4: Use only one dot per line
+4: Use only one dot per line 
+4a: Unless explicitly using a fluent interface over an OO model
 5: Don't abbreviate
 6: Keep all entities small (no more than 50 lines)
 7: Don't use a class with more than two instance variables
 8: Use first class collections
 9: Don't use any getters/setters/properties  
+9a: On a class, it's fine to do this with a data object, such as a DTO
+9b: Don't give a data object behavior
+9c: But don't build an aneamic model, if a data object needs behavior, make a class

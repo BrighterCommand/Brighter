@@ -11,19 +11,23 @@ namespace Paramore.Domain.Venues
         private VenueName venueName;
         private Address address;
         private VenueMap map;
-        private VenueContact venueContact;
+        private VenueContact contact;
 
-        public Venue(Id id, Version version, VenueName venueName, Address address, VenueMap map, VenueContact venueContact) : base(id, version)
+        public Venue(Id id, Version version, VenueName venueName, Address address, VenueMap map, VenueContact contact) : base(id, version)
         {
             this.venueName = venueName;
             this.address = address;
             this.map = map;
-            this.venueContact = venueContact;
+            this.contact = contact;
+        }
+
+        public override void Load(VenueDTO dataObject)
+        {
         }
 
         public override VenueDTO ToDTO()
         {
-            throw new System.NotImplementedException();
+            return new VenueDTO(id, version, venueName, address, map, contact);
         }
     }
 
@@ -31,12 +35,12 @@ namespace Paramore.Domain.Venues
     {
         public VenueDTO(Id id, Version version, VenueName venueName, Address address, VenueMap venueMap, VenueContact venueContact)
         {
-            Id = id;
-            Version = version;
-            VenueName = venueName;
-            Address = address;
-            VenueMap = venueMap;
-            VenueContact = venueContact;
+            Id = (Guid)id;
+            Version = (int) version;
+            VenueName = (string) venueName;
+            Address = (string) address;
+            VenueMap = (string) venueMap;
+            VenueContact = (string) venueContact;
         }
 
         public string Address { get; set; }

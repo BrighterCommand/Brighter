@@ -52,6 +52,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Lib\nunit.framework.dll</HintPath>
     </Reference>
+    <Reference Include="Raven.Client.Lightweight, Version=1.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />

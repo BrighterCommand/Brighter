@@ -9,16 +9,24 @@ namespace Paramore.Domain.Speakers
     public class Speaker : Aggregate<SpeakerDTO>
     {
         private SpeakerBio bio;
-        private PhoneNumber phoneNumber;
         private EmailAddress emailAddress;
         private Name name;
+        private PhoneNumber phoneNumber;
 
         public Speaker(Id id, Version version, SpeakerBio bio, PhoneNumber phoneNumber, EmailAddress emailAddress, Name name) : base(id, version)
         {
             this.bio = bio;
-            this.phoneNumber = phoneNumber;
             this.emailAddress = emailAddress;
             this.name = name;
+            this.phoneNumber = phoneNumber;
+        }
+
+        public override void Load(SpeakerDTO dataObject)
+        {
+            bio = new SpeakerBio(dataObject.Bio);
+            emailAddress = new EmailAddress(dataObject.Email);
+            name = new Name(dataObject.Name);
+            phoneNumber = new PhoneNumber(dataObject.PhoneNumber);
         }
 
         public override SpeakerDTO ToDTO()
@@ -31,14 +39,16 @@ namespace Paramore.Domain.Speakers
     {
         public SpeakerDTO(Id id, Version version, SpeakerBio bio, PhoneNumber phoneNumber, EmailAddress emailAddress, Name name)
         {
-            Id = (Guid) id;
-            Version = (int)version;
             Bio = (string) bio;
+            Email = (string) emailAddress;
+            Id = (Guid) id;
             PhoneNumber = (string) phoneNumber;
             Name = (string) name;
+            Version = (int)version;
         }
 
         public string Bio { get; set; }
+        public string Email { get; set; }
         public Guid Id { get; set; }
         public string Name { get; set; }
         public string PhoneNumber { get; set; }

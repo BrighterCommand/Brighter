@@ -16,7 +16,8 @@ using Paramore.Services.CommandProcessors;
 using Paramore.Services.Commands.Meeting;
 using Raven.Client;
 using Raven.Client.Document;
-using Raven.Client.Indexes;
+using System.Configuration;
+using Raven.Client.Linq;
 using TechTalk.SpecFlow;
 using Version = Paramore.Infrastructure.Domain.Version;
 
@@ -25,11 +26,12 @@ namespace Paramore.Features.Steps
     [Binding]
     public class ScheduleAMeetingSteps
     {
-        private readonly ScheduleMeetingCommand scheduleMeetingCommand = new ScheduleMeetingCommand(Guid.NewGuid());
+        private readonly ScheduleMeetingCommand scheduleMeetingCommand = new ScheduleMeetingCommand();
         private static CommandProcessor commandProcessor;
         private static WindsorContainer container;
         private Id speakerId;
         private Id venueId;
+        private Meeting meeting;
 
         [BeforeFeature]
         public static void SetUp()
@@ -101,17 +103,19 @@ namespace Paramore.Features.Steps
         [When(@"I schedule a meeting")]
         public void WhenIScheduleAMeeting()
         {
+            scheduleMeetingCommand.Id = Guid.NewGuid();
             commandProcessor.Send(scheduleMeetingCommand);
-
-            //how do we publish to report, directly or via command handler. Looks like by using transaction handler we go through unit of work whose commit method fires events to BUS
-            //so if we have event and then save they get re-ublished and report canpick up
- 
         }
 
         [Then(@"the new meeting should be open for registration")]
         public void ThenTheNewMeetingShouldBeOpenForRegistration()
         {
-            //var sut = reportingRepository.GetByExample<MeetingDetailsReport>(new { MeetingTime = meetingDate }).FirstOrDefault();
+            using (var uow = container.Resolve<IAmAUnitOfWorkFactory>().CreateUnitOfWork())
+            {
+                var meetingRepository = container.Resolve<IRepository<Meeting, MeetingDTO>>();
+                meeting = meetingRepository[scheduleMeetingCommand.Id];
+
+            }
         }
 
         [Then(@"the date should be (.*)")]

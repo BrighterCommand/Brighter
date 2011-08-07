@@ -15,7 +15,7 @@ namespace Paramore.Domain.Meetings
         {
             var tickets = _overbookingPolicy.AllocateTickets(capacity);
             
-            return new Meeting(meetingDate: on, location: location, speaker: speaker, tickets: tickets, version: new Version(), id: meetingId);
+            return new Meeting(meetingDate: on, venue: location, speaker: speaker, tickets: tickets, version: new Version(), id: meetingId);
 
         }
     }
