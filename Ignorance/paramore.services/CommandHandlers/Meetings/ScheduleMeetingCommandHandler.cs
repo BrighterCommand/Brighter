@@ -23,12 +23,13 @@ namespace Paramore.Services.CommandHandlers.Meetings
             var meeting = scheduler.Schedule(
                 new Id(command.MeetingId), 
                 new MeetingDate(command.On), 
-                new Id(command.LocationId), 
+                new Id(command.VenueId), 
                 new Id(command.SpeakerId), 
                 new Capacity(command.Capacity));
 
             using (var unitOfWork = unitOfWorkFactory.CreateUnitOfWork())
             {
+                repository.UnitOfWork = unitOfWork;
                 repository.Add(meeting);
                 unitOfWork.Commit();
             }

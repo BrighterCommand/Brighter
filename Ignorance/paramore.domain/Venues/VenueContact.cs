@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Paramore.Domain.Common;
 
 namespace Paramore.Domain.Venues
@@ -22,7 +23,17 @@ namespace Paramore.Domain.Venues
 
         public override string ToString()
         {
-            return string.Format("Name : {0}, EmailAddress {1}: , PhoneNumber : {2}", contactName, emailAddress, phoneNumber);
+            return string.Format("Name : {0}, EmailAddress : {1}: , PhoneNumber : {2}", contactName, emailAddress, phoneNumber);
+        }
+
+        public static VenueContact Parse(string venueContact)
+        {
+            var rx = new Regex("Name : (.*), EmailAddress : (.*): , PhoneNumber : (.*)");
+            var match = rx.Match(venueContact);
+            var contactName = new ContactName(match.Groups[0].ToString());
+            var emailAddress = new EmailAddress(match.Groups[1].ToString());
+            var phoneNumber = new PhoneNumber(match.Groups[2].ToString());
+            return new VenueContact(contactName, emailAddress, phoneNumber);
         }
     }
 }

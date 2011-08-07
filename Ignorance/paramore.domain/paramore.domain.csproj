@@ -32,6 +32,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Raven.Abstractions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL" />
+    <Reference Include="Raven.Client.Lightweight, Version=1.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
@@ -40,6 +42,7 @@
     <Compile Include="Common\Aggregate.cs" />
     <Compile Include="Common\EmailAddress.cs" />
     <Compile Include="Common\PhoneNumber.cs" />
+    <Compile Include="Meetings\MeetingState.cs" />
     <Compile Include="Venues\Address.cs" />
     <Compile Include="Venues\City.cs" />
     <Compile Include="Venues\ContactName.cs" />
@@ -71,6 +74,7 @@
       <Name>paramore.infrastructure</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

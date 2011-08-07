@@ -7,5 +7,6 @@ namespace Paramore.Infrastructure.Domain
     {
         void Add(T aggregate);
         T this[Guid id] { get; }
+        IUnitOfWork UnitOfWork { set; }
     }
 }

@@ -10,6 +10,13 @@ namespace Paramore.Tests.services.CommandProcessors.TestDoubles
         {
         }
 
+        public MyEntity() : base(new Id(), new Version()) {}
+
+        public override void Load(MyEntityDTO dataObject)
+        {
+            throw new System.NotImplementedException();
+        }
+
         public override MyEntityDTO ToDTO()
         {
             return new MyEntityDTO();

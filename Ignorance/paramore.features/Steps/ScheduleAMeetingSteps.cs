@@ -1,8 +1,8 @@
 ﻿using System;
-using Castle.MicroKernel;
-using Castle.MicroKernel.LifecycleConcerns;
+using System.Linq;
 using Castle.Windsor;
 using Castle.MicroKernel.Registration;
+using NUnit.Framework;
 using Paramore.Domain.Common;
 using Paramore.Domain.Meetings;
 using Paramore.Domain.Speakers;
@@ -16,7 +16,6 @@ using Paramore.Services.CommandProcessors;
 using Paramore.Services.Commands.Meeting;
 using Raven.Client;
 using Raven.Client.Document;
-using System.Configuration;
 using Raven.Client.Linq;
 using TechTalk.SpecFlow;
 using Version = Paramore.Infrastructure.Domain.Version;
@@ -31,7 +30,7 @@ namespace Paramore.Features.Steps
         private static WindsorContainer container;
         private Id speakerId;
         private Id venueId;
-        private Meeting meeting;
+        private MeetingDTO scheduledMeeting;
 
         [BeforeFeature]
         public static void SetUp()
@@ -42,7 +41,6 @@ namespace Paramore.Features.Steps
                                 .DependsOn(new {connectionStringName = "RavenServer"})
                                 .OnCreate(RavenConnection.DoInitialisation)
                                 .LifeStyle.Singleton,
-                               Component.For<IUnitOfWork>().UsingFactoryMethod(RavenConnection.GetUnitOfWork).LifeStyle.Transient,
                                Component.For<IAmAUnitOfWorkFactory>().ImplementedBy<UnitOfWorkFactory>().LifeStyle.Singleton,
                                Component.For<IRepository<Meeting, MeetingDTO>>().ImplementedBy<Repository<Meeting, MeetingDTO>>().LifeStyle.PerThread,
                                Component.For<IIssueTickets>().ImplementedBy<TicketIssuer>(),
@@ -67,6 +65,8 @@ namespace Paramore.Features.Steps
                             new Name("Augusta Ada King, Countess of Lovelace")));
                 uow.Commit();
             }
+
+            scheduleMeetingCommand.SpeakerId = speakerId;
         }
 
         [Given(@"I have a venue (.*)")]
@@ -85,6 +85,7 @@ namespace Paramore.Features.Steps
                 uow.Add(venue);
                 uow.Commit();
             }
+            scheduleMeetingCommand.VenueId = venueId;
         }
 
         [Given(@"I have a meeting date (.*)")]
@@ -103,7 +104,7 @@ namespace Paramore.Features.Steps
         [When(@"I schedule a meeting")]
         public void WhenIScheduleAMeeting()
         {
-            scheduleMeetingCommand.Id = Guid.NewGuid();
+            scheduleMeetingCommand.MeetingId = Guid.NewGuid();
             commandProcessor.Send(scheduleMeetingCommand);
         }
 
@@ -112,22 +113,25 @@ namespace Paramore.Features.Steps
         {
             using (var uow = container.Resolve<IAmAUnitOfWorkFactory>().CreateUnitOfWork())
             {
-                var meetingRepository = container.Resolve<IRepository<Meeting, MeetingDTO>>();
-                meeting = meetingRepository[scheduleMeetingCommand.Id];
-
+                var results = uow.Query<MeetingDTO>()
+                    .Where(meeting => meeting.Id == scheduleMeetingCommand.MeetingId)
+                    .Customize(x => x.WaitForNonStaleResults())
+                    .ToList();
+                scheduledMeeting = results.First();
+                Assert.That(scheduledMeeting.State == MeetingState.Live);
             }
         }
 
         [Then(@"the date should be (.*)")]
         public void ThenTheDateShouldBe(string dateOfMeeting)
         {
-            ScenarioContext.Current.Pending();
+            Assert.That(DateTime.Parse(dateOfMeeting), Is.EqualTo(scheduledMeeting.MeetingDate));
         }
 
         [Then(@"(.*) tickets should be available")]
         public void ThenTicketsShouldBeAvailable(int noOfTickets)
         {
-            ScenarioContext.Current.Pending();
+            Assert.That(noOfTickets, Is.EqualTo(scheduledMeeting.Tickets.Count()));
         }
 
 

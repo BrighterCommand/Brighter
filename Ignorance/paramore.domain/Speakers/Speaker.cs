@@ -21,6 +21,8 @@ namespace Paramore.Domain.Speakers
             this.phoneNumber = phoneNumber;
         }
 
+        public Speaker() : base(new Id(), new Version()){}
+
         public override void Load(SpeakerDTO dataObject)
         {
             bio = new SpeakerBio(dataObject.Bio);
