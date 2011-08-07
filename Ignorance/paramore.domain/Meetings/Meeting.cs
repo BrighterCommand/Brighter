@@ -11,49 +11,50 @@ namespace Paramore.Domain.Meetings
     public class Meeting : Aggregate<MeetingDTO>  
     {
         private MeetingDate meetingDate;
-        private Id location;
+        private Id venue;
         private Id speaker;
         private Tickets tickets;
 
-        public Meeting(MeetingDate meetingDate, Id location, Id speaker, Tickets tickets, Version version, Id id)
+        public Meeting(MeetingDate meetingDate, Id venue, Id speaker, Tickets tickets, Version version, Id id)
             :base(id, version)
         {
             this.meetingDate = meetingDate;
-            this.location = location;
+            this.venue = venue;
             this.speaker = speaker;
             this.tickets = tickets;
         }
 
-        public Meeting(MeetingDTO dto)
-            :base(new Id(dto.Id), new Version(dto.Version))
+        public override void Load(MeetingDTO dataObject)
         {
-            meetingDate = new MeetingDate(dto.Meeting);
-            location = new Id(dto.Location);
-            speaker = new Id(dto.Speaker);
-            tickets = new Tickets(dto.Tickets);
+            id = new Id(dataObject.Id);
+            version = new Version(dataObject.Version);
+            meetingDate = new MeetingDate(dataObject.MeetingDate);
+            speaker = new Id(dataObject.Speaker);
+            tickets = new Tickets(dataObject.Tickets);
+            venue = new Id(dataObject.Venue);
         }
 
         public override MeetingDTO ToDTO()
         {
-            return new MeetingDTO(Id, meetingDate, location, speaker, tickets.ToDTO(), version);
+            return new MeetingDTO(Id, meetingDate, venue, speaker, tickets.ToDTO(), version);
         }
     }
 
     public class MeetingDTO : IAmADataObject
     {
-        public MeetingDTO(Id meetingId, MeetingDate meeting, Id location, Id speaker, IEnumerable<TicketDTO> tickets, Version version)
+        public MeetingDTO(Id meetingId, MeetingDate meeting, Id venue, Id speaker, IEnumerable<TicketDTO> tickets, Version version)
         {
             Id = (Guid) meetingId; 
-            Location = (Guid) location;
-            Meeting = (DateTime) meeting;
+            Venue = (Guid) venue;
+            MeetingDate = (DateTime) meeting;
             Speaker = (Guid) speaker;
             Tickets = tickets.ToList();
             Version = (int) version;
         }
 
         public Guid Id { get; set; }
-        public Guid Location { get; set; }
-        public DateTime Meeting { get; set; }
+        public Guid Venue { get; set; }
+        public DateTime MeetingDate { get; set; }
         public Guid Speaker { get; set; }
         public List<TicketDTO> Tickets { get; set; }
         public int Version { get; set; }

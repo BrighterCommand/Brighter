@@ -1,4 +1,5 @@
 using System;
+using Raven.Client.Linq;
 
 namespace Paramore.Infrastructure.Domain
 {
@@ -6,5 +7,7 @@ namespace Paramore.Infrastructure.Domain
     {
         void Add(dynamic entity);
         void Commit();
+        T Load<T>(Guid id);
+        IRavenQueryable<T> Query<T>();
     }
 }

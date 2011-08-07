@@ -10,7 +10,7 @@ namespace Paramore.Domain.Common
         protected Id id;
         protected Version version;
 
-        public Aggregate(Id id, Version version)
+        protected Aggregate(Id id, Version version)
         {
             this.id = id;
             this.version = version;
@@ -21,12 +21,7 @@ namespace Paramore.Domain.Common
             get { return id; }
         }
 
-        public abstract TDataObject ToDTO();
-
-        public Version Version
-        {
-            get { return version; }
-        }
+        public abstract void Load(TDataObject dataObject);
 
         public Version Lock(Version expectedVersion)
         {
@@ -37,5 +32,14 @@ namespace Paramore.Domain.Common
 
             return version;
         }
+
+        public abstract TDataObject ToDTO();
+
+        public Version Version
+        {
+            get { return version; }
+        }
+
+
     }
 }

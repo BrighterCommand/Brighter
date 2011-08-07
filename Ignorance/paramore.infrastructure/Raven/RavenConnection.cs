@@ -1,6 +1,7 @@
 ﻿using Castle.MicroKernel;
 using Paramore.Infrastructure.Domain;
 using Raven.Client;
+using System.IO;
 
 namespace Paramore.Infrastructure.Raven
 {
@@ -17,6 +18,11 @@ namespace Paramore.Infrastructure.Raven
         {
             store.Initialize();
             //IndexCreation.CreateIndexes(typeof(EventSeries_ByName).Assembly, store);
+        }
+
+        public static void ClearDatabase(string ravenPath)
+        {
+            Directory.Delete(ravenPath);
         }
 
     }
