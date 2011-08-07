@@ -16,7 +16,7 @@ namespace Paramore.Infrastructure.Domain
             id = Guid.NewGuid();
         }
 
-        public static explicit  operator Id(Guid guid)
+        public static explicit operator Id(Guid guid)
         {
             return new Id(guid);
         }

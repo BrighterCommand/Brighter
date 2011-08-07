@@ -1,7 +1,10 @@
 ﻿using Castle.MicroKernel;
 using Paramore.Infrastructure.Domain;
+using Raven.Abstractions.Indexing;
 using Raven.Client;
 using System.IO;
+using Raven.Client.Document;
+using Raven.Client.Indexes;
 
 namespace Paramore.Infrastructure.Raven
 {
@@ -26,4 +29,6 @@ namespace Paramore.Infrastructure.Raven
         }
 
     }
+
+ 
 }

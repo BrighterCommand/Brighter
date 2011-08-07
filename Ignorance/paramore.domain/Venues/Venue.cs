@@ -8,26 +8,30 @@ namespace Paramore.Domain.Venues
 {
     public class Venue : Aggregate<VenueDTO> 
     {
-        private VenueName venueName;
         private Address address;
-        private VenueMap map;
         private VenueContact contact;
+        private VenueMap map;
+        private VenueName name;
 
-        public Venue(Id id, Version version, VenueName venueName, Address address, VenueMap map, VenueContact contact) : base(id, version)
+        public Venue(Id id, Version version, VenueName name, Address address, VenueMap map, VenueContact contact) : base(id, version)
         {
-            this.venueName = venueName;
             this.address = address;
-            this.map = map;
             this.contact = contact;
+            this.map = map;
+            this.name = name;
         }
 
         public override void Load(VenueDTO dataObject)
         {
+            address = Address.Parse(dataObject.Address); 
+            contact = VenueContact.Parse(dataObject.VenueContact);
+            map = new VenueMap(new Uri(dataObject.VenueMap));
+            name = new VenueName(dataObject.VenueName);
         }
 
         public override VenueDTO ToDTO()
         {
-            return new VenueDTO(id, version, venueName, address, map, contact);
+            return new VenueDTO(id, version, name, address, map, contact);
         }
     }
 
