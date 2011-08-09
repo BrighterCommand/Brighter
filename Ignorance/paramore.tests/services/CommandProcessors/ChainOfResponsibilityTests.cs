@@ -1,12 +1,11 @@
 ﻿using System.Linq;
-using Castle.MicroKernel.Registration;
-using Castle.Windsor;
 using Machine.Specifications;
 using Paramore.Infrastructure.Domain;
 using Paramore.Infrastructure.Raven;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandProcessors;
 using Paramore.Tests.services.CommandProcessors.TestDoubles;
+using TinyIoC;
 
 namespace Paramore.Tests.services.CommandProcessors
 {
@@ -18,11 +17,8 @@ namespace Paramore.Tests.services.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new WindsorContainer();
-
-            container.Register(
-                    Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyCommandHandler>()
-                );
+            var container = new TinyIoCContainer();
+            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();            
 
             Chain_Builder = new ChainofResponsibilityBuilder<MyCommand>(container); 
         };
@@ -48,13 +44,11 @@ namespace Paramore.Tests.services.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new WindsorContainer();
+            var container = new TinyIoCContainer();
 
-            container.Register(
-                    Component.For<IUnitOfWork>().ImplementedBy<MyUnitOfWork>(),
-                    Component.For<IRepository<MyEntity, MyEntityDTO>>().ImplementedBy<Repository<MyEntity, MyEntityDTO>>(),
-                    Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyDependentCommandHandler>()
-                );
+            container.Register<IUnitOfWork, MyUnitOfWork>().AsMultiInstance();
+            container.Register<IRepository<MyEntity, MyEntityDTO>, Repository<MyEntity, MyEntityDTO>>().AsMultiInstance();
+            container.Register<IHandleRequests<MyCommand>, MyDependentCommandHandler>().AsMultiInstance();
 
             Chain_Builder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
@@ -80,9 +74,8 @@ namespace Paramore.Tests.services.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new WindsorContainer();
-
-            container.Register(Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyImplicitHandler>());
+            var container = new TinyIoCContainer();
+            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>().AsMultiInstance();
 
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
@@ -108,10 +101,8 @@ namespace Paramore.Tests.services.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new WindsorContainer();
-
-            container.Register(Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyDoubleDecoratedHandler>());
-
+            var container = new TinyIoCContainer();
+            container.Register<IHandleRequests<MyCommand>, MyDoubleDecoratedHandler>().AsMultiInstance();
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
 
@@ -135,10 +126,8 @@ namespace Paramore.Tests.services.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new WindsorContainer();
-
-            container.Register(Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyPreAndPostDecoratedHandler>());
-
+            var container = new TinyIoCContainer();
+            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsMultiInstance();
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
 

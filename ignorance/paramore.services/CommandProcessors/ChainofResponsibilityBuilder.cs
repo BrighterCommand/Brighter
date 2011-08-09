@@ -1,19 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Castle.Windsor;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandProcessors.ReflectionExtensionMethods;
 using Paramore.Services.Common;
+using TinyIoC;
 
 namespace Paramore.Services.CommandProcessors
 {
     public class ChainofResponsibilityBuilder<TRequest> : IChainofResponsibilityBuilder<TRequest> where TRequest : class, IRequest
     {
-        private readonly IWindsorContainer container;
+        private readonly TinyIoCContainer container;
         private readonly Type implicithandlerType;
 
-        public ChainofResponsibilityBuilder(IWindsorContainer container)
+        public ChainofResponsibilityBuilder(TinyIoCContainer container)
         {
             this.container = container;
 
@@ -36,9 +36,9 @@ namespace Paramore.Services.CommandProcessors
             return chains;
         }
 
-        private RequestHandlers<TRequest> GetHandlers()
+        private IEnumerable<RequestHandler<TRequest>> GetHandlers()
         {
-            var handlers = container.ResolveAll(implicithandlerType);
+            var handlers = container.ResolveAll(implicithandlerType, true);
             return new RequestHandlers<TRequest>(handlers);
         }
 

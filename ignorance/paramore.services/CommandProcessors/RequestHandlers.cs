@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using Paramore.Services.CommandHandlers;
@@ -10,9 +9,9 @@ namespace Paramore.Services.CommandProcessors
     internal class RequestHandlers<TRequest> : IEnumerable<RequestHandler<TRequest>>
         where TRequest : class, IRequest
     {
-        private readonly Array handlers;
+        private readonly IEnumerable<object> handlers;
 
-        internal RequestHandlers(Array handlers)
+        internal RequestHandlers(IEnumerable<object> handlers)
         {
             this.handlers = handlers;
         }

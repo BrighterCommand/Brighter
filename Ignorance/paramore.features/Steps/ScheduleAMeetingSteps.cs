@@ -18,6 +18,7 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Linq;
 using TechTalk.SpecFlow;
+using TinyIoC;
 using Version = Paramore.Infrastructure.Domain.Version;
 
 namespace Paramore.Features.Steps
@@ -27,7 +28,7 @@ namespace Paramore.Features.Steps
     {
         private readonly ScheduleMeetingCommand scheduleMeetingCommand = new ScheduleMeetingCommand();
         private static CommandProcessor commandProcessor;
-        private static WindsorContainer container;
+        private static TinyIoCContainer container;
         private Id speakerId;
         private Id venueId;
         private MeetingDTO scheduledMeeting;
@@ -35,19 +36,17 @@ namespace Paramore.Features.Steps
         [BeforeFeature]
         public static void SetUp()
         {
-            container = new WindsorContainer();
-            container.AddFacility<Castle.Facilities.FactorySupport.FactorySupportFacility>();
-            container.Register(Component.For<IDocumentStore>().ImplementedBy<DocumentStore>()
-                                .DependsOn(new {connectionStringName = "RavenServer"})
-                                .OnCreate(RavenConnection.DoInitialisation)
-                                .LifeStyle.Singleton,
-                               Component.For<IAmAUnitOfWorkFactory>().ImplementedBy<UnitOfWorkFactory>().LifeStyle.Singleton,
-                               Component.For<IRepository<Meeting, MeetingDTO>>().ImplementedBy<Repository<Meeting, MeetingDTO>>().LifeStyle.PerThread,
-                               Component.For<IIssueTickets>().ImplementedBy<TicketIssuer>(),
-                               Component.For<IAmAnOverbookingPolicy>().ImplementedBy<FiftyPercentOverbookingPolicy>().LifeStyle.Transient,
-                               Component.For<IScheduler>().ImplementedBy<Scheduler>().LifeStyle.PerThread,
-                               Component.For<IHandleRequests<ScheduleMeetingCommand>>().ImplementedBy<ScheduleMeetingCommandHandler>().LifeStyle.Transient);
+            container = new TinyIoCContainer();
+
             commandProcessor = new CommandProcessor(container);
+            var documentStore = new DocumentStore();
+            RavenConnection.DoInitialisation(documentStore);
+            container.Register<IDocumentStore, DocumentStore>(documentStore).AsMultiInstance();
+            container.Register<IAmAUnitOfWorkFactory, UnitOfWorkFactory>().AsSingleton();
+            container.Register<IRepository<Meeting, MeetingDTO>, Repository<Meeting, MeetingDTO>>().AsMultiInstance();
+            container.Register<IIssueTickets, TicketIssuer>().AsMultiInstance();
+            container.Register<IScheduler, Scheduler>().AsMultiInstance();
+            container.Register<IHandleRequests<ScheduleMeetingCommand>, ScheduleMeetingCommandHandler>().AsMultiInstance();
         }
 
         [Given(@"I have a speaker (.*)")]
