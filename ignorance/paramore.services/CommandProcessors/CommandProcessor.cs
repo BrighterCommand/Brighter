@@ -1,16 +1,16 @@
 using System;
 using System.Linq;
-using Castle.Windsor;
 using Paramore.Services.Common;
 using Paramore.Utility;
+using TinyIoC;
 
 namespace Paramore.Services.CommandProcessors
 {
     public class CommandProcessor
     {
-        private readonly IWindsorContainer container;
+        private readonly TinyIoCContainer container;
 
-        public CommandProcessor(IWindsorContainer container)
+        public CommandProcessor(TinyIoCContainer  container)
         {
             this.container = container;
         }

@@ -32,15 +32,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Castle.Core">
-      <HintPath>..\Lib\Castle.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Castle.MicroKernel">
-      <HintPath>..\Lib\Castle.MicroKernel.dll</HintPath>
-    </Reference>
-    <Reference Include="Castle.Windsor">
-      <HintPath>..\Lib\Castle.Windsor.dll</HintPath>
-    </Reference>
     <Reference Include="FakeItEasy">
       <HintPath>..\Lib\FakeItEasy.dll</HintPath>
     </Reference>

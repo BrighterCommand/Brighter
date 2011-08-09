@@ -1,10 +1,9 @@
 ﻿using System;
-using Castle.MicroKernel.Registration;
-using Castle.Windsor;
 using Machine.Specifications;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandProcessors;
 using Paramore.Tests.services.CommandProcessors.TestDoubles;
+using TinyIoC;
 
 namespace Paramore.Tests.services.CommandProcessors
 {
@@ -16,9 +15,8 @@ namespace Paramore.Tests.services.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new WindsorContainer();
-            container.Register(Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyCommandHandler>());
-            
+            var container = new TinyIoCContainer();
+            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
             commandProcessor = new CommandProcessor(container);
 
         };
@@ -37,10 +35,9 @@ namespace Paramore.Tests.services.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new WindsorContainer();
-            container.Register(Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyCommandHandler>());
-            container.Register(Component.For<IHandleRequests<MyCommand>>().ImplementedBy<MyImplicitHandler>());
-            
+            var container = new TinyIoCContainer();
+            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
+            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>().AsMultiInstance();
             commandProcessor = new CommandProcessor(container);
 
         };
@@ -60,7 +57,7 @@ namespace Paramore.Tests.services.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new WindsorContainer();
+            var container = new TinyIoCContainer();
             commandProcessor = new CommandProcessor(container);
 
         };
@@ -79,9 +76,8 @@ namespace Paramore.Tests.services.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new WindsorContainer();
-            container.Register(Component.For<IHandleRequests<MyEvent>>().ImplementedBy<MyEventHandler>());
-            
+            var container = new TinyIoCContainer();
+            container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsMultiInstance();
             commandProcessor = new CommandProcessor(container);
         };
 
@@ -99,7 +95,7 @@ namespace Paramore.Tests.services.CommandProcessors
 
         Establish context = () =>
         {
-            commandProcessor = new CommandProcessor(new WindsorContainer());                                    
+            commandProcessor = new CommandProcessor(new TinyIoCContainer());                                    
         };
 
         Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
@@ -116,9 +112,9 @@ namespace Paramore.Tests.services.CommandProcessors
 
         Establish context = () =>
                                 {
-                                    IWindsorContainer container = new WindsorContainer();
-                                    container.Register(Component.For<IHandleRequests<MyEvent>>().ImplementedBy<MyEventHandler>());
-                                    container.Register(Component.For<IHandleRequests<MyEvent>>().ImplementedBy<MyOtherEventHandler>());
+                                    var container = new TinyIoCContainer();
+                                    container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsMultiInstance();
+                                    container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>().AsMultiInstance();
                                     commandProcessor = new CommandProcessor(container);
                                 };
 

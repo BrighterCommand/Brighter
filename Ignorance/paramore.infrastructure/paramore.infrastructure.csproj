@@ -61,6 +61,7 @@
     <Compile Include="Raven\UnitOfWorkFactory.cs" />
     <Compile Include="Raven\Repository.cs" />
     <Compile Include="Raven\UnitOfWork.cs" />
+    <Compile Include="TinyIoC\TinyIoC.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Domain\Repositories\" />

@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Linq;
-using Castle.Windsor;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.Common;
+using TinyIoC;
 
 namespace Paramore.Services.CommandProcessors
 {
     internal class HandlerFactory<TRequest> where TRequest : class, IRequest
     {
         private readonly RequestHandlerAttribute attribute;
-        private readonly IWindsorContainer container;
+        private readonly TinyIoCContainer container;
         private readonly Type messageType;
 
-        public HandlerFactory(RequestHandlerAttribute attribute, IWindsorContainer container)
+        public HandlerFactory(RequestHandlerAttribute attribute, TinyIoCContainer container)
         {
             this.attribute = attribute;
             this.container = container;
