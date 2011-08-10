@@ -36,8 +36,8 @@ namespace Paramore.Tests.services.CommandProcessors
         Establish context = () =>
         {
             var container = new TinyIoCContainer();
-            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
-            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>().AsMultiInstance();
+            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>("DefaultHandler").AsMultiInstance();
+            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>("Implicit Handler").AsMultiInstance();
             commandProcessor = new CommandProcessor(container);
 
         };
@@ -113,8 +113,8 @@ namespace Paramore.Tests.services.CommandProcessors
         Establish context = () =>
                                 {
                                     var container = new TinyIoCContainer();
-                                    container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsMultiInstance();
-                                    container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>().AsMultiInstance();
+                                    container.Register<IHandleRequests<MyEvent>, MyEventHandler>("My Event Handler").AsMultiInstance();
+                                    container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("My Other Event Handler").AsMultiInstance();
                                     commandProcessor = new CommandProcessor(container);
                                 };
 
