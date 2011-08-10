@@ -39,9 +39,6 @@ namespace Paramore.Features.Steps
             container = new TinyIoCContainer();
 
             commandProcessor = new CommandProcessor(container);
-            var documentStore = new DocumentStore();
-            RavenConnection.DoInitialisation(documentStore);
-            container.Register<IDocumentStore, DocumentStore>(documentStore).AsMultiInstance();
             container.Register<IAmAUnitOfWorkFactory, UnitOfWorkFactory>().AsSingleton();
             container.Register<IRepository<Meeting, MeetingDTO>, Repository<Meeting, MeetingDTO>>().AsMultiInstance();
             container.Register<IIssueTickets, TicketIssuer>().AsMultiInstance();
