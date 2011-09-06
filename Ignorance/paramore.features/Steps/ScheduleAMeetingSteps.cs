@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Linq;
-using Castle.Windsor;
-using Castle.MicroKernel.Registration;
 using NUnit.Framework;
 using Paramore.Domain.Common;
 using Paramore.Domain.Meetings;
@@ -14,8 +12,6 @@ using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandHandlers.Meetings;
 using Paramore.Services.CommandProcessors;
 using Paramore.Services.Commands.Meeting;
-using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Linq;
 using TechTalk.SpecFlow;
 using TinyIoC;
@@ -42,8 +38,10 @@ namespace Paramore.Features.Steps
             container.Register<IAmAUnitOfWorkFactory, UnitOfWorkFactory>().AsSingleton();
             container.Register<IRepository<Meeting, MeetingDTO>, Repository<Meeting, MeetingDTO>>().AsMultiInstance();
             container.Register<IIssueTickets, TicketIssuer>().AsMultiInstance();
-            container.Register<IScheduler, Scheduler>().AsMultiInstance();
-            container.Register<IHandleRequests<ScheduleMeetingCommand>, ScheduleMeetingCommandHandler>().AsMultiInstance();
+            container.Register<IScheduler, Scheduler>();
+            container.Register<IAmAnOverbookingPolicy, FiftyPercentOverbookingPolicy>();
+            container.Register<IIssueTickets, TicketIssuer>();
+            container.Register<IHandleRequests<ScheduleMeetingCommand>, ScheduleMeetingCommandHandler>("ScheduleMeetingCommandHandler");
         }
 
         [Given(@"I have a speaker (.*)")]

@@ -40,6 +40,7 @@
     <Compile Include="CommandHandlers\HandlerName.cs" />
     <Compile Include="CommandHandlers\HandlerTiming.cs" />
     <Compile Include="CommandHandlers\RequestHandler.cs" />
+    <Compile Include="CommandHandlers\Venues\AddVenueCommandHandler.cs" />
     <Compile Include="CommandProcessors\ChainofResponsibilityBuilder.cs" />
     <Compile Include="CommandHandlers\IHandleCommands.cs" />
     <Compile Include="CommandHandlers\Meetings\ScheduleMeetingCommandHandler.cs" />
@@ -53,6 +54,7 @@
     <Compile Include="CommandProcessors\RequestHandlers.cs" />
     <Compile Include="CommandProcessors\Command.cs" />
     <Compile Include="CommandProcessors\ICommand.cs" />
+    <Compile Include="Commands\Venue\AddVenueCommand.cs" />
     <Compile Include="Commands\Meeting\ScheduleMeetingCommand.cs" />
     <Compile Include="CommandProcessors\Event.cs" />
     <Compile Include="Events\Meeting\MeetingScheduledEvent.cs" />
