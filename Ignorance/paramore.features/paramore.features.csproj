@@ -67,18 +67,28 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddNewVenue.feature.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>AddNewVenue.feature</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScheduleAMeeting.feature.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>ScheduleAMeeting.feature</DependentUpon>
     </Compile>
+    <Compile Include="Steps\AddNewvenueSteps.cs" />
     <Compile Include="Steps\ScheduleAMeetingSteps.cs" />
     <Compile Include="Tools\FuzzyDateParser.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
       <SubType>Designer</SubType>
+    </None>
+    <None Include="AddNewVenue.feature">
+      <Generator>SpecFlowSingleFileGenerator</Generator>
+      <LastGenOutput>AddNewVenue.feature.cs</LastGenOutput>
     </None>
     <None Include="ScheduleAMeeting.feature">
       <Generator>SpecFlowSingleFileGenerator</Generator>

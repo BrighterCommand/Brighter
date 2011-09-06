@@ -7,19 +7,19 @@ namespace Paramore.Infrastructure.Raven
 {
     public class UnitOfWorkFactory : IAmAUnitOfWorkFactory
     {
-        private static IDocumentStore _documentStore;
+        private static DocumentStore documentStore;
 
-        public static IDocumentStore DocumentStore
+        private static DocumentStore DocumentStore
         {
-            get { return (_documentStore ?? (_documentStore = CreateDocumentStore())); }
+            get { return (documentStore ?? (CreateDocumentStore())); }
         }
 
-        private static IDocumentStore CreateDocumentStore()
+        private static DocumentStore CreateDocumentStore()
         {
-            var store = new DocumentStore() {Url = ConfigurationManager.AppSettings["RavenServer"]};
-            store.Initialize();
+            documentStore = new DocumentStore() {ConnectionStringName = "RavenServer"};
+            documentStore.Initialize();
 
-            return store;
+            return documentStore;
         }
         public IUnitOfWork CreateUnitOfWork()
         {
