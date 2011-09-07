@@ -6,9 +6,9 @@ namespace Paramore.Tests.services.CommandProcessors.TestDoubles
     {
         [MyValidationHandler(step:2)]
         [MyLoggingHandler(step:1)]
-        public override MyCommand Handle(MyCommand request)
+        public override MyCommand Handle(MyCommand command)
         {
-            return base.Handle(request);
+            return base.Handle(command);
         }
     }
 }

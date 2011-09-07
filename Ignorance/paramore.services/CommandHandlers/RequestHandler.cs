@@ -23,14 +23,14 @@ namespace Paramore.Services.CommandHandlers
             }
         }
 
-        public virtual TRequest Handle(TRequest request)
+        public virtual TRequest Handle(TRequest command)
         {
             if (_successor != null)
             {
-                return _successor.Handle(request);
+                return _successor.Handle(command);
             }
 
-            return request;
+            return command;
         }
 
        protected HandlerName Name()

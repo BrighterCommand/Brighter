@@ -21,6 +21,11 @@ namespace Paramore.Domain.Venues
             this.name = name;
         }
 
+        public Venue(Id id, Version version, VenueName venueName) : base(id, version)
+        {
+            this.name = venueName;
+        }
+
         public override void Load(VenueDTO dataObject)
         {
             address = Address.Parse(dataObject.Address); 

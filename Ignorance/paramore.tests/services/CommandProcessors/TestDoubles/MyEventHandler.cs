@@ -12,10 +12,10 @@ namespace Paramore.Tests.services.CommandProcessors.TestDoubles
             receivedEvent = null;
         }
 
-        public override MyEvent Handle(MyEvent @event)
+        public override MyEvent Handle(MyEvent command)
         {
-            LogEvent(@event);
-            return @event;
+            LogEvent(command);
+            return command;
         }
 
         private static void LogEvent(MyEvent @event)
