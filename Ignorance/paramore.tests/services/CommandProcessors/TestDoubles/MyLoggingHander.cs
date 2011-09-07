@@ -5,9 +5,9 @@ namespace Paramore.Tests.services.CommandProcessors.TestDoubles
 {
     internal class MyLoggingHander<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
-        public override TRequest Handle(TRequest request)
+        public override TRequest Handle(TRequest command)
         {
-            return request;
+            return command;
         }
     }
 }

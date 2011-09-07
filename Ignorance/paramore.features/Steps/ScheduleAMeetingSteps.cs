@@ -93,7 +93,6 @@ namespace Paramore.Features.Steps
         {
             scheduleMeetingCommand.Capacity = seats;
         }
- 
 
         [When(@"I schedule a meeting")]
         public void WhenIScheduleAMeeting()

@@ -11,10 +11,10 @@ namespace Paramore.Tests.services.CommandProcessors.TestDoubles
             command = null;
         }
 
-        public override MyCommand  Handle(MyCommand request)
+        public override MyCommand  Handle(MyCommand command)
         {
-            LogCommand(request);
-            return base.Handle(request);
+            LogCommand(command);
+            return base.Handle(command);
         }
 
         public static bool ShouldRecieve(MyCommand expectedCommand)

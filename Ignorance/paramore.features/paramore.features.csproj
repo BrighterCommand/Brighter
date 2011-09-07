@@ -78,7 +78,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>ScheduleAMeeting.feature</DependentUpon>
     </Compile>
-    <Compile Include="Steps\AddNewvenueSteps.cs" />
+    <Compile Include="Steps\AddAVenueSteps.cs" />
     <Compile Include="Steps\ScheduleAMeetingSteps.cs" />
     <Compile Include="Tools\FuzzyDateParser.cs" />
   </ItemGroup>

@@ -33,6 +33,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Raven.Client.Lightweight, Version=1.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
   </ItemGroup>
@@ -60,6 +61,7 @@
     <Compile Include="Events\Meeting\MeetingScheduledEvent.cs" />
     <Compile Include="Common\IRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ThinReadLayer\VenueReader.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\paramore.domain\paramore.domain.csproj">

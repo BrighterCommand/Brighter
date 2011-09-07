@@ -6,9 +6,9 @@ namespace Paramore.Tests.services.CommandProcessors.TestDoubles
     {
         [MyPreValidationHandlerAttribute(step: 2, timing: HandlerTiming.Before)]
         [MyPostLoggingHandlerAttribute(step: 1, timing: HandlerTiming.After)]
-        public override MyCommand Handle(MyCommand request)
+        public override MyCommand Handle(MyCommand command)
         {
-            return base.Handle(request);
+            return base.Handle(command);
         }
     }
 }
