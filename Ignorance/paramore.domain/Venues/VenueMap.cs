@@ -11,6 +11,11 @@ namespace Paramore.Domain.Venues
             this.map = map;
         }
 
+        public VenueMap()
+        {
+            map = new Uri(string.Empty);
+        }
+
         public static implicit operator string(VenueMap venueMap)
         {
             return venueMap.map.AbsoluteUri;

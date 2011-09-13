@@ -15,6 +15,13 @@ namespace Paramore.Domain.Venues
             this.city = city;
         }
 
+        public Address()
+        {
+            city = new City();
+            postalCode = new PostCode();
+            street = new Street();
+        }
+
         public static implicit operator string(Address address)
         {
             return address.ToString();

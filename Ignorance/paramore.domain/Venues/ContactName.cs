@@ -2,11 +2,16 @@ namespace Paramore.Domain.Venues
 {
     public class ContactName
     {
-        public string Name { get; private set; }
+        private readonly string name = string.Empty;
 
         public ContactName(string name)
         {
-            Name = name;
+            this.name = name;
         }
+
+        public ContactName() {}
+
+        public string Name { get { return name; }}
+
     }
 }

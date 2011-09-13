@@ -2,8 +2,8 @@ namespace Paramore.Domain.Venues
 {
     public class Street
     {
-        private readonly string streetNumber;
-        private readonly string street;
+        private readonly string streetNumber = string.Empty;
+        private readonly string street = string.Empty;
 
         public Street(string streetNumber, string street)
         {
@@ -15,6 +15,8 @@ namespace Paramore.Domain.Venues
         {
             this.street = street;
         }
+
+        public Street() {}
 
         public override string ToString()
         {

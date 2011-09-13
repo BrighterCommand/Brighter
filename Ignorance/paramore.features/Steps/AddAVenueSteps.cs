@@ -1,9 +1,14 @@
 ﻿using System;
+using System.Linq;
+using NUnit.Framework;
+using Paramore.Domain.Venues;
+using Paramore.Infrastructure.Domain;
 using Paramore.Infrastructure.Raven;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandHandlers.Venues;
 using Paramore.Services.CommandProcessors;
 using Paramore.Services.Commands.Venue;
+using Paramore.Services.ThinReadLayer;
 using TechTalk.SpecFlow;
 using TinyIoC;
 
@@ -15,6 +20,7 @@ namespace Paramore.Features.Steps
         private static TinyIoCContainer container;
         private static CommandProcessor commandProcessor;
         private static AddVenueCommand command;
+        private readonly Guid newVenueId = Guid.NewGuid();
 
         [BeforeFeature]
         public static void SetUp()
@@ -25,6 +31,7 @@ namespace Paramore.Features.Steps
 
             commandProcessor = new CommandProcessor(container);
             container.Register<IAmAUnitOfWorkFactory, UnitOfWorkFactory>().AsSingleton();
+            container.Register<IRepository<Venue, VenueDTO>, Repository<Venue, VenueDTO>>().AsMultiInstance();
             container.Register<IHandleRequests<AddVenueCommand>, AddVenueCommandHandler>("ScheduleMeetingCommandHandler");
         }
 
@@ -37,14 +44,16 @@ namespace Paramore.Features.Steps
         [When(@"I create a new venue")]
         public void WhenICreateANewVenue()
         {
-            command.VenueId = Guid.NewGuid();
+            command.VenueId = newVenueId;
             commandProcessor.Send(command);
         }
 
         [Then(@"whe I list venues (.*) should be included")]
         public void ThenWheIListVenuesShouldBeIncluded(string venueName)
         {
-            ScenarioContext.Current.Pending();
+            var reader = new VenueReader(container.Resolve<IAmAUnitOfWorkFactory>());
+            var venues = reader.GetAll();
+            Assert.IsTrue(venues.Where(venue => venue.Id == newVenueId).Any());
         }
     }
 
