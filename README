@@ -13,6 +13,11 @@ to help achieve that. Arguments about whether the domain is sufficiently high-va
 in favor of the accessability of the sample. It's also using a few technologies I wanted to try out: 
 Raven DB, NancyFX, and TinyIoC
 
+This is a 'work-in-progress' and by no means complete. Feel free to pull or fork. However, don't expect
+to push back to this repository. It's not really intended as an exercise in shared development. If I harvest 
+frameworks such as the command processor pipeline from this project, that is much more likely to be the pull-push
+option. 
+
 Renegade - Just some older code, dumped here for now. At this point, nothing to see here, move along. 
 Later this is intended to be a version of Ignorance that uses an Event Sourcing approach to storage.
 
