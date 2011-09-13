@@ -16,6 +16,13 @@ namespace Paramore.Domain.Venues
             this.phoneNumber = phoneNumber;
         }
 
+        public VenueContact()
+        {
+            contactName = new ContactName();
+            emailAddress = new EmailAddress();
+            phoneNumber = new PhoneNumber();
+        }
+
         public static implicit operator string(VenueContact venueContact)
         {
             return venueContact.ToString();

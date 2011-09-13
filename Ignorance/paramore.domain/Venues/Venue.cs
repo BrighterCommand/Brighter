@@ -21,10 +21,10 @@ namespace Paramore.Domain.Venues
             this.name = name;
         }
 
-        public Venue(Id id, Version version, VenueName venueName) : base(id, version)
-        {
-            this.name = venueName;
-        }
+        public Venue(Id id, Version version, VenueName venueName) 
+            : this(id, version, venueName, new Address(), new VenueMap(), new VenueContact()) {}
+
+        public Venue() : base(new Id(), new Version()){}
 
         public override void Load(VenueDTO dataObject)
         {
