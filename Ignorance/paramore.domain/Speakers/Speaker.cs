@@ -35,6 +35,11 @@ namespace Paramore.Domain.Speakers
         {
             return new SpeakerDTO(Id, Version, bio, phoneNumber, emailAddress, name);
         }
+
+        public override string ToString()
+        {
+            return string.Format("Bio: {0}, EmailAddress: {1}, Name: {2}, PhoneNumber: {3}", bio, emailAddress, name, phoneNumber);
+        }
     }
 
     public class SpeakerDTO : IAmADataObject
@@ -55,5 +60,10 @@ namespace Paramore.Domain.Speakers
         public string Name { get; set; }
         public string PhoneNumber { get; set; }
         public int Version { get; set; }
+
+        public override string ToString()
+        {
+            return string.Format("Bio: {0}, Email: {1}, Id: {2}, Name: {3}, PhoneNumber: {4}, Version: {5}", Bio, Email, Id, Name, PhoneNumber, Version);
+        }
     }
 }

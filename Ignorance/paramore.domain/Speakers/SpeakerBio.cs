@@ -1,17 +1,30 @@
+using Paramore.Domain.Common;
+
 namespace Paramore.Domain.Speakers
 {
-    public class SpeakerBio
+    public class SpeakerBio : IAmAValueType<string>
     {
-        private string bio; 
+        private readonly string bio; 
 
         public SpeakerBio(string biography)
         {
             this.bio = biography;
         }
 
-        public static implicit operator string(SpeakerBio speakerBio)
+        public string Value
         {
-            return speakerBio.bio;
+            get { return bio; }
         }
+
+        public static implicit operator string(SpeakerBio rhs)
+        {
+            return rhs.bio;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0}", bio);
+        }
+
     }
 }

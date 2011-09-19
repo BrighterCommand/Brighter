@@ -41,6 +41,11 @@ namespace Paramore.Infrastructure.Domain
             return version.version;
         }
 
+        public static explicit operator Version(int versionNumber)
+        {
+            return new Version(versionNumber: versionNumber);
+        }
+
         public static bool operator ==(Version left, Version right)
         {
             return Equals(left, right);

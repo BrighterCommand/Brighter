@@ -1,8 +1,9 @@
 using System;
+using Paramore.Domain.Common;
 
 namespace Paramore.Domain.Venues
 {
-    public class VenueMap
+    public class VenueMap : IAmAValueType<Uri>
     {
         private readonly Uri map;
 
@@ -13,12 +14,22 @@ namespace Paramore.Domain.Venues
 
         public VenueMap()
         {
-            map = new Uri(string.Empty);
+            map = new Uri("http://paramore/venue/map");
         }
 
-        public static implicit operator string(VenueMap venueMap)
+        public Uri Value
         {
-            return venueMap.map.AbsoluteUri;
+            get { return map; }
+        }
+
+        public static implicit operator string(VenueMap rhs)
+        {
+            return rhs.ToString();
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0}", map.AbsoluteUri);
         }
     }
 }

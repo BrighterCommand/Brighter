@@ -1,6 +1,9 @@
+using System;
+using Paramore.Domain.Common;
+
 namespace Paramore.Domain.Meetings
 {
-    public class Capacity
+    public class Capacity: IEquatable<Capacity>, IAmAValueType<int>
     {
         private readonly int capacity;
 
@@ -9,24 +12,24 @@ namespace Paramore.Domain.Meetings
             this.capacity = capacity;
         }
 
-        public static implicit operator int(Capacity capacity)
+        public static implicit operator int(Capacity rhs)
         {
-            return capacity.capacity;
+            return rhs.capacity;
         }
 
-        public bool Equals(Capacity other)
+        public bool Equals(Capacity lhs)
         {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return other.capacity == capacity;
+            if (ReferenceEquals(null, lhs)) return false;
+            if (ReferenceEquals(this, lhs)) return true;
+            return lhs.capacity == capacity;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object rhs)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != typeof (Capacity)) return false;
-            return Equals((Capacity) obj);
+            if (ReferenceEquals(null, rhs)) return false;
+            if (ReferenceEquals(this, rhs)) return true;
+            if (rhs.GetType() != typeof (Capacity)) return false;
+            return Equals((Capacity) rhs);
         }
 
         public override int GetHashCode()
@@ -42,6 +45,16 @@ namespace Paramore.Domain.Meetings
         public static bool operator !=(Capacity left, Capacity right)
         {
             return !Equals(left, right);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0}", capacity);
+        }
+
+        public int Value
+        {
+            get { return capacity; }
         }
     }
 }

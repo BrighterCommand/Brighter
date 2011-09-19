@@ -61,7 +61,7 @@ namespace Paramore.Features.Steps
     public class AddAnAddressToAVenue
     {
         [Given(@"I have a street address of (.*)")]
-        public void GivenIHaveAStreetAddressOf116_120GoswellRoad()
+        public void GivenIHaveAStreetAddressOf(string streetAddress)
         {
             ScenarioContext.Current.Pending();
         }
@@ -85,7 +85,7 @@ namespace Paramore.Features.Steps
         }
 
         [Then(@"I should get a street address of (.*)")]
-        public void ThenIShouldGetAStreetAddressOf()
+        public void ThenIShouldGetAStreetAddressOf(string streetAddress)
         {
             ScenarioContext.Current.Pending();
         }
