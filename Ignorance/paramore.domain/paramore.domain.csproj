@@ -41,6 +41,7 @@
   <ItemGroup>
     <Compile Include="Common\Aggregate.cs" />
     <Compile Include="Common\EmailAddress.cs" />
+    <Compile Include="Common\IAmAvalueType.cs" />
     <Compile Include="Common\PhoneNumber.cs" />
     <Compile Include="Meetings\MeetingState.cs" />
     <Compile Include="Venues\Address.cs" />

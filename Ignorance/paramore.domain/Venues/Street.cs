@@ -1,6 +1,9 @@
+using System;
+using Paramore.Domain.Common;
+
 namespace Paramore.Domain.Venues
 {
-    public class Street
+    public class Street : IAmAValueType<string>, IFormattable
     {
         private readonly string streetNumber = string.Empty;
         private readonly string street = string.Empty;
@@ -18,14 +21,29 @@ namespace Paramore.Domain.Venues
 
         public Street() {}
 
-        public override string ToString()
+        public string Value
         {
-            return streetNumber == null ? string.Format("{0} {1}", streetNumber, street) : street;
+            get { return ToString(); }
         }
 
-        public static implicit operator string(Street street)
+        public static implicit operator string(Street rhs)
         {
-            return street.ToString();
+            return rhs.ToString();
+        }
+
+        public override string ToString()
+        {
+            return streetNumber != null ? string.Format("StreetNumber: {0}, Street: {1}", streetNumber, street) : string.Format("Street: {0}", street);
+        }
+
+        public string ToString(string format, IFormatProvider formatProvider)
+        {
+            switch(format)
+            {
+                case "G":
+                default:
+                    return ToString();
+            }
         }
     }
 }

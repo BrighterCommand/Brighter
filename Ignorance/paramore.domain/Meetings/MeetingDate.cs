@@ -1,8 +1,9 @@
 using System;
+using Paramore.Domain.Common;
 
 namespace Paramore.Domain.Meetings
 {
-    public class MeetingDate
+    public class MeetingDate : IEquatable<MeetingDate>, IAmAValueType<DateTime>
     {
         private readonly DateTime on;
 
@@ -11,24 +12,29 @@ namespace Paramore.Domain.Meetings
             this.on = on;
         }
 
-        public static implicit operator DateTime(MeetingDate meetingDate)
+        public DateTime Value
         {
-            return meetingDate.on;
+            get { return on; }
         }
 
-        public bool Equals(MeetingDate other)
+        public static implicit operator DateTime(MeetingDate rhs)
         {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return other.@on.Equals(@on);
+            return rhs.on;
         }
 
-        public override bool Equals(object obj)
+        public bool Equals(MeetingDate rhs)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != typeof (MeetingDate)) return false;
-            return Equals((MeetingDate) obj);
+            if (ReferenceEquals(null, rhs)) return false;
+            if (ReferenceEquals(this, rhs)) return true;
+            return rhs.@on.Equals(@on);
+        }
+
+        public override bool Equals(object rhs)
+        {
+            if (ReferenceEquals(null, rhs)) return false;
+            if (ReferenceEquals(this, rhs)) return true;
+            if (rhs.GetType() != typeof (MeetingDate)) return false;
+            return Equals((MeetingDate) rhs);
         }
 
         public override int GetHashCode()
@@ -45,5 +51,11 @@ namespace Paramore.Domain.Meetings
         {
             return !Equals(left, right);
         }
+
+        public override string ToString()
+        {
+            return string.Format("{0}", @on);
+        }
+
     }
 }

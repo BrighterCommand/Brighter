@@ -38,6 +38,11 @@ namespace Paramore.Domain.Venues
         {
             return new VenueDTO(id, version, name, address, map, contact);
         }
+
+        public override string ToString()
+        {
+            return string.Format("Address: {0}, Contact: {1}, Map: {2}, Name: {3}", address, contact, map, name);
+        }
     }
 
     public class VenueDTO : IAmADataObject
@@ -51,6 +56,8 @@ namespace Paramore.Domain.Venues
             VenueMap = (string) venueMap;
             VenueContact = (string) venueContact;
         }
+
+        public VenueDTO() {}
 
         public string Address { get; set; }
         public Guid Id { get; set; }

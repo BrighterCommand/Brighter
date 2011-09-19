@@ -48,6 +48,10 @@ namespace Paramore.Domain.Meetings
             return new MeetingDTO(Id, meetingDate, venue, speaker, tickets.ToDTO(), state, version);
         }
 
+        public override string ToString()
+        {
+            return string.Format("MeetingDate: {0}, Speaker: {1}, State: {2}, Tickets: {3}, Venue: {4}", meetingDate, speaker, state, tickets, venue);
+        }
     }
 
     public class MeetingDTO : IAmADataObject
@@ -72,5 +76,10 @@ namespace Paramore.Domain.Meetings
         public MeetingState State { get; set; }
         public List<TicketDTO> Tickets { get; set; }
         public int Version { get; set; }
+
+        public override string ToString()
+        {
+            return string.Format("Id: {0}, Venue: {1}, MeetingDate: {2}, Speaker: {3}, State: {4}, Tickets: {5}, Version: {6}", Id, Venue, MeetingDate, Speaker, State, Tickets, Version);
+        }
     }
 }
