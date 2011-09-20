@@ -10,6 +10,5 @@ namespace Paramore.Services.Commands.Venue
         public AddVenueCommand():base(Guid.NewGuid()){}
 
         public string VenueName { get; set; }
-        public Guid VenueId { get; set; }
     }
 }
