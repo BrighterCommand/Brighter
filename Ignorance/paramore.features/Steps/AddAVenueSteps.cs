@@ -44,15 +44,15 @@ namespace Paramore.Features.Steps
         [When(@"I create a new venue")]
         public void WhenICreateANewVenue()
         {
-            command.VenueId = newVenueId;
+            command.Id = newVenueId;
             commandProcessor.Send(command);
         }
 
         [Then(@"whe I list venues (.*) should be included")]
         public void ThenWheIListVenuesShouldBeIncluded(string venueName)
         {
-            var reader = new VenueReader(container.Resolve<IAmAUnitOfWorkFactory>());
-            var venues = reader.GetAll();
+            var reader = new VenueReader(unitOfWorkFactory: container.Resolve<IAmAUnitOfWorkFactory>());
+            var venues = reader.GetAll().ToList();
             Assert.IsTrue(venues.Where(venue => venue.Id == newVenueId).Any());
         }
     }
