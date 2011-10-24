@@ -4,9 +4,9 @@ using Paramore.Infrastructure.Raven;
 
 namespace Paramore.Domain.Meetings
 {
-    public class Ticket : IEntity<TicketDTO>
+    public class Ticket : IEntity<TicketDTO> 
     {
-        private Id id;
+        private readonly Id id;
 
         public Ticket()
         {
@@ -22,6 +22,11 @@ namespace Paramore.Domain.Meetings
         {
             get { return id; }
         }
+
+        public override string ToString()
+        {
+            return string.Format("Id: {0}", id);
+        }
     }
 
     public class TicketDTO : IAmADataObject
@@ -34,5 +39,10 @@ namespace Paramore.Domain.Meetings
         }
 
         public Guid Id { get; set; }
+
+        public override string ToString()
+        {
+            return string.Format("Id: {0}", Id);
+        }
     }
 }
