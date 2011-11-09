@@ -6,11 +6,11 @@ using Paramore.Infrastructure.Domain;
 using Paramore.Infrastructure.Raven;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandHandlers.Venues;
-using Paramore.Services.CommandProcessors;
 using Paramore.Services.Commands.Venue;
 using Paramore.Services.ThinReadLayer;
 using TechTalk.SpecFlow;
 using TinyIoC;
+using paramore.commandprocessor;
 
 namespace Paramore.Features.Steps
 {

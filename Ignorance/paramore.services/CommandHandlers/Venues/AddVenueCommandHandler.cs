@@ -2,6 +2,7 @@ using Paramore.Domain.Venues;
 using Paramore.Infrastructure.Domain;
 using Paramore.Infrastructure.Raven;
 using Paramore.Services.Commands.Venue;
+using paramore.commandprocessor;
 
 namespace Paramore.Services.CommandHandlers.Venues
 {

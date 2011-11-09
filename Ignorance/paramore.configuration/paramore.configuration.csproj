@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -45,6 +45,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\paramore.commandprocessor\paramore.commandprocessor.csproj">
+      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
+      <Name>paramore.commandprocessor</Name>
+    </ProjectReference>
     <ProjectReference Include="..\paramore.services\paramore.services.csproj">
       <Project>{A056F023-D432-42AE-8029-BB6B84828704}</Project>
       <Name>paramore.services</Name>

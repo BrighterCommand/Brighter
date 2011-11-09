@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Services.CommandHandlers;
-using Paramore.Services.CommandProcessors;
 using Paramore.Services.Commands;
+using paramore.commandprocessor;
 
 namespace Paramore.Configuration
 {

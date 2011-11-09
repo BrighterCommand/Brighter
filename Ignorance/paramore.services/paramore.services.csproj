@@ -38,32 +38,19 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CommandHandlers\HandlerName.cs" />
-    <Compile Include="CommandHandlers\HandlerTiming.cs" />
-    <Compile Include="CommandHandlers\RequestHandler.cs" />
     <Compile Include="CommandHandlers\Venues\AddVenueCommandHandler.cs" />
-    <Compile Include="CommandProcessors\ChainofResponsibilityBuilder.cs" />
-    <Compile Include="CommandHandlers\IHandleCommands.cs" />
     <Compile Include="CommandHandlers\Meetings\ScheduleMeetingCommandHandler.cs" />
-    <Compile Include="CommandProcessors\ChainPathExplorer.cs" />
-    <Compile Include="CommandProcessors\Chains.cs" />
-    <Compile Include="CommandProcessors\CommandProcessor.cs" />
-    <Compile Include="CommandProcessors\HandlerFactory.cs" />
-    <Compile Include="CommandProcessors\IChainofResponsibilityBuilder.cs" />
-    <Compile Include="CommandProcessors\ReflectionExtensionMethods\ReflectionExtensionMethods.cs" />
-    <Compile Include="CommandProcessors\RequestHandlerRequiredDecoratorAttribute.cs" />
-    <Compile Include="CommandProcessors\RequestHandlers.cs" />
-    <Compile Include="CommandProcessors\Command.cs" />
-    <Compile Include="CommandProcessors\ICommand.cs" />
     <Compile Include="Commands\Venue\AddVenueCommand.cs" />
     <Compile Include="Commands\Meeting\ScheduleMeetingCommand.cs" />
-    <Compile Include="CommandProcessors\Event.cs" />
     <Compile Include="Events\Meeting\MeetingScheduledEvent.cs" />
-    <Compile Include="Common\IRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ThinReadLayer\VenueReader.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\paramore.commandprocessor\paramore.commandprocessor.csproj">
+      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
+      <Name>paramore.commandprocessor</Name>
+    </ProjectReference>
     <ProjectReference Include="..\paramore.domain\paramore.domain.csproj">
       <Project>{41D1C746-9959-403C-956E-F4538CA72A83}</Project>
       <Name>paramore.domain</Name>
@@ -77,6 +64,7 @@
       <Name>paramore.utility</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

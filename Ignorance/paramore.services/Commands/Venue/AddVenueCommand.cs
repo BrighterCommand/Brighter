@@ -1,6 +1,5 @@
 using System;
-using Paramore.Services.CommandProcessors;
-using Paramore.Services.Common;
+using paramore.commandprocessor;
 
 namespace Paramore.Services.Commands.Venue
 {
