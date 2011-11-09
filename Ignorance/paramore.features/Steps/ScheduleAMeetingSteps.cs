@@ -10,11 +10,11 @@ using Paramore.Infrastructure.Domain;
 using Paramore.Infrastructure.Raven;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandHandlers.Meetings;
-using Paramore.Services.CommandProcessors;
 using Paramore.Services.Commands.Meeting;
 using Raven.Client.Linq;
 using TechTalk.SpecFlow;
 using TinyIoC;
+using paramore.commandprocessor;
 using Version = Paramore.Infrastructure.Domain.Version;
 
 namespace Paramore.Features.Steps

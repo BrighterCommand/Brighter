@@ -54,29 +54,14 @@
     <Compile Include="domain\Meetings\TicketIssuerTests.cs" />
     <Compile Include="domain\Venues\VenueParsingTests.cs" />
     <Compile Include="services\CommandHandlers\Meetings\ScheduleMeetingCommandHandlerTests.cs" />
-    <Compile Include="services\CommandProcessors\ChainOfResponsibilityTests.cs" />
-    <Compile Include="services\CommandProcessors\CommandProcessorTests.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyDependentCommandHandler.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyEntity.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyCommand.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyCommandHandler.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyDoubleDecoratedHandler.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyEvent.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyEventHandler.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyImplicitHandler.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyLoggingHander.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyLoggingHandlerAttribute.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyOtherEventHandler.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyPostLoggingHandlerAttribute.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyPreAndPostDecoratedHandler.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyPreValidationHandlerAttribute.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyUnitOfWorkFactory.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyValidationHandler.cs" />
-    <Compile Include="services\CommandProcessors\TestDoubles\MyValidationHandlerAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
+    <ProjectReference Include="..\paramore.commandprocessor\paramore.commandprocessor.csproj">
+      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
+      <Name>paramore.commandprocessor</Name>
+    </ProjectReference>
     <ProjectReference Include="..\paramore.domain\paramore.domain.csproj">
       <Project>{41D1C746-9959-403C-956E-F4538CA72A83}</Project>
       <Name>paramore.domain</Name>

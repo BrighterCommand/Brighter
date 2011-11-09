@@ -17,6 +17,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.web", "paramore.we
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.infrastructure", "paramore.infrastructure\paramore.infrastructure.csproj", "{A29960CC-7A28-4C4C-B52A-EEDF32168205}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.commandprocessor", "paramore.commandprocessor\paramore.commandprocessor.csproj", "{2ACB382A-38FA-49A6-A9CD-212881D3CD37}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.commandprocessor.tests", "paramore.commandprocessor.tests\paramore.commandprocessor.tests.csproj", "{65BADB63-5F98-4F24-84D7-8C99263F88C6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +59,14 @@ Global
 		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2ACB382A-38FA-49A6-A9CD-212881D3CD37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2ACB382A-38FA-49A6-A9CD-212881D3CD37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2ACB382A-38FA-49A6-A9CD-212881D3CD37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2ACB382A-38FA-49A6-A9CD-212881D3CD37}.Release|Any CPU.Build.0 = Release|Any CPU
+		{65BADB63-5F98-4F24-84D7-8C99263F88C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65BADB63-5F98-4F24-84D7-8C99263F88C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65BADB63-5F98-4F24-84D7-8C99263F88C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65BADB63-5F98-4F24-84D7-8C99263F88C6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
