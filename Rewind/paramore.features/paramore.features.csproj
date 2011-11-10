@@ -60,7 +60,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AddAVenue.feature.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>AddAVenue.feature</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ScheduleAMeeting.feature.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>ScheduleAMeeting.feature</DependentUpon>
+    </Compile>
     <Compile Include="Steps\AddAVenueSteps.cs" />
     <Compile Include="Steps\ScheduleAMeetingSteps.cs" />
     <Compile Include="Tools\FuzzyDateParser.cs" />
