@@ -2,7 +2,7 @@ using System.Text;
 
 namespace paramore.commandprocessor
 {
-    public class ChainPathExplorer
+    internal class ChainPathExplorer : IChainPathExplorer
     {
         private readonly StringBuilder buffer = new StringBuilder();
 

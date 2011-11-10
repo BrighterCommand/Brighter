@@ -12,7 +12,7 @@ namespace paramore.commandprocessor
             set { _successor = value; }
         }
 
-        public void DescribePath(ChainPathExplorer pathExplorer)
+        public void DescribePath(IChainPathExplorer pathExplorer)
         {
             pathExplorer.AddToPath(Name());
             if (_successor != null)
