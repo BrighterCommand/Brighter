@@ -5,7 +5,7 @@ using TinyIoC;
 
 namespace paramore.commandprocessor
 {
-    public class ChainofResponsibilityBuilder<TRequest> : IChainofResponsibilityBuilder<TRequest> where TRequest : class, IRequest
+    internal class ChainofResponsibilityBuilder<TRequest> : IChainofResponsibilityBuilder<TRequest> where TRequest : class, IRequest
     {
         private readonly TinyIoCContainer container;
         private readonly Type implicithandlerType;

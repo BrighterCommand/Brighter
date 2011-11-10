@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace paramore.commandprocessor
 {
-
     public class Chains<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest
     {
         private readonly List<IHandleRequests<TRequest>> chains = new List<IHandleRequests<TRequest>>();

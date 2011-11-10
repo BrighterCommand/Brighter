@@ -46,6 +46,7 @@
     <Compile Include="HandlerName.cs" />
     <Compile Include="HandlerTiming.cs" />
     <Compile Include="IChainofResponsibilityBuilder.cs" />
+    <Compile Include="IChainPathExplorer.cs" />
     <Compile Include="ICommand.cs" />
     <Compile Include="IHandleRequests.cs" />
     <Compile Include="IRequest.cs" />
