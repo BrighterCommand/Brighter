@@ -1,0 +1,55 @@
+Story: As an organizer I want to propose a session with a speaker so that I can begin finding a venue for it
+Scenario
+Given that I enter a session title
+And a speaker name
+When I save them to a proposal
+Then my proposal will be added to the proposed session list
+
+Given that I have a proposed session with a Title of "CQRS Diving Deeper" and a Speaker of "Ian Cooper"
+And I have a proposed session with a Title of "Introduction to Mono" and a Speaker of "Toby Henderson"
+When I view the proposed session index
+Then I will see two proposed sessions
+The first with a proposed session with a Title of "CQRS Diving Deeper" and a Speaker of "Ian Cooper"
+And the second with a proposed session with a Title of "Introduction to Mono" and a Speaker of "Toby Henderson"
+
+Scenario
+Given that I have a proposed session
+When I delete the session
+Then it is removed from the proposed session list
+
+--No real need to update a proposal I expect, we turn them in to sessions and speakers i.e. we have a proposal, we either match with existing speaker or create new, we match with existing venue details or create new. Proposal should be a lightweight pipeline.
+
+Story: As an organizer I want to confirm the date for the session, so that everyone can block out their calendars
+
+Story: As an organizer I want to confirm the venue for the session, so that everyone knows where to go
+
+Story: As an organizer I want to update a proposed session's abstract, so that people know if they want to attend
+
+Story: As an organizer I want to update a speaker's bio, so that people know who is speaking
+
+Story: As an organizer I want to publish the event, so that people can see our future timetable
+
+Story: As an organizer I want to be able to publish the event to Eventbrite, so that I can deal with registration
+
+Story: As a developer I want to register at LDNUG to be kept up to date with future events
+
+Scenario 1
+Given that I am not an LDNUG user
+And I enter my user name
+And I enter my password
+And I enter my email address
+When I register with LDNUG
+Then I will be added to the users of the site
+And I will receive a confirmation email to confirm my email address
+And I will have 24 hours to confirm my account
+And I will be welcomed to the site by the mail
+
+Story: As a developer I want to subscribe to an iCal feed for future events
+
+Story: As a developer I want to be see events published to Twitter once I can register
+
+
+
+
+:wa
+
