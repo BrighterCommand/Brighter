@@ -4,7 +4,6 @@ using NUnit.Framework;
 using Paramore.Domain.Venues;
 using Paramore.Infrastructure.Domain;
 using Paramore.Infrastructure.Raven;
-using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandHandlers.Venues;
 using Paramore.Services.Commands.Venue;
 using Paramore.Services.ThinReadLayer;

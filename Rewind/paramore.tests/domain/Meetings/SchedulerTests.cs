@@ -34,7 +34,6 @@ namespace Paramore.Tests.domain.Meetings
     public class When_we_schedule_a_meeting_it_should_have_a_time
     {
         static Scheduler scheduler;
-        static Capacity capacity;
         static IAmAnOverbookingPolicy _overbookingPolicy;
         static Exception exception;
 
@@ -44,7 +43,7 @@ namespace Paramore.Tests.domain.Meetings
             scheduler = new Scheduler(_overbookingPolicy);
         };
 
-        Because of = () => exception = Catch.Exception(() => scheduler.Schedule(new Id(Guid.NewGuid()), null, new Id(Guid.NewGuid()), new Id(Guid.NewGuid()), capacity));
+        Because of = () => exception = Catch.Exception(() => scheduler.Schedule(new Id(Guid.NewGuid()), null, new Id(Guid.NewGuid()), new Id(Guid.NewGuid()), new Capacity(100)));
 
         It should_throw_an_invalid_argument_exception = () => exception.ShouldBeOfType<ArgumentNullException>();
 
