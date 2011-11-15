@@ -1,0 +1,50 @@
+
+1.2.0 - 2009/11/25
+
+New features:
++ Generate #line pragmas to the output file (Issue 26)
++ Allow transformation of feature files from command-line and MsBuild (Issue 3)
++ Merge all command-line tool (generation, reports) to a single executable: specflow.exe
++ Support for Dutch and Swedish language
++ Support enumerations in step binding arguments (Issue 28)
+
+Fixed issues:
++ MsTest does not refresh tests automatically (Issue 25)
++ Fixes in report localization
++ Non-string parameters for bindings are not converted using the feature language (Issue 26)
+
+1.1.0 - 2009/11/11
+
+New features:
++ Support for MsTest (Issue 4)
++ Finalize configuration (Issue 13)
++ Support German, French and Hungarian languages (Issue 5)
++ Add strong-name for specflow assemblies (Issue 2)
++ Allow scenario events to be instance methods (Issue 20)
++ More descriptive name for the scenario outline example tests than XYZ_Variant1 (Issue 18)
++ NUnit SpecFlow test execution report (Issue 23)
++ Step definition usage report (Issue 24)
+
+Fixed issues:
++ Runtime: Remove direct dependency on nunit.framework.dll from the runtime (Issue 12)
++ Runtime: Binding methods with more than 4 parameters cannot be used (Issue 21)
++ Generator: Special language characters (e.g. accented letters) are removed when generating test method names (Issue 22)
+
+1.0.2 - 2009/10/20
+
+New features:
++ Runtime: allow non-static bindings
++ Runtime: support multiple step attributes on a single binding method
+
+Fixed issues:
++ VS: Error message is displayed when you add a SpecFlow project item to your project.
++ Parser: mixed order of Given/When/Then is not supported
++ Runtime: the original phrasing of the keywords (Given/And/But) is not preserved
++ Generator: the generated test class has a "Fixture" suffix
++ Parser: specifying any "given" should be optional
+
+
+1.0.1 - 2009/10/13
+
+Initial publish on http://www.specflow.org
+

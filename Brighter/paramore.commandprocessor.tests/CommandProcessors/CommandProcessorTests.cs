@@ -1,6 +1,7 @@
 using System;
 using Machine.Specifications;
 using TinyIoC;
+using paramore.commandprocessor.ioccontainers.IoCContainers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
@@ -13,7 +14,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyIoCContainer();
+            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
             commandProcessor = new CommandProcessor(container);
 
@@ -33,7 +34,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyIoCContainer();
+            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>("DefaultHandler").AsMultiInstance();
             container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>("Implicit Handler").AsMultiInstance();
             commandProcessor = new CommandProcessor(container);
@@ -55,7 +56,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyIoCContainer();
+            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
             commandProcessor = new CommandProcessor(container);
 
         };
@@ -74,7 +75,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyIoCContainer();
+            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
             container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsMultiInstance();
             commandProcessor = new CommandProcessor(container);
         };
@@ -93,7 +94,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            commandProcessor = new CommandProcessor(new TinyIoCContainer());                                    
+            commandProcessor = new CommandProcessor(new TinyInversionOfControlContainer(new TinyIoCContainer()));                                    
         };
 
         Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
@@ -110,7 +111,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
                                 {
-                                    var container = new TinyIoCContainer();
+                                    var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
                                     container.Register<IHandleRequests<MyEvent>, MyEventHandler>("My Event Handler").AsMultiInstance();
                                     container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("My Other Event Handler").AsMultiInstance();
                                     commandProcessor = new CommandProcessor(container);
