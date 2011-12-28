@@ -10,13 +10,15 @@ using Paramore.Services.ThinReadLayer;
 using TechTalk.SpecFlow;
 using TinyIoC;
 using paramore.commandprocessor;
+using paramore.commandprocessor.ioccontainers.IoCContainers;
+using paramore.commandprocessor.sharedinterfaces;
 
 namespace Paramore.Features.Steps
 {
     [Binding]
     public class AddAVenue
     {
-        private static TinyIoCContainer container;
+        private static IAmAnInversionOfControlContainer container;
         private static CommandProcessor commandProcessor;
         private static AddVenueCommand command;
         private readonly Guid newVenueId = Guid.NewGuid();
@@ -26,7 +28,7 @@ namespace Paramore.Features.Steps
         {
             command = new AddVenueCommand();
 
-            container = new TinyIoCContainer();
+            container = new TinyInversionOfControlContainer(new TinyIoCContainer());
 
             commandProcessor = new CommandProcessor(container);
             container.Register<IAmAUnitOfWorkFactory, UnitOfWorkFactory>().AsSingleton();
