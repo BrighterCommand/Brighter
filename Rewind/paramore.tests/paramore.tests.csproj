@@ -43,6 +43,13 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Lib\nunit.framework.dll</HintPath>
     </Reference>
+    <Reference Include="paramore.commandprocessor, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Lib\paramore.commandprocessor.dll</HintPath>
+    </Reference>
+    <Reference Include="paramore.commandprocessor.ioccontainers">
+      <HintPath>..\Lib\paramore.commandprocessor.ioccontainers.dll</HintPath>
+    </Reference>
     <Reference Include="Raven.Client.Lightweight, Version=1.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -58,10 +65,6 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <ProjectReference Include="..\paramore.commandprocessor\paramore.commandprocessor.csproj">
-      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
-      <Name>paramore.commandprocessor</Name>
-    </ProjectReference>
     <ProjectReference Include="..\paramore.domain\paramore.domain.csproj">
       <Project>{41D1C746-9959-403C-956E-F4538CA72A83}</Project>
       <Name>paramore.domain</Name>

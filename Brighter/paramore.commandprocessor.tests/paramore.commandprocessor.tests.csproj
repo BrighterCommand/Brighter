@@ -34,9 +34,6 @@
     <Reference Include="Machine.Specifications">
       <HintPath>..\Lib\Machine.Specifications.dll</HintPath>
     </Reference>
-    <Reference Include="Raven.Client.Lightweight">
-      <HintPath>..\paramore.domain\bin\Debug\Raven.Client.Lightweight.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />

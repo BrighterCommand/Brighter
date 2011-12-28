@@ -32,6 +32,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="paramore.commandprocessor">
+      <HintPath>..\Lib\paramore.commandprocessor.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -45,10 +48,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\paramore.commandprocessor\paramore.commandprocessor.csproj">
-      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
-      <Name>paramore.commandprocessor</Name>
-    </ProjectReference>
     <ProjectReference Include="..\paramore.services\paramore.services.csproj">
       <Project>{A056F023-D432-42AE-8029-BB6B84828704}</Project>
       <Name>paramore.services</Name>

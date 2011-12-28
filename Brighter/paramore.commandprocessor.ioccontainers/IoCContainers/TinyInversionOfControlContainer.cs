@@ -43,5 +43,11 @@ namespace paramore.commandprocessor.ioccontainers.IoCContainers
             Debug.Assert(_registerOptions != null);
             _registerOptions.AsMultiInstance();
         }
+
+        public void AsSingleton()
+        {
+            Debug.Assert(_registerOptions != null);
+            _registerOptions.AsSingleton();
+        }
     }
 }
