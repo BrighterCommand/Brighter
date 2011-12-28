@@ -1,0 +1,362 @@
+﻿1.8.1 - 20111/10/25
+
+Fixed issues:
++ Run & debug scenarios from the feature file context menu does not work with ReSharper 6 (Issue 138)
++ VS2010 step autocomplete: New steps form external project are not found unless IDE is restarted (Issue 88, by Stanislaw Wozniak)
++ VS2010 step autocomplete: Duplicated steps
+
+1.8.0 - 2011/10/17
+
+Breaking changes:
++ Classes used for context injection must have a single public constructor with maximum parameter count (so far the first constructor was used).
++ After step hook is was not invoked when step definition failed so far. Now it is invoked even in case of a failure.
+
+New features:
++ Async testing support for Windows Phone 7 (Issue 132, by Jeff Simons)
++ Support for MbUnit v3. Use unit test provider name "mbunit.3". (Issue 133, by Raytheon)
++ SpecFlow framework classes can be used as a dependency for context injection.
++ Custom extensions for the runtime can be specified in the config file (specflow/runtime/dependencies).
++ Better customization possibilities with plugins.
++ [StepScope] attribute can also scope hooks (event bindings) (Issue 95)
++ [StepScope] has been renamed to [Scope]. [StepScope] is kept with obsolete warning.
++ VS2010: Run & debug scenarios from the feature file context menu and solution explorer nodes (feature file, folder, project).
++ VS2010: Use infix word prefix matching for step completion. 
++ VS2010: Regenerate feature files from project context menu.
++ VS2010: Go to step definition command in feature file context menu. 
++ MsBuild generator can output generated file paths (GeneratedFiles property). The file list is populated to the MsBuild item 
+  @(SpecFlowGeneratedFiles) by the TechTalk.SpecFlow.targets.
++ MsBuild: TechTalk.SpecFlow.targets provides overrideable BeforeUpdateFeatureFilesInProject and AfterUpdateFeatureFilesInProject targets.
++ Cucumber harmonization
+	+ Allow using [Before]/[After] attributes as synonyms of [BeforeScenario]/[AfterScenario]
+	+ Allow using [StepDefinition] attribute that matches to given, when or then steps
+	+ Leading '@' sign can be specified for hooks and [Scope] attribute
+
+Fixed issues:
++ Instances created for context injection are disposed after scenario execution (Issue 22)
++ Error when opening feature file in VS2008 if VS2008 syntax coloring was enabled.
++ Silverlight: make possible to access SilverlightTest instance (Issue 126, by Matt Ellis)
++ Silverlight: apply feature tags to the test class instead of the methods (Issue 126, by Matt Ellis)
++ SpecFlowContext.TryGetValue does not evaluate Func<T> factory methods (Issue 127, by Matt Ellis)
++ StepArgumentTransformation cannot be used recursively
++ VS2010 locks generator folder
++ After step hook is not invoked when step definition failed.
++ Missing XML comment warnings caused by the generated test class (Issue 121)
++ VS2010: Goto step definition misdiagnoses Given-But as a Then-But (Issue 134, by Raytheon)
++ VS2010: 'Go To Definition' does not work with partial classes. (Issue 53, by Raytheon)
++ AfterTestRun-Hook does not trigger when running in NUnitGui or NUnitConsole. To fix this, you need to add the NUnit addin from 
+  https://raw.github.com/techtalk/SpecFlow/master/Installer/NUnitNuGetPackage/SpecFlowNUnitExtension.cs to the project, or use
+  the SpecFlow.NUnit combined NuGet package that does this automatically.
+
+1.7.1 - 2011/08/19
+
+Fixed issues:
++ Test execution report displays the feature description instead of the title (Issue 118)
++ Incomprehensible error message when Scenario-description is empty (Issue 117)
++ Assist helpers do not support Singles (Issue 114, by Joe Parkin)
++ Assist helpers do not support unsigned integers (Issue 115, by mdellanoce)
++ The test class is not generated as UTF-8, so some accented characters might be displayed incorrectly. (Issue 112)
++ Fix step definition report broken by v1.7. (Issue 111, by Chris Roff)
++ Intellisense breaks when typing keyword 'E' (And in pt-BR) followed by a space (Issue 109)
++ Intellisense completition removes the non-first words of keywords (e.g. for "Gegeben sei") (Issue 65)
++ Support table delimiter escaping for table formatting (Issue 99)
++ Fixed enum property name match (Issue 119)
++ Added Assist support for byte, float, long, ulong, sbyte, ushort, single. With nullables. (Issue 120)
+
+1.7.0 - 2011/07/29
+
+Breaking changes:
++ There are a few breaking changes in the generated test code. If you upgrade to SpecFlow 1.7, you should either 
+  re-generate the tests, or setup your project to use a version for generating the tests that is compatible with
+  the runtime you use (see "Using SpecFlow generator from the project's lib folder" feature).
+
+New features:
++ Using standard Gherkin parser (http://github.com/aslakhellesoy/gherkin) v2.3.6
++ Using SpecFlow generator from the project's lib folder instead of SpecFlow installed for IDE integration.
+  The VS2010 integration can be installed independently from projects using a different version. The VS2010
+  integration checks the generator in the following paths:
+  1. generator path configured in app.config (<generator path="..\lib\SpecFlow"/>)
+  2. generator assembly (TechTalk.SpecFlow.Generator.dll) referenced from the SpecFlow project
+  3. generator in the same folder as the runtime (TechTalk.SpecFlow.dll)
+  4. generator is near to the runtime ("tools" or "..\tools", relative to the runtime)
+  5. generator obtained through NuGet ("..\..\tools", relative to the runtime)
+  If SpecFlow cannot find the generator or it is older than v1.6.0, the installed SpecFlow generator is used.
+  If you use any custom plugins (e.g. unit test generator), this has to be in the same folder as the generator 
+  currently.
++ Added ToProjection<T>, ToProjectionOfSet<T>, ToProjectionOfInstance<T> to allow for LINQ-based comparisons. (by Vagif Abilov)
++ Cleaned-up CreateInstance<T> and CreateSet<T> for greater code maintainability.
++ Cleaned-up CompareToInstance<T> and CompareToSet<T> for greater code maintainability, and slightly more accurate value comparisons (like decimals with trailing zeroes).
++ Removed the |Field|Value| requirement for CreateInstance<T> and CompareToInstance<T>. Any header names can be used, so long as the first column is the name of the property and the second column is the value.
++ Can use empty spaces and different casing in the tables used for comparison (i.e. can use |First name| instead of |FirstName| )
++ Tables used with CreateInstance<T> and CompareToInstance<T> can now be one-row tables with each field as a column (instead of requiring a vertical table with "Field/Value" headers)
++ A default function to create a default instance can be passed to CreateInstance<T> and CreateSet<T>. 
++ Syntax coloring support for Visual Studio 2008. Uncheck this option in the installer if you are using cuke4vs. (by Avram Korets)
++ SharpDevelop 4 (#develop) integration. Enable SharpDevelop 4 integration in the installer and use the SharpDevelop AddIn Manager 
+  to install the integration (select addin file from SpecFlow installation folder). (by Charles Weld)
++ Support for testing Silverlight asynchronous code. (by Matt Ellis & Ryan Burnham)
+  See https://github.com/techtalk/SpecFlow/wiki/Testing-Silverlight-Asynchronous-Code for details.
++ TableRow implements IDictionary<string, string>
++ Add table row from a (total or partially filled) dictionary
++ Raname table column (Table.RenameColumn(stirng, string))
+
+Fixed issues:
++ Installer executes devenv /installtemplates even if VS2008 integration is not selected.
++ Duplicated logic between generator and runtime (generator depends on runtime now)
++ MsTest tests are not properly attached to the right feature (Issue 96)
++ Assist methods now work with classes with multiple properties of the same enum type.
++ Refactor IUnitTestGeneratorProvider interface to be more consistent (Issue 4)
+
+1.6.1 - 2011/04/15
+
+Fixed issues:
++ Windows Phone 7 runtime (TechTalk.SpecFlow.WindowsPhone7.dll) is not included in the NuGet package (Issue 61)
++ Warnings in the generated test classes (Issue 58)
++ Improved tracing for VS2010 integration
+
+1.6.0 - 2011/04/04
+
+Breaking changes:
++ The Silverlight runtime assembly has been renamed to TechTalk.SpecFlow.Silverlight3.dll.
+
+New features:
++ Added a Set<T>(Func<T>) extension method. The Func<T> method will be invoked whenever ScenarioContext.Current.Get<T> is called.
++ Support for tagging (including @ignore) scenario outline examples. 
+  NUnit and MbUnit: to filter for categories generated for the examples in the unit test runner, you need to 
+  switch off row test generaiton (<generator allowRowTests="false" />)
++ Using standard Gherkin parser (http://github.com/aslakhellesoy/gherkin) v2.3.5
++ Support for converting table and multi-line text arguments with [StepArgumentTransformation] (by Chris Roff, roffster)
+  See examples in Tests/FeatureTests/StepArgumentTransfomation
++ VS2010: Support for specifying color for the step text
++ Added a FillInstance<T>(T) extension method off of Table. When passed an instance of T, it will fill the instance with values from the table (like CreateInstance<T>).
++ VS2010: Re-generate feature file when the configuration has changed or a new version of SpecFlow is installed
++ VS2010: Improved intellisense for steps
++ VS2010: Intellisense for keywords
++ VS2010: "go to binding"
++ VS2010: Automatic table formatting when "|" is typed
++ VS2010: Tracing can be configured from tools / options. The environment variable SPECFLOW_TRACE is not used anymore.
++ Windows Phone 7 support, see https://github.com/techtalk/SpecFlow/wiki/Windows-Phone-7-Support (by Max Paulousky)
++ Silverlight runtime can be configured from query string (by Matt Ellis)
++ Generate test parameters from scenario outline parameters and example set name for MsTest (by Qingsong Yao)
++ Isolated test generator interface (can be used later for using the generator of the project instead of the generator of the IDE integration)
++ Official NuGet integration (by Daniel Sack)
+
+Fixed issues:
++ Scenario with only "*" steps fails with "System.ArgumentException: Unable to convert block to binding type"
++ Binding is reported as invalid if there is a matching step definition with different scope
++ Support for datetime comparisons that ignore 12:00:00 AM (issue 52)
++ Fix NUnit execution report to properly select features when .features is solely comprised Scenario Outlines. 
+  (by Jon Archer)
++ Tags applied at the feature level are now applied as Silverlight TagAttributes on the class. (by Matt Ellis, citizenmatt)
++ Rethrowing exceptions caught during steps would lose the call stack on Silverlight. (by Matt Ellis, citizenmatt)
++ SpecFlow emits an erroneous suggestion for the step bindings in VB.NET (Issue 32)
++ Refactored VS2010 intagration to better maintanability
++ Refactored CreateSet<T> and CompareToSet<T> extension methods to use the same logic as CreateInstance<T> and CompareToInstance<T>.
++ Step Intellisense doesn't show in Feature Background (Issue 23)
++ Xunit Theory Attribute/InlineAttribute using incorrect namespace. (Issue 40, by Kerry Jones)
++ Scenario Outline - Multiple Scenarios table header row VS formatting issue (Issue 16)
++ SpecFlow step definition report generator throws unhandled exception when a scenario starts with "And" (Issue 45) 
++ VS2010: SpecFlow writes out feature and code-behind files with inconsistent line endings (Issue 28)
++ Step definitions can be implemented in abstract base classes (but the abstract base class must not have the [Binding] attribute). SpecFlow no longer tries to instantiate the abstract base class. (Issue 47)
+
+1.5.0 - 2010/12/17
+
+Breaking changes:
++ Changing the default value (true) of the allowRowTests configuration setting is not incompatible with older 
+  runtimes.
+
+New features:
++ Step Intellisense for Visual Studio 2010 - displays the list of bound steps when pressing space or ctrl+space 
+  after a step keyword
+  (Thanks to Marcus Hammarberg for the contribution.)
++ Options for Visual Studio 2010 - you can enable/disable the integration features (syntax coloring, outlining, 
+  intellisense) in Visual Studio 2010, Tools / Options / SpecFlow / General
++ Faster installation for VS2010 - if you install SpecFlow only to VS2010, the installation is much faster 
+  as we now entirely using the new VSIX infrastructure for the integaration.
++ Support for row test generation (NUnit, MbUnit and xUnit). This new feature is enabled by default, but can 
+  be switched off from the configuration with <generator allowRowTests="false" />.
+  (Thanks to John Gietzen (otac0n) for the contribution.)
++ Support for specifying property names with blanks and case insensitive for SpecFlow.Assist (by Steven Zhang, jdomzhang)
+
+Fixed issues:
++ Scoped Steps does not recognize feature tags (Issue 12)
++ Support for double and nullable types in table-helpers of SpecFlow.Assist
++ Support for enum parsing in table-helpers of SpecFlow.Assist
++ Adding comparison helpers to SpecFlow.Assist (by darrencauthon)
++ Support for char parsing in table-helpers of SpecFlow.Assist (Issue 19)
++ VS2010 might crash after pasting into a feature file
++ Excution report should list features ordered by feature title
+
+1.4.0 - 2010/10/07
+
+Breaking changes:
++ The generator has been improved to provide source code language. Because of this, SpecFlow test generated 
+  with this version will be incompatible with older runtimes.
+
+New features:
++ Scoped Step Definitions: you can scope step definitions (bindings) to tags, features and scenarios. Scope filter 
+  can be applied to a class or a method with the [StepScope] attribute.
+  See examples in Tests/FeatureTests/ScopedSteps/ScopedSteps.feature and Tests/FeatureTests/ScopedSteps/ScopedStepsBindings.cs
+  (Thanks to Jose Simas for the contribution.)
++ Adding binding-culture to App.config. If set, this culture is used during execution of steps.
++ VB-Step-Definition Skeleton Provider: For VB-projects, the suggested step skeletons are generated in VB.
++ Merging strongly typed context accessors from Darren Cauthon's SpecFlowAssist
++ Merging table/row extension methods from Darren Cauthon's SpecFlowAssist 
+  Add a using statement for the namespace TechTalk.SpecFlow.Assist to use the extension methods.
+  See also Darren's youtube tutorial: http://bit.ly/aY4VOd
++ Diagnostic tracing: VS2010 integration can display trace messages to the Output window
+  if tracing is enabled. Tracing can be enabled by setting the environment variable SPECFLOW_TRACE
+  to either "all" or to the comma separated list of individual SpecFlow traing categories (currently
+  only the category "EditorParser" is supported).
+
+Fixed issues:
++ Better error reporting for wrong Gherkin files (multiple errors displayed, detect duplicate scenario names)
++ Visual Studio 2010 editor slows down after editing a feature file for a longer time (Issue 9)
+
+1.3.5.2 - 2010/08/11
+
+Fixed issues:
++ Sorry, we're ironing out our deploy strategy with the new Mono/MonoDevelop integration.  We didn't 
+  change the version in the MonoDevelop Add-In XML file.
+
+1.3.5.1 - 2010/08/11
+
+New features:
++ Support for hosting add-in on http://addins.monodevelop.com
+
+1.3.5 - 2010/08/11
+
+New features:
++ Support for Mono (v2.6.7) & MonoDevelop (v2.4) by Dale Ragan
+
+Fixed issues:
++ Generating code randomly for the wrong testing engine
++ Test class generation problem for Russian feature files
++ Fix tag support for Silverlight
+
+1.3.4 - 2010/07/28
+
+Fixed issues:
++ Installation fails if Visual Studio 2010 is not installed
++ VS2010: Background section is not colored properly
+
+1.3.3 - 2010/07/19
+
+New features:
++ Support for MsTest report generation
+  usage: specflow mstestexecutionreport projectFile [/testResult:value] [/xsltFile:value] [/out:value]
+    projectFile             Visual Studio Project File containing specs
+    [/testResult:value]     Test Result file generated by MsTest. Defaults to TestResult.trx
+    [/out:value]            Generated Output File. Defaults to TestResult.html
+    [/xsltFile:value]       Xslt file to use, defaults to built-in stylesheet if not provided
++ Visual Studio 2010 editor support: 
+    - syntax coloring with configurable colors ("Gherkin ...")
+    - outlining for scenarios
+  Uninstall the beta integration (TechTalk.SpecFlow.VsIntegration.GherkinFile.vsix) before installing 
+  SpecFlow 1.3.3.
+
+Fixed issues:
++ MbUnit execution fails for pending steps (Assert method not found: Inconclusive)
+
+1.3.2 - 2010/06/29
+
+New features:
++ Support for MsTest for .NET 4.0 categories. Configure the test provider name to 
+  "MsTest.2010" in order to use the [TestCategory] attribute.
++ Silverlight support (beta), see http://wiki.github.com/techtalk/SpecFlow/silverlight-support  
+
+Fixed issues:
++ Report generation fails if no custom XSLT is provided
+
+
+1.3.1 - 2010/06/21
+
+New features:
++ Using standard Gherkin parser (http://github.com/aslakhellesoy/gherkin) v2.0.1
++ Custom XSLT can be specified for generating reports. 
+  See examples in Tests/ReportingTests/CustomXsltTemplate.feature
++ The test error can be accessed through ScenarioContext.Current.TestError 
+  (e.g. in an AfterScenario event).
++ [StepTransformation] attribute has been renamed to [StepArgumentTransformation]
+  because this name describe the intention better. Using the old attribute will 
+  generate a warning.
++ Support for MbUnit
+
+Fixed issues:
++ NullReference exception when using BeforeTestRun event (Issue 41)
+
+1.3.0 - 2010/05/05
+
+New features:
++ Using standard Gherkin parser (http://github.com/aslakhellesoy/gherkin) v1.0.24
++ Context injection in step definitions. Step definitions can get a context injected with 
+  constructor injection. (Issue 30)
+  See examples in Tests/FeatureTests/ContextInjection
++ Using steps in other assemblies. This enables writing steps in VB. (Issue 19)
+  See examples in Tests/FeatureTests/ExternalSteps 
++ Steps can be invoked from other steps using step text. See examples in 
+  Tests/FeatureTests/CallingStepsFromStepDefinitions
++ Custom step parameter converters can be defined as a binding. 
+  See examples in Tests/FeatureTests/StepArgumentTransfomation
++ SpecFlow feature files can be added also to VB.NET projects
++ Support for xUnit
++ Single installer for Visual Studio 2008 and 2010 (Issue 6, 10, 11)
++ Place GeneratedCodeAttribute and 'Designer generated code' region on generated code to 
+  avoid having this code parsed by code analysis. (Issue 33)
++ Configuration option to disable all output. (Issue 29)
+  Use the following config to disable output:
+  <trace listener="TechTalk.SpecFlow.Tracing.NullListener, TechTalk.SpecFlow" />
+
+Fixed issues:
++ SpecFlow Reporting doesn't work with Firefox (Issue 31)
++ Binding methods are executed using the culture of the feature file.
++ Several parsing issues are solved now (Issue 1, 8, 9, 37)
+
+1.2.0 - 2009/11/25
+
+New features:
++ Generate #line pragmas to the output file (Issue 26)
++ Allow transformation of feature files from command-line and MsBuild (Issue 3)
++ Merge all command-line tool (generation, reports) to a single executable: specflow.exe
++ Support for Dutch and Swedish language
++ Support enumerations in step binding arguments (Issue 28)
+
+Fixed issues:
++ MsTest does not refresh tests automatically (Issue 25)
++ Fixes in report localization
++ Non-string parameters for bindings are not converted using the feature language (Issue 26)
+
+1.1.0 - 2009/11/11
+
+New features:
++ Support for MsTest (Issue 4)
++ Finalize configuration (Issue 13)
++ Support German, French and Hungarian languages (Issue 5)
++ Add strong-name for specflow assemblies (Issue 2)
++ Allow scenario events to be instance methods (Issue 20)
++ More descriptive name for the scenario outline example tests than XYZ_Variant1 (Issue 18)
++ NUnit SpecFlow test execution report (Issue 23)
++ Step definition usage report (Issue 24)
+
+Fixed issues:
++ Runtime: Remove direct dependency on nunit.framework.dll from the runtime (Issue 12)
++ Runtime: Binding methods with more than 4 parameters cannot be used (Issue 21)
++ Generator: Special language characters (e.g. accented letters) are removed when generating 
+  test method names (Issue 22)
+
+1.0.2 - 2009/10/20
+
+New features:
++ Runtime: allow non-static bindings
++ Runtime: support multiple step attributes on a single binding method
+
+Fixed issues:
++ VS: Error message is displayed when you add a SpecFlow project item to your project.
++ Parser: mixed order of Given/When/Then is not supported
++ Runtime: the original phrasing of the keywords (Given/And/But) is not preserved
++ Generator: the generated test class has a "Fixture" suffix
++ Parser: specifying any "given" should be optional
+
+
+1.0.1 - 2009/10/13
+
+Initial publish on http://www.specflow.org
+
