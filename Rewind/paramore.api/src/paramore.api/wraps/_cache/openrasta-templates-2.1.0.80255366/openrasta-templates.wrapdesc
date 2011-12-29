@@ -1,0 +1,7 @@
+﻿name: openrasta-templates
+depends: openwrap anchored
+depends: openrasta-core = 2.1
+depends: openrasta-hosting-aspnet = 2.1
+depends: sharpziplib
+build: msbuild; project=src\OpenRasta.Templates.Commands\OpenRasta.Templates.Commands.csproj
+version: 2.1.0.80255366

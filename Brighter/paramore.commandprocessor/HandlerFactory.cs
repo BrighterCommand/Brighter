@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using paramore.commandprocessor.sharedinterfaces;
 
 namespace paramore.commandprocessor
 {

@@ -1,0 +1,5 @@
+﻿depends: openwrap content
+depends: openrasta-core = 2.1
+build: msbuild; profile=net35; project=src\OpenRasta.Hosting.AspNet\OpenRasta.Hosting.AspNet.csproj;
+name: openrasta-hosting-aspnet
+version: 2.1.0.80252216

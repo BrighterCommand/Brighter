@@ -11,7 +11,6 @@ using TechTalk.SpecFlow;
 using TinyIoC;
 using paramore.commandprocessor;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
-using paramore.commandprocessor.sharedinterfaces;
 
 namespace Paramore.Features.Steps
 {
