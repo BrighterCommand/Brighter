@@ -1,0 +1,9 @@
+﻿name: openrasta-devtools
+title: OpenRasta Developer Tools
+Description: Provides developer-focused tools for building OpenRasta web sites and applications.
+depends: openwrap content
+depends: openrasta-core = 2.1
+depends: openrasta-codecs-webforms = 2.1
+depends: openrasta-templates = 2.1
+use-project-repository: false
+version: 2.1.0.81133919

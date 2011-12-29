@@ -1,0 +1,4 @@
+﻿name: openrasta-codecs-webforms
+depends: openwrap anchored content
+depends: openrasta-core = 2.1
+version: 2.1.0.80254244

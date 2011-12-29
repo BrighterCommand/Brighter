@@ -15,6 +15,7 @@ using Raven.Client.Linq;
 using TechTalk.SpecFlow;
 using TinyIoC;
 using paramore.commandprocessor;
+using paramore.commandprocessor.ioccontainers.IoCContainers;
 using Version = Paramore.Infrastructure.Domain.Version;
 
 namespace Paramore.Features.Steps
@@ -24,7 +25,7 @@ namespace Paramore.Features.Steps
     {
         private readonly ScheduleMeetingCommand scheduleMeetingCommand = new ScheduleMeetingCommand();
         private static CommandProcessor commandProcessor;
-        private static TinyIoCContainer container;
+        private static TinyInversionOfControlContainer container;
         private Id speakerId;
         private Id venueId;
         private MeetingDTO scheduledMeeting;
@@ -32,7 +33,7 @@ namespace Paramore.Features.Steps
         [BeforeFeature]
         public static void SetUp()
         {
-            container = new TinyIoCContainer();
+            container = new TinyInversionOfControlContainer(new TinyIoCContainer());
 
             commandProcessor = new CommandProcessor(container);
             container.Register<IAmAUnitOfWorkFactory, UnitOfWorkFactory>().AsSingleton();

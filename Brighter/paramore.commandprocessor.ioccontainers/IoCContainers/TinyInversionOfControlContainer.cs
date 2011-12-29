@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using TinyIoC;
-using paramore.commandprocessor.sharedinterfaces;
 
 namespace paramore.commandprocessor.ioccontainers.IoCContainers
 {
@@ -24,6 +23,21 @@ namespace paramore.commandprocessor.ioccontainers.IoCContainers
         public object Resolve(Type resolveType)
         {
             return _container.Resolve(resolveType);
+        }
+
+        public object Resolve(Type resolveType, string name)
+        {
+            return _container.Resolve(resolveType, name);
+        }
+
+        public ResolveType Resolve<ResolveType>() where ResolveType : class
+        {
+            return _container.Resolve<ResolveType>();
+        }
+
+        public ResolveType Resolve<ResolveType>(string name) where ResolveType : class
+        {
+            return _container.Resolve<ResolveType>(name);
         }
 
         public IAmAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>() where RegisterType : class where RegisterImplementation : class, RegisterType

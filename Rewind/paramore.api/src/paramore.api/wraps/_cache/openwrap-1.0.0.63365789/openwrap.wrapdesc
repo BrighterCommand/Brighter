@@ -1,0 +1,8 @@
+﻿depends: sharpziplib
+depends: openfilesystem
+depends: openwrap content
+anchored: true
+build: msbuild; profile=net35; project=src\OpenWrap\OpenWrap.csproj; project=src\OpenWrap.Build.Tasks\OpenWrap.Build.Tasks.csproj; project=src\OpenWrap.Commands\OpenWrap.Commands.csproj; project=src\OpenWrap.Testing\OpenWrap.Testing.csproj; project=src\OpenWrap.Tests\OpenWrap.Tests.csproj;
+name: openwrap
+depends: tdnet-framework
+version: 1.0.0.63365789

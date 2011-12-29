@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.utility", "paramor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.infrastructure", "paramore.infrastructure\paramore.infrastructure.csproj", "{A29960CC-7A28-4C4C-B52A-EEDF32168205}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.api", "paramore.api\src\paramore.api\paramore.api.csproj", "{C27B6BA3-64F9-4173-B22A-385D8F735BC8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,6 +51,10 @@ Global
 		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C27B6BA3-64F9-4173-B22A-385D8F735BC8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C27B6BA3-64F9-4173-B22A-385D8F735BC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C27B6BA3-64F9-4173-B22A-385D8F735BC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C27B6BA3-64F9-4173-B22A-385D8F735BC8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
