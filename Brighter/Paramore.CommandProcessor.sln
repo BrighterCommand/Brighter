@@ -7,7 +7,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.commandprocessor.t
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.commandprocessor.ioccontainers", "paramore.commandprocessor.ioccontainers\paramore.commandprocessor.ioccontainers.csproj", "{7B7A3ADA-CED8-4BCF-B643-493607C4579F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleSite", "Examples\SampleSite\SampleSite.csproj", "{84B4ACD6-1744-454B-A356-F7A6EC822D55}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tasklist.web", "Examples\tasklist.web\tasklist.web.csproj", "{84B4ACD6-1744-454B-A356-F7A6EC822D55}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -62,5 +64,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{84B4ACD6-1744-454B-A356-F7A6EC822D55} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 	EndGlobalSection
 EndGlobal
