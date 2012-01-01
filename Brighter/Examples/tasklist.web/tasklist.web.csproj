@@ -47,6 +47,9 @@
     <Reference Include="HtmlAgilityPlus, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Nancy.Testing.0.9.0\lib\net40\HtmlAgilityPlus.dll</HintPath>
     </Reference>
+    <Reference Include="Machine.Specifications">
+      <HintPath>..\..\packages\Machine.Specifications.0.5.2.0\lib\Machine.Specifications.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Nancy">
       <HintPath>..\..\packages\Nancy.0.9.0\lib\net40\Nancy.dll</HintPath>
@@ -56,18 +59,6 @@
     </Reference>
     <Reference Include="Nancy.Testing, Version=0.9.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Nancy.Testing.0.9.0\lib\net40\Nancy.Testing.dll</HintPath>
-    </Reference>
-    <Reference Include="nunit.framework, Version=2.5.10.11092, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\NUnit.2.5.10.11092\lib\nunit.framework.dll</HintPath>
-    </Reference>
-    <Reference Include="nunit.mocks, Version=2.5.10.11092, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\NUnit.2.5.10.11092\lib\nunit.mocks.dll</HintPath>
-    </Reference>
-    <Reference Include="pnunit.framework, Version=1.0.4109.34242, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\NUnit.2.5.10.11092\lib\pnunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="Simple.Data">
       <HintPath>..\..\packages\Simple.Data.Core.0.12.2.2\lib\net40\Simple.Data.dll</HintPath>
@@ -93,10 +84,16 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\AddTaskCommand.cs" />
+    <Compile Include="Handlers\AddTaskCommandHandler.cs" />
+    <Compile Include="DataAccess\ITasksDAO.cs" />
     <Compile Include="Models\Task.cs" />
     <Compile Include="Modules\TaskList.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Tests\tasklistfixture_acceptancetests.cs" />
+    <Compile Include="Tests\TaskCommandHandler_UnitTests.cs" />
+    <Compile Include="Tests\TaskDAO_IntegrationTests.cs" />
+    <Compile Include="Tests\Tasklistfixture_AcceptanceTests.cs" />
+    <Compile Include="DataAccess\TasksDAO.cs" />
     <Compile Include="ViewModelRetrievers\ITaskListRetriever.cs" />
     <Compile Include="ViewModelRetrievers\TaskListRetriever.cs" />
   </ItemGroup>
@@ -114,6 +111,12 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\paramore.commandprocessor\paramore.commandprocessor.csproj">
+      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
+      <Name>paramore.commandprocessor</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" />
