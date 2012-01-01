@@ -4,7 +4,7 @@ using paramore.commandprocessor.extensions;
 
 namespace paramore.commandprocessor
 {
-    public class CommandProcessor
+    public class CommandProcessor : IAmACommandProcessor
     {
         private readonly IAmAnInversionOfControlContainer container;
 

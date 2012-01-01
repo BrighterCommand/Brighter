@@ -46,6 +46,7 @@
     <Compile Include="HandlerFactory.cs" />
     <Compile Include="HandlerName.cs" />
     <Compile Include="HandlerTiming.cs" />
+    <Compile Include="IAmACommandProcessor.cs" />
     <Compile Include="IAmAnInversionOfControlContainer.cs" />
     <Compile Include="IChainofResponsibilityBuilder.cs" />
     <Compile Include="IChainPathExplorer.cs" />
