@@ -1,4 +1,5 @@
 ﻿using Nancy;
+using tasklist.web.Commands;
 using tasklist.web.ViewModelRetrievers;
 
 namespace tasklist.web.Modules
@@ -10,11 +11,18 @@ namespace tasklist.web.Modules
         public TaskListModule(ITaskListRetriever taskListRetriever)
         {
             this.taskListRetriever = taskListRetriever;
-            Get["/todo/index"] = _ =>
+            Get["/todo/index"] = _ => TasksView(); 
+
+            Post["/todo/index"] = _ =>
             {
-                 var tasks = taskListRetriever.RetrieveTasks();
-                 return View["index.sshtml", new { Tasks = tasks }];
+                var cmd = new AddTaskCommand(Request.Form.taskName, Request.Form.taskDecription);
+                return TasksView();
             };
+
         }
+        private Response TasksView()
+        {
+            return View["index.sshtml", new {Tasks = taskListRetriever.RetrieveTasks()}];
+          }
     }
 }
