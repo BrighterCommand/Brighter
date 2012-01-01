@@ -1,22 +1,19 @@
-﻿using System.IO;
-using System.Reflection;
-using Nancy;
-using Simple.Data;
-using tasklist.web.Models;
+﻿using Nancy;
+using tasklist.web.ViewModelRetrievers;
 
 namespace tasklist.web.Modules
 {
     public class TaskListModule : NancyModule
     {
-        static readonly string DatabasePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().CodeBase.Substring(8)),"tasks.sqlite");
+        private readonly ITaskListRetriever taskListRetriever;
 
-        public TaskListModule()
+        public TaskListModule(ITaskListRetriever taskListRetriever)
         {
-            Get["/"] = _ => 
-            { 
-                var db = Database.Opener.OpenFile(DatabasePath);
-                var tasks = db.Tasks.All().ToList<Task>();
-                return View["index.sshtml", new { Tasks = tasks }]; 
+            this.taskListRetriever = taskListRetriever;
+            Get["/todo/index"] = _ =>
+            {
+                 var tasks = taskListRetriever.RetrieveTasks();
+                 return View["index.sshtml", new { Tasks = tasks }];
             };
         }
     }
