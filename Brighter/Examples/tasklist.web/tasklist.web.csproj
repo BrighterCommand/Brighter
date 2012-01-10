@@ -84,6 +84,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bootstrapper\CommandProcessorBootstrapper.cs" />
     <Compile Include="Commands\AddTaskCommand.cs" />
     <Compile Include="Handlers\AddTaskCommandHandler.cs" />
     <Compile Include="DataAccess\ITasksDAO.cs" />
@@ -113,6 +114,10 @@
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\paramore.commandprocessor.ioccontainers\paramore.commandprocessor.ioccontainers.csproj">
+      <Project>{7B7A3ADA-CED8-4BCF-B643-493607C4579F}</Project>
+      <Name>paramore.commandprocessor.ioccontainers</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\paramore.commandprocessor\paramore.commandprocessor.csproj">
       <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
       <Name>paramore.commandprocessor</Name>
