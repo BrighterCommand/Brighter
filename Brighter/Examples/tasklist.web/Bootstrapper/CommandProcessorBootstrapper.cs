@@ -1,5 +1,6 @@
 ﻿using Nancy;
 using paramore.commandprocessor;
+using paramore.commandprocessor.ioccontainers.IoCContainers;
 using tasklist.web.Commands;
 using tasklist.web.Handlers;
 
@@ -11,6 +12,8 @@ namespace tasklist.web.Bootstrapper
         {
             base.ConfigureApplicationContainer(container);
             //try to register the command handlers
+            container.Register<IAmACommandProcessor, CommandProcessor>();
+            container.Register<IAmAnInversionOfControlContainer, TinyInversionOfControlContainer>();
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>().AsMultiInstance();
         }
     }
