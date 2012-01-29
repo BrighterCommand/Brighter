@@ -14,19 +14,22 @@ namespace tasklist.web.Modules
         {
             this.taskListRetriever = taskListRetriever;
             this.commandProcessor = commandProcessor;
-            Get["/todo/index"] = _ => TasksView(); 
 
-            Post["/todo/index"] = _ =>
-            {
-                var cmd = new AddTaskCommand(Request.Form.taskName, Request.Form.taskDecription);
-                commandProcessor.Send(cmd);
-                return TasksView();
-            };
+            Get["/todo/index"] = _ => TasksView(); 
+            Post["/todo/index"] = _ => AddTask();
 
         }
+
+        private Response AddTask()
+        {
+            var cmd = new AddTaskCommand(Request.Form.taskName, Request.Form.taskDecription);
+            commandProcessor.Send(cmd);
+            return TasksView();
+        }
+
         private Response TasksView()
         {
-            return View["index.sshtml", new {Tasks = taskListRetriever.RetrieveTasks()}];
-          }
+            return View["Index.sshtml", new {Tasks = taskListRetriever.RetrieveTasks()}];
+        }
     }
 }
