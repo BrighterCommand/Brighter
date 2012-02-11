@@ -4,12 +4,10 @@ using Machine.Specifications;
 using Nancy;
 using Nancy.Testing;
 using Simple.Data;
-using tasklist.web.Bootstrapper;
 
 namespace tasklist.web.Tests
 {
     [Subject("GET: Task List")]
-    [Ignore("Don't seem to get a valid response, but site works")]
     public class When_getting_the_current_task_list
     {
         static Browser _app;
@@ -29,12 +27,29 @@ namespace tasklist.web.Tests
         Because of = () => _response = _app.Get("/todo/index", with => with.HttpRequest());
 
         It should_have_a_list = () => _response.Body["ul"].ShouldExistOnce();
+        It should_have_a_link_to_add_new_tasks = () => _response.Body["a"].ShouldExistOnce();
+    }
+
+    [Subject("GET: New Task")]
+    public class When_getting_the_new_task_form
+    {
+        static Browser _app;
+        static BrowserResponse _response;
+
+        Establish context = () =>
+        {
+            var boostrapper = new CommandProcessorBootstrapper();
+            _app = new Browser(boostrapper);
+        };
+
+        Because of = () => _response = _app.Get("/todo/add", with => with.HttpRequest());
+
         It should_have_a_task_name_input_field_on_the_page = () => _response.Body["input#taskName"].ShouldExistOnce();
         It should_have_a_task_description_field_on_the_page = () => _response.Body["input#taskDescription"].ShouldExistOnce();
         It should_have_a_button_to_add_the_task = () => _response.Body["input#addTask"].ShouldExistOnce();
     }
 
-    [Subject("Post: Task List")]
+    [Subject("Post: New Task")]
     public class When_posting_a_new_task_into_the_task_list
     {
         static Browser _app;
@@ -50,7 +65,7 @@ namespace tasklist.web.Tests
             _app = new Browser(boostrapper);
         };
 
-        Because of = () => _response = _app.Post("/todo/index", (with) =>
+        Because of = () => _response = _app.Post("/todo/add", (with) =>
         {
             with.HttpRequest();
             with.FormValue("taskDescription", "A new test task");

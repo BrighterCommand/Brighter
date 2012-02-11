@@ -1,0 +1,9 @@
+﻿<!DOCTYPE html >
+<html>
+<head>
+    <title>Task List</title>
+</head>
+<body>
+<textarea rows="5" cols="80">@Model.Task.TaskDescription</textarea>
+</body>
+</html>

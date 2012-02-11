@@ -4,15 +4,11 @@
     <title>Task List</title>
 </head>
 <body>
+	<h3>To Do List</h3>
+	<label>Task Name:</label> <label> Task Description: </label>
     <ul>
-        @Each.Tasks <li> @Current.TaskName </li> @EndEach
+        @Each.Tasks <li> <a href="/todo/task/@Current.Id">@Current.TaskName </a> </li> @EndEach
     </ul>
-	<form method="POST">
-	<label>Task Name:</label>
-	<input type ="text" name="taskName" id="taskName" />
-	<label> Task Description: </label>
-	<input type ="text" name="taskDescription" id="taskDescription" />
-	<input type="submit" value="Add" id="addTasks" /input>
-	</form>
+	<a href = "/todo/add">Add</a>
 </body>
 </html>
