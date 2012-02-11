@@ -84,21 +84,25 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Bootstrapper\CommandProcessorBootstrapper.cs" />
+    <Compile Include="CommandProcessorBootstrapper.cs" />
     <Compile Include="Commands\AddTaskCommand.cs" />
     <Compile Include="Handlers\AddTaskCommandHandler.cs" />
     <Compile Include="DataAccess\ITasksDAO.cs" />
     <Compile Include="Models\Task.cs" />
     <Compile Include="Modules\TaskList.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Tests\ITaskRetriever.cs" />
     <Compile Include="Tests\TaskCommandHandler_UnitTests.cs" />
     <Compile Include="Tests\TaskDAO_IntegrationTests.cs" />
     <Compile Include="Tests\Tasklistfixture_AcceptanceTests.cs" />
     <Compile Include="DataAccess\TasksDAO.cs" />
+    <Compile Include="Tests\TaskRetriever.cs" />
     <Compile Include="ViewModelRetrievers\ITaskListRetriever.cs" />
+    <Compile Include="ViewModelRetrievers\SimpleDataRetriever.cs" />
     <Compile Include="ViewModelRetrievers\TaskListRetriever.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Views\AddTask.sshtml" />
     <None Include="Views\Index.sshtml" />
     <Content Include="Web.config">
       <SubType>Designer</SubType>
@@ -109,6 +113,7 @@
     <Content Include="Web.Release.config">
       <DependentUpon>Web.config</DependentUpon>
     </Content>
+    <None Include="Views\TaskDetail.sshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />

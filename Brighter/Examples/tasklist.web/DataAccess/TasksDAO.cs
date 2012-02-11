@@ -24,5 +24,5 @@ namespace tasklist.web.DataAccess
         {
             db.Tasks.DeleteAll();
         }
-    }
+      }
 }

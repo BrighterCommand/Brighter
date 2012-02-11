@@ -2,9 +2,11 @@
 using paramore.commandprocessor;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
 using tasklist.web.Commands;
+using tasklist.web.DataAccess;
 using tasklist.web.Handlers;
+using tasklist.web.ViewModelRetrievers;
 
-namespace tasklist.web.Bootstrapper
+namespace tasklist.web
 {
     public class CommandProcessorBootstrapper : DefaultNancyBootstrapper
     {
@@ -15,6 +17,8 @@ namespace tasklist.web.Bootstrapper
             container.Register<IAmACommandProcessor, CommandProcessor>();
             container.Register<IAmAnInversionOfControlContainer, TinyInversionOfControlContainer>();
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>().AsMultiInstance();
+            container.Register<ITaskListRetriever, TaskListRetriever>().AsMultiInstance();
+            container.Register<ITasksDAO, TasksDAO>().AsMultiInstance();
         }
     }
 }
