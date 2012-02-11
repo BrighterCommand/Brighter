@@ -6,18 +6,5 @@ So the code here is an attempt to solve that problem.
 The individual projects may have some re-usable code; my intent is to harvest that and present it in a 
 more re-usable form over time. Requests welcome, though no timescales guaranteed
 
-Rewind - Notionally this might be used to replace the very outdated London User Group site at www.dnug.org.uk 
-However, there have been a lot of notional replacements of that over time, so no one should hold their breath. 
-More pragmatically its trying to be an example of how to follow a DDD approach, and utilizing a simple CQRS pattern 
-to help achieve that. Arguments about whether the domain is sufficiently high-value for a DDD approach are ignored 
-in favor of the accessability of the sample. It's also using a few technologies I wanted to try out: 
-Raven DB, NancyFX, and TinyIoC
-
-This is a 'work-in-progress' and by no means complete. Feel free to pull or fork. However, don't expect
-to push back to this repository. It's not really intended as an exercise in shared development. If I harvest 
-frameworks such as the command processor pipeline from this project, that is much more likely to be the pull-push
-option. 
-
-Renegade - Just some older code, dumped here for now. At this point, nothing to see here, move along. 
-Later this is intended to be a version of Ignorance that uses an Event Sourcing approach to storage.
+You can find more information on the projects over on the wiki
 
