@@ -45,6 +45,9 @@
   <ItemGroup>
     <Compile Include="CommandProcessors\ChainOfResponsibilityTests.cs" />
     <Compile Include="CommandProcessors\CommandProcessorTests.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyAbortingHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyAbortingHandlerAttribute.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyUnUsedCommandHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeRepository.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeSession.cs" />
     <Compile Include="CommandProcessors\TestDoubles\IAmAnAggregate.cs" />
@@ -58,7 +61,7 @@
     <Compile Include="CommandProcessors\TestDoubles\MyEvent.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyEventHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyImplicitHandler.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyLoggingHander.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyLoggingHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyLoggingHandlerAttribute.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyOtherEventHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyPostLoggingHandlerAttribute.cs" />

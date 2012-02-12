@@ -4,21 +4,21 @@ using paramore.commandprocessor.ioccontainers.IoCContainers;
 
 namespace paramore.commandprocessor.tests.IoCContainers
 {
-    [Subject(typeof(TinyInversionOfControlContainer))]
+    [Subject(typeof(TinyIoCAdapter))]
     public class When_creating_a_wrapped_TinyIoCInstance
     {
-       static TinyInversionOfControlContainer _container;
+       static TinyIoCAdapter _container;
 
-        Establish context = () => _container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+        Establish context = () => _container = new TinyIoCAdapter(new TinyIoCContainer());
 
         It should_create_a_wrapped_IoC_container = () => _container.ShouldBeOfType<IAmAnInversionOfControlContainer>();
     }
 
     public class When_resolving_an_interface_implementation
     {
-        static TinyInversionOfControlContainer _container;
+        static TinyIoCAdapter _container;
 
-        Establish context = () => _container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+        Establish context = () => _container = new TinyIoCAdapter(new TinyIoCContainer());
 
         Because of = () => _container.Register<IMyInterface, MyInterfaceImpl>();
 
@@ -27,9 +27,9 @@ namespace paramore.commandprocessor.tests.IoCContainers
 
     public class When_resolving_an_interface_implementation_using_generic_shorthand
     {
-        static TinyInversionOfControlContainer _container;
+        static TinyIoCAdapter _container;
 
-        Establish context = () => _container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+        Establish context = () => _container = new TinyIoCAdapter(new TinyIoCContainer());
 
         Because of = () => _container.Register<IMyInterface, MyInterfaceImpl>();
 
@@ -38,11 +38,11 @@ namespace paramore.commandprocessor.tests.IoCContainers
 
     public class When_resolving_an_interface_implementation_should_allow_disambiguation_by_name
     {
-        static TinyInversionOfControlContainer _container;
+        static TinyIoCAdapter _container;
 
         Establish context = () =>
         {
-            _container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            _container = new TinyIoCAdapter(new TinyIoCContainer());
             _container.Register<IMyInterface, MyInterfaceImpl>("FirstImpl");
             _container.Register<IMyInterface, MyOtherIntefaceImpl>("SecondImpl");
         };
@@ -52,11 +52,11 @@ namespace paramore.commandprocessor.tests.IoCContainers
 
     public class When_resolving_an_interface_implementation_using_generics_should_allow_disambiguation_by_name
     {
-        static TinyInversionOfControlContainer _container;
+        static TinyIoCAdapter _container;
 
         Establish context = () =>
         {
-            _container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            _container = new TinyIoCAdapter(new TinyIoCContainer());
             _container.Register<IMyInterface, MyInterfaceImpl>("FirstImpl");
             _container.Register<IMyInterface, MyOtherIntefaceImpl>("SecondImpl");
         };
@@ -65,11 +65,11 @@ namespace paramore.commandprocessor.tests.IoCContainers
     }
     public class When_resolving_an_interface_implementation_should_support_singleton
     {
-        static TinyInversionOfControlContainer _container;
+        static TinyIoCAdapter _container;
 
         Establish context = () =>
         {
-            _container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            _container = new TinyIoCAdapter(new TinyIoCContainer());
             _container.Register<IMyInterface, MyInterfaceImpl>().AsSingleton();
         };
 
@@ -78,11 +78,11 @@ namespace paramore.commandprocessor.tests.IoCContainers
 
     public class When_resolving_an_interface_implementation_should_support_multiple_implementations
     {
-        static TinyInversionOfControlContainer _container;
+        static TinyIoCAdapter _container;
 
         Establish context = () =>
         {
-            _container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            _container = new TinyIoCAdapter(new TinyIoCContainer());
             _container.Register<IMyInterface, MyInterfaceImpl>().AsMultiInstance();
         };
         

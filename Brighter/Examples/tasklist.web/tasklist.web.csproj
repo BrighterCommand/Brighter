@@ -88,6 +88,8 @@
     <Compile Include="Commands\AddTaskCommand.cs" />
     <Compile Include="Handlers\AddTaskCommandHandler.cs" />
     <Compile Include="DataAccess\ITasksDAO.cs" />
+    <Compile Include="Handlers\TaskValidationHandler.cs" />
+    <Compile Include="Handlers\TaskValidationHandlerAttribute.cs" />
     <Compile Include="Models\Task.cs" />
     <Compile Include="Modules\TaskList.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -1,10 +1,10 @@
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class MyValidationHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
+    internal class MyLoggingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
-        private static TRequest command;
+        private TRequest command;
 
-        public MyValidationHandler()
+        public MyLoggingHandler()
         {
             command = null;
         }
@@ -14,10 +14,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
             LogCommand(command);
             return base.Handle(command);
         }
-
+        
         public static bool ShouldRecieve(TRequest expectedCommand)
         {
-            return (command != null);
+            return (expectedCommand != null);
         }
 
         private void LogCommand(TRequest request)
