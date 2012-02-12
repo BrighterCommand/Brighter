@@ -14,7 +14,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
             commandProcessor = new CommandProcessor(container);
 
@@ -34,7 +34,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>("DefaultHandler").AsMultiInstance();
             container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>("Implicit Handler").AsMultiInstance();
             commandProcessor = new CommandProcessor(container);
@@ -56,7 +56,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
             commandProcessor = new CommandProcessor(container);
 
         };
@@ -75,7 +75,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsMultiInstance();
             commandProcessor = new CommandProcessor(container);
         };
@@ -94,7 +94,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            commandProcessor = new CommandProcessor(new TinyInversionOfControlContainer(new TinyIoCContainer()));                                    
+            commandProcessor = new CommandProcessor(new TinyIoCAdapter(new TinyIoCContainer()));                                    
         };
 
         Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
@@ -111,7 +111,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
                                 {
-                                    var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+                                    var container = new TinyIoCAdapter(new TinyIoCContainer());
                                     container.Register<IHandleRequests<MyEvent>, MyEventHandler>("My Event Handler").AsMultiInstance();
                                     container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("My Other Event Handler").AsMultiInstance();
                                     commandProcessor = new CommandProcessor(container);
@@ -121,5 +121,47 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         It should_not_throw_an_exception = () => exception.ShouldBeNull();
         It should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.ShouldRecieve(myEvent).ShouldBeTrue(); 
-        It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();}
+        It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();
+    }
+
+    public class When_an_exception_is_thrown_terminate_the_chain
+    {
+        static CommandProcessor commandProcessor;
+        static readonly MyCommand myCommand = new MyCommand();
+        static Exception exception;
+
+        Establish context = () =>
+        {
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
+            container.Register<IHandleRequests<MyCommand>, MyUnusedCommandHandler>().AsMultiInstance();
+            commandProcessor = new CommandProcessor(container);
+        };
+
+        Because of = () => exception = Catch.Exception(() => commandProcessor.Send(myCommand));
+
+        It should_throw_an_exception = () => exception.ShouldNotBeNull();
+        It should_fail_the_pipeline_not_execute_it = () => MyUnusedCommandHandler.ShouldRecieve(myCommand).ShouldBeFalse();
+    }
+
+    public class When_there_are_no_failures_execute_all_the_steps_in_the_chain
+    {
+        static CommandProcessor commandProcessor;
+        static readonly MyCommand myCommand = new MyCommand();
+
+        Establish context = () =>
+        {
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
+            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsMultiInstance();
+            commandProcessor = new CommandProcessor(container);
+
+        };
+
+        Because of = () => commandProcessor.Send(myCommand);
+
+        It should_call_the_pre_validation_handler = () => MyValidationHandler<MyCommand>.ShouldRecieve(myCommand).ShouldBeTrue();
+        It should_send_the_command_to_the_command_handler = () => MyPreAndPostDecoratedHandler.ShouldRecieve(myCommand).ShouldBeTrue();
+        It should_call_the_post_validation_handler = () => MyLoggingHandler<MyCommand>.ShouldRecieve(myCommand).ShouldBeTrue();
+    }
 }
+
+    

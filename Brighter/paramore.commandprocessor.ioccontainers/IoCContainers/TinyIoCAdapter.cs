@@ -5,12 +5,12 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.ioccontainers.IoCContainers
 {
-    public class TinyInversionOfControlContainer : IAmAnInversionOfControlContainer
+    public class TinyIoCAdapter : IAmAnInversionOfControlContainer
     {
         private readonly TinyIoCContainer _container;
         private TinyIoCContainer.RegisterOptions _registerOptions;
 
-        public TinyInversionOfControlContainer(TinyIoCContainer container)
+        public TinyIoCAdapter(TinyIoCContainer container)
         {
             _container = container;
         }

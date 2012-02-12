@@ -11,7 +11,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 
         public override Type GetHandlerType()
         {
-            return typeof(MyLoggingHander<>);
+            return typeof(MyLoggingHandler<>);
         }
     }
 }

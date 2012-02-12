@@ -14,7 +14,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();            
 
             Chain_Builder = new ChainofResponsibilityBuilder<MyCommand>(container); 
@@ -41,7 +41,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
 
             container.Register<IUnitOfWork, FakeSession>().AsMultiInstance();
             container.Register<IRepository<MyAggregate>, FakeRepository<MyAggregate>>().AsMultiInstance();
@@ -71,7 +71,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>().AsMultiInstance();
 
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
@@ -98,7 +98,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyDoubleDecoratedHandler>().AsMultiInstance();
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
@@ -123,7 +123,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            var container = new TinyInversionOfControlContainer(new TinyIoCContainer());
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsMultiInstance();
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };

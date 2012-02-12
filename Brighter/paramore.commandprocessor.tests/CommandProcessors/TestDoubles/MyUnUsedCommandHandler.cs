@@ -1,17 +1,16 @@
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class MyPreAndPostDecoratedHandler : RequestHandler<MyCommand>
+    internal class MyUnusedCommandHandler : RequestHandler<MyCommand>
     {
         private static MyCommand command;
 
-        public MyPreAndPostDecoratedHandler()
+        public MyUnusedCommandHandler()
         {
             command = null;
         }
 
-        [MyPreValidationHandlerAttribute(step: 2, timing: HandlerTiming.Before)]
-        [MyPostLoggingHandlerAttribute(step: 1, timing: HandlerTiming.After)]
-        public override MyCommand Handle(MyCommand command)
+        [MyAbortingHandlerAttribute(step: 1, timing: HandlerTiming.Before)]
+        public override MyCommand  Handle(MyCommand command)
         {
             LogCommand(command);
             return base.Handle(command);
