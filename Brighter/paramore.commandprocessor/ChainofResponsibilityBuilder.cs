@@ -6,10 +6,10 @@ namespace paramore.commandprocessor
 {
     internal class ChainofResponsibilityBuilder<TRequest> : IChainofResponsibilityBuilder<TRequest> where TRequest : class, IRequest
     {
-        private readonly IAmAnInversionOfControlContainer  container;
+        private readonly IAdaptAnInversionOfControlContainer  container;
         private readonly Type implicithandlerType;
 
-        public ChainofResponsibilityBuilder(IAmAnInversionOfControlContainer  container)
+        public ChainofResponsibilityBuilder(IAdaptAnInversionOfControlContainer  container)
         {
             this.container = container;
 

@@ -15,7 +15,7 @@ namespace tasklist.web
             base.ConfigureApplicationContainer(container);
             //try to register the command handlers
             container.Register<IAmACommandProcessor, CommandProcessor>();
-            container.Register<IAmAnInversionOfControlContainer, TinyIoCAdapter>();
+            container.Register<IAdaptAnInversionOfControlContainer, TinyIoCAdapter>();
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>().AsMultiInstance();
             container.Register<ITaskListRetriever, TaskListRetriever>().AsMultiInstance();
             container.Register<ITasksDAO, TasksDAO>().AsMultiInstance();
