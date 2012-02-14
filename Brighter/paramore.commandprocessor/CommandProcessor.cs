@@ -6,9 +6,9 @@ namespace paramore.commandprocessor
 {
     public class CommandProcessor : IAmACommandProcessor
     {
-        private readonly IAmAnInversionOfControlContainer container;
+        private readonly IAdaptAnInversionOfControlContainer container;
 
-        public CommandProcessor(IAmAnInversionOfControlContainer container)
+        public CommandProcessor(IAdaptAnInversionOfControlContainer container)
         {
             this.container = container;
         }

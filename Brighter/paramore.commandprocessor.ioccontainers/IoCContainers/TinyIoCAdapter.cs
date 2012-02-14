@@ -5,7 +5,7 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.ioccontainers.IoCContainers
 {
-    public class TinyIoCAdapter : IAmAnInversionOfControlContainer
+    public class TinyIoCAdapter : IAdaptAnInversionOfControlContainer
     {
         private readonly TinyIoCContainer _container;
         private TinyIoCContainer.RegisterOptions _registerOptions;
@@ -40,15 +40,21 @@ namespace paramore.commandprocessor.ioccontainers.IoCContainers
             return _container.Resolve<ResolveType>(name);
         }
 
-        public IAmAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>() where RegisterType : class where RegisterImplementation : class, RegisterType
+        public IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>() where RegisterType : class where RegisterImplementation : class, RegisterType
         {
             _registerOptions = _container.Register<RegisterType, RegisterImplementation>();
             return this;
         }
 
-        public IAmAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>(string name) where RegisterType : class where RegisterImplementation : class, RegisterType
+        public IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>(string name) where RegisterType : class where RegisterImplementation : class, RegisterType
         {
             _registerOptions = _container.Register<RegisterType, RegisterImplementation>(name);
+            return this;
+        }
+
+        public IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>(RegisterImplementation instance) where RegisterType : class where RegisterImplementation : class, RegisterType
+        {
+            _registerOptions = _container.Register<RegisterType, RegisterImplementation>(instance);
             return this;
         }
 

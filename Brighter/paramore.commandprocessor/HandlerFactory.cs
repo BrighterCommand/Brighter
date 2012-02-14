@@ -6,10 +6,10 @@ namespace paramore.commandprocessor
     internal class HandlerFactory<TRequest> where TRequest : class, IRequest
     {
         private readonly RequestHandlerAttribute attribute;
-        private readonly IAmAnInversionOfControlContainer container;
+        private readonly IAdaptAnInversionOfControlContainer container;
         private readonly Type messageType;
 
-        public HandlerFactory(RequestHandlerAttribute attribute, IAmAnInversionOfControlContainer  container)
+        public HandlerFactory(RequestHandlerAttribute attribute, IAdaptAnInversionOfControlContainer  container)
         {
             this.attribute = attribute;
             this.container = container;

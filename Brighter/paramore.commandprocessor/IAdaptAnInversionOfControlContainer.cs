@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace paramore.commandprocessor
 {
-    public interface IAmAnInversionOfControlContainer
+    public interface IAdaptAnInversionOfControlContainer
     {
         IEnumerable<object> ResolveAll(Type resolveType, bool includeUnamed);
         object Resolve(Type resolveType);
@@ -13,10 +13,13 @@ namespace paramore.commandprocessor
         ResolveType Resolve<ResolveType>(string name)
             where ResolveType : class;
 
-        IAmAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>()
+        IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>()
             where RegisterType : class
             where RegisterImplementation : class, RegisterType;
-        IAmAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>(string name) 
+        IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>(string name) 
+            where RegisterType : class 
+            where RegisterImplementation : class, RegisterType;
+        IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>(RegisterImplementation instance)
             where RegisterType : class 
             where RegisterImplementation : class, RegisterType;
 

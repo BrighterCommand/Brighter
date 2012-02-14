@@ -11,7 +11,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
 
         Establish context = () => _container = new TinyIoCAdapter(new TinyIoCContainer());
 
-        It should_create_a_wrapped_IoC_container = () => _container.ShouldBeOfType<IAmAnInversionOfControlContainer>();
+        It should_create_a_wrapped_IoC_container = () => _container.ShouldBeOfType<IAdaptAnInversionOfControlContainer>();
     }
 
     public class When_resolving_an_interface_implementation

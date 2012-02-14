@@ -1,15 +1,17 @@
 using System;
 using paramore.commandprocessor;
+using tasklist.web.Commands;
 
 namespace tasklist.web.Handlers
 {
-    public class TaskValidationHandler : RequestHandler<Commands.AddTaskCommand>
+    public class ValidationHandler<TRequest> : RequestHandler<TRequest>
+        where TRequest: class, IRequest, ICanBeValidated 
     {
-        public override Commands.AddTaskCommand Handle(Commands.AddTaskCommand command)
+        public override TRequest Handle(TRequest command)
         {
-            if ((command.TaskDecription == null) || (command.TaskName == null))
+            if (!((ICanBeValidated)command).IsValid())
             {
-                throw new Exception("A valid task needs both a description and a name");
+                throw new ArgumentException("The commmand was not valid");
             }
 
             return base.Handle(command);

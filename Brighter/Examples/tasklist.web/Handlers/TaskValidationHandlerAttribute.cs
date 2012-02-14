@@ -12,7 +12,7 @@ namespace tasklist.web.Handlers
 
         public override Type GetHandlerType()
         {
-            return typeof(TaskValidationHandler);
+            return typeof(ValidationHandler<>);
         }
     }
 }
