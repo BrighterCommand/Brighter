@@ -22,7 +22,7 @@ namespace paramore.commandprocessor
 
         public Chains<TRequest> Build(IRequestContext requestContext)
         {
-            var handlers = GetHandlers(requestContext);
+            var handlers = GetHandlers();
             
             var chains = new Chains<TRequest>();
             foreach (var handler in handlers)
@@ -33,16 +33,16 @@ namespace paramore.commandprocessor
             return chains;
         }
 
-        private IEnumerable<RequestHandler<TRequest>> GetHandlers(IRequestContext requestContext)
+        private IEnumerable<RequestHandler<TRequest>> GetHandlers()
         {
             var handlers = new RequestHandlers<TRequest>(container.ResolveAll(implicithandlerType, true));
-            handlers.Each(handler => handler.Context = requestContext);
             return handlers;
         }
 
         private IHandleRequests<TRequest> BuildChain(RequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
         {
-  
+            implicitHandler.Context = requestContext;
+
             var preAttributes = 
                 implicitHandler.FindHandlerMethod()
                 .GetOtherHandlersInChain()
