@@ -15,9 +15,10 @@ namespace tasklist.web.DataAccess
             db = Database.Opener.OpenFile(DatabasePath);
         }
 
+        //inserting the id is problematic, but against SQLite Simple.Data does not return the row we inserted
         public void Add(Task newTask)
         {
-            db.Tasks.Insert(taskname: newTask.TaskName, taskdescription: newTask.TaskDescription);
+            db.Tasks.Insert(id:newTask.Id, taskname: newTask.TaskName, taskdescription: newTask.TaskDescription);
         }
 
         public void Clear()

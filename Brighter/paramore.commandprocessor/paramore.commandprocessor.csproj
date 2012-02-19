@@ -53,8 +53,10 @@
     <Compile Include="ICommand.cs" />
     <Compile Include="IHandleRequests.cs" />
     <Compile Include="IRequest.cs" />
+    <Compile Include="IRequestContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReflectionExtensions.cs" />
+    <Compile Include="RequestContext.cs" />
     <Compile Include="RequestHandler.cs" />
     <Compile Include="RequestHandlerAttribute.cs" />
     <Compile Include="RequestHandlers.cs" />

@@ -12,6 +12,8 @@ namespace paramore.commandprocessor
             set { _successor = value; }
         }
 
+        public IRequestContext Context {get; set; }
+
         public void DescribePath(IChainPathExplorer pathExplorer)
         {
             pathExplorer.AddToPath(Name());
