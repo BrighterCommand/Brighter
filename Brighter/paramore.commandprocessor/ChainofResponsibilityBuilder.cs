@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using paramore.commandprocessor.extensions;
 
 namespace paramore.commandprocessor
 {
@@ -19,34 +20,36 @@ namespace paramore.commandprocessor
 
         }
 
-        public Chains<TRequest> Build()
+        public Chains<TRequest> Build(IRequestContext requestContext)
         {
-            var handlers = GetHandlers();
+            var handlers = GetHandlers(requestContext);
             
             var chains = new Chains<TRequest>();
             foreach (var handler in handlers)
             {
-                chains.Add(BuildChain(handler));
+                chains.Add(BuildChain(handler, requestContext));
             }
 
             return chains;
         }
 
-        private IEnumerable<RequestHandler<TRequest>> GetHandlers()
+        private IEnumerable<RequestHandler<TRequest>> GetHandlers(IRequestContext requestContext)
         {
-            var handlers = container.ResolveAll(implicithandlerType, true);
-            return new RequestHandlers<TRequest>(handlers);
+            var handlers = new RequestHandlers<TRequest>(container.ResolveAll(implicithandlerType, true));
+            handlers.Each(handler => handler.Context = requestContext);
+            return handlers;
         }
 
-        private IHandleRequests<TRequest> BuildChain(RequestHandler<TRequest> implicitHandler)
+        private IHandleRequests<TRequest> BuildChain(RequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
         {
+  
             var preAttributes = 
                 implicitHandler.FindHandlerMethod()
                 .GetOtherHandlersInChain()
                 .Where(attribute => attribute.Timing == HandlerTiming.Before)
                 .OrderByDescending(attribute => attribute.Step); 
 
-            var firstInChain = PushOntoChain(preAttributes, implicitHandler);
+            var firstInChain = PushOntoChain(preAttributes, implicitHandler, requestContext);
             
             var postAttributes = 
                 implicitHandler.FindHandlerMethod()
@@ -54,26 +57,26 @@ namespace paramore.commandprocessor
                 .Where(attribute => attribute.Timing == HandlerTiming.After)
                 .OrderByDescending(attribute => attribute.Step);
 
-            AppendToChain(postAttributes, implicitHandler);
+            AppendToChain(postAttributes, implicitHandler, requestContext);
             return firstInChain;
         }
 
-        private void AppendToChain(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler)
+        private void AppendToChain(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
         {
-            var lastInChain = implicitHandler;
+            IHandleRequests<TRequest> lastInChain = implicitHandler;
             foreach (var attribute in attributes) 
             {
-                var decorator = new HandlerFactory<TRequest>(attribute, container).CreateRequestHandler();
+                var decorator = new HandlerFactory<TRequest>(attribute, container, requestContext).CreateRequestHandler();
                 lastInChain.Successor = decorator;
                 lastInChain = decorator;
             }
         }
 
-        private IHandleRequests<TRequest> PushOntoChain(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInChain)
+        private IHandleRequests<TRequest> PushOntoChain(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInChain, IRequestContext requestContext)
         {
             foreach (var attribute in attributes) 
             {
-                var decorator = new HandlerFactory<TRequest>(attribute, container).CreateRequestHandler();
+                var decorator = new HandlerFactory<TRequest>(attribute, container, requestContext).CreateRequestHandler();
                 decorator.Successor = lastInChain;
                 lastInChain = decorator;
             }

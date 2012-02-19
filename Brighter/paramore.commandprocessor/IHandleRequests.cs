@@ -5,5 +5,6 @@ namespace paramore.commandprocessor
         void DescribePath(IChainPathExplorer pathExplorer);
         TRequest Handle(TRequest command);
         IHandleRequests<TRequest> Successor { set; }
+        IRequestContext Context { get; set; }
     }
 }

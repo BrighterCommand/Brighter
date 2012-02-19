@@ -16,7 +16,8 @@ namespace paramore.commandprocessor
         public void Send<T>(T command) where T : class, IRequest
         {
             var builder = new ChainofResponsibilityBuilder<T>(container);
-            var handlerChain = builder.Build();
+            var requestContext = new RequestContext();
+            var handlerChain = builder.Build(requestContext);
 
             var handlerCount = handlerChain.Count();
 
@@ -31,7 +32,8 @@ namespace paramore.commandprocessor
         public void Publish<T>(T @event) where T : class, IRequest
         {
             var builder = new ChainofResponsibilityBuilder<T>(container);
-            var handlerChain = builder.Build();
+            var requestContext = new RequestContext();
+            var handlerChain = builder.Build(requestContext);
 
             handlerChain.Each(chain => chain.Handle(@event));
         }

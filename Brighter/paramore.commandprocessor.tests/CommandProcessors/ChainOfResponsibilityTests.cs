@@ -20,7 +20,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             Chain_Builder = new ChainofResponsibilityBuilder<MyCommand>(container); 
         };
 
-        Because of = () => Chain_Of_Responsibility = Chain_Builder.Build().First();
+        Because of = () => Chain_Of_Responsibility = Chain_Builder.Build(new RequestContext()).First();
 
         It should_return_the_my_command_handler_as_the_implicit_handler = () => Chain_Of_Responsibility.ShouldBeOfType(typeof(MyCommandHandler));
         It should_be_the_only_element_in_the_chain = () => GetChain().ToString().ShouldEqual("MyCommandHandler|");
@@ -50,7 +50,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             Chain_Builder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
 
-        Because of = () => Chain_Of_Responsibility = Chain_Builder.Build().First();
+        Because of = () => Chain_Of_Responsibility = Chain_Builder.Build(new RequestContext()).First();
 
         It should_return_the_command_handler_as_the_implicit_handler = () => Chain_Of_Responsibility.ShouldBeOfType(typeof(MyDependentCommandHandler));
         It should_be_the_only_element_in_the_chain = () => GetChain().ToString().ShouldEqual("MyDependentCommandHandler|");
@@ -77,7 +77,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
 
-        Because of = () => chainOfResponsibility = chainBuilder.Build().First();
+        Because of = () => chainOfResponsibility = chainBuilder.Build(new RequestContext()).First();
 
         It should_include_my_command_handler_filter_in_the_chain = () => GetChain().ToString().Contains("MyImplicitHandler").ShouldBeTrue();
         It should_include_my_logging_handler_in_the_chain = () => GetChain().ToString().Contains("MyLoggingHandler").ShouldBeTrue();
@@ -103,7 +103,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
 
-        Because of = () => chainOfResponsibility = chainBuilder.Build().First();
+        Because of = () => chainOfResponsibility = chainBuilder.Build(new RequestContext()).First();
 
         It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyLoggingHandler`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
 
@@ -128,7 +128,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             chainBuilder = new ChainofResponsibilityBuilder<MyCommand>(container);
         };
 
-        Because of = () => chainOfResponsibility = chainBuilder.Build().First();
+        Because of = () => chainOfResponsibility = chainBuilder.Build(new RequestContext()).First();
 
         It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|");
 

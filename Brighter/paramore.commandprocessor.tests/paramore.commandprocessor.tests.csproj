@@ -45,6 +45,7 @@
   <ItemGroup>
     <Compile Include="CommandProcessors\ChainOfResponsibilityTests.cs" />
     <Compile Include="CommandProcessors\CommandProcessorTests.cs" />
+    <Compile Include="CommandProcessors\PipelineContextTests.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyAbortingHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyAbortingHandlerAttribute.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyUnUsedCommandHandler.cs" />
