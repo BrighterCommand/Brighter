@@ -80,7 +80,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Because of = () => chainOfResponsibility = chainBuilder.Build().First();
 
         It should_include_my_command_handler_filter_in_the_chain = () => GetChain().ToString().Contains("MyImplicitHandler").ShouldBeTrue();
-        It should_include_my_logging_handler_in_the_chain = () => GetChain().ToString().Contains("MyLoggingHander").ShouldBeTrue();
+        It should_include_my_logging_handler_in_the_chain = () => GetChain().ToString().Contains("MyLoggingHandler").ShouldBeTrue();
 
         private static ChainPathExplorer GetChain()
         {
@@ -105,7 +105,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () => chainOfResponsibility = chainBuilder.Build().First();
 
-        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyLoggingHander`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
+        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyLoggingHandler`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
 
         private static ChainPathExplorer GetChain()
         {
@@ -130,7 +130,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () => chainOfResponsibility = chainBuilder.Build().First();
 
-        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHander`1|");
+        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => GetChain().ToString().ShouldEqual("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|");
 
         private static ChainPathExplorer GetChain()
         {
