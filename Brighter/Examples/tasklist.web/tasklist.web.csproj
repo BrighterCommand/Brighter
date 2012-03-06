@@ -103,6 +103,7 @@
     <Compile Include="DataAccess\TasksDAO.cs" />
     <Compile Include="Tests\TaskPipelines_UnitTests.cs" />
     <Compile Include="Tests\TaskRetriever.cs" />
+    <Compile Include="Tests\TaskPipelines_IntegrationTests.cs" />
     <Compile Include="ViewModelRetrievers\ITaskListRetriever.cs" />
     <Compile Include="ViewModelRetrievers\SimpleDataRetriever.cs" />
     <Compile Include="ViewModelRetrievers\TaskListRetriever.cs" />

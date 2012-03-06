@@ -20,7 +20,8 @@ namespace tasklist.web.Tests
 
         Establish context = () =>
         {
-            dao = new TasksDAO(Database.Opener.OpenFile(DatabasePath));
+            dao = new TasksDAO();
+            dao.Db = Database.Opener.OpenFile(DatabasePath);
             dao.Clear();
             newTask = new Task(taskName: "Test Name", taskDecription: "Task Description");
         };
@@ -40,7 +41,8 @@ namespace tasklist.web.Tests
 
         Establish context = () =>
         {
-            dao = new TasksDAO(Database.Opener.OpenFile(DatabasePath));
+            dao = new TasksDAO();
+            dao.Db = Database.Opener.OpenFile(DatabasePath);
             dao.Clear();
             newTask = new Task(id: 1, taskName: "Test Name", taskDecription: "Task Description");
         };
