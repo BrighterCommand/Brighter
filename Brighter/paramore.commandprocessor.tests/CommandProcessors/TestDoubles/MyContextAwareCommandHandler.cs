@@ -12,7 +12,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 
         private void LogContext()
         {
-            TestString = Context.Bag.TestString.ToString();
+            TestString = (string)Context.Bag.TestString;
             Context.Bag["MyContextAwareCommandHandler"] = "I was called and set the context";
         }
 

@@ -1,18 +1,14 @@
-using System.IO;
-using System.Reflection;
-using Simple.Data;
 using tasklist.web.Models;
 
 namespace tasklist.web.DataAccess
 {
     public class TasksDAO : ITasksDAO
     {
-        static readonly string DatabasePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().CodeBase.Substring(8)),"tasks.sqlite");
-        private dynamic db;
+        private readonly dynamic db;
 
-        public TasksDAO()
+        public TasksDAO(dynamic db)
         {
-            db = Database.Opener.OpenFile(DatabasePath);
+            this.db = db;
         }
 
         //inserting the id is problematic, but against SQLite Simple.Data does not return the row we inserted

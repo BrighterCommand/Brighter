@@ -16,7 +16,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
-            commandProcessor = new CommandProcessor(container);
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
 
         };
 
@@ -37,7 +37,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>("DefaultHandler").AsMultiInstance();
             container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>("Implicit Handler").AsMultiInstance();
-            commandProcessor = new CommandProcessor(container);
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
 
         };
 
@@ -57,7 +57,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Establish context = () =>
         {
             var container = new TinyIoCAdapter(new TinyIoCContainer());
-            commandProcessor = new CommandProcessor(container);
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
 
         };
 
@@ -77,7 +77,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsMultiInstance();
-            commandProcessor = new CommandProcessor(container);
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
         };
 
         Because of = () => commandProcessor.Publish(myEvent);
@@ -94,7 +94,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
-            commandProcessor = new CommandProcessor(new TinyIoCAdapter(new TinyIoCContainer()));                                    
+            commandProcessor = new CommandProcessor(new TinyIoCAdapter(new TinyIoCContainer()), new InMemoryRequestContextFactory());                                    
         };
 
         Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
@@ -114,7 +114,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                                     var container = new TinyIoCAdapter(new TinyIoCContainer());
                                     container.Register<IHandleRequests<MyEvent>, MyEventHandler>("My Event Handler").AsMultiInstance();
                                     container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("My Other Event Handler").AsMultiInstance();
-                                    commandProcessor = new CommandProcessor(container);
+                                    commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
                                 };
 
         Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
@@ -134,7 +134,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyUnusedCommandHandler>().AsMultiInstance();
-            commandProcessor = new CommandProcessor(container);
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
         };
 
         Because of = () => exception = Catch.Exception(() => commandProcessor.Send(myCommand));
@@ -152,7 +152,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsMultiInstance();
-            commandProcessor = new CommandProcessor(container);
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
 
         };
 

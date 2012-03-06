@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using FakeItEasy;
 using Machine.Specifications;
 using TinyIoC;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
@@ -43,7 +44,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             myCommand = new MyCommand();
             MyContextAwareCommandHandler.TestString = null;
 
-            commandProcessor = new CommandProcessor(container);
+            var requestContextFactory = A.Fake<IAmARequestContextFactory>();
+            A.CallTo(() => requestContextFactory.Create()).Returns(request_context);
+
+            commandProcessor = new CommandProcessor(container, requestContextFactory);
 
             request_context.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
         };
@@ -52,7 +56,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Because of = () => commandProcessor.Send(myCommand);
 
         It should_have_seen_the_data_we_pushed_into_the_bag = () => MyContextAwareCommandHandler.TestString.ShouldEqual(I_AM_A_TEST_OF_THE_CONTEXT_BAG);
-        It should_have_been_filled_by_the_handler = () => ShouldExtensionMethods.ShouldNotBeNull(request_context.Bag.MyContextAwareCommandHandler);
+        It should_have_been_filled_by_the_handler = () => ((string)request_context.Bag.MyContextAwareCommandHandler).ShouldEqual("I was called and set the context");
     }
 
 

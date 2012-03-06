@@ -51,10 +51,12 @@
     <Compile Include="HandlerTiming.cs" />
     <Compile Include="IAmACommandProcessor.cs" />
     <Compile Include="IAdaptAnInversionOfControlContainer.cs" />
+    <Compile Include="IAmARequestContextFactory.cs" />
     <Compile Include="IChainofResponsibilityBuilder.cs" />
     <Compile Include="IChainPathExplorer.cs" />
     <Compile Include="ICommand.cs" />
     <Compile Include="IHandleRequests.cs" />
+    <Compile Include="InMemoryRequestContextFactory.cs" />
     <Compile Include="IRequest.cs" />
     <Compile Include="IRequestContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
