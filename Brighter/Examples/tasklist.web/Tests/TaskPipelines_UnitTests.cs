@@ -68,34 +68,4 @@ namespace tasklist.web.Tests
         It should_be_of_the_correct_type = () => exception.ShouldBeOfType<ArgumentException>();
         It should_show_a_suitable_message = () => exception.ShouldContainErrorMessage("The commmand was not valid");
     }
-
-    public class When_I_add_a_new_task
-    {
-        static AddTaskCommand cmd;
-        static IAmACommandProcessor commandProcessor;
-        static ITasksDAO tasksDAO;
-        static readonly RequestContext requestContext = new RequestContext();
-
-        Establish context = () =>
-        {
-            tasksDAO = A.Fake<ITasksDAO>();
-            A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
-
-            IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
-            container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
-
-            var requestContextFactory = A.Fake<IAmARequestContextFactory>();
-            A.CallTo(() => requestContextFactory.Create()).Returns(requestContext);
-
-            commandProcessor = new CommandProcessor(container, requestContextFactory);
-
-            cmd = new AddTaskCommand("New Task", "Test that we store a task");
-        };
-
-        Because of = () => commandProcessor.Send(cmd);
-        It should_have_a_db_in_the_context = () => requestContext.Bag.Db.ShouldNotBeNull();
-        It should_have_a_transaction_in_the_context = () => requestContext.Bag.Tx.ShouldNotBeNull();
-
-    }
 }
