@@ -7,16 +7,18 @@ namespace paramore.commandprocessor
     public class CommandProcessor : IAmACommandProcessor
     {
         private readonly IAdaptAnInversionOfControlContainer container;
+        private readonly IAmARequestContextFactory requestContextFactory;
 
-        public CommandProcessor(IAdaptAnInversionOfControlContainer container)
+        public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory)
         {
             this.container = container;
+            this.requestContextFactory = requestContextFactory;
         }
 
         public void Send<T>(T command) where T : class, IRequest
         {
             var builder = new ChainofResponsibilityBuilder<T>(container);
-            var requestContext = new RequestContext();
+            var requestContext = requestContextFactory.Create();
             var handlerChain = builder.Build(requestContext);
 
             var handlerCount = handlerChain.Count();

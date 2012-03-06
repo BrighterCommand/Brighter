@@ -14,7 +14,8 @@ namespace tasklist.web.Handlers
             this.tasksDao = tasksDao;
         }
 
-        [TaskValidationHandlerAttribute(step: 1, timing: HandlerTiming.Before)]
+        [Validation(step: 1, timing: HandlerTiming.Before)]
+        [BeginTransaction(step: 2, timing: HandlerTiming.Before)]
         public override AddTaskCommand Handle(AddTaskCommand askTaskCommand)
         {
             tasksDao.Add(

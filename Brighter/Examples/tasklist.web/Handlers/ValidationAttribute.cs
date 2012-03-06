@@ -3,12 +3,11 @@ using paramore.commandprocessor;
 
 namespace tasklist.web.Handlers
 {
-    public class TaskValidationHandlerAttribute : RequestHandlerAttribute
+    public class ValidationAttribute : RequestHandlerAttribute
     {
-        public TaskValidationHandlerAttribute(int step, HandlerTiming timing)
+        public ValidationAttribute(int step, HandlerTiming timing)
             : base(step, timing)
-        {
-        }
+        {}
 
         public override Type GetHandlerType()
         {
