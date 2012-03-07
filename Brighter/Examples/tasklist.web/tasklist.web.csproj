@@ -89,8 +89,6 @@
     <Compile Include="Handlers\AddTaskCommandHandler.cs" />
     <Compile Include="DataAccess\ITasksDAO.cs" />
     <Compile Include="Commands\ICanBeValidated.cs" />
-    <Compile Include="Handlers\BeginTransaction.cs" />
-    <Compile Include="Handlers\BeginTransactionAttribute.cs" />
     <Compile Include="Handlers\ValidationHandler.cs" />
     <Compile Include="Handlers\ValidationAttribute.cs" />
     <Compile Include="Models\Task.cs" />
