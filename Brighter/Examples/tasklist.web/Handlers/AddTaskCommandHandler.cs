@@ -16,10 +16,8 @@ namespace tasklist.web.Handlers
         }
 
         [Validation(step: 1, timing: HandlerTiming.Before)]
-        [BeginTransaction(step: 2, timing: HandlerTiming.Before)]
         public override AddTaskCommand Handle(AddTaskCommand addTaskCommand)
         {
-            tasksDao.Db = Context.Bag.Db.Value as Database;
             tasksDao.Add(
                 new Task(
                     taskName: addTaskCommand.TaskName, 
