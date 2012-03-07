@@ -60,6 +60,9 @@
     <Reference Include="Nancy.Testing, Version=0.9.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Nancy.Testing.0.9.0\lib\net40\Nancy.Testing.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\..\packages\Newtonsoft.Json.4.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="Simple.Data">
       <HintPath>..\..\packages\Simple.Data.Core.0.12.2.2\lib\net40\Simple.Data.dll</HintPath>
     </Reference>
@@ -89,6 +92,8 @@
     <Compile Include="Handlers\AddTaskCommandHandler.cs" />
     <Compile Include="DataAccess\ITasksDAO.cs" />
     <Compile Include="Commands\ICanBeValidated.cs" />
+    <Compile Include="Handlers\TraceAttribute.cs" />
+    <Compile Include="Handlers\TraceHandler.cs" />
     <Compile Include="Handlers\ValidationHandler.cs" />
     <Compile Include="Handlers\ValidationAttribute.cs" />
     <Compile Include="Models\Task.cs" />
