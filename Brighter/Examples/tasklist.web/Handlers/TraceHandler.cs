@@ -26,9 +26,4 @@ namespace tasklist.web.Handlers
             return command;
         }
     }
-
-    public interface ITraceOutput
-    {
-        void WriteLine(string format);
-    }
 }

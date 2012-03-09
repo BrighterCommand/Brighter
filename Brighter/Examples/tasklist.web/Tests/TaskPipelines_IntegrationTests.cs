@@ -7,6 +7,7 @@ using paramore.commandprocessor.ioccontainers.IoCContainers;
 using tasklist.web.Commands;
 using tasklist.web.DataAccess;
 using tasklist.web.Handlers;
+using tasklist.web.Utilities;
 
 namespace tasklist.web.Tests
 {
@@ -21,6 +22,7 @@ namespace tasklist.web.Tests
             IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<ITasksDAO, TasksDAO>();
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
+            container.Register<ITraceOutput, ConsoleTrace>();
 
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
             A.CallTo(() => requestContextFactory.Create()).Returns(requestContext);
@@ -32,9 +34,7 @@ namespace tasklist.web.Tests
 
         Because of = () => commandProcessor.Send(cmd);
 
-        It should_have_a_db_in_the_context = () => ((Database) requestContext.Bag.Db.Value).ShouldNotBeNull();
-        It should_have_a_transaction_in_the_context = () => ((SimpleTransaction)requestContext.Bag.Tx.Value).ShouldNotBeNull();
-        It should_store_something_in_the_db;
+        It should_store_something_in_the_db = () => new TasksDAO().FindByName(cmd.TaskName).ShouldNotBeNull();
 
     }
 }

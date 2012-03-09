@@ -89,9 +89,11 @@
   <ItemGroup>
     <Compile Include="CommandProcessorBootstrapper.cs" />
     <Compile Include="Commands\AddTaskCommand.cs" />
+    <Compile Include="Utilities\ConsoleTrace.cs" />
     <Compile Include="Handlers\AddTaskCommandHandler.cs" />
     <Compile Include="DataAccess\ITasksDAO.cs" />
     <Compile Include="Commands\ICanBeValidated.cs" />
+    <Compile Include="Handlers\ITraceOutput.cs" />
     <Compile Include="Handlers\TraceAttribute.cs" />
     <Compile Include="Handlers\TraceHandler.cs" />
     <Compile Include="Handlers\ValidationHandler.cs" />

@@ -27,5 +27,10 @@ namespace tasklist.web.DataAccess
         {
             db.Tasks.DeleteAll();
         }
-      }
+
+        public Task FindByName(string taskName)
+        {
+            return db.FindByTaskName(taskName);
+        }
+    }
 }
