@@ -17,16 +17,19 @@ namespace tasklist.web.Tests
         static AddTaskCommand cmd;
         static IAmACommandProcessor commandProcessor;
         static ITasksDAO tasksDAO;
+        static ITraceOutput traceOutput;
         static Exception exception;
 
         Establish context = () =>
         {
             tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
+            traceOutput = A.Fake<ITraceOutput>();
 
             IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
+            container.Register<ITraceOutput, ITraceOutput>(traceOutput);
 
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
 
@@ -46,16 +49,19 @@ namespace tasklist.web.Tests
         static AddTaskCommand cmd;
         static IAmACommandProcessor commandProcessor;
         static ITasksDAO tasksDAO;
+        static ITraceOutput traceOutput;
         static Exception exception;
 
         Establish context = () =>
         {
             tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
+            traceOutput = A.Fake<ITraceOutput>();
 
             IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
+            container.Register<ITraceOutput, ITraceOutput>(traceOutput);
 
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
 
@@ -71,6 +77,30 @@ namespace tasklist.web.Tests
 
     public class When_adding_a_valid_new_task
     {
+        static AddTaskCommand cmd;
+        static IAmACommandProcessor commandProcessor;
+        static ITasksDAO tasksDAO;
+        static ITraceOutput traceOutput;
+
+        Establish context = () =>
+        {
+            tasksDAO = A.Fake<ITasksDAO>();
+            A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
+            traceOutput = A.Fake<ITraceOutput>();
+
+            IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
+            container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
+            container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
+            container.Register<ITraceOutput, ITraceOutput>(traceOutput);
+
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+
+            cmd = new AddTaskCommand("Test task", "Test that we store a task");
+        };
+
+        Because of = () => commandProcessor.Send(cmd);
+
+        It should_add_the_task_to_the_task_List = () => A.CallTo(() => tasksDAO.Add(A<Task>.Ignored)).MustHaveHappened();
     }
 
     public class When_tracing_the_add_task_command_handler
