@@ -4,6 +4,7 @@ using paramore.commandprocessor.ioccontainers.IoCContainers;
 using tasklist.web.Commands;
 using tasklist.web.DataAccess;
 using tasklist.web.Handlers;
+using tasklist.web.Utilities;
 using tasklist.web.ViewModelRetrievers;
 
 namespace tasklist.web
@@ -19,6 +20,7 @@ namespace tasklist.web
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>().AsMultiInstance();
             container.Register<ITaskListRetriever, TaskListRetriever>().AsMultiInstance();
             container.Register<ITasksDAO, TasksDAO>().AsMultiInstance();
+            container.Register<ITraceOutput, ConsoleTrace>().AsSingleton();
         }
     }
 }

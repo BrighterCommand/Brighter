@@ -68,4 +68,12 @@ namespace tasklist.web.Tests
         It should_be_of_the_correct_type = () => exception.ShouldBeOfType<ArgumentException>();
         It should_show_a_suitable_message = () => exception.ShouldContainErrorMessage("The commmand was not valid");
     }
+
+    public class When_adding_a_valid_new_task
+    {
+    }
+
+    public class When_tracing_the_add_task_command_handler
+    {
+    }
 }
