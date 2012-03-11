@@ -1,24 +1,30 @@
-﻿namespace tasklist.web.Models
+﻿using System;
+
+namespace tasklist.web.Models
 {
     public class Task
     {
         public Task() {/*Needed for Simple.Data*/ }
-        public Task(string taskName, string taskDecription)
+        public Task(string taskName, string taskDecription, DateTime? dueDate = null)
         {
-            TaskName = taskName;
             TaskDescription = taskDecription;
+            DueDate = dueDate;
+            TaskName = taskName;
         }
 
         //allow us to set the key as Simple.Data.SQLite does not return a value on insert
-        public Task(int id, string taskName, string taskDecription)
+        public Task(int id, string taskName, string taskDecription, DateTime? dueDate = null)
         {
+            DueDate = dueDate;
             Id = id;
-            TaskName = taskName;
             TaskDescription = taskDecription;
+            TaskName = taskName;
         }
 
-        public string TaskDescription { get; set; }
+        public DateTime? CompletionDate { get; set; }
+        public DateTime? DueDate { get; set; }
         public int Id { get; set; }
+        public string TaskDescription { get; set; }
         public string TaskName{get; set;}
     }
 }
