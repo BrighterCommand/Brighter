@@ -30,7 +30,7 @@ namespace tasklist.web.DataAccess
 
         public Task FindByName(string taskName)
         {
-            return db.FindByTaskName(taskName);
+            return db.Tasks.FindBy(taskName: taskName);
         }
     }
 }
