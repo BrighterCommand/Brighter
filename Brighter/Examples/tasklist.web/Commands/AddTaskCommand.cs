@@ -5,14 +5,16 @@ namespace tasklist.web.Commands
 {
     public class AddTaskCommand : Command, ICanBeValidated
     {
-        public string TaskName { get; set; }
         public string TaskDecription { get; set; }
+        public DateTime? TaskDueDate { get; set; }
+        public string TaskName { get; set; }
 
-        public AddTaskCommand(string taskName, string taskDecription)
+        public AddTaskCommand(string taskName, string taskDecription, DateTime? dueDate = null)
             :base(Guid.NewGuid())
         {
             TaskName = taskName;
             TaskDecription = taskDecription;
+            TaskDueDate = dueDate;
         }
 
         public bool IsValid()

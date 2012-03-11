@@ -22,7 +22,8 @@ namespace tasklist.web.Handlers
             tasksDao.Add(
                 new Task(
                     taskName: addTaskCommand.TaskName, 
-                    taskDecription: addTaskCommand.TaskDecription
+                    taskDecription: addTaskCommand.TaskDecription,
+                    dueDate: addTaskCommand.TaskDueDate
                     )
                 );
 

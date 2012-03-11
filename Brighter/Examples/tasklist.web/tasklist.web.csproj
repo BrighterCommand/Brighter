@@ -90,6 +90,7 @@
   <ItemGroup>
     <Compile Include="CommandProcessorBootstrapper.cs" />
     <Compile Include="Commands\AddTaskCommand.cs" />
+    <Compile Include="Tests\TaskModel.cs" />
     <Compile Include="Utilities\ConsoleTrace.cs" />
     <Compile Include="Handlers\AddTaskCommandHandler.cs" />
     <Compile Include="DataAccess\ITasksDAO.cs" />

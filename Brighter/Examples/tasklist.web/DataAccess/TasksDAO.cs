@@ -20,7 +20,7 @@ namespace tasklist.web.DataAccess
 
         public void Add(Task newTask)
         {
-            db.Tasks.Insert(id:newTask.Id, taskname: newTask.TaskName, taskdescription: newTask.TaskDescription);
+            db.Tasks.Insert(id:newTask.Id, taskname: newTask.TaskName, taskdescription: newTask.TaskDescription, DueDate: newTask.DueDate);
         }
 
         public void Clear()

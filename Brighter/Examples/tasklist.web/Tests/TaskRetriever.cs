@@ -6,11 +6,12 @@ namespace tasklist.web.Tests
 {
     internal class TaskRetriever : SimpleDataRetriever, ITaskRetriever
     {
-        public Task Get(int taskId)
+        public TaskModel Get(int taskId)
         {
             var db = Database.Opener.OpenFile(DatabasePath);
-            var task = db.Tasks.FindById(taskId);
-            return task;
+            var matchingTask = db.Tasks.QueryById(taskId)
+                .Select(db.Tasks.TaskName, db.Tasks.TaskDescription, db.Tasks.DueDate);
+            return new TaskModel(taskName: matchingTask.TaskName, taskDescription: matchingTask.TaskDescription, dueDate: matchingTask.DueDate.ToString());
         }
     }
 }
