@@ -1,6 +1,7 @@
 ﻿using System;
 using FakeItEasy;
 using Machine.Specifications;
+using Newtonsoft.Json;
 using TinyIoC;
 using paramore.commandprocessor;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
@@ -105,5 +106,30 @@ namespace tasklist.web.Tests
 
     public class When_tracing_the_add_task_command_handler
     {
+        static AddTaskCommand cmd;
+        static IAmACommandProcessor commandProcessor;
+        static ITasksDAO tasksDAO;
+        static ITraceOutput traceOutput;
+
+        Establish context = () =>
+        {
+            tasksDAO = A.Fake<ITasksDAO>();
+            A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
+            traceOutput = A.Fake<ITraceOutput>();
+
+            IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
+            container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
+            container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
+            container.Register<ITraceOutput, ITraceOutput>(traceOutput);
+
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+
+            cmd = new AddTaskCommand("Test task", "Test that we store a task");
+        };
+
+        Because of = () => commandProcessor.Send(cmd);
+
+        It should_log_the_call_before_the_command_handler = () => A.CallTo(() => traceOutput.WriteLine(string.Format("Calling handler for {0} with values of {1} at: {2}", typeof (AddTaskCommand), JsonConvert.SerializeObject(cmd), DateTime.UtcNow))).MustHaveHappened();
+        It should_add_a_call_after_the_command_handler = () => A.CallTo(() => traceOutput.WriteLine(string.Format("Finished calling handler for {0} at: {1}", typeof (AddTaskCommand), DateTime.UtcNow))).MustHaveHappened();
     }
 }

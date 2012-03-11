@@ -30,6 +30,8 @@ namespace tasklist.web.Tests
             commandProcessor = new CommandProcessor(container, requestContextFactory);
 
             cmd = new AddTaskCommand("New Task", "Test that we store a task");
+
+            new TasksDAO().Clear();
         };
 
         Because of = () => commandProcessor.Send(cmd);
