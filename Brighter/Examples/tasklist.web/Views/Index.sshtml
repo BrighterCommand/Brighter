@@ -2,13 +2,26 @@
 <html>
 <head>
     <title>Task List</title>
+	<link rel="stylesheet" type="text/css" href="/content/main.css" />
 </head>
 <body>
-	<h3>To Do List</h3>
-	<label>Task Name:</label> <label> Task Description: </label>
-    <ul>
-        @Each.Tasks <li> <a href="/todo/task/@Current.Id">@Current.TaskName </a> </li> @EndEach
-    </ul>
+    <table id="todolist">
+		<caption>Outstanding Tasks</caption>
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th>Due</th>
+			</tr>
+		</thead>
+		<tbody>
+			@Each.Tasks 
+			<tr>
+				<td> <a href="/todo/task/@Current.Id">@Current.TaskName </a> </td> 
+				<td> @Current.DueDate </td>
+			</tr> 
+			@EndEach
+		</tbody>
+    </table>
 	<a href = "/todo/add">Add</a>
 </body>
 </html>

@@ -30,7 +30,7 @@ namespace tasklist.web.Tests
 
             commandProcessor = new CommandProcessor(container, requestContextFactory);
 
-            cmd = new AddTaskCommand("New Task", "Test that we store a task", DateTime.UtcNow.AddDays(3));
+            cmd = new AddTaskCommand("New Task", "Test that we store a task", DateTime.Now.AddDays(3));
 
             new TasksDAO().Clear();
         };
