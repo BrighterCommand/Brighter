@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Machine.Specifications;
 using tasklist.web.DataAccess;
@@ -18,7 +19,7 @@ namespace tasklist.web.Tests
         {
             dao = new TasksDAO();
             dao.Clear();
-            newTask = new Task(taskName: "Test Name", taskDecription: "Task Description");
+            newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
         };
 
         Because of = () => dao.Add(newTask);
@@ -37,7 +38,7 @@ namespace tasklist.web.Tests
         {
             dao = new TasksDAO();
             dao.Clear();
-            newTask = new Task(id: 1, taskName: "Test Name", taskDecription: "Task Description");
+            newTask = new Task(id: 1, taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
         };
 
         Because of = () => dao.Add(newTask);
