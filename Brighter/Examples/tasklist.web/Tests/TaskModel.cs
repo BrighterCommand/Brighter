@@ -1,6 +1,6 @@
 namespace tasklist.web.Tests
 {
-    internal class TaskModel
+    public class TaskModel
     {
         public TaskModel(string dueDate, string taskDescription, string taskName)
         {

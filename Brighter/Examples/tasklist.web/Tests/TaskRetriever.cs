@@ -1,3 +1,4 @@
+using System;
 using Simple.Data;
 using tasklist.web.Models;
 using tasklist.web.ViewModelRetrievers;
@@ -11,7 +12,8 @@ namespace tasklist.web.Tests
             var db = Database.Opener.OpenFile(DatabasePath);
             var matchingTask = db.Tasks.QueryById(taskId)
                 .Select(db.Tasks.TaskName, db.Tasks.TaskDescription, db.Tasks.DueDate);
-            return new TaskModel(taskName: matchingTask.TaskName, taskDescription: matchingTask.TaskDescription, dueDate: matchingTask.DueDate.ToString());
+            string dueDate = matchingTask.DueDate != null ? matchingTask.DueDate.ToUniversalTime().ToString() : string.Empty;
+            return new TaskModel(dueDate: dueDate, taskName: matchingTask.TaskName, taskDescription: matchingTask.TaskDescription);
         }
     }
 }
