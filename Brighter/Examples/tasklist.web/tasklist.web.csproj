@@ -91,7 +91,9 @@
     <Compile Include="CommandProcessorBootstrapper.cs" />
     <Compile Include="Commands\AddTaskCommand.cs" />
     <Compile Include="Commands\EditTaskCommand.cs" />
+    <Compile Include="Commands\CompleteTaskCommand.cs" />
     <Compile Include="Handlers\EditTaskCommandHandler.cs" />
+    <Compile Include="Handlers\CompleteTaskCommandHandler.cs" />
     <Compile Include="Tests\TaskModel.cs" />
     <Compile Include="Utilities\ConsoleTrace.cs" />
     <Compile Include="Handlers\AddTaskCommandHandler.cs" />
