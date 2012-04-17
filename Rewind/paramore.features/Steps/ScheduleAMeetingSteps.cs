@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Linq;
 using NUnit.Framework;
-using Paramore.Domain.Common;
-using Paramore.Domain.Meetings;
-using Paramore.Domain.Speakers;
+using Paramore.Domain.Documents;
+using Paramore.Domain.DomainServices;
+using Paramore.Domain.Entities.Meetings;
+using Paramore.Domain.Entities.Speakers;
+using Paramore.Domain.Factories;
+using Paramore.Domain.ValueTypes;
 using Paramore.Domain.Venues;
 using Paramore.Features.Tools;
-using Paramore.Infrastructure.Domain;
-using Paramore.Infrastructure.Raven;
+using Paramore.Infrastructure.Repositories;
 using Paramore.Services.CommandHandlers;
 using Paramore.Services.CommandHandlers.Meetings;
 using Paramore.Services.Commands.Meeting;
@@ -16,7 +18,7 @@ using TechTalk.SpecFlow;
 using TinyIoC;
 using paramore.commandprocessor;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
-using Version = Paramore.Infrastructure.Domain.Version;
+using Version = Paramore.Infrastructure.Repositories.Version;
 
 namespace Paramore.Features.Steps
 {
@@ -28,7 +30,7 @@ namespace Paramore.Features.Steps
         private static TinyInversionOfControlContainer container;
         private Id speakerId;
         private Id venueId;
-        private MeetingDTO scheduledMeeting;
+        private MeetingDocument scheduledMeeting;
 
         [BeforeFeature]
         public static void SetUp()
@@ -37,7 +39,7 @@ namespace Paramore.Features.Steps
 
             commandProcessor = new CommandProcessor(container);
             container.Register<IAmAUnitOfWorkFactory, UnitOfWorkFactory>().AsSingleton();
-            container.Register<IRepository<Meeting, MeetingDTO>, Repository<Meeting, MeetingDTO>>().AsMultiInstance();
+            container.Register<IRepository<Meeting, MeetingDocument>, Repository<Meeting, MeetingDocument>>().AsMultiInstance();
             container.Register<IIssueTickets, TicketIssuer>().AsMultiInstance();
             container.Register<IScheduler, Scheduler>();
             container.Register<IAmAnOverbookingPolicy, FiftyPercentOverbookingPolicy>();
@@ -51,7 +53,7 @@ namespace Paramore.Features.Steps
             using (var uow = container.Resolve<IAmAUnitOfWorkFactory>().CreateUnitOfWork())
             {
                 speakerId = new Id(Guid.NewGuid());
-                uow.Add(new SpeakerDTO(
+                uow.Add(new SpeakerDocument(
                             speakerId,
                             new Version(),
                             new SpeakerBio("Augusta Ada King, Countess of Lovelace (10 December 1815 – 27 November 1852), born Augusta Ada Byron, was an English writer chiefly known for her work on Charles Babbage's early mechanical general-purpose computer, the analytical engine."),
@@ -70,7 +72,7 @@ namespace Paramore.Features.Steps
             using (var uow = container.Resolve<IAmAUnitOfWorkFactory>().CreateUnitOfWork())
             {
                 venueId = new Id(Guid.NewGuid());
-                var venue = new VenueDTO(
+                var venue = new VenueDocument(
                     venueId, 
                     new Version(), 
                     new VenueName("The American Bar, The Savoy Hotel"),
@@ -107,7 +109,7 @@ namespace Paramore.Features.Steps
         {
             using (var uow = container.Resolve<IAmAUnitOfWorkFactory>().CreateUnitOfWork())
             {
-                var results = uow.Query<MeetingDTO>()
+                var results = uow.Query<MeetingDocument>()
                     .Where(meeting => meeting.Id == scheduleMeetingCommand.MeetingId)
                     .Customize(x => x.WaitForNonStaleResults())
                     .ToList();

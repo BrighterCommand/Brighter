@@ -16,11 +16,22 @@ namespace tasklist.web.DataAccess
             db = Database.Opener.OpenFile(DatabasePath);
         }
 
-        //inserting the id is problematic, but against SQLite Simple.Data does not return the row we inserted
+        //inserting the id is problematic, but against SQLite Simple.Data does not return the row we inserted,
+        //and we want to know to test integration. Trick might be to rewrite with a different Db.
+
+        internal void Add(int id, Task newTask)
+        {
+            db.Tasks.Insert(id:id, taskname: newTask.TaskName, taskdescription: newTask.TaskDescription, DueDate: newTask.DueDate);
+        }
 
         public void Add(Task newTask)
         {
-            db.Tasks.Insert(id:newTask.Id, taskname: newTask.TaskName, taskdescription: newTask.TaskDescription, DueDate: newTask.DueDate);
+            db.Tasks.Insert(taskname: newTask.TaskName, taskdescription: newTask.TaskDescription, DueDate: newTask.DueDate);
+        }
+
+        public void Update(Task task)
+        {
+            db.Tasks.UpdateById(task);
         }
 
         public void Clear()
@@ -28,9 +39,15 @@ namespace tasklist.web.DataAccess
             db.Tasks.DeleteAll();
         }
 
+        public Task FindById(int taskId)
+        {
+            return db.Tasks.FindById();
+        }
+
         public Task FindByName(string taskName)
         {
             return db.Tasks.FindBy(taskName: taskName);
         }
+
     }
 }

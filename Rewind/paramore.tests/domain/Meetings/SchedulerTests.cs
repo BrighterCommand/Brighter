@@ -1,8 +1,12 @@
 ﻿using System;
 using FakeItEasy;
 using Machine.Specifications;
-using Paramore.Domain.Meetings;
-using Paramore.Infrastructure.Domain;
+using Paramore.Domain.Documents;
+using Paramore.Domain.DomainServices;
+using Paramore.Domain.Entities.Meetings;
+using Paramore.Domain.Factories;
+using Paramore.Domain.ValueTypes;
+using Paramore.Infrastructure.Repositories;
 
 namespace Paramore.Tests.domain.Meetings
 {
@@ -94,7 +98,7 @@ namespace Paramore.Tests.domain.Meetings
 
         Because of = () => meeting = scheduler.Schedule(new Id(Guid.NewGuid()), new MeetingDate(DateTime.Today), null, null, null);
 
-        It should_be_open_for_registration = () => meeting.ToDTO().State.ShouldEqual(MeetingState.Live);
+        It should_be_open_for_registration = () => ((MeetingDocument)meeting).State.ShouldEqual(MeetingState.Live);
     }
 
     public class When_we_add_speaker_or_venue_they_should_be_noted
@@ -119,8 +123,8 @@ namespace Paramore.Tests.domain.Meetings
 
         Because of = () => meeting = scheduler.Schedule(new Id(Guid.NewGuid()), new MeetingDate(DateTime.Today), venueId, speakerId, capacity);
 
-        It should_have_a_speaker_id = () => meeting.ToDTO().Speaker.ShouldEqual((Guid) speakerId);
-        It should_have_a_venue_id = () => meeting.ToDTO().Venue.ShouldEqual((Guid) venueId);
+        It should_have_a_speaker_id = () => ((MeetingDocument)meeting).Speaker.ShouldEqual((Guid) speakerId);
+        It should_have_a_venue_id = () => ((MeetingDocument)meeting).Venue.ShouldEqual((Guid) venueId);
 
     }
 }

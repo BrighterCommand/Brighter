@@ -90,6 +90,8 @@
   <ItemGroup>
     <Compile Include="CommandProcessorBootstrapper.cs" />
     <Compile Include="Commands\AddTaskCommand.cs" />
+    <Compile Include="Commands\EditTaskCommand.cs" />
+    <Compile Include="Handlers\EditTaskCommandHandler.cs" />
     <Compile Include="Tests\TaskModel.cs" />
     <Compile Include="Utilities\ConsoleTrace.cs" />
     <Compile Include="Handlers\AddTaskCommandHandler.cs" />
@@ -118,7 +120,10 @@
   <ItemGroup>
     <None Include="Views\AddTask.sshtml" />
     <None Include="Views\Index.sshtml" />
+    <Content Include="content\jquery-ui-1.8.18.custom.css" />
     <Content Include="content\main.css" />
+    <Content Include="content\jquery-1.7.1.min.js" />
+    <Content Include="content\jquery-ui-1.8.18.custom.min.js" />
     <Content Include="Web.config">
       <SubType>Designer</SubType>
     </Content>
@@ -143,9 +148,7 @@
       <Name>paramore.commandprocessor</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="NewFolder1\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

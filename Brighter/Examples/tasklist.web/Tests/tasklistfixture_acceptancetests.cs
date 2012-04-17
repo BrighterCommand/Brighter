@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.Globalization;
+using System.IO;
 using System.Reflection;
 using Machine.Specifications;
 using Nancy;
@@ -70,6 +72,7 @@ namespace tasklist.web.Tests
             with.HttpRequest();
             with.FormValue("taskDescription", "A new test task");
             with.FormValue("taskName", "A named task");
+            with.FormValue("taskDescription", DateTime.Now.ToString(CultureInfo.InvariantCulture));
         });
 
         It should_have_a_list = () => _response.Body["ul"].ShouldExistOnce();

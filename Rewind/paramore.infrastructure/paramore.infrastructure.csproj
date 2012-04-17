@@ -62,23 +62,21 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Domain\Id.cs" />
-    <Compile Include="Domain\IUnitOfWork.cs" />
-    <Compile Include="Domain\Version.cs" />
+    <Compile Include="Repositories\Id.cs" />
+    <Compile Include="Repositories\IUnitOfWork.cs" />
+    <Compile Include="Repositories\Version.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Domain\IAggregateRoot.cs" />
-    <Compile Include="Domain\IEntity.cs" />
-    <Compile Include="Domain\IRepository.cs" />
-    <Compile Include="Raven\RavenConnection.cs" />
-    <Compile Include="Raven\IAmADataObject.cs" />
-    <Compile Include="Raven\IAmAUnitOfWorkFactory.cs" />
-    <Compile Include="Raven\UnitOfWorkFactory.cs" />
-    <Compile Include="Raven\Repository.cs" />
-    <Compile Include="Raven\UnitOfWork.cs" />
+    <Compile Include="Repositories\IAggregateRoot.cs" />
+    <Compile Include="Repositories\IEntity.cs" />
+    <Compile Include="Repositories\IRepository.cs" />
+    <Compile Include="Repositories\RavenConnection.cs" />
+    <Compile Include="Repositories\IAmADocument.cs" />
+    <Compile Include="Repositories\IAmAUnitOfWorkFactory.cs" />
+    <Compile Include="Repositories\UnitOfWorkFactory.cs" />
+    <Compile Include="Repositories\Repository.cs" />
+    <Compile Include="Repositories\UnitOfWork.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Domain\Repositories\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>

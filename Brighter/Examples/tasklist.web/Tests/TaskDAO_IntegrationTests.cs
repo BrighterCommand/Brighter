@@ -38,10 +38,10 @@ namespace tasklist.web.Tests
         {
             dao = new TasksDAO();
             dao.Clear();
-            newTask = new Task(id: 1, taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
+            newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
         };
 
-        Because of = () => dao.Add(newTask);
+        Because of = () => dao.Add(1, newTask);
 
         It should_add_the_task_into_the_list = () => retriever.Get(newTask.Id).ShouldNotBeNull();
     }

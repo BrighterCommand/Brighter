@@ -1,12 +1,14 @@
 ﻿using System;
 using FakeItEasy;
 using Machine.Specifications;
-using Paramore.Domain.Meetings;
-using Paramore.Infrastructure.Domain;
-using Paramore.Infrastructure.Raven;
+using Paramore.Domain.Documents;
+using Paramore.Domain.Entities.Meetings;
+using Paramore.Domain.Factories;
+using Paramore.Domain.ValueTypes;
+using Paramore.Infrastructure.Repositories;
 using Paramore.Services.CommandHandlers.Meetings;
 using Paramore.Services.Commands.Meeting;
-using Version = Paramore.Infrastructure.Domain.Version;
+using Version = Paramore.Infrastructure.Repositories.Version;
 
 namespace Paramore.Tests.services.CommandHandlers.Meetings
 {
@@ -15,7 +17,7 @@ namespace Paramore.Tests.services.CommandHandlers.Meetings
     {
         static ScheduleMeetingCommandHandler scheduleMeetingCommandHandler;
         static ScheduleMeetingCommand newMeetingRequest;
-        static IRepository<Meeting, MeetingDTO> repository;
+        static IRepository<Meeting, MeetingDocument> repository;
         static IScheduler scheduler;
         static IAmAUnitOfWorkFactory uoWFactory;
         static IUnitOfWork uow;
@@ -27,7 +29,7 @@ namespace Paramore.Tests.services.CommandHandlers.Meetings
 
         Establish context = () =>
         {
-            repository = A.Fake<IRepository<Meeting, MeetingDTO>>();
+            repository = A.Fake<IRepository<Meeting, MeetingDocument>>();
             scheduler = A.Fake<IScheduler>();
             uoWFactory = A.Fake<IAmAUnitOfWorkFactory>();
             uow = A.Fake<IUnitOfWork>();

@@ -1,6 +1,7 @@
+using Paramore.Domain.Documents;
+using Paramore.Domain.ValueTypes;
 using Paramore.Domain.Venues;
-using Paramore.Infrastructure.Domain;
-using Paramore.Infrastructure.Raven;
+using Paramore.Infrastructure.Repositories;
 using Paramore.Services.Commands.Venue;
 using paramore.commandprocessor;
 
@@ -8,10 +9,10 @@ namespace Paramore.Services.CommandHandlers.Venues
 {
     public class AddVenueCommandHandler : RequestHandler<AddVenueCommand>
     {
-        private readonly IRepository<Venue, VenueDTO> repository;
+        private readonly IRepository<Venue, VenueDocument> repository;
         private readonly IAmAUnitOfWorkFactory unitOfWorkFactory;
 
-        public AddVenueCommandHandler(IRepository<Venue,VenueDTO> repository, IAmAUnitOfWorkFactory unitOfWorkFactory)
+        public AddVenueCommandHandler(IRepository<Venue,VenueDocument> repository, IAmAUnitOfWorkFactory unitOfWorkFactory)
         {
             this.repository = repository;
             this.unitOfWorkFactory = unitOfWorkFactory;
