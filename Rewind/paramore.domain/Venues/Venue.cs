@@ -1,12 +1,12 @@
 using System;
-using Paramore.Domain.Common;
-using Paramore.Infrastructure.Domain;
-using Paramore.Infrastructure.Raven;
-using Version = Paramore.Infrastructure.Domain.Version;
+using Paramore.Domain.Documents;
+using Paramore.Domain.ValueTypes;
+using Paramore.Infrastructure.Repositories;
+using Version = Paramore.Infrastructure.Repositories.Version;
 
 namespace Paramore.Domain.Venues
 {
-    public class Venue : Aggregate<VenueDTO> 
+    public class Venue : AggregateRoot<VenueDocument> 
     {
         private Address address;
         private VenueContact contact;
@@ -26,44 +26,24 @@ namespace Paramore.Domain.Venues
 
         public Venue() : base(new Id(), new Version()){}
 
-        public override void Load(VenueDTO dataObject)
+        #region Aggregate  Persistence
+        public override void Load(VenueDocument document)
         {
-            address = Address.Parse(dataObject.Address); 
-            contact = VenueContact.Parse(dataObject.VenueContact);
-            map = new VenueMap(new Uri(dataObject.VenueMap));
-            name = new VenueName(dataObject.VenueName);
+            address = Address.Parse(document.Address); 
+            contact = VenueContact.Parse(document.VenueContact);
+            map = new VenueMap(new Uri(document.VenueMap));
+            name = new VenueName(document.VenueName);
         }
 
-        public override VenueDTO ToDTO()
+        protected override VenueDocument ToDocument()
         {
-            return new VenueDTO(id, version, name, address, map, contact);
+            return new VenueDocument(id, version, name, address, map, contact);
         }
+        #endregion
 
         public override string ToString()
         {
             return string.Format("Address: {0}, Contact: {1}, Map: {2}, Name: {3}", address, contact, map, name);
         }
-    }
-
-    public class VenueDTO : IAmADataObject
-    {
-        public VenueDTO(Id id, Version version, VenueName venueName, Address address, VenueMap venueMap, VenueContact venueContact)
-        {
-            Id = (Guid)id;
-            Version = (int) version;
-            VenueName = (string) venueName;
-            Address = (string) address;
-            VenueMap = (string) venueMap;
-            VenueContact = (string) venueContact;
-        }
-
-        public VenueDTO() {}
-
-        public string Address { get; set; }
-        public Guid Id { get; set; }
-        public string VenueName { get; set; }
-        public string VenueContact { get; set; }
-        public string VenueMap { get; set; }
-        public int Version { get; set; }
     }
 }

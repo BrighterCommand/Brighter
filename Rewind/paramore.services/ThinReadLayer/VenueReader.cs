@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Paramore.Domain.Documents;
 using Paramore.Domain.Venues;
-using Paramore.Infrastructure.Raven;
+using Paramore.Infrastructure.Repositories;
 using Raven.Client.Linq;
 
 namespace Paramore.Services.ThinReadLayer
@@ -16,12 +17,12 @@ namespace Paramore.Services.ThinReadLayer
             this.allowStale = allowStale;
         }
 
-        public IEnumerable<VenueDTO> GetAll()
+        public IEnumerable<VenueDocument> GetAll()
         {
-            IRavenQueryable<VenueDTO> venues;
+            IRavenQueryable<VenueDocument> venues;
             using (var unitOfWork = unitOfWorkFactory.CreateUnitOfWork())
             {
-                venues = unitOfWork.Query<VenueDTO>();
+                venues = unitOfWork.Query<VenueDocument>();
                 if (!allowStale)
                 {
                     venues.Customize(x => x.WaitForNonStaleResults());

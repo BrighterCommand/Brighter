@@ -1,6 +1,8 @@
-﻿using Paramore.Domain.Meetings;
-using Paramore.Infrastructure.Domain;
-using Paramore.Infrastructure.Raven;
+﻿using Paramore.Domain.Documents;
+using Paramore.Domain.Entities.Meetings;
+using Paramore.Domain.Factories;
+using Paramore.Domain.ValueTypes;
+using Paramore.Infrastructure.Repositories;
 using Paramore.Services.Commands.Meeting;
 using paramore.commandprocessor;
 
@@ -8,11 +10,11 @@ namespace Paramore.Services.CommandHandlers.Meetings
 {
     public class ScheduleMeetingCommandHandler : RequestHandler<ScheduleMeetingCommand>
     {
-        private readonly IRepository<Meeting, MeetingDTO> repository;
+        private readonly IRepository<Meeting, MeetingDocument> repository;
         private readonly IAmAUnitOfWorkFactory unitOfWorkFactory;
         private readonly IScheduler scheduler;
 
-        public ScheduleMeetingCommandHandler(IScheduler scheduler,IRepository<Meeting, MeetingDTO> repository, IAmAUnitOfWorkFactory unitOfWorkFactory)
+        public ScheduleMeetingCommandHandler(IScheduler scheduler,IRepository<Meeting, MeetingDocument> repository, IAmAUnitOfWorkFactory unitOfWorkFactory)
         {
             this.repository = repository;
             this.unitOfWorkFactory = unitOfWorkFactory;

@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using Machine.Specifications;
-using Paramore.Domain.Meetings;
+using Paramore.Domain.Entities.Meetings;
+using Paramore.Domain.Factories;
+using Paramore.Domain.ValueTypes;
 
 namespace Paramore.Tests.domain.Meetings
 {

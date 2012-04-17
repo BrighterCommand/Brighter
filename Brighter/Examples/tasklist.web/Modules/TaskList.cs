@@ -1,4 +1,6 @@
-﻿using Nancy;
+﻿using System;
+using System.Globalization;
+using Nancy;
 using paramore.commandprocessor;
 using tasklist.web.Commands;
 using tasklist.web.Tests;
@@ -37,7 +39,11 @@ namespace tasklist.web.Modules
 
         private Response AddTask()
         {
-            var cmd = new AddTaskCommand(Request.Form.taskName, Request.Form.taskDecription);
+            var cmd = new AddTaskCommand(
+                Request.Form.taskName, 
+                Request.Form.taskDecription, 
+                DateTime.Parse(Request.Form.taskDueDate)
+                );
             commandProcessor.Send(cmd);
             return TasksView();
         }

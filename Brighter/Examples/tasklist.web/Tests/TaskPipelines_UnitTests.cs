@@ -96,7 +96,7 @@ namespace tasklist.web.Tests
 
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
 
-            cmd = new AddTaskCommand("Test task", "Test that we store a task");
+            cmd = new AddTaskCommand("Test task", "Test that we store a task", DateTime.Now);
         };
 
         Because of = () => commandProcessor.Send(cmd);

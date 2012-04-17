@@ -8,18 +8,18 @@ namespace tasklist.web.Handlers
 {
     public class AddTaskCommandHandler : RequestHandler<AddTaskCommand>
     {
-        private readonly ITasksDAO tasksDao;
+        private readonly ITasksDAO tasksDAO;
 
-        public AddTaskCommandHandler(ITasksDAO tasksDao)
+        public AddTaskCommandHandler(ITasksDAO tasksDAO)
         {
-            this.tasksDao = tasksDao;
+            this.tasksDAO = tasksDAO;
         }
 
         [Validation(step: 2, timing: HandlerTiming.Before)]
         [Trace(step:1, timing: HandlerTiming.Before)]
         public override AddTaskCommand Handle(AddTaskCommand addTaskCommand)
         {
-            tasksDao.Add(
+            tasksDAO.Add(
                 new Task(
                     taskName: addTaskCommand.TaskName, 
                     taskDecription: addTaskCommand.TaskDecription,

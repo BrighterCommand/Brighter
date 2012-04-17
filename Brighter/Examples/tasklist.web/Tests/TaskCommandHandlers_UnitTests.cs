@@ -28,4 +28,13 @@ namespace tasklist.web.Tests
 
         It should_add_a_new_task_to_the_db = () => A.CallTo(() => tasksDAO.Add(A<Task>.Ignored)).MustHaveHappened();
     }
+
+    [Subject(typeof(EditTaskCommandHandler))]
+    public class When_editing_an_existing_task
+    {
+        Establish context;
+        Because of;
+        It should_get_the_task_from_the_db;
+        It should_update_the_task_with_changes;
+    }
 }

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using NUnit.Framework;
+using Paramore.Domain.Documents;
 using Paramore.Domain.Venues;
-using Paramore.Infrastructure.Domain;
-using Paramore.Infrastructure.Raven;
+using Paramore.Infrastructure.Repositories;
 using Paramore.Services.CommandHandlers.Venues;
 using Paramore.Services.Commands.Venue;
 using Paramore.Services.ThinReadLayer;
@@ -31,7 +31,7 @@ namespace Paramore.Features.Steps
 
             commandProcessor = new CommandProcessor(container);
             container.Register<IAmAUnitOfWorkFactory, UnitOfWorkFactory>().AsSingleton();
-            container.Register<IRepository<Venue, VenueDTO>, Repository<Venue, VenueDTO>>().AsMultiInstance();
+            container.Register<IRepository<Venue, VenueDocument>, Repository<Venue, VenueDocument>>().AsMultiInstance();
             container.Register<IHandleRequests<AddVenueCommand>, AddVenueCommandHandler>("ScheduleMeetingCommandHandler");
         }
 
