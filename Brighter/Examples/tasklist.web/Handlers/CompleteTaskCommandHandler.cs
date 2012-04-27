@@ -1,6 +1,8 @@
+using System;
 using paramore.commandprocessor;
 using tasklist.web.Commands;
 using tasklist.web.DataAccess;
+using tasklist.web.Models;
 
 namespace tasklist.web.Handlers
 {
@@ -17,9 +19,16 @@ namespace tasklist.web.Handlers
         [Trace(step:1, timing: HandlerTiming.Before)]
         public override CompleteTaskCommand Handle(CompleteTaskCommand completeTaskCommand)
         {
-            //get from repo
-            //update completion date
-            //save to repo
+            Task task = tasksDAO.FindById(completeTaskCommand.TaskId);
+            if (task != null)
+            {
+                task.CompletionDate = completeTaskCommand.CompletionDate;
+                tasksDAO.Update(task);
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException("completeTaskCommand", completeTaskCommand, "Could not find the task to complete");
+            }
             return completeTaskCommand;
         }
     }

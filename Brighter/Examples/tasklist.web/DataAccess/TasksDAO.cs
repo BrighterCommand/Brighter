@@ -41,7 +41,7 @@ namespace tasklist.web.DataAccess
 
         public Task FindById(int taskId)
         {
-            return db.Tasks.FindById();
+            return db.Tasks.FindById(taskId);
         }
 
         public Task FindByName(string taskName)

@@ -108,4 +108,29 @@ namespace tasklist.web.Tests
         It should_update_the_task = () => A.CallTo(() => tasksDAO.Update(A<Task>.Ignored)).MustHaveHappened();
         private It should_update_the_tasks_completed_date = () => taskToBeCompleted.CompletionDate.ShouldEqual(COMPLETION_DATE);
     }
+
+    [Subject(typeof(CompleteTaskCommandHandler))]
+    public class When_completing_a_missing_task
+    {
+        private static CompleteTaskCommandHandler handler;
+        private static CompleteTaskCommand cmd;
+        private static ITasksDAO tasksDAO;
+        private const int TASK_ID = 1;
+        private static readonly DateTime COMPLETION_DATE = DateTime.Now.AddDays(-1);
+        private static Exception exception;
+
+        Establish context = () =>
+        {
+            tasksDAO = A.Fake<ITasksDAO>(_ => _.Strict());
+            A.CallTo(() => tasksDAO.FindById(TASK_ID)).Returns(null);
+            cmd = new CompleteTaskCommand(TASK_ID, COMPLETION_DATE);
+
+            handler = new CompleteTaskCommandHandler(tasksDAO);                                    
+        };
+
+        Because of = () => exception = Catch.Exception(() => handler.Handle(cmd));
+
+        It should_get_the_task_from_the_db = () => A.CallTo(() => tasksDAO.FindById(TASK_ID)).MustHaveHappened();
+        It should_fail = () => exception.ShouldBeOfType<ArgumentOutOfRangeException>();
+    }
 }
