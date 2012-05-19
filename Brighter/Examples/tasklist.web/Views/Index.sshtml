@@ -18,7 +18,8 @@
 			<tr>
 				<td> <a href="/todo/task/@Current.Id">@Current.TaskName </a> </td> 
 				<td> @Current.DueDate </td>
-				<td> <a href = "/todo/edit" > </td>
+				<td> <a href = "/todo/edit/@Current.Id" > </td>
+				<td> <a href = "/todo/complete/@Current.Id ></td>
 			</tr> 
 			@EndEach
 		</tbody>

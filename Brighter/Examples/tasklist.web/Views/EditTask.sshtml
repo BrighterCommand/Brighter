@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Add a New Task</title>
+	<!-- jQuery -->
+	<link href="/content/jquery-ui-1.8.18.custom.css" rel="stylesheet" type="text/css" />
+	<script type="text/javascript" src="/content/jquery-1.7.1.min.js"></script>
+	<script type="text/javascript" src="/content/jquery-ui-1.8.18.custom.min.js"></script>
+
+	<!-- Initialize Controls -->
+	<script>
+  $(document).ready(function() {
+    $(".date-pick").datepicker({ dateFormat: 'yy-mm-dd' });
+  });
+  </script>
+<body>
+	<form method="POST">
+	<label>Task Name:</label>
+	<input type ="text" name="taskName" id="taskName" value=@Model.Task.TaskName />
+	<label> Task Description: </label>
+	<input type ="text" name="taskDescription" id="taskDescription" />
+	<label> Due Date: </label>
+	<input type="date" name="taskDueDate" id = "taskDueDate" class="date-pick" />
+	<input type="submit" value="Add" id="addTasks" /input>
+	</form>
+</body>
+</html>

@@ -105,7 +105,7 @@
     <Compile Include="Handlers\ValidationHandler.cs" />
     <Compile Include="Handlers\ValidationAttribute.cs" />
     <Compile Include="Models\Task.cs" />
-    <Compile Include="Modules\TaskList.cs" />
+    <Compile Include="Modules\TaskModule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tests\ITaskRetriever.cs" />
     <Compile Include="Tests\TaskCommandHandlers_UnitTests.cs" />
@@ -121,6 +121,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Views\AddTask.sshtml" />
+    <None Include="Views\EditTask.sshtml" />
     <None Include="Views\Index.sshtml" />
     <Content Include="content\jquery-ui-1.8.18.custom.css" />
     <Content Include="content\main.css" />

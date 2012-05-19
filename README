@@ -1,11 +1,15 @@
+#Paramore #
+
 Paramore is a collection of projects whose main purpose is to supplement talks or blog posts. 
 
 I often find that both of these suffer from the lack of my ability to provide an example that attendees 
 or readers can explore in more depth when the presentation is finished or they have read the blog post. 
-So the code here is an attempt to solve that problem.
 
-The individual projects may have some re-usable code; my intent is to harvest that and present it in a 
-more re-usable form over time. Requests welcome, though no timescales guaranteed
+The projects here are:
+
+- **Brighter**: Harvested from Rewind, this project is a Command Processor implementation that can be reused in other projects. It defaults to using TinyIoC as an IoC container to resolve handlers, but this dependency is abstracted to allow other IoC containers. Examples are in NancyFX
+- **Rewind**: A project demonstrating the CQRS architectural pattern and the use of DDD to create a domain model. The project also uses RavenDb as a backing store - partially to show the affinity between aggregates and document databases. In addition the project uses OpenRasta to expose functionality as a REST endpoing and an SPA to provide web access.
+- **Rengade**: Older code showing Event Sourcing. Move along, nothing to see here for now.    
 
 You can find more information on the projects over on the wiki
 
