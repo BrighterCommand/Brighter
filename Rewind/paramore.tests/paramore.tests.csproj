@@ -60,10 +60,10 @@
       <HintPath>..\packages\NUnit.2.5.10.11092\lib\nunit.mocks.dll</HintPath>
     </Reference>
     <Reference Include="paramore.commandprocessor">
-      <HintPath>..\Lib\Paramore.CommandProcessor\paramore.commandprocessor.dll</HintPath>
+      <HintPath>..\bin\paramore.commandprocessor\paramore.commandprocessor.dll</HintPath>
     </Reference>
     <Reference Include="paramore.commandprocessor.ioccontainers">
-      <HintPath>..\Lib\Paramore.CommandProcessor\paramore.commandprocessor.ioccontainers.dll</HintPath>
+      <HintPath>..\bin\paramore.commandprocessor\paramore.commandprocessor.ioccontainers.dll</HintPath>
     </Reference>
     <Reference Include="pnunit.framework, Version=1.0.4109.34242, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

@@ -1,0 +1,5 @@
+C:\Users\ian\OSS\Paramore\Rewind\paramore.api\src\paramore.api\bin\paramore.api.dll
+C:\Users\ian\OSS\Paramore\Rewind\paramore.api\src\paramore.api\bin\paramore.api.pdb
+C:\Users\ian\OSS\Paramore\Rewind\paramore.api\src\paramore.api\obj\Debug\ResolveAssemblyReference.cache
+C:\Users\ian\OSS\Paramore\Rewind\paramore.api\src\paramore.api\obj\Debug\paramore.api.dll
+C:\Users\ian\OSS\Paramore\Rewind\paramore.api\src\paramore.api\obj\Debug\paramore.api.pdb

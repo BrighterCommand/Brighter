@@ -1,3 +1,0 @@
-﻿name: paramore.api
-depends: openwrap anchored content
-depends: openrasta-devtools

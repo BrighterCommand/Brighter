@@ -1,4 +1,0 @@
-﻿name: tdnet-framework
-use-project-repository: false
-build: files; file=bin-net35->bin\TestDriven.Framework.dll
-version: 2.0.0.48555719
