@@ -1,7 +1,0 @@
-﻿depends: openwrap content
-description: The core OpenRasta framework.
-build: msbuild;profile=net35;project=src\openrasta\openrasta.csproj;project=src\openrasta.testing\openrasta.testing.csproj
-name: openrasta-core
-directory-structure: src\*.{scope:Tests = tests}*
-directory-structure: src\*.{scope:Testing = tests}
-version: 2.1.0.83282449
