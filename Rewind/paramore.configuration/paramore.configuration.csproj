@@ -33,7 +33,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="paramore.commandprocessor">
-      <HintPath>..\Lib\Paramore.CommandProcessor\paramore.commandprocessor.dll</HintPath>
+      <HintPath>..\bin\paramore.commandprocessor\paramore.commandprocessor.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

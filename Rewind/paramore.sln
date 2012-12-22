@@ -5,8 +5,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.configuration", "p
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.domain", "paramore.domain\paramore.domain.csproj", "{41D1C746-9959-403C-956E-F4538CA72A83}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.features", "paramore.features\paramore.features.csproj", "{A278C10C-E42A-4403-841F-4BA25F853146}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.services", "paramore.services\paramore.services.csproj", "{A056F023-D432-42AE-8029-BB6B84828704}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.tests", "paramore.tests\paramore.tests.csproj", "{567B365E-F777-40D6-A6C1-EB9970FA9542}"
@@ -15,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.utility", "paramor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.infrastructure", "paramore.infrastructure\paramore.infrastructure.csproj", "{A29960CC-7A28-4C4C-B52A-EEDF32168205}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.api", "paramore.api\src\paramore.api\paramore.api.csproj", "{C27B6BA3-64F9-4173-B22A-385D8F735BC8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.api", "paramore.api\src\paramore.api\paramore.api.csproj", "{CC4AE266-7D06-4309-9DFD-D76477F6245D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,10 +29,6 @@ Global
 		{41D1C746-9959-403C-956E-F4538CA72A83}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{41D1C746-9959-403C-956E-F4538CA72A83}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{41D1C746-9959-403C-956E-F4538CA72A83}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A278C10C-E42A-4403-841F-4BA25F853146}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A278C10C-E42A-4403-841F-4BA25F853146}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A278C10C-E42A-4403-841F-4BA25F853146}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A278C10C-E42A-4403-841F-4BA25F853146}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A056F023-D432-42AE-8029-BB6B84828704}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A056F023-D432-42AE-8029-BB6B84828704}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A056F023-D432-42AE-8029-BB6B84828704}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -51,10 +45,10 @@ Global
 		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A29960CC-7A28-4C4C-B52A-EEDF32168205}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C27B6BA3-64F9-4173-B22A-385D8F735BC8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C27B6BA3-64F9-4173-B22A-385D8F735BC8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C27B6BA3-64F9-4173-B22A-385D8F735BC8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C27B6BA3-64F9-4173-B22A-385D8F735BC8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC4AE266-7D06-4309-9DFD-D76477F6245D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC4AE266-7D06-4309-9DFD-D76477F6245D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC4AE266-7D06-4309-9DFD-D76477F6245D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC4AE266-7D06-4309-9DFD-D76477F6245D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
