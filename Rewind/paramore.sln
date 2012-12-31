@@ -15,6 +15,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.infrastructure", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.api", "paramore.api\src\paramore.api\paramore.api.csproj", "{CC4AE266-7D06-4309-9DFD-D76477F6245D}"
 EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "paramore.acceptancetests", "paramore.acceptancetests\paramore.acceptancetests.pyproj", "{5BE2931F-6C39-449E-A64E-11550B2F7648}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5AC6D94A-216E-4948-B4E2-037EDDE9E74A}"
+	ProjectSection(SolutionItems) = preProject
+		readme.txt = readme.txt
+		theRules.txt = theRules.txt
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.integrationtests", "paramore.integrationtests\paramore.integrationtests.csproj", "{154A0DA0-0B8F-4C24-879B-75C262246BC6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,6 +59,12 @@ Global
 		{CC4AE266-7D06-4309-9DFD-D76477F6245D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CC4AE266-7D06-4309-9DFD-D76477F6245D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CC4AE266-7D06-4309-9DFD-D76477F6245D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BE2931F-6C39-449E-A64E-11550B2F7648}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BE2931F-6C39-449E-A64E-11550B2F7648}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{154A0DA0-0B8F-4C24-879B-75C262246BC6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{154A0DA0-0B8F-4C24-879B-75C262246BC6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{154A0DA0-0B8F-4C24-879B-75C262246BC6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{154A0DA0-0B8F-4C24-879B-75C262246BC6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

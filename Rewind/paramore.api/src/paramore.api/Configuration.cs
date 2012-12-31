@@ -14,7 +14,8 @@ namespace paramore.api
                 ResourceSpace.Has.ResourcesOfType<EntryPoint>()
                     .AtUri("/entrypoint")
                     .HandledBy<EntryPointHandler>()
-                    .RenderedByAspx("~/Views/EntryPointView.aspx");
+                    .AsXmlDataContract()
+                    .And.AsJsonDataContract();
             }
         }
 
