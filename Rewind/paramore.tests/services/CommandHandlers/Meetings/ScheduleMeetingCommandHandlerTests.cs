@@ -13,7 +13,7 @@ using Version = Paramore.Infrastructure.Repositories.Version;
 namespace Paramore.Tests.services.CommandHandlers.Meetings
 {
     [Subject("A create meeting command should result in creation of a new meeting")]
-    public class ScheduleMeetingCommandHandlerTests
+    public class When_a_create_meeting_command_is_received
     {
         static ScheduleMeetingCommandHandler scheduleMeetingCommandHandler;
         static ScheduleMeetingCommand newMeetingRequest;
