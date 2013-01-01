@@ -72,7 +72,7 @@
     <Compile Include="ValueTypes\ContactName.cs" />
     <Compile Include="ValueTypes\PostCode.cs" />
     <Compile Include="ValueTypes\Street.cs" />
-    <Compile Include="Venues\Venue.cs" />
+    <Compile Include="Entities\Venues\Venue.cs" />
     <Compile Include="ValueTypes\VenueContact.cs" />
     <Compile Include="ValueTypes\VenueMap.cs" />
     <Compile Include="ValueTypes\VenueName.cs" />

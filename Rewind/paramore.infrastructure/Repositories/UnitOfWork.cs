@@ -18,9 +18,14 @@ namespace Paramore.Infrastructure.Repositories
             session.Store(entity);
         }
 
-        public void Commit()
+        public void Delete(dynamic entity)
         {
-            session.SaveChanges();
+            session.Delete(entity);
+        }
+
+        public T Load<T>(Guid id)
+        {
+            return session.Load<T>(id);
         }
 
         public IRavenQueryable<T> Query<T>()
@@ -28,9 +33,9 @@ namespace Paramore.Infrastructure.Repositories
             return session.Query<T>();
         }
 
-        public T Load<T>(Guid id)
+        public void Commit()
         {
-            return session.Load<T>(id);
+            session.SaveChanges();
         }
 
         public void Dispose()

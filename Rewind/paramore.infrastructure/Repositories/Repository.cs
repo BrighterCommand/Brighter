@@ -25,5 +25,12 @@ namespace Paramore.Infrastructure.Repositories
                 return aggregate;
             }
         }
+
+        public void Delete(T aggregate)
+        {
+            Debug.Assert(UnitOfWork != null);
+            var dto = (TDocument)((IAmAnAggregateRoot<TDocument>)aggregate);
+            UnitOfWork.Delete(dto);
+        }
     }
 }
