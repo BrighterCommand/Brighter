@@ -7,5 +7,6 @@ namespace Paramore.Infrastructure.Repositories
         void Add(T aggregate);
         T this[Guid id] { get; }
         IUnitOfWork UnitOfWork { set; }
+        void Delete(T aggregate);
     }
 }
