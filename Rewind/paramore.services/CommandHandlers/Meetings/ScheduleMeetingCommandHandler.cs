@@ -1,7 +1,5 @@
-﻿using Paramore.Domain.Documents;
-using Paramore.Domain.Entities.Meetings;
-using Paramore.Domain.Factories;
-using Paramore.Domain.ValueTypes;
+﻿using Paramore.Domain.Meetings;
+using Paramore.Domain.Venues;
 using Paramore.Infrastructure.Repositories;
 using Paramore.Services.Commands.Meeting;
 using paramore.commandprocessor;
