@@ -1,9 +1,7 @@
 ﻿using FakeItEasy;
 using Machine.Specifications;
-using Paramore.Domain.DomainServices;
-using Paramore.Domain.Entities.Meetings;
-using Paramore.Domain.Factories;
-using Paramore.Domain.ValueTypes;
+using Paramore.Domain.Meetings;
+using Paramore.Domain.Venues;
 
 namespace Paramore.Tests.domain.Meetings
 {

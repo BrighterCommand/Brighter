@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Paramore.Domain.Documents;
+using Paramore.Domain.Venues;
 using Paramore.Infrastructure.Repositories;
 using Raven.Client.Linq;
 

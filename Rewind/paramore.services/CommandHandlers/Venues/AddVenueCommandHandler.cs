@@ -1,6 +1,4 @@
-using Paramore.Domain.Documents;
-using Paramore.Domain.Entities.Venues;
-using Paramore.Domain.ValueTypes;
+using Paramore.Domain.Venues;
 using Paramore.Infrastructure.Repositories;
 using Paramore.Services.Commands.Venue;
 using paramore.commandprocessor;
