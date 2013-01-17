@@ -37,6 +37,6 @@ C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.infrastructure\bin\Debug\Raven.C
 C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.infrastructure\bin\Debug\Raven.Client.Lightweight.pdb
 C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.infrastructure\bin\Debug\Raven.Client.Lightweight.xml
 C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.infrastructure\bin\Debug\Raven.Client.MvcIntegration.pdb
-C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.infrastructure\obj\Debug\ResolveAssemblyReference.cache
 C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.infrastructure\obj\Debug\Paramore.Infrastructure.dll
 C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.infrastructure\obj\Debug\Paramore.Infrastructure.pdb
+C:\Users\SUNDANCE\work\paramore\rewind\paramore.infrastructure\obj\Debug\paramore.infrastructure.csprojResolveAssemblyReference.cache
