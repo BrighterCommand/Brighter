@@ -25,7 +25,7 @@ namespace Paramore.Adapters.Presentation.API
 
                 ResourceSpace.Has.ResourcesOfType<VenueDocument>()
                     .AtUri("/venues")
-                    .HandledBy<VenueHandler>()
+                    .HandledBy<VenueEndPointHandler>()
                     .AsXmlDataContract()
                     .And.AsJsonDataContract();
             }
