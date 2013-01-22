@@ -1,4 +1,4 @@
-﻿namespace Paramore.Infrastructure.Repositories
+﻿namespace Paramore.Adapters.Infrastructure.Repositories
 {
     public interface IAmADocument
     {

@@ -1,7 +1,7 @@
 using System;
 using Raven.Client.Linq;
 
-namespace Paramore.Infrastructure.Repositories
+namespace Paramore.Adapters.Infrastructure.Repositories
 {
     public interface IUnitOfWork : IDisposable
     {

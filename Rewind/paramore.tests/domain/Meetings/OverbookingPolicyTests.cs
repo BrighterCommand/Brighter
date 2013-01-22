@@ -1,9 +1,7 @@
 ﻿using FakeItEasy;
 using Machine.Specifications;
-using Paramore.Domain.Meetings;
-using Paramore.Domain.Venues;
 
-namespace Paramore.Tests.domain.Meetings
+namespace Paramore.Adapters.Tests.UnitTests.domain.Meetings
 {
     [Subject("The policy for booking tickets")]
     public class OverbookingPolicyTests

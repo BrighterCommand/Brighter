@@ -1,4 +1,4 @@
-﻿namespace paramore.api.Resources
+﻿namespace Paramore.Adapters.Presentation.API.Resources
 {
     public class EntryPoint
     {

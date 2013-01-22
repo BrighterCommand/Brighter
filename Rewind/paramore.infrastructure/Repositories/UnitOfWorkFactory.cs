@@ -1,6 +1,6 @@
 using Raven.Client.Document;
 
-namespace Paramore.Infrastructure.Repositories
+namespace Paramore.Adapters.Infrastructure.Repositories
 {
     public class UnitOfWorkFactory : IAmAUnitOfWorkFactory
     {

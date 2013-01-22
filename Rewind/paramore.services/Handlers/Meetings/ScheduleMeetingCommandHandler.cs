@@ -1,10 +1,8 @@
-﻿using Paramore.Domain.Meetings;
-using Paramore.Domain.Venues;
-using Paramore.Infrastructure.Repositories;
-using Paramore.Services.Commands.Meeting;
+﻿using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Ports.Services.Commands.Meeting;
 using paramore.commandprocessor;
 
-namespace Paramore.Services.CommandHandlers.Meetings
+namespace Paramore.Ports.Services.Handlers.Meetings
 {
     public class ScheduleMeetingCommandHandler : RequestHandler<ScheduleMeetingCommand>
     {

@@ -2,7 +2,7 @@ using System;
 using Raven.Client;
 using Raven.Client.Linq;
 
-namespace Paramore.Infrastructure.Repositories
+namespace Paramore.Adapters.Infrastructure.Repositories
 {
     public class UnitOfWork : IUnitOfWork
     {

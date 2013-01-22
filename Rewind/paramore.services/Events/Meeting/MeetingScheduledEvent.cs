@@ -1,7 +1,7 @@
 ﻿using System;
 using paramore.commandprocessor;
 
-namespace Paramore.Services.Events.Meeting
+namespace Paramore.Ports.Services.Events.Meeting
 {
     public class MeetingScheduledEvent : Event
     {

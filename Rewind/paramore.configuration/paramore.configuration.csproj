@@ -8,8 +8,8 @@
     <ProjectGuid>{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Paramore.Configuration</RootNamespace>
-    <AssemblyName>Paramore.Configuration</AssemblyName>
+    <RootNamespace>Paramore.Ports.Configuration</RootNamespace>
+    <AssemblyName>Paramore.Ports.Configuration</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

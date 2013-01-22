@@ -1,9 +1,8 @@
-using Paramore.Domain.Venues;
-using Paramore.Infrastructure.Repositories;
-using Paramore.Services.Commands.Venue;
+using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Ports.Services.Commands.Venue;
 using paramore.commandprocessor;
 
-namespace Paramore.Services.CommandHandlers.Venues
+namespace Paramore.Ports.Services.Handlers.Venues
 {
     public class AddVenueCommandHandler : RequestHandler<AddVenueCommand>
     {

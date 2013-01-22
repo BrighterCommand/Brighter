@@ -1,7 +1,7 @@
 using System;
 using paramore.commandprocessor;
 
-namespace Paramore.Services.Commands.Venue
+namespace Paramore.Ports.Services.Commands.Venue
 {
     public class AddVenueCommand : Command, IRequest
     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using paramore.commandprocessor;
 
-namespace Paramore.Configuration
+namespace Paramore.Ports.Configuration
 {
     public class ConfigurationHelper
     {
