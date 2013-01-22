@@ -61,12 +61,12 @@
   <ItemGroup>
     <Compile Include="Meetings\MeetingDocument.cs" />
     <Compile Include="Meetings\MeetingDocumentTickets.cs" />
-    <Compile Include="Speakers\SpeakerDocument.cs" />
     <Compile Include="Common\AggregateRoot.cs" />
     <Compile Include="Common\EmailAddress.cs" />
     <Compile Include="Common\IAmAvalueType.cs" />
     <Compile Include="Common\PhoneNumber.cs" />
     <Compile Include="Meetings\MeetingState.cs" />
+    <Compile Include="Speakers\SpeakerDocument.cs" />
     <Compile Include="Venues\Address.cs" />
     <Compile Include="Venues\City.cs" />
     <Compile Include="Venues\ContactName.cs" />

@@ -1,9 +1,6 @@
-﻿using System.Linq;
-using Machine.Specifications;
-using Paramore.Domain.Meetings;
-using Paramore.Domain.Venues;
+﻿using Machine.Specifications;
 
-namespace Paramore.Tests.domain.Meetings
+namespace Paramore.Adapters.Tests.UnitTests.domain.Meetings
 {
     public class When_Issuing_Tickets
     {

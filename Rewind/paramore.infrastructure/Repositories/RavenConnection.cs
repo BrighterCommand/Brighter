@@ -2,7 +2,7 @@
 using System.IO;
 using Raven.Client.Document;
 
-namespace Paramore.Infrastructure.Repositories
+namespace Paramore.Adapters.Infrastructure.Repositories
 {
     public static class RavenConnection
     {

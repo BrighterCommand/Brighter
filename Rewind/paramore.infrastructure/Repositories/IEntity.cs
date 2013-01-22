@@ -7,7 +7,7 @@
 //
 //In our model an aggregate is a document (that's how we store it in RavenDB, and an entity is a part of a document.
 
-namespace Paramore.Infrastructure.Repositories
+namespace Paramore.Adapters.Infrastructure.Repositories
 {
     public interface IEntity<out T> where T : IAmPartOfADocument
     {

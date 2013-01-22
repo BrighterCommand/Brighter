@@ -1,12 +1,8 @@
-﻿using System;
-using OpenRasta.Configuration;
-using OpenRasta.DI;
-using Paramore.Domain.Venues;
-using Paramore.Infrastructure.Repositories;
-using paramore.api.Handlers;
-using paramore.api.Resources;
+﻿using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Adapters.Presentation.API.Handlers;
+using Paramore.Adapters.Presentation.API.Resources;
 
-namespace paramore.api
+namespace Paramore.Adapters.Presentation.API
 {
     public class Configuration : IConfigurationSource
     {

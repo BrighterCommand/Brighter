@@ -1,6 +1,6 @@
 using System;
 
-namespace Paramore.Infrastructure.Repositories
+namespace Paramore.Adapters.Infrastructure.Repositories
 {
     public class Id
     {

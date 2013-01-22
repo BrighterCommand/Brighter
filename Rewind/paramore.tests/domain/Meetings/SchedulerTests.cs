@@ -1,11 +1,9 @@
 ﻿using System;
 using FakeItEasy;
 using Machine.Specifications;
-using Paramore.Domain.Meetings;
-using Paramore.Domain.Venues;
-using Paramore.Infrastructure.Repositories;
+using Paramore.Adapters.Infrastructure.Repositories;
 
-namespace Paramore.Tests.domain.Meetings
+namespace Paramore.Adapters.Tests.UnitTests.domain.Meetings
 {
     [Subject(typeof(Scheduler))]
     public class When_we_schedule_a_meeting_there_should_be_tickets_over_capacity

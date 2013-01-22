@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Paramore.Infrastructure.Repositories
+namespace Paramore.Adapters.Infrastructure.Repositories
 {
     public interface IRepository<T, TDocument> where T: IAmAnAggregateRoot<TDocument> where TDocument : IAmADocument
     {

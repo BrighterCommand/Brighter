@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace paramore.api {
+namespace Paramore.Adapters.Presentation.API {
     
     
     public partial class _Default {

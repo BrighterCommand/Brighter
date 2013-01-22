@@ -1,14 +1,12 @@
 ﻿using System;
 using FakeItEasy;
 using Machine.Specifications;
-using Paramore.Domain.Meetings;
-using Paramore.Domain.Venues;
-using Paramore.Infrastructure.Repositories;
-using Paramore.Services.CommandHandlers.Meetings;
-using Paramore.Services.Commands.Meeting;
-using Version = Paramore.Infrastructure.Repositories.Version;
+using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Ports.Services.Commands.Meeting;
+using Paramore.Ports.Services.Handlers.Meetings;
+using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
 
-namespace Paramore.Tests.services.CommandHandlers.Meetings
+namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Meetings
 {
     [Subject("A create meeting command should result in creation of a new meeting")]
     public class When_a_create_meeting_command_is_received

@@ -1,9 +1,8 @@
 using System.Collections.Generic;
-using Paramore.Domain.Venues;
-using Paramore.Infrastructure.Repositories;
+using Paramore.Adapters.Infrastructure.Repositories;
 using Raven.Client.Linq;
 
-namespace Paramore.Services.ThinReadLayer
+namespace Paramore.Ports.Services.ThinReadLayer
 {
     public class VenueReader : IViewModelReader<VenueDocument>
     {

@@ -1,6 +1,6 @@
-﻿using paramore.api.Resources;
+﻿using Paramore.Adapters.Presentation.API.Resources;
 
-namespace paramore.api.Handlers
+namespace Paramore.Adapters.Presentation.API.Handlers
 {
     public class EntryPointHandler
     {

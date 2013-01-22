@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Paramore.Tests.domain.Venues
+﻿namespace Paramore.Adapters.Tests.UnitTests.domain.Venues
 {
     class VenueParsingTests
     {

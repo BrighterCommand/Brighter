@@ -1,7 +1,7 @@
 ﻿using System;
 using paramore.commandprocessor;
 
-namespace Paramore.Services.Commands.Meeting
+namespace Paramore.Ports.Services.Commands.Meeting
 {
     [Serializable]
     public class ScheduleMeetingCommand : Command, IRequest
