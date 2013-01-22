@@ -1,4 +1,6 @@
 ﻿using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Domain.Meetings;
+using Paramore.Domain.Venues;
 using Paramore.Ports.Services.Commands.Meeting;
 using paramore.commandprocessor;
 

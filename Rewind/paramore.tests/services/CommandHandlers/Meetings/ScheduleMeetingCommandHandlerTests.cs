@@ -2,6 +2,8 @@
 using FakeItEasy;
 using Machine.Specifications;
 using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Domain.Meetings;
+using Paramore.Domain.Venues;
 using Paramore.Ports.Services.Commands.Meeting;
 using Paramore.Ports.Services.Handlers.Meetings;
 using Version = Paramore.Adapters.Infrastructure.Repositories.Version;

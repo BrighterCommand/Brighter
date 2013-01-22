@@ -2,6 +2,8 @@
 using FakeItEasy;
 using Machine.Specifications;
 using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Domain.Meetings;
+using Paramore.Domain.Venues;
 
 namespace Paramore.Adapters.Tests.UnitTests.domain.Meetings
 {

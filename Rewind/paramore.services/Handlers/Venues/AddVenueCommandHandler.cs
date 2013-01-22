@@ -1,4 +1,5 @@
 using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Domain.Venues;
 using Paramore.Ports.Services.Commands.Venue;
 using paramore.commandprocessor;
 
