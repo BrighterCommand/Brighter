@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Domain.Venues;
 using Raven.Client.Linq;
 
 namespace Paramore.Ports.Services.ThinReadLayer
 {
-    public class VenueReader : IViewModelReader<VenueDocument>
+    public class VenueReader : IAmAViewModelReader<VenueDocument>
     {
         private readonly IAmAUnitOfWorkFactory unitOfWorkFactory;
         private readonly bool allowStale;

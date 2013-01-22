@@ -4,9 +4,9 @@ namespace Paramore.Adapters.Presentation.API.Handlers
 {
     public class EntryPointHandler
     {
-        public EntryPoint Get()
+        public OperationResult Get()
         {
-            return new EntryPoint { Title = "Welcome Home." };
+            return new OperationResult.OK { ResponseResource = new EntryPoint { Title = "Welcome Home." } };
         }
     }
 }

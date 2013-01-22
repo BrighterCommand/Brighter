@@ -1,6 +1,7 @@
 ﻿using Paramore.Adapters.Infrastructure.Repositories;
 using Paramore.Adapters.Presentation.API.Handlers;
 using Paramore.Adapters.Presentation.API.Resources;
+using Paramore.Domain.Venues;
 
 namespace Paramore.Adapters.Presentation.API
 {
