@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using FakeItEasy;
 using Machine.Specifications;
+using Paramore.Adapters.Infrastructure.Repositories;
 using Paramore.Domain.Venues;
-using Paramore.Infrastructure.Repositories;
-using Paramore.Services.ThinReadLayer;
-using Version = Paramore.Infrastructure.Repositories.Version;
+using Paramore.Ports.Services.ThinReadLayer;
+using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
 
 namespace paramore.integrationtests
 {
@@ -16,7 +14,7 @@ namespace paramore.integrationtests
         private const string TEST_VENUE = "Test Venue";
         private static IRepository<Venue, VenueDocument> repository;
         private static IAmAUnitOfWorkFactory unitOfWorkFactory;
-        private static IViewModelReader<VenueDocument> reader; 
+        private static IAmAViewModelReader<VenueDocument> reader; 
         private static IEnumerable<VenueDocument> venues;
         private static Venue venue;
         

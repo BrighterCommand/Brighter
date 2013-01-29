@@ -1,4 +1,7 @@
-﻿using Paramore.Adapters.Presentation.API.Resources;
+﻿// ReSharper disable RedundantUsingDirective
+using OpenRasta.Web;
+// ReSharper restore RedundantUsingDirective
+using Paramore.Adapters.Presentation.API.Resources;
 
 namespace Paramore.Adapters.Presentation.API.Handlers
 {
