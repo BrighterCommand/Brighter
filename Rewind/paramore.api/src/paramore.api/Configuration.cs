@@ -21,7 +21,7 @@ namespace Paramore.Adapters.Presentation.API
                 //    Uses.
                 //    CustomDependency<IAmAUnitOfWorkFactory, UnitOfWorkFactory>(DependencyLifetime.PerRequest);
 
-                ResourceSpace.Uses.PipelineContributor<DependecyPipelineContributor>();
+                ResourceSpace.Uses.PipelineContributor<DependencyPipelineContributor>();
 
                 //Resources
                 ResourceSpace.Has.ResourcesOfType<EntryPoint>()
