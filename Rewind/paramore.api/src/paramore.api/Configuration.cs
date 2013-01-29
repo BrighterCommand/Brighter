@@ -1,4 +1,9 @@
-﻿using Paramore.Adapters.Infrastructure.Repositories;
+﻿// ReSharper disable RedundantUsingDirective
+using OpenRasta.Configuration;
+using OpenRasta.DI;
+// ReSharper restore RedundantUsingDirective
+using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Adapters.Presentation.API.Contributors;
 using Paramore.Adapters.Presentation.API.Handlers;
 using Paramore.Adapters.Presentation.API.Resources;
 using Paramore.Domain.Venues;
@@ -12,9 +17,11 @@ namespace Paramore.Adapters.Presentation.API
             using (OpenRastaConfiguration.Manual)
             {
                 //Dependencies
-                ResourceSpace.
-                    Uses.
-                    CustomDependency<IAmAUnitOfWorkFactory, UnitOfWorkFactory>(DependencyLifetime.PerRequest);
+                //ResourceSpace.
+                //    Uses.
+                //    CustomDependency<IAmAUnitOfWorkFactory, UnitOfWorkFactory>(DependencyLifetime.PerRequest);
+
+                ResourceSpace.Uses.PipelineContributor<DependecyPipelineContributor>();
 
                 //Resources
                 ResourceSpace.Has.ResourcesOfType<EntryPoint>()
