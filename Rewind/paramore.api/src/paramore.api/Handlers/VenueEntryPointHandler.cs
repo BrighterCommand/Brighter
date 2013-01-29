@@ -16,7 +16,10 @@ namespace Paramore.Adapters.Presentation.API.Handlers
 
         public OperationResult Get()
         {
-            return new OperationResult.OK { ResponseResource = new Paramore.Ports.Services.ThinReadLayer.VenueReader(_unitOfWorkFactory, true)};
+            return new OperationResult.OK 
+            { 
+                ResponseResource = new Paramore.Ports.Services.ThinReadLayer.VenueReader(_unitOfWorkFactory, true)
+                .GetAll()};
         }
     }
 }
