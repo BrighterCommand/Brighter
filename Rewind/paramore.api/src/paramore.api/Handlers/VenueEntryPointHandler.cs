@@ -2,6 +2,7 @@
 using OpenRasta.Web;
 // ReSharper restore RedundantUsingDirective
 using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Ports.Services.ThinReadLayer;
 
 namespace Paramore.Adapters.Presentation.API.Handlers
 {
@@ -18,8 +19,8 @@ namespace Paramore.Adapters.Presentation.API.Handlers
         {
             return new OperationResult.OK 
             { 
-                ResponseResource = new Paramore.Ports.Services.ThinReadLayer.VenueReader(_unitOfWorkFactory, true)
-                .GetAll()};
+                ResponseResource = new VenueReader(_unitOfWorkFactory, true).GetAll()
+            };
         }
     }
 }
