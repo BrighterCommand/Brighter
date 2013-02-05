@@ -33,6 +33,11 @@ namespace Paramore.Domain.Speakers
         {
             return new SpeakerDocument(Id, Version, bio, phoneNumber, emailAddress, name);
         }
+
+       public static explicit operator SpeakerDocument(Speaker speaker)
+        {
+            return speaker.ToDocument();
+        }
         #endregion
 
         public override string ToString()

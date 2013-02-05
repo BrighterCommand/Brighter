@@ -51,6 +51,11 @@ namespace Paramore.Domain.Meetings
                 state, 
                 version);
         }
+
+       public static explicit operator MeetingDocument(Meeting meeting)
+        {
+            return meeting.ToDocument();
+        }
         #endregion
 
         public override string ToString()
