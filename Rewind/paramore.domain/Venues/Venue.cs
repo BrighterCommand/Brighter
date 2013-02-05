@@ -38,6 +38,12 @@ namespace Paramore.Domain.Venues
         {
             return new VenueDocument(id, version, name, address, map, contact);
         }
+
+        public static explicit operator VenueDocument(Venue venue)
+        {
+            return venue.ToDocument();
+        }
+
         #endregion
 
         public override string ToString()
