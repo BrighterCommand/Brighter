@@ -20,6 +20,7 @@ namespace paramore.integrationtests
         
         Establish context = () =>
         {
+            unitOfWorkFactory = new UnitOfWorkFactory();
             repository = new Repository<Venue, VenueDocument>();
             venue = new Venue(id: new Id(), version: new Version(), venueName: new VenueName(TEST_VENUE));
 

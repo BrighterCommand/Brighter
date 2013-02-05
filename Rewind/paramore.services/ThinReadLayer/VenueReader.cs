@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Paramore.Adapters.Infrastructure.Repositories;
 using Paramore.Domain.Venues;
@@ -24,7 +25,7 @@ namespace Paramore.Ports.Services.ThinReadLayer
                 venues = unitOfWork.Query<VenueDocument>();
                 if (!allowStale)
                 {
-                    venues.Customize(x => x.WaitForNonStaleResults());
+                    venues.Customize(x => x.WaitForNonStaleResultsAsOfLastWrite());
                 }
             }
 

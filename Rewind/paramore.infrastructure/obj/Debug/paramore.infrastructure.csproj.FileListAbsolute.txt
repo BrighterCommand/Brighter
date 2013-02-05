@@ -1,12 +1,5 @@
-c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\AsyncCtpLibrary.dll
-c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\Newtonsoft.Json.dll
-c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\NLog.dll
 c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\Raven.Abstractions.dll
 c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\Raven.Client.Lightweight.dll
-c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\AsyncCtpLibrary.xml
-c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\Newtonsoft.Json.pdb
-c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\Newtonsoft.Json.xml
-c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\NLog.xml
 c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\Raven.Abstractions.pdb
 c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\Raven.Client.Lightweight.pdb
 c:\users\ian\oss\paramore\Rewind\paramore.infrastructure\bin\Debug\Raven.Client.Lightweight.xml
@@ -36,3 +29,4 @@ C:\Users\SUNDANCE\work\paramore\rewind\paramore.infrastructure\bin\Debug\Paramor
 C:\Users\SUNDANCE\work\paramore\rewind\paramore.infrastructure\bin\Debug\Paramore.Adapters.Infrastructure.pdb
 C:\Users\SUNDANCE\work\paramore\rewind\paramore.infrastructure\obj\Debug\Paramore.Adapters.Infrastructure.dll
 C:\Users\SUNDANCE\work\paramore\rewind\paramore.infrastructure\obj\Debug\Paramore.Adapters.Infrastructure.pdb
+C:\Users\ian\oss\paramore\rewind\paramore.infrastructure\bin\Debug\Raven.Abstractions.xml

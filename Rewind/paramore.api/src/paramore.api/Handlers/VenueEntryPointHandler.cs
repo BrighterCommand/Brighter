@@ -1,4 +1,6 @@
 // ReSharper disable RedundantUsingDirective
+
+using System.Linq;
 using OpenRasta.Web;
 // ReSharper restore RedundantUsingDirective
 using Paramore.Adapters.Infrastructure.Repositories;
@@ -17,9 +19,11 @@ namespace Paramore.Adapters.Presentation.API.Handlers
 
         public OperationResult Get()
         {
+            var venues = new VenueReader(_unitOfWorkFactory, false).GetAll().ToList();
+
             return new OperationResult.OK 
             { 
-                ResponseResource = new VenueReader(_unitOfWorkFactory, true).GetAll()
+                ResponseResource = venues
             };
         }
     }
