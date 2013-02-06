@@ -40,7 +40,7 @@ namespace Paramore.Domain.Meetings
             venue = new Id(document.Venue);
         }
 
-        protected override MeetingDocument ToDocument()
+        public override MeetingDocument ToDocument()
         {
             return new MeetingDocument(
                 Id, 
@@ -52,10 +52,6 @@ namespace Paramore.Domain.Meetings
                 version);
         }
 
-       public static explicit operator MeetingDocument(Meeting meeting)
-        {
-            return meeting.ToDocument();
-        }
         #endregion
 
         public override string ToString()

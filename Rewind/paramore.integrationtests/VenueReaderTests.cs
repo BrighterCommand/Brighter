@@ -30,6 +30,8 @@ namespace paramore.integrationtests
                 repository.Add(venue);
                 unitOfWork.Commit();
             }
+
+            reader = new VenueReader(unitOfWorkFactory, false);
         };
 
         Because of = () => venues = reader.GetAll();

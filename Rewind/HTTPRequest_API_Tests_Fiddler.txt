@@ -1,0 +1,9 @@
+--- GET VENUES -------------------------------
+
+GET http://localhost:59280/venues HTTP/1.1
+User-Agent: Fiddler
+Host: localhost:59280
+Content-Type: application/vnd.paramore.data+xml
+
+----------------------------------------------
+
