@@ -1,4 +1,5 @@
 using System;
+using Raven.Abstractions.Commands;
 using Raven.Client;
 using Raven.Client.Linq;
 
@@ -20,7 +21,11 @@ namespace Paramore.Adapters.Infrastructure.Repositories
 
         public void Delete(dynamic entity)
         {
-            session.Delete(entity);
+            Type entityType = entity.GetType();
+            var entityDocumentTypeName = entityType.Name;
+            var key = string.Format(@"{0}s/{1}", entityDocumentTypeName, entity.Id.ToString());
+
+            session.Advanced.Defer(new DeleteCommandData{Key = key});
         }
 
         public T Load<T>(Guid id)

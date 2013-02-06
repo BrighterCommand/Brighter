@@ -34,14 +34,9 @@ namespace Paramore.Domain.Venues
             name = new VenueName(document.VenueName);
         }
 
-        protected override VenueDocument ToDocument()
+        public override VenueDocument ToDocument()
         {
             return new VenueDocument(id, version, name, address, map, contact);
-        }
-
-        public static explicit operator VenueDocument(Venue venue)
-        {
-            return venue.ToDocument();
         }
 
         #endregion

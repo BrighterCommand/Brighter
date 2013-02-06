@@ -37,7 +37,7 @@ namespace Paramore.Domain.Common
             return aggregateRoot.ToDocument();
         }
 
-        protected abstract TDocument ToDocument();
+        public abstract TDocument ToDocument();
 
         public Version Version
         {

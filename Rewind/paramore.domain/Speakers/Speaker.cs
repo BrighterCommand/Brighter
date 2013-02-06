@@ -29,15 +29,11 @@ namespace Paramore.Domain.Speakers
             phoneNumber = new PhoneNumber(document.PhoneNumber);
         }
 
-        protected override SpeakerDocument ToDocument()
+        public override SpeakerDocument ToDocument()
         {
             return new SpeakerDocument(Id, Version, bio, phoneNumber, emailAddress, name);
         }
 
-       public static explicit operator SpeakerDocument(Speaker speaker)
-        {
-            return speaker.ToDocument();
-        }
         #endregion
 
         public override string ToString()

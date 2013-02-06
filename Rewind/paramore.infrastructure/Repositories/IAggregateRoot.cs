@@ -1,10 +1,11 @@
 ﻿namespace Paramore.Adapters.Infrastructure.Repositories
 {
-    public interface IAmAnAggregateRoot<T> where T : IAmADocument
+    public interface IAmAnAggregateRoot<TDocument> where TDocument : IAmADocument
     {
         Id Id { get; }
-        void Load(T document);
+        void Load(TDocument document);
         Version Lock(Version expectedVersion);
+        TDocument ToDocument();
         Version Version { get; }
     }
 }
