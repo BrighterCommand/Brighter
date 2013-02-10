@@ -10,7 +10,7 @@ namespace Paramore.Adapters.Infrastructure.Repositories
         public void Add(T aggregate)
         {
             Debug.Assert(UnitOfWork != null);
-            var dto = (TDocument)((IAmAnAggregateRoot<TDocument>)aggregate);
+            var dto = aggregate.ToDocument();
             UnitOfWork.Add(dto);
         }
 
@@ -29,7 +29,7 @@ namespace Paramore.Adapters.Infrastructure.Repositories
         public void Delete(T aggregate)
         {
             Debug.Assert(UnitOfWork != null);
-            var dto = (TDocument)((IAmAnAggregateRoot<TDocument>)aggregate);
+            var dto = aggregate.ToDocument();
             UnitOfWork.Delete(dto);
         }
     }

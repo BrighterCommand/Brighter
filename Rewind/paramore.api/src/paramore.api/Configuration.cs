@@ -33,8 +33,8 @@ namespace Paramore.Adapters.Presentation.API
                 ResourceSpace.Has.ResourcesOfType<VenueDocument>()
                     .AtUri("/venues")
                     .HandledBy<VenueEndPointHandler>()
-                    .AsXmlDataContract().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
-                    .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
+                    .AsXmlDataContract()//.ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
+                    .And.AsJsonDataContract();//.ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
             }
         }
 

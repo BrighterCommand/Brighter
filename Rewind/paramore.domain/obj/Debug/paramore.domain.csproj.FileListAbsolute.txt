@@ -1,12 +1,7 @@
 c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Paramore.Domain.dll
 c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Paramore.Domain.pdb
-c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\AsyncCtpLibrary.dll
 c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Newtonsoft.Json.dll
 c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\NLog.dll
-c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Raven.Abstractions.dll
-c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.Debug.dll
-c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.Lightweight.dll
-c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.MvcIntegration.dll
 c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\AsyncCtpLibrary.xml
 c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Newtonsoft.Json.pdb
 c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Newtonsoft.Json.xml

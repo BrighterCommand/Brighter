@@ -34,10 +34,11 @@ namespace Paramore.Domain.Venues
             name = new VenueName(document.VenueName);
         }
 
-        protected override VenueDocument ToDocument()
+        public override VenueDocument ToDocument()
         {
             return new VenueDocument(id, version, name, address, map, contact);
         }
+
         #endregion
 
         public override string ToString()
