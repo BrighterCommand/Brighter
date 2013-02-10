@@ -1,0 +1,4 @@
+﻿depends: openwrap content
+description: OpenFileSystem provides an abstraction over the .net IO subsystem and provides for pluggable implementations.
+name: openfilesystem
+version: 1.0.1.87877626
