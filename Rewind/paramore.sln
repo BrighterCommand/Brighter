@@ -1,28 +1,12 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.configuration", "paramore.configuration\paramore.configuration.csproj", "{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.domain", "paramore.domain\paramore.domain.csproj", "{41D1C746-9959-403C-956E-F4538CA72A83}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.services", "paramore.services\paramore.services.csproj", "{A056F023-D432-42AE-8029-BB6B84828704}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.unittests", "paramore.tests\paramore.unittests.csproj", "{567B365E-F777-40D6-A6C1-EB9970FA9542}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.utility", "paramore.utility\paramore.utility.csproj", "{5A5A059A-133C-46DB-A959-826EEE178D64}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.infrastructure", "paramore.infrastructure\paramore.infrastructure.csproj", "{A29960CC-7A28-4C4C-B52A-EEDF32168205}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.api", "paramore.api\src\paramore.api\paramore.api.csproj", "{CC4AE266-7D06-4309-9DFD-D76477F6245D}"
-EndProject
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5AC6D94A-216E-4948-B4E2-037EDDE9E74A}"
 	ProjectSection(SolutionItems) = preProject
 		HTTPRequest_API_Tests_Fiddler.txt = HTTPRequest_API_Tests_Fiddler.txt
 		readme.txt = readme.txt
 		theRules.txt = theRules.txt
 	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.integrationtests", "paramore.integrationtests\paramore.integrationtests.csproj", "{154A0DA0-0B8F-4C24-879B-75C262246BC6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Adapters", "Adapters", "{0EC66342-CC04-4CF0-B6E5-E4449DAB4B3C}"
 EndProject
@@ -37,6 +21,22 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{E870EFCC-4EB8-4AEE-B4CE-DF88AAA97DDD}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Supporting", "Supporting", "{854DFB0F-33D4-4B13-8DAB-0712AAF0B5B2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.configuration", "paramore.configuration\paramore.configuration.csproj", "{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.domain", "paramore.domain\paramore.domain.csproj", "{41D1C746-9959-403C-956E-F4538CA72A83}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.services", "paramore.services\paramore.services.csproj", "{A056F023-D432-42AE-8029-BB6B84828704}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.unittests", "paramore.tests\paramore.unittests.csproj", "{567B365E-F777-40D6-A6C1-EB9970FA9542}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.utility", "paramore.utility\paramore.utility.csproj", "{5A5A059A-133C-46DB-A959-826EEE178D64}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.infrastructure", "paramore.infrastructure\paramore.infrastructure.csproj", "{A29960CC-7A28-4C4C-B52A-EEDF32168205}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.api", "paramore.api\src\paramore.api\paramore.api.csproj", "{CC4AE266-7D06-4309-9DFD-D76477F6245D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.integrationtests", "paramore.integrationtests\paramore.integrationtests.csproj", "{154A0DA0-0B8F-4C24-879B-75C262246BC6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.web", "paramore.web\paramore.web.csproj", "{AB3C7CE2-F9D6-4C5C-89FB-BDB8AA578397}"
 EndProject
@@ -91,18 +91,18 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{A056F023-D432-42AE-8029-BB6B84828704} = {84F862E7-E175-4E15-AF92-D1B879C635AD}
-		{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC} = {84F862E7-E175-4E15-AF92-D1B879C635AD}
-		{41D1C746-9959-403C-956E-F4538CA72A83} = {D0EF9F14-135F-4217-88D5-45D0DA6A0455}
-		{073037E4-3713-43A5-B9BF-07D2AC34DE3E} = {0EC66342-CC04-4CF0-B6E5-E4449DAB4B3C}
 		{5A55DB54-B0C2-4E42-ACAB-0B929051CAE4} = {0EC66342-CC04-4CF0-B6E5-E4449DAB4B3C}
+		{073037E4-3713-43A5-B9BF-07D2AC34DE3E} = {0EC66342-CC04-4CF0-B6E5-E4449DAB4B3C}
 		{E870EFCC-4EB8-4AEE-B4CE-DF88AAA97DDD} = {0EC66342-CC04-4CF0-B6E5-E4449DAB4B3C}
-		{5A5A059A-133C-46DB-A959-826EEE178D64} = {854DFB0F-33D4-4B13-8DAB-0712AAF0B5B2}
-		{A29960CC-7A28-4C4C-B52A-EEDF32168205} = {073037E4-3713-43A5-B9BF-07D2AC34DE3E}
+		{0CAD3AB9-A085-4A4C-8FFE-A7524AADAADC} = {84F862E7-E175-4E15-AF92-D1B879C635AD}
+		{A056F023-D432-42AE-8029-BB6B84828704} = {84F862E7-E175-4E15-AF92-D1B879C635AD}
+		{41D1C746-9959-403C-956E-F4538CA72A83} = {D0EF9F14-135F-4217-88D5-45D0DA6A0455}
 		{CC4AE266-7D06-4309-9DFD-D76477F6245D} = {5A55DB54-B0C2-4E42-ACAB-0B929051CAE4}
 		{AB3C7CE2-F9D6-4C5C-89FB-BDB8AA578397} = {5A55DB54-B0C2-4E42-ACAB-0B929051CAE4}
+		{A29960CC-7A28-4C4C-B52A-EEDF32168205} = {073037E4-3713-43A5-B9BF-07D2AC34DE3E}
 		{567B365E-F777-40D6-A6C1-EB9970FA9542} = {E870EFCC-4EB8-4AEE-B4CE-DF88AAA97DDD}
 		{154A0DA0-0B8F-4C24-879B-75C262246BC6} = {E870EFCC-4EB8-4AEE-B4CE-DF88AAA97DDD}
 		{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5} = {E870EFCC-4EB8-4AEE-B4CE-DF88AAA97DDD}
+		{5A5A059A-133C-46DB-A959-826EEE178D64} = {854DFB0F-33D4-4B13-8DAB-0712AAF0B5B2}
 	EndGlobalSection
 EndGlobal
