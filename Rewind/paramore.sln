@@ -42,6 +42,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.web", "paramore.we
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "paramore.acceptancetests", "paramore.acceptancetests\paramore.acceptancetests.pyproj", "{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{0E8FD318-FDE8-48BE-9F7D-2F5944996BBC}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\packages.config = .nuget\packages.config
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

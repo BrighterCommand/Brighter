@@ -42,6 +42,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -57,6 +58,9 @@
       <Project>{A056F023-D432-42AE-8029-BB6B84828704}</Project>
       <Name>paramore.services</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Setup.txt" />
   </ItemGroup>
   <Import Project="..\wraps\openwrap\build\OpenWrap.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
