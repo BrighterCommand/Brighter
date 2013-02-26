@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using System.Linq;
 using OpenRasta.Web;
 using Paramore.Adapters.Infrastructure.Repositories;
@@ -16,12 +18,22 @@ namespace Paramore.Adapters.Presentation.API.Handlers
 
         public OperationResult Get()
         {
-            var venues = new VenueReader(_unitOfWorkFactory, false).GetAll().ToList();
+            try
+            {
+                var venues = new VenueReader(_unitOfWorkFactory, false).GetAll().ToList();
 
-            return new OperationResult.OK 
-            { 
-                ResponseResource = venues
-            };
+                return new OperationResult.OK
+                    {
+                        ResponseResource = venues
+                    };
+            }
+            catch (Exception e)
+            {
+                return new OperationResult.InternalServerError()
+                    {
+                        Description = e.Message
+                    };
+            }
         }
     }
 }
