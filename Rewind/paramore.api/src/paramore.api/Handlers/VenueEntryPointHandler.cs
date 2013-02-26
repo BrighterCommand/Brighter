@@ -1,8 +1,5 @@
-// ReSharper disable RedundantUsingDirective
-
 using System.Linq;
 using OpenRasta.Web;
-// ReSharper restore RedundantUsingDirective
 using Paramore.Adapters.Infrastructure.Repositories;
 using Paramore.Ports.Services.ThinReadLayer;
 

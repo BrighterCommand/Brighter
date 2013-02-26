@@ -11,7 +11,6 @@ c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.Debug.pd
 c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.Lightweight.pdb
 c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.Lightweight.xml
 c:\users\ian\oss\paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.MvcIntegration.pdb
-c:\users\ian\oss\paramore\Rewind\paramore.domain\obj\Debug\ResolveAssemblyReference.cache
 c:\users\ian\oss\paramore\Rewind\paramore.domain\obj\Debug\Paramore.Domain.dll
 c:\users\ian\oss\paramore\Rewind\paramore.domain\obj\Debug\Paramore.Domain.pdb
 C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.domain\bin\Debug\Paramore.Domain.dll
@@ -39,3 +38,9 @@ c:\Users\ian\oss\paramore\rewind\paramore.domain\bin\Debug\Paramore.Adapters.Inf
 c:\Users\ian\oss\paramore\rewind\paramore.domain\bin\Debug\Paramore.Adapters.Infrastructure.pdb
 C:\Users\SUNDANCE\work\paramore\rewind\paramore.domain\bin\Debug\Paramore.Adapters.Infrastructure.dll
 C:\Users\SUNDANCE\work\paramore\rewind\paramore.domain\bin\Debug\Paramore.Adapters.Infrastructure.pdb
+C:\Users\ian\OSS\Paramore\Rewind\paramore.domain\bin\Debug\AsyncCtpLibrary.dll
+C:\Users\ian\OSS\Paramore\Rewind\paramore.domain\bin\Debug\Raven.Abstractions.dll
+C:\Users\ian\OSS\Paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.Debug.dll
+C:\Users\ian\OSS\Paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.Lightweight.dll
+C:\Users\ian\OSS\Paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.MvcIntegration.dll
+C:\Users\ian\OSS\Paramore\Rewind\paramore.domain\obj\Debug\paramore.domain.csprojResolveAssemblyReference.cache
