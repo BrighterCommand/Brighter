@@ -48,6 +48,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Lib\openrasta-core-2.1.1.151056433\bin-net35\OpenRasta.dll</HintPath>
     </Reference>
+    <Reference Include="OpenRasta.Hosting.AspNet">
+      <HintPath>..\..\..\Lib\openrasta-hosting-aspnet-2.1.1+151058209\bin-net35\OpenRasta.Hosting.AspNet.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Web" />
   </ItemGroup>
