@@ -1,3 +1,0 @@
-﻿name: SharpZipLib
-version: 0.86.0
-description: #ziplib (SharpZipLib, formerly NZipLib) is a Zip, GZip, Tar and BZip2 library written entirely in C# for the .NET platform. It is implemented as an assembly (installable in the GAC), and thus can easily be incorporated into other projects (in any .NET language).

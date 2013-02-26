@@ -1,8 +1,4 @@
-﻿// ReSharper disable RedundantUsingDirective
-using OpenRasta.Configuration;
-using OpenRasta.DI;
-// ReSharper restore RedundantUsingDirective
-using Paramore.Adapters.Infrastructure.Repositories;
+﻿using OpenRasta.Configuration;
 using Paramore.Adapters.Presentation.API.Contributors;
 using Paramore.Adapters.Presentation.API.Handlers;
 using Paramore.Adapters.Presentation.API.Resources;
