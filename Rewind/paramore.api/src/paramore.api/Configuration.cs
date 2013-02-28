@@ -19,14 +19,16 @@ namespace Paramore.Adapters.Presentation.API
                 ResourceSpace.Has.ResourcesOfType<EntryPoint>()
                     .AtUri("/entrypoint")
                     .HandledBy<EntryPointHandler>()
-                    .AsXmlDataContract()
-                    .And.AsJsonDataContract();
+                   .AsXmlDataContract().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
+                    .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
+
 
                 ResourceSpace.Has.ResourcesOfType<List<VenueDocument>>()
                     .AtUri("/venues")
                     .HandledBy<VenueEndPointHandler>()
-                    .AsXmlDataContract()
-                    .And.AsJsonDataContract();
+                    .AsXmlDataContract().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
+                    .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
+
             }
         }
 
