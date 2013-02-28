@@ -6,4 +6,9 @@ Host: localhost:59280
 Content-Type: application/vnd.paramore.data+xml
 
 ----------------------------------------------
+----GET ENTRY POINT--------------------------
+GET http://localhost:59280/entrypoint HTTP/1.1
+User-Agent: Fiddler
+Host: localhost:59280
+
 

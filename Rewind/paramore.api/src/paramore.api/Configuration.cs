@@ -1,4 +1,5 @@
-﻿using OpenRasta.Configuration;
+﻿using System.Collections.Generic;
+using OpenRasta.Configuration;
 using Paramore.Adapters.Presentation.API.Contributors;
 using Paramore.Adapters.Presentation.API.Handlers;
 using Paramore.Adapters.Presentation.API.Resources;
@@ -12,25 +13,20 @@ namespace Paramore.Adapters.Presentation.API
         {
             using (OpenRastaConfiguration.Manual)
             {
-                //Dependencies
-                //ResourceSpace.
-                //    Uses.
-                //    CustomDependency<IAmAUnitOfWorkFactory, UnitOfWorkFactory>(DependencyLifetime.PerRequest);
-
                 ResourceSpace.Uses.PipelineContributor<DependencyPipelineContributor>();
 
                 //Resources
                 ResourceSpace.Has.ResourcesOfType<EntryPoint>()
                     .AtUri("/entrypoint")
                     .HandledBy<EntryPointHandler>()
-                    .AsXmlDataContract().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
-                    .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
+                    .AsXmlDataContract()
+                    .And.AsJsonDataContract();
 
-                ResourceSpace.Has.ResourcesOfType<VenueDocument>()
+                ResourceSpace.Has.ResourcesOfType<List<VenueDocument>>()
                     .AtUri("/venues")
                     .HandledBy<VenueEndPointHandler>()
-                    .AsXmlDataContract()//.ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
-                    .And.AsJsonDataContract();//.ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
+                    .AsXmlDataContract()
+                    .And.AsJsonDataContract();
             }
         }
 
