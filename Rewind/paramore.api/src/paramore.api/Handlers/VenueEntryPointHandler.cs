@@ -32,17 +32,17 @@ namespace Paramore.Adapters.Presentation.API.Handlers
         }
 
         //DEBUG method to get results without hitting Db
-        private List<VenueDocument> VenueDocuments()
+        private List<VenueResource> VenueDocuments()
         {
-            var venues = new List<VenueDocument>
+            var venues = new List<VenueResource>
                 {
-                    new VenueDocument(
+                    new VenueResource(
                         id: new Id(Guid.NewGuid()),
                         version: new Version(1),
-                        venueName: new VenueName("Test Venue"),
+                        name: new VenueName("Test Venue"),
                         address: new Address(new Street("MyStreet"), new City("London"), new PostCode("N1 3GA")),
-                        venueMap: new VenueMap(),
-                        venueContact:
+                        map: new VenueMap(),
+                        contact:
                             new VenueContact(new ContactName("Ian"), new EmailAddress("ian@huddle.com"),
                                              new PhoneNumber("123454678")))
                 };

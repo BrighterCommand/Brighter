@@ -4,9 +4,8 @@ using Machine.Specifications;
 using Paramore.Adapters.Infrastructure.Repositories;
 using Paramore.Domain.Venues;
 using Paramore.Ports.Services.ThinReadLayer;
-using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
 
-namespace paramore.integrationtests
+namespace paramore.integrationtests.ThinReadLayer
 {
     [Subject("Chekc that we can get the venue list out of the thin read layer")]
     public class When_viewing_a_list_of_venues

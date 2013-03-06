@@ -54,6 +54,7 @@
       <HintPath>..\..\..\Lib\openrasta-hosting-aspnet-2.1.1+151058209\bin-net35\OpenRasta.Hosting.AspNet.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Web" />
   </ItemGroup>
   <ItemGroup>
@@ -79,9 +80,12 @@
       <DependentUpon>Default.aspx</DependentUpon>
     </Compile>
     <Compile Include="Handlers\EntryPointHandler.cs" />
+    <Compile Include="Resources\VenueResource.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources\EntryPoint.cs" />
     <Compile Include="Handlers\VenueEntryPointHandler.cs" />
+    <Compile Include="Translators\Globals.cs" />
+    <Compile Include="Translators\VenueTranslator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\paramore.domain\paramore.domain.csproj">
