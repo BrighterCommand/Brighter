@@ -19,6 +19,8 @@ using System.Runtime.InteropServices;
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
 
+[assembly: InternalsVisibleTo("paramore.integrationtests") ]
+
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("56288656-b3c4-450b-b972-543ec6546371")]
 

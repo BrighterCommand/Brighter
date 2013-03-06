@@ -40,14 +40,19 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="VenueReaderTests.cs" />
+    <Compile Include="ThinReadLayer\VenueReaderTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Translators\VenueTranslatorTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\paramore.api\src\paramore.api\paramore.api.csproj">
+      <Project>{CC4AE266-7D06-4309-9DFD-D76477F6245D}</Project>
+      <Name>paramore.api</Name>
+    </ProjectReference>
     <ProjectReference Include="..\paramore.domain\paramore.domain.csproj">
       <Project>{41D1C746-9959-403C-956E-F4538CA72A83}</Project>
       <Name>paramore.domain</Name>
