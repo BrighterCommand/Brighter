@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using OpenRasta.Web;
 using Paramore.Adapters.Infrastructure.Repositories;
+using Paramore.Adapters.Presentation.API.Resources;
 using Paramore.Domain.Common;
 using Paramore.Domain.Venues;
 using Paramore.Ports.Services.ThinReadLayer;
@@ -41,7 +42,7 @@ namespace Paramore.Adapters.Presentation.API.Handlers
                         version: new Version(1),
                         name: new VenueName("Test Venue"),
                         address: new Address(new Street("MyStreet"), new City("London"), new PostCode("N1 3GA")),
-                        map: new VenueMap(),
+                        mapURN: new VenueMap(new Uri("http://www.mysite.com/maps/12345")),
                         contact:
                             new VenueContact(new ContactName("Ian"), new EmailAddress("ian@huddle.com"),
                                              new PhoneNumber("123454678")))
