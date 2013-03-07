@@ -55,7 +55,9 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Web" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Default.aspx" />
@@ -80,11 +82,12 @@
       <DependentUpon>Default.aspx</DependentUpon>
     </Compile>
     <Compile Include="Handlers\EntryPointHandler.cs" />
+    <Compile Include="Resources\Link.cs" />
     <Compile Include="Resources\VenueResource.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources\EntryPoint.cs" />
     <Compile Include="Handlers\VenueEntryPointHandler.cs" />
-    <Compile Include="Translators\Globals.cs" />
+    <Compile Include="Translators\ParamoreGlobals.cs" />
     <Compile Include="Translators\VenueTranslator.cs" />
   </ItemGroup>
   <ItemGroup>
