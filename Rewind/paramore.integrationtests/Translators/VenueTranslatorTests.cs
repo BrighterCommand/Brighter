@@ -10,7 +10,7 @@ using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
 namespace paramore.integrationtests.Translators
 {
     [Subject("Chekc that we can get the venue list out of the thin read layer")]
-    class When_changing_a_document_to_a_resource
+    public class When_changing_a_document_to_a_resource
     {
         private static readonly VenueTranslator venueTranslator = new VenueTranslator();
         private static VenueDocument document;
@@ -31,6 +31,6 @@ namespace paramore.integrationtests.Translators
         Because of = () => resource = venueTranslator.Translate(document);
 
         It should_set_the_self_uri = () => resource.Self.ShouldEqual(new Uri(string.Format("<link rel='self' href='{0}/venue/{1)'", Globals.HostName, document.Id)));
-        It should_set_the_map_link = () => { };
+        //It should_set_the_map_link = () => { };
     }
 }
