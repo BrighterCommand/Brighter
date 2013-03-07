@@ -1,0 +1,1543 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Machine.Fakes</name>
+    </assembly>
+    <members>
+        <member name="T:Machine.Fakes.OnEstablish">
+            <summary>
+            Delegate used in behavior configs in order
+            to configure dependencies in the main specification
+            from outside the specification.
+            </summary>
+            <param name="accessor">
+            Specifies gateway for accessing fakes.
+            </param>
+        </member>
+        <member name="T:Machine.Fakes.OnCleanup">
+            <summary>
+            Delegate used in behavior configs in order
+            to cleanup the subject after a specification has been
+            executed. This can be used for cleaning up transactions
+            for example.
+            </summary>
+            <param name="subject">
+            Specifies the subject of a context / specification.
+            </param>
+        </member>
+        <member name="T:Machine.Fakes.Internal.InstanceCreationException">
+            <summary>
+            Exception that occurs when a type cannot be instantiated by the automatic faking/dependency resolution
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Internal.InstanceCreationException.#ctor(System.Type,System.String)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="type">Type that cannot be created</param>
+            <param name="reason">Reason</param>
+        </member>
+        <member name="T:Machine.Fakes.FakeAccessorRegistrarExtensions">
+            <summary>
+            This class implements the several way that can be used to work with the
+            <see cref="T:Machine.Fakes.Registrar"/> API.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.FakeAccessorRegistrarExtensions.Configure``1(Machine.Fakes.IFakeAccessor,``0)">
+            <summary>
+            Uses the instance supplied by <paramref name="instance"/> during the
+            creation of the sut. The specified instance will be injected into the constructor.
+            </summary>
+            <typeparam name="TInterfaceType">Specifies the interface type.</typeparam>
+            <param name="accessor">Specifies the fake accessor</param>
+            <param name="instance">Specifies the instance to be used for the specification.</param>
+        </member>
+        <member name="M:Machine.Fakes.FakeAccessorRegistrarExtensions.Configure``2(Machine.Fakes.IFakeAccessor)">
+            <summary>
+                Registered the type specified via <typeparamref name = "TImplementationType" /> as the default type
+                for the interface specified via <typeparamref name = "TInterfaceType" />. With this the type gets automatically
+                build when the subject is resolved.
+            </summary>
+            <param name = "accessor">
+                Specifies the fake accessor
+            </param>
+            <typeparam name = "TInterfaceType">
+                Specifies the interface type.
+            </typeparam>
+            <typeparam name = "TImplementationType">
+                Specifies the implementation type.
+            </typeparam>
+        </member>
+        <member name="M:Machine.Fakes.FakeAccessorRegistrarExtensions.Configure(Machine.Fakes.IFakeAccessor,System.Action{Machine.Fakes.Registrar})">
+            <summary>
+                Shortcut for <see cref="M:Machine.Fakes.IFakeAccessor.Configure(Machine.Fakes.Registrar)"/>. This one will create
+                a registrar for you and allow configuration via the delegate passed
+                in via <paramref name="registrarExpression"/>.
+            </summary>
+            <param name="accessor">
+                Specifies the fake accessor
+            </param>
+            <param name="registrarExpression">
+                Specifies the configuration for the registrar.
+            </param>
+            <exception cref="T:System.ArgumentNullException">
+                Thrown when the supplied registrar expression is <c>null</c>.
+            </exception>
+        </member>
+        <member name="T:Machine.Fakes.Param">
+            <summary>
+            Entry point for using inline parameter constraints with Machine.Fakes.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Param.Is``1(``0)">
+            <summary>
+            Configures that the parameter must match the specified value.
+            </summary>
+            <param name="value">The value.</param>
+            <typeparam name="TParam">Specifies the parameter type.</typeparam>
+            <returns>A substitute type that isn't directly used.</returns>
+        </member>
+        <member name="M:Machine.Fakes.Param.IsAny``1">
+            <summary>
+            Configures that every parameter value matches.
+            </summary>
+            <typeparam name="TParam">
+            Specifies the parameter type.
+            </typeparam>
+            <returns>
+            A substitute type that isn't directly used.
+            </returns>
+        </member>
+        <member name="T:Machine.Fakes.Param`1">
+            <summary>
+            Entry point for using inline parameter constraints with Machine.Fakes.
+            </summary>
+            <typeparam name="TParam">
+            Specifies the parameters type.
+            </typeparam>
+        </member>
+        <member name="M:Machine.Fakes.Param`1.IsA``1">
+            <summary>
+            Configures that the parameter must be of a particular type.
+            </summary>
+            <typeparam name="TOther">
+            Specifies the other type.
+            </typeparam>
+            <returns>
+            A substitute type that isn't directly used.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Param`1.Matches(System.Linq.Expressions.Expression{System.Func{`0,System.Boolean}})">
+            <summary>
+            Configures that the parameter must match the specified predicate.
+            </summary>
+            <param name="matchExpression">
+            Specifies the predicate.
+            </param>
+            <returns>
+            A substitute type that isn't directly used.
+            </returns>
+        </member>
+        <member name="P:Machine.Fakes.Param`1.IsNull">
+            <summary>
+            Matches when the parameter value is null.
+            </summary>
+            <returns>
+            A substitute type that isn't directly used.
+            </returns>
+        </member>
+        <member name="P:Machine.Fakes.Param`1.IsNotNull">
+            <summary>
+            Matches when the parameter value is not null.
+            </summary>
+            <returns>
+            A substitute type that isn't directly used.
+            </returns>
+        </member>
+        <member name="P:Machine.Fakes.Param`1.IsAnything">
+            <summary>
+            Every parameter is matched.
+            </summary>
+            <returns>
+            A substitute type that isn't directly used.
+            </returns>
+        </member>
+        <member name="T:Machine.Fakes.Registrar">
+            <summary>
+            Registration endpoint for configuring the underlying container with 
+            concrete implementations (the rest that can be faked will be filled up from the AutoFakeContainer).
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Registrar.Store(Machine.Fakes.Internal.IMapping)">
+            <summary>
+            Stores the mapping supplied by <paramref name="mapping"/>.
+            </summary>
+            <param name="mapping">
+            Specifies the mapping to be stored.
+            </param>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when <paramref name="mapping"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Machine.Fakes.Registrar.Apply(System.Action{Machine.Fakes.Internal.IMapping})">
+            <summary>
+            Applies the configured mappings.
+            </summary>
+            <param name="register">An action that registers a single mapping</param>
+        </member>
+        <member name="M:Machine.Fakes.Registrar.New(System.Action{Machine.Fakes.Registrar})">
+            <summary>
+            Shortcut for inlining the configuration of a registrar via
+            the nested closure pattern.
+            </summary>
+            <param name="configurationExpression">
+            Specifies the expression that does the configuraition.
+            </param>
+            <returns>
+            The configured registrar.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when <paramref name="configurationExpression"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Machine.Fakes.Registrar.For(System.Type)">
+            <summary>
+            Starts the configuration of a type. This should be the interface type.
+            </summary>
+            <param name="type">
+            Specifies the interface type.
+            </param>
+            <returns>
+            An expression for further configuration.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when <paramref name="type"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Machine.Fakes.Registrar.For``1">
+            <summary>
+            Starts the configuration of a type. This should be the interface type.
+            </summary>
+            <typeparam name="T">
+            Specifies the interface type.
+            </typeparam>
+            <returns>
+            An expression for further configuration.
+            </returns>
+        </member>
+        <member name="T:Machine.Fakes.Registrar.RegistrationExpression">
+            <summary>
+            Concludes the configurataion that was startet with <see cref="M:Machine.Fakes.Registrar.For(System.Type)"/>.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Registrar.RegistrationExpression.Use(System.Object)">
+            <summary>
+            Configures the underlying container to use
+            the specified instance whenever an instance of the interface type
+            in the container is resolved.
+            </summary>
+            <param name="implementation">
+            Specifies the instance to be used.
+            </param>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when <paramref name="implementation"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Machine.Fakes.Registrar.RegistrationExpression.Use(System.Type)">
+            <summary>
+            Configures the underlying container to use
+            the specified implementation type whenever an instance of the interface type
+            in the container is resolved.
+            </summary>
+            <param name="implementationType">
+            Specifies the implementation type to be used.
+            </param>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when <paramref name="implementationType"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="T:Machine.Fakes.Registrar.RegistrationExpression`1">
+            <summary>
+            Concludes the configuration that was started with <see cref="M:Machine.Fakes.Registrar.For(System.Type)"/>.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Registrar.RegistrationExpression`1.Use``1">
+            <summary>
+            Configures the underlying container to use
+            the specified implementation type whenever an instance of the interface type
+            in the container is resolved.
+            </summary>
+            <typeparam name="TImplementationType">
+            Specifies the implementation type.
+            </typeparam>
+        </member>
+        <member name="M:Machine.Fakes.Registrar.RegistrationExpression`1.Use(`0)">
+            <summary>
+            Configures the underlying container to use
+            the specified instance whenever an instance of the interface type
+            in the container is resolved.
+            </summary>
+            <param name="instance">
+            Specifies the instance to be used.
+            </param>
+        </member>
+        <member name="M:Machine.Fakes.Registrar.RegistrationExpression`1.Use(System.Func{`0})">
+            <summary>
+            Configures the underlying container to use
+            the specified factory when he needs to create an instance of the target type.
+            </summary>
+            <param name="factory">
+            Specifies the factory to be used for creation.
+            </param>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when <paramref name="factory"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="T:Machine.Fakes.Sdk.MethodExpressionConverter">
+            <summary>
+            A converter for a <see cref="T:System.Linq.Expressions.MethodCallExpression"/>.
+            </summary>
+            <param name="expression">
+            Specifies the expression to be converted.
+            </param>
+            <returns>
+            The result of the conversion.
+            </returns>
+        </member>
+        <member name="T:Machine.Fakes.Sdk.MemberExpressionConverter">
+            <summary>
+            A converter for a <see cref="T:System.Linq.Expressions.MemberExpression"/>.
+            </summary>
+            <param name="expression">
+            Specifies the expression to be converted.
+            </param>
+            <returns>
+            The result of the conversion.
+            </returns>
+        </member>
+        <member name="T:Machine.Fakes.Sdk.AbstractExpressionRewriter">
+            <summary>
+            Base class for <see cref="T:Machine.Fakes.Sdk.IExpressionRewriter"/> implementations.
+            </summary>
+        </member>
+        <member name="T:Machine.Fakes.Sdk.IExpressionRewriter">
+            <summary>
+            Rewriter abstraction that is used by Machine.Fakes
+            in order to transform the inline constraint format used by Machine.Fakes
+            into the specific formats used by the different mock frameworks.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.IExpressionRewriter.Rewrite(System.Linq.Expressions.Expression)">
+            <summary>
+            Rewrites the expression tree and replaces all occurences
+            of Machine.Fakes specific inline constraints with the 
+            equivalents of a specific mock framework.
+            </summary>
+            <param name="expr">
+            Specifies the input expression.
+            </param>
+            <returns>
+            Returns the target expression in the format of the relevant mock framework.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.AbstractExpressionRewriter.Rewrite(System.Linq.Expressions.Expression)">
+            <summary>
+            Rewrites the expression tree and replaces all occurences
+            of Machine.Fakes specific inline constraints with the 
+            equivalents of a specific mock framework.
+            </summary>
+            <param name="expr">
+            Specifies the input expression.
+            </param>
+            <returns>
+            Returns the target expression in the format of the relevant mock framework.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.AbstractExpressionRewriter.AddConverter(System.String,Machine.Fakes.Sdk.MethodExpressionConverter)">
+            <summary>
+            Adds a converter for a particular method.
+            </summary>
+            <param name="methodName">
+            Specifies the name of the method.
+            </param>
+            <param name="converter">
+            Specifies the converter
+            </param>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.AbstractExpressionRewriter.AddConverter(System.String,Machine.Fakes.Sdk.MemberExpressionConverter)">
+            <summary>
+            Adds a converter for a particular member.
+            </summary>
+            <param name="methodName">
+            Specifies the name of the member.
+            </param>
+            <param name="converter">
+            Specifies the converter
+            </param>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.AbstractExpressionRewriter.VisitMethodCall(System.Linq.Expressions.MethodCallExpression)">
+            <summary>
+            Is called on each <see cref="T:System.Linq.Expressions.MethodCallExpression"/> expression.
+            </summary>
+            <param name="node">
+            Specifies the expression node.
+            </param>
+            <returns>
+            The new expression to be used for that node.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.AbstractExpressionRewriter.VisitMember(System.Linq.Expressions.MemberExpression)">
+            <summary>
+            Is called on each <see cref="T:System.Linq.Expressions.MemberExpression"/> expression.
+            </summary>
+            <param name="node">
+            Specifies the expression node.
+            </param>
+            <returns>
+            The new expression to be used for that node.
+            </returns>
+        </member>
+        <member name="T:Machine.Fakes.Sdk.ExpressionExtensions">
+            <summary>
+            A helper class for extensions on expression.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.ExpressionExtensions.RewriteUsing``2(System.Linq.Expressions.Expression{System.Func{``0,``1}},Machine.Fakes.Sdk.IExpressionRewriter)">
+            <summary>
+            Rewrites the expression specified by <paramref name="expression"/>
+            with the rewriter specified by <paramref name="rewriter"/>.
+            </summary>
+            <typeparam name="TType">
+            Specifies the parameter type in the expression.
+            </typeparam>
+            <typeparam name="TValue">
+            Specifies the return type in the expression.
+            </typeparam>
+            <param name="expression">
+            Specifies the expression. 
+            </param>
+            <param name="rewriter">
+            Specifies the rewriter.
+            </param>
+            <returns>
+            The converted expression.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.ExpressionExtensions.RewriteUsing``1(System.Linq.Expressions.Expression{System.Action{``0}},Machine.Fakes.Sdk.IExpressionRewriter)">
+            <summary>
+            Rewrites the expression specified by <paramref name="expression"/>
+            with the rewriter specified by <paramref name="rewriter"/>.
+            </summary>
+            <typeparam name="TType">
+            Specifies the parameter type in the expression.
+            </typeparam>
+            <param name="expression">
+            Specifies the expression. 
+            </param>
+            <param name="rewriter">
+            Specifies the rewriter.
+            </param>
+            <returns>
+            The converted expression.
+            </returns>
+        </member>
+        <member name="T:Machine.Fakes.Sdk.ReflectionExtensions">
+            <summary>
+                Helper class which contains all the helper method needed for reflection.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.ReflectionExtensions.IsMFakesConstraint(System.Type)">
+            <summary>
+                Checks whether the supplied type is one of the machine.fakes
+                inline constraint types.
+            </summary>
+            <param name = "type">
+                Specifies the type to check.
+            </param>
+            <returns>
+                <c>true</c> if it's one of the constraint types. Otherwise not.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.ReflectionExtensions.ClosesGenericParamType(System.Type)">
+            <summary>
+                Checks whether the supplied type closes the <see cref="T:Machine.Fakes.Param`1"/> class.
+            </summary>
+            <param name="type">
+                Specifies the type to be checked.
+            </param>
+            <returns>
+                <c>true</c> if the type closes the <see cref="T:Machine.Fakes.Param`1"/> type. Otherwise <c>false</c>.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.ReflectionExtensions.GetFirstTypeArgument(System.Type)">
+            <summary>
+                Gets the first generic type argument of the specified type.
+            </summary>
+            <param name = "type">
+                Specifies the type to extract the type argument from.
+            </param>
+            <returns>
+                The extracted type.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.ReflectionExtensions.GetFirstTypeArgument(System.Reflection.MethodInfo)">
+            <summary>
+                Gets the first generic type argument of the specified type.
+            </summary>
+            <param name = "method">
+                Specifies the method to extract the type argument from.
+            </param>
+            <returns>
+                The extracted type.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.ReflectionExtensions.MakePropertyAccess(System.Type,System.String,System.Linq.Expressions.Expression)">
+            <summary>
+                Creates a <see cref="T:System.Linq.Expressions.MemberExpression"/> on a public instance property.
+            </summary>
+            <param name="targetType">
+                Specifies the target type.
+            </param>
+            <param name="property">
+                Specifies the name of the property to be accessed.
+            </param>
+            <param name="instanceExpression">
+                Specifies an instance via an <see cref="T:System.Linq.Expressions.Expression"/>.
+            </param>
+            <returns>
+                The created <see cref="T:System.Linq.Expressions.MemberExpression"/>.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.ReflectionExtensions.MakeStaticPropertyAccess(System.Type,System.String)">
+            <summary>
+                Creates a <see cref="T:System.Linq.Expressions.MemberExpression"/> on a public static property.
+            </summary>
+            <param name="targetType">
+                Specifies the target type.
+            </param>
+            <param name="property">
+                Specifies the name of the property to be accessed.
+            </param>
+            <returns>
+                The created <see cref="T:System.Linq.Expressions.MemberExpression"/>.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.ReflectionExtensions.GetFieldValues``1(System.Object)">
+            <summary>
+                Get all field values of the type specified by <typeparamref name = "TFieldType" />.
+            </summary>
+            <typeparam name = "TFieldType">
+                Specifies the field type.
+            </typeparam>
+            <param name = "instance">
+                Specifies the instance to extract the field values from.
+            </param>
+            <returns>
+                A collection of all field values of the specified type.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.ReflectionExtensions.ResetReferences(System.Object)">
+            <summary>
+            Resets the references in the instance specified by <paramref name="instance"/>.
+            </summary>
+            <param name="instance">The instance.</param>
+        </member>
+        <member name="T:Machine.Fakes.Sdk.RewritingFakeEngine">
+            <summary>
+            Derive from this class in order to make inline constraints work.
+            This is just glue code. The expression writer does does all the job.
+            </summary>
+        </member>
+        <member name="T:Machine.Fakes.IFakeEngine">
+            <summary>
+            Interface to a fake framework. 
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.IFakeEngine.CreateFake(System.Type,System.Object[])">
+            <summary>
+            Creates a fake of the type specified via <paramref name="interfaceType"/> using a non default constructor.
+            </summary>
+            <param name="interfaceType">
+            Specifies the interface type to create a fake for.
+            </param>
+            <param name="args">
+            Specifies parameters for non default constructor.
+            </param>
+            <returns>
+            The created fake instance.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.IFakeEngine.PartialMock``1(System.Object[])">
+            <summary>
+            Creates a partial mock.
+            </summary>
+            <typeparam name="T">
+            Specifies the type of the partial mock. This needs to be 
+            an abstract base class.
+            </typeparam>
+            <param name="args">
+            Specifies the constructor parameters.
+            </param>
+            <returns>
+            The created instance.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.IFakeEngine.SetUpQueryBehaviorFor``2(``0,System.Linq.Expressions.Expression{System.Func{``0,``1}})">
+            <summary>
+              Configures the behavior of the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">
+              Specifies the type of the fake.
+            </typeparam>
+            <typeparam name="TReturnValue">
+              Specifies the type of the return value.
+            </typeparam>
+            <param name="fake">
+              The fake to configure behavior on.
+            </param>
+            <param name="func">
+              Expression to set up the behavior.
+            </param>
+            <returns>
+              A <see cref="T:Machine.Fakes.IQueryOptions`1"/> for further configuration.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.IFakeEngine.SetUpCommandBehaviorFor``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+              Configures the behavior of the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">
+              Specifies the type of the fake.
+            </typeparam>
+            <param name="fake">
+              The fake to configure behavior on.
+            </param>
+            <param name="func">
+              Configures the behavior. This must be a void method.
+            </param>
+            <returns>
+              A <see cref="T:Machine.Fakes.ICommandOptions"/> for further configuration.
+            </returns>
+            <remarks>
+              This method is used for command, e.g. methods returning void.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.IFakeEngine.VerifyBehaviorWasNotExecuted``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+            Verifies that the behavior specified by <paramref name="func"/>
+            was not executed on the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">
+            Specifies the type of the fake.
+            </typeparam>
+            <param name="fake">
+            Specifies the fake instance.
+            </param>
+            <param name="func">
+            Specifies the behavior that was not supposed to happen.
+            </param>
+        </member>
+        <member name="M:Machine.Fakes.IFakeEngine.VerifyBehaviorWasExecuted``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+            Verifies that the behavior specified by <paramref name="func"/>
+            was executed on the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">
+            Specifies the type of the fake.
+            </typeparam>
+            <param name="fake">
+            Specifies the fake instance.
+            </param>
+            <param name="func">
+            Specifies the behavior that was supposed to happen.
+            </param>
+            <returns>
+            A <see cref="T:Machine.Fakes.IMethodCallOccurrence"/> which can be used
+            to narrow down the expectations to a particular amount of times.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.RewritingFakeEngine.#ctor(Machine.Fakes.Sdk.IExpressionRewriter)">
+            <summary>
+            Creates a new instance of the <see cref="T:Machine.Fakes.Sdk.RewritingFakeEngine"/> class.
+            </summary>
+            <param name="rewriter">
+            Specifies the rewriter that translates the expressions or more
+            specific the generic inline constraints used in expressions
+            to the inline constraints used in the target fake framework.
+            </param>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.RewritingFakeEngine.CreateFake(System.Type,System.Object[])">
+            <summary>
+            Creates a fake of the type specified via <paramref name="interfaceType"/> with no default constructor.
+            </summary>
+            <param name="interfaceType">Specifies the interface type to create a fake for.</param>
+            <param name="args">Specifies the constructor parameters.</param>
+            <returns>The created fake instance.</returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.RewritingFakeEngine.PartialMock``1(System.Object[])">
+            <summary>
+            Creates a partial mock.
+            </summary>
+            <typeparam name="T">
+            Specifies the type of the partial mock. This needs to be 
+            an abstract base class.
+            </typeparam>
+            <param name="args">
+            Specifies the constructor parameters.
+            </param>
+            <returns>
+            The created instance.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.RewritingFakeEngine.SetUpQueryBehaviorFor``2(``0,System.Linq.Expressions.Expression{System.Func{``0,``1}})">
+            <summary>
+            Configures the behavior of the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">Specifies the type of the fake.</typeparam>
+            <typeparam name="TReturnValue">Specifies the type of the return value.</typeparam>
+            <param name="fake">The fake to configure behavior on.</param>
+            <param name="func">Expression to set up the behavior.</param>
+            <returns>A <see cref="T:Machine.Fakes.IQueryOptions`1"/> for further configuration.</returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.RewritingFakeEngine.SetUpCommandBehaviorFor``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+            Configures the behavior of the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">Specifies the type of the fake.</typeparam>
+            <param name="fake">The fake to configure behavior on.</param>
+            <param name="func">Configures the behavior. This must be a void method.</param>
+            <returns>A <see cref="T:Machine.Fakes.ICommandOptions"/> for further configuration.</returns>
+            <remarks>This method is used for command, e.g. methods returning void.</remarks>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.RewritingFakeEngine.VerifyBehaviorWasNotExecuted``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+            Verifies that the behavior specified by <paramref name="func"/>
+            was not executed on the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">Specifies the type of the fake.</typeparam>
+            <param name="fake">Specifies the fake instance.</param>
+            <param name="func">Specifies the behavior that was not supposed to happen.</param>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.RewritingFakeEngine.VerifyBehaviorWasExecuted``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+            Verifies that the behavior specified by <paramref name="func"/>
+            was executed on the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">Specifies the type of the fake.</typeparam>
+            <param name="fake">Specifies the fake instance.</param>
+            <param name="func">Specifies the behavior that was supposed to happen.</param>
+            <returns>A <see cref="T:Machine.Fakes.IMethodCallOccurrence"/> which can be used
+            to narrow down the expectations to a particular amount of times.</returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.RewritingFakeEngine.OnVerifyBehaviorWasExecuted``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+            Verifies that the behavior specified by <paramref name="func"/>
+            was executed on the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">Specifies the type of the fake.</typeparam>
+            <param name="fake">Specifies the fake instance.</param>
+            <param name="func">Specifies the behavior that was supposed to happen
+            expressed in terms of the target framework.</param>
+            <returns>A <see cref="T:Machine.Fakes.IMethodCallOccurrence"/> which can be used
+            to narrow down the expectations to a particular amount of times.</returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.RewritingFakeEngine.OnSetUpQueryBehaviorFor``2(``0,System.Linq.Expressions.Expression{System.Func{``0,``1}})">
+            <summary>
+            Configures the behavior of the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">Specifies the type of the fake.</typeparam>
+            <typeparam name="TReturnValue">Specifies the type of the return value.</typeparam>
+            <param name="fake">The fake to configure behavior on.</param>
+            <param name="func">Expression to set up the behavior in terms of the target framework.</param>
+            <returns>A <see cref="T:Machine.Fakes.IQueryOptions`1"/> for further configuration.</returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.RewritingFakeEngine.OnVerifyBehaviorWasNotExecuted``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+            Verifies that the behavior specified by <paramref name="func"/>
+            was not executed on the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">Specifies the type of the fake.</typeparam>
+            <param name="fake">Specifies the fake instance.</param>
+            <param name="func">Specifies the behavior that was not supposed to happen
+            expressed in terms of the target framework.</param>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.RewritingFakeEngine.OnSetUpCommandBehaviorFor``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+            Configures the behavior of the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">Specifies the type of the fake.</typeparam>
+            <param name="fake">The fake to configure behavior on.</param>
+            <param name="func">Configures the behavior expressed in terms of the target framework.
+            This must be a void method.</param>
+            <returns>A <see cref="T:Machine.Fakes.ICommandOptions"/> for further configuration.</returns>
+        </member>
+        <member name="T:Machine.Fakes.Sdk.SpecificationController`2">
+            <summary>
+            Shortcut for <see cref="T:Machine.Fakes.Sdk.SpecificationController`1"/> which
+            supplies the type of the fake engine to be used via a generic type parameter.
+            </summary>
+            <typeparam name="TSubject">
+            The subject for the specification. This is the type that is created by the
+            specification for you.
+            </typeparam>
+            <typeparam name="TFakeEngine">
+            Specifies the type of the fake engine which will be used.
+            </typeparam>
+        </member>
+        <member name="T:Machine.Fakes.Sdk.SpecificationController`1">
+            <summary>
+            Controller that implements all the core capabilities of Machine.Fakes.
+            This includes filling a subject with fakes and providing all the handy helper methods
+            for interacting with fakes in a specification.
+            </summary>
+            <typeparam name="TSubject">
+            The subject for the specification. This is the type that is created by the
+            specification for you.
+            </typeparam>
+        </member>
+        <member name="T:Machine.Fakes.IFakeAccessor">
+            <summary>
+            Accessor interface for dependencies created and managed by fake framework / auto fake container.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.IFakeAccessor.An``1(System.Object[])">
+            <summary>
+            Creates a fake of the type specified by <typeparamref name="TInterfaceType"/>.
+            </summary>
+            <typeparam name="TInterfaceType">
+            The type to create a fake for. (Should be an interface or an abstract class)
+            </typeparam>
+            <param name="args">
+            The ctor parameters for the newly created entity
+            </param>
+            <returns>
+            An newly created fake implementing <typeparamref name="TInterfaceType"/>.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.IFakeAccessor.An(System.Type,System.Object[])">
+            <summary>
+            Creates a fake of the type specified by <paramref name="interfaceType"/>.
+            </summary>
+            The type to create a fake for. (Should be an interface or an abstract class)
+            <param name="interfaceType">
+            Specifies the type of item to fake.
+            </param>
+            <param name="args">
+            The ctor parameters for the newly created entity
+            </param>
+            <returns>
+            An newly created fake implementing <paramref name="interfaceType"/>.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.IFakeAccessor.The``1">
+            <summary>
+            Creates a fake of the type specified by <typeparamref name="TInterfaceType"/>.
+            This method reuses existing instances. If an instance of <typeparamref name="TInterfaceType"/>
+            was already requested it's returned here. (You can say this is kind of a singleton behavior)
+            Besides that, you can obtain a reference to automatically injected fakes with this 
+            method.
+            </summary>
+            <typeparam name="TInterfaceType">
+            The type to create a fake for. (Should be an interface or an abstract class)
+            </typeparam>
+            <returns>
+            An instance implementing <typeparamref name="TInterfaceType"/>.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.IFakeAccessor.Some``1">
+            <summary>
+            Creates a list containing 3 fake instances of the type specified 
+            via <typeparamref name="TInterfaceType"/>.
+            </summary>
+            <typeparam name="TInterfaceType">
+            Specifies the item type of the list. This should be an interface or an abstract class.
+            </typeparam>
+            <returns>
+            An <see cref="T:System.Collections.Generic.IList`1"/>.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.IFakeAccessor.Some``1(System.Int32)">
+            <summary>
+            Creates a list containing fake instances of the type specified via <typeparamref name="TInterfaceType"/>.
+            </summary>
+            <param name="amount">
+            Specifies the amount of fakes in the list.
+            </param>
+            <typeparam name="TInterfaceType">Specifies the item type of the list. This should be an interface or an abstract class.</typeparam>
+            <returns>An <see cref="T:System.Collections.Generic.IList`1"/>.</returns>
+        </member>
+        <member name="M:Machine.Fakes.IFakeAccessor.Configure(Machine.Fakes.Registrar)">
+            <summary>
+            Applies the configuration embedded in the registar to the underlying container.
+            </summary>
+            <param name="registrar">
+            Specifies the registrar.
+            </param>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when the supplied registrar is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`1.#ctor(Machine.Fakes.IFakeEngine)">
+            <summary>
+            Creates a new instance of the <see cref="T:Machine.Fakes.Sdk.SpecificationController`1"/> class.
+            </summary>
+            <param name="fakeEngine">
+            Specifies the <see cref="T:Machine.Fakes.IFakeEngine"/> that is used for creating specifications.
+            </param>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`1.Configure(Machine.Fakes.Registrar)">
+            <summary>
+            Applies the configuration embedded in the registar to the underlying container.
+            </summary>
+            <param name="registrar">
+            Specifies the registrar.
+            </param>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when the supplied registrar is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`1.With``1">
+            <summary>
+            Configures the specification to execute a behavior config before the action on the subject
+            is executed (<see cref="T:Machine.Specifications.Because"/>).
+            </summary>
+            <typeparam name="TBehaviorConfig">Specifies the type of the config to be executed.</typeparam>
+            <returns>The behavior config instance.</returns>
+            <remarks>
+            The class specified by <typeparamref name="TBehaviorConfig"/>
+            needs to have private fields assigned with either <see cref="T:Machine.Fakes.OnEstablish"/>
+            or <see cref="T:Machine.Fakes.OnCleanup"/> delegates.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`1.With(System.Object)">
+            <summary>
+              Configures the specification to execute the behavior config specified
+              by <paramref name="behaviorConfig"/> before the action on the sut is executed (<see cref="T:Machine.Specifications.Because"/>).
+            </summary>
+            <param name="behaviorConfig">
+              Specifies the behavior config to be executed.
+            </param>
+            <remarks>
+            The object specified by <see paramref="behaviorConfig"/>
+            needs to have private fields assigned with either <see cref="T:Machine.Fakes.OnEstablish"/>
+            or <see cref="T:Machine.Fakes.OnCleanup"/> delegates.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`1.An``1(System.Object[])">
+            <summary>
+              Creates a fake of the type specified by <typeparamref name = "TInterfaceType" /> without a default constructor.
+            </summary>
+            <typeparam name = "TInterfaceType">The type to create a fake for.</typeparam>
+            <param name="args">
+              No default constructor arguments
+            </param>
+            <returns>
+              An newly created fake implementing <typeparamref name = "TInterfaceType" />.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`1.An(System.Type,System.Object[])">
+            <summary>
+            Creates a fake of the type specified by <paramref name="interfaceType"/> without default constructor.
+            </summary>
+            The type to create a fake for.
+            <param name="interfaceType">
+            Specifies the type of item to fake.
+            </param>
+            <param name="args">
+            Specifies the constructor parameters if the class is a concrete class without default constructor
+            </param>
+            <returns>
+            An newly created fake implementing <paramref name="interfaceType"/>.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`1.The``1">
+            <summary>
+              Creates a fake of the type specified by <typeparamref name = "TInterfaceType" />.
+              This method reuses existing instances. If an instance of <typeparamref name = "TInterfaceType" />
+              was already requested it's returned here. (You can say this is kind of a singleton behavior)
+              Besides that, you can obtain a reference to automatically injected fakes with this
+              method.
+            </summary>
+            <typeparam name = "TInterfaceType">The type to create a fake for. (Should be an interface or an abstract class)</typeparam>
+            <returns>
+              An instance implementing <typeparamref name="TInterfaceType" />.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`1.Some``1">
+            <summary>
+              Creates a list containing 3 fake instances of the type specified
+              via <typeparamref name="TInterfaceType"/>.
+            </summary>
+            <typeparam name="TInterfaceType">Specifies the item type of the list. This should be an interface or an abstract class.</typeparam>
+            <returns>An <see cref="T:System.Collections.Generic.IList`1"/>.</returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`1.Some``1(System.Int32)">
+            <summary>
+            Creates a list of fakes.
+            </summary>
+            <typeparam name="TInterfaceType">
+            Specifies the item type of the list. This should be an interface or an abstract class.
+            </typeparam>
+            <param name="amount">
+            Specifies the amount of fakes that have to be created and inserted into the list.
+            </param>
+            <returns>
+            An <see cref="T:System.Collections.Generic.IList`1"/>.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`1.Dispose">
+            <summary>
+            Performs cleanup. Exuecutes the Cleanup functionality of all configured behavior configs.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`1.EnsureSubjectCreated">
+            <summary>
+            Ensures that the subject has been created. This will trigger the lazy loading in case creation hasn't happened
+            before.
+            </summary>
+        </member>
+        <member name="P:Machine.Fakes.Sdk.SpecificationController`1.Subject">
+            <summary>
+            Gives access to the subject under specification. On first access
+            the spec tries to create an instance of the subject type by itself.
+            Override this behavior by manually setting a subject instance.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.SpecificationController`2.#ctor">
+            <summary>
+            Creates a new instance of the <see cref="T:Machine.Fakes.Sdk.SpecificationController`2"/> class.
+            </summary>
+        </member>
+        <member name="T:Machine.Fakes.WithFakes`1">
+            <summary>
+            Base class for the simpler cases than <see cref="T:Machine.Fakes.WithSubject`2"/>. 
+            This class only contains the shortcuts for creating fakes via "An" and "Some".
+            </summary>
+            <typeparam name="TFakeEngine">
+            Specifies the concrete fake engine that will be used for creating fake instances.
+            This must be a class with a parameterless constructor that implements <see cref="T:Machine.Fakes.IFakeEngine"/>.
+            </typeparam>
+        </member>
+        <member name="F:Machine.Fakes.WithFakes`1._specificationController">
+            <summary>
+            The specification controller
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.WithFakes`1.#ctor">
+            <summary>
+            Creates a new instance of the <see cref="T:Machine.Fakes.WithFakes`1"/> class.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.WithFakes`1.An``1(System.Object[])">
+            <summary>
+              Creates a fake of the type specified by <typeparamref name = "TInterfaceType" />.
+            </summary>
+            <typeparam name = "TInterfaceType">The type to create a fake for. (Should be an interface or an abstract class)</typeparam>
+            <param name="args">
+             Optional constructor parameters for abstract base classes as fakes.
+            </param>
+            <returns>
+              An newly created fake implementing <typeparamref name = "TInterfaceType" />.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.WithFakes`1.Some``1">
+            <summary>
+              Creates a list containing 3 fake instances of the type specified
+              via <typeparamref name="TInterfaceType"/>.
+            </summary>
+            <typeparam name="TInterfaceType">Specifies the item type of the list. This should be an interface or an abstract class.</typeparam>
+            <returns>An <see cref="T:System.Collections.Generic.IList`1"/>.</returns>
+        </member>
+        <member name="M:Machine.Fakes.WithFakes`1.Some``1(System.Int32)">
+            <summary>
+            Creates a list of fakes.
+            </summary>
+            <typeparam name="TInterfaceType">
+            Specifies the item type of the list. This should be an interface or an abstract class.
+            </typeparam>
+            <param name="amount">
+            Specifies the amount of fakes that have to be created and inserted into the list.
+            </param>
+            <returns>
+            An <see cref="T:System.Collections.Generic.IList`1"/>.
+            </returns>
+        </member>
+        <member name="T:Machine.Fakes.FakeApi">
+            <summary>
+              A set of extension methods for setting up behavior on fakes in a fashion independent
+              of a particular fake framework.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.FakeApi.WhenToldTo``2(``0,System.Linq.Expressions.Expression{System.Func{``0,``1}})">
+            <summary>
+              Configures the behavior of the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">
+              Specifies the type of the fake.
+            </typeparam>
+            <typeparam name="TReturnValue">
+              Specifies the type of the return value.
+            </typeparam>
+            <param name="fake">
+              The fake to configure behavior on.
+            </param>
+            <param name="func">
+              Configures the behavior. This must be a void method.
+            </param>
+            <returns>
+              A <see cref="T:Machine.Fakes.IQueryOptions`1"/> for further configuration.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.FakeApi.WhenToldTo``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+              Configures the behavior of the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">
+              Specifies the type of the fake.
+            </typeparam>
+            <param name="fake">
+              The fake to configure behavior on.
+            </param>
+            <param name="func">
+              Configures the behavior. This must be a void method.
+            </param>
+            <returns>
+              A <see cref="T:Machine.Fakes.ICommandOptions"/> for further configuration.
+            </returns>
+            <remarks>
+              This method is used for command, e.g. methods returning void.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.FakeApi.WasNotToldTo``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+            Verifies that the behavior specified by <paramref name="func"/>
+            was not executed on the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">
+            Specifies the type of the fake.
+            </typeparam>
+            <param name="fake">
+            Specifies the fake instance.
+            </param>
+            <param name="func">
+            Specifies the behavior that was not supposed to happen.
+            </param>
+        </member>
+        <member name="M:Machine.Fakes.FakeApi.WasToldTo``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})">
+            <summary>
+            Verifies that the behavior specified by <paramref name="func"/>
+            was executed on the fake specified by <paramref name="fake"/>.
+            </summary>
+            <typeparam name="TFake">
+            Specifies the type of the fake.
+            </typeparam>
+            <param name="fake">
+            Specifies the fake instance.
+            </param>
+            <param name="func">
+            Specifies the behavior that was supposed to happen.
+            </param>
+            <returns>
+            A <see cref="T:Machine.Fakes.IMethodCallOccurrence"/> which can be used
+            to narrow down the expectations to a particular amount of times.
+            </returns>
+        </member>
+        <member name="T:Machine.Fakes.Internal.FakeEngineExtensions">
+            <summary>
+            A set of extension methods to simplify the strong typed fake creation
+            which is used at several places in the framework.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Internal.FakeEngineExtensions.Stub``1(Machine.Fakes.IFakeEngine,System.Object[])">
+            <summary>Gives strong typed access to the generic <see cref="M:Machine.Fakes.IFakeEngine.CreateFake(System.Type,System.Object[])"/> method.</summary>
+            <typeparam name="T">Specifies the type to stub e.g. to create a fake for.</typeparam>
+            <param name="fakeEngine">Specifies the <see cref="T:Machine.Fakes.IFakeEngine"/>.</param>
+            <param name="args">Constructor arguments for fake to create.</param>
+            <returns>A new fake for the type specified via <typeparamref name="T"/>.</returns>
+        </member>
+        <member name="T:Machine.Fakes.Sdk.Guard">
+            <summary>
+            Container class for (as it name implies) guard clauses.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.Guard.AgainstArgumentNull(System.Object,System.String)">
+            <summary>
+            Verifies that the argument supplied by <paramref name="argument"/>
+            is not <c>null</c>.
+            </summary>
+            <param name="argument">The object to be checked.</param>
+            <param name="argumentName">The name of the object that will be used when raising an <see cref="T:System.ArgumentException"/>.</param>
+            <exception cref="T:System.ArgumentException">
+            Thrown when <paramref name="argument"/> is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.Guard.AgainstNullOrEmptyString(System.String,System.String)">
+            <summary>
+            Verifies that the argument supplied by <paramref name="argument"/>
+            is neither <c>null</c> nor an empty <see cref="T:System.String"/>.
+            </summary>
+            <param name="argument">The object to be checked.</param>
+            <param name="argumentName">The name of the object that will be used when raising an <see cref="T:System.ArgumentException"/>.</param>
+            <exception cref="T:System.ArgumentException">
+            Thrown when <paramref name="argument"/> is <c>null</c> or an empty <see cref="T:System.String"/>.
+            </exception>
+        </member>
+        <member name="M:Machine.Fakes.Sdk.Guard.ArgumentAssignableTo(System.Type,System.Type)">
+            <summary>
+            Verifies that the type supplied by <paramref name="argument"/>
+            is assignable to the type specified by <paramref name="assignmentTargetType"/>.
+            </summary>
+            <param name="argument">The type to be checked.</param>
+            <param name="assignmentTargetType">The target type.</param>
+            <exception cref="T:System.ArgumentException">
+            Thrown when <paramref name="argument"/> is not assignable to <paramref name="assignmentTargetType"/>.
+            </exception>
+        </member>
+        <member name="T:Machine.Fakes.ICommandOptions">
+            <summary>
+              Defines a fake framework independent fluent interface for setting up behavior
+              for methods returning void (commands)
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.ICommandOptions.Callback(System.Action)">
+            <summary>
+              Configures that the function supplied by <paramref name = "callback" />
+              will be called when the method under configuration is called.
+            </summary>
+            <param name = "callback">
+              Specifies the function which is called when the method under configuration is called.
+            </param>
+            <remarks>
+              Use this overload when you're not interested in the parameters.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.ICommandOptions.Callback``1(System.Action{``0})">
+            <summary>
+              Configures that the function supplied by <paramref name = "callback" />
+              will be called when the method under configuration is called.
+            </summary>
+            <param name = "callback">
+              Specifies the function which is called when the method under configuration is called.
+            </param>
+            <remarks>
+              Use this for callbacks on methods with a single parameter.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.ICommandOptions.Callback``2(System.Action{``0,``1})">
+            <summary>
+              Configures that the function supplied by <paramref name = "callback" />
+              will be called when the method under configuration is called.
+            </summary>
+            <param name = "callback">
+              Specifies the function which is called when the method under configuration is called.
+            </param>
+            <remarks>
+              Use this for callbacks on methods with two parameters.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.ICommandOptions.Callback``3(System.Action{``0,``1,``2})">
+            <summary>
+              Configures that the function supplied by <paramref name = "callback" />
+              will be called when the method under configuration is called.
+            </summary>
+            <param name = "callback">
+              Specifies the function which is called when the method under configuration is called.
+            </param>
+            <remarks>
+              Use this for callbacks on methods with three parameters.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.ICommandOptions.Callback``4(System.Action{``0,``1,``2,``3})">
+            <summary>
+              Configures that the function supplied by <paramref name = "callback" />
+              will be called when the method under configuration is called.
+            </summary>
+            <param name = "callback">
+              Specifies the function which is called when the method under configuration is called.
+            </param>
+            <remarks>
+              Use this for callbacks on methods with four parameters.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.ICommandOptions.Throw(System.Exception)">
+            <summary>
+              Configures that the invocation of the related behavior
+              results in the specified <see cref="T:System.Exception"/> beeing thrown.
+            </summary>
+            <param name="exception">
+              Specifies the exception which should be thrown when the 
+              behavior is invoked.
+            </param>
+        </member>
+        <member name="T:Machine.Fakes.IMethodCallOccurrence">
+            <summary>
+            Interface for detail configuration used by <see cref="M:Machine.Fakes.FakeApi.WasToldTo``1(``0,System.Linq.Expressions.Expression{System.Action{``0}})"/>.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.IMethodCallOccurrence.Times(System.Int32)">
+            <summary>
+              Specifies that the behavior on the fake should be executed several times. <paramref name = "numberOfTimesTheMethodShouldHaveBeenCalled" />
+              specifies exactly how often.
+            </summary>
+            <param name = "numberOfTimesTheMethodShouldHaveBeenCalled">
+              The number of times the behavior should have been executed.
+            </param>
+        </member>
+        <member name="M:Machine.Fakes.IMethodCallOccurrence.OnlyOnce">
+            <summary>
+              Specifies that the behavior on the fake should only be executed once.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.IMethodCallOccurrence.Twice">
+            <summary>
+              Specifies that the behavior on the fake should be called twice.
+            </summary>
+        </member>
+        <member name="T:Machine.Fakes.IQueryOptions`1">
+            <summary>
+              Defines a fake framework independent fluent interface for setting up behavior
+              for methods returning a result (queries).
+            </summary>
+            <typeparam name = "TReturn">
+              Specifies the return value of the behavior under configuration.
+            </typeparam>
+        </member>
+        <member name="M:Machine.Fakes.IQueryOptions`1.Return(`0)">
+            <summary>
+              Sets up the return value of a behavior.
+            </summary>
+            <param name = "returnValue">
+              Specifies the return value.
+            </param>
+        </member>
+        <member name="M:Machine.Fakes.IQueryOptions`1.Return(System.Func{`0})">
+            <summary>
+              Configures that the function supplied by <paramref name = "valueFunction" />
+              will be used to evaluate the result value of a behavior.
+            </summary>
+            <param name = "valueFunction">
+              Specifies the function which is called when the method is called.
+            </param>
+            <remarks>
+              Use this for configuring parameterless methods.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.IQueryOptions`1.Return``1(System.Func{``0,`0})">
+            <summary>
+              Configures that the function supplied by <paramref name = "valueFunction" />
+              will be used to evaluate the result value of a behavior.
+            </summary>
+            <param name = "valueFunction">
+              Specifies the function which is called when the method is called.
+            </param>
+            <remarks>
+              Use this for configuring methods with a single parameter.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.IQueryOptions`1.Return``2(System.Func{``0,``1,`0})">
+            <summary>
+              Configures that the function supplied by <paramref name = "valueFunction" />
+              will be used to evaluate the result value of a behavior.
+            </summary>
+            <param name = "valueFunction">
+              Specifies the function which is called when the method is called.
+            </param>
+            <remarks>
+              Use this for configuring methods with two parameters.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.IQueryOptions`1.Return``3(System.Func{``0,``1,``2,`0})">
+            <summary>
+              Configures that the function supplied by <paramref name = "valueFunction" />
+              will be used to evaluate the result value of a behavior.
+            </summary>
+            <param name = "valueFunction">
+              Specifies the function which is called when the method is called.
+            </param>
+            <remarks>
+              Use this for configuring methods with three parameters.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.IQueryOptions`1.Return``4(System.Func{``0,``1,``2,``3,`0})">
+            <summary>
+              Configures that the function supplied by <paramref name = "valueFunction" />
+              will be used to evaluate the result value of a behavior.
+            </summary>
+            <param name = "valueFunction">
+              Specifies the function which is called when the method is called.
+            </param>
+            <remarks>
+              Use this for configuring methods with four parameters.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.IQueryOptions`1.Throw(System.Exception)">
+            <summary>
+              Configures that the invocation of the related behavior
+              results in the specified <see cref="T:System.Exception"/> beeing thrown.
+            </summary>
+            <param name="exception">
+              Specifies the exception which should be thrown when the 
+              behavior is invoked.
+            </param>
+        </member>
+        <member name="T:Machine.Fakes.WithSubject`2">
+            <summary>
+            Base class that adds auto mocking (grasp), I mean auto faking capabilities
+            to Machine.Specifications. 
+            </summary>
+            <typeparam name="TSubject">
+            The subject for the specification. This is the type that is created by the
+            specification for you.
+            </typeparam>
+            <typeparam name="TFakeEngine">
+            Specifies the concrete fake engine that will be used for creating fake instances.
+            This must be a class with a parameterless constructor that implements <see cref="T:Machine.Fakes.IFakeEngine"/>.
+            </typeparam>
+        </member>
+        <member name="F:Machine.Fakes.WithSubject`2._specificationController">
+            <summary>
+            The specification controller
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.#ctor">
+            <summary>
+            Creates a new instance of the <see cref="T:Machine.Fakes.WithSubject`2"/> class.
+            </summary>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.The``1">
+            <summary>
+              Creates a fake of the type specified by <typeparamref name = "TInterfaceType" />.
+              This method reuses existing instances. If an instance of <typeparamref name = "TInterfaceType" />
+              was already requested it's returned here. (You can say this is kind of a singleton behavior)
+              Besides that, you can obtain a reference to automatically injected fakes with this
+              method.
+            </summary>
+            <typeparam name = "TInterfaceType">The type to create a fake for. (Should be an interface or an abstract class)</typeparam>
+            <returns>
+              An instance implementing <typeparamref name="TInterfaceType" />.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.An``1(System.Object[])">
+            <summary>
+              Creates a fake of the type specified by <typeparamref name = "TInterfaceType" />.
+            </summary>
+            <typeparam name = "TInterfaceType">The type to create a fake for. (Should be an interface or an abstract class)</typeparam>
+            <param name="args">
+             Optional constructor parameters for abstract base classes as fakes.
+            </param>
+            <returns>
+              An newly created fake implementing <typeparamref name = "TInterfaceType" />.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.Some``1">
+            <summary>
+              Creates a list containing 3 fake instances of the type specified
+              via <typeparamref name="TInterfaceType"/>.
+            </summary>
+            <typeparam name="TInterfaceType">Specifies the item type of the list. This should be an interface or an abstract class.</typeparam>
+            <returns>An <see cref="T:System.Collections.Generic.IList`1"/>.</returns>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.Some``1(System.Int32)">
+            <summary>
+            Creates a list of fakes.
+            </summary>
+            <typeparam name="TInterfaceType">
+            Specifies the item type of the list. This should be an interface or an abstract class.
+            </typeparam>
+            <param name="amount">
+            Specifies the amount of fakes that have to be created and inserted into the list.
+            </param>
+            <returns>
+            An <see cref="T:System.Collections.Generic.IList`1"/>.
+            </returns>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.Configure``1(``0)">
+            <summary>
+                Uses the instance supplied by <paramref name = "instance" /> during the
+                build process of the subject. The specified instance will be injected into the constructor.
+            </summary>
+            <typeparam name = "TInterfaceType">Specifies the interface type.</typeparam>
+            <param name = "instance">Specifies the instance to be used for the specification.</param>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.Configure``2">
+            <summary>
+            Registered the type specified via <typeparamref name="TImplementationType"/> as the default type
+            for the interface specified via <typeparamref name="TInterfaceType"/>. With this the type gets automatically
+            build when the subject is resolved.
+            </summary>
+            <typeparam name="TInterfaceType">
+            Specifies the interface type.
+            </typeparam>
+            <typeparam name="TImplementationType">
+            Specifies the implementation type.
+            </typeparam>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.Configure(Machine.Fakes.Registrar)">
+            <summary>
+            Applies the configuration embedded in the registar to the underlying container.
+            </summary>
+            <param name="registrar">
+            Specifies the registrar.
+            </param>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when the supplied registrar is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.Configure``1">
+            <summary>
+            Applies the configuration embedded in the registar to the underlying container.
+            Shortcut for <see cref="M:Machine.Fakes.WithSubject`2.Configure(Machine.Fakes.Registrar)"/> so that you don't have to create the 
+            registrar manually.
+            </summary>
+            <typeparam name="TRegistrar">The registrar type.</typeparam>
+            <returns>The registrar.</returns>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.Configure(System.Action{Machine.Fakes.Registrar})">
+            <summary>
+            Shortcut for <see cref="M:Machine.Fakes.WithSubject`2.Configure(Machine.Fakes.Registrar)"/>. This one will create
+            a registrar for you and allow configuration via the delegate passed
+            in via <paramref name="registrarExpression"/>.
+            </summary>
+            <param name="registrarExpression">
+            Specifies the configuration for the registrar.
+            </param>
+            <exception cref="T:System.ArgumentNullException">
+            Thrown when the supplied registrar is <c>null</c>.
+            </exception>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.With``1">
+            <summary>
+            Configures the specification to execute a behavior config before the action on the subject
+            is executed (<see cref="T:Machine.Specifications.Because"/>).
+            </summary>
+            <typeparam name="TBehaviorConfig">Specifies the type of the config to be executed.</typeparam>
+            <returns>The behavior config instance.</returns>
+            <remarks>
+            The class specified by <typeparamref name="TBehaviorConfig"/>
+            needs to have private fields assigned with either <see cref="T:Machine.Fakes.OnEstablish"/>
+            or <see cref="T:Machine.Fakes.OnCleanup"/> delegates.
+            </remarks>
+        </member>
+        <member name="M:Machine.Fakes.WithSubject`2.With(System.Object)">
+            <summary>
+              Configures the specification to execute the behavior config specified
+              by <paramref name="behaviorConfig"/> before the action on the sut is executed (<see cref="T:Machine.Specifications.Because"/>).
+            </summary>
+            <param name="behaviorConfig">
+              Specifies the behavior config to be executed.
+            </param>
+            <remarks>
+            The object specified by <see paramref="behaviorConfig"/>
+            needs to have private fields assigned with either <see cref="T:Machine.Fakes.OnEstablish"/>
+            or <see cref="T:Machine.Fakes.OnCleanup"/> delegates.
+            </remarks>
+        </member>
+        <member name="P:Machine.Fakes.WithSubject`2.Subject">
+            <summary>
+            Gives access to the subject under specification. On first access
+            the spec tries to create an instance of the subject type by itself.
+            Override this behavior by manually setting a subject instance.
+            </summary>
+        </member>
+    </members>
+</doc>
