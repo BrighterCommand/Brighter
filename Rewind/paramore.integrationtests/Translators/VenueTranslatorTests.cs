@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Xml;
+using System.Xml.Serialization;
 using Machine.Specifications;
 using Paramore.Adapters.Infrastructure.Repositories;
 using Paramore.Adapters.Presentation.API.Resources;
@@ -33,8 +34,8 @@ namespace paramore.integrationtests.Translators
 
         Because of = () => resource = venueTranslator.Translate(document);
 
-        It should_set_the_self_uri = () => resource.Self.ToString().ShouldEqual(string.Format("<link rel='self' href='//{0}/venue/{1}'>", ParamoreGlobals.HostName, document.Id));
-        It should_set_the_map_link = () => resource.Map.ToString().ShouldEqual(string.Format("<link rel='map' href='{0}'>", document.VenueMap));
+        It should_set_the_self_uri = () => resource[ParamoreGlobals.Self].ToString().ShouldEqual(string.Format("<link rel='self' href='//{0}/venue/{1}'>", ParamoreGlobals.HostName, document.Id));
+        It should_set_the_map_link = () => resource[ParamoreGlobals.Map].ToString().ShouldEqual(string.Format("<link rel='map' href='{0}'>", document.VenueMap));
         It should_set_the_version = () => resource.Version.ShouldEqual(document.Version);
         It should_set_the_venue_name = () => resource.Name.ShouldEqual(document.VenueName);
         It should_set_the_address = () => resource.Address.ShouldEqual(document.Address);
@@ -45,14 +46,13 @@ namespace paramore.integrationtests.Translators
     [Subject("Check that we serialize to the expected xml")]
     public class When_serializing_a_resource_to_xml
     {
-        private static DataContractSerializer serializer;
+        private static XmlSerializer serializer;
         private static StringWriter stringwriter;
         private static VenueResource resource;
         private static string response;
 
         Establish context = () =>
             {
-                serializer = new DataContractSerializer(typeof(VenueResource));
                 stringwriter = new StringWriter();
                 resource = new VenueResource(
                     id: Guid.NewGuid(),
@@ -62,13 +62,14 @@ namespace paramore.integrationtests.Translators
                     mapURN: "http://www.mysite.com/maps/12345",
                     contact: "ContactName: Ian, EmailAddress: ian@huddle.com, PhoneNumber: 123454678"
                 );
+                serializer = new XmlSerializer(typeof(VenueResource));
             };
 
         Because of = () =>
             {
                 using (var writer = new XmlTextWriter(stringwriter) { Formatting = Formatting.Indented })
                 {
-                    serializer.WriteObject(writer, resource);
+                    serializer.Serialize(writer, resource);
                 }
                 response =  stringwriter.GetStringBuilder().ToString();
             };
