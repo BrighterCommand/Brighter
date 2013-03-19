@@ -23,7 +23,7 @@ namespace Paramore.Adapters.Presentation.API
                     .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
 
 
-                ResourceSpace.Has.ResourcesOfType<List<VenueDocument>>()
+                ResourceSpace.Has.ResourcesOfType<List<VenueResource>>()
                     .AtUri("/venues")
                     .HandledBy<VenueEndPointHandler>()
                     .AsXmlDataContract().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
