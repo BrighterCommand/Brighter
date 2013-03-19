@@ -1,0 +1,33 @@
+using System;
+using System.Runtime.Serialization;
+using System.Xml.Serialization;
+using Paramore.Adapters.Presentation.API.Translators;
+
+namespace Paramore.Adapters.Presentation.API.Resources
+{
+    [DataContract, XmlType("Link")]
+    public class Link
+    {
+        public Link(string relName, string resourceName, string id)
+        {
+            this.Rel = relName;
+            this.HRef = string.Format("//{0}/{1}/{2}", ParamoreGlobals.HostName, resourceName, id);
+        }
+
+        public Link(string relName, string href)
+        {
+            this.Rel = relName;
+            this.HRef = href;
+        }
+
+        [DataMember, XmlAttribute("href")]
+        public string Rel { get; private set; }
+        [DataMember, XmlAttribute("rel")]
+        public string HRef { get; private set; }
+
+        public override string ToString()
+        {
+            return string.Format("<link rel='{0}' href='{1}'>", Rel, HRef);
+        }
+    }
+}
