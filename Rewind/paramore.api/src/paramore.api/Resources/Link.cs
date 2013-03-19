@@ -5,7 +5,7 @@ using Paramore.Adapters.Presentation.API.Translators;
 
 namespace Paramore.Adapters.Presentation.API.Resources
 {
-    [DataContract, XmlType("Link")]
+    [XmlType("Link")]
     public class Link
     {
         public Link(string relName, string resourceName, string id)
@@ -20,10 +20,15 @@ namespace Paramore.Adapters.Presentation.API.Resources
             this.HRef = href;
         }
 
-        [DataMember, XmlAttribute("href")]
-        public string Rel { get; private set; }
-        [DataMember, XmlAttribute("rel")]
-        public string HRef { get; private set; }
+        public Link()
+        {
+            //Required for serialiazation
+        }
+
+        [XmlAttribute("href")]
+        public string Rel { get; set; }
+        [XmlAttribute("rel")]
+        public string HRef { get; set; }
 
         public override string ToString()
         {
