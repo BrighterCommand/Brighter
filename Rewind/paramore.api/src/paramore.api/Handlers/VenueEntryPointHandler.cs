@@ -24,7 +24,7 @@ namespace Paramore.Adapters.Presentation.API.Handlers
         public OperationResult Get()
         {
             //var venues = new VenueReader(_unitOfWorkFactory, false).GetAll().ToList();
-            var venues = VenueDocuments();
+            var venues = Venues();
 
             return new OperationResult.OK
                     {
@@ -33,7 +33,7 @@ namespace Paramore.Adapters.Presentation.API.Handlers
         }
 
         //DEBUG method to get results without hitting Db
-        private List<VenueResource> VenueDocuments()
+        private List<VenueResource> Venues()
         {
             var venues = new List<VenueResource>
                 {
