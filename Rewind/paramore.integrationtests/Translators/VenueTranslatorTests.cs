@@ -74,6 +74,6 @@ namespace paramore.integrationtests.Translators
             };
 
         It should_format_the_self_uri_as_expected = () => response.ShouldContain(string.Format("<link rel=\"self\" href=\"//{0}/venue/{1}\" />", ParamoreGlobals.HostName, resource.Id));
-
+        It should_format_the_map_uri_as_expected = () => response.ShouldContain(string.Format("<link rel=\"map\" href=\"{0}\" />", ParamoreGlobals.HostName, resource.MapURN));
     }
 }
