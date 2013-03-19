@@ -23,6 +23,7 @@ namespace Paramore.Adapters.Presentation.API.Resources
         public VenueResource(Guid id, int version, string name, string address, string mapURN, string contact)
         {
             Id = id;
+            MapURN = mapURN;
             self = new Link(relName: ParamoreGlobals.Self, resourceName: "venue", id: id.ToString());
             map = new Link(relName: ParamoreGlobals.Map, href: mapURN);
             Links = new List<Link>{self, map};
@@ -35,6 +36,8 @@ namespace Paramore.Adapters.Presentation.API.Resources
 
         [XmlIgnore]
         public Guid Id { get; set; }
+        [XmlIgnore]
+        public string MapURN { get; set; }
         [XmlElement(ElementName = "name")]
         public string Name { get; set; }
         [XmlElement(ElementName = "address")]
@@ -45,6 +48,7 @@ namespace Paramore.Adapters.Presentation.API.Resources
         public int Version { get; set; }
         [XmlArray(ElementName = "links")]
         public List<Link> Links { get; set; }
+
 
 
         public Link this[string linkName]
