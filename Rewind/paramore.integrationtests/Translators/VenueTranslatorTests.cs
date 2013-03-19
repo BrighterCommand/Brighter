@@ -8,7 +8,6 @@ using Paramore.Adapters.Presentation.API.Resources;
 using Paramore.Adapters.Presentation.API.Translators;
 using Paramore.Domain.Common;
 using Paramore.Domain.Venues;
-using System.Runtime.Serialization;
 using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
 
 namespace paramore.integrationtests.Translators
@@ -34,8 +33,8 @@ namespace paramore.integrationtests.Translators
 
         Because of = () => resource = venueTranslator.Translate(document);
 
-        It should_set_the_self_uri = () => resource[ParamoreGlobals.Self].ToString().ShouldEqual(string.Format("<link rel='self' href='//{0}/venue/{1}'>", ParamoreGlobals.HostName, document.Id));
-        It should_set_the_map_link = () => resource[ParamoreGlobals.Map].ToString().ShouldEqual(string.Format("<link rel='map' href='{0}'>", document.VenueMap));
+        It should_set_the_self_uri = () => resource[ParamoreGlobals.Self].ToString().ShouldEqual(string.Format("<link rel=\"self\" href=\"//{0}/venue/{1}\" />", ParamoreGlobals.HostName, document.Id));
+        It should_set_the_map_link = () => resource[ParamoreGlobals.Map].ToString().ShouldEqual(string.Format("<link rel=\"map\" href=\"{0}\" />", document.VenueMap));
         It should_set_the_version = () => resource.Version.ShouldEqual(document.Version);
         It should_set_the_venue_name = () => resource.Name.ShouldEqual(document.VenueName);
         It should_set_the_address = () => resource.Address.ShouldEqual(document.Address);
@@ -74,7 +73,7 @@ namespace paramore.integrationtests.Translators
                 response =  stringwriter.GetStringBuilder().ToString();
             };
 
-        It should_format_the_self_uri_as_expected = () => { };
+        It should_format_the_self_uri_as_expected = () => response.ShouldContain(string.Format("<link rel=\"self\" href=\"//{0}/venue/{1}\" />", ParamoreGlobals.HostName, resource.Id));
 
     }
 }
