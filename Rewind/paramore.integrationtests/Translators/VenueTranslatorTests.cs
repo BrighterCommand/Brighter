@@ -74,6 +74,10 @@ namespace paramore.integrationtests.Translators
             };
 
         It should_format_the_self_uri_as_expected = () => response.ShouldContain(string.Format("<link rel=\"self\" href=\"//{0}/venue/{1}\" />", ParamoreGlobals.HostName, resource.Id));
-        It should_format_the_map_uri_as_expected = () => response.ShouldContain(string.Format("<link rel=\"map\" href=\"{0}\" />", ParamoreGlobals.HostName, resource.MapURN));
+        It should_format_the_map_uri_as_expected = () => response.ShouldContain(string.Format("<link rel=\"map\" href=\"{0}\" />", resource.MapURN));
+        It should_format_the_venue_name_as_expected = () => response.ShouldContain(string.Format("<name>{0}</name>", resource.Name));
+        It should_format_the_address_as_expected = () => response.ShouldContain(string.Format("<address>{0}</address>", resource.Address));
+        It should_format_the_contact_as_expected = () => response.ShouldContain(string.Format("<contact>{0}</contact>", resource.Contact));
+        It should_format_the_version_as_expected = () => response.ShouldContain(string.Format("<version>{0}</version>", resource.Version)); 
     }
 }
