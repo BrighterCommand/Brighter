@@ -5,7 +5,7 @@
     {
         static ParamoreGlobals()
         {
-            HostName = "localhost: xxxxx";
+            HostName = "localhost:59280";
             Self = "self";
             Map = "map";
         }
