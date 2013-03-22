@@ -17,7 +17,7 @@ namespace Paramore.Adapters.Presentation.API
                 ResourceSpace.Uses.PipelineContributor<DependencyPipelineContributor>();
 
                 //Resources
-                ResourceSpace.Has.ResourcesOfType<EntryPoint>()
+                ResourceSpace.Has.ResourcesOfType<EntryPointResource>()
                     .AtUri("/entrypoint")
                     .HandledBy<EntryPointHandler>()
                    .AsXmlDataContract().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
