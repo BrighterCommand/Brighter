@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using OpenRasta.Codecs;
 using OpenRasta.Configuration;
 using Paramore.Adapters.Presentation.API.Contributors;
 using Paramore.Adapters.Presentation.API.Handlers;
@@ -16,7 +17,7 @@ namespace Paramore.Adapters.Presentation.API
                 ResourceSpace.Uses.PipelineContributor<DependencyPipelineContributor>();
 
                 //Resources
-                ResourceSpace.Has.ResourcesOfType<EntryPoint>()
+                ResourceSpace.Has.ResourcesOfType<EntryPointResource>()
                     .AtUri("/entrypoint")
                     .HandledBy<EntryPointHandler>()
                    .AsXmlDataContract().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
@@ -26,7 +27,7 @@ namespace Paramore.Adapters.Presentation.API
                 ResourceSpace.Has.ResourcesOfType<List<VenueResource>>()
                     .AtUri("/venues")
                     .HandledBy<VenueEndPointHandler>()
-                    .AsXmlDataContract().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
+                    .TranscodedBy<XmlSerializerCodec>().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
                     .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
 
             }

@@ -1,13 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Xml;
+using System.Xml.Serialization;
 using Machine.Specifications;
 using Paramore.Adapters.Infrastructure.Repositories;
 using Paramore.Adapters.Presentation.API.Resources;
 using Paramore.Adapters.Presentation.API.Translators;
 using Paramore.Domain.Common;
 using Paramore.Domain.Venues;
-using System.Runtime.Serialization;
 using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
 
 namespace paramore.integrationtests.Translators
@@ -33,8 +33,8 @@ namespace paramore.integrationtests.Translators
 
         Because of = () => resource = venueTranslator.Translate(document);
 
-        It should_set_the_self_uri = () => resource.Self.ToString().ShouldEqual(string.Format("<link rel='self' href='//{0}/venue/{1}'>", ParamoreGlobals.HostName, document.Id));
-        It should_set_the_map_link = () => resource.Map.ToString().ShouldEqual(string.Format("<link rel='map' href='{0}'>", document.VenueMap));
+        It should_set_the_self_uri = () => resource[ParamoreGlobals.Self].ToString().ShouldEqual(string.Format("<link rel=\"self\" href=\"//{0}/venue/{1}\" />", ParamoreGlobals.HostName, document.Id));
+        It should_set_the_map_link = () => resource[ParamoreGlobals.Map].ToString().ShouldEqual(string.Format("<link rel=\"map\" href=\"{0}\" />", document.VenueMap));
         It should_set_the_version = () => resource.Version.ShouldEqual(document.Version);
         It should_set_the_venue_name = () => resource.Name.ShouldEqual(document.VenueName);
         It should_set_the_address = () => resource.Address.ShouldEqual(document.Address);
@@ -45,14 +45,13 @@ namespace paramore.integrationtests.Translators
     [Subject("Check that we serialize to the expected xml")]
     public class When_serializing_a_resource_to_xml
     {
-        private static DataContractSerializer serializer;
+        private static XmlSerializer serializer;
         private static StringWriter stringwriter;
         private static VenueResource resource;
         private static string response;
 
         Establish context = () =>
             {
-                serializer = new DataContractSerializer(typeof(VenueResource));
                 stringwriter = new StringWriter();
                 resource = new VenueResource(
                     id: Guid.NewGuid(),
@@ -62,18 +61,23 @@ namespace paramore.integrationtests.Translators
                     mapURN: "http://www.mysite.com/maps/12345",
                     contact: "ContactName: Ian, EmailAddress: ian@huddle.com, PhoneNumber: 123454678"
                 );
+                serializer = new XmlSerializer(typeof(VenueResource));
             };
 
         Because of = () =>
             {
                 using (var writer = new XmlTextWriter(stringwriter) { Formatting = Formatting.Indented })
                 {
-                    serializer.WriteObject(writer, resource);
+                    serializer.Serialize(writer, resource);
                 }
                 response =  stringwriter.GetStringBuilder().ToString();
             };
 
-        It should_format_the_self_uri_as_expected = () => { };
-
+        It should_format_the_self_uri_as_expected = () => response.ShouldContain(string.Format("<link rel=\"self\" href=\"//{0}/venue/{1}\" />", ParamoreGlobals.HostName, resource.Id));
+        It should_format_the_map_uri_as_expected = () => response.ShouldContain(string.Format("<link rel=\"map\" href=\"{0}\" />", resource.MapURN));
+        It should_format_the_venue_name_as_expected = () => response.ShouldContain(string.Format("<name>{0}</name>", resource.Name));
+        It should_format_the_address_as_expected = () => response.ShouldContain(string.Format("<address>{0}</address>", resource.Address));
+        It should_format_the_contact_as_expected = () => response.ShouldContain(string.Format("<contact>{0}</contact>", resource.Contact));
+        It should_format_the_version_as_expected = () => response.ShouldContain(string.Format("<version>{0}</version>", resource.Version)); 
     }
 }
