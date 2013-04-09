@@ -53,6 +53,10 @@
     <Reference Include="OpenRasta.Hosting.AspNet">
       <HintPath>..\..\..\Lib\openrasta-hosting-aspnet-2.1.1+151058209\bin-net35\OpenRasta.Hosting.AspNet.dll</HintPath>
     </Reference>
+    <Reference Include="paramore.commandprocessor, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\bin\paramore.commandprocessor\paramore.commandprocessor.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />

@@ -5,6 +5,7 @@ using Paramore.Adapters.Presentation.API.Contributors;
 using Paramore.Adapters.Presentation.API.Handlers;
 using Paramore.Adapters.Presentation.API.Resources;
 using Paramore.Domain.Venues;
+using Paramore.Ports.Services.Commands.Venue;
 
 namespace Paramore.Adapters.Presentation.API
 {
@@ -24,11 +25,20 @@ namespace Paramore.Adapters.Presentation.API
                     .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
 
 
+                //GET /venues 
                 ResourceSpace.Has.ResourcesOfType<List<VenueResource>>()
                     .AtUri("/venues")
                     .HandledBy<VenueEndPointHandler>()
                     .TranscodedBy<XmlSerializerCodec>().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
                     .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
+
+                //PUT /venues/{id}
+                ResourceSpace.Has.ResourcesOfType<VenueResource>()
+                    .AtUri("/venues/add")
+                    .HandledBy<VenueEndPointHandler>()
+                    .TranscodedBy<XmlSerializerCodec>().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
+                    .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
+
 
             }
         }
