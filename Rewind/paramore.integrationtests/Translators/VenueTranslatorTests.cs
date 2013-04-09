@@ -15,9 +15,9 @@ namespace paramore.integrationtests.Translators
     [Subject("Check that we can get the venue list out of the thin read layer")]
     public class When_changing_a_document_to_a_resource
     {
-        private static readonly VenueTranslator venueTranslator = new VenueTranslator();
-        private static VenueDocument document;
-        private static VenueResource resource;
+        static readonly VenueTranslator venueTranslator = new VenueTranslator();
+        static VenueDocument document;
+        static VenueResource resource;
 
         Establish context = () =>
             {
@@ -45,10 +45,10 @@ namespace paramore.integrationtests.Translators
     [Subject("Check that we serialize to the expected xml")]
     public class When_serializing_a_resource_to_xml
     {
-        private static XmlSerializer serializer;
-        private static StringWriter stringwriter;
-        private static VenueResource resource;
-        private static string response;
+        static XmlSerializer serializer;
+        static StringWriter stringwriter;
+        static VenueResource resource;
+        static string response;
 
         Establish context = () =>
             {
