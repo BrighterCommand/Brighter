@@ -45,15 +45,9 @@ namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Meetings
         Because of = () => scheduleMeetingCommandHandler.Handle(command: newMeetingRequest);
 
         It should_add_a_meeting_to_the_repository = () => A.CallTo(() => repository.Add(A<Meeting>.Ignored)).MustHaveHappened();
-
-        It should_ask_the_factory_to_create_an_instance_of_a_Meeting = () => 
-            A.CallTo(() => scheduler.Schedule(new Id(id), new MeetingDate(@on), new Id(location), new Id(speaker), new Capacity(capacity))).MustHaveHappened();
-
-        It should_ask_the_session_factory_for_a_unit_of_work =
-            () => A.CallTo(() => uoWFactory.CreateUnitOfWork()).MustHaveHappened();
-
-        It should_commit_the_unit_of_work =
-            () => A.CallTo(() => uow.Commit()).MustHaveHappened();
+        It should_ask_the_factory_to_create_an_instance_of_a_Meeting = () =>  A.CallTo(() => scheduler.Schedule(new Id(id), new MeetingDate(@on), new Id(location), new Id(speaker), new Capacity(capacity))).MustHaveHappened();
+        It should_ask_the_session_factory_for_a_unit_of_work = () => A.CallTo(() => uoWFactory.CreateUnitOfWork()).MustHaveHappened();
+        It should_commit_the_unit_of_work = () => A.CallTo(() => uow.Commit()).MustHaveHappened();
 
     }
 }

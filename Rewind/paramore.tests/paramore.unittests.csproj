@@ -68,6 +68,7 @@
     <Compile Include="domain\Venues\VenueParsingTests.cs" />
     <Compile Include="services\CommandHandlers\Meetings\ScheduleMeetingCommandHandlerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="services\CommandHandlers\Venues\AddVenueCommandHandlerTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

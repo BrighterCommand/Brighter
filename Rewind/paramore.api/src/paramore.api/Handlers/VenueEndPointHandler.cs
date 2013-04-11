@@ -7,6 +7,7 @@ using Paramore.Adapters.Infrastructure.Repositories;
 using Paramore.Adapters.Presentation.API.Resources;
 using Paramore.Domain.Common;
 using Paramore.Domain.Venues;
+using Paramore.Ports.Services.Commands.Venue;
 using Paramore.Ports.Services.ThinReadLayer;
 using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
 
@@ -30,6 +31,18 @@ namespace Paramore.Adapters.Presentation.API.Handlers
                     {
                         ResponseResource = venues
                     };
+        }
+
+        public OperationResult Post(VenueResource venueResource)
+        {
+            var venueCommand = new AddVenueCommand(
+                id: new Id(Guid.NewGuid()),
+                venueName: venueResource.Name,
+                address: venueResource.Address,
+                mapURN: venueResource.MapURN,
+                contact: venueResource.Contact);
+            
+            return new OperationResult.OK();
         }
 
         //DEBUG method to get results without hitting Db
