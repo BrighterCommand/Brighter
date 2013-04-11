@@ -3,7 +3,9 @@ using System.Diagnostics;
 
 namespace Paramore.Adapters.Infrastructure.Repositories
 {
-    public class Repository<T, TDocument> : IRepository<T, TDocument> where T : IAmAnAggregateRoot<TDocument>, new() where TDocument : IAmADocument
+    public class Repository<T, TDocument> : IRepository<T, TDocument> 
+        where T : IAmAnAggregateRoot<TDocument>, new() 
+        where TDocument : IAmADocument
     {
         public IUnitOfWork UnitOfWork { private get; set; }
 
