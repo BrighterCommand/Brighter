@@ -1,13 +1,28 @@
 using System;
+using Paramore.Domain.Venues;
 using paramore.commandprocessor;
+using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
 
 namespace Paramore.Ports.Services.Commands.Venue
 {
     public class AddVenueCommand : Command, IRequest
     {
-        public AddVenueCommand(Guid id) : base(id) {}
-        public AddVenueCommand():base(Guid.NewGuid()){}
+        //Required for serialization
+        public AddVenueCommand() : base(Guid.NewGuid()) {}
 
-        public string VenueName { get; set; }
+        public AddVenueCommand(Guid id, string venueName, string address, string mapURN, string contact) : base(id)
+        {
+            Address = Address.Parse(address);
+            VenueContact = VenueContact.Parse(contact);
+            VenueMap = new VenueMap(new Uri(mapURN));
+            VenueName = new VenueName(venueName);
+            Version = new Version(1);
+        }
+
+        protected Address Address { get; set; }
+        public Version Version { get; set; }
+        protected VenueContact VenueContact { get; set; }
+        protected VenueMap VenueMap { get; set; }
+        public VenueName VenueName { get; set; }
     }
 }
