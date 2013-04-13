@@ -19,10 +19,10 @@ namespace Paramore.Ports.Services.Commands.Venue
             Version = new Version(1);
         }
 
-        protected Address Address { get; set; }
+        public Address Address { get; set; }
         public Version Version { get; set; }
-        protected VenueContact VenueContact { get; set; }
-        protected VenueMap VenueMap { get; set; }
+        public VenueContact VenueContact { get; set; }
+        public VenueMap VenueMap { get; set; }
         public VenueName VenueName { get; set; }
     }
 }

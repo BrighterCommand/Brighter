@@ -23,10 +23,7 @@ namespace Paramore.Adapters.Tests.UnitTests.fakes
         {
             get
             {
-                foreach (var member in members.Where(member => member.Id == id))
-                {
-                    return member;
-                }
+                return  members.SingleOrDefault(member => member.Id == id);
             }
         }
 
@@ -37,6 +34,7 @@ namespace Paramore.Adapters.Tests.UnitTests.fakes
 
         public void Delete(T aggregate)
         {
+            members.RemoveAll(member => member.Id == aggregate.Id);
         }
 
         #endregion
