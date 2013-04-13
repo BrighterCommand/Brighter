@@ -69,14 +69,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="404.html" />
-    <Content Include="Content\bootstrap-responsive.css" />
-    <Content Include="Content\bootstrap-responsive.min.css" />
-    <Content Include="Content\bootstrap.css" />
-    <Content Include="Content\bootstrap.min.css" />
-    <Content Include="Content\images\glyphicons-halflings-white.png" />
-    <Content Include="Content\images\glyphicons-halflings.png" />
-    <Content Include="Content\main.css" />
-    <Content Include="Content\normalize.css" />
+    <Content Include="Content\css\main.css" />
+    <Content Include="Content\css\normalize.css" />
     <Content Include="Content\themes\base\images\animated-overlay.gif" />
     <Content Include="Content\themes\base\images\ui-bg_flat_0_aaaaaa_40x100.png" />
     <Content Include="Content\themes\base\images\ui-bg_flat_75_ffffff_40x100.png" />
@@ -142,40 +136,36 @@
     <Content Include="favicon.ico" />
     <Content Include="Global.asax" />
     <Content Include="humans.txt" />
-    <Content Include="index.html" />
     <Content Include="robots.txt" />
-    <None Include="Scripts\jquery-1.9.1.intellisense.js" />
-    <Content Include="Scripts\bootstrap.js" />
-    <Content Include="Scripts\bootstrap.min.js" />
-    <Content Include="Scripts\jquery-1.9.1.js" />
-    <Content Include="Scripts\jquery-1.9.1.min.js" />
-    <None Include="Scripts\jquery.validate-vsdoc.js" />
-    <Content Include="Scripts\jquery-ui-1.10.1.js" />
-    <Content Include="Scripts\jquery-ui-1.10.1.min.js" />
-    <Content Include="Scripts\jquery.unobtrusive-ajax.js" />
-    <Content Include="Scripts\jquery.unobtrusive-ajax.min.js" />
-    <Content Include="Scripts\jquery.validate.js" />
-    <Content Include="Scripts\jquery.validate.min.js" />
-    <Content Include="Scripts\jquery.validate.unobtrusive.js" />
-    <Content Include="Scripts\jquery.validate.unobtrusive.min.js" />
-    <Content Include="Scripts\knockout-2.2.1.debug.js" />
-    <Content Include="Scripts\knockout-2.2.1.js" />
+    <None Include="Scripts\lib\jquery-1.9.1.intellisense.js" />
+    <None Include="Scripts\lib\jquery.validate-vsdoc.js" />
+    <Content Include="Scripts\lib\jquery.validate.js" />
+    <Content Include="Scripts\lib\jquery.validate.min.js" />
+    <Content Include="Scripts\lib\bootstrap.js" />
+    <Content Include="Scripts\lib\bootstrap.min.js" />
+    <Content Include="Scripts\lib\jquery-1.9.1.js" />
+    <Content Include="Scripts\lib\jquery-1.9.1.min.js" />
+    <Content Include="Scripts\lib\jquery-ui-1.10.1.js" />
+    <Content Include="Scripts\lib\jquery-ui-1.10.1.min.js" />
+    <Content Include="Scripts\lib\jquery.unobtrusive-ajax.js" />
+    <Content Include="Scripts\lib\jquery.unobtrusive-ajax.min.js" />
+    <Content Include="Scripts\lib\jquery.validate.unobtrusive.js" />
+    <Content Include="Scripts\lib\jquery.validate.unobtrusive.min.js" />
+    <Content Include="Scripts\lib\knockout-2.2.1.debug.js" />
+    <Content Include="Scripts\lib\knockout-2.2.1.js" />
     <Content Include="Scripts\lib\jquery-1.9.0-vsdoc.js" />
     <Content Include="Scripts\lib\jquery-1.9.0.js" />
     <Content Include="Scripts\lib\jquery-1.9.0.min.js" />
     <Content Include="Scripts\lib\jquery-ui-1.10.0.js" />
     <Content Include="Scripts\lib\jquery-ui-1.10.0.min.js" />
-    <Content Include="Scripts\lib\jquery.validate-vsdoc.js" />
-    <Content Include="Scripts\lib\jquery.validate.js" />
-    <Content Include="Scripts\lib\jquery.validate.min.js" />
     <Content Include="Scripts\lib\jstd-scenario-adapter-config.js" />
     <Content Include="Scripts\lib\jstd-scenario-adapter.js" />
     <Content Include="Scripts\lib\knockout-2.1.0.js" />
-    <Content Include="Scripts\main.js" />
     <Content Include="Scripts\lib\modernizr-2.6.2.js" />
-    <Content Include="Scripts\plugins.js" />
-    <Content Include="Scripts\sammy-0.7.4.js" />
-    <Content Include="Scripts\sammy-0.7.4.min.js" />
+    <Content Include="Scripts\lib\sammy-0.7.4.js" />
+    <Content Include="Scripts\lib\sammy-0.7.4.min.js" />
+    <Content Include="Scripts\mocks\venuedata.js" />
+    <Content Include="Views\Venues.html" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
@@ -183,19 +173,17 @@
     <Content Include="Web.Release.config">
       <DependentUpon>Web.config</DependentUpon>
     </Content>
-    <Content Include="Scripts\_references.js" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
+    <Folder Include="Content\images\" />
     <Folder Include="Controllers\" />
     <Folder Include="Scripts\app\" />
-    <Folder Include="Views\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Scripts\jquery-1.9.1.min.map" />
     <None Include="Scripts\lib\jquery-1.9.0.min.map" />
   </ItemGroup>
   <PropertyGroup>

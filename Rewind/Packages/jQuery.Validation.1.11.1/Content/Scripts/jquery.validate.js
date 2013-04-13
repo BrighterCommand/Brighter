@@ -1,6 +1,13 @@
-/*! jQuery Validation Plugin - v1.11.0 - 2/4/2013
-* https://github.com/jzaefferer/jquery-validation
-* Copyright (c) 2013 Jörn Zaefferer; Licensed MIT */
+/*!
+ * jQuery Validation Plugin 1.11.1
+ *
+ * http://bassistance.de/jquery-plugins/jquery-plugin-validation/
+ * http://docs.jquery.com/Plugins/Validation
+ *
+ * Copyright 2013 Jörn Zaefferer
+ * Released under the MIT license:
+ *   http://www.opensource.org/licenses/mit-license.php
+ */
 
 (function($) {
 
@@ -38,6 +45,11 @@ $.extend($.fn, {
 				if ( $(event.target).hasClass("cancel") ) {
 					validator.cancelSubmit = true;
 				}
+
+				// allow suppressing validation by adding the html5 formnovalidate attribute to the submit button
+				if ( $(event.target).attr("formnovalidate") !== undefined ) {
+					validator.cancelSubmit = true;
+				}
 			});
 
 			// validate the form on submit
@@ -51,7 +63,7 @@ $.extend($.fn, {
 					if ( validator.settings.submitHandler ) {
 						if ( validator.submitButton ) {
 							// insert a hidden input as a replacement for the missing submit button
-							hidden = $("<input type='hidden'/>").attr("name", validator.submitButton.name).val(validator.submitButton.value).appendTo(validator.currentForm);
+							hidden = $("<input type='hidden'/>").attr("name", validator.submitButton.name).val( $(validator.submitButton).val() ).appendTo(validator.currentForm);
 						}
 						validator.settings.submitHandler.call( validator, validator.currentForm, event );
 						if ( validator.submitButton ) {
@@ -91,7 +103,7 @@ $.extend($.fn, {
 			var valid = true;
 			var validator = $(this[0].form).validate();
 			this.each(function() {
-				valid &= validator.element(this);
+				valid = valid && validator.element(this);
 			});
 			return valid;
 		}
@@ -117,6 +129,8 @@ $.extend($.fn, {
 			switch(command) {
 			case "add":
 				$.extend(existingRules, $.validator.normalizeRule(argument));
+				// remove messages from rules, but allow them to be set separetely
+				delete existingRules.messages;
 				staticRules[element.name] = existingRules;
 				if ( argument.messages ) {
 					settings.messages[element.name] = $.extend( settings.messages[element.name], argument.messages );
@@ -159,11 +173,11 @@ $.extend($.fn, {
 // Custom selectors
 $.extend($.expr[":"], {
 	// http://docs.jquery.com/Plugins/Validation/blank
-	blank: function( a ) { return !$.trim("" + a.value); },
+	blank: function( a ) { return !$.trim("" + $(a).val()); },
 	// http://docs.jquery.com/Plugins/Validation/filled
-	filled: function( a ) { return !!$.trim("" + a.value); },
+	filled: function( a ) { return !!$.trim("" + $(a).val()); },
 	// http://docs.jquery.com/Plugins/Validation/unchecked
-	unchecked: function( a ) { return !a.checked; }
+	unchecked: function( a ) { return !$(a).prop("checked"); }
 });
 
 // constructor for validator
@@ -553,7 +567,7 @@ $.extend($.validator, {
 					}
 				} catch(e) {
 					if ( this.settings.debug && window.console ) {
-						console.log( "Exception occured when checking element " + element.id + ", check the '" + rule.method + "' method.", e );
+						console.log( "Exception occurred when checking element " + element.id + ", check the '" + rule.method + "' method.", e );
 					}
 					throw e;
 				}
@@ -826,6 +840,7 @@ $.extend($.validator, {
 	attributeRules: function( element ) {
 		var rules = {};
 		var $element = $(element);
+		var type = $element[0].getAttribute("type");
 
 		for (var method in $.validator.methods) {
 			var value;
@@ -844,9 +859,17 @@ $.extend($.validator, {
 				value = $element.attr(method);
 			}
 
+			// convert the value to a number for number inputs, and for text for backwards compability
+			// allows type="date" and others to be compared as strings
+			if ( /min|max/.test( method ) && ( type === null || /number|range|text/.test( type ) ) ) {
+				value = Number(value);
+			}
+
 			if ( value ) {
 				rules[method] = value;
-			} else if ( $element[0].getAttribute("type") === method ) {
+			} else if ( type === method && type !== 'range' ) {
+				// exception: the jquery validate 'range' method
+				// does not test for the html5 'range' type
 				rules[method] = true;
 			}
 		}
@@ -917,7 +940,7 @@ $.extend($.validator, {
 				rules[this] = Number(rules[this]);
 			}
 		});
-		$.each(['rangelength'], function() {
+		$.each(['rangelength', 'range'], function() {
 			var parts;
 			if ( rules[this] ) {
 				if ( $.isArray(rules[this]) ) {
@@ -986,93 +1009,6 @@ $.extend($.validator, {
 			return $.trim(value).length > 0;
 		},
 
-		// http://docs.jquery.com/Plugins/Validation/Methods/remote
-		remote: function( value, element, param ) {
-			if ( this.optional(element) ) {
-				return "dependency-mismatch";
-			}
-
-			var previous = this.previousValue(element);
-			if (!this.settings.messages[element.name] ) {
-				this.settings.messages[element.name] = {};
-			}
-			previous.originalMessage = this.settings.messages[element.name].remote;
-			this.settings.messages[element.name].remote = previous.message;
-
-			param = typeof param === "string" && {url:param} || param;
-
-			if ( previous.old === value ) {
-				return previous.valid;
-			}
-
-			previous.old = value;
-			var validator = this;
-			this.startRequest(element);
-			var data = {};
-			data[element.name] = value;
-			$.ajax($.extend(true, {
-				url: param,
-				mode: "abort",
-				port: "validate" + element.name,
-				dataType: "json",
-				data: data,
-				success: function( response ) {
-					validator.settings.messages[element.name].remote = previous.originalMessage;
-					var valid = response === true || response === "true";
-					if ( valid ) {
-						var submitted = validator.formSubmitted;
-						validator.prepareElement(element);
-						validator.formSubmitted = submitted;
-						validator.successList.push(element);
-						delete validator.invalid[element.name];
-						validator.showErrors();
-					} else {
-						var errors = {};
-						var message = response || validator.defaultMessage( element, "remote" );
-						errors[element.name] = previous.message = $.isFunction(message) ? message(value) : message;
-						validator.invalid[element.name] = true;
-						validator.showErrors(errors);
-					}
-					previous.valid = valid;
-					validator.stopRequest(element, valid);
-				}
-			}, param));
-			return "pending";
-		},
-
-		// http://docs.jquery.com/Plugins/Validation/Methods/minlength
-		minlength: function( value, element, param ) {
-			var length = $.isArray( value ) ? value.length : this.getLength($.trim(value), element);
-			return this.optional(element) || length >= param;
-		},
-
-		// http://docs.jquery.com/Plugins/Validation/Methods/maxlength
-		maxlength: function( value, element, param ) {
-			var length = $.isArray( value ) ? value.length : this.getLength($.trim(value), element);
-			return this.optional(element) || length <= param;
-		},
-
-		// http://docs.jquery.com/Plugins/Validation/Methods/rangelength
-		rangelength: function( value, element, param ) {
-			var length = $.isArray( value ) ? value.length : this.getLength($.trim(value), element);
-			return this.optional(element) || ( length >= param[0] && length <= param[1] );
-		},
-
-		// http://docs.jquery.com/Plugins/Validation/Methods/min
-		min: function( value, element, param ) {
-			return this.optional(element) || value >= param;
-		},
-
-		// http://docs.jquery.com/Plugins/Validation/Methods/max
-		max: function( value, element, param ) {
-			return this.optional(element) || value <= param;
-		},
-
-		// http://docs.jquery.com/Plugins/Validation/Methods/range
-		range: function( value, element, param ) {
-			return this.optional(element) || ( value >= param[0] && value <= param[1] );
-		},
-
 		// http://docs.jquery.com/Plugins/Validation/Methods/email
 		email: function( value, element ) {
 			// contributed by Scott Gonzalez: http://projects.scottsplayground.com/email_address_validation/
@@ -1136,6 +1072,39 @@ $.extend($.validator, {
 			return (nCheck % 10) === 0;
 		},
 
+		// http://docs.jquery.com/Plugins/Validation/Methods/minlength
+		minlength: function( value, element, param ) {
+			var length = $.isArray( value ) ? value.length : this.getLength($.trim(value), element);
+			return this.optional(element) || length >= param;
+		},
+
+		// http://docs.jquery.com/Plugins/Validation/Methods/maxlength
+		maxlength: function( value, element, param ) {
+			var length = $.isArray( value ) ? value.length : this.getLength($.trim(value), element);
+			return this.optional(element) || length <= param;
+		},
+
+		// http://docs.jquery.com/Plugins/Validation/Methods/rangelength
+		rangelength: function( value, element, param ) {
+			var length = $.isArray( value ) ? value.length : this.getLength($.trim(value), element);
+			return this.optional(element) || ( length >= param[0] && length <= param[1] );
+		},
+
+		// http://docs.jquery.com/Plugins/Validation/Methods/min
+		min: function( value, element, param ) {
+			return this.optional(element) || value >= param;
+		},
+
+		// http://docs.jquery.com/Plugins/Validation/Methods/max
+		max: function( value, element, param ) {
+			return this.optional(element) || value <= param;
+		},
+
+		// http://docs.jquery.com/Plugins/Validation/Methods/range
+		range: function( value, element, param ) {
+			return this.optional(element) || ( value >= param[0] && value <= param[1] );
+		},
+
 		// http://docs.jquery.com/Plugins/Validation/Methods/equalTo
 		equalTo: function( value, element, param ) {
 			// bind to the blur event of the target in order to revalidate whenever the target field is updated
@@ -1147,6 +1116,60 @@ $.extend($.validator, {
 				});
 			}
 			return value === target.val();
+		},
+
+		// http://docs.jquery.com/Plugins/Validation/Methods/remote
+		remote: function( value, element, param ) {
+			if ( this.optional(element) ) {
+				return "dependency-mismatch";
+			}
+
+			var previous = this.previousValue(element);
+			if (!this.settings.messages[element.name] ) {
+				this.settings.messages[element.name] = {};
+			}
+			previous.originalMessage = this.settings.messages[element.name].remote;
+			this.settings.messages[element.name].remote = previous.message;
+
+			param = typeof param === "string" && {url:param} || param;
+
+			if ( previous.old === value ) {
+				return previous.valid;
+			}
+
+			previous.old = value;
+			var validator = this;
+			this.startRequest(element);
+			var data = {};
+			data[element.name] = value;
+			$.ajax($.extend(true, {
+				url: param,
+				mode: "abort",
+				port: "validate" + element.name,
+				dataType: "json",
+				data: data,
+				success: function( response ) {
+					validator.settings.messages[element.name].remote = previous.originalMessage;
+					var valid = response === true || response === "true";
+					if ( valid ) {
+						var submitted = validator.formSubmitted;
+						validator.prepareElement(element);
+						validator.formSubmitted = submitted;
+						validator.successList.push(element);
+						delete validator.invalid[element.name];
+						validator.showErrors();
+					} else {
+						var errors = {};
+						var message = response || validator.defaultMessage( element, "remote" );
+						errors[element.name] = previous.message = $.isFunction(message) ? message(value) : message;
+						validator.invalid[element.name] = true;
+						validator.showErrors(errors);
+					}
+					previous.valid = valid;
+					validator.stopRequest(element, valid);
+				}
+			}, param));
+			return "pending";
 		}
 
 	}
@@ -1184,7 +1207,8 @@ $.format = $.validator.format;
 				if ( pendingRequests[port] ) {
 					pendingRequests[port].abort();
 				}
-				return (pendingRequests[port] = ajax.apply(this, arguments));
+				pendingRequests[port] = ajax.apply(this, arguments);
+				return pendingRequests[port];
 			}
 			return ajax.apply(this, arguments);
 		};
