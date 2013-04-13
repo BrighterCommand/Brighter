@@ -1,7 +1,9 @@
+using System;
 using Paramore.Adapters.Infrastructure.Repositories;
 using Paramore.Domain.Venues;
 using Paramore.Ports.Services.Commands.Venue;
 using paramore.commandprocessor;
+using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
 
 namespace Paramore.Ports.Services.Handlers.Venues
 {
@@ -18,7 +20,13 @@ namespace Paramore.Ports.Services.Handlers.Venues
 
         public override AddVenueCommand Handle(AddVenueCommand command)
         {
-            var venue = new Venue(new Id(command.Id), new Version(), new VenueName(command.VenueName));
+            var venue = new Venue(
+                id: new Id(command.Id), 
+                version: new Version(), 
+                name: command.VenueName,
+                address: command.Address,
+                map: command.VenueMap,
+                contact: command.VenueContact);
 
             using (var unitOfWork = unitOfWorkFactory.CreateUnitOfWork())
             {
