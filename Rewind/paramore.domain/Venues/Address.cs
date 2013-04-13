@@ -43,7 +43,7 @@ namespace Paramore.Domain.Venues
         {
             var rx = new Regex("Street : (.*), City : (.*), PostCode : (.*)");
             var match = rx.Match(address);
-            var street = new Street(match.Groups[0].Value);
+            var street = Street.Parse(match.Groups[0].Value);
             var city = new City(match.Groups[1].Value);
             var postcode = new PostCode(match.Groups[2].Value);
             return new Address(street, city, postcode);

@@ -54,7 +54,7 @@ namespace Paramore.Adapters.Presentation.API.Handlers
                         id: new Id(Guid.NewGuid()),
                         version: new Version(1),
                         name: new VenueName("Test Venue"),
-                        address: new Address(new Street("MyStreet"), new City("London"), new PostCode("N1 3GA")),
+                        address: new Address(new Street(1, "MyStreet"), new City("London"), new PostCode("N1 3GA")),
                         mapURN: new VenueMap(new Uri("http://www.mysite.com/maps/12345")),
                         contact:
                             new VenueContact(new ContactName("Ian"), new EmailAddress("ian@huddle.com"),

@@ -22,23 +22,33 @@ namespace Paramore.Adapters.Presentation.API
                     .AtUri("/entrypoint")
                     .HandledBy<EntryPointHandler>()
                    .AsXmlDataContract().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
-                    .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
-
+                    .And.TranscodedBy<JsonDataContractCodec>().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
 
                 //GET /venues 
                 ResourceSpace.Has.ResourcesOfType<List<VenueResource>>()
-                    .AtUri("/venues")
-                    .HandledBy<VenueEndPointHandler>()
-                    .TranscodedBy<XmlSerializerCodec>().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
-                    .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
+                     .AtUri("/venues")
+                     .HandledBy<VenueEndPointHandler>()
+                     .TranscodedBy<JsonDataContractCodec>()
+                        .ForMediaType("application/vnd.paramore.data+json")
+                        .ForExtension("js")
+                        .ForExtension("json");
+                     //.And
+                     //.TranscodedBy<XmlSerializerCodec>()
+                     //   .ForMediaType("application/vnd.paramore.data+xml")
+                     //   .ForExtension("xml");
 
                 //PUT /venues/{id}
                 ResourceSpace.Has.ResourcesOfType<VenueResource>()
-                    .AtUri("/venues/add")
-                    .HandledBy<VenueEndPointHandler>()
-                    .TranscodedBy<XmlSerializerCodec>().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
-                    .And.AsJsonDataContract().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
-
+                     .AtUri("/venues/add")
+                     .HandledBy<VenueEndPointHandler>()
+                     .TranscodedBy<JsonDataContractCodec>()
+                     .ForMediaType("application/vnd.paramore.data+json")
+                     .ForExtension("js")
+                     .ForExtension("json");
+                //.And
+                //.TranscodedBy<XmlSerializerCodec>()
+                //    .ForMediaType("application/vnd.paramore.data+xml")
+                //    .ForExtension("xml");
 
             }
         }
