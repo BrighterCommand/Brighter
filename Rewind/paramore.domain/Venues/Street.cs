@@ -1,14 +1,15 @@
 using System;
+using System.Text.RegularExpressions;
 using Paramore.Domain.Common;
 
 namespace Paramore.Domain.Venues
 {
     public class Street : IAmAValueType<string>, IFormattable
     {
-        private readonly string streetNumber = string.Empty;
+        private readonly int streetNumber;
         private readonly string street = string.Empty;
 
-        public Street(string streetNumber, string street)
+        public Street(int streetNumber, string street)
         {
             this.streetNumber = streetNumber;
             this.street = street;
@@ -33,7 +34,16 @@ namespace Paramore.Domain.Venues
 
         public override string ToString()
         {
-            return streetNumber != null ? string.Format("StreetNumber: {0}, Street: {1}", streetNumber, street) : string.Format("Street: {0}", street);
+            return streetNumber > 0 ? string.Format("StreetNumber: {0}, Street: {1}", streetNumber, street) : string.Format("Street: {0}", street);
+        }
+
+        public static Street Parse(string street)
+        {
+            var rx = new Regex("StreetNumber: (.*), Street: (.*)");
+            var match = rx.Match(street);
+            var streetNumber = Convert.ToInt32(match.Groups[0].Value);
+            var streetName = match.Groups[1].Value;
+            return new Street(streetNumber, streetName);
         }
 
         public string ToString(string format, IFormatProvider formatProvider)
