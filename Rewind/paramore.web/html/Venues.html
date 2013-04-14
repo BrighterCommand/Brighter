@@ -27,7 +27,7 @@
                                 <th>Map</th>
                             </tr>
                         </th>
-                        <tbody>
+                        <tbody data-bind="foreach: venues">
                             <tr>
                                 <td style="width: 200px;">
                                     <span data-bind="text: name"></span> 
@@ -39,7 +39,7 @@
                                     <span data-bind="text:contact"></span>
                                 </td>
                                 <td style="width: 300px;">
-                                    <a data-bind="attr: {href: map}"></a>
+                                    <a data-bind="attr: {href: map}" target="_blank">Map</a>
                                 </td>
                             </tr>
                         </tbody>
