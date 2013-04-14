@@ -3156,7 +3156,7 @@ ko.exportSymbol('__tr_ambtns', ko.templateRewriting.applyMemoizedBindingsToNextS
             } else if (!shouldDisplay) {
                 ko.virtualElements.emptyNode(element);
             } else {
-                // Render once for this single data point (or use the viewModel if no data was provided)
+                // Render once for this single data point (or use the ViewModel if no data was provided)
                 var innerBindingContext = ('data' in options) ?
                     bindingContext['createChildContext'](dataValue, options['as']) :  // Given an explitit 'data' value, we create a child binding context for it
                     bindingContext;                                                        // Given no explicit 'data' value, we retain the same binding context
