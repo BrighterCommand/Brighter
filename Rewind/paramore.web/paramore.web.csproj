@@ -98,8 +98,9 @@
     <Content Include="css\main.css" />
     <Content Include="css\normalize.css" />
     <Content Include="Global.asax" />
-    <Content Include="Html\Venues.html" />
+    <Content Include="html\Venues.html" />
     <None Include="Scripts\jquery-1.9.1.intellisense.js" />
+    <Content Include="js\venues.js" />
     <Content Include="Scripts\jquery-1.9.1.js" />
     <Content Include="Scripts\jquery-1.9.1.min.js" />
     <Content Include="Scripts\knockout-2.2.1.debug.js" />
