@@ -100,6 +100,7 @@
     <Content Include="Global.asax" />
     <Content Include="html\Venues.html" />
     <None Include="Scripts\jquery-1.9.1.intellisense.js" />
+    <Content Include="js\data.js" />
     <Content Include="js\venues.js" />
     <Content Include="Scripts\jquery-1.9.1.js" />
     <Content Include="Scripts\jquery-1.9.1.min.js" />
