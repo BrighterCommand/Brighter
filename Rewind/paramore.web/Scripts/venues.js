@@ -1,1 +1,0 @@
-﻿var venues = { }; //venues namespace

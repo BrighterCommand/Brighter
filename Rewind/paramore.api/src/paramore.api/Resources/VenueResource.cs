@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
-using System.ServiceModel;
 using System.Xml.Serialization;
-using Paramore.Adapters.Presentation.API.Handlers;
 using Paramore.Adapters.Presentation.API.Translators;
 
 namespace Paramore.Adapters.Presentation.API.Resources
 {
     [XmlRoot]
+    [DataContract]
     public class VenueResource
     {
         private Link self;
@@ -39,13 +38,18 @@ namespace Paramore.Adapters.Presentation.API.Resources
         [XmlIgnore]
         public string MapURN { get; set; }
         [XmlElement(ElementName = "name")]
+        [DataMember(Name = "name")]
         public string Name { get; set; }
+        [DataMember(Name = "address")]
         [XmlElement(ElementName = "address")]
         public string Address { get; set; }
+        [DataMember(Name = "contact")]
         [XmlElement(ElementName = "contact")]
         public string Contact { get; set; }
+        [DataMember(Name = "version")]
         [XmlElement(ElementName = "version")]
         public int Version { get; set; }
+        [DataMember(Name = "links")]
         [XmlArray(ElementName = "links")]
         public List<Link> Links { get; set; }
 
