@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Paramore.Adapters.Infrastructure.Repositories;
-using Raven.Client.Linq;
 
 namespace Paramore.Adapters.Tests.UnitTests.fakes
 {
