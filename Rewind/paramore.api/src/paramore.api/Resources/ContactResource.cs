@@ -8,6 +8,7 @@ namespace Paramore.Adapters.Presentation.API.Resources
     [DataContract]
     public class ContactResource
     {
+
         [XmlElement(ElementName = "name")]
         [DataMember(Name = "name")]
         public string Name { get; set; }
@@ -17,6 +18,11 @@ namespace Paramore.Adapters.Presentation.API.Resources
         [XmlElement(ElementName = "phoneNumber")]
         [DataMember(Name = "phoneNumber")]
         public string PhoneNumber { get; set; }
+
+        public ContactResource()
+        {
+            //required for serialization
+        }
 
         public ContactResource(string name, string emailAddress, string phoneNumber)
         {
