@@ -57,7 +57,7 @@ namespace Paramore.Adapters.Presentation.API.Handlers
                         address: new Address(new Street(1, "MyStreet"), new City("London"), new PostCode("N1 3GA")),
                         mapURN: new VenueMap(new Uri("http://www.mysite.com/maps/12345")),
                         contact:
-                            new VenueContact(new ContactName("Ian"), new EmailAddress("ian@huddle.com"),
+                            new Contact(new Name("Ian"), new EmailAddress("ian@huddle.com"),
                                              new PhoneNumber("123454678")))
                 };
             return venues;

@@ -93,6 +93,8 @@
       <DependentUpon>Default.aspx</DependentUpon>
     </Compile>
     <Compile Include="Handlers\EntryPointHandler.cs" />
+    <Compile Include="Resources\AddressResource.cs" />
+    <Compile Include="Resources\ContactResource.cs" />
     <Compile Include="Resources\Link.cs" />
     <Compile Include="Resources\VenueResource.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

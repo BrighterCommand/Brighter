@@ -51,11 +51,11 @@
     <Compile Include="Speakers\SpeakerDocument.cs" />
     <Compile Include="Venues\Address.cs" />
     <Compile Include="Venues\City.cs" />
-    <Compile Include="Venues\ContactName.cs" />
+    <Compile Include="Venues\Name.cs" />
     <Compile Include="Venues\PostCode.cs" />
     <Compile Include="Venues\Street.cs" />
     <Compile Include="Venues\Venue.cs" />
-    <Compile Include="Venues\VenueContact.cs" />
+    <Compile Include="Venues\Contact.cs" />
     <Compile Include="Venues\VenueMap.cs" />
     <Compile Include="Venues\VenueName.cs" />
     <Compile Include="Venues\Capacity.cs" />

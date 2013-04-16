@@ -8,11 +8,11 @@ namespace Paramore.Domain.Venues
     public class Venue : AggregateRoot<VenueDocument> 
     {
         private Address address;
-        private VenueContact contact;
+        private Contact contact;
         private VenueMap map;
         private VenueName name;
 
-        public Venue(Id id, Version version, VenueName name, Address address, VenueMap map, VenueContact contact) : base(id, version)
+        public Venue(Id id, Version version, VenueName name, Address address, VenueMap map, Contact contact) : base(id, version)
         {
             this.address = address;
             this.contact = contact;
@@ -21,7 +21,7 @@ namespace Paramore.Domain.Venues
         }
 
         public Venue(Id id, Version version, VenueName venueName) 
-            : this(id, version, venueName, new Address(), new VenueMap(), new VenueContact()) {}
+            : this(id, version, venueName, new Address(), new VenueMap(), new Contact()) {}
 
         public Venue() : base(new Id(), new Version()){}
 
@@ -29,7 +29,7 @@ namespace Paramore.Domain.Venues
         public override void Load(VenueDocument document)
         {
             address = Address.Parse(document.Address); 
-            contact = VenueContact.Parse(document.VenueContact);
+            contact = Contact.Parse(document.VenueContact);
             map = new VenueMap(new Uri(document.VenueMap));
             name = new VenueName(document.VenueName);
         }

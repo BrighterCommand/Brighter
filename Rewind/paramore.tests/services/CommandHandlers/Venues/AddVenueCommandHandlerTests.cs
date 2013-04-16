@@ -32,9 +32,9 @@ namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Venues
             addVenueCommand = new AddVenueCommand(
                 id: Guid.NewGuid(), 
                 venueName: "My Venue Name", 
-                address:"Street : MyStreet, City : London, PostCode : SW1 1PL",
+                address: "StreetNumber: 1, Street: MyStreet, City: London, PostCode: SW1 1PL",
                 mapURN: "http://www.mysite.com/maps/12345",
-                contact: "Name : Mary Alice, EmailAddress : mary.alice@foobar.com: , PhoneNumber : 0111 111 1111");
+                contact: "Name: Mary Alice, EmailAddress: mary.alice@foobar.com: , PhoneNumber: 0111 111 1111");
 
             addVenueCommandHandler = new AddVenueCommandHandler(venueRepository, uoWFactory);
         };
@@ -52,9 +52,7 @@ namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Venues
         It should_set_the_name_of_the_venue = () => GetVenueFromRepoBy(addVenueCommand.Id).ToDocument().VenueName.ShouldEqual(addVenueCommand.VenueName);
         It should_set_the_address_of_the_venue = () => GetVenueFromRepoBy(addVenueCommand.Id).ToDocument().Address.ShouldEqual(addVenueCommand.Address);
         It should_set_the_mapURN_for_the_venue = () => GetVenueFromRepoBy(addVenueCommand.Id).ToDocument().VenueMap.ShouldEqual(addVenueCommand.VenueMap);
-
-        private It should_set_the_contact_for_the_venue =
-            () => GetVenueFromRepoBy(addVenueCommand.Id).ToDocument().VenueContact.ShouldEqual(addVenueCommand.VenueContact);
+        It should_set_the_contact_for_the_venue = () => GetVenueFromRepoBy(addVenueCommand.Id).ToDocument().VenueContact.ShouldEqual(addVenueCommand.Contact);
 
 
     }
