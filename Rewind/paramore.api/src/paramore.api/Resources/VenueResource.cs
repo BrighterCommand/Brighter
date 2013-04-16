@@ -29,8 +29,8 @@ namespace Paramore.Adapters.Presentation.API.Resources
 
             this.Version = version;
             this.Name = name;
-            this.Address = address;
-            this.Contact = contact;
+            this.Address = AddressResource.Parse(address);
+            this.Contact = ContactResource.Parse(contact);
         }
 
         [XmlIgnore]
@@ -42,18 +42,16 @@ namespace Paramore.Adapters.Presentation.API.Resources
         public string Name { get; set; }
         [DataMember(Name = "address")]
         [XmlElement(ElementName = "address")]
-        public string Address { get; set; }
+        public AddressResource Address { get; set; }
         [DataMember(Name = "contact")]
         [XmlElement(ElementName = "contact")]
-        public string Contact { get; set; }
+        public ContactResource Contact { get; set; }
         [DataMember(Name = "version")]
         [XmlElement(ElementName = "version")]
         public int Version { get; set; }
         [DataMember(Name = "links")]
         [XmlArray(ElementName = "links")]
         public List<Link> Links { get; set; }
-
-
 
         public Link this[string linkName]
         {

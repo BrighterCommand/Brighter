@@ -26,7 +26,7 @@ namespace Paramore.Ports.Services.Handlers.Venues
                 name: command.VenueName,
                 address: command.Address,
                 map: command.VenueMap,
-                contact: command.VenueContact);
+                contact: command.Contact);
 
             using (var unitOfWork = unitOfWorkFactory.CreateUnitOfWork())
             {

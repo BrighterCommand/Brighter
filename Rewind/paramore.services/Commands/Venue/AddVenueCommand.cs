@@ -13,7 +13,7 @@ namespace Paramore.Ports.Services.Commands.Venue
         public AddVenueCommand(Guid id, string venueName, string address, string mapURN, string contact) : base(id)
         {
             Address = Address.Parse(address);
-            VenueContact = VenueContact.Parse(contact);
+            Contact = Contact.Parse(contact);
             VenueMap = new VenueMap(new Uri(mapURN));
             VenueName = new VenueName(venueName);
             Version = new Version(1);
@@ -21,7 +21,7 @@ namespace Paramore.Ports.Services.Commands.Venue
 
         public Address Address { get; set; }
         public Version Version { get; set; }
-        public VenueContact VenueContact { get; set; }
+        public Contact Contact { get; set; }
         public VenueMap VenueMap { get; set; }
         public VenueName VenueName { get; set; }
     }

@@ -6,5 +6,5 @@ C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.utility\bin\Debug\Paramore.Utili
 C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.utility\bin\Debug\Paramore.Utility.pdb
 C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.utility\obj\Debug\Paramore.Utility.dll
 C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.utility\obj\Debug\Paramore.Utility.pdb
-C:\Users\ian\OSS\Paramore\Rewind\paramore.utility\obj\Debug\paramore.utility.csprojResolveAssemblyReference.cache
 C:\Users\SUNDANCE\Work\Paramore\Rewind\paramore.utility\obj\Debug\paramore.utility.csprojResolveAssemblyReference.cache
+C:\Users\ian\OSS\Paramore\Rewind\paramore.utility\obj\Debug\paramore.utility.csprojResolveAssemblyReference.cache
