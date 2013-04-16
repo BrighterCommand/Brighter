@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using Paramore.Adapters.Presentation.API.Handlers;
-using Paramore.Adapters.Presentation.API.Resources;
+﻿using Paramore.Adapters.Presentation.API.Resources;
 using Paramore.Domain.Venues;
 
 namespace Paramore.Adapters.Presentation.API.Translators
