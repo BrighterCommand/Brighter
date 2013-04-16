@@ -32,6 +32,7 @@ paramore.model = function () {
             }
         ]   
     };
+    
 
     return {
         data: data

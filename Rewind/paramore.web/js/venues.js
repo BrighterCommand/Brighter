@@ -35,7 +35,6 @@
         };
 
     }();
-    
 
     //Note: Data bind the values between the source and the targets using Knockout
     paramore.ViewModel.loadVenues();
