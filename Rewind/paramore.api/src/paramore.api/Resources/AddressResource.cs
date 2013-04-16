@@ -22,6 +22,11 @@ namespace Paramore.Adapters.Presentation.API.Resources
         [DataMember(Name = "postCode")]
         public string Postcode { get; set; }
 
+        public AddressResource()
+        {
+            //required for serialization
+        }
+
         public AddressResource(string streetNumber, string street, string city, string postcode)
         {
             StreetNumber = streetNumber;

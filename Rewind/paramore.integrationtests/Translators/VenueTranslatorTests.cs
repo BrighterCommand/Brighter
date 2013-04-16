@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.Serialization.Json;
+using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 using Machine.Specifications;
@@ -111,5 +113,61 @@ namespace paramore.integrationtests.Translators
         It should_format_the_address_as_expected = () => response.ShouldContain(string.Format("<address>{0}</address>", resource.Address));
         It should_format_the_contact_as_expected = () => response.ShouldContain(string.Format("<contact>{0}</contact>", resource.Contact));
         It should_format_the_version_as_expected = () => response.ShouldContain(string.Format("<version>{0}</version>", resource.Version)); 
+    }
+
+    [Subject("Check writing a resource to JSON")]
+    public class When_serializing_a_resource_to_JSON
+    {
+        static DataContractJsonSerializer serializer;
+        static VenueResource resource;
+        static string response;
+
+        Establish context = () =>
+        {
+            resource = new VenueResource(
+                id: Guid.NewGuid(),
+                version: 1,
+                name: "Test Venue",
+                address: "Street : StreetNumber: , Street: MyStreet, City : London, PostCode : N1 3GT",
+                mapURN: "http://www.mysite.com/maps/12345",
+                contact: "ContactName: Ian, EmailAddress: ian@huddle.com, PhoneNumber: 123454678"
+            );
+            serializer = new DataContractJsonSerializer(typeof(VenueResource));
+        };
+
+        Because of = () =>
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                serializer.WriteObject(memoryStream, resource);
+                response = Encoding.Default.GetString(memoryStream.ToArray());
+            }
+        };
+
+        It should_not_be_null = () => response.ShouldNotBeNull();
+    }
+
+    [Subject("Check loading a resource from JSON")]
+    public class When_serializing_a_resource_from_JSON
+    {
+        static string jsonData;
+        static DataContractJsonSerializer serializer;
+        private static VenueResource resource;
+
+        Establish context = () =>
+        {
+            jsonData = "{\"address\":{\"city\":\"\",\"postCode\":\"\",\"street\":\"\",\"streetnumber\":\"\"},\"contact\":{\"emailAddress\":\"ian@huddle.com\",\"name\":\"Ian\",\"phoneNumber\":\"123454678\"},\"links\":[{\"HRef\":\"\\/\\/localhost:59280\\/venue\\/cc7519cf-d58e-4e9c-a340-855254f67de5\",\"Rel\":\"self\"},{\"HRef\":\"http:\\/\\/www.mysite.com\\/maps\\/12345\",\"Rel\":\"map\"}],\"name\":\"Test Venue\",\"version\":1}";
+            serializer = new DataContractJsonSerializer(typeof(VenueResource));
+        };
+
+        Because of = () =>
+        {
+            using (var memoryStream = new MemoryStream(Encoding.Unicode.GetBytes(jsonData)))
+            {
+                resource = (VenueResource)serializer.ReadObject(memoryStream);
+            }
+        };
+
+        It should_deserialize_the_venue = () => resource.ShouldNotBeNull();
     }
 }
