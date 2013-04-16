@@ -4,6 +4,23 @@ GET http://localhost:59280/venues HTTP/1.1
 Host: localhost:59280
 Content-Type: application/vnd.paramore.data+json
 
+HTTP/1.1 200 OK
+Server: ASP.NET Development Server/11.0.0.0
+Date: Tue, 16 Apr 2013 15:49:47 GMT
+X-AspNet-Version: 4.0.30319
+Content-Length: 343
+Cache-Control: private
+Content-Type: application/vnd.paramore.data+json
+Connection: Close
+
+[{"address":{"city":"","postCode":"","street":"","streetnumber":""},
+  "contact":{"emailAddress":"ian@huddle.com","name":"Ian","phoneNumber":"123454678"},
+  "links":[{"HRef":"\/\/localhost:59280\/venue\/8b8c66fc-d541-4051-94ed-1699209d69b0","Rel":"self"},
+	{"HRef":"http:\/\/www.mysite.com\/maps\/12345","Rel":"map"}],
+   "name":"Test Venue",
+   "version":1}]
+
+
 ----------------------------------------------
 ----GET ENTRY POINT--------------------------
 GET http://localhost:59280/entrypoint HTTP/1.1

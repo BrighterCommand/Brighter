@@ -7,14 +7,14 @@ namespace Paramore.Domain.Venues
 {
     public class VenueDocument : IAmADocument
     {
-        public VenueDocument(Id id, Version version, VenueName venueName, Address address, VenueMap venueMap, VenueContact venueContact)
+        public VenueDocument(Id id, Version version, VenueName venueName, Address address, VenueMap venueMap, Contact contact)
         {
             Id = (Guid)id;
             Version = (int) version;
             VenueName = (string) venueName;
             Address = (string) address;
             VenueMap = (string) venueMap;
-            VenueContact = (string) venueContact;
+            VenueContact = (string) contact;
         }
 
         public VenueDocument() {}
