@@ -31,5 +31,13 @@ namespace Paramore.Ports.Services.ThinReadLayer
 
             return venues;
         }
+
+        public VenueDocument Get(Guid id)
+        {
+            using (var unitOfWork = unitOfWorkFactory.CreateUnitOfWork())
+            {
+                return unitOfWork.Load<VenueDocument>(id);
+            }
+        }
     }
 }

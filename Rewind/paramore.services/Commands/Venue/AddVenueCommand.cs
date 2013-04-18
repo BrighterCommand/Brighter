@@ -10,11 +10,11 @@ namespace Paramore.Ports.Services.Commands.Venue
         //Required for serialization
         public AddVenueCommand() : base(Guid.NewGuid()) {}
 
-        public AddVenueCommand(Guid id, string venueName, string address, string mapURN, string contact) : base(id)
+        public AddVenueCommand(string venueName, string address, string mapURN, string contact) : base(Guid.NewGuid())
         {
             Address = Address.Parse(address);
             Contact = Contact.Parse(contact);
-            VenueMap = new VenueMap(new Uri(mapURN));
+            VenueMap = new VenueMap(new Uri(mapURN != null ? mapURN : "http://maps.google.co.uk"));
             VenueName = new VenueName(venueName);
             Version = new Version(1);
         }

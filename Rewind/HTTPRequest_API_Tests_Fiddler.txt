@@ -25,13 +25,7 @@ POST http://localhost:59280/venues HTTP/1.1
 Host: localhost:59280
 Content-Type: application/vnd.paramore.data+json
 
-{"address":{"city":"","postCode":"","street":"","streetnumber":""},
-  "contact":{"emailAddress":"ian@huddle.com","name":"Ian","phoneNumber":"123454678"},
-  "links":[{"HRef":"\/\/localhost:59280\/venue\/8b8c66fc-d541-4051-94ed-1699209d69b0","Rel":"self"},
-	{"HRef":"http:\/\/www.mysite.com\/maps\/12345","Rel":"map"}],
-   "name":"Test Venue",
-   "version":1}
-
+{"address":{"city":"London","postCode":"EC1Y 2BP","street":"City Road","streetnumber":"100"},   "contact":{"emailAddress":"ian@huddle.com","name":"Ian","phoneNumber":"123454678"},   "links":[{"HRef":"\/\/localhost:59280\/venue\/8b8c66fc-d541-4051-94ed-1699209d69b0","Rel":"self"}, {"HRef":"http:\/\/goo.gl\/maps\/nwJl7","Rel":"map"}], "name":"Test Venue", "version":1}
 
 
 ----------------------------------------------

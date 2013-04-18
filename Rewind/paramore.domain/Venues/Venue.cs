@@ -12,6 +12,12 @@ namespace Paramore.Domain.Venues
         private VenueMap map;
         private VenueName name;
 
+        public Venue(Version version, VenueName name, Address address, VenueMap map, Contact contact) 
+            : this(new Id(), version, name, address, map, contact){}
+
+        public Venue(Id id, Version version, VenueName venueName) 
+            : this(id, version, venueName, new Address(), new VenueMap(), new Contact()) {}
+
         public Venue(Id id, Version version, VenueName name, Address address, VenueMap map, Contact contact) : base(id, version)
         {
             this.address = address;
@@ -20,10 +26,8 @@ namespace Paramore.Domain.Venues
             this.name = name;
         }
 
-        public Venue(Id id, Version version, VenueName venueName) 
-            : this(id, version, venueName, new Address(), new VenueMap(), new Contact()) {}
-
         public Venue() : base(new Id(), new Version()){}
+
 
         #region Aggregate  Persistence
         public override void Load(VenueDocument document)

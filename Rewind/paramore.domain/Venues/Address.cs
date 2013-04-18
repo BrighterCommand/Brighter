@@ -45,7 +45,8 @@ namespace Paramore.Domain.Venues
             var match = rx.Match(address);
 
             var streetNumber = match.Groups[1].Value;
-            int number = Convert.ToInt32(streetNumber);
+            int number;
+            if (!int.TryParse(streetNumber, out number)) number = 0;
             var streetName = match.Groups[2].Value;
             var street = new Street(number, streetName);
 

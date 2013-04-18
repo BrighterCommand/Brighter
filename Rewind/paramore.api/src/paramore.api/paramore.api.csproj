@@ -48,6 +48,9 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Nancy">
+      <HintPath>..\..\..\packages\Nancy.0.9.0\lib\net40\Nancy.dll</HintPath>
+    </Reference>
     <Reference Include="OpenRasta, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Lib\openrasta-core-2.1.1.151056433\bin-net35\OpenRasta.dll</HintPath>
@@ -57,7 +60,10 @@
     </Reference>
     <Reference Include="paramore.commandprocessor, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\bin\paramore.commandprocessor\paramore.commandprocessor.dll</HintPath>
+      <HintPath>..\..\..\Lib\Paramore.CommandProcessor\paramore.commandprocessor.dll</HintPath>
+    </Reference>
+    <Reference Include="paramore.commandprocessor.ioccontainers">
+      <HintPath>..\..\..\Lib\Paramore.CommandProcessor\paramore.commandprocessor.ioccontainers.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -116,6 +122,9 @@
       <Project>{A056F023-D432-42AE-8029-BB6B84828704}</Project>
       <Name>paramore.services</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="IoC\" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
