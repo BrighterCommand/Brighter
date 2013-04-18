@@ -5,6 +5,7 @@ using System.Linq;
 using OpenRasta.Web;
 using Paramore.Adapters.Infrastructure.Repositories;
 using Paramore.Adapters.Presentation.API.Resources;
+using Paramore.Adapters.Presentation.API.Translators;
 using Paramore.Domain.Common;
 using Paramore.Domain.Venues;
 using Paramore.Ports.Services.Commands.Venue;
@@ -27,8 +28,11 @@ namespace Paramore.Adapters.Presentation.API.Handlers
 
         public OperationResult Get()
         {
-            //var venues = new VenueReader(_unitOfWorkFactory, false).GetAll().ToList();
-            var venues = Venues();
+            var venues = new VenueReader(_unitOfWorkFactory, false)
+                .GetAll()
+                .Select(v => new VenueTranslator().Translate(v))
+                .ToList();
+            //HACK!: var venues = Venues();
 
             return new OperationResult.OK
                     {
@@ -46,7 +50,10 @@ namespace Paramore.Adapters.Presentation.API.Handlers
 
             commandProcessor.Send(venueCommand);
 
-            var venue = new VenueReader(_unitOfWorkFactory, false).Get(venueCommand.Id);
+            var venue = new VenueTranslator().Translate(
+                new VenueReader(_unitOfWorkFactory, false)
+                    .Get(venueCommand.Id)
+                );
             
             return new OperationResult.OK
                     {
@@ -54,7 +61,7 @@ namespace Paramore.Adapters.Presentation.API.Handlers
                     };
         }
 
-        //DEBUG method to get results without hitting Db
+        //HACK! method to get results without hitting Db
         private List<VenueResource> Venues()
         {
             var venues = new List<VenueResource>
