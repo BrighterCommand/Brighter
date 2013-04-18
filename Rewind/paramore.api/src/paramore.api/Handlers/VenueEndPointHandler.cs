@@ -9,6 +9,7 @@ using Paramore.Domain.Common;
 using Paramore.Domain.Venues;
 using Paramore.Ports.Services.Commands.Venue;
 using Paramore.Ports.Services.ThinReadLayer;
+using paramore.commandprocessor;
 using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
 
 namespace Paramore.Adapters.Presentation.API.Handlers
@@ -16,10 +17,12 @@ namespace Paramore.Adapters.Presentation.API.Handlers
     public class VenueEndPointHandler
     {
         private readonly IAmAUnitOfWorkFactory _unitOfWorkFactory;
+        private readonly IAmACommandProcessor commandProcessor;
 
-        public VenueEndPointHandler(IAmAUnitOfWorkFactory unitOfWorkFactory)
+        public VenueEndPointHandler(IAmAUnitOfWorkFactory unitOfWorkFactory, IAmACommandProcessor commandProcessor)
         {
             _unitOfWorkFactory = unitOfWorkFactory;
+            this.commandProcessor = commandProcessor;
         }
 
         public OperationResult Get()
@@ -36,13 +39,19 @@ namespace Paramore.Adapters.Presentation.API.Handlers
         public OperationResult Post(VenueResource venueResource)
         {
             var venueCommand = new AddVenueCommand(
-                id: new Id(Guid.NewGuid()),
                 venueName: venueResource.Name,
                 address: venueResource.Address,
                 mapURN: venueResource.MapURN,
                 contact: venueResource.Contact);
+
+            commandProcessor.Send(venueCommand);
+
+            var venue = new VenueReader(_unitOfWorkFactory, false).Get(venueCommand.Id);
             
-            return new OperationResult.OK();
+            return new OperationResult.OK
+                    {
+                        ResponseResource = venue
+                    };
         }
 
         //DEBUG method to get results without hitting Db

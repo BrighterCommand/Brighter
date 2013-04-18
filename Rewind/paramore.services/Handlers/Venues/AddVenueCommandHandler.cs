@@ -21,7 +21,6 @@ namespace Paramore.Ports.Services.Handlers.Venues
         public override AddVenueCommand Handle(AddVenueCommand command)
         {
             var venue = new Venue(
-                id: new Id(command.Id), 
                 version: new Version(), 
                 name: command.VenueName,
                 address: command.Address,
@@ -34,6 +33,8 @@ namespace Paramore.Ports.Services.Handlers.Venues
                 repository.Add(venue);
                 unitOfWork.Commit();
             }
+
+            command.Id = venue.Id;
 
             return base.Handle(command);
         }

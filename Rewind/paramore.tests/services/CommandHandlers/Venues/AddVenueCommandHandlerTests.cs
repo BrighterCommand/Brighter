@@ -30,7 +30,6 @@ namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Venues
             A.CallTo(() => uoWFactory.CreateUnitOfWork()).Returns(uow);
 
             addVenueCommand = new AddVenueCommand(
-                id: Guid.NewGuid(), 
                 venueName: "My Venue Name", 
                 address: "StreetNumber: 1, Street: MyStreet, City: London, PostCode: SW1 1PL",
                 mapURN: "http://www.mysite.com/maps/12345",
