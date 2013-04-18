@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using OpenRasta.Web;
 using Paramore.Adapters.Infrastructure.Repositories;
@@ -39,19 +38,40 @@ namespace Paramore.Adapters.Presentation.API.Handlers
                     };
         }
 
-        public OperationResult Post(VenueResource venueResource)
+        public OperationResult Post(VenueResource newVenueResource)
         {
-            var venueCommand = new AddVenueCommand(
-                venueName: venueResource.Name,
-                address: venueResource.Address,
-                mapURN: venueResource.MapURN,
-                contact: venueResource.Contact);
+            var addVenueCommand = new AddVenueCommand(
+                venueName: newVenueResource.Name,
+                address: newVenueResource.Address,
+                mapURN: newVenueResource.MapURN,
+                contact: newVenueResource.Contact);
 
-            commandProcessor.Send(venueCommand);
+            commandProcessor.Send(addVenueCommand);
 
             var venue = new VenueTranslator().Translate(
                 new VenueReader(_unitOfWorkFactory, false)
-                    .Get(venueCommand.Id)
+                    .Get(addVenueCommand.Id)
+                );
+            
+            return new OperationResult.Created()
+                    {
+                        ResponseResource = venue,
+                        CreatedResourceUrl = new Uri(venue.Links[0].HRef)
+                    };
+        }
+
+        public OperationResult Put(VenueResource venueResource)
+        {
+            var updateVenueCommand = new UpdateVenueCommand(
+                id: venueResource.Id,
+                venueName: venueResource.Name,
+                address: venueResource.Address,
+                mapURN: venueResource.MapURN,
+                contact: venueResource.Contact               );
+
+            var venue = new VenueTranslator().Translate(
+                new VenueReader(_unitOfWorkFactory, false)
+                    .Get(updateVenueCommand.Id)
                 );
             
             return new OperationResult.OK

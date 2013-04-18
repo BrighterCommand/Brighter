@@ -49,6 +49,7 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\Venue\UpdateVenueCommand.cs" />
     <Compile Include="Handlers\Venues\AddVenueCommandHandler.cs" />
     <Compile Include="Handlers\Meetings\ScheduleMeetingCommandHandler.cs" />
     <Compile Include="Commands\Venue\AddVenueCommand.cs" />

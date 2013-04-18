@@ -11,7 +11,7 @@ namespace Paramore.Adapters.Presentation.API.Resources
         public Link(string relName, string resourceName, string id)
         {
             this.Rel = relName;
-            this.HRef = string.Format("//{0}/{1}/{2}", ParamoreGlobals.HostName, resourceName, id);
+            this.HRef = string.Format("http://{0}/{1}/{2}", ParamoreGlobals.HostName, resourceName, id);
         }
 
         public Link(string relName, string href)
