@@ -28,10 +28,9 @@ namespace Paramore.Adapters.Presentation.API.Handlers
 
         public OperationResult Get()
         {
-            var venues = new VenueReader(_unitOfWorkFactory, false)
-                .GetAll()
-                .Select(v => new VenueTranslator().Translate(v))
-                .ToList();
+            var venues = new VenueTranslator().Translate(
+                new VenueReader(_unitOfWorkFactory, false).GetAll().ToList()
+                );
             //HACK!: var venues = Venues();
 
             return new OperationResult.OK
