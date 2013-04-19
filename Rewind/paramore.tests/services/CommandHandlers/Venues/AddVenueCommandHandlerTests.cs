@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using FakeItEasy;
 using Machine.Specifications;
 using Paramore.Adapters.Infrastructure.Repositories;
@@ -45,7 +42,7 @@ namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Venues
 
         Because of = () => addVenueCommandHandler.Handle(addVenueCommand);
 
-        It should_add_a_meeting_to_the_repository = () => GetVenueFromRepoBy(addVenueCommand.Id).ShouldNotBeNull();
+        It should_add_a_venue_to_the_repository = () => GetVenueFromRepoBy(addVenueCommand.Id).ShouldNotBeNull();
         It should_ask_the_session_factory_for_a_unit_of_work = () => A.CallTo(() => uoWFactory.CreateUnitOfWork()).MustHaveHappened();
         It should_commit_the_unit_of_work = () => A.CallTo(() => uow.Commit()).MustHaveHappened();
         It should_set_the_name_of_the_venue = () => GetVenueFromRepoBy(addVenueCommand.Id).ToDocument().VenueName.ShouldEqual(addVenueCommand.VenueName);
