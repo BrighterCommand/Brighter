@@ -55,6 +55,7 @@
     <Compile Include="Commands\Venue\AddVenueCommand.cs" />
     <Compile Include="Commands\Meeting\ScheduleMeetingCommand.cs" />
     <Compile Include="Events\Meeting\MeetingScheduledEvent.cs" />
+    <Compile Include="Handlers\Venues\UpdateVenueCommandHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ThinReadLayer\IAmAViewModelReader.cs" />
     <Compile Include="ThinReadLayer\VenueReader.cs" />
