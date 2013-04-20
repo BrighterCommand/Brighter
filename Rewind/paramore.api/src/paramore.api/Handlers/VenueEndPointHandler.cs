@@ -67,7 +67,8 @@ namespace Paramore.Adapters.Presentation.API.Handlers
                 venueName: venueResource.Name,
                 address: venueResource.Address,
                 mapURN: venueResource.MapURN,
-                contact: venueResource.Contact               );
+                contact: venueResource.Contact,
+                version: venueResource.Version);
 
             var venue = new VenueTranslator().Translate(
                 new VenueReader(_unitOfWorkFactory, false)

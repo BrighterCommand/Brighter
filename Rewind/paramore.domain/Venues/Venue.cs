@@ -49,5 +49,15 @@ namespace Paramore.Domain.Venues
         {
             return string.Format("Address: {0}, Contact: {1}, Map: {2}, Name: {3}", address, contact, map, name);
         }
+
+        public void Update(VenueName venueName, Address address, Contact contact, VenueMap venueMap)
+        {
+            this.name = venueName;
+            this.address = address;
+            this.contact = contact;
+            this.map = venueMap;
+
+            version = version++;
+        }
     }
 }

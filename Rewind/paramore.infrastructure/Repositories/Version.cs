@@ -11,6 +11,11 @@ namespace Paramore.Adapters.Infrastructure.Repositories
 
         public Version() { }
 
+        public Version Increment()
+        {
+            return new Version(version + 1);
+        }
+
         public bool Equals(Version other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -55,5 +60,6 @@ namespace Paramore.Adapters.Infrastructure.Repositories
         {
             return !Equals(left, right);
         }
+
     }
 }
