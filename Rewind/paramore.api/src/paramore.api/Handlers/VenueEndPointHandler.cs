@@ -60,15 +60,17 @@ namespace Paramore.Adapters.Presentation.API.Handlers
                     };
         }
 
-        public OperationResult Put(VenueResource venueResource)
+        public OperationResult Put(Guid id, VenueResource venueResource)
         {
             var updateVenueCommand = new UpdateVenueCommand(
-                id: venueResource.Id,
+                id: id,
                 venueName: venueResource.Name,
                 address: venueResource.Address,
                 mapURN: venueResource.MapURN,
                 contact: venueResource.Contact,
                 version: venueResource.Version);
+
+            commandProcessor.Send(updateVenueCommand);
 
             var venue = new VenueTranslator().Translate(
                 new VenueReader(_unitOfWorkFactory, false)
@@ -79,6 +81,15 @@ namespace Paramore.Adapters.Presentation.API.Handlers
                     {
                         ResponseResource = venue
                     };
+        }
+
+        public OperationResult Delete(Guid id)
+        {
+            var deleteVenueCommand = new DeleteVenueCommand(id);
+
+            commandProcessor.Send(deleteVenueCommand);
+
+            return new OperationResult.OK();
         }
 
         //HACK! method to get results without hitting Db

@@ -24,7 +24,7 @@ namespace Paramore.Adapters.Presentation.API
                    .AsXmlDataContract().ForMediaType("application/vnd.paramore.data+xml").ForExtension("xml")
                     .And.TranscodedBy<JsonDataContractCodec>().ForMediaType("application/vnd.paramore.data+json;q=1").ForExtension("js").ForExtension("json");
 
-                //GET /venues 
+                //GET/POST /venues 
                 ResourceSpace.Has.ResourcesOfType<List<VenueResource>>()
                      .AtUri("/venues")
                      .HandledBy<VenueEndPointHandler>()
@@ -37,9 +37,9 @@ namespace Paramore.Adapters.Presentation.API
                      //   .ForMediaType("application/vnd.paramore.data+xml")
                      //   .ForExtension("xml");
 
-                //PUT /venues/{id}
+                //PUT /venues/id
                 ResourceSpace.Has.ResourcesOfType<VenueResource>()
-                     .AtUri("/venues/add")
+                     .AtUri("/venues/{id}")
                      .HandledBy<VenueEndPointHandler>()
                      .TranscodedBy<JsonDataContractCodec>()
                      .ForMediaType("application/vnd.paramore.data+json")
@@ -49,6 +49,10 @@ namespace Paramore.Adapters.Presentation.API
                 //.TranscodedBy<XmlSerializerCodec>()
                 //    .ForMediaType("application/vnd.paramore.data+xml")
                 //    .ForExtension("xml");
+
+                //DELETE /venues/id
+
+
 
             }
         }

@@ -2,6 +2,7 @@ using Paramore.Adapters.Infrastructure.Repositories;
 using OpenRasta.DI;
 using OpenRasta.Pipeline;
 using OpenRasta.Web;
+using Paramore.Adapters.Presentation.API.Handlers;
 using Paramore.Domain.Venues;
 using Paramore.Ports.Services.Commands.Venue;
 using Paramore.Ports.Services.Handlers.Venues;
@@ -32,6 +33,8 @@ namespace Paramore.Adapters.Presentation.API.Contributors
             //HACK! For now dependencies may need to be in both containers to allow resolution
             //, IAmAUnitOfWorkFactory unitOfWorkFactory
             container.Register<IHandleRequests<AddVenueCommand>, AddVenueCommandHandler>().AsMultiInstance();
+            container.Register<IHandleRequests<UpdateVenueCommand>, UpdateVenueCommandHandler>().AsMultiInstance();
+            container.Register<IHandleRequests<DeleteVenueCommand>, DeleteVenueCommandHandler>().AsMultiInstance();
             container.Register<IRepository<Venue,VenueDocument>, Repository<Venue, VenueDocument>>().AsMultiInstance();
             container.Register<IAmAUnitOfWorkFactory, UnitOfWorkFactory>().AsSingleton();
             
