@@ -63,6 +63,8 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.Entity" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="domain\Meetings\OverbookingPolicyTests.cs" />
@@ -73,7 +75,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="services\CommandHandlers\Venues\AddVenueCommandHandlerTests.cs" />
     <Compile Include="fakes\FakeRepository.cs" />
-    <Compile Include="services\CommandHandlers\Venues\UpdateVenueCommandHandlerFixture.cs" />
+    <Compile Include="services\CommandHandlers\Venues\DeleteVenueCommandHandlerTests.cs" />
+    <Compile Include="services\CommandHandlers\Venues\UpdateVenueCommandHandlerTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -51,12 +51,14 @@
     <Reference Include="System.Data.Entity" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\Venue\DeleteVenueCommand.cs" />
     <Compile Include="Commands\Venue\UpdateVenueCommand.cs" />
     <Compile Include="Handlers\Venues\AddVenueCommandHandler.cs" />
     <Compile Include="Handlers\Meetings\ScheduleMeetingCommandHandler.cs" />
     <Compile Include="Commands\Venue\AddVenueCommand.cs" />
     <Compile Include="Commands\Meeting\ScheduleMeetingCommand.cs" />
     <Compile Include="Events\Meeting\MeetingScheduledEvent.cs" />
+    <Compile Include="Handlers\Venues\DeleteVenueCommandHandler.cs" />
     <Compile Include="Handlers\Venues\UpdateVenueCommandHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ThinReadLayer\IAmAViewModelReader.cs" />
