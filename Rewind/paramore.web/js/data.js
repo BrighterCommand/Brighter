@@ -13,8 +13,8 @@ paramore.model = function () {
     var data = {
         Venues: [
             {
-                "address": "Street : StreetNumber: 100, Street: City Road, City : London, PostCode : EC1Y 2BP",
-                "contact": "ContactName: Ian, EmailAddress: ian@huddle.com, PhoneNumber: 123454678",
+                "address": { "streetNumber": "100", "street": "City Road", "city" : "London", "postCode" : "EC1Y 2BP" },
+                "contact": { "name": "Ian", "emailAddress": "ian@huddle.com", "phoneNumber": "123454678" },
                 "links": [
                     { "HRef": "\/\/localhost:59280\/venue\/5557e160-0f5a-472a-8dab-56f4e70ed15f", "Rel": "self" },
                     { "HRef": "http:\/\/goo.gl\/maps\/OX8n0", "Rel": "map" }],
@@ -22,8 +22,8 @@ paramore.model = function () {
                 "version": "1"
             },
             {
-                "address": "Street : StreetNumber: 123, Street: Sesame Street, City : New York, PostCode : 10128",
-                "contact": "ContactName: Elmo, EmailAddress: elmo@bigbird.com, PhoneNumber: 123454678",
+                "address": { "streetNumber": "123", "street": "Sesame Street", "city" : "New York", "postCode" : "10128" },
+                "contact": { "name": "Elmo", "emailAddress": "elmo@bigbird.com", "phoneNumber": "123454678" },
                 "links": [
                     { "HRef": "\/\/localhost:59280\/venue\/5557e160-0f5a-472a-8dab-56f4e70ed15f", "Rel": "self" },
                     { "HRef": "http:\/\/goo.gl\/maps\/vN5Gk", "Rel": "map" }],
