@@ -1,4 +1,4 @@
-﻿$(function () {
+﻿s$(function () {
  
     //for creating venues
     paramore.Venue = function () {
