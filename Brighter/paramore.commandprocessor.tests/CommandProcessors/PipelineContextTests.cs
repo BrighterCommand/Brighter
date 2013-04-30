@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
-using TinyIoC;
+using Nancy.TinyIoc;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
