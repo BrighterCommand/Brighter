@@ -23,6 +23,8 @@ namespace paramore.web {
           .Include("~/Content/font-awesome.min.css")
 		  .Include("~/Content/durandal.css")
           .Include("~/Content/app.css")
+          .Include("~/Content/main.css")
+          .Include("~/Content/normalize.css")
         );
     }
 
