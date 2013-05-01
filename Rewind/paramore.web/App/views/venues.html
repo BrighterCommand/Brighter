@@ -1,0 +1,73 @@
+﻿<section class="view">
+    <div class="venuelist">
+        <table>
+            <tbody data-bind="foreach: venues">
+                <tr>
+                    <td>
+                        <span>Name</span><input data-bind="value: name" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span><em>Address</em></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span>Street Number: </span>
+                        <input data-bind="value: streetNumber" />
+                    <td>
+                </tr>
+                <tr>
+                    <td>
+                        <span>Street: </span>
+                        <input data-bind="value: street" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span>City:</span><input data-bind="value: city" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span>Post Code:</span><input data-bind="value: postcode" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span><em>Contact:</em></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span>Name: </span>
+                        <input data-bind="value: contactName" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span>Email Address:</span><input data-bind="value: emailAddress" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span>Phone Number:</span><input data-bind="value: phoneNumber" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div data-bind="if: map ">
+                            <a data-bind="attr: { href: map }" target="_blank">Map</a>
+                        </div>
+                        <div data-bind="ifnot: map">
+                            <span>Map:</span><input data-bind="value: map">
+                        </div>
+                        <hr />
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <button data-bind='click: addVenue'>Add Venue</button>
+    </div>
+</section>
