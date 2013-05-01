@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>Twitter.Bootstrap.MVC</id>
+    <version>1.1.6</version>
+    <title>Bootstrap for MVC 4</title>
+    <authors>Chris Kirby</authors>
+    <owners>Chris Kirby</owners>
+    <licenseUrl>http://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
+    <projectUrl>https://github.com/sirkirby/twitter-bootstrap-nuget</projectUrl>
+    <iconUrl>https://raw.github.com/twitter/bootstrap/master/docs/assets/ico/apple-touch-icon-72-precomposed.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>This package is meant to complement those using the Twitter.Bootstrap library in their MVC 4 application. Upon installation it adds bundling and minification support for easy integration into your shared layouts and views. Issues? Please post them here https://github.com/sirkirby/twitter-bootstrap-nuget/issues</description>
+    <releaseNotes>- update to latest bootstrap dependency</releaseNotes>
+    <copyright />
+    <language />
+    <tags>twitter boostrap mvc mvc4 bundles javascript css</tags>
+    <dependencies>
+      <dependency id="Microsoft.AspNet.Web.Optimization" version="1.0.0" />
+      <dependency id="Microsoft.AspNet.Mvc" version="4.0.20710.0" />
+      <dependency id="Twitter.Bootstrap" version="2.3.1" />
+      <dependency id="WebActivatorEx" version="2.0.1" />
+    </dependencies>
+    <references />
+  </metadata>
+</package>

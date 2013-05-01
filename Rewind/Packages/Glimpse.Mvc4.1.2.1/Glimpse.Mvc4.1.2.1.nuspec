@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>Glimpse.Mvc4</id>
+    <version>1.2.1</version>
+    <title>Glimpse Mvc4</title>
+    <authors>nmolnar,  avanderhoorn</authors>
+    <owners>nmolnar,  avanderhoorn</owners>
+    <licenseUrl>http://www.opensource.org/licenses/apache2.0</licenseUrl>
+    <projectUrl>http://getglimpse.com/</projectUrl>
+    <iconUrl>http://getglimpse.com/content/glimpse100.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Glimpse is a web debugging and diagnostics tool used to gain a better understanding of whats happening inside of your ASP.NET MVC 4.0 application.</description>
+    <summary>ASP.NET MVC 4.0 web debugging and diagnostics tool.</summary>
+    <releaseNotes>Flyweight release for core:  
+ - Minor update to allow this package to take part in dynamic release notes.</releaseNotes>
+    <copyright />
+    <language />
+    <tags>ASP.NET Web MVC Glimpse diagnostics performance profiling timing</tags>
+    <dependencies>
+      <dependency id="Glimpse.AspNet" version="1.2.0" />
+      <dependency id="Microsoft.AspNet.Mvc" version="4.0.20710.0" />
+    </dependencies>
+    <references>
+      <reference file="Glimpse.Mvc4.dll" />
+    </references>
+  </metadata>
+</package>

@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>FontAwesome</id>
+    <version>3.0.2.3</version>
+    <authors>JiveCode</authors>
+    <owners>JiveCode</owners>
+    <licenseUrl>http://creativecommons.org/licenses/by/3.0/</licenseUrl>
+    <projectUrl>http://fortawesome.github.com/Font-Awesome/</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Iconic font designed for use with Twitter Bootstrap. The full suite of pictographic icons, examples, and documentation can be found at: http://fortawesome.github.com/Font-Awesome/</description>
+    <summary>Font Awesome for Twitter Bootstrap - http://fortawesome.github.com/Font-Awesome</summary>
+    <releaseNotes>Fixed issue with Fonts not having a build type of Content and font path in css.</releaseNotes>
+    <tags>FortAwesome FontAwesome Font Awesome Iconic Twitter Bootstrap</tags>
+    <references />
+  </metadata>
+</package>
