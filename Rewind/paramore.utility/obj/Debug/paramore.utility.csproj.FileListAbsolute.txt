@@ -6,3 +6,4 @@ c:\users\ian\oss\paramore\rewind\paramore.utility\bin\Debug\Paramore.Utility.dll
 c:\users\ian\oss\paramore\rewind\paramore.utility\bin\Debug\Paramore.Utility.pdb
 c:\users\ian\oss\paramore\rewind\paramore.utility\obj\Debug\Paramore.Utility.dll
 c:\users\ian\oss\paramore\rewind\paramore.utility\obj\Debug\Paramore.Utility.pdb
+c:\users\ian\oss\paramore\rewind\paramore.utility\obj\Debug\paramore.utility.csprojResolveAssemblyReference.cache
