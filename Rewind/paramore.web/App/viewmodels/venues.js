@@ -1,4 +1,4 @@
-﻿define(['durandal/system', 'durandal/app', 'durandal/data', 'durandal/logger'], function(system, app, data, logger) {
+﻿define(['durandal/system', 'durandal/app', 'data'], function(system, app, data) {
     var venueList= ko.observableArray([]);
 
    //The viewmodel
@@ -13,7 +13,7 @@
     
     //for creating venues
     function Venue() {
-        this.name = ko.observable(paramore.model.name);
+        this.name = ko.observable();
         this.streetNumber = ko.observable();
         this.street = ko.observable();
         this.city = ko.observable();
@@ -30,7 +30,9 @@
     function addVenue() {
         venues.push(new Venue());
     };
+    
     function loadVenues() {
+        var rows = data.venues.rows;
         $.each(data.venues.rows, function(i, v) {
             venueList.push(new Venue()
                 .name(v.name)
@@ -47,15 +49,12 @@
             );
         });
     };
+    
     function activate () {
         //the router's activator calls this function and waits for it to complete before proceding
         //Note: Data bind the values between the source and the targets using Knockout
-        logger.log('Venue view activate',
-                null,
-                system.getModuleId(venueList),
-                true);
-            loadVenues();
-        ko.applyBindings(venues);
+        system.log('activating the venues viewmodel');
+        loadVenues();
     };
 
  

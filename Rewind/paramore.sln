@@ -3,6 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5AC6D94A-216E-4948-B4E2-037EDDE9E74A}"
 	ProjectSection(SolutionItems) = preProject
+		Debugging_Durandal_KO.txt = Debugging_Durandal_KO.txt
 		HTTPRequest_API_Tests_Fiddler.txt = HTTPRequest_API_Tests_Fiddler.txt
 		Running Raven.txt = Running Raven.txt
 		theRules.txt = theRules.txt
