@@ -145,7 +145,6 @@
     <Content Include="App\durandal\viewModel.js" />
     <Content Include="App\durandal\viewModelBinder.js" />
     <Content Include="App\durandal\widget.js" />
-    <Content Include="App\logger.js" />
     <Content Include="App\main-built.js" />
     <Content Include="App\main.js" />
     <Content Include="App\viewmodels\flickr.js" />
