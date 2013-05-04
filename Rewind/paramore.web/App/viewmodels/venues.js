@@ -1,11 +1,11 @@
-﻿define(['durandal/system', 'durandal/app', 'data'], function(system, app, data) {
+﻿define(['durandal/system', 'durandal/app', 'services/dataService'], function(system, app, dataService) {
     var venueList= ko.observableArray([]);
-
+    var initialized = false;
    //The viewmodel
    var venues = {
         venueList: venueList,
         addVenue: addVenue,
-        loadVenues: loadVenues,
+        loadVenues: load,
         activate: activate
     };
 
@@ -31,9 +31,10 @@
         venues.push(new Venue());
     };
     
-    function loadVenues() {
-        var rows = data.venues.rows;
-        $.each(data.venues.rows, function(i, v) {
+    function load() {
+        var rows = dataService.getVenues();
+        rows.sort(sortVenues);
+        $.each(rows, function(i, v) {
             venueList.push(new Venue()
                 .name(v.name)
                 .streetNumber(v.address.streetNumber)
@@ -50,11 +51,20 @@
         });
     };
     
+    function sortVenues(right, left) {
+        return (right.name > left.name) ? 1 : -1 
+    };
+    
     function activate () {
         //the router's activator calls this function and waits for it to complete before proceding
         //Note: Data bind the values between the source and the targets using Knockout
         system.log('activating the venues viewmodel');
-        loadVenues();
+        if (initialized) {
+            return;
+        }
+            
+        load();
+        initialized = true;
     };
 
  
