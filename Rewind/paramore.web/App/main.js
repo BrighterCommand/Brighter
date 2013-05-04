@@ -4,24 +4,17 @@
     }
 });
 
-define(['durandal/app', 'durandal/viewLocator', 'durandal/system', 'durandal/plugins/router'],
-    function(app, viewLocator, system, router) {
+define(['durandal/app', 'durandal/system', 'config'],
+    function(app, system, config) {
 
         //>>excludeStart("build", true);
         system.debug(true);
         //>>excludeEnd("build");
 
-        app.title = 'Durandal Starter Kit';
+        app.title = 'Paramore';
         app.start().then(function() {
-            //Replace 'viewmodels' in the moduleId with 'views' to locate the view.
-            //Look for partial views in a 'views' folder in the root.
-            viewLocator.useConvention();
 
-            //configure routing
-            router.useConvention();
-            router.mapNav('welcome');
-            router.mapNav('flickr');
-            router.mapNav('venues');
+            config.initialize();
 
             app.adaptToDevice();
 
