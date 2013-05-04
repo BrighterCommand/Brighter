@@ -13,6 +13,8 @@ namespace paramore.web {
           .Include("~/Scripts/knockout-{version}.js")
           .Include("~/Scripts/sammy-{version}.js")
           .Include("~/Scripts/bootstrap.min.js")
+          .Include("~/Scripts/moment.min.js")
+          .Include("~/Scripts/moment.datepicker.min.js")
         );
 
       bundles.Add(
