@@ -4,8 +4,8 @@
     }
 });
 
-define(['durandal/app', 'durandal/system', 'config'],
-    function(app, system, config) {
+define(['durandal/app', 'durandal/system', 'config', 'services/dataService'],
+    function(app, system, config, dataService) {
 
         //>>excludeStart("build", true);
         system.debug(true);
@@ -16,6 +16,8 @@ define(['durandal/app', 'durandal/system', 'config'],
 
             config.initialize();
 
+            dataService.initialize();
+            
             app.adaptToDevice();
 
             //Show the app by setting the root view model for our application with a transition.

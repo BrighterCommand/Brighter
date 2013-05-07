@@ -1,5 +1,5 @@
-﻿define(['durandal/plugins/router', 'durandal/viewLocator'],
-    function (router, viewLocator) {
+﻿define(['durandal/plugins/router', 'durandal/viewLocator', 'durandal/services/mocks/mockVenues'],
+    function (router, viewLocator, mockVenues) {
         var routes = [
             {
                 url: 'welcome',
@@ -21,10 +21,36 @@
             }
         ];
 
+        var requests = [
+            {
+                resourceId: 'venues',
+                type: 'ajax',
+                settings: {
+                    url: "http://localhost:31290/venues",
+                    //cache: "persist",
+                    type: 'GET',
+                    dataType: 'JSON'
+                }
+            }
+        ];
+
+        var useMocks = true;
+        var mockRequests = [
+            {
+                resourceId: 'venues',
+                resource: function (resource) {
+                    resource.success(mockVenues.data);
+                },
+            }
+        ];
+
         var config = {
-           initialize : initialize, 
-           routes: routes,
-           startModule: 'welcome'
+            initialize: initialize,
+            mockRequests : mockRequests,
+            requests: requests,
+            routes: routes,
+            startModule: 'welcome',
+            useMocks: useMocks
         };
         return config;
         
