@@ -1,4 +1,4 @@
-﻿define(['durandal/plugins/router', 'durandal/app'], function (router, app) {
+﻿define(['durandal/plugins/router', 'durandal/app', 'config'], function (router, app, config) {
 
     return {
         router: router,
@@ -8,7 +8,8 @@
             app.showMessage('Search not yet implemented...');
         },
         activate: function () {
-            return router.activate('welcome');
+            router.map(config.routes);
+            return router.activate(config.startModule);
         }
     };
 });
