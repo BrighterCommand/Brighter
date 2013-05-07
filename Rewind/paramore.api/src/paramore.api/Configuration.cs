@@ -16,6 +16,7 @@ namespace Paramore.Adapters.Presentation.API
             using (OpenRastaConfiguration.Manual)
             {
                 ResourceSpace.Uses.PipelineContributor<DependencyPipelineContributor>();
+                ResourceSpace.Uses.PipelineContributor<CrossDomainPipelineContributor>();
 
                 //Resources
                 ResourceSpace.Has.ResourcesOfType<EntryPointResource>()
