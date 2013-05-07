@@ -11,7 +11,7 @@
 
 //The model
 define([], function () {
-    var venues = [
+    var data = [
             {
                 "address": { "streetNumber": "100", "street": "City Road", "city": "London", "postCode": "EC1Y 2BP" },
                 "contact": { "name": "Ian", "emailAddress": "ian@huddle.com", "phoneNumber": "123454678" },
@@ -32,13 +32,9 @@ define([], function () {
             }
         ];
 
-    var getVenues = function () {
-        return venues;
+    var mockVenues = {
+        data: data
     };
 
-    var dataservice = {
-        getVenues: getVenues
-    };
-
-    return dataservice;
+    return mockVenues;
 });

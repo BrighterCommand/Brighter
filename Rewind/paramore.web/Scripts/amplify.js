@@ -488,7 +488,7 @@ amplify.request = function( resourceId, data, callback ) {
 
 amplify.request.types = {};
 amplify.request.resources = {};
-amplify.request.define = function( resourceId, type, settings ) {
+amplify.request.define = function (resourceId, type, settings) {
 	if ( typeof type === "string" ) {
 		if ( !( type in amplify.request.types ) ) {
 			throw "amplify.request.define: unknown type: " + type;

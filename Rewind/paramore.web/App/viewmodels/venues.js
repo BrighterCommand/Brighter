@@ -32,7 +32,7 @@
     };
     
     function load() {
-        var rows = dataService.getVenues();
+        var rows = dataService.venues.getVenues();
         rows.sort(sortVenues);
         $.each(rows, function(i, v) {
             venueList.push(new Venue()
@@ -52,7 +52,7 @@
     };
     
     function sortVenues(right, left) {
-        return (right.name > left.name) ? 1 : -1 
+        return (right.name > left.name) ? 1 : -1;
     };
     
     function activate () {
@@ -62,7 +62,7 @@
         if (initialized) {
             return;
         }
-            
+
         load();
         initialized = true;
     };

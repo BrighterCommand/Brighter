@@ -1,48 +1,42 @@
-﻿// MOCK: Get the real data from a REST endpoint - this is test data captured from the enpoint by Fiddler
-//[{
-//    "address": { "city": "", "postCode": "", "street": "", "streetnumber": "" },
-//    "contact": { "emailAddress": "ian@huddle.com", "name": "Ian", "phoneNumber": "123454678" },
-//    "links": [{ "HRef": "\/\/localhost:59280\/venue\/8b8c66fc-d541-4051-94ed-1699209d69b0", "Rel": "self" },
-//      { "HRef": "http:\/\/www.mysite.com\/maps\/12345", "Rel": "map" }],
-//    "name": "Test Venue",
-//    "version": 1
-//}]
-
-
-//The model
-define(['durandal/system'],  function (system) {
-    var getVenues = function() {
-        var venues = [];
-        //set ajax call
-        var options = {
-            url: "http://localhost:49868/venues",
-            cache: false,
-            type: 'GET',
-            dataType: 'JSON'
-        };
-        
-        //make call
-        $.ajax(options)
-            .then(querySucceeded)
-            .fail(queryFailed);
-
-        return venues;
-        
-        //handle the ajax callbac
-        function querySucceeded(data) {
-            venues = data;
-            system.log("Retrieved speakers from the Paramore API", venues, system.getModuleId(dataservice));
+﻿define(['config', 'services/dataService.venues'],
+    function(config, venues) {
+        var requests = config.requests;
+        var mockRequests = config.mockRequests;
+        var useMocks = config.useMocks;
+        var dataService = {
+            initialize: initialize,
+            venues : venues
         };
 
-        function queryFailed(jqXHR, status) {
-            system.log("Failed to get data: " + status, jqXHR, system.getModuleId(dataservice));
-        }
-    };
-    
+        return dataService;
 
-    var dataservice = {
-        getVenues : getVenues
-    };
+        function initialize() {
+            if (!useMocks) {
+                buildRequestDefinitions();
+            } else {
+                buildMockRequestDefinitions();
+            }
 
-    return dataservice;
-});
+        };
+        
+        function buildRequestDefinitions() {
+            for (var i = 0; i < requests.length; i++) {
+                var request = requests[i];
+                amplify.request.define(
+                    request.resourceId,
+                    request.type,
+                    request.settings
+                );
+            }
+        };
+        
+        function buildMockRequestDefinitions() {
+            for (var i = 0; i < requests.length; i++) {
+                var request = requests[i];
+                amplify.request.define(
+                    request.resourceId,
+                    request.resource
+                );
+            }
+        };
+    });

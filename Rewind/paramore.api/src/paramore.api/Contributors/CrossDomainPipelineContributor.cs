@@ -26,7 +26,7 @@ namespace Paramore.Adapters.Presentation.API.Contributors
         {
             context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
             context.Response.Headers.Add("Access-Control-Allow-Methods","POST, GET, OPTIONS, PUT, DELETE");
-            context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
+            context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, accept, glimpse-parent-requestid, origin");
         }
     }
 }
