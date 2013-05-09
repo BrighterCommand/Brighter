@@ -3,6 +3,8 @@
         var requests = config.requests;
         var mockRequests = config.mockRequests;
         var useMocks = config.useMocks;
+        var initialized = false;
+        
         var dataService = {
             initialize: initialize,
             venues : venues
@@ -11,11 +13,17 @@
         return dataService;
 
         function initialize() {
+             if (initialized ) {
+                 return;
+             }
+
             if (!useMocks) {
                 buildRequestDefinitions();
             } else {
                 buildMockRequestDefinitions();
             }
+
+            initialized = true;
 
         };
         
@@ -31,7 +39,7 @@
         };
         
         function buildMockRequestDefinitions() {
-            for (var i = 0; i < requests.length; i++) {
+            for (var i = 0; i < mockRequests.length; i++) {
                 var request = requests[i];
                 amplify.request.define(
                     request.resourceId,

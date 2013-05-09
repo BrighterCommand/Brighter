@@ -1,4 +1,6 @@
-﻿// MOCK: Get the real data from a REST endpoint - this is test data captured from the enpoint by Fiddler
+﻿define([], function () {
+    
+// MOCK: Get the real data from a REST endpoint - this is test data captured from the enpoint by Fiddler
 //[{
 //    "address": { "city": "", "postCode": "", "street": "", "streetnumber": "" },
 //    "contact": { "emailAddress": "ian@huddle.com", "name": "Ian", "phoneNumber": "123454678" },
@@ -8,9 +10,6 @@
 //    "version": 1
 //}]
 
-
-//The model
-define([], function () {
     var data = [
             {
                 "address": { "streetNumber": "100", "street": "City Road", "city": "London", "postCode": "EC1Y 2BP" },
