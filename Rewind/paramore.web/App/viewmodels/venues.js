@@ -32,7 +32,17 @@
     };
     
     function load() {
-        var rows = dataService.venues.getVenues();
+        var rows = dataService.venues.getVenues()
+            .then(
+                function (data) {
+                    venues = data;
+                    system.log("Retrieved speakers from the Paramore API");
+                },
+                function (data, status) {
+                    system.log("Failed to get data: " + status, data);
+                }
+            );
+        
         rows.sort(sortVenues);
         $.each(rows, function(i, v) {
             venueList.push(new Venue()
