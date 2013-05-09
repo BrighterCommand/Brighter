@@ -17,11 +17,11 @@
                  return;
              }
 
-            if (!useMocks) {
-                buildRequestDefinitions();
-            } else {
-                buildMockRequestDefinitions();
-            }
+             buildRequestDefinitions();
+            
+             if (useMocks) {
+                 buildMockRequestDefinitions();
+             }
 
             initialized = true;
 
@@ -43,7 +43,17 @@
                 var request = requests[i];
                 amplify.request.define(
                     request.resourceId,
-                    request.resource
+                    function (resource) {
+                        resource.success({
+                            "address": { "streetNumber": "123", "street": "Sesame Street", "city": "New York", "postCode": "10128" },
+                            "contact": { "name": "Elmo", "emailAddress": "elmo@bigbird.com", "phoneNumber": "123454678" },
+                            "links": [
+                                { "HRef": "\/\/localhost:59280\/venue\/5557e160-0f5a-472a-8dab-56f4e70ed15f", "Rel": "self" },
+                                { "HRef": "http:\/\/goo.gl\/maps\/vN5Gk", "Rel": "map" }],
+                            "name": "Hooper's Store",
+                            "version": "1"
+                        });
+                    }
                 );
             }
         };

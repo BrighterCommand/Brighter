@@ -15,7 +15,7 @@ namespace paramore.web {
           .Include("~/Scripts/bootstrap.min.js")
           .Include("~/Scripts/moment.min.js")
           .Include("~/Scripts/moment.datepicker.min.js")
-          .Include("~/Scripts/amplify.min.js")
+          .Include("~/Scripts/amplify.js")
         );
 
       bundles.Add(

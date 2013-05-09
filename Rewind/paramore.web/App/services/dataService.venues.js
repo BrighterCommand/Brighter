@@ -12,7 +12,7 @@
 //The model
 define(['durandal/system'],  function (system) {
 
-    var getVenues = function () {
+    var getVenues = function() {
         var venues = [];
         //set ajax call
         var options = {
@@ -21,19 +21,21 @@ define(['durandal/system'],  function (system) {
             type: 'GET',
             dataType: 'JSON'
         };
-        
+
         //make call
         /*$.ajax(options)
             .then(querySucceeded)
             .fail(queryFailed);*/
-        amplify.request({
-            resourceId: 'venues',
-            success: succeeded,
-            error: failed
-        });
+        $.Deferred(function(dfd) {
+            amplify.request({
+                resourceId: 'venues',
+                success: dfd.resolve,
+                error: dfd.reject
+            });
+        }).promise();
+    };
 
-        return venues;
-        
+    /*
         //handle the ajax callbac
         function succeeded(data) {
             venues = data;
@@ -43,7 +45,7 @@ define(['durandal/system'],  function (system) {
         function failed(data, status) {
             system.log("Failed to get data: " + status, data, system.getModuleId(dataservice));
         }
-    };
+        */
     
 
     var dataservice = {
