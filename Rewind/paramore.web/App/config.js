@@ -1,4 +1,4 @@
-﻿define(['durandal/plugins/router', 'durandal/viewLocator', 'durandal/services/mocks/mockVenues'],
+﻿define(['durandal/plugins/router', 'durandal/viewLocator', 'services/mocks/mockVenues'],
     function (router, viewLocator, mockVenues) {
         var routes = [
             {
