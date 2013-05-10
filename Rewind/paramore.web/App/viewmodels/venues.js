@@ -1,4 +1,5 @@
-﻿define(['durandal/system', 'durandal/app', 'services/dataService'], function(system, app, dataService) {
+﻿define(['durandal/system', 'durandal/app', 'services/dataService'], function (system, app, dataService) {
+    var rows = [];
     var venueList= ko.observableArray([]);
     var initialized = false;
    //The viewmodel
@@ -32,33 +33,32 @@
     };
     
     function load() {
-        var rows = dataService.venues.getVenues()
+        dataService.venues.getVenues()
             .then(
                 function (data) {
-                    venues = data;
+                    rows = data;
                     system.log("Retrieved speakers from the Paramore API");
+                    $.each(rows, function(i, v) {
+                        venueList.push(new Venue()
+                            .name(v.name)
+                            .streetNumber(v.address.streetNumber)
+                            .street(v.address.street)
+                            .city(v.address.city)
+                            .postcode(v.address.postCode)
+                            .contactName(v.contact.name)
+                            .emailAddress(v.contact.emailAddress)
+                            .phoneNumber(v.contact.phoneNumber)
+                            .map(v.links[1].HRef)
+                            .self(v.links[0].HRef)
+                            .version(v.version)
+                        );
+                    });
+                    venueList.sort(sortVenues);
                 },
                 function (data, status) {
                     system.log("Failed to get data: " + status, data);
                 }
             );
-        
-        rows.sort(sortVenues);
-        $.each(rows, function(i, v) {
-            venueList.push(new Venue()
-                .name(v.name)
-                .streetNumber(v.address.streetNumber)
-                .street(v.address.street)
-                .city(v.address.city)
-                .postcode(v.address.postCode)
-                .contactName(v.contact.name)
-                .emailAddress(v.contact.emailAddress)
-                .phoneNumber(v.contact.phoneNumber)
-                .map(v.links[1].HRef)
-                .self(v.links[0].HRef)
-                .version(v.version)
-            );
-        });
     };
     
     function sortVenues(right, left) {
