@@ -26,7 +26,7 @@ define(['durandal/system'],  function (system) {
         /*$.ajax(options)
             .then(querySucceeded)
             .fail(queryFailed);*/
-        $.Deferred(function(dfd) {
+        return $.Deferred(function(dfd) {
             amplify.request({
                 resourceId: 'venues',
                 success: dfd.resolve,
