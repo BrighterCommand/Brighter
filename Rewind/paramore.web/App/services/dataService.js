@@ -40,11 +40,13 @@
         
         function buildMockRequestDefinitions() {
             for (var i = 0; i < mockRequests.length; i++) {
-                var request = requests[i];
+                var request = mockRequests[i];
                 amplify.request.define(
                     request.resourceId,
-                    request.resource
-                    );
+                    function(resource) {
+                        resource.success(request.mockdata);
+                    }
+                );
             }
         };
     });
