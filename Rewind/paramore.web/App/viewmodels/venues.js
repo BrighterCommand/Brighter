@@ -56,7 +56,7 @@
                     venueList.sort(sortVenues);
                 },
                 function (data, status) {
-                    system.log("Failed to get data: " + status, data);
+                    system.log("Failed to load data: " + status, data);
                 }
             );
     };

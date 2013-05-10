@@ -8,8 +8,6 @@
 //    "version": 1
 //}]
 
-
-//The model
 define(['durandal/system'],  function (system) {
 
     var getVenues = function() {
@@ -22,10 +20,8 @@ define(['durandal/system'],  function (system) {
             dataType: 'JSON'
         };
 
+
         //make call
-        /*$.ajax(options)
-            .then(querySucceeded)
-            .fail(queryFailed);*/
         return $.Deferred(function(dfd) {
             amplify.request({
                 resourceId: 'venues',
@@ -34,18 +30,6 @@ define(['durandal/system'],  function (system) {
             });
         }).promise();
     };
-
-    /*
-        //handle the ajax callbac
-        function succeeded(data) {
-            venues = data;
-            system.log("Retrieved speakers from the Paramore API", venues, system.getModuleId(dataservice));
-        };
-
-        function failed(data, status) {
-            system.log("Failed to get data: " + status, data, system.getModuleId(dataservice));
-        }
-        */
     
 
     var dataservice = {

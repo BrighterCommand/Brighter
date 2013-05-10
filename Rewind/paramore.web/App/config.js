@@ -38,9 +38,7 @@
         var mockRequests = [
             {
                 resourceId: 'venues',
-                resource: function (resource) {
-                    resource.success(mockVenues.data);
-                },
+                mockdata: mockVenues.data
             }
         ];
 
