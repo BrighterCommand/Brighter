@@ -18,6 +18,12 @@
                 moduleId: 'viewmodels/venues',
                 name: 'Venues',
                 visible: true
+            },
+            {
+                url: 'addVenueModal',
+                moduleId: 'viewmodels/addVenueModal',
+                name: 'AddVenues',
+                visible: false
             }
         ];
 
