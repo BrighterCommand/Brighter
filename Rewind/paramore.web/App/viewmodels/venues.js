@@ -29,7 +29,11 @@
     };
 
     function addVenue() {
-        venues.push(new Venue());
+        app.showModal('viewmodels/addVenueModal')
+            .then(function(response) {
+                var venue = new Venue();
+                venues.push(venue);
+            });
     };
     
     function load() {

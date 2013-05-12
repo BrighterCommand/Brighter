@@ -20,15 +20,15 @@
                         <address data-bind="text: name" />
                     </td>
                     <td style ="width:300px">
-                        <span>Street Number: </span><address data-bind="text: streetNumber" />
-                        <span>Street: </span><address data-bind="text: street" />
-                        <span>City:</span><address data-bind="text: city" />
-                        <span>Post Code:</span><address data-bind="text: postcode" />
+                        <span>Street Number: </span><span data-bind="text: streetNumber" />
+                        <span>Street: </span><span data-bind="text: street" />
+                        <span>City:</span><span data-bind="text: city" />
+                        <span>Post Code:</span><span data-bind="text: postcode" />
                     </td>
                     <td style ="width:300px">
-                        <span>Name: </span><address data-bind="text: contactName" />
-                        <span>Email Address:</span><address data-bind="text: emailAddress" />
-                        <span>Phone Number:</span><address data-bind="text: phoneNumber" />
+                        <span>Name: </span><span data-bind="text: contactName" />
+                        <span>Email Address:</span><span data-bind="text: emailAddress" />
+                        <span>Phone Number:</span><span data-bind="text: phoneNumber" />
                     </td>
                 </tr>
                 <tr>
@@ -37,7 +37,7 @@
                             <a data-bind="attr: { href: map }" target="_blank">Map</a>
                         </div>
                         <div data-bind="ifnot: map">
-                            <span>Map:</span><address data-bind="text: map"/>
+                            <span>Map:</span><span data-bind="text: map"/>
                         </div>
                         <hr />
                     </td>
