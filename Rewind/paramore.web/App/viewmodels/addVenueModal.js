@@ -1,5 +1,9 @@
 ﻿define(['durandal/system'], function (system) {
 
+    var response = {
+        closedWith: 'cancel'
+    };
+
     var addVenueModal = {
         activate: activate,
         response: response,
@@ -7,7 +11,7 @@
         onbtnCancel: onbtnCancel
     };
 
-    function activate () {
+    function activate() {
         system.log("Activating Add Venue Modal");
     };
 
