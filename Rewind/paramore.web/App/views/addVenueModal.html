@@ -9,7 +9,7 @@
                     <tr>
                         <td>
                             <span>Venue Name: </span>
-                            <input data-bind="value: name" />
+                            <input data-bind="value: response.name" />
                         </td>
                     </tr>
                     <tr>
@@ -20,25 +20,25 @@
                     <tr>
                         <td>
                             <span>Street Number: </span>
-                            <input data-bind="value: streetNumber" />
+                            <input data-bind="value: response.streetNumber" />
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <span>Street: </span>
-                            <input data-bind="value: street" />
+                            <input data-bind="value: response.street" />
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <span>City: </span>
-                            <input data-bind="value: city" />
+                            <input data-bind="value: response.city" />
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <span>Post Code: </span>
-                            <input data-bind="value: postcode" />
+                            <input data-bind="value: response.postcode" />
                         </td>
                     </tr>
                     <tr>
@@ -49,29 +49,24 @@
                     <tr>
                         <td>
                             <span>Contact Name: </span>
-                            <input data-bind="value: contactName" />
+                            <input data-bind="value: response.contactName" />
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <span>Email Address: </span>
-                            <input data-bind="value: emailAddress" />
+                            <input data-bind="value: response.emailAddress" />
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <span>Phone Number: </span>
-                            <input data-bind="value: phoneNumber" />
+                            <input data-bind="value: response.phoneNumber" />
                         </td>
                     </tr>
                     <tr>
                         <td>
-                            <div data-bind="if: map ">
-                                <a data-bind="attr: { href: map }" target="_blank">Map</a>
-                            </div>
-                            <div data-bind="ifnot: map">
-                                <span>Map:</span><input data-bind="value: map" />
-                            </div>
+                            <span>Map:</span><input data-bind="value: response.map" />
                         </td>
                     </tr>
                 </tbody>

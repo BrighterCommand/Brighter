@@ -1,7 +1,18 @@
 ﻿define(['durandal/system'], function (system) {
 
     var response = {
-        closedWith: 'cancel'
+        closedWith: 'cancel',
+        name: ko.observable(),
+        streetNumber: ko.observable(),
+        street: ko.observable(),
+        city: ko.observable(),
+        postcode: ko.observable(),
+        contactName: ko.observable(),
+        emailAddress: ko.observable(),
+        phoneNumber: ko.observable(),
+        map: ko.observable(),
+        self: ko.observable(),
+        version: ko.observable()
     };
 
     var addVenueModal = {

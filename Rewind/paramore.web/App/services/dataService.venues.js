@@ -22,7 +22,7 @@ define(['durandal/system'],  function (system) {
 
 
         //make call
-        return $.Deferred(function(dfd) {
+        return system.defer(function(dfd) {
             amplify.request({
                 resourceId: 'venues',
                 success: dfd.resolve,
