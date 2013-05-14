@@ -31,8 +31,20 @@
     function addVenue() {
         app.showModal('viewmodels/addVenueModal')
             .then(function(response) {
-                var venue = new Venue();
-                venues.push(venue);
+                venueList.push(new Venue()
+                      .name(response.name())
+                      .streetNumber(response.streetNumber())
+                      .street(response.street())
+                      .city(response.city())
+                      .postcode(response.postcode())
+                      .contactName(response.contactName())
+                      .emailAddress(response.emailAddress())
+                      .phoneNumber(response.phoneNumber())
+                      .map(response.map())
+                      .self(response.self())
+                      .version(0)
+                  );
+                venueList.sort(sortVenues);
             });
     };
     
