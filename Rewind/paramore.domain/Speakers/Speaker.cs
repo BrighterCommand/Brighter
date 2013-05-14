@@ -7,10 +7,10 @@ namespace Paramore.Domain.Speakers
     {
         private SpeakerBio bio;
         private EmailAddress emailAddress;
-        private Name name;
+        private SpeakerName name;
         private PhoneNumber phoneNumber;
 
-        public Speaker(Id id, Version version, SpeakerBio bio, PhoneNumber phoneNumber, EmailAddress emailAddress, Name name) : base(id, version)
+        public Speaker(Id id, Version version, SpeakerBio bio, PhoneNumber phoneNumber, EmailAddress emailAddress, SpeakerName name) : base(id, version)
         {
             this.bio = bio;
             this.emailAddress = emailAddress;
@@ -25,7 +25,7 @@ namespace Paramore.Domain.Speakers
         {
             bio = new SpeakerBio(document.Bio);
             emailAddress = new EmailAddress(document.Email);
-            name = new Name(document.Name);
+            name = new SpeakerName(document.Name);
             phoneNumber = new PhoneNumber(document.PhoneNumber);
         }
 

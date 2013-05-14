@@ -22,8 +22,8 @@ namespace Paramore.Adapters.Presentation.API.Resources
         public VenueResource(Guid id, int version, string name, string address, string mapURN, string contact)
         {
             Id = id;
-            MapURN = mapURN;
             self = new Link(relName: ParamoreGlobals.Self, resourceName: "venue", id: id.ToString());
+            MapURN = mapURN;
             map = new Link(relName: ParamoreGlobals.Map, href: mapURN);
             Links = new List<Link>{self, map};
 

@@ -3,16 +3,16 @@ using Paramore.Domain.Common;
 
 namespace Paramore.Domain.Speakers
 {
-    public class Name : IEquatable<Name>, IAmAValueType<string>
+    public class SpeakerName : IEquatable<SpeakerName>, IAmAValueType<string>
     {
         private readonly string fullname; 
 
-        public Name(string name)
+        public SpeakerName(string name)
         {
             this.fullname = name;
         }
 
-        public static implicit operator string(Name rhs)
+        public static implicit operator string(SpeakerName rhs)
         {
             return rhs.fullname;
         }
@@ -27,7 +27,7 @@ namespace Paramore.Domain.Speakers
             return string.Format("{0}", fullname);
         }
 
-        public bool Equals(Name rhs)
+        public bool Equals(SpeakerName rhs)
         {
             if (ReferenceEquals(null, rhs)) return false;
             if (ReferenceEquals(this, rhs)) return true;
@@ -38,8 +38,8 @@ namespace Paramore.Domain.Speakers
         {
             if (ReferenceEquals(null, rhs)) return false;
             if (ReferenceEquals(this, rhs)) return true;
-            if (rhs.GetType() != typeof (Name)) return false;
-            return Equals((Name) rhs);
+            if (rhs.GetType() != typeof (SpeakerName)) return false;
+            return Equals((SpeakerName) rhs);
         }
 
         public override int GetHashCode()
@@ -47,12 +47,12 @@ namespace Paramore.Domain.Speakers
             return (fullname != null ? fullname.GetHashCode() : 0);
         }
 
-        public static bool operator ==(Name left, Name right)
+        public static bool operator ==(SpeakerName left, SpeakerName right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(Name left, Name right)
+        public static bool operator !=(SpeakerName left, SpeakerName right)
         {
             return !Equals(left, right);
         }

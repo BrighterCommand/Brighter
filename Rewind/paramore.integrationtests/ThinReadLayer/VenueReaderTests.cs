@@ -9,7 +9,7 @@ using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
 
 namespace paramore.integrationtests.ThinReadLayer
 {
-    [Subject("Chekc that we can get the venue list out of the thin read layer")]
+    [Subject("Check that we can get the venue list out of the thin read layer")]
     public class When_viewing_a_list_of_venues
     {
         private const string TEST_VENUE = "Test Venue";

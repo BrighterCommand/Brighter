@@ -110,11 +110,14 @@
     <Compile Include="Resources\AddressResource.cs" />
     <Compile Include="Resources\ContactResource.cs" />
     <Compile Include="Resources\Link.cs" />
+    <Compile Include="Resources\SpeakerResource.cs" />
     <Compile Include="Resources\VenueResource.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources\EntryPointResource.cs" />
     <Compile Include="Handlers\VenueEndPointHandler.cs" />
+    <Compile Include="Translators\ITranslator.cs" />
     <Compile Include="Translators\ParamoreGlobals.cs" />
+    <Compile Include="Translators\SpeakerTranslator.cs" />
     <Compile Include="Translators\VenueTranslator.cs" />
   </ItemGroup>
   <ItemGroup>
