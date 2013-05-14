@@ -47,7 +47,7 @@ namespace paramore.integrationtests.Translators
     }
 
     [Subject("Check that we can get the venue list out of the thin read layer")]
-    public class When_changing_a_document_to_a_resource
+    public class When_changing_a_venuedocument_to_a_resource
     {
         static readonly VenueTranslator venueTranslator = new VenueTranslator();
         static VenueDocument document;

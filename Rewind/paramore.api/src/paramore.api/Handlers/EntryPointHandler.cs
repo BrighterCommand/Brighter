@@ -7,7 +7,7 @@ namespace Paramore.Adapters.Presentation.API.Handlers
     {
         public OperationResult Get()
         {
-            return new OperationResult.OK { ResponseResource = new EntryPointResource { Title = "Welcome Home." } };
+            return new OperationResult.OK { ResponseResource = new EntryPointResource { Title = "ToDo: Add Resource Index" } };
         }
     }
 }

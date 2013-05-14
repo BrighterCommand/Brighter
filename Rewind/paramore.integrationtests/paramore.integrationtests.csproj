@@ -58,8 +58,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ThinReadLayer\SpeakerReaderTests.cs" />
     <Compile Include="ThinReadLayer\VenueReaderTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Translators\SpeakerTranslatorTests.cs" />
     <Compile Include="Translators\VenueTranslatorTests.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -4,7 +4,9 @@ namespace Paramore.Domain.Speakers
 {
     public class SpeakerBio : IAmAValueType<string>
     {
-        private readonly string bio; 
+        private readonly string bio;
+
+        public SpeakerBio() {}
 
         public SpeakerBio(string biography)
         {
@@ -20,6 +22,35 @@ namespace Paramore.Domain.Speakers
         {
             return rhs.bio;
         }
+
+        protected bool Equals(SpeakerBio other)
+        {
+            return string.Equals(bio, other.bio);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((SpeakerBio) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (bio != null ? bio.GetHashCode() : 0);
+        }
+
+        public static bool operator ==(SpeakerBio left, SpeakerBio right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(SpeakerBio left, SpeakerBio right)
+        {
+            return !Equals(left, right);
+        }
+
 
         public override string ToString()
         {

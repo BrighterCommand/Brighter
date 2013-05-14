@@ -67,6 +67,7 @@
     <Compile Include="Handlers\Venues\UpdateVenueCommandHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ThinReadLayer\IAmAViewModelReader.cs" />
+    <Compile Include="ThinReadLayer\SpeakerReader.cs" />
     <Compile Include="ThinReadLayer\VenueReader.cs" />
   </ItemGroup>
   <ItemGroup>

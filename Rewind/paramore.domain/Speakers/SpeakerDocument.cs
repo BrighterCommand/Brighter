@@ -7,7 +7,7 @@ namespace Paramore.Domain.Speakers
 {
     public class SpeakerDocument : IAmADocument
     {
-        public SpeakerDocument(Id id, Version version, SpeakerBio bio, PhoneNumber phoneNumber, EmailAddress emailAddress, Name name)
+        public SpeakerDocument(Id id, Version version, SpeakerBio bio, PhoneNumber phoneNumber, EmailAddress emailAddress, SpeakerName name)
         {
             Bio = (string) bio;
             Email = (string) emailAddress;
@@ -16,6 +16,8 @@ namespace Paramore.Domain.Speakers
             Name = (string) name;
             Version = (int)version;
         }
+
+        public SpeakerDocument() {}
 
         public string Bio { get; set; }
         public string Email { get; set; }

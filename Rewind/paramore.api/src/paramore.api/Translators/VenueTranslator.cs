@@ -5,7 +5,7 @@ using Paramore.Domain.Venues;
 
 namespace Paramore.Adapters.Presentation.API.Translators
 {
-    internal class VenueTranslator
+    internal class VenueTranslator : ITranslator<VenueResource, VenueDocument>
     {
         public VenueResource Translate(VenueDocument document)
         {
