@@ -34,12 +34,12 @@ namespace Paramore.Domain.Venues
 
         public override string ToString()
         {
-            return streetNumber > 0 ? string.Format("StreetNumber: {0}, Street: {1}", streetNumber, street) : string.Format("Street: {0}", street);
+            return streetNumber > 0 ? string.Format("BuidlingNumber: {0}, StreetName: {1}", streetNumber, street) : string.Format("BuildingNumber: 0, StreetName: {0}", street);
         }
 
         public static Street Parse(string street)
         {
-            var rx = new Regex("StreetNumber: (.*), Street: (.*)");
+            var rx = new Regex("BuildingNumber: (.*), StreetName: (.*)");
             var match = rx.Match(street);
             var streetNumber = Convert.ToInt32(match.Groups[0].Value);
             var streetName = match.Groups[1].Value;

@@ -9,11 +9,11 @@ namespace Paramore.Adapters.Presentation.API.Resources
     [DataContract]
     public class AddressResource
     {
-        [XmlElement(ElementName = "streetNumber")]
-        [DataMember(Name = "streetnumber")]
+        [XmlElement(ElementName = "buildingNumber")]
+        [DataMember(Name = "buildingNumber")]
         public string StreetNumber { get; set; }
-        [XmlElement(ElementName = "street")]
-        [DataMember(Name = "street")]
+        [XmlElement(ElementName = "streetName")]
+        [DataMember(Name = "streetName")]
         public string Street { get; set; }
         [XmlElement(ElementName = "city")]
         [DataMember(Name = "city")]
@@ -37,7 +37,7 @@ namespace Paramore.Adapters.Presentation.API.Resources
 
         public static AddressResource Parse(string address)
         {
-            var rx = new Regex("Street: StreetNumber: (.*), Street: (.*), City : (.*), PostCode : (.*)");
+            var rx = new Regex("Street: BuildingNumber: (.*), StreetName: (.*), City: (.*), PostCode: (.*)");
             var match = rx.Match(address);
             var streetNumber = match.Groups[1].Value;
             var street = match.Groups[2].Value;
@@ -49,7 +49,7 @@ namespace Paramore.Adapters.Presentation.API.Resources
 
         public override string ToString()
         {
-            return string.Format("StreetNumber: {0}, Street: {1}, City: {2}, Postcode: {3}", StreetNumber, Street, City, Postcode);
+            return string.Format("Street: BuildingNumber: {0}, StreetName: {1}, City: {2}, PostCode: {3}", StreetNumber, Street, City, Postcode);
         }
 
         public static implicit operator string(AddressResource resource)
