@@ -77,7 +77,7 @@ namespace paramore.integrationtests.Translators
     }
 
     [Subject("Check that we serialize to the expected xml")]
-    public class When_serializing_a_resource_to_xml
+    public class When_serializing_a_venue_to_xml
     {
         static XmlSerializer serializer;
         static StringWriter stringwriter;
@@ -120,7 +120,7 @@ namespace paramore.integrationtests.Translators
     }
 
     [Subject("Check writing a resource to JSON")]
-    public class When_serializing_a_resource_to_JSON
+    public class When_serializing_a_venue_to_JSON
     {
         static DataContractJsonSerializer serializer;
         static VenueResource resource;
