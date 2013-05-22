@@ -41,7 +41,7 @@ namespace Paramore.Domain.Venues
 
         public static Address Parse(string address)
         {
-            var rx = new Regex("StreetNumber: (.*), Street: (.*), City: (.*), PostCode: (.*)");
+            var rx = new Regex("BuildingNumber: (.*), StreetName: (.*), City: (.*), PostCode: (.*)");
             var match = rx.Match(address);
 
             var streetNumber = match.Groups[1].Value;

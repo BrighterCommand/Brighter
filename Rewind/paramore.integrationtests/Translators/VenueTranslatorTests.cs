@@ -23,7 +23,7 @@ namespace paramore.integrationtests.Translators
         const string city = "New York";
         const string postcode = "10128";
 
-        Because of = () => resource = AddressResource.Parse(string.Format("Street: StreetNumber: {0}, Street: {1}, City : {2}, PostCode : {3}", streetNumber, street, city, postcode));
+        Because of = () => resource = AddressResource.Parse(string.Format("Street: BuildingNumber: {0}, StreetName: {1}, City: {2}, PostCode: {3}", streetNumber, street, city, postcode));
 
         It should_have_a_matching_streetNumber = () => resource.StreetNumber.ShouldEqual(streetNumber);
         It should_have_a_matching_street = () => resource.Street.ShouldEqual(street);
@@ -71,7 +71,7 @@ namespace paramore.integrationtests.Translators
         It should_set_the_map_link = () => resource[ParamoreGlobals.Map].ToString().ShouldEqual(string.Format("<link rel=\"map\" href=\"{0}\" />", document.VenueMap));
         It should_set_the_version = () => resource.Version.ShouldEqual(document.Version);
         It should_set_the_venue_name = () => resource.Name.ShouldEqual(document.VenueName);
-        It should_set_the_address = () => resource.Address.ToString().ShouldEqual(document.Address);
+        It should_set_the_address = () => string.Format(resource.Address.ToString()).ShouldEqual(document.Address);
         It should_set_the_contact = () => resource.Contact.ToString().ShouldEqual(document.VenueContact);
 
     }
@@ -91,7 +91,7 @@ namespace paramore.integrationtests.Translators
                     id: Guid.NewGuid(),
                     version: 1,
                     name: "Test Venue",
-                    address: "Street : StreetNumber: , Street: MyStreet, City : London, PostCode : N1 3GT",
+                    address: "Street: BuildingNumber: 0, StreetName: MyStreet, City: London, PostCode: N1 3GT",
                     mapURN: "http://www.mysite.com/maps/12345",
                     contact: "ContactName: Ian, EmailAddress: ian@huddle.com, PhoneNumber: 123454678"
                 );
@@ -110,8 +110,12 @@ namespace paramore.integrationtests.Translators
         It should_format_the_self_uri_as_expected = () => response.ShouldContain(string.Format("<link rel=\"self\" href=\"http://{0}/venue/{1}\" />", ParamoreGlobals.HostName, resource.Id));
         It should_format_the_map_uri_as_expected = () => response.ShouldContain(string.Format("<link rel=\"map\" href=\"{0}\" />", resource.MapURN));
         It should_format_the_venue_name_as_expected = () => response.ShouldContain(string.Format("<name>{0}</name>", resource.Name));
-        It should_format_the_address_as_expected = () => response.ShouldContain(string.Format("<address>{0}</address>", resource.Address));
-        It should_format_the_contact_as_expected = () => response.ShouldContain(string.Format("<contact>{0}</contact>", resource.Contact));
+        It should_format_the_address__buildingNumber = () => response.ShouldContain("<buildingNumber>0</buildingNumber>");
+        It should_format_the_address__streetNumber = () => response.ShouldContain("<streetName>MyStreet</streetName>");
+        It should_format_the_address__city = () => response.ShouldContain("<city>London</city>");
+        It should_format_the_address_postCode= () => response.ShouldContain("<postCode>N1 3GT</postCode>");
+        It should_format_the_contactName = () => response.ShouldContain("<name>Ian</name>");
+        It should_format_the_emailAddress = () => response.ShouldContain("<emailAddress>ian@huddle.com</emailAddress>");
         It should_format_the_version_as_expected = () => response.ShouldContain(string.Format("<version>{0}</version>", resource.Version)); 
     }
 
@@ -128,7 +132,7 @@ namespace paramore.integrationtests.Translators
                 id: Guid.NewGuid(),
                 version: 1,
                 name: "Test Venue",
-                address: "Street : StreetNumber: , Street: MyStreet, City : London, PostCode : N1 3GT",
+                address: "Street: BuildingNumber: 0, StreetName: MyStreet, City: London, PostCode: N1 3GT",
                 mapURN: "http://www.mysite.com/maps/12345",
                 contact: "ContactName: Ian, EmailAddress: ian@huddle.com, PhoneNumber: 123454678"
             );
@@ -156,7 +160,7 @@ namespace paramore.integrationtests.Translators
 
         Establish context = () =>
         {
-            jsonData = "{\"address\":{\"city\":\"\",\"postCode\":\"\",\"street\":\"\",\"streetnumber\":\"\"},\"contact\":{\"emailAddress\":\"ian@huddle.com\",\"name\":\"Ian\",\"phoneNumber\":\"123454678\"},\"links\":[{\"HRef\":\"\\/\\/localhost:59280\\/venue\\/cc7519cf-d58e-4e9c-a340-855254f67de5\",\"Rel\":\"self\"},{\"HRef\":\"http:\\/\\/www.mysite.com\\/maps\\/12345\",\"Rel\":\"map\"}],\"name\":\"Test Venue\",\"version\":1}";
+            jsonData = "{\"address\":{\"city\":\"\",\"postCode\":\"\",\"streetName\":\"\",\"buildingNumber\":\"\"},\"contact\":{\"emailAddress\":\"ian@huddle.com\",\"name\":\"Ian\",\"phoneNumber\":\"123454678\"},\"links\":[{\"HRef\":\"\\/\\/localhost:59280\\/venue\\/cc7519cf-d58e-4e9c-a340-855254f67de5\",\"Rel\":\"self\"},{\"HRef\":\"http:\\/\\/www.mysite.com\\/maps\\/12345\",\"Rel\":\"map\"}],\"name\":\"Test Venue\",\"version\":1}";
             serializer = new DataContractJsonSerializer(typeof(VenueResource));
         };
 
