@@ -1,5 +1,5 @@
-﻿define(['config', 'services/dataService.venues'],
-    function(config, venues) {
+﻿define(['config', 'services/dataService.venues', 'services/dataService.speakers'],
+    function(config, venues, speakers) {
         var requests = config.requests;
         var mockRequests = config.mockRequests;
         var useMocks = config.useMocks;
@@ -7,7 +7,8 @@
         
         var dataService = {
             initialize: initialize,
-            venues : venues
+            venues: venues,
+            speakers: speakers
         };
 
         return dataService;

@@ -1,7 +1,7 @@
 namespace Paramore.Adapters.Presentation.API.Translators
 {
     //TODO: Move declarations that can change to a configuration file
-    internal static class ParamoreGlobals
+    public static class ParamoreGlobals
     {
         static ParamoreGlobals()
         {

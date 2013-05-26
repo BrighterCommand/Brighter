@@ -1,18 +1,6 @@
-﻿define(['durandal/plugins/router', 'durandal/viewLocator', 'services/mocks/mockVenues'],
-    function (router, viewLocator, mockVenues) {
+﻿define(['durandal/plugins/router', 'durandal/viewLocator', 'services/mocks/mockVenues', 'services/mocks/mockSpeakers'],
+    function (router, viewLocator, mockVenues, mockSpeakers) {
         var routes = [
-            {
-                url: 'welcome',
-                moduleId: 'viewmodels/welcome',
-                name: 'Welcome',
-                visible: true
-            },
-            {
-                url: 'filckr',
-                moduleId: 'viewmodels/flickr',
-                name: 'flickr',
-                visible: true
-            },
             {
                 url: 'venues',
                 moduleId: 'viewmodels/venues',
@@ -24,6 +12,12 @@
                 moduleId: 'viewmodels/addVenueModal',
                 name: 'AddVenues',
                 visible: false
+            },
+            {
+                url: 'speakers',
+                moduleId: 'viewmodels/speakers',
+                name: 'Speakers',
+                visible: true
             }
         ];
 
@@ -32,19 +26,45 @@
                 resourceId: 'venues',
                 type: 'ajax',
                 settings: {
-                    url: "http://localhost:31290/venues",
+                    url: "http://localhost:51872/venues",
                     //cache: "persist",
                     type: 'GET',
-                    dataType: 'JSON'
+                    dataType: 'JSON',
+                    contentType: 'application/vnd.paramore.data+json'
+                }
+            },
+            {
+                resourceId: 'addVenue',
+                type: 'ajax',
+                settings: {
+                    url: "http://localhost:51872/venues",
+                    type: 'POST',
+                    dataType: 'JSON',
+                    contentType: 'application/vnd.paramore.data+json',
+                }
+            },
+            {
+                resourceId: 'speakers',
+                type: 'ajax',
+                settings: {
+                    url: "http://localhost:51872/speakers",
+                    //cache:persist,
+                    type: 'GET',
+                    dataType: 'JSON',
+                    contentType: 'application/vnd.paramore.data+json'
                 }
             }
         ];
 
-        var useMocks = true;
+        var useMocks = false;
         var mockRequests = [
             {
                 resourceId: 'venues',
                 mockdata: mockVenues.data
+            },
+            {
+                resourceId: 'speakers',
+                mockdata: mockSpeakers.data
             }
         ];
 
@@ -53,7 +73,7 @@
             mockRequests : mockRequests,
             requests: requests,
             routes: routes,
-            startModule: 'welcome',
+            startModule: 'speakers',
             useMocks: useMocks
         };
         return config;

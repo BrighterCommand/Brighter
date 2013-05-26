@@ -1,26 +1,6 @@
-﻿// MOCK: Get the real data from a REST endpoint - this is test data captured from the enpoint by Fiddler
-//[{
-//    "address": { "city": "", "postCode": "", "street": "", "streetnumber": "" },
-//    "contact": { "emailAddress": "ian@huddle.com", "name": "Ian", "phoneNumber": "123454678" },
-//    "links": [{ "HRef": "\/\/localhost:59280\/venue\/8b8c66fc-d541-4051-94ed-1699209d69b0", "Rel": "self" },
-//      { "HRef": "http:\/\/www.mysite.com\/maps\/12345", "Rel": "map" }],
-//    "name": "Test Venue",
-//    "version": 1
-//}]
-
-define(['durandal/system'],  function (system) {
+﻿define(['durandal/system'],  function (system) {
 
     var getVenues = function() {
-        var venues = [];
-        //set ajax call
-        var options = {
-            url: "http://localhost:31290/venues",
-            cache: false,
-            type: 'GET',
-            dataType: 'JSON'
-        };
-
-
         //make call
         return system.defer(function(dfd) {
             amplify.request({
@@ -30,9 +10,28 @@ define(['durandal/system'],  function (system) {
             });
         }).promise();
     };
+
+    var addVenue = function(newVenue) {
+        //make call
+        return system.defer(function(dfd) {
+            amplify.request({
+                resourceId: 'addVenue',
+                data: JSON.stringify(newVenue),
+                success: dfd.resolve,
+                error: dfd.reject,
+                dataMap: function(data) { 
+                    if(typeof data === 'object') { 
+                        return JSON.stringify(data); 
+                    } 
+                    return data; 
+                } 
+            });
+        }).promise();
+    };
     
 
     var dataservice = {
+        addVenue : addVenue,
         getVenues : getVenues
     };
 
