@@ -1,0 +1,34 @@
+﻿<section>
+<div class="venuelist">
+        <table>
+            <thead>
+                <tr>
+                    <th>
+                        <span>Name</span>
+                    </th> 
+                    <th>
+                        <span><em>Biod</em></span>
+                    </th>
+                    <th>
+                        <span><em>Contact</em></span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody data-bind="foreach: speakerList">
+                <tr>
+                    <td style ="width:300px">
+                        <address data-bind="text: name" />
+                    </td>
+                    <td style ="width:300px">
+                        <span>Bio: </span><span data-bind="text: bio" />
+                    </td>
+                    <td style ="width:300px">
+                        <span>Email Address:</span><span data-bind="text: emailAddress" />
+                        <span>Phone Number:</span><span data-bind="text: phoneNumber" />
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <button data-bind='click: addSpeaker'>Add Speaker</button>
+    </div>
+</section>

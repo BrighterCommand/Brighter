@@ -3,8 +3,8 @@
     var response = {
         closedWith: 'cancel',
         name: ko.observable(),
-        streetNumber: ko.observable(),
-        street: ko.observable(),
+        buildingNumber: ko.observable(),
+        streetName: ko.observable(),
         city: ko.observable(),
         postcode: ko.observable(),
         contactName: ko.observable(),

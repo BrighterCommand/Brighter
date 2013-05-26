@@ -68,23 +68,30 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.Data.Entity" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="domain\Meetings\OverbookingPolicyTests.cs" />
     <Compile Include="domain\Meetings\SchedulerTests.cs" />
     <Compile Include="domain\Meetings\TicketIssuerTests.cs" />
-    <Compile Include="domain\Venues\VenueParsingTests.cs" />
     <Compile Include="services\CommandHandlers\Meetings\ScheduleMeetingCommandHandlerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="services\CommandHandlers\Venues\AddVenueCommandHandlerTests.cs" />
     <Compile Include="fakes\FakeRepository.cs" />
     <Compile Include="services\CommandHandlers\Venues\DeleteVenueCommandHandlerTests.cs" />
     <Compile Include="services\CommandHandlers\Venues\UpdateVenueCommandHandlerTests.cs" />
+    <Compile Include="Translators\SpeakerTranslatorTests.cs" />
+    <Compile Include="Translators\VenueTranslatorTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\paramore.api\src\paramore.api\paramore.api.csproj">
+      <Project>{CC4AE266-7D06-4309-9DFD-D76477F6245D}</Project>
+      <Name>paramore.api</Name>
+    </ProjectReference>
     <ProjectReference Include="..\paramore.domain\paramore.domain.csproj">
       <Project>{41D1C746-9959-403C-956E-F4538CA72A83}</Project>
       <Name>paramore.domain</Name>

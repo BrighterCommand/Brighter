@@ -36,43 +36,23 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="FakeItEasy">
-      <HintPath>..\packages\FakeItEasy.1.10.0\lib\net40\FakeItEasy.dll</HintPath>
-    </Reference>
-    <Reference Include="Machine.Fakes">
-      <HintPath>..\packages\Machine.Fakes.1.4.0\lib\net40\Machine.Fakes.dll</HintPath>
-    </Reference>
-    <Reference Include="Machine.Fakes.Adapters.FakeItEasy">
-      <HintPath>..\packages\Machine.Fakes.FakeItEasy.1.4.0\lib\net40\Machine.Fakes.Adapters.FakeItEasy.dll</HintPath>
-    </Reference>
     <Reference Include="Machine.Specifications, Version=0.5.12.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Machine.Specifications.0.5.12\lib\net40\Machine.Specifications.dll</HintPath>
     </Reference>
-    <Reference Include="Machine.Specifications.Clr4">
-      <HintPath>..\packages\Machine.Specifications.0.5.12\lib\net40\Machine.Specifications.Clr4.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ThinReadLayer\SpeakerReaderTests.cs" />
     <Compile Include="ThinReadLayer\VenueReaderTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Translators\SpeakerTranslatorTests.cs" />
-    <Compile Include="Translators\VenueTranslatorTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\paramore.api\src\paramore.api\paramore.api.csproj">
-      <Project>{CC4AE266-7D06-4309-9DFD-D76477F6245D}</Project>
-      <Name>paramore.api</Name>
-    </ProjectReference>
     <ProjectReference Include="..\paramore.domain\paramore.domain.csproj">
       <Project>{41D1C746-9959-403C-956E-F4538CA72A83}</Project>
       <Name>paramore.domain</Name>

@@ -53,6 +53,18 @@ namespace Paramore.Adapters.Presentation.API
 
                 //DELETE /venues/id
 
+                //GET/POST /speakers
+                ResourceSpace.Has.ResourcesOfType<List<SpeakerResource>>()
+                     .AtUri("/speakers")
+                     .HandledBy<SpeakerEndPointHandler>()
+                     .TranscodedBy<JsonDataContractCodec>()
+                        .ForMediaType("application/vnd.paramore.data+json")
+                        .ForExtension("js")
+                        .ForExtension("json");
+                     //.And
+                     //.TranscodedBy<XmlSerializerCodec>()
+                     //   .ForMediaType("application/vnd.paramore.data+xml")
+                     //   .ForExtension("xml");
 
 
             }

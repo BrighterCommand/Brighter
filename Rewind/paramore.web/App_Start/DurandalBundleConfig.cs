@@ -16,6 +16,7 @@ namespace paramore.web {
           .Include("~/Scripts/moment.min.js")
           .Include("~/Scripts/moment.datepicker.min.js")
           .Include("~/Scripts/amplify.js")
+          .Include("~/Scripts/json2.js")
         );
 
       bundles.Add(

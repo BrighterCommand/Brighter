@@ -16,7 +16,7 @@
  * 
  * http://amplifyjs.com
  */
-(function( global, undefined ) {
+(function (global, undefined) {
 
 var slice = [].slice,
 	subscriptions = {};

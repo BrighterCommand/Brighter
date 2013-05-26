@@ -107,6 +107,7 @@
       <DependentUpon>Default.aspx</DependentUpon>
     </Compile>
     <Compile Include="Handlers\EntryPointHandler.cs" />
+    <Compile Include="Handlers\SpeakerEndPointHandler.cs" />
     <Compile Include="Resources\AddressResource.cs" />
     <Compile Include="Resources\ContactResource.cs" />
     <Compile Include="Resources\Link.cs" />
@@ -147,7 +148,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>17299</DevelopmentServerPort>
+          <DevelopmentServerPort>51872</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>
           </IISUrl>
