@@ -14,15 +14,15 @@ namespace Paramore.Ports.Services.Commands.Venue
         {
             Address = Address.Parse(address);
             Contact = Contact.Parse(contact);
-            VenueMap = new VenueMap(new Uri(mapURN != null ? mapURN : "http://maps.google.co.uk"));
+            VenueMap = new VenueMap(new Uri(mapURN ?? "http://maps.google.co.uk"));
             VenueName = new VenueName(venueName);
             Version = new Version(1);
         }
 
-        public Address Address { get; set; }
-        public Version Version { get; set; }
-        public Contact Contact { get; set; }
-        public VenueMap VenueMap { get; set; }
-        public VenueName VenueName { get; set; }
+        public Address Address { get; private set; }
+        public Version Version { get; private set; }
+        public Contact Contact { get; private set; }
+        public VenueMap VenueMap { get; private set; }
+        public VenueName VenueName { get; private set; }
     }
 }
