@@ -59,7 +59,7 @@
     <Compile Include="Commands\Speaker\AddSpeakerCommand.cs" />
     <Compile Include="Commands\Venue\DeleteVenueCommand.cs" />
     <Compile Include="Commands\Venue\UpdateVenueCommand.cs" />
-    <Compile Include="Handlers\Speaker\AddSpeakerCommandHandler.cs" />
+    <Compile Include="Handlers\Speakers\AddSpeakerCommandHandler.cs" />
     <Compile Include="Handlers\Venues\AddVenueCommandHandler.cs" />
     <Compile Include="Handlers\Meetings\ScheduleMeetingCommandHandler.cs" />
     <Compile Include="Commands\Venue\AddVenueCommand.cs" />

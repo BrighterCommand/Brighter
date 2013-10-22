@@ -6,6 +6,7 @@ using Paramore.Adapters.Tests.UnitTests.fakes;
 using Paramore.Domain.Speakers;
 using Paramore.Ports.Services.Commands.Speaker;
 using Paramore.Ports.Services.Handlers.Speaker;
+using Paramore.Ports.Services.Handlers.Speakers;
 
 namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Speakers
 {
@@ -50,5 +51,6 @@ namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Speakers
         It should_set_the_speaker_bio = () => GetSpeakerFromRepoBy(addSpeakerCommand.Id).ToDocument().Bio.ShouldEqual(addSpeakerCommand.Bio);
         It should_set_the_speaker_phone_no = () => GetSpeakerFromRepoBy(addSpeakerCommand.Id).ToDocument().PhoneNumber.ShouldEqual(addSpeakerCommand.PhoneNumber);
         It should_set_the_speaker_email = () => GetSpeakerFromRepoBy(addSpeakerCommand.Id).ToDocument().Email.ShouldEqual(addSpeakerCommand.Email);
+        It should_be_at_the_first_version = () => GetSpeakerFromRepoBy(addSpeakerCommand.Id).ToDocument().Version.ShouldEqual(1);
     }
 }

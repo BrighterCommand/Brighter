@@ -10,6 +10,10 @@ namespace Paramore.Domain.Speakers
         private SpeakerName name;
         private PhoneNumber phoneNumber;
 
+        public Speaker(SpeakerBio bio, PhoneNumber phoneNumber, EmailAddress emailAddress, SpeakerName name)
+            : this(new Id(), new Version(), bio, phoneNumber, emailAddress, name)
+        {}
+
         public Speaker(Id id, Version version, SpeakerBio bio, PhoneNumber phoneNumber, EmailAddress emailAddress, SpeakerName name) : base(id, version)
         {
             this.bio = bio;
