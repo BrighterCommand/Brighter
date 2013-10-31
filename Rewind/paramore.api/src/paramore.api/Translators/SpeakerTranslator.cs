@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Paramore.Adapters.Presentation.API.Resources;
 using Paramore.Domain.Speakers;

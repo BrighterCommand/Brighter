@@ -1,6 +1,6 @@
 using System;
 using Machine.Specifications;
-using Nancy.TinyIoc;
+using TinyIoC;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 

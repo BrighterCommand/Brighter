@@ -1,4 +1,5 @@
-using Nancy;
+
+using System.Collections.Generic;
 
 namespace paramore.commandprocessor
 {
@@ -6,9 +7,9 @@ namespace paramore.commandprocessor
     {
         public RequestContext()
         {
-            Bag = new DynamicDictionary();
+            Bag = new Dictionary<string, object>();
         }
 
-        public dynamic Bag { get; private set; }
+        public Dictionary<string, object> Bag { get; private set; }
     }
 }
