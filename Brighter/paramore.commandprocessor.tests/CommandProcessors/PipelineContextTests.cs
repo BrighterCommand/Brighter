@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
-using Nancy.TinyIoc;
+using TinyIoC;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
@@ -56,7 +56,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Because of = () => commandProcessor.Send(myCommand);
 
         It should_have_seen_the_data_we_pushed_into_the_bag = () => MyContextAwareCommandHandler.TestString.ShouldEqual(I_AM_A_TEST_OF_THE_CONTEXT_BAG);
-        It should_have_been_filled_by_the_handler = () => ((string)request_context.Bag.MyContextAwareCommandHandler).ShouldEqual("I was called and set the context");
+        It should_have_been_filled_by_the_handler = () => ((string)request_context.Bag["MyContextAwareCommandHandler"]).ShouldEqual("I was called and set the context");
     }
 
 

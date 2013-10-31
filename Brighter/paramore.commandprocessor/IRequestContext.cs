@@ -1,9 +1,9 @@
-using Nancy;
+using System.Collections.Generic;
 
 namespace paramore.commandprocessor
 {
     public interface IRequestContext
     {
-        dynamic Bag { get; }
+        Dictionary<string, object> Bag { get; }
     }
 }

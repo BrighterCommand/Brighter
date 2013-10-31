@@ -39,8 +39,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.api", "paramore.ap
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.integrationtests", "paramore.integrationtests\paramore.integrationtests.csproj", "{154A0DA0-0B8F-4C24-879B-75C262246BC6}"
 EndProject
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "paramore.acceptancetests", "paramore.acceptancetests\paramore.acceptancetests.pyproj", "{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{0E8FD318-FDE8-48BE-9F7D-2F5944996BBC}"
 	ProjectSection(SolutionItems) = preProject
 		.nuget\NuGet.Config = .nuget\NuGet.Config
@@ -49,6 +47,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{0E8FD3
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.web", "paramore.web\paramore.web.csproj", "{B099D3D2-55E1-4161-86F7-6D610ACE4E57}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SystemTests", "SystemTests", "{6D12D5F6-4D33-4B8C-82BA-AE592ADF3535}"
+EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "paramore.acceptancetests", "paramore.acceptancetests\paramore.acceptancetests.pyproj", "{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -88,12 +90,14 @@ Global
 		{154A0DA0-0B8F-4C24-879B-75C262246BC6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{154A0DA0-0B8F-4C24-879B-75C262246BC6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{154A0DA0-0B8F-4C24-879B-75C262246BC6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B099D3D2-55E1-4161-86F7-6D610ACE4E57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B099D3D2-55E1-4161-86F7-6D610ACE4E57}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B099D3D2-55E1-4161-86F7-6D610ACE4E57}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B099D3D2-55E1-4161-86F7-6D610ACE4E57}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -109,8 +113,8 @@ Global
 		{B099D3D2-55E1-4161-86F7-6D610ACE4E57} = {5A55DB54-B0C2-4E42-ACAB-0B929051CAE4}
 		{A29960CC-7A28-4C4C-B52A-EEDF32168205} = {073037E4-3713-43A5-B9BF-07D2AC34DE3E}
 		{567B365E-F777-40D6-A6C1-EB9970FA9542} = {E870EFCC-4EB8-4AEE-B4CE-DF88AAA97DDD}
-		{154A0DA0-0B8F-4C24-879B-75C262246BC6} = {E870EFCC-4EB8-4AEE-B4CE-DF88AAA97DDD}
-		{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5} = {E870EFCC-4EB8-4AEE-B4CE-DF88AAA97DDD}
 		{5A5A059A-133C-46DB-A959-826EEE178D64} = {854DFB0F-33D4-4B13-8DAB-0712AAF0B5B2}
+		{154A0DA0-0B8F-4C24-879B-75C262246BC6} = {6D12D5F6-4D33-4B8C-82BA-AE592ADF3535}
+		{BC1733CC-7E88-4EC7-98DF-367D61EDA2D5} = {6D12D5F6-4D33-4B8C-82BA-AE592ADF3535}
 	EndGlobalSection
 EndGlobal
