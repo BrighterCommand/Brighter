@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Nancy.TinyIoc;
+using TinyIoC;
 
 namespace paramore.commandprocessor.ioccontainers.IoCContainers
 {
