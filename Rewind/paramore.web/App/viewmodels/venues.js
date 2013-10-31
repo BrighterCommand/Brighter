@@ -1,4 +1,5 @@
-﻿define(['durandal/system', 'durandal/app', 'services/dataService'], function (system, app, dataService) {
+﻿define(['durandal/system', 'durandal/app', 'services/dataService'],
+    function (system, app, dataService) {
     var rows = [],
     venueList = ko.observableArray([]),
     initialized = false;

@@ -20,7 +20,17 @@
     };
     
     function addSpeaker() {
-
+        app.showModal('')
+            .then(function (response) {
+                //update locally
+                var newSpeaker = new Speaker()
+                    .name(response.name())
+                    .emailAddress(response.emailAddress())
+                    .phoneNumber(response.phoneNumber)
+                    .bio(response.bio())
+                    .self(response.self())
+                //push to server
+            })
     };
 
     function load() {
