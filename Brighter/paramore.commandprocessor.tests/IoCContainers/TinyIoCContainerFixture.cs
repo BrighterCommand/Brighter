@@ -1,5 +1,5 @@
 ﻿using Machine.Specifications;
-using Nancy.TinyIoc;
+using TinyIoC;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
 
 namespace paramore.commandprocessor.tests.IoCContainers
