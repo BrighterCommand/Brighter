@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+  <metadata>
+    <id>Simple.Data.Core</id>
+    <version>1.0.0-rc3</version>
+    <title>Simple.Data.Core</title>
+    <authors>Mark Rendle</authors>
+    <owners>Mark Rendle</owners>
+    <licenseUrl>http://www.opensource.org/licenses/mit-license.php</licenseUrl>
+    <projectUrl>http://github.com/markrendle/Simple.Data</projectUrl>
+    <iconUrl>http://simplefx.org/images/simpledata100x100.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A Simple, Dynamic data access library.</description>
+    <releaseNotes />
+    <copyright />
+    <language />
+    <tags>sql database data ado .net40</tags>
+    <references>
+      <reference file="Simple.Data.dll" />
+    </references>
+  </metadata>
+</package>
