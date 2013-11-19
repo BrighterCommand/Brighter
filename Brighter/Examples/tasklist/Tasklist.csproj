@@ -65,14 +65,28 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Default.aspx" />
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Adapters\API\Handlers\Class1.cs" />
-    <Compile Include="Adapters\API\Resources\Class1.cs" />
+    <Compile Include="Adapters\API\Contributors\Class1.cs" />
+    <Compile Include="Adapters\API\Handlers\TaskHandler.cs" />
+    <Compile Include="Adapters\API\Resources\TaskResource.cs" />
     <Compile Include="CommandProcessorBootstrapper.cs" />
+    <Compile Include="Configuration.cs" />
+    <Compile Include="Default.aspx.cs">
+      <DependentUpon>Default.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Default.aspx.designer.cs">
+      <DependentUpon>Default.aspx</DependentUpon>
+    </Compile>
     <Compile Include="Ports\Commands\AddTaskCommand.cs" />
     <Compile Include="Ports\Commands\CompleteTaskCommand.cs" />
     <Compile Include="Ports\Commands\EditTaskCommand.cs" />
@@ -120,7 +134,9 @@
       <Name>paramore.commandprocessor</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Adapters\API\Views\" />
+  </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>

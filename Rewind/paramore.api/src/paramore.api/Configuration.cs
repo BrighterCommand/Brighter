@@ -4,8 +4,6 @@ using OpenRasta.Configuration;
 using Paramore.Adapters.Presentation.API.Contributors;
 using Paramore.Adapters.Presentation.API.Handlers;
 using Paramore.Adapters.Presentation.API.Resources;
-using Paramore.Domain.Venues;
-using Paramore.Ports.Services.Commands.Venue;
 
 namespace Paramore.Adapters.Presentation.API
 {
