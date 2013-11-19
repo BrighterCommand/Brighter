@@ -24,3 +24,16 @@ c:\users\ian\oss\paramore\rewind\paramore.domain\bin\Debug\Raven.Abstractions.xm
 c:\users\ian\oss\paramore\rewind\paramore.domain\obj\Debug\paramore.domain.csprojResolveAssemblyReference.cache
 c:\users\ian\oss\paramore\rewind\paramore.domain\obj\Debug\Paramore.Domain.dll
 c:\users\ian\oss\paramore\rewind\paramore.domain\obj\Debug\Paramore.Domain.pdb
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\bin\Debug\Paramore.Domain.dll
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\bin\Debug\Paramore.Domain.pdb
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\bin\Debug\Paramore.Adapters.Infrastructure.dll
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.Lightweight.dll
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\bin\Debug\Raven.Abstractions.dll
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\bin\Debug\Paramore.Adapters.Infrastructure.pdb
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.Lightweight.pdb
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\bin\Debug\Raven.Client.Lightweight.xml
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\bin\Debug\Raven.Abstractions.pdb
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\bin\Debug\Raven.Abstractions.xml
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\obj\Debug\paramore.domain.csprojResolveAssemblyReference.cache
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\obj\Debug\Paramore.Domain.dll
+C:\Users\ian\OSS\iancooper\Paramore\Rewind\paramore.domain\obj\Debug\Paramore.Domain.pdb
