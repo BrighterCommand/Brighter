@@ -11,7 +11,7 @@ using TinyIoC;
 using paramore.commandprocessor;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
 
-namespace Paramore.Adapters.Presentation.API.Contributors
+namespace Tasklist.Adapters.API.Contributors
 {
     public class DependencyPipelineContributor : IPipelineContributor
     {

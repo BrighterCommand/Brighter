@@ -1,4 +1,4 @@
-namespace Tasklist.Adapters.Tests
+namespace Tasklist.Adapters.API.Resources
 {
     public class TaskModel
     {

@@ -75,9 +75,8 @@
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Adapters\API\Contributors\Class1.cs" />
+    <Compile Include="Adapters\API\Contributors\DependencyPipelineContributor.cs" />
     <Compile Include="Adapters\API\Handlers\TaskHandler.cs" />
-    <Compile Include="Adapters\API\Resources\TaskResource.cs" />
     <Compile Include="CommandProcessorBootstrapper.cs" />
     <Compile Include="Configuration.cs" />
     <Compile Include="Default.aspx.cs">
@@ -103,13 +102,13 @@
     <Compile Include="Ports\Handlers\ValidationHandler.cs" />
     <Compile Include="Domain\Task.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Adapters\Tests\ITaskRetriever.cs" />
+    <Compile Include="Adapters\DataAccess\ITaskRetriever.cs" />
     <Compile Include="Adapters\Tests\TaskCommandHandlers_UnitTests.cs" />
     <Compile Include="Adapters\Tests\TaskDAO_IntegrationTests.cs" />
-    <Compile Include="Adapters\Tests\TaskModel.cs" />
+    <Compile Include="Adapters\API\Resources\TaskModel.cs" />
     <Compile Include="Adapters\Tests\TaskPipelines_IntegrationTests.cs" />
     <Compile Include="Adapters\Tests\TaskPipelines_UnitTests.cs" />
-    <Compile Include="Adapters\Tests\TaskRetriever.cs" />
+    <Compile Include="Adapters\DataAccess\TaskRetriever.cs" />
     <Compile Include="Utilities\ConsoleTrace.cs" />
     <Compile Include="Ports\ViewModelRetrievers\ITaskListRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\SimpleDataRetriever.cs" />

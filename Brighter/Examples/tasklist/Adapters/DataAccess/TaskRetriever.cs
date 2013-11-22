@@ -1,7 +1,8 @@
 using Simple.Data;
+using Tasklist.Adapters.API.Resources;
 using Tasklist.Ports.ViewModelRetrievers;
 
-namespace Tasklist.Adapters.Tests
+namespace Tasklist.Adapters.DataAccess
 {
     internal class TaskRetriever : SimpleDataRetriever, ITaskRetriever
     {
