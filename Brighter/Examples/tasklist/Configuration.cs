@@ -1,4 +1,6 @@
-﻿using OpenRasta.Configuration;
+﻿using OpenRasta.Codecs;
+using OpenRasta.Configuration;
+using Tasklist.Adapters.API.Handlers;
 using Tasklist.Adapters.API.Resources;
 
 namespace Tasklist
@@ -9,10 +11,13 @@ namespace Tasklist
         {
             using (OpenRastaConfiguration.Manual)
             {
-                ResourceSpace.Has.ResourcesOfType<TaskResource>()
-                        .AtUri("/home")
-                        .HandledBy<HomeHandler>()
-                        .RenderedByAspx("~/Views/HomeView.aspx");
+                ResourceSpace.Has.ResourcesOfType<TaskModel>()
+                        .AtUri("/task/{id}")
+                        .HandledBy<TaskEndPointHandler>()
+                        .TranscodedBy<JsonDataContractCodec>()
+                        .ForMediaType("application/json")
+                        .ForExtension("js")
+                        .ForExtension("json");
             }
         }
     }
