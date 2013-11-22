@@ -76,7 +76,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Adapters\API\Contributors\DependencyPipelineContributor.cs" />
-    <Compile Include="Adapters\API\Handlers\TaskHandler.cs" />
     <Compile Include="CommandProcessorBootstrapper.cs" />
     <Compile Include="Configuration.cs" />
     <Compile Include="Default.aspx.cs">
@@ -109,6 +108,7 @@
     <Compile Include="Adapters\Tests\TaskPipelines_IntegrationTests.cs" />
     <Compile Include="Adapters\Tests\TaskPipelines_UnitTests.cs" />
     <Compile Include="Adapters\DataAccess\TaskRetriever.cs" />
+    <Compile Include="Adapters\API\Handlers\TaskEndPointHandler.cs" />
     <Compile Include="Utilities\ConsoleTrace.cs" />
     <Compile Include="Ports\ViewModelRetrievers\ITaskListRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\SimpleDataRetriever.cs" />
