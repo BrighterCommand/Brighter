@@ -1,0 +1,247 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+    <p>A web site for hosting user group meetings (more about practicing some techniques than intended to be re-usable by others.)</p>
+    <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+    <ul>
+        <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+        <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+        <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+    </ul>
+    </header>
+    <section>
+        <h1>Decoupling via a Command Processor</h1>
+        <p>When we think about a <a href="http://domaindrivendesign.org/node/118">layered </a>or <a href="http://alistair.cockburn.us/Hexagonal+architecture">hexagonal </a>architecture
+            it is common to identify the need for a service layer. The service layer both provides a facade over our domain layer to applications
+            acting as an API definition and contains the co-ordination and control logic for orchestrating how we respond to requests.</p>
+        <p>One option to implement this is the notion of a service as a class:</p>
+        <pre><code>
+public class MyFatDomainService
+{
+    public void CreateMyThing(
+            CreateMyThingCommand createMyThingCommand)
+    {
+        /*Stuff*/
+    }
+
+    public void UpdateMyThingForFoo(FooCommand fooHappened)
+    {
+        /*Other Stuff*/
+    }
+
+    public void UpdateMyThingForBar(BarCommand barHappened)
+    {
+        /*Other Stuff*/
+    }
+
+    /*Loads more of these*/
+}
+        </code></pre>
+        <p>Another option is to use the <a href=http://books.google.co.uk/books?id=0kUFZDuqvmEC&lpg=PA288&ots=MJzBAU9zGr&dq=posa%20command%20processor&pg=PA277#v=onepage&q&f=false">command processor pattern</a>.
+            There are some keys to understanding the choice to use a command processor to implement your service layer.</p>
+        <p>The <a href="http://www.objectmentor.com/resources/articles/isp.pdf">Interface Segregation Principle</a> states that clients should not be forced to depend on methods on an interface
+            that they do not use. This is because we do not want to update the client because the interface changes to service other clients in a way that the client itself does not
+            care about. <em>Operation script</em> style domain service classes force consumers (for example MVC controllers) to become dependent on methods on the domain service class
+            that they do not consume.</p>
+        <p>Now this can be obviated by having the domain service implement a number of interfaces, and hand to its clients interfaces that only cover the concerns they have.
+            With application service layers this naturally tends towards one method per interface.</p>
+        <pre><code>
+public interface ICreateMyThingDomainService
+{
+    void CreateMyThing(
+            CreateMyThingCommand createMyThingCommand);
+}
+
+public interface IUpdateMyThingForFooDomainService
+{
+    void UpdateMyThingForFoo(FooCommand fooHappened);
+}
+
+public interface IUpdateMyThingForBarDomainService
+{
+    void UpdateMyThingForBar(BarCommand barHappened);
+}
+
+public class MyFatDomainService :
+            ICreateMyThingDomainService,
+            IUpdateMyThingForFooDomainService,
+            IUpdateMyThingForBarDomainService
+{
+    public void CreateMyThing(
+            CreateMyThingCommand createMyThingCommand)
+    {
+        /*Stuff*/
+    }
+
+    public void UpdateMyThingForFoo(FooCommand fooHappened)
+    {
+        /*Other Stuff*/
+    }
+
+    public void UpdateMyThingForBar(BarCommand barHappened)
+    {
+        /*Other Stuff*/
+    }
+
+    /*Loads more of these*/
+
+}
+        </code></pre>
+        <p>Now the <a href="http://www.objectmentor.com/resources/articles/srp.pdf">Single Responsibility Principle</a> suggests that a class should have one and only one reason to change.
+            All these separate interfaces begin to suggest that a separate class might be better for each interface, to avoid updating a class for concerns that it does not have.</p>
+        <pre><code>
+public interface ICreateMyThingDomainService
+{
+    void CreateMyThing(
+            CreateMyThingCommand createMyThingCommand);
+}
+
+public class CreateMyThingDomainService :
+            ICreateMyThingDomainService
+{
+    public void CreateMyThing(
+            CreateMyThingCommand createMyThingCommand)
+    {
+        /*Stuff */
+    }
+}
+
+public interface IUpdateMyThingForFooDomainService
+{
+    void UpdateMyThingForFoo(FooCommand fooHappened);
+}
+
+public class UpdateMyThingForFooDomainService :
+            IUpdateMyThingForBarDomainService
+{
+    public void UpdateMyThingForBar(BarCommand barHappened)
+    {
+        /*Other Stuff*/
+    }
+}
+
+public interface IUpdateMyThingForFooDomainService
+{
+    void UpdateMyThingForBar(FooCommand barHappened);
+}
+
+public class UpdateMyThingForFooDomainService :
+            IUpdateMyThingForFooDomainService
+{
+    public void UpdateMyThingForFoo(FooCommand barHappened)
+    {
+        /*Other Stuff*/
+    }
+}
+        </code></pre>
+        <p>Having split these individual classes out we might choose to avoid calling them directly, but instead decide to send a message to them. There are a number of reasons for this.</p>
+        <p>The first is that we decouple the caller from the service. This is useful where we might want to change what the service does – for example handle requests asynchronously,
+            without modifying the caller.</p>
+        <p>The second is that we might want to handle orthogonal concerns orthogonally such as transactions or logging. Although we could use a technology like PostSharp to weave in aspects,
+            a simpler approach is pipes and filters – create a pipeline with a series of steps, the end of which is our service. We then send a message, the framework instantiates
+            a pipeline with those orthogonal concerns, the message is passed through the filter steps before arriving at the target handler.</p>
+        <p>In order to make this work the pipeline steps need to implement a common interface as this allows us to add <a href="http://en.wikipedia.org/wiki/Decorator_pattern">Decorators</a>
+            that implement the same interface, forming a <a href="http://en.wikipedia.org/wiki/Chain-of-responsibility_pattern">Chain of Responsibility</a>.</p>
+        <p>&nbsp;</p>
+        <pre><code>
+public interface IHandleMessages
+{
+    void Handle(T command);
+}
+
+public class CreateMyThingHandler : IHandleMessages
+{
+    public void Handles(
+            CreateMyThingCommand createMyThingCommand)
+    {
+        /*Stuff */
+    }
+}
+
+public class UpdateMyThingForFooHandler : IHandleMessages
+{
+    [Logging]
+    public void Handles(BarCommand barHappened)
+    {
+        /*Other Stuff*/
+    }
+}
+
+public class Logger : IHandleMessages
+{
+    public void Handles(BarCommand barHappened)
+    {
+        /*Other Stuff*/
+    }
+}
+        </code></pre>
+        <p>The code is not shown here, but you may want to use attributes to document a handler and show the decorators in the chain of responsibility.
+            You could use these to decide what decorators to put in the chain. However, It&#8217;s worth noting that real implementations that assemble a
+            chain of responsibility often use an Inversion of Control container to resolve the handler and you will often find it easier to implement if you have an
+            IDecorate interface. Some of the pipeline building code involves usually involves dealing with <a href="http://msdn.microsoft.com/en-us/library/system.type.makegenerictype.aspx">Type.MakeGenericType</a>
+            and you might want to be aware of that if you want to use this approach. I might do a separate post on building a chain of responsibility at a future date.</p>
+        <p>Note that this also serves to reduce the number of interfaces that we must implement as the generic interface can stand in for most of them.</p>
+        <p>Third is the number of dependencies our service has. We might have an action that we need to execute as part of the response to a number of actions by the user.
+            We don’t want to repeat that code in every service. But, we also don’t want to have services calling too many other services, (that in turn may call other services),
+            because we will get an explosion of dependencies for our service, and the service that it depends on. This makes it hard to get our service under test, or makes the
+            tests unintelligible and results in <a href="http://altnetseattle.pbworks.com/w/page/12367942/Why%20We%20Stopped%20Using%20the%20Auto-Mocking%20Container%20and%20What%27s%20Next">anti-patterns like auto-mocking</a>.
+            The need for auto-mocking may be seen as a design smell: you have too many dependencies; resolution might be to use a command processor.</p>
+        <p>We gain some dependency advantages from the split into separate handlers, because each handler will have fewer dependencies than a service. But in addition we can separate
+            concerns in our handlers, such that we focus on updating a small part of our domain model or object graph in each handler (in DDD terms we
+            focus on an <a href="http://domaindrivendesign.org/node/88">aggregate</a>).</p>
+        <p>So to further limit the number of dependencies we prefer to publish a message (an event) from the service that handles the initial request,
+            handing off any work that is related to handling the command, but applies to a different aggregate (and should potentially be in a different transaction and
+            consistency boundary). This allows the framework to pass the message to those services, removing our dependency on them.</p>
+        <pre><code>
+public class CreateMyThingHandler : IHandleMessages
+{
+    IProcessCommands _commandProcessor;
+    IMyThingRepository _myThingRepository;
+
+    public CreateMyThingHandler(IProcessCommands commandProcessor,
+    IMyThingRepository myThingRepository)
+    {
+        _commandProcessor = commandProcessor;
+        _myThingRepository = myThingRepository;
+    }
+
+    public void Handles(
+            CreateMyThingCommand createMyThingCommand)
+    {
+        /*Use Factory or Factory Method to create a my thing  */
+        /*save my thing to a repository*/
+
+        _commandProcessor.Publish(
+            new MyThingCreated
+            {/* properties that other consumers may care about*/}
+        );
+    }
+}
+        </code></pre>
+        <p>In addition a command processor, because it is responsible for loading the services, is also the point at which an Inversion of Control (IOC) container is injected
+            into our request handling pipeline, which removes any issues with lack of support for IOC containers in legacy platforms like WebForms.</p>
+        <p>Finally switching to a command processor eases our path to handling some requests asynchronously.</p>
+        <h4>Disadvantages of using a command processor</h4>
+        <p>One common criticism of using a command processor is that it adds a level of indirection. To read the code you have to identify how commands map to handlers.
+            Naming conventions can help ease the burden, especially if used with tools like R#.</p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</body>
+</html>
