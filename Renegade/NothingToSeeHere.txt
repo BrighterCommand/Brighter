@@ -1,1 +1,0 @@
-There is nothing to see here really, it's just some earlier work around building an ES implementation of the example, that needs more work. The idea is to show one domain model example with different approaches. I decided to finish the basic DDD version first, and then show this as a a development, so work here has stalled for now
