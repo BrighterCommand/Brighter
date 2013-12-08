@@ -40,6 +40,7 @@ namespace Tasklist.Adapters.API.Contributors
             resolver.AddDependencyInstance<IAdaptAnInversionOfControlContainer>(container, DependencyLifetime.Singleton);
             resolver.AddDependencyInstance<IAmARequestContextFactory>(new InMemoryRequestContextFactory(), DependencyLifetime.PerRequest);
             resolver.AddDependency<IAmACommandProcessor, CommandProcessor>(DependencyLifetime.Singleton);
+            resolver.AddDependency<ITaskRetriever, TaskRetriever>(DependencyLifetime.Singleton);
 
 
             return PipelineContinuation.Continue;

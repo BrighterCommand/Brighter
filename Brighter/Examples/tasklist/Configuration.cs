@@ -1,5 +1,6 @@
 ﻿using OpenRasta.Codecs;
 using OpenRasta.Configuration;
+using Tasklist.Adapters.API.Contributors;
 using Tasklist.Adapters.API.Handlers;
 using Tasklist.Adapters.API.Resources;
 
@@ -11,6 +12,7 @@ namespace Tasklist
         {
             using (OpenRastaConfiguration.Manual)
             {
+                ResourceSpace.Uses.PipelineContributor<DependencyPipelineContributor>();
                 ResourceSpace.Has.ResourcesOfType<TaskModel>()
                         .AtUri("/task/{id}")
                         .HandledBy<TaskEndPointHandler>()

@@ -19,7 +19,7 @@ namespace Paramore.Adapters.Presentation.API.Handlers
             this.commandProcessor = commandProcessor;
         }
 
-             public OperationResult Get()
+        public OperationResult Get()
         {
             /*
                  var speakers = new SpeakerTranslator().Translate(
