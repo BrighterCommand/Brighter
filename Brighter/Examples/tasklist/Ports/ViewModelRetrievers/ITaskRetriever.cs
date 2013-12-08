@@ -1,6 +1,6 @@
 using Tasklist.Adapters.API.Resources;
 
-namespace Tasklist.Adapters.DataAccess
+namespace Tasklist.Ports.ViewModelRetrievers
 {
     public interface ITaskRetriever
     {

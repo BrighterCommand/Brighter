@@ -1,3 +1,5 @@
+using System;
+using System.Configuration;
 using System.IO;
 using System.Reflection;
 using Simple.Data;
@@ -7,26 +9,27 @@ namespace Tasklist.Adapters.DataAccess
 {
     public class TasksDAO : ITasksDAO
     {
-        static readonly string DatabasePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().CodeBase.Substring(8)),"tasks.sqlite");
-
         private dynamic db;
 
         public TasksDAO()
         {
-            db = Database.Opener.OpenFile(DatabasePath);
+
+            if (System.Web.HttpContext.Current != null)
+            {
+                var databasePath = System.Web.HttpContext.Current.Server.MapPath("~\\App_Data\\Tasks.sdf");
+                db = Database.Opener.OpenFile(databasePath);
+            }
+            else
+            {
+                var file =  Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\Tasks.sdf");
+    
+                db = Database.OpenFile(file);
+            }
         }
-
-        //inserting the id is problematic, but against SQLite Simple.Data does not return the row we inserted,
-        //and we want to know to test integration. Trick might be to rewrite with a different Db.
-
-        internal void Add(int id, Task newTask)
+ 
+        public Task Add(Task newTask)
         {
-            db.Tasks.Insert(id:id, taskname: newTask.TaskName, taskdescription: newTask.TaskDescription, DueDate: newTask.DueDate);
-        }
-
-        public void Add(Task newTask)
-        {
-            db.Tasks.Insert(taskname: newTask.TaskName, taskdescription: newTask.TaskDescription, DueDate: newTask.DueDate);
+            return db.Tasks.Insert(newTask);
         }
 
         public void Update(Task task)
