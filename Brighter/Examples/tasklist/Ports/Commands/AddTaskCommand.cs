@@ -7,6 +7,7 @@ namespace Tasklist.Ports.Commands
     {
         public string TaskDecription { get; set; }
         public DateTime? TaskDueDate { get; set; }
+        public int TaskId { get; set; }
         public string TaskName { get; set; }
 
         public AddTaskCommand(string taskName, string taskDecription, DateTime? dueDate = null)

@@ -41,7 +41,7 @@ namespace Tasklist.Adapters.Tests
         It should_store_something_in_the_db = () => FindTaskinDb().ShouldNotBeNull();
         It should_store_with_the_correct_name = () => FindTaskinDb().TaskName.ShouldEqual(cmd.TaskName);
         It should_store_with_the_correct_description = () => FindTaskinDb().TaskDescription.ShouldEqual(cmd.TaskDecription);
-        It should_store_with_the_correct_duedate = () => FindTaskinDb().DueDate.ShouldEqual(cmd.TaskDueDate);
+        It should_store_with_the_correct_duedate = () => FindTaskinDb().DueDate.Value.ToShortDateString().ShouldEqual(cmd.TaskDueDate.Value.ToShortDateString());
 
         static Task FindTaskinDb()
         {
