@@ -33,17 +33,18 @@ namespace Tasklist.Adapters.Tests
         static TasksDAO dao;
         static readonly TaskRetriever retriever = new TaskRetriever();
         static Task newTask;
+        static Task addedTask;
 
         Establish context = () =>
         {
             dao = new TasksDAO();
             dao.Clear();
-            newTask = new Task(id: 1, taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
+            newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
         };
 
-        Because of = () => dao.Add(1, newTask);
+        Because of = () => addedTask = dao.Add(newTask);
 
-        It should_add_the_task_into_the_list = () => retriever.Get(newTask.Id).ShouldNotBeNull();
+        It should_add_the_task_into_the_list = () => retriever.Get(addedTask.Id).ShouldNotBeNull();
     }
 
 
@@ -52,6 +53,7 @@ namespace Tasklist.Adapters.Tests
     {
         static TasksDAO dao;
         static Task newTask;
+        static Task addedTask;
         static Task foundTask;
         const string NEW_TASK_NAME = "New Task Name";
         const string NEW_TASK_DESCRIPTION = "New Task Description";
@@ -62,25 +64,25 @@ namespace Tasklist.Adapters.Tests
         {
             dao = new TasksDAO();
             dao.Clear();
-            newTask = new Task(id: 1, taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
-            dao.Add(1, newTask);
-            newTask.TaskName = NEW_TASK_NAME;
-            newTask.TaskDescription = NEW_TASK_DESCRIPTION;
-            newTask.DueDate = NEW_DUE_DATE;
-            newTask.CompletionDate = NEW_COMPLETION_DATE;
+            newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
+            addedTask = dao.Add(newTask);
+            addedTask .TaskName = NEW_TASK_NAME;
+            addedTask .TaskDescription = NEW_TASK_DESCRIPTION;
+            addedTask .DueDate = NEW_DUE_DATE;
+            addedTask .CompletionDate = NEW_COMPLETION_DATE;
         };
 
-        private Because of = () => dao.Update(newTask); 
+        private Because of = () => dao.Update(addedTask); 
 
         It should_add_the_task_into_the_list = () => GetTask().ShouldNotBeNull();
         It should_set_the_task_name = () => GetTask().TaskName.ShouldEqual(NEW_TASK_NAME);
         It should_set_the_task_description = () => GetTask().TaskDescription.ShouldEqual(NEW_TASK_DESCRIPTION); 
-        It should_set_the_task_duedate = () => GetTask().DueDate.ShouldEqual(NEW_DUE_DATE);
-        It Should_set_the_task_completion_date = () => GetTask().CompletionDate.ShouldEqual(NEW_COMPLETION_DATE);
+        It should_set_the_task_duedate = () => GetTask().DueDate.Value.ToShortDateString().ShouldEqual(NEW_DUE_DATE.Value.ToShortDateString());
+        It Should_set_the_task_completion_date = () => GetTask().CompletionDate.Value.ToShortDateString().ShouldEqual(NEW_COMPLETION_DATE.Value.ToShortDateString());
 
         private static Task GetTask()
         {
-            return foundTask ?? (foundTask = dao.FindById(newTask.Id));
+            return foundTask ?? (foundTask = dao.FindById(addedTask.Id));
         }
     }
 }
