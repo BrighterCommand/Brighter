@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{65BADB63-5F98-4F24-84D7-8C99263F88C6}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>paramore.commandprocessor.tests</RootNamespace>
+    <AssemblyName>paramore.commandprocessor.tests</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Castle.Core">
+      <HintPath>..\packages\Castle.Core.2.5.2\lib\NET35\Castle.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="FakeItEasy, Version=1.7.4257.42, Culture=neutral, PublicKeyToken=eff28e2146d5fd2c, processorArchitecture=MSIL">
+      <HintPath>..\packages\FakeItEasy.1.7.4257.42\lib\NET40\FakeItEasy.dll</HintPath>
+    </Reference>
+    <Reference Include="Machine.Specifications, Version=0.5.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Machine.Specifications.0.5.2.0\lib\Machine.Specifications.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CommandProcessors\ChainOfResponsibilityTests.cs" />
+    <Compile Include="CommandProcessors\CommandProcessorTests.cs" />
+    <Compile Include="CommandProcessors\PipelineContextTests.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyContextAwareCommandHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyAbortingHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyAbortingHandlerAttribute.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyUnUsedCommandHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\FakeRepository.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\FakeSession.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\IAmAnAggregate.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\IRepository.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\IUnitOfWork.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyCommand.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyCommandHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyDependentCommandHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyDoubleDecoratedHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyAggregate.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyEvent.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyEventHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyImplicitHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyLoggingHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyLoggingHandlerAttribute.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyOtherEventHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyPostLoggingHandlerAttribute.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyPreAndPostDecoratedHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyPreValidationHandlerAttribute.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyValidationHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyValidationHandlerAttribute.cs" />
+    <Compile Include="IoCContainers\TinyIoCContainerFixture.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\paramore.commandprocessor.ioccontainers\paramore.commandprocessor.ioccontainers.csproj">
+      <Project>{7B7A3ADA-CED8-4BCF-B643-493607C4579F}</Project>
+      <Name>paramore.commandprocessor.ioccontainers</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.commandprocessor\paramore.commandprocessor.csproj">
+      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
+      <Name>paramore.commandprocessor</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
