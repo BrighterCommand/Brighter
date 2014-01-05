@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>Machine.Specifications</id>
+    <version>0.5.12</version>
+    <title>Machine.Specifications</title>
+    <authors>Aaron Jensen,  Alexander Groß,  et al.</authors>
+    <owners>Aaron Jensen,  Alexander Groß,  et al.</owners>
+    <licenseUrl>http://github.com/machine/machine.specifications/blob/master/License.txt</licenseUrl>
+    <projectUrl>http://github.com/machine/machine.specifications</projectUrl>
+    <iconUrl>http://github.com/machine/machine.specifications/raw/master/Misc/Machine.Specifications-128x128.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Machine.Specifications is a Context/Specification framework geared towards removing language noise and simplifying tests.</description>
+    <summary>Machine.Specifications Context/Specification framework</summary>
+    <language>en-US</language>
+    <tags>test unit testing context specification bdd tdd mspec</tags>
+    <references>
+      <reference file="Machine.Specifications.dll" />
+      <reference file="Machine.Specifications.Clr4.dll" />
+    </references>
+  </metadata>
+</package>

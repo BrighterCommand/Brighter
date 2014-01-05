@@ -1,0 +1,1095 @@
+time,logger,level,database,message,exception
+2013-05-26 11:51:51.9000,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 11:51:51.9156,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:41.3142,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Databases/Paramore_Integration_Tests' was found,
+2013-05-26 12:51:41.4633,Raven.Database.Server.HttpServer,Debug,,Request #   1: GET     -   251 ms - <system>   - 200 - /docs/Raven/Databases/Paramore_Integration_Tests,
+2013-05-26 12:51:41.4933,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,,Document with key 'Raven/Databases/Paramore_Integration_Tests' was found,
+2013-05-26 12:51:42.3556,Raven.Database.Impl.DocumentCacher,Info,Paramore_Integration_Tests,"MemoryCache Settings:
+  PhysicalMemoryLimit = 98
+  CacheMemoryLimit    = 535822336
+  PollingInterval     = 00:02:00",
+2013-05-26 12:51:42.3556,Raven.Storage.Esent.TransactionalStorage,Info,Paramore_Integration_Tests,"Esent Settings:
+  MaxVerPages      = 32768
+  CacheSizeMax     = 65536
+  DatabasePageSize = 4096",
+2013-05-26 12:51:43.3769,Raven.Database.Storage.IndexDefinitionStorage,Info,Paramore_Integration_Tests,"New index Raven%2fDocumentsByEntityName:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+
+Compiled to:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+",
+2013-05-26 12:51:43.3769,Raven.Database.Indexing.IndexStorage.Startup,Debug,Paramore_Integration_Tests,Loading saved index Raven/DocumentsByEntityName,
+2013-05-26 12:51:43.4239,Raven.Database.Indexing.Index.Indexing,Debug,Paramore_Integration_Tests,Creating index for Raven/DocumentsByEntityName,
+2013-05-26 12:51:43.4969,Raven.Database.Indexing.WorkContext,Warn,Paramore_Integration_Tests,"Could not setup performance counters properly because of access permissions, perf counters will not be used","System.Security.SecurityException: Requested registry access is not allowed.
+   at System.ThrowHelper.ThrowSecurityException(ExceptionResource resource)
+   at Microsoft.Win32.RegistryKey.OpenSubKey(String name, Boolean writable)
+   at System.Diagnostics.PerformanceCounterLib.CreateRegistryEntry(String categoryName, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection creationData, Boolean& iniRegistered)
+   at System.Diagnostics.PerformanceCounterLib.RegisterCategory(String categoryName, PerformanceCounterCategoryType categoryType, String categoryHelp, CounterCreationDataCollection creationData)
+   at System.Diagnostics.PerformanceCounterCategory.Create(String categoryName, String categoryHelp, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection counterData)
+   at Raven.Database.Indexing.WorkContext.SetupPerformanceCounter(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 335
+   at Raven.Database.Indexing.WorkContext.Init(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 367
+The Zone of the assembly that failed was:
+MyComputer"
+2013-05-26 12:51:43.4969,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'Raven/Backup/Status' was not found,
+2013-05-26 12:51:43.5159,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:43.5159,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 12:51:43.6029,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 12:51:43.6109,Raven.Database.Server.HttpServer,Debug,,"Request #   2: GET     - 2,120 ms - Paramore_Integration_Tests - 404 - /docs/Raven/Replication/Destinations",
+2013-05-26 12:51:43.6609,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,"Inserted a new document with key 'SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e', update: False, ",
+2013-05-26 12:51:43.6609,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Put document SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e with etag 00000001-0000-0400-0000-000000000001,
+2013-05-26 12:51:43.6720,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 1 because: PUT SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e,
+2013-05-26 12:51:43.6720,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0572591,
+2013-05-26 12:51:43.6980,Raven.Database.Server.HttpServer,Debug,,"Request #   3: POST    - 1,147 ms - Paramore_Integration_Tests - 200 - /bulk_docs",
+2013-05-26 12:51:43.7440,Raven.Database.Server.HttpServer,Debug,,"	PUT SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e
+",
+2013-05-26 12:51:43.7610,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e' was found,
+2013-05-26 12:51:43.7610,Raven.Database.Server.HttpServer,Debug,,Request #   4: GET     -    13 ms - Paramore_Integration_Tests - 200 - /docs/SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e,
+2013-05-26 12:51:43.8820,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 1, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:43.9060,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,Found a total of 1 documents that requires indexing since etag: 00000001-0000-0300-0000-000000000002: (SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e),
+2013-05-26 12:51:43.9210,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"After read triggers executed, 1 documents remained",
+2013-05-26 12:51:43.9320,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Going to index 1 documents in IndexName: Raven/DocumentsByEntityName, LastIndexedEtag: 00000001-0000-0300-0000-000000000002: (SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e)",
+2013-05-26 12:51:43.9320,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,Indexing 1 documents for index: Raven/DocumentsByEntityName. (SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e),
+2013-05-26 12:51:43.9970,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Delete a document with key: SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e and etag ,
+2013-05-26 12:51:44.0191,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e' was deleted,
+2013-05-26 12:51:44.0331,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 2 because: DEL SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e,
+2013-05-26 12:51:44.0331,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0374532,
+2013-05-26 12:51:44.0331,Raven.Database.Server.HttpServer,Debug,,Request #   5: POST    -    40 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:51:44.1161,Raven.Database.Server.HttpServer,Debug,,"	DELETE SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e
+",
+2013-05-26 12:51:44.3562,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 2, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:44.4852,Raven.Database.Indexing.Index.Indexing,Debug,,"Indexing on SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e result in index Raven/DocumentsByEntityName gave document: 	__document_id IS: speakerdocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e
+	Tag I-: SpeakerDocuments
+	LastModified I-: 2013-05-26T11:51:43.6599966Z
+",
+2013-05-26 12:51:44.9333,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,"Inserted a new document with key 'VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13', update: False, ",
+2013-05-26 12:51:44.9333,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Put document VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13 with etag 00000001-0000-0400-0000-000000000002,
+2013-05-26 12:51:44.9333,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 3 because: PUT VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13,
+2013-05-26 12:51:44.9333,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0015394,
+2013-05-26 12:51:44.9333,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 3, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:44.9333,Raven.Database.Server.HttpServer,Debug,,Request #   6: POST    -     2 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:51:44.9333,Raven.Database.Server.HttpServer,Debug,,"	PUT VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13
+",
+2013-05-26 12:51:44.9503,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13' was found,
+2013-05-26 12:51:44.9503,Raven.Database.Server.HttpServer,Debug,,Request #   7: GET     -     1 ms - Paramore_Integration_Tests - 200 - /docs/VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13,
+2013-05-26 12:51:44.9843,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Delete a document with key: VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13 and etag ,
+2013-05-26 12:51:44.9843,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13' was deleted,
+2013-05-26 12:51:44.9843,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 4 because: DEL VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13,
+2013-05-26 12:51:44.9843,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0037499,
+2013-05-26 12:51:44.9843,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 4, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:44.9843,Raven.Database.Server.HttpServer,Debug,,Request #   8: POST    -     4 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:51:44.9993,Raven.Database.Server.HttpServer,Debug,,"	DELETE VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13
+",
+2013-05-26 12:51:45.0654,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,"Inserted a new document with key 'VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282', update: False, ",
+2013-05-26 12:51:45.0654,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Put document VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282 with etag 00000001-0000-0400-0000-000000000003,
+2013-05-26 12:51:45.0654,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 5 because: PUT VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282,
+2013-05-26 12:51:45.0654,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0030992,
+2013-05-26 12:51:45.0654,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 5, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:45.0654,Raven.Database.Server.HttpServer,Debug,,Request #   9: POST    -     5 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:51:45.1234,Raven.Database.Server.HttpServer,Debug,,"	PUT VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282
+",
+2013-05-26 12:51:45.4565,Raven.Database.Indexing.Index.Querying,Debug,Paramore_Integration_Tests,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-26 12:51:45.4735,Raven.Database.Indexing.Index.Indexing,Debug,,Indexed 1 documents for Raven/DocumentsByEntityName,
+2013-05-26 12:51:45.4735,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,"After indexing 1 documents, the new last etag for is: 00000001-0000-0400-0000-000000000001 for Raven/DocumentsByEntityName",
+2013-05-26 12:51:45.5025,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Executing Index: Raven/DocumentsByEntityName, Keys: SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e, VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13",
+2013-05-26 12:51:45.5025,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e' was not found,
+2013-05-26 12:51:45.5025,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13' was not found,
+2013-05-26 12:51:45.5025,Raven.Database.Indexing.Index.Indexing,Debug,Paramore_Integration_Tests,"Deleting (SpeakerDocuments/39c68ae6-e198-4ee2-b69c-4172baf90f7e, VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13) from Raven/DocumentsByEntityName",
+2013-05-26 12:51:45.5585,Raven.Database.Server.HttpServer,Debug,,Request #  10: GET     -   383 ms - Paramore_Integration_Tests - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000003,
+2013-05-26 12:51:45.5585,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 339 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 0 returned out of 0 total.
+",
+2013-05-26 12:51:45.5915,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 6 because: WORK BY IndexingExecuter,
+2013-05-26 12:51:45.5915,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Found a total of 2 documents that requires indexing since etag: 00000001-0000-0400-0000-000000000001: (VenueDocuments/368748d8-8acb-4b84-b97c-26f9896b0f13, VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282)",
+2013-05-26 12:51:45.5915,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"After read triggers executed, 2 documents remained",
+2013-05-26 12:51:45.5915,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Going to index 1 documents in IndexName: Raven/DocumentsByEntityName, LastIndexedEtag: 00000001-0000-0400-0000-000000000001: (VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282)",
+2013-05-26 12:51:45.5915,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 6, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:45.5915,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,Indexing 1 documents for index: Raven/DocumentsByEntityName. (VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282),
+2013-05-26 12:51:45.5915,Raven.Database.Indexing.Index.Indexing,Debug,,"Indexing on VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282 result in index Raven/DocumentsByEntityName gave document: 	__document_id IS: venuedocuments/c626b5c4-03df-4a43-88a5-2b19ab677282
+	Tag I-: VenueDocuments
+	LastModified I-: 2013-05-26T11:51:45.0654181Z
+",
+2013-05-26 12:51:45.6585,Raven.Database.Indexing.Index.Indexing,Debug,,Indexed 1 documents for Raven/DocumentsByEntityName,
+2013-05-26 12:51:45.6585,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,"After indexing 1 documents, the new last etag for is: 00000001-0000-0400-0000-000000000003 for Raven/DocumentsByEntityName",
+2013-05-26 12:51:45.6665,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 7 because: WORK BY IndexingExecuter,
+2013-05-26 12:51:45.6665,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 7, for: IndexingExecuter, will wait for additional work",
+2013-05-26 12:51:45.6665,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 7, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:45.6665,Raven.Database.Indexing.Index.Querying,Debug,Paramore_Integration_Tests,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-26 12:51:45.6816,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'venuedocuments/c626b5c4-03df-4a43-88a5-2b19ab677282' was found,
+2013-05-26 12:51:45.7016,Raven.Database.Server.HttpServer,Debug,,Request #  11: GET     -    31 ms - Paramore_Integration_Tests - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000003,
+2013-05-26 12:51:45.7016,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 12 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 1 returned out of 1 total.
+",
+2013-05-26 12:51:45.7166,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Delete a document with key: VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282 and etag ,
+2013-05-26 12:51:45.7166,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282' was deleted,
+2013-05-26 12:51:45.7166,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 8 because: DEL VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282,
+2013-05-26 12:51:45.7166,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0037191,
+2013-05-26 12:51:45.7166,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Executing Index: Raven/DocumentsByEntityName, Keys: VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282",
+2013-05-26 12:51:45.7166,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282' was not found,
+2013-05-26 12:51:45.7166,Raven.Database.Indexing.Index.Indexing,Debug,Paramore_Integration_Tests,Deleting (VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282) from Raven/DocumentsByEntityName,
+2013-05-26 12:51:45.7166,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 8, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:45.7166,Raven.Database.Server.HttpServer,Debug,,Request #  12: POST    -    12 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:51:45.7326,Raven.Database.Server.HttpServer,Debug,,"	DELETE VenueDocuments/c626b5c4-03df-4a43-88a5-2b19ab677282
+",
+2013-05-26 12:51:45.7326,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,"Inserted a new document with key 'SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96', update: False, ",
+2013-05-26 12:51:45.7326,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Put document SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96 with etag 00000001-0000-0400-0000-000000000004,
+2013-05-26 12:51:45.7456,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 9 because: PUT SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96,
+2013-05-26 12:51:45.7456,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0073304,
+2013-05-26 12:51:45.7456,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 9, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:45.7456,Raven.Database.Server.HttpServer,Debug,,Request #  13: POST    -     9 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:51:45.7456,Raven.Database.Server.HttpServer,Debug,,"	PUT SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96
+",
+2013-05-26 12:51:45.7606,Raven.Database.Indexing.Index.Querying,Debug,Paramore_Integration_Tests,Issuing query on index Raven/DocumentsByEntityName for: Tag:SpeakerDocuments,
+2013-05-26 12:51:45.7606,Raven.Database.Server.HttpServer,Debug,,Request #  14: GET     -     3 ms - Paramore_Integration_Tests - 200 - /indexes/dynamic/SpeakerDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000004,
+2013-05-26 12:51:45.7606,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:SpeakerDocuments
+	Time: 3 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 0 returned out of 0 total.
+",
+2013-05-26 12:51:45.7756,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 10 because: WORK BY IndexingExecuter,
+2013-05-26 12:51:45.7756,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,Found a total of 1 documents that requires indexing since etag: 00000001-0000-0400-0000-000000000003: (SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96),
+2013-05-26 12:51:45.7756,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"After read triggers executed, 1 documents remained",
+2013-05-26 12:51:45.7756,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Going to index 1 documents in IndexName: Raven/DocumentsByEntityName, LastIndexedEtag: 00000001-0000-0400-0000-000000000003: (SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96)",
+2013-05-26 12:51:45.7756,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 10, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:45.7756,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,Indexing 1 documents for index: Raven/DocumentsByEntityName. (SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96),
+2013-05-26 12:51:45.7756,Raven.Database.Indexing.Index.Indexing,Debug,,"Indexing on SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96 result in index Raven/DocumentsByEntityName gave document: 	__document_id IS: speakerdocuments/bd63e677-9fc1-4969-869f-ba822584cf96
+	Tag I-: SpeakerDocuments
+	LastModified I-: 2013-05-26T11:51:45.7386200Z
+",
+2013-05-26 12:51:45.8666,Raven.Database.Indexing.Index.Indexing,Debug,,Indexed 1 documents for Raven/DocumentsByEntityName,
+2013-05-26 12:51:45.8766,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,"After indexing 1 documents, the new last etag for is: 00000001-0000-0400-0000-000000000004 for Raven/DocumentsByEntityName",
+2013-05-26 12:51:45.8766,Raven.Database.Indexing.Index.Querying,Debug,Paramore_Integration_Tests,Issuing query on index Raven/DocumentsByEntityName for: Tag:SpeakerDocuments,
+2013-05-26 12:51:45.8766,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'speakerdocuments/bd63e677-9fc1-4969-869f-ba822584cf96' was found,
+2013-05-26 12:51:45.8766,Raven.Database.Server.HttpServer,Debug,,Request #  15: GET     -     3 ms - Paramore_Integration_Tests - 200 - /indexes/dynamic/SpeakerDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000004,
+2013-05-26 12:51:45.8766,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:SpeakerDocuments
+	Time: 1 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 1 returned out of 1 total.
+",
+2013-05-26 12:51:45.8886,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 11 because: WORK BY IndexingExecuter,
+2013-05-26 12:51:45.8886,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 11, for: IndexingExecuter, will wait for additional work",
+2013-05-26 12:51:45.8886,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 11, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:45.9796,Raven.Database.Indexing.Index.Querying,Debug,Paramore_Integration_Tests,Issuing query on index Raven/DocumentsByEntityName for: Tag:SpeakerDocuments,
+2013-05-26 12:51:45.9796,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'speakerdocuments/bd63e677-9fc1-4969-869f-ba822584cf96' was found,
+2013-05-26 12:51:45.9796,Raven.Database.Server.HttpServer,Debug,,Request #  16: GET     -     5 ms - Paramore_Integration_Tests - 200 - /indexes/dynamic/SpeakerDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000004,
+2013-05-26 12:51:45.9796,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:SpeakerDocuments
+	Time: 1 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 1 returned out of 1 total.
+",
+2013-05-26 12:51:45.9986,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Delete a document with key: SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96 and etag ,
+2013-05-26 12:51:45.9986,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96' was deleted,
+2013-05-26 12:51:45.9986,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 12 because: DEL SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96,
+2013-05-26 12:51:45.9986,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0016692,
+2013-05-26 12:51:45.9986,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Executing Index: Raven/DocumentsByEntityName, Keys: SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96",
+2013-05-26 12:51:45.9986,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96' was not found,
+2013-05-26 12:51:45.9986,Raven.Database.Indexing.Index.Indexing,Debug,Paramore_Integration_Tests,Deleting (SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96) from Raven/DocumentsByEntityName,
+2013-05-26 12:51:45.9986,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 12, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:45.9986,Raven.Database.Server.HttpServer,Debug,,Request #  17: POST    -     2 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:51:46.0157,Raven.Database.Server.HttpServer,Debug,,"	DELETE SpeakerDocuments/bd63e677-9fc1-4969-869f-ba822584cf96
+",
+2013-05-26 12:51:46.1927,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 13 because: WORK BY IndexingExecuter,
+2013-05-26 12:51:46.1927,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 13, for: IndexingExecuter, will wait for additional work",
+2013-05-26 12:51:46.1927,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 13, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:51:49.9418,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 12:51:49.9418,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:51.5294,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Databases/Paramore_Integration_Tests' was found,
+2013-05-26 12:59:51.5294,Raven.Database.Server.HttpServer,Debug,,Request #  18: GET     -    15 ms - <system>   - 200 - /docs/Raven/Databases/Paramore_Integration_Tests,
+2013-05-26 12:59:51.5774,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 12:59:51.5774,Raven.Database.Server.HttpServer,Debug,,Request #  19: GET     -     8 ms - Paramore_Integration_Tests - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 12:59:52.2434,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,"Inserted a new document with key 'SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57', update: False, ",
+2013-05-26 12:59:52.2434,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Put document SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57 with etag 00000001-0000-0400-0000-000000000005,
+2013-05-26 12:59:52.2474,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 14 because: PUT SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57,
+2013-05-26 12:59:52.2474,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0038551,
+2013-05-26 12:59:52.2474,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,Found a total of 1 documents that requires indexing since etag: 00000001-0000-0400-0000-000000000004: (SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57),
+2013-05-26 12:59:52.2474,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"After read triggers executed, 1 documents remained",
+2013-05-26 12:59:52.2474,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Going to index 1 documents in IndexName: Raven/DocumentsByEntityName, LastIndexedEtag: 00000001-0000-0400-0000-000000000004: (SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57)",
+2013-05-26 12:59:52.2474,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 14, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:52.2474,Raven.Database.Server.HttpServer,Debug,,Request #  20: POST    -     6 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:59:52.2984,Raven.Database.Server.HttpServer,Debug,,"	PUT SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57
+",
+2013-05-26 12:59:52.2984,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,Indexing 1 documents for index: Raven/DocumentsByEntityName. (SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57),
+2013-05-26 12:59:52.2984,Raven.Database.Indexing.Index.Indexing,Debug,,"Indexing on SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57 result in index Raven/DocumentsByEntityName gave document: 	__document_id IS: speakerdocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57
+	Tag I-: SpeakerDocuments
+	LastModified I-: 2013-05-26T11:59:52.2434847Z
+",
+2013-05-26 12:59:52.3204,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57' was found,
+2013-05-26 12:59:52.3204,Raven.Database.Server.HttpServer,Debug,,Request #  21: GET     -     0 ms - Paramore_Integration_Tests - 200 - /docs/SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57,
+2013-05-26 12:59:52.4975,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Delete a document with key: SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57 and etag ,
+2013-05-26 12:59:52.4975,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57' was deleted,
+2013-05-26 12:59:52.4975,Raven.Database.Indexing.Index.Indexing,Debug,,Indexed 1 documents for Raven/DocumentsByEntityName,
+2013-05-26 12:59:52.4975,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 15 because: DEL SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57,
+2013-05-26 12:59:52.4975,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0089659,
+2013-05-26 12:59:52.4975,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 15, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:52.4975,Raven.Database.Server.HttpServer,Debug,,Request #  22: POST    -    10 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:59:52.5185,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,"After indexing 1 documents, the new last etag for is: 00000001-0000-0400-0000-000000000005 for Raven/DocumentsByEntityName",
+2013-05-26 12:59:52.5185,Raven.Database.Server.HttpServer,Debug,,"	DELETE SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57
+",
+2013-05-26 12:59:52.5245,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Executing Index: Raven/DocumentsByEntityName, Keys: SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57",
+2013-05-26 12:59:52.5245,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57' was not found,
+2013-05-26 12:59:52.5245,Raven.Database.Indexing.Index.Indexing,Debug,Paramore_Integration_Tests,Deleting (SpeakerDocuments/3a8b0df5-bdc6-4aff-88ef-423e3b0d7d57) from Raven/DocumentsByEntityName,
+2013-05-26 12:59:52.5245,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,"Inserted a new document with key 'VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de', update: False, ",
+2013-05-26 12:59:52.5245,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Put document VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de with etag 00000001-0000-0400-0000-000000000006,
+2013-05-26 12:59:52.5245,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 16 because: PUT VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de,
+2013-05-26 12:59:52.5245,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0041962,
+2013-05-26 12:59:52.5405,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 16, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:52.5405,Raven.Database.Server.HttpServer,Debug,,Request #  23: POST    -     5 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:59:52.5405,Raven.Database.Server.HttpServer,Debug,,"	PUT VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de
+",
+2013-05-26 12:59:52.5655,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de' was found,
+2013-05-26 12:59:52.5655,Raven.Database.Server.HttpServer,Debug,,Request #  24: GET     -     0 ms - Paramore_Integration_Tests - 200 - /docs/VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de,
+2013-05-26 12:59:52.5815,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Delete a document with key: VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de and etag ,
+2013-05-26 12:59:52.5815,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de' was deleted,
+2013-05-26 12:59:52.5815,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 17 because: DEL VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de,
+2013-05-26 12:59:52.5815,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0031975,
+2013-05-26 12:59:52.5815,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 17, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:52.5815,Raven.Database.Server.HttpServer,Debug,,Request #  25: POST    -     4 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:59:52.6005,Raven.Database.Server.HttpServer,Debug,,"	DELETE VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de
+",
+2013-05-26 12:59:52.6135,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,"Inserted a new document with key 'VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946', update: False, ",
+2013-05-26 12:59:52.6135,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Put document VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946 with etag 00000001-0000-0400-0000-000000000007,
+2013-05-26 12:59:52.6205,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 18 because: PUT VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946,
+2013-05-26 12:59:52.6205,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0076404,
+2013-05-26 12:59:52.6205,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 18, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:52.6805,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Executing Index: Raven/DocumentsByEntityName, Keys: VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de",
+2013-05-26 12:59:52.6805,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de' was not found,
+2013-05-26 12:59:52.6805,Raven.Database.Indexing.Index.Indexing,Debug,Paramore_Integration_Tests,Deleting (VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de) from Raven/DocumentsByEntityName,
+2013-05-26 12:59:52.6205,Raven.Database.Server.HttpServer,Debug,,Request #  26: POST    -     8 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:59:52.6805,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 19 because: WORK BY IndexingExecuter,
+2013-05-26 12:59:52.6805,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Found a total of 2 documents that requires indexing since etag: 00000001-0000-0400-0000-000000000005: (VenueDocuments/aaa6a986-1472-4c87-94ae-e0adee71b2de, VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946)",
+2013-05-26 12:59:52.6805,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"After read triggers executed, 2 documents remained",
+2013-05-26 12:59:52.6805,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Going to index 1 documents in IndexName: Raven/DocumentsByEntityName, LastIndexedEtag: 00000001-0000-0400-0000-000000000005: (VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946)",
+2013-05-26 12:59:52.6805,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 19, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:52.6805,Raven.Database.Server.HttpServer,Debug,,"	PUT VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946
+",
+2013-05-26 12:59:52.6805,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,Indexing 1 documents for index: Raven/DocumentsByEntityName. (VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946),
+2013-05-26 12:59:52.6805,Raven.Database.Indexing.Index.Indexing,Debug,,"Indexing on VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946 result in index Raven/DocumentsByEntityName gave document: 	__document_id IS: venuedocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946
+	Tag I-: VenueDocuments
+	LastModified I-: 2013-05-26T11:59:52.6135217Z
+",
+2013-05-26 12:59:52.7105,Raven.Database.Indexing.Index.Querying,Debug,Paramore_Integration_Tests,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-26 12:59:52.7105,Raven.Database.Server.HttpServer,Debug,,Request #  27: GET     -     2 ms - Paramore_Integration_Tests - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000007,
+2013-05-26 12:59:52.7285,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 1 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 0 returned out of 0 total.
+",
+2013-05-26 12:59:52.8275,Raven.Database.Indexing.Index.Indexing,Debug,,Indexed 1 documents for Raven/DocumentsByEntityName,
+2013-05-26 12:59:52.8275,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,"After indexing 1 documents, the new last etag for is: 00000001-0000-0400-0000-000000000007 for Raven/DocumentsByEntityName",
+2013-05-26 12:59:52.8365,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 20 because: WORK BY IndexingExecuter,
+2013-05-26 12:59:52.8365,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 20, for: IndexingExecuter, will wait for additional work",
+2013-05-26 12:59:52.8365,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 20, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:52.8365,Raven.Database.Indexing.Index.Querying,Debug,Paramore_Integration_Tests,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-26 12:59:52.8365,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'venuedocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946' was found,
+2013-05-26 12:59:52.8595,Raven.Database.Server.HttpServer,Debug,,Request #  28: GET     -    19 ms - Paramore_Integration_Tests - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000007,
+2013-05-26 12:59:52.8595,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 1 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 1 returned out of 1 total.
+",
+2013-05-26 12:59:52.8745,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Delete a document with key: VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946 and etag ,
+2013-05-26 12:59:52.8745,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946' was deleted,
+2013-05-26 12:59:52.8745,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 21 because: DEL VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946,
+2013-05-26 12:59:52.8745,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0023032,
+2013-05-26 12:59:52.8745,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Executing Index: Raven/DocumentsByEntityName, Keys: VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946",
+2013-05-26 12:59:52.8745,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946' was not found,
+2013-05-26 12:59:52.8745,Raven.Database.Indexing.Index.Indexing,Debug,Paramore_Integration_Tests,Deleting (VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946) from Raven/DocumentsByEntityName,
+2013-05-26 12:59:52.8745,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 21, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:52.8745,Raven.Database.Server.HttpServer,Debug,,Request #  29: POST    -     3 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:59:52.8895,Raven.Database.Server.HttpServer,Debug,,"	DELETE VenueDocuments/3bbd0c49-7d32-4a8c-adac-83bab1505946
+",
+2013-05-26 12:59:52.8895,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,"Inserted a new document with key 'SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788', update: False, ",
+2013-05-26 12:59:52.8895,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Put document SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788 with etag 00000001-0000-0400-0000-000000000008,
+2013-05-26 12:59:52.9095,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 22 because: PUT SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788,
+2013-05-26 12:59:52.9095,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0116703,
+2013-05-26 12:59:52.9095,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 22, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:52.9095,Raven.Database.Server.HttpServer,Debug,,Request #  30: POST    -    12 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:59:52.9255,Raven.Database.Server.HttpServer,Debug,,"	PUT SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788
+",
+2013-05-26 12:59:52.9375,Raven.Database.Indexing.Index.Querying,Debug,Paramore_Integration_Tests,Issuing query on index Raven/DocumentsByEntityName for: Tag:SpeakerDocuments,
+2013-05-26 12:59:52.9375,Raven.Database.Server.HttpServer,Debug,,Request #  31: GET     -     6 ms - Paramore_Integration_Tests - 200 - /indexes/dynamic/SpeakerDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000008,
+2013-05-26 12:59:52.9375,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:SpeakerDocuments
+	Time: 5 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 0 returned out of 0 total.
+",
+2013-05-26 12:59:52.9575,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 23 because: WORK BY IndexingExecuter,
+2013-05-26 12:59:52.9575,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,Found a total of 1 documents that requires indexing since etag: 00000001-0000-0400-0000-000000000007: (SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788),
+2013-05-26 12:59:52.9575,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"After read triggers executed, 1 documents remained",
+2013-05-26 12:59:52.9575,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Going to index 1 documents in IndexName: Raven/DocumentsByEntityName, LastIndexedEtag: 00000001-0000-0400-0000-000000000007: (SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788)",
+2013-05-26 12:59:52.9575,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 23, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:52.9575,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,Indexing 1 documents for index: Raven/DocumentsByEntityName. (SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788),
+2013-05-26 12:59:52.9575,Raven.Database.Indexing.Index.Indexing,Debug,,"Indexing on SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788 result in index Raven/DocumentsByEntityName gave document: 	__document_id IS: speakerdocuments/0ee58509-e351-4524-942e-ce338e1b6788
+	Tag I-: SpeakerDocuments
+	LastModified I-: 2013-05-26T11:59:52.8975501Z
+",
+2013-05-26 12:59:53.0175,Raven.Database.Indexing.Index.Indexing,Debug,,Indexed 1 documents for Raven/DocumentsByEntityName,
+2013-05-26 12:59:53.0175,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,"After indexing 1 documents, the new last etag for is: 00000001-0000-0400-0000-000000000008 for Raven/DocumentsByEntityName",
+2013-05-26 12:59:53.0175,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 24 because: WORK BY IndexingExecuter,
+2013-05-26 12:59:53.0175,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 24, for: IndexingExecuter, will wait for additional work",
+2013-05-26 12:59:53.0175,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 24, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:53.0415,Raven.Database.Indexing.Index.Querying,Debug,Paramore_Integration_Tests,Issuing query on index Raven/DocumentsByEntityName for: Tag:SpeakerDocuments,
+2013-05-26 12:59:53.0415,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'speakerdocuments/0ee58509-e351-4524-942e-ce338e1b6788' was found,
+2013-05-26 12:59:53.0415,Raven.Database.Server.HttpServer,Debug,,Request #  32: GET     -     6 ms - Paramore_Integration_Tests - 200 - /indexes/dynamic/SpeakerDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000008,
+2013-05-26 12:59:53.0415,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:SpeakerDocuments
+	Time: 1 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 1 returned out of 1 total.
+",
+2013-05-26 12:59:53.0565,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Delete a document with key: SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788 and etag ,
+2013-05-26 12:59:53.0565,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788' was deleted,
+2013-05-26 12:59:53.0565,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 25 because: DEL SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788,
+2013-05-26 12:59:53.0565,Raven.Database.DocumentDatabase,Debug,Paramore_Integration_Tests,Successfully executed 1 commands in 00:00:00.0039909,
+2013-05-26 12:59:53.0845,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore_Integration_Tests,"Executing Index: Raven/DocumentsByEntityName, Keys: SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788",
+2013-05-26 12:59:53.0845,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore_Integration_Tests,Document with key 'SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788' was not found,
+2013-05-26 12:59:53.0845,Raven.Database.Indexing.Index.Indexing,Debug,Paramore_Integration_Tests,Deleting (SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788) from Raven/DocumentsByEntityName,
+2013-05-26 12:59:53.0845,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 25, for: ReducingExecuter, will wait for additional work",
+2013-05-26 12:59:53.0845,Raven.Database.Server.HttpServer,Debug,,Request #  33: POST    -    28 ms - Paramore_Integration_Tests - 200 - /bulk_docs,
+2013-05-26 12:59:53.0965,Raven.Database.Server.HttpServer,Debug,,"	DELETE SpeakerDocuments/0ee58509-e351-4524-942e-ce338e1b6788
+",
+2013-05-26 12:59:53.1805,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,Incremented work counter to 26 because: WORK BY IndexingExecuter,
+2013-05-26 12:59:53.1805,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 26, for: IndexingExecuter, will wait for additional work",
+2013-05-26 12:59:53.1805,Raven.Database.Indexing.WorkContext,Debug,Paramore_Integration_Tests,"No work was found, workerWorkCounter: 26, for: ReducingExecuter, will wait for additional work",
+2013-05-26 13:14:54.9784,Raven.Database.Indexing.WorkContext,Debug,,Stopping background workers,
+2013-05-26 13:51:49.6051,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 13:51:49.6207,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 14:00:12.5472,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-26 14:00:12.5940,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-26 14:00:12.5940,Raven.Database.Server.HttpServer,Debug,,Request #  34: GET     -    44 ms - <system>   - 200 - /docs/Raven/Databases/Paramore,
+2013-05-26 14:00:12.7344,Raven.Database.Impl.DocumentCacher,Info,Paramore,"MemoryCache Settings:
+  PhysicalMemoryLimit = 98
+  CacheMemoryLimit    = 535822336
+  PollingInterval     = 00:02:00",
+2013-05-26 14:00:12.7344,Raven.Storage.Esent.TransactionalStorage,Info,Paramore,"Esent Settings:
+  MaxVerPages      = 32768
+  CacheSizeMax     = 65536
+  DatabasePageSize = 4096",
+2013-05-26 14:00:12.9372,Raven.Database.Storage.IndexDefinitionStorage,Info,Paramore,"New index Raven%2fDocumentsByEntityName:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+
+Compiled to:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+",
+2013-05-26 14:00:12.9372,Raven.Database.Indexing.IndexStorage.Startup,Debug,Paramore,Loading saved index Raven/DocumentsByEntityName,
+2013-05-26 14:00:12.9528,Raven.Database.Indexing.Index.Indexing,Debug,Paramore,Creating index for Raven/DocumentsByEntityName,
+2013-05-26 14:00:12.9528,Raven.Database.Indexing.WorkContext,Warn,Paramore,"Could not setup performance counters properly because of access permissions, perf counters will not be used","System.Security.SecurityException: Requested registry access is not allowed.
+   at System.ThrowHelper.ThrowSecurityException(ExceptionResource resource)
+   at Microsoft.Win32.RegistryKey.OpenSubKey(String name, Boolean writable)
+   at System.Diagnostics.PerformanceCounterLib.CreateRegistryEntry(String categoryName, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection creationData, Boolean& iniRegistered)
+   at System.Diagnostics.PerformanceCounterLib.RegisterCategory(String categoryName, PerformanceCounterCategoryType categoryType, String categoryHelp, CounterCreationDataCollection creationData)
+   at System.Diagnostics.PerformanceCounterCategory.Create(String categoryName, String categoryHelp, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection counterData)
+   at Raven.Database.Indexing.WorkContext.SetupPerformanceCounter(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 335
+   at Raven.Database.Indexing.WorkContext.Init(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 367
+The Zone of the assembly that failed was:
+MyComputer"
+2013-05-26 14:00:12.9528,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Backup/Status' was not found,
+2013-05-26 14:00:12.9528,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 14:00:12.9528,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 14:00:13.0152,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 14:00:13.0152,Raven.Database.Server.HttpServer,Debug,,Request #  35: GET     -   473 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 14:00:13.0308,Raven.Database.Indexing.Index.Querying,Debug,Paramore,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-26 14:00:13.0308,Raven.Database.Server.HttpServer,Debug,,Request #  36: GET     -   313 ms - Paramore   - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 14:00:13.0308,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 9 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 0 returned out of 0 total.
+",
+2013-05-26 14:00:15.7297,Raven.Database.Server.HttpServer,Debug,,Request #  37: GET     -     6 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 14:00:15.7297,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 1 ms
+",
+2013-05-26 14:15:55.7751,Raven.Database.Indexing.WorkContext,Debug,,Stopping background workers,
+2013-05-26 14:51:49.7746,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 14:51:49.7902,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 15:51:49.5330,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 15:51:49.5486,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 16:51:49.7067,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 16:51:49.7223,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 17:51:49.5235,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 17:51:49.5391,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 18:30:44.7459,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-26 18:30:44.7459,Raven.Database.Server.HttpServer,Debug,,Request #  38: GET     -    13 ms - <system>   - 200 - /docs/Raven/Databases/Paramore,
+2013-05-26 18:30:44.8863,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-26 18:30:45.0423,Raven.Database.Impl.DocumentCacher,Info,Paramore,"MemoryCache Settings:
+  PhysicalMemoryLimit = 98
+  CacheMemoryLimit    = 535822336
+  PollingInterval     = 00:02:00",
+2013-05-26 18:30:45.0423,Raven.Storage.Esent.TransactionalStorage,Info,Paramore,"Esent Settings:
+  MaxVerPages      = 32768
+  CacheSizeMax     = 65536
+  DatabasePageSize = 4096",
+2013-05-26 18:30:45.5103,Raven.Database.Storage.IndexDefinitionStorage,Info,Paramore,"New index Raven%2fDocumentsByEntityName:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+
+Compiled to:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+",
+2013-05-26 18:30:45.5103,Raven.Database.Indexing.IndexStorage.Startup,Debug,Paramore,Loading saved index Raven/DocumentsByEntityName,
+2013-05-26 18:30:45.5103,Raven.Database.Indexing.Index.Indexing,Debug,Paramore,Creating index for Raven/DocumentsByEntityName,
+2013-05-26 18:30:45.5259,Raven.Database.Indexing.WorkContext,Warn,Paramore,"Could not setup performance counters properly because of access permissions, perf counters will not be used","System.Security.SecurityException: Requested registry access is not allowed.
+   at System.ThrowHelper.ThrowSecurityException(ExceptionResource resource)
+   at Microsoft.Win32.RegistryKey.OpenSubKey(String name, Boolean writable)
+   at System.Diagnostics.PerformanceCounterLib.CreateRegistryEntry(String categoryName, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection creationData, Boolean& iniRegistered)
+   at System.Diagnostics.PerformanceCounterLib.RegisterCategory(String categoryName, PerformanceCounterCategoryType categoryType, String categoryHelp, CounterCreationDataCollection creationData)
+   at System.Diagnostics.PerformanceCounterCategory.Create(String categoryName, String categoryHelp, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection counterData)
+   at Raven.Database.Indexing.WorkContext.SetupPerformanceCounter(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 335
+   at Raven.Database.Indexing.WorkContext.Init(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 367
+The Zone of the assembly that failed was:
+MyComputer"
+2013-05-26 18:30:45.5259,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Backup/Status' was not found,
+2013-05-26 18:30:45.5415,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 18:30:45.5415,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 18:30:45.6507,Raven.Database.Indexing.Index.Querying,Debug,Paramore,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-26 18:30:45.7443,Raven.Database.Server.HttpServer,Debug,,Request #  39: GET     -   853 ms - Paramore   - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 18:30:45.7443,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 30 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 0 returned out of 0 total.
+",
+2013-05-26 18:30:45.7599,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 18:30:45.7599,Raven.Database.Server.HttpServer,Debug,,Request #  40: GET     -     1 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 18:32:18.6317,Raven.Database.Server.HttpServer,Debug,,Request #  41: GET     -    28 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 18:32:18.6317,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 3 ms
+",
+2013-05-26 18:45:34.3316,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 18:45:34.3472,Raven.Database.Server.HttpServer,Debug,,Request #  42: GET     -     3 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 18:45:34.3940,Raven.Database.Server.HttpServer,Debug,,Request #  43: GET     -    46 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 18:45:34.3940,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 31 ms
+",
+2013-05-26 18:51:49.4822,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 18:51:49.4978,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 18:58:06.5374,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 18:58:06.5374,Raven.Database.Server.HttpServer,Debug,,Request #  44: GET     -     2 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 18:58:06.6310,Raven.Database.Server.HttpServer,Debug,,Request #  45: GET     -    90 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 18:58:06.6466,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 23 ms
+",
+2013-05-26 19:04:06.0413,Raven.Database.Server.HttpServer,Debug,,Request #  46: GET     -    68 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 19:04:06.0413,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 2 ms
+",
+2013-05-26 19:04:06.3845,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 19:04:06.3845,Raven.Database.Server.HttpServer,Debug,,Request #  47: GET     -   153 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 19:18:38.7373,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 19:18:38.7373,Raven.Database.Server.HttpServer,Debug,,Request #  48: GET     -     2 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 19:18:38.7841,Raven.Database.Server.HttpServer,Debug,,Request #  49: GET     -    39 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 19:18:38.7841,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 23 ms
+",
+2013-05-26 19:21:39.1626,Raven.Database.Server.HttpServer,Debug,,Request #  50: GET     -    20 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 19:21:39.1626,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 3 ms
+",
+2013-05-26 19:26:36.1714,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 19:26:36.1714,Raven.Database.Server.HttpServer,Debug,,Request #  51: GET     -     5 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 19:26:36.2027,Raven.Database.Server.HttpServer,Debug,,Request #  52: GET     -    31 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 19:26:36.2027,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 13 ms
+",
+2013-05-26 19:30:45.7061,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 19:30:45.7061,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 19:31:01.2133,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,"Inserted a new document with key 'VenueDocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1', update: False, ",
+2013-05-26 19:31:01.2133,Raven.Database.DocumentDatabase,Debug,Paramore,Put document VenueDocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1 with etag 00000001-0000-0400-0000-000000000001,
+2013-05-26 19:31:01.2133,Raven.Database.Indexing.WorkContext,Debug,Paramore,Incremented work counter to 1 because: PUT VenueDocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1,
+2013-05-26 19:31:01.2133,Raven.Database.DocumentDatabase,Debug,Paramore,Successfully executed 1 commands in 00:00:00.0022812,
+2013-05-26 19:31:01.2133,Raven.Database.Server.HttpServer,Debug,,Request #  53: POST    -     5 ms - Paramore   - 200 - /bulk_docs,
+2013-05-26 19:31:01.2289,Raven.Database.Server.HttpServer,Debug,,"	PUT VenueDocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1
+",
+2013-05-26 19:31:01.2913,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'VenueDocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1' was found,
+2013-05-26 19:31:01.2913,Raven.Database.Server.HttpServer,Debug,,Request #  54: GET     -    33 ms - Paramore   - 200 - /docs/VenueDocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1,
+2013-05-26 19:31:01.3069,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 1, for: ReducingExecuter, will wait for additional work",
+2013-05-26 19:31:01.3069,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,Found a total of 1 documents that requires indexing since etag: 00000000-0000-0000-0000-000000000000: (VenueDocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1),
+2013-05-26 19:31:01.3069,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,"After read triggers executed, 1 documents remained",
+2013-05-26 19:31:01.3069,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,"Going to index 1 documents in IndexName: Raven/DocumentsByEntityName, LastIndexedEtag: 00000000-0000-0000-0000-000000000000: (VenueDocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1)",
+2013-05-26 19:31:01.3069,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,Indexing 1 documents for index: Raven/DocumentsByEntityName. (VenueDocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1),
+2013-05-26 19:31:01.3225,Raven.Database.Indexing.Index.Indexing,Debug,,"Indexing on VenueDocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1 result in index Raven/DocumentsByEntityName gave document: 	__document_id IS: venuedocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1
+	Tag I-: VenueDocuments
+	LastModified I-: 2013-05-26T18:31:01.2133156Z
+",
+2013-05-26 19:31:01.3849,Raven.Database.Indexing.Index.Indexing,Debug,,Indexed 1 documents for Raven/DocumentsByEntityName,
+2013-05-26 19:31:01.3849,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,"After indexing 1 documents, the new last etag for is: 00000001-0000-0400-0000-000000000001 for Raven/DocumentsByEntityName",
+2013-05-26 19:31:01.3849,Raven.Database.Indexing.WorkContext,Debug,Paramore,Incremented work counter to 2 because: WORK BY IndexingExecuter,
+2013-05-26 19:31:01.3849,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 2, for: IndexingExecuter, will wait for additional work",
+2013-05-26 19:31:01.3849,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 2, for: ReducingExecuter, will wait for additional work",
+2013-05-26 19:32:41.8998,Raven.Database.Indexing.Index.Querying,Debug,Paramore,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-26 19:32:41.9310,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'venuedocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1' was found,
+2013-05-26 19:32:41.9622,Raven.Database.Server.HttpServer,Debug,,Request #  55: GET     -   138 ms - Paramore   - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000001,
+2013-05-26 19:32:41.9622,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 115 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 1 returned out of 1 total.
+",
+2013-05-26 19:32:41.9622,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 19:32:41.9622,Raven.Database.Server.HttpServer,Debug,,Request #  56: GET     -     0 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 19:34:54.9708,Raven.Database.Server.HttpServer,Debug,,Request #  57: GET     -    18 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000001,
+2013-05-26 19:34:54.9708,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 3 ms
+",
+2013-05-26 19:36:31.0701,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,"Inserted a new document with key 'VenueDocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa', update: False, ",
+2013-05-26 19:36:31.0701,Raven.Database.DocumentDatabase,Debug,Paramore,Put document VenueDocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa with etag 00000001-0000-0400-0000-000000000002,
+2013-05-26 19:36:31.0701,Raven.Database.Indexing.WorkContext,Debug,Paramore,Incremented work counter to 3 because: PUT VenueDocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa,
+2013-05-26 19:36:31.0701,Raven.Database.DocumentDatabase,Debug,Paramore,Successfully executed 1 commands in 00:00:00.0026623,
+2013-05-26 19:36:31.0701,Raven.Database.Server.HttpServer,Debug,,Request #  58: POST    -     5 ms - Paramore   - 200 - /bulk_docs,
+2013-05-26 19:36:31.0701,Raven.Database.Server.HttpServer,Debug,,"	PUT VenueDocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa
+",
+2013-05-26 19:36:31.0701,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'VenueDocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa' was found,
+2013-05-26 19:36:31.0701,Raven.Database.Server.HttpServer,Debug,,Request #  59: GET     -     0 ms - Paramore   - 200 - /docs/VenueDocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa,
+2013-05-26 19:36:31.1013,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,Found a total of 1 documents that requires indexing since etag: 00000001-0000-0400-0000-000000000001: (VenueDocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa),
+2013-05-26 19:36:31.1013,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,"After read triggers executed, 1 documents remained",
+2013-05-26 19:36:31.1013,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,"Going to index 1 documents in IndexName: Raven/DocumentsByEntityName, LastIndexedEtag: 00000001-0000-0400-0000-000000000001: (VenueDocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa)",
+2013-05-26 19:36:31.1013,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,Indexing 1 documents for index: Raven/DocumentsByEntityName. (VenueDocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa),
+2013-05-26 19:36:31.1013,Raven.Database.Indexing.Index.Indexing,Debug,,"Indexing on VenueDocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa result in index Raven/DocumentsByEntityName gave document: 	__document_id IS: venuedocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa
+	Tag I-: VenueDocuments
+	LastModified I-: 2013-05-26T18:36:31.0701460Z
+",
+2013-05-26 19:36:31.1169,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 3, for: ReducingExecuter, will wait for additional work",
+2013-05-26 19:36:31.2104,Raven.Database.Indexing.Index.Indexing,Debug,,Indexed 1 documents for Raven/DocumentsByEntityName,
+2013-05-26 19:36:31.2260,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,"After indexing 1 documents, the new last etag for is: 00000001-0000-0400-0000-000000000002 for Raven/DocumentsByEntityName",
+2013-05-26 19:36:31.2260,Raven.Database.Indexing.WorkContext,Debug,Paramore,Incremented work counter to 4 because: WORK BY IndexingExecuter,
+2013-05-26 19:36:31.2260,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 4, for: IndexingExecuter, will wait for additional work",
+2013-05-26 19:36:31.2260,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 4, for: ReducingExecuter, will wait for additional work",
+2013-05-26 19:42:10.3308,Raven.Database.Indexing.Index.Querying,Debug,Paramore,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-26 19:42:10.3308,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'venuedocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1' was found,
+2013-05-26 19:42:10.3308,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'venuedocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa' was found,
+2013-05-26 19:42:10.3620,Raven.Database.Server.HttpServer,Debug,,Request #  60: GET     -    24 ms - Paramore   - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000002,
+2013-05-26 19:42:10.3620,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 3 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 2 returned out of 2 total.
+",
+2013-05-26 19:42:10.3620,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 19:42:10.3620,Raven.Database.Server.HttpServer,Debug,,Request #  61: GET     -     0 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 19:45:31.4983,Raven.Database.Server.HttpServer,Debug,,Request #  62: GET     -    56 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000002,
+2013-05-26 19:45:31.4983,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 7 ms
+",
+2013-05-26 19:46:08.1945,Raven.Database.Server.HttpServer,Debug,,Request #  63: GET     -   217 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000002,
+2013-05-26 19:46:08.2195,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 179 ms
+",
+2013-05-26 19:48:17.9568,Raven.Database.Server.HttpServer,Debug,,Request #  64: GET     -   212 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000002,
+2013-05-26 19:48:17.9568,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 174 ms
+",
+2013-05-26 19:48:17.9568,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 19:48:17.9568,Raven.Database.Server.HttpServer,Debug,,Request #  65: GET     -     2 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 19:48:45.8806,Raven.Database.Server.HttpServer,Debug,,Request #  66: GET     -    22 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000002,
+2013-05-26 19:48:45.8806,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 0 ms
+",
+2013-05-26 19:51:49.1854,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 19:51:49.2010,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 20:00:08.8390,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 20:00:08.8390,Raven.Database.Server.HttpServer,Debug,,Request #  67: GET     -     2 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 20:00:08.9220,Raven.Database.Server.HttpServer,Debug,,Request #  68: GET     -    78 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0400-0000-000000000002,
+2013-05-26 20:00:08.9260,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 52 ms
+",
+2013-05-26 20:04:16.0358,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-26 20:04:16.0868,Raven.Database.Server.HttpServer,Debug,,Request #  69: GET     -    66 ms - <system>   - 200 - /docs/Raven/Databases/Paramore,
+2013-05-26 20:04:16.1308,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 20:04:16.1308,Raven.Database.Server.HttpServer,Debug,,Request #  70: GET     -     1 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 20:04:16.2068,Raven.Database.Indexing.Index.Querying,Debug,Paramore,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-26 20:04:16.2068,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'venuedocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1' was found,
+2013-05-26 20:04:16.2068,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'venuedocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa' was found,
+2013-05-26 20:04:16.2738,Raven.Database.Server.HttpServer,Debug,,Request #  71: GET     -    82 ms - Paramore   - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 20:04:16.2898,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 22 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 2 returned out of 2 total.
+",
+2013-05-26 20:06:06.5098,Raven.Database.Server.HttpServer,Debug,,Request #  72: GET     -     3 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 20:06:06.5098,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 3 ms
+",
+2013-05-26 20:22:01.7244,Raven.Database.Indexing.WorkContext,Debug,,Stopping background workers,
+2013-05-26 20:51:49.3541,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 20:51:49.3661,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 21:25:28.9146,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-26 21:25:29.2809,Raven.Database.Impl.DocumentCacher,Info,Paramore,"MemoryCache Settings:
+  PhysicalMemoryLimit = 98
+  CacheMemoryLimit    = 535822336
+  PollingInterval     = 00:02:00",
+2013-05-26 21:25:29.2809,Raven.Storage.Esent.TransactionalStorage,Info,Paramore,"Esent Settings:
+  MaxVerPages      = 32768
+  CacheSizeMax     = 65536
+  DatabasePageSize = 4096",
+2013-05-26 21:25:29.9526,Raven.Database.Storage.IndexDefinitionStorage,Info,Paramore,"New index Raven%2fDocumentsByEntityName:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+
+Compiled to:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+",
+2013-05-26 21:25:29.9526,Raven.Database.Indexing.IndexStorage.Startup,Debug,Paramore,Loading saved index Raven/DocumentsByEntityName,
+2013-05-26 21:25:29.9526,Raven.Database.Indexing.Index.Indexing,Debug,Paramore,Creating index for Raven/DocumentsByEntityName,
+2013-05-26 21:25:29.9526,Raven.Database.Indexing.WorkContext,Warn,Paramore,"Could not setup performance counters properly because of access permissions, perf counters will not be used","System.Security.SecurityException: Requested registry access is not allowed.
+   at System.ThrowHelper.ThrowSecurityException(ExceptionResource resource)
+   at Microsoft.Win32.RegistryKey.OpenSubKey(String name, Boolean writable)
+   at System.Diagnostics.PerformanceCounterLib.CreateRegistryEntry(String categoryName, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection creationData, Boolean& iniRegistered)
+   at System.Diagnostics.PerformanceCounterLib.RegisterCategory(String categoryName, PerformanceCounterCategoryType categoryType, String categoryHelp, CounterCreationDataCollection creationData)
+   at System.Diagnostics.PerformanceCounterCategory.Create(String categoryName, String categoryHelp, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection counterData)
+   at Raven.Database.Indexing.WorkContext.SetupPerformanceCounter(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 335
+   at Raven.Database.Indexing.WorkContext.Init(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 367
+The Zone of the assembly that failed was:
+MyComputer"
+2013-05-26 21:25:29.9526,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Backup/Status' was not found,
+2013-05-26 21:25:29.9526,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 21:25:30.0234,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 21:25:30.0464,Raven.Database.Server.HttpServer,Debug,,"Request #  73: GET     - 1,137 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128",
+2013-05-26 21:25:30.0823,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 1 ms
+",
+2013-05-26 21:25:30.0823,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 21:25:30.0823,Raven.Database.Server.HttpServer,Debug,,Request #  74: GET     -     0 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 21:41:02.5651,Raven.Database.Indexing.WorkContext,Debug,,Stopping background workers,
+2013-05-26 21:48:51.6480,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-26 21:48:51.6650,Raven.Database.Server.HttpServer,Debug,,Request #  75: GET     -    23 ms - <system>   - 200 - /docs/Raven/Databases/Paramore,
+2013-05-26 21:48:51.7050,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-26 21:48:51.8520,Raven.Database.Impl.DocumentCacher,Info,Paramore,"MemoryCache Settings:
+  PhysicalMemoryLimit = 98
+  CacheMemoryLimit    = 535822336
+  PollingInterval     = 00:02:00",
+2013-05-26 21:48:51.8520,Raven.Storage.Esent.TransactionalStorage,Info,Paramore,"Esent Settings:
+  MaxVerPages      = 32768
+  CacheSizeMax     = 65536
+  DatabasePageSize = 4096",
+2013-05-26 21:48:52.2681,Raven.Database.Storage.IndexDefinitionStorage,Info,Paramore,"New index Raven%2fDocumentsByEntityName:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+
+Compiled to:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+",
+2013-05-26 21:48:52.2701,Raven.Database.Indexing.IndexStorage.Startup,Debug,Paramore,Loading saved index Raven/DocumentsByEntityName,
+2013-05-26 21:48:52.2701,Raven.Database.Indexing.Index.Indexing,Debug,Paramore,Creating index for Raven/DocumentsByEntityName,
+2013-05-26 21:48:52.2701,Raven.Database.Indexing.WorkContext,Warn,Paramore,"Could not setup performance counters properly because of access permissions, perf counters will not be used","System.Security.SecurityException: Requested registry access is not allowed.
+   at System.ThrowHelper.ThrowSecurityException(ExceptionResource resource)
+   at Microsoft.Win32.RegistryKey.OpenSubKey(String name, Boolean writable)
+   at System.Diagnostics.PerformanceCounterLib.CreateRegistryEntry(String categoryName, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection creationData, Boolean& iniRegistered)
+   at System.Diagnostics.PerformanceCounterLib.RegisterCategory(String categoryName, PerformanceCounterCategoryType categoryType, String categoryHelp, CounterCreationDataCollection creationData)
+   at System.Diagnostics.PerformanceCounterCategory.Create(String categoryName, String categoryHelp, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection counterData)
+   at Raven.Database.Indexing.WorkContext.SetupPerformanceCounter(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 335
+   at Raven.Database.Indexing.WorkContext.Init(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 367
+The Zone of the assembly that failed was:
+MyComputer"
+2013-05-26 21:48:52.2701,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Backup/Status' was not found,
+2013-05-26 21:48:52.2701,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 21:48:52.3441,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 21:48:52.3441,Raven.Database.Server.HttpServer,Debug,,Request #  76: GET     -   640 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 21:48:52.3541,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 21:48:52.3541,Raven.Database.Indexing.Index.Querying,Debug,Paramore,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-26 21:48:52.3541,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'venuedocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1' was found,
+2013-05-26 21:48:52.3541,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'venuedocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa' was found,
+2013-05-26 21:48:52.3661,Raven.Database.Server.HttpServer,Debug,,Request #  77: GET     -   305 ms - Paramore   - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-26 21:48:52.3661,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 2 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 2 returned out of 2 total.
+",
+2013-05-26 21:50:12.2161,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,"Inserted a new document with key 'VenueDocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2', update: False, ",
+2013-05-26 21:50:12.2161,Raven.Database.DocumentDatabase,Debug,Paramore,Put document VenueDocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2 with etag 00000001-0000-0600-0000-000000000001,
+2013-05-26 21:50:12.2161,Raven.Database.Indexing.WorkContext,Debug,Paramore,Incremented work counter to 1 because: PUT VenueDocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2,
+2013-05-26 21:50:12.2161,Raven.Database.DocumentDatabase,Debug,Paramore,Successfully executed 1 commands in 00:00:00.0143442,
+2013-05-26 21:50:12.2161,Raven.Database.Server.HttpServer,Debug,,Request #  78: POST    -    48 ms - Paramore   - 200 - /bulk_docs,
+2013-05-26 21:50:12.2381,Raven.Database.Server.HttpServer,Debug,,"	PUT VenueDocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2
+",
+2013-05-26 21:50:12.2521,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'VenueDocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2' was found,
+2013-05-26 21:50:12.2521,Raven.Database.Server.HttpServer,Debug,,Request #  79: GET     -     9 ms - Paramore   - 200 - /docs/VenueDocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2,
+2013-05-26 21:50:12.2611,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,Found a total of 1 documents that requires indexing since etag: 00000001-0000-0400-0000-000000000002: (VenueDocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2),
+2013-05-26 21:50:12.2611,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,"After read triggers executed, 1 documents remained",
+2013-05-26 21:50:12.2611,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,"Going to index 1 documents in IndexName: Raven/DocumentsByEntityName, LastIndexedEtag: 00000001-0000-0400-0000-000000000002: (VenueDocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2)",
+2013-05-26 21:50:12.2611,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 1, for: ReducingExecuter, will wait for additional work",
+2013-05-26 21:50:12.2611,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,Indexing 1 documents for index: Raven/DocumentsByEntityName. (VenueDocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2),
+2013-05-26 21:50:12.2721,Raven.Database.Indexing.Index.Indexing,Debug,,"Indexing on VenueDocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2 result in index Raven/DocumentsByEntityName gave document: 	__document_id IS: venuedocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2
+	Tag I-: VenueDocuments
+	LastModified I-: 2013-05-26T20:50:12.2141275Z
+",
+2013-05-26 21:50:12.3611,Raven.Database.Indexing.Index.Indexing,Debug,,Indexed 1 documents for Raven/DocumentsByEntityName,
+2013-05-26 21:50:12.3641,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,"After indexing 1 documents, the new last etag for is: 00000001-0000-0600-0000-000000000001 for Raven/DocumentsByEntityName",
+2013-05-26 21:50:12.3641,Raven.Database.Indexing.WorkContext,Debug,Paramore,Incremented work counter to 2 because: WORK BY IndexingExecuter,
+2013-05-26 21:50:12.3791,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 2, for: IndexingExecuter, will wait for additional work",
+2013-05-26 21:50:12.3791,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 2, for: ReducingExecuter, will wait for additional work",
+2013-05-26 21:51:49.0568,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 21:51:49.0578,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-26 21:53:41.4210,Raven.Database.Indexing.Index.Querying,Debug,Paramore,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-26 21:53:41.4210,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'venuedocuments/81ff63f0-24f0-44d8-a394-dabc44fcefd1' was found,
+2013-05-26 21:53:41.4210,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'venuedocuments/25445d65-6852-4d8b-a6fe-d527df69dfaa' was found,
+2013-05-26 21:53:41.4210,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'venuedocuments/5463d802-35d9-4bbc-ac72-92eba1f5e2a2' was found,
+2013-05-26 21:53:41.4210,Raven.Database.Server.HttpServer,Debug,,Request #  80: GET     -    11 ms - Paramore   - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128&cutOffEtag=00000001-0000-0600-0000-000000000001,
+2013-05-26 21:53:41.4210,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 7 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 3 returned out of 3 total.
+",
+2013-05-26 21:54:08.9587,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-26 21:54:08.9587,Raven.Database.Server.HttpServer,Debug,,Request #  81: GET     -     1 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-26 21:54:08.9828,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,"Inserted a new document with key 'VenueDocuments/67b38a69-d33c-4d53-99f0-7e1de492214e', update: False, ",
+2013-05-26 21:54:08.9828,Raven.Database.DocumentDatabase,Debug,Paramore,Put document VenueDocuments/67b38a69-d33c-4d53-99f0-7e1de492214e with etag 00000001-0000-0600-0000-000000000002,
+2013-05-26 21:54:08.9828,Raven.Database.Indexing.WorkContext,Debug,Paramore,Incremented work counter to 3 because: PUT VenueDocuments/67b38a69-d33c-4d53-99f0-7e1de492214e,
+2013-05-26 21:54:08.9828,Raven.Database.DocumentDatabase,Debug,Paramore,Successfully executed 1 commands in 00:00:00.0203764,
+2013-05-26 21:54:08.9828,Raven.Database.Server.HttpServer,Debug,,Request #  82: POST    -    21 ms - Paramore   - 200 - /bulk_docs,
+2013-05-26 21:54:08.9828,Raven.Database.Server.HttpServer,Debug,,"	PUT VenueDocuments/67b38a69-d33c-4d53-99f0-7e1de492214e
+",
+2013-05-26 21:54:08.9828,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'VenueDocuments/67b38a69-d33c-4d53-99f0-7e1de492214e' was found,
+2013-05-26 21:54:08.9828,Raven.Database.Server.HttpServer,Debug,,Request #  83: GET     -     0 ms - Paramore   - 200 - /docs/VenueDocuments/67b38a69-d33c-4d53-99f0-7e1de492214e,
+2013-05-26 21:54:09.0058,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 3, for: ReducingExecuter, will wait for additional work",
+2013-05-26 21:54:09.0058,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,Found a total of 1 documents that requires indexing since etag: 00000001-0000-0600-0000-000000000001: (VenueDocuments/67b38a69-d33c-4d53-99f0-7e1de492214e),
+2013-05-26 21:54:09.0058,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,"After read triggers executed, 1 documents remained",
+2013-05-26 21:54:09.0058,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,Paramore,"Going to index 1 documents in IndexName: Raven/DocumentsByEntityName, LastIndexedEtag: 00000001-0000-0600-0000-000000000001: (VenueDocuments/67b38a69-d33c-4d53-99f0-7e1de492214e)",
+2013-05-26 21:54:09.0058,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,Indexing 1 documents for index: Raven/DocumentsByEntityName. (VenueDocuments/67b38a69-d33c-4d53-99f0-7e1de492214e),
+2013-05-26 21:54:09.0058,Raven.Database.Indexing.Index.Indexing,Debug,,"Indexing on VenueDocuments/67b38a69-d33c-4d53-99f0-7e1de492214e result in index Raven/DocumentsByEntityName gave document: 	__document_id IS: venuedocuments/67b38a69-d33c-4d53-99f0-7e1de492214e
+	Tag I-: VenueDocuments
+	LastModified I-: 2013-05-26T20:54:08.9828020Z
+",
+2013-05-26 21:54:09.0718,Raven.Database.Indexing.Index.Indexing,Debug,,Indexed 1 documents for Raven/DocumentsByEntityName,
+2013-05-26 21:54:09.0818,Raven.Database.Indexing.AbstractIndexingExecuter,Debug,,"After indexing 1 documents, the new last etag for is: 00000001-0000-0600-0000-000000000002 for Raven/DocumentsByEntityName",
+2013-05-26 21:54:09.0818,Raven.Database.Indexing.WorkContext,Debug,Paramore,Incremented work counter to 4 because: WORK BY IndexingExecuter,
+2013-05-26 21:54:09.0818,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 4, for: IndexingExecuter, will wait for additional work",
+2013-05-26 21:54:09.0818,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 4, for: ReducingExecuter, will wait for additional work",
+2013-05-26 22:10:03.1152,Raven.Database.Indexing.WorkContext,Debug,,Stopping background workers,
+2013-05-26 22:51:49.0085,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-26 22:51:49.0085,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",

@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>json2</id>
+    <version>1.0.2</version>
+    <title>JSON-js json2</title>
+    <authors>Douglas Crockford</authors>
+    <owners>Douglas Crockford</owners>
+    <projectUrl>http://www.json.org/js.html</projectUrl>
+    <iconUrl>http://www.json.org/img/json160.gif</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>JSON is a light-weight, language independent, data interchange format.
+See http://www.JSON.org/
+
+This package implements JSON encoders/decoders in JavaScript.</description>
+    <releaseNotes />
+    <copyright />
+    <language />
+    <tags>json json2</tags>
+    <references />
+  </metadata>
+</package>
