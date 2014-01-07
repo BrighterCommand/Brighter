@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>Simple.Data.SqlServer</id>
+    <version>0.19.0.0</version>
+    <title>Simple.Data.SqlServer</title>
+    <authors>Mark Rendle</authors>
+    <owners>Mark Rendle</owners>
+    <licenseUrl>http://www.opensource.org/licenses/mit-license.php</licenseUrl>
+    <projectUrl>http://github.com/markrendle/Simple.Data</projectUrl>
+    <iconUrl>http://simplefx.org/images/simpledata100x100.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>SQL Server ADO provider for the Simple.Data data access library.</description>
+    <releaseNotes />
+    <copyright />
+    <language>en-us</language>
+    <tags>sqlserver database data ado .net40</tags>
+    <dependencies>
+      <dependency id="Simple.Data.Ado" version="0.19.0.0" />
+    </dependencies>
+  </metadata>
+</package>

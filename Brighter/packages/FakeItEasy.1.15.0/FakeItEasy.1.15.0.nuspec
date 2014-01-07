@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>FakeItEasy</id>
+    <version>1.15.0</version>
+    <title>Fake it Easy!</title>
+    <authors>Patrik Hägne</authors>
+    <owners>Patrik Hägne</owners>
+    <licenseUrl>https://github.com/FakeItEasy/FakeItEasy/blob/master/License.txt</licenseUrl>
+    <projectUrl>http://fakeiteasy.github.io/</projectUrl>
+    <iconUrl>http://fakeiteasy.github.io/img/talkingladies.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>It's faking amazing! The easy mocking framework for .NET that works great in C# and VB.NET alike. No need to know the difference between a stub, a mock or a spy, everything's a fake! The easy to use, refactoring friendly API makes faking a breeze.</description>
+    <releaseNotes>New: Better handling of ReturnsLazily, Throws, and Invokes convenience methods when used with out and ref parameters - https://github.com/FakeItEasy/FakeItEasy/issues/168
+Fixed: .NET 3.5 and Silverlight assemblies are still using Castle 3.2.0 - https://github.com/FakeItEasy/FakeItEasy/issues/195
+Fixed: Unable to run multiple test assemblies in a single app domain - https://github.com/FakeItEasy/FakeItEasy/issues/189</releaseNotes>
+    <copyright />
+    <language>en-US</language>
+    <tags>TDD unittesting mocks mocking fakes faking stubs stubbing spy spies doubles isolation substitutes substitution</tags>
+  </metadata>
+</package>
