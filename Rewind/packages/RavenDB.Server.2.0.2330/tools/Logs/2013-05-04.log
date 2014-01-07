@@ -1,0 +1,298 @@
+time,logger,level,database,message,exception
+2013-05-04 13:03:49.6772,Raven.Database.Impl.DocumentCacher,Info,<system>,"MemoryCache Settings:
+  PhysicalMemoryLimit = 98
+  CacheMemoryLimit    = 535822336
+  PollingInterval     = 00:02:00",
+2013-05-04 13:03:49.6928,Raven.Storage.Esent.TransactionalStorage,Info,<system>,"Esent Settings:
+  MaxVerPages      = 32768
+  CacheSizeMax     = 65536
+  DatabasePageSize = 4096",
+2013-05-04 13:03:58.6633,Raven.Database.Indexing.WorkContext,Warn,<system>,"Could not setup performance counters properly because of access permissions, perf counters will not be used","System.Security.SecurityException: Requested registry access is not allowed.
+   at System.ThrowHelper.ThrowSecurityException(ExceptionResource resource)
+   at Microsoft.Win32.RegistryKey.OpenSubKey(String name, Boolean writable)
+   at System.Diagnostics.PerformanceCounterLib.CreateRegistryEntry(String categoryName, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection creationData, Boolean& iniRegistered)
+   at System.Diagnostics.PerformanceCounterLib.RegisterCategory(String categoryName, PerformanceCounterCategoryType categoryType, String categoryHelp, CounterCreationDataCollection creationData)
+   at System.Diagnostics.PerformanceCounterCategory.Create(String categoryName, String categoryHelp, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection counterData)
+   at Raven.Database.Indexing.WorkContext.SetupPerformanceCounter(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 335
+   at Raven.Database.Indexing.WorkContext.Init(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 367
+The Zone of the assembly that failed was:
+MyComputer"
+2013-05-04 13:03:58.7257,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Backup/Status' was not found,
+2013-05-04 13:03:58.7725,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-04 13:03:58.7881,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,,Document with key 'Raven/Authorization/WindowsSettings' was not found,
+2013-05-04 13:03:58.7881,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-04 13:51:53.6468,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,,Document with key 'Raven/Databases/Paramore' was not found,
+2013-05-04 13:51:53.8028,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Databases/Paramore' was not found,
+2013-05-04 13:51:53.7872,Raven.Database.Server.HttpServer,Debug,,Request #   1: GET     -   160 ms -            - 404 - /databases/Paramore/docs/Raven/Replication/Destinations,
+2013-05-04 13:51:53.8184,Raven.Database.Server.HttpServer,Debug,,Request #   2: GET     -   189 ms - <system>   - 404 - /docs/Raven/Databases/Paramore,
+2013-05-04 13:51:54.0992,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,"Inserted a new document with key 'Raven/Databases/Paramore', update: False, ",
+2013-05-04 13:51:54.1148,Raven.Database.Indexing.WorkContext,Debug,<system>,Incremented work counter to 1 because: PUT Raven/Databases/Paramore,
+2013-05-04 13:51:54.1148,Raven.Database.DocumentDatabase,Debug,<system>,Put document Raven/Databases/Paramore with etag 00000001-0000-0100-0000-000000000001,
+2013-05-04 13:51:54.1148,Raven.Database.Server.HttpServer,Debug,,Request #   3: PUT     -   100 ms - <system>   - 200 - /admin/databases/Paramore,
+2013-05-04 13:51:54.1460,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-04 13:51:54.1616,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 1, for: ReducingExecuter, will wait for additional work",
+2013-05-04 13:51:54.1616,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 1, for: IndexingExecuter, will wait for additional work",
+2013-05-04 13:51:54.2552,Raven.Database.Impl.DocumentCacher,Info,Paramore,"MemoryCache Settings:
+  PhysicalMemoryLimit = 98
+  CacheMemoryLimit    = 535822336
+  PollingInterval     = 00:02:00",
+2013-05-04 13:51:54.2552,Raven.Storage.Esent.TransactionalStorage,Info,Paramore,"Esent Settings:
+  MaxVerPages      = 32768
+  CacheSizeMax     = 65536
+  DatabasePageSize = 4096",
+2013-05-04 13:51:56.1585,Raven.Database.Indexing.WorkContext,Warn,Paramore,"Could not setup performance counters properly because of access permissions, perf counters will not be used","System.Security.SecurityException: Requested registry access is not allowed.
+   at System.ThrowHelper.ThrowSecurityException(ExceptionResource resource)
+   at Microsoft.Win32.RegistryKey.OpenSubKey(String name, Boolean writable)
+   at System.Diagnostics.PerformanceCounterLib.CreateRegistryEntry(String categoryName, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection creationData, Boolean& iniRegistered)
+   at System.Diagnostics.PerformanceCounterLib.RegisterCategory(String categoryName, PerformanceCounterCategoryType categoryType, String categoryHelp, CounterCreationDataCollection creationData)
+   at System.Diagnostics.PerformanceCounterCategory.Create(String categoryName, String categoryHelp, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection counterData)
+   at Raven.Database.Indexing.WorkContext.SetupPerformanceCounter(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 335
+   at Raven.Database.Indexing.WorkContext.Init(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 367
+The Zone of the assembly that failed was:
+MyComputer"
+2013-05-04 13:51:56.1585,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Backup/Status' was not found,
+2013-05-04 13:51:56.1741,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-04 13:51:56.1741,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-04 13:51:56.2365,Raven.Database.Server.HttpServer,Debug,,"Request #   4: HEAD    - 2,099 ms - Paramore   - 404 - /indexes/Raven/DocumentsByEntityName",
+2013-05-04 13:51:56.8761,Raven.Database.Storage.IndexDefinitionStorage,Info,Paramore,"New index Raven%2fDocumentsByEntityName:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+
+Compiled to:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+",
+2013-05-04 13:51:56.8917,Raven.Database.Indexing.IndexStorage,Debug,Paramore,Creating index Raven/DocumentsByEntityName with encoded name Raven/DocumentsByEntityName,
+2013-05-04 13:51:57.0321,Raven.Database.Indexing.Index.Indexing,Debug,Paramore,Creating index for Raven/DocumentsByEntityName,
+2013-05-04 13:51:57.0477,Raven.Database.Indexing.WorkContext,Debug,Paramore,Incremented work counter to 1 because: PUT INDEX Raven/DocumentsByEntityName,
+2013-05-04 13:51:57.0633,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 1, for: ReducingExecuter, will wait for additional work",
+2013-05-04 13:51:57.0477,Raven.Database.Server.HttpServer,Debug,,Request #   5: PUT     -   706 ms - Paramore   - 201 - /indexes/Raven/DocumentsByEntityName,
+2013-05-04 13:51:57.0633,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-04 13:51:57.0789,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 1, for: IndexingExecuter, will wait for additional work",
+2013-05-04 13:51:57.0789,Raven.Database.Server.HttpServer,Debug,,Request #   6: GET     -     1 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-04 13:51:57.3754,Raven.Database.Indexing.Index.Querying,Debug,Paramore,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-04 13:51:57.4378,Raven.Database.Server.HttpServer,Debug,,Request #   7: GET     -   190 ms - Paramore   - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-04 13:51:57.4378,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 137 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 0 returned out of 0 total.
+",
+2013-05-04 14:03:01.4101,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-04 14:03:01.4413,Raven.Database.Server.HttpServer,Debug,,Request #   8: GET     -    28 ms - <system>   - 200 - /docs/Raven/Databases/Paramore,
+2013-05-04 14:03:01.5349,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-04 14:03:01.5349,Raven.Database.Server.HttpServer,Debug,,Request #   9: GET     -     1 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-04 14:03:01.6753,Raven.Database.Indexing.Index.Querying,Debug,Paramore,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-04 14:03:01.6753,Raven.Database.Server.HttpServer,Debug,,Request #  10: GET     -    27 ms - Paramore   - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-04 14:03:01.6753,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 26 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 0 returned out of 0 total.
+",
+2013-05-04 14:03:04.0934,Raven.Database.Server.HttpServer,Debug,,Request #  11: GET     -    10 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-04 14:03:04.0934,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 9 ms
+",
+2013-05-04 14:03:06.1683,Raven.Database.Server.HttpServer,Debug,,Request #  12: GET     -     0 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-04 14:03:06.1683,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 0 ms
+",
+2013-05-04 14:03:56.6837,Raven.Database.Server.HttpServer,Debug,,Request #  13: GET     -     1 ms - Paramore   - 304 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-04 14:03:56.6837,Raven.Database.Server.HttpServer,Debug,,"	Query: 
+	Time: 0 ms
+",
+2013-05-04 14:18:59.8789,Raven.Database.Indexing.WorkContext,Debug,,Stopping background workers,
+2013-05-04 14:51:54.3379,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 1, for: ReducingExecuter, will wait for additional work",
+2013-05-04 14:51:54.3379,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 1, for: IndexingExecuter, will wait for additional work",
+2013-05-04 15:15:42.6773,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-04 15:15:42.7397,Raven.Database.Server.HttpServer,Debug,,Request #  14: GET     -    60 ms - <system>   - 200 - /docs/Raven/Databases/Paramore,
+2013-05-04 15:15:42.8021,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-04 15:15:43.0518,Raven.Database.Impl.DocumentCacher,Info,Paramore,"MemoryCache Settings:
+  PhysicalMemoryLimit = 98
+  CacheMemoryLimit    = 535822336
+  PollingInterval     = 00:02:00",
+2013-05-04 15:15:43.0518,Raven.Storage.Esent.TransactionalStorage,Info,Paramore,"Esent Settings:
+  MaxVerPages      = 32768
+  CacheSizeMax     = 65536
+  DatabasePageSize = 4096",
+2013-05-04 15:15:43.5667,Raven.Database.Storage.IndexDefinitionStorage,Info,Paramore,"New index Raven%2fDocumentsByEntityName:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+
+Compiled to:
+using Raven.Abstractions;
+using Raven.Database.Linq;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections;
+using System;
+using Raven.Database.Linq.PrivateExtensions;
+using Lucene.Net.Documents;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Raven.Database.Indexing;
+
+
+public class Index_Raven_2fDocumentsByEntityName : Raven.Database.Linq.AbstractViewGenerator
+{
+	public Index_Raven_2fDocumentsByEntityName()
+	{
+		this.ViewText = @""from doc in docs 
+let Tag = doc[""""@metadata""""][""""Raven-Entity-Name""""]
+select new { Tag, LastModified = (DateTime)doc[""""@metadata""""][""""Last-Modified""""] };"";
+		this.AddMapDefinition(docs => 
+			from doc in docs
+			let Tag = doc[""@metadata""][""Raven-Entity-Name""]
+			select new {
+				Tag,
+				LastModified = (DateTime)doc[""@metadata""][""Last-Modified""],
+				__document_id = doc.__document_id
+			});
+		this.AddField(""LastModified"");
+		this.AddField(""__document_id"");
+		this.AddField(""Tag"");
+		this.AddQueryParameterForMap(""__document_id"");
+		this.AddQueryParameterForReduce(""__document_id"");
+	}
+}
+",
+2013-05-04 15:15:43.5667,Raven.Database.Indexing.IndexStorage.Startup,Debug,Paramore,Loading saved index Raven/DocumentsByEntityName,
+2013-05-04 15:15:43.5667,Raven.Database.Indexing.Index.Indexing,Debug,Paramore,Creating index for Raven/DocumentsByEntityName,
+2013-05-04 15:15:43.6136,Raven.Database.Indexing.WorkContext,Warn,Paramore,"Could not setup performance counters properly because of access permissions, perf counters will not be used","System.Security.SecurityException: Requested registry access is not allowed.
+   at System.ThrowHelper.ThrowSecurityException(ExceptionResource resource)
+   at Microsoft.Win32.RegistryKey.OpenSubKey(String name, Boolean writable)
+   at System.Diagnostics.PerformanceCounterLib.CreateRegistryEntry(String categoryName, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection creationData, Boolean& iniRegistered)
+   at System.Diagnostics.PerformanceCounterLib.RegisterCategory(String categoryName, PerformanceCounterCategoryType categoryType, String categoryHelp, CounterCreationDataCollection creationData)
+   at System.Diagnostics.PerformanceCounterCategory.Create(String categoryName, String categoryHelp, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection counterData)
+   at Raven.Database.Indexing.WorkContext.SetupPerformanceCounter(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 335
+   at Raven.Database.Indexing.WorkContext.Init(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 367
+The Zone of the assembly that failed was:
+MyComputer"
+2013-05-04 15:15:43.6448,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Backup/Status' was not found,
+2013-05-04 15:15:43.6604,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-04 15:15:43.7228,Raven.Database.Indexing.WorkContext,Debug,Paramore,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-04 15:15:43.7540,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-04 15:15:43.7540,Raven.Database.Server.HttpServer,Debug,,Request #  15: GET     -   958 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-04 15:15:43.8008,Raven.Database.Indexing.Index.Querying,Debug,Paramore,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-04 15:15:43.8008,Raven.Database.Server.HttpServer,Debug,,Request #  16: GET     -   463 ms - Paramore   - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-04 15:15:43.8008,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 45 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 0 returned out of 0 total.
+",
+2013-05-04 15:18:12.5162,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Databases/Paramore' was found,
+2013-05-04 15:18:12.5474,Raven.Database.Server.HttpServer,Debug,,Request #  17: GET     -    43 ms - <system>   - 200 - /docs/Raven/Databases/Paramore,
+2013-05-04 15:18:12.6098,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,Paramore,Document with key 'Raven/Replication/Destinations' was not found,
+2013-05-04 15:18:12.6098,Raven.Database.Server.HttpServer,Debug,,Request #  18: GET     -     1 ms - Paramore   - 404 - /docs/Raven/Replication/Destinations,
+2013-05-04 15:18:12.7502,Raven.Database.Indexing.Index.Querying,Debug,Paramore,Issuing query on index Raven/DocumentsByEntityName for: Tag:VenueDocuments,
+2013-05-04 15:18:12.7658,Raven.Database.Server.HttpServer,Debug,,Request #  19: GET     -    23 ms - Paramore   - 200 - /indexes/dynamic/VenueDocuments?query=&pageSize=128,
+2013-05-04 15:18:12.7658,Raven.Database.Server.HttpServer,Debug,,"	Query: Tag:VenueDocuments
+	Time: 22 ms
+	Index: Raven/DocumentsByEntityName
+	Results: 0 returned out of 0 total.
+",
+2013-05-04 15:34:01.5818,Raven.Database.Indexing.WorkContext,Debug,,Stopping background workers,
+2013-05-04 15:51:54.5279,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 1, for: IndexingExecuter, will wait for additional work",
+2013-05-04 15:51:54.5279,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 1, for: ReducingExecuter, will wait for additional work",
+2013-05-04 16:51:54.7044,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 1, for: ReducingExecuter, will wait for additional work",
+2013-05-04 16:51:54.7044,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 1, for: IndexingExecuter, will wait for additional work",
+2013-05-04 17:51:53.8050,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 1, for: ReducingExecuter, will wait for additional work",
+2013-05-04 17:51:53.8050,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 1, for: IndexingExecuter, will wait for additional work",
