@@ -1,4 +1,5 @@
-﻿using OpenRasta.Codecs;
+﻿using System.Collections.Generic;
+using OpenRasta.Codecs;
 using OpenRasta.Configuration;
 using Tasklist.Adapters.API.Contributors;
 using Tasklist.Adapters.API.Handlers;
@@ -15,6 +16,14 @@ namespace Tasklist
                 ResourceSpace.Uses.PipelineContributor<DependencyPipelineContributor>();
                 ResourceSpace.Has.ResourcesOfType<TaskModel>()
                         .AtUri("/task/{id}")
+                        .HandledBy<TaskEndPointHandler>()
+                        .TranscodedBy<JsonDataContractCodec>()
+                        .ForMediaType("application/json")
+                        .ForExtension("js")
+                        .ForExtension("json");
+
+                 ResourceSpace.Has.ResourcesOfType<List<TaskModel>>()
+                        .AtUri("/tasks")
                         .HandledBy<TaskEndPointHandler>()
                         .TranscodedBy<JsonDataContractCodec>()
                         .ForMediaType("application/json")
