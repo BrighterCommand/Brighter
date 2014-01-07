@@ -41,14 +41,24 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="FakeItEasy">
-      <HintPath>..\..\packages\FakeItEasy.1.14.0\lib\net40\FakeItEasy.dll</HintPath>
-    </Reference>
-    <Reference Include="Machine.Specifications, Version=0.5.18.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="FakeItEasy, Version=1.15.0.0, Culture=neutral, PublicKeyToken=eff28e2146d5fd2c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Machine.Specifications.0.5.2.0\lib\Machine.Specifications.dll</HintPath>
+      <HintPath>..\..\packages\FakeItEasy.1.15.0\lib\net40\FakeItEasy.dll</HintPath>
+    </Reference>
+    <Reference Include="Machine.Specifications, Version=0.6.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Machine.Specifications.0.6.1\lib\net45\Machine.Specifications.dll</HintPath>
+    </Reference>
+    <Reference Include="Machine.Specifications.Clr4, Version=0.6.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Machine.Specifications.0.6.1\lib\net45\Machine.Specifications.Clr4.dll</HintPath>
+    </Reference>
+    <Reference Include="Machine.Specifications.Should, Version=0.6.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Machine.Specifications.0.6.1\lib\net45\Machine.Specifications.Should.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.QualityTools.Testing.Fakes, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\packages\Newtonsoft.Json.5.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -58,14 +68,18 @@
     <Reference Include="OpenRasta.Hosting.AspNet">
       <HintPath>Libs\OpenRasta\OpenRasta.Hosting.AspNet.dll</HintPath>
     </Reference>
-    <Reference Include="Simple.Data">
-      <HintPath>..\..\packages\Simple.Data.Core.1.0.0-rc3\lib\net40\Simple.Data.dll</HintPath>
+    <Reference Include="Simple.Data, Version=0.19.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Simple.Data.Core.0.19.0.0\lib\net40\Simple.Data.dll</HintPath>
     </Reference>
     <Reference Include="Simple.Data.Ado">
-      <HintPath>..\..\packages\Simple.Data.Ado.0.18.3.1\lib\net40\Simple.Data.Ado.dll</HintPath>
+      <HintPath>..\..\packages\Simple.Data.Ado.0.19.0.0\lib\net40\Simple.Data.Ado.dll</HintPath>
     </Reference>
     <Reference Include="Simple.Data.SqlCe40">
-      <HintPath>..\..\packages\Simple.Data.SqlCompact40.0.18.3.1\lib\net40\Simple.Data.SqlCe40.dll</HintPath>
+      <HintPath>..\..\packages\Simple.Data.SqlCompact40.0.19.0.0\lib\net40\Simple.Data.SqlCe40.dll</HintPath>
+    </Reference>
+    <Reference Include="Simple.Data.SqlServer">
+      <HintPath>..\..\packages\Simple.Data.SqlServer.0.19.0.0\lib\net40\Simple.Data.SqlServer.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
@@ -131,6 +145,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
+    <Fakes Include="Fakes\Simple.Data.fakes" />
+    <Fakes Include="Fakes\Simple.Data.Ado.fakes" />
+    <Fakes Include="Fakes\Simple.Data.SqlCe40.fakes" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
