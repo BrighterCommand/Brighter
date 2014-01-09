@@ -1,0 +1,29 @@
+time,logger,level,database,message,exception
+2013-05-12 20:22:46.2407,Raven.Database.Impl.DocumentCacher,Info,<system>,"MemoryCache Settings:
+  PhysicalMemoryLimit = 98
+  CacheMemoryLimit    = 535822336
+  PollingInterval     = 00:02:00",
+2013-05-12 20:22:46.2667,Raven.Storage.Esent.TransactionalStorage,Info,<system>,"Esent Settings:
+  MaxVerPages      = 32768
+  CacheSizeMax     = 65536
+  DatabasePageSize = 4096",
+2013-05-12 20:22:50.0345,Raven.Database.Indexing.WorkContext,Warn,<system>,"Could not setup performance counters properly because of access permissions, perf counters will not be used","System.Security.SecurityException: Requested registry access is not allowed.
+   at System.ThrowHelper.ThrowSecurityException(ExceptionResource resource)
+   at Microsoft.Win32.RegistryKey.OpenSubKey(String name, Boolean writable)
+   at System.Diagnostics.PerformanceCounterLib.CreateRegistryEntry(String categoryName, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection creationData, Boolean& iniRegistered)
+   at System.Diagnostics.PerformanceCounterLib.RegisterCategory(String categoryName, PerformanceCounterCategoryType categoryType, String categoryHelp, CounterCreationDataCollection creationData)
+   at System.Diagnostics.PerformanceCounterCategory.Create(String categoryName, String categoryHelp, PerformanceCounterCategoryType categoryType, CounterCreationDataCollection counterData)
+   at Raven.Database.Indexing.WorkContext.SetupPerformanceCounter(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 335
+   at Raven.Database.Indexing.WorkContext.Init(String name) in c:\Builds\RavenDB-Stable\Raven.Database\Indexing\WorkContext.cs:line 367
+The Zone of the assembly that failed was:
+MyComputer"
+2013-05-12 20:22:50.0855,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,<system>,Document with key 'Raven/Backup/Status' was not found,
+2013-05-12 20:22:50.1105,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-12 20:22:50.1225,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-12 20:22:50.1565,Raven.Storage.Esent.StorageActions.DocumentStorageActions,Debug,,Document with key 'Raven/Authorization/WindowsSettings' was not found,
+2013-05-12 21:22:50.3291,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-12 21:22:50.3291,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-12 22:22:50.4970,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-12 22:22:50.4970,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",
+2013-05-12 23:22:50.6883,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: ReducingExecuter, will wait for additional work",
+2013-05-12 23:22:50.6883,Raven.Database.Indexing.WorkContext,Debug,<system>,"No work was found, workerWorkCounter: 0, for: IndexingExecuter, will wait for additional work",

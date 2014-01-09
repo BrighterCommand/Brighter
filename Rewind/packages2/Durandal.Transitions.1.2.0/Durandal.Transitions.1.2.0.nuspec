@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>Durandal.Transitions</id>
+    <version>1.2.0</version>
+    <title>Durandal Transitions</title>
+    <authors>Rob Eisenberg, John Papa</authors>
+    <owners>Rob Eisenberg, John Papa</owners>
+    <licenseUrl>https://raw.github.com/EisenbergEffect/Durandal/master/License.txt</licenseUrl>
+    <projectUrl>http://www.durandaljs.com/</projectUrl>
+    <iconUrl>https://raw.github.com/BlueSpire/Durandal/master/media/icon_128.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Durandal is a cross-device, cross-platform client framework written in JavaScript and designed to make Single Page Applications (SPAs) easy to create and maintain. We've used it to build apps for PC, Mac, Linux, iOS and Android...and now it's your turn...
+
+This is a collection of transitions designed to work with Durandal's composition system.</description>
+    <summary>This is a collection of transitions designed to work with Durandal's composition system.</summary>
+    <copyright>Copyright (c) 2012 Blue Spire Consulting, Inc.</copyright>
+    <tags>JavaScript JS Durandal HTML CSS MVC MVVM MVP Web SPA RIA Knockout RequireJS jQuery Transitions</tags>
+    <dependencies>
+      <dependency id="Durandal" version="1.2.0" />
+    </dependencies>
+    <references />
+  </metadata>
+</package>

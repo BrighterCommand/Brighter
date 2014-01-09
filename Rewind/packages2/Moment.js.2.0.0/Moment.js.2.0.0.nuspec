@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>Moment.js</id>
+    <version>2.0.0</version>
+    <title>Moment.js</title>
+    <authors>Tim Wood</authors>
+    <owners>Tim Wood</owners>
+    <licenseUrl>https://raw.github.com/timrwood/moment/master/LICENSE</licenseUrl>
+    <projectUrl>http://momentjs.com/</projectUrl>
+    <iconUrl>https://si0.twimg.com/profile_images/2907663153/dc29a7aa56e686932ac4fde6f2353d1f_normal.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A lightweight javascript date library for parsing, manipulating, and formatting dates.</description>
+    <releaseNotes>- Added short form localized tokens.
+            - Added ability to define language a string should be parsed in.
+            - Added support for reversed add/subtract arguments.
+            - Added support for endOf('week') and startOf('week').
+            - Fixed the logic for moment#diff(Moment, 'months') and moment#diff(Moment, 'years')
+            - moment#diff now floors instead of rounds.
+            - Normalized moment#toString.
+            - Added isSame, isAfter, and isBefore methods.
+            - Added better week support.
+            - Added moment#toJSON
+            - Bugfix: Fixed parsing of first century dates
+            - Bugfix: Parsing 10Sep2001 should work as expected
+            - Bugfix: Fixed wierdness with moment.utc() parsing.
+            - Changed language ordinal method to return the number + ordinal instead of just the ordinal.
+            - Changed two digit year parsing cutoff to match strptime.
+            - Removed moment#sod and moment#eod in favor of moment#startOf and moment#endOf.
+            - Removed moment.humanizeDuration() in favor of moment.duration().humanize().
+            - Removed the lang data objects from the top level namespace.
+            - Duplicate Date passed to moment() instead of referencing it.</releaseNotes>
+    <copyright />
+    <language />
+    <tags>JavaScript date time browser node.js</tags>
+    <references />
+  </metadata>
+</package>

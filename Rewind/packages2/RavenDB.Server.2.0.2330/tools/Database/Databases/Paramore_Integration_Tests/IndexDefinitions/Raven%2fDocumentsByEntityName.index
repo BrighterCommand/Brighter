@@ -1,0 +1,23 @@
+{
+  "Name": "Raven/DocumentsByEntityName",
+  "Map": "from doc in docs \r\nlet Tag = doc[\"@metadata\"][\"Raven-Entity-Name\"]\r\nselect new { Tag, LastModified = (DateTime)doc[\"@metadata\"][\"Last-Modified\"] };",
+  "Maps": [
+    "from doc in docs \r\nlet Tag = doc[\"@metadata\"][\"Raven-Entity-Name\"]\r\nselect new { Tag, LastModified = (DateTime)doc[\"@metadata\"][\"Last-Modified\"] };"
+  ],
+  "Reduce": null,
+  "TransformResults": null,
+  "IsMapReduce": false,
+  "IsCompiled": false,
+  "IsTemp": false,
+  "Stores": {},
+  "Indexes": {
+    "Tag": "NotAnalyzed",
+    "LastModified": "NotAnalyzed"
+  },
+  "SortOptions": {},
+  "Analyzers": {},
+  "Fields": [],
+  "Suggestions": {},
+  "TermVectors": {},
+  "Type": "Map"
+}
