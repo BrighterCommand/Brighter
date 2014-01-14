@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>OpenRasta.Testing</name>
+    </assembly>
+    <members>
+        <member name="M:OpenRasta.Testing.SpecExtensions.ShouldBeEquivalentTo``1(``0,``0)">
+            <summary>
+            Tests that two objects have the same public properties.
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="actual"></param>
+            <param name="expected"></param>
+        </member>
+    </members>
+</doc>
