@@ -36,7 +36,7 @@ namespace Tasklist.Adapters.API.Handlers
             return new OperationResult.Created
                 {
                     ResponseResource = taskRetriever.Get(addTaskCommand.TaskId),
-                    CreatedResourceUrl = new Uri(string.Format("\\tasks\\{0}", addTaskCommand.TaskId))
+                    CreatedResourceUrl = new Uri(string.Format("http://localhost:49743/tasks/{0}", addTaskCommand.TaskId))
                 };
         }
     }

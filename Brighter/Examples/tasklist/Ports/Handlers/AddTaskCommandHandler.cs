@@ -18,13 +18,15 @@ namespace Tasklist.Ports.Handlers
         [Trace(step:1, timing: HandlerTiming.Before)]
         public override AddTaskCommand Handle(AddTaskCommand addTaskCommand)
         {
-            tasksDAO.Add(
+            var inserted = tasksDAO.Add(
                 new Task(
                     taskName: addTaskCommand.TaskName, 
                     taskDecription: addTaskCommand.TaskDecription,
                     dueDate: addTaskCommand.TaskDueDate
                     )
                 );
+
+            addTaskCommand.TaskId = inserted.Id;
 
             return addTaskCommand;
         }
