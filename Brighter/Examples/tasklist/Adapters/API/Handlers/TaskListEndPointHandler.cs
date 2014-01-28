@@ -14,7 +14,7 @@ namespace Tasklist.Adapters.API.Handlers
 
         public OperationResult Get()
         {
-            return new OperationResult.OK{ResponseResource = taskListRetriever.RetrieveTasks()}
+            return new OperationResult.OK {ResponseResource = taskListRetriever.RetrieveTasks()};
         }
     }
 }

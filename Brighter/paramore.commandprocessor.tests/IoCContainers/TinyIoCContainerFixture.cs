@@ -22,7 +22,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
 
         Because of = () => _container.Register<IMyInterface, MyInterfaceImpl>();
 
-        It should_resolve_instances_of_the_interface = () => _container.Resolve(typeof(IMyInterface)).ShouldBeOfType<IMyInterface>();
+        It should_resolve_instances_of_the_interface = () => _container.GetInstance(typeof(IMyInterface)).ShouldBeOfType<IMyInterface>();
     }
 
     public class When_resolving_an_interface_implementation_using_generic_shorthand
@@ -33,7 +33,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
 
         Because of = () => _container.Register<IMyInterface, MyInterfaceImpl>();
 
-        It should_resolve_instances_of_the_interface = () => _container.Resolve<IMyInterface>().ShouldBeOfType<IMyInterface>();
+        It should_resolve_instances_of_the_interface = () => _container.GetInstance<IMyInterface>().ShouldBeOfType<IMyInterface>();
     }
 
     public class When_resolving_an_interface_implementation_should_allow_disambiguation_by_name
@@ -47,7 +47,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
             _container.Register<IMyInterface, MyOtherIntefaceImpl>("SecondImpl");
         };
 
-        It should_resolve_instances_of_the_interface = () => _container.Resolve(typeof(IMyInterface), "FirstImpl").ShouldBeOfType<MyInterfaceImpl>();
+        It should_resolve_instances_of_the_interface = () => _container.GetInstance(typeof(IMyInterface), "FirstImpl").ShouldBeOfType<MyInterfaceImpl>();
     }
 
     public class When_resolving_an_interface_implementation_using_generics_should_allow_disambiguation_by_name
@@ -61,7 +61,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
             _container.Register<IMyInterface, MyOtherIntefaceImpl>("SecondImpl");
         };
 
-        It should_resolve_instances_of_the_interface = () => _container.Resolve<IMyInterface>("FirstImpl").ShouldBeOfType<MyInterfaceImpl>();
+        It should_resolve_instances_of_the_interface = () => _container.GetInstance<IMyInterface>("FirstImpl").ShouldBeOfType<MyInterfaceImpl>();
     }
     public class When_resolving_an_interface_implementation_should_support_singleton
     {
@@ -73,7 +73,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
             _container.Register<IMyInterface, MyInterfaceImpl>().AsSingleton();
         };
 
-        It should_resolve_instances_of_the_interface = () => _container.Resolve(typeof(IMyInterface)).ShouldBeTheSameAs(_container.Resolve(typeof(IMyInterface)));
+        It should_resolve_instances_of_the_interface = () => _container.GetInstance(typeof(IMyInterface)).ShouldBeTheSameAs(_container.GetInstance(typeof(IMyInterface)));
     }
 
     public class When_resolving_an_interface_implementation_should_support_multiple_implementations
@@ -86,7 +86,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
             _container.Register<IMyInterface, MyInterfaceImpl>().AsMultiInstance();
         };
         
-        It should_resolve_instances_of_the_interface = () => _container.Resolve(typeof(IMyInterface)).ShouldNotBeTheSameAs(_container.Resolve(typeof(IMyInterface)));
+        It should_resolve_instances_of_the_interface = () => _container.GetInstance(typeof(IMyInterface)).ShouldNotBeTheSameAs(_container.GetInstance(typeof(IMyInterface)));
     }
 
     internal class MyInterfaceImpl : IMyInterface {}
