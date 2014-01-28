@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Practices.ServiceLocation;
 using TinyIoC;
 
 namespace paramore.commandprocessor.ioccontainers.IoCContainers
 {
-    public class TinyIoCAdapter : IAdaptAnInversionOfControlContainer
+    public class TinyIoCAdapter : ServiceLocatorImplBase, IAdaptAnInversionOfControlContainer
     {
         private readonly TinyIoCContainer _container;
         private TinyIoCContainer.RegisterOptions _registerOptions;
@@ -13,31 +14,6 @@ namespace paramore.commandprocessor.ioccontainers.IoCContainers
         public TinyIoCAdapter(TinyIoCContainer container)
         {
             _container = container;
-        }
-
-        public IEnumerable<object> ResolveAll(Type resolveType, bool includeUnamed)
-        {
-            return _container.ResolveAll(resolveType, includeUnamed);
-        }
-
-        public object Resolve(Type resolveType)
-        {
-            return _container.Resolve(resolveType);
-        }
-
-        public object Resolve(Type resolveType, string name)
-        {
-            return _container.Resolve(resolveType, name);
-        }
-
-        public ResolveType Resolve<ResolveType>() where ResolveType : class
-        {
-            return _container.Resolve<ResolveType>();
-        }
-
-        public ResolveType Resolve<ResolveType>(string name) where ResolveType : class
-        {
-            return _container.Resolve<ResolveType>(name);
         }
 
         public IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>() where RegisterType : class where RegisterImplementation : class, RegisterType
@@ -68,6 +44,16 @@ namespace paramore.commandprocessor.ioccontainers.IoCContainers
         {
             Debug.Assert(_registerOptions != null);
             _registerOptions.AsSingleton();
+        }
+
+        protected override object DoGetInstance(Type serviceType, string key)
+        {
+            return key != null ? _container.Resolve(serviceType, key) : _container.Resolve(serviceType);
+        }
+
+        protected override IEnumerable<object> DoGetAllInstances(Type serviceType)
+        {
+            return _container.ResolveAll(serviceType, true);
         }
     }
 }

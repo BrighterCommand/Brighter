@@ -21,7 +21,7 @@ namespace paramore.commandprocessor
         public IHandleRequests<TRequest> CreateRequestHandler()
         {
             var handlerType = attribute.GetHandlerType().MakeGenericType(messageType);
-            var parameters = handlerType.GetConstructors()[0].GetParameters().Select(param => container.Resolve(param.ParameterType)).ToArray();
+            var parameters = handlerType.GetConstructors()[0].GetParameters().Select(param => container.GetInstance(param.ParameterType)).ToArray();
             var handler = (IHandleRequests<TRequest>)Activator.CreateInstance(handlerType, parameters);
             handler.Context = requestContext;
             return handler;

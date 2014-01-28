@@ -35,7 +35,7 @@ namespace paramore.commandprocessor
 
         private IEnumerable<RequestHandler<TRequest>> GetHandlers()
         {
-            var handlers = new RequestHandlers<TRequest>(container.ResolveAll(implicithandlerType, true));
+            var handlers = new RequestHandlers<TRequest>(container.GetAllInstances(implicithandlerType));
             return handlers;
         }
 
