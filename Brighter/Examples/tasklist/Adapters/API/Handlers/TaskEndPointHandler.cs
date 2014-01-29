@@ -11,18 +11,28 @@ namespace Tasklist.Adapters.API.Handlers
     {
         private readonly ITaskRetriever taskRetriever;
         private readonly IAmACommandProcessor commandProcessor;
+        private readonly ITaskListRetriever taskListRetriever;
 
-        public TaskEndPointHandler(ITaskRetriever taskRetriever, IAmACommandProcessor commandProcessor)
+        public TaskEndPointHandler(ITaskRetriever taskRetriever, ITaskListRetriever taskListRetriever, IAmACommandProcessor commandProcessor)
         {
             this.taskRetriever = taskRetriever;
+            this.taskListRetriever = taskListRetriever;
             this.commandProcessor = commandProcessor;
         }
 
+        [HttpOperation(HttpMethod.GET)]
+        public OperationResult Get()
+        {
+            return new OperationResult.OK {ResponseResource = taskListRetriever.RetrieveTasks()};
+        }
+
+        [HttpOperation(HttpMethod.GET)]
         public OperationResult Get(int taskId)
         {
             return new OperationResult.OK {ResponseResource = taskRetriever.Get(taskId)};
         }
 
+        [HttpOperation(HttpMethod.POST)]
         public OperationResult Post(TaskModel newTask)
         {
             var addTaskCommand = new AddTaskCommand(

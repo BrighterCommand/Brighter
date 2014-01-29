@@ -15,20 +15,20 @@ namespace Tasklist
             {
                 ResourceSpace.Uses.PipelineContributor<DependencyPipelineContributor>();
                 ResourceSpace.Has.ResourcesOfType<TaskModel>()
-                        .AtUri("/task/{id}")
+                        .AtUri("/tasks/{id}")
                         .HandledBy<TaskEndPointHandler>()
                         .TranscodedBy<JsonDataContractCodec>()
                         .ForMediaType("application/json")
                         .ForExtension("js")
                         .ForExtension("json");
 
-                 ResourceSpace.Has.ResourcesOfType<List<TaskModel>>()
-                        .AtUri("/tasks")
-                        .HandledBy<TaskEndPointHandler>()
-                        .TranscodedBy<JsonDataContractCodec>()
-                        .ForMediaType("application/json")
-                        .ForExtension("js")
-                        .ForExtension("json");
+                ResourceSpace.Has.ResourcesOfType<List<TaskModel>>()
+                         .AtUri("/tasks")
+                         .HandledBy<TaskEndPointHandler>()
+                         .TranscodedBy<JsonDataContractCodec>()
+                         .ForMediaType("application/json")
+                         .ForExtension("js")
+                         .ForExtension(".json");
             }
         }
     }
