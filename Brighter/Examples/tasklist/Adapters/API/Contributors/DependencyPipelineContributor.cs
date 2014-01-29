@@ -41,6 +41,7 @@ namespace Tasklist.Adapters.API.Contributors
             resolver.AddDependencyInstance<IAmARequestContextFactory>(new InMemoryRequestContextFactory(), DependencyLifetime.PerRequest);
             resolver.AddDependency<IAmACommandProcessor, CommandProcessor>(DependencyLifetime.Singleton);
             resolver.AddDependency<ITaskRetriever, TaskRetriever>(DependencyLifetime.Singleton);
+            resolver.AddDependency<ITaskListRetriever, TaskListRetriever>(DependencyLifetime.Singleton);
 
 
             return PipelineContinuation.Continue;
