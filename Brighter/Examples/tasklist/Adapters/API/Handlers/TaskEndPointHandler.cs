@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using OpenRasta.Web;
 using Tasklist.Adapters.API.Resources;
 using Tasklist.Ports.Commands;
@@ -23,7 +24,8 @@ namespace Tasklist.Adapters.API.Handlers
         [HttpOperation(HttpMethod.GET)]
         public OperationResult Get()
         {
-            return new OperationResult.OK {ResponseResource = taskListRetriever.RetrieveTasks()};
+            List<TaskModel> responseResource = taskListRetriever.RetrieveTasks();
+            return new OperationResult.OK {ResponseResource = responseResource};
         }
 
         [HttpOperation(HttpMethod.GET)]
