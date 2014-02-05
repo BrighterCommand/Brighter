@@ -111,6 +111,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Adapters\API\Contributors\DependencyPipelineContributor.cs" />
+    <Compile Include="Adapters\API\Resources\Link.cs" />
+    <Compile Include="Adapters\API\Resources\TaskListModel.cs" />
+    <Compile Include="Adapters\API\Resources\TaskListGlobals.cs" />
     <Compile Include="Adapters\Tests\TaskListRetrieveFixture.cs" />
     <Compile Include="Adapters\Tests\TaskRetrieverFixture.cs" />
     <Compile Include="Configuration.cs" />
