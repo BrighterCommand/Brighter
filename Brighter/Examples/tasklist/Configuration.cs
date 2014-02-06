@@ -22,7 +22,7 @@ namespace Tasklist
                         .ForExtension("js")
                         .ForExtension("json");
 
-                ResourceSpace.Has.ResourcesOfType<List<TaskModel>>()
+                ResourceSpace.Has.ResourcesOfType<TaskListModel>()
                          .AtUri("/tasks")
                          .HandledBy<TaskEndPointHandler>()
                          .TranscodedBy<JsonDataContractCodec>()

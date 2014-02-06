@@ -24,7 +24,7 @@ namespace Tasklist.Adapters.API.Handlers
         [HttpOperation(HttpMethod.GET)]
         public OperationResult Get()
         {
-            List<TaskModel> responseResource = taskListRetriever.RetrieveTasks();
+            TaskListModel responseResource = taskListRetriever.RetrieveTasks();
             return new OperationResult.OK {ResponseResource = responseResource};
         }
 

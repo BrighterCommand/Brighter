@@ -6,7 +6,7 @@ namespace Tasklist.Adapters.API.Resources
 
         public static string HostName
         {
-            get { return HostName; }
+            get { return hostName; }
         }
     }
 }
