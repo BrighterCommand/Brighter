@@ -11,7 +11,7 @@ namespace Tasklist.Ports.ViewModelRetrievers
             var db = Database.Opener.OpenFile(DatabasePath);
             var tasks = db.Tasks.All().ToList<Task>();
             var taskList = new TaskListModel(tasks);
-            return tasks;
+            return taskList ;
         }
     }
 }
