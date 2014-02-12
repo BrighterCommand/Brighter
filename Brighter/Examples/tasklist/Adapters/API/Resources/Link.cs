@@ -18,23 +18,23 @@ namespace Tasklist.Adapters.API.Resources
         public string Rel { get; set; }
         public string HRef { get; set; }
 
-        public static Link Create(Task task)
+        public static Link Create(Task task, string hostName)
         {
             var link = new Link
                 {
                     Rel = "item",
-                    HRef = string.Format("http://{0}/{1}/{2}", TaskListGlobals.HostName, "task", task.Id)
+                    HRef = string.Format("http://{0}/{1}/{2}", hostName, "task", task.Id)
                 };
             return link;
         }
 
-        public static Link Create(TaskListModel taskList)
+        public static Link Create(TaskListModel taskList, string hostName)
         {
             //we don't need to use taskList to build the self link
             var self = new Link
                 {
                     Rel = "self",
-                    HRef = string.Format("http://{0}/{1}", TaskListGlobals.HostName, "tasks")
+                    HRef = string.Format("http://{0}/{1}", hostName, "tasks")
                 };
 
             return self;

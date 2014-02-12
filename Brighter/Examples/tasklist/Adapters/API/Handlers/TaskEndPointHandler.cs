@@ -12,13 +12,15 @@ namespace Tasklist.Adapters.API.Handlers
     {
         private readonly ITaskRetriever taskRetriever;
         private readonly IAmACommandProcessor commandProcessor;
+        private readonly ICommunicationContext communicationContext;
         private readonly ITaskListRetriever taskListRetriever;
 
-        public TaskEndPointHandler(ITaskRetriever taskRetriever, ITaskListRetriever taskListRetriever, IAmACommandProcessor commandProcessor)
+        public TaskEndPointHandler(ITaskRetriever taskRetriever, ITaskListRetriever taskListRetriever, IAmACommandProcessor commandProcessor, ICommunicationContext communicationContext)
         {
             this.taskRetriever = taskRetriever;
             this.taskListRetriever = taskListRetriever;
             this.commandProcessor = commandProcessor;
+            this.communicationContext = communicationContext;
         }
 
         [HttpOperation(HttpMethod.GET)]
@@ -48,7 +50,7 @@ namespace Tasklist.Adapters.API.Handlers
             return new OperationResult.Created
                 {
                     ResponseResource = taskRetriever.Get(addTaskCommand.TaskId),
-                    CreatedResourceUrl = new Uri(string.Format("http://localhost:49743/tasks/{0}", addTaskCommand.TaskId))
+                    CreatedResourceUrl = new Uri(string.Format("{0}/tasks/{1}", communicationContext.ApplicationBaseUri, addTaskCommand.TaskId))
                 };
         }
     }

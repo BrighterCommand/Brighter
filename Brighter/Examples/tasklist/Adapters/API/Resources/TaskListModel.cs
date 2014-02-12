@@ -12,10 +12,10 @@ namespace Tasklist.Adapters.API.Resources
         private Link self;
         private IEnumerable<Link> links; 
 
-        public TaskListModel(IEnumerable<Task> tasks)
+        public TaskListModel(IEnumerable<Task> tasks, string hostName)
         {
-            self = Link.Create(this);
-            links = tasks.Select(task => Link.Create((Task) task));
+            self = Link.Create(this, hostName);
+            links = tasks.Select(task => Link.Create((Task)task, hostName));
         }
 
         [DataMember(Name = "self"), XmlElement(ElementName = "self")]
