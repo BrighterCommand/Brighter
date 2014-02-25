@@ -1,0 +1,190 @@
+Command Processors
+Introduction
+------------
+In this article, we are going to talk about requirements for a commmand processor implementation. We will then discuss the API of our implementation ,and show the usage of that implementation. A later article will look at the details of the implementation.
+
+Why?
+----
+We want to use a ports and adapters architectural style. http://alistair.cockburn.us/Hexagonal+architecture
+
+A ports & adapters architectural style (Hexagonal Architecture) is a variation of the n-tier architectural style which makes clear the seperation between the domain model - which contains the rules of our application - and the adapters, which abstract the inputs to the system and our outputs. The advantage of this style is that the application is decoupled from the nature of the input or output device, and any frameworks used to implement them. 
+
+For example when a client POSTs a request to the REST API exposed by our application the adapter recieves the HTTP request, transforms it into a call onto our domain, and marshals the response back out to the client over HTTP. Similarly if our application needs to retrieve persisted entity state to initialise the domain it calls out to an adapter that wraps access to the Db.
+
+The layer between the adapter and the domain is identified as the Ports layer. Our domain is inside the port, adapters for external entities are on the outisde of the port. The notion of a 'port' invokes the OS idea that any device that adheres to a know protocol can be plugged into a port. Similarly, many adapters may use our ports.
+
+One particular asset is testability. Our tests can be written agains the ports, instead of the adapters. This decouples our tests from the adapters - which may change over time as we add or remove external entities we wish to use to surface the application. It also means that our functionality must be contained inside the port, against which the test runs, and cannot bleed into other layers. A traditional problem of n-tier architectures is bleeding of domain logic out of the domain and into the presentation layer. The ports and adapters model seeks to solve this, by forcing adapters to use the API exposed by the port. Writing TDD unit tests at this layer means that the test driven-development pushes the domain logic required to implement behind the port.
+
+$See figure hexagonal_architecture.vsd
+$See hexagonal_architecture.vsd
+
+We have a notion of primary and secondary actors in use cases which map to the adapter and port layer. Primary actors exercise our application, they are inputs into our application. A primary actor uses a primary adapter, which calls a primary port - the chain is one of inputs into our application. So our REST API is a primary adapter, so are our tests. A secondary actor is one that our application exercises as part of its work, they are outputs from out application. So our Db is a secondary adapter, as our mocks and we talk to them over a secondary port. Many applications seem to consist only of one primary and one secondary, which leads to the n-tier style, but once we factor in tests we may begin to observe that we have more, and by building for multiple ports we make our application more modifiable to new ports in future.
+
+We often show primary ports on the left and secondary ports on the right.
+
+A port is the 'use case boundary'. Use cases become problematic when they become focused on technology concerns. Use cases written against the ports can elide those concerns and focus on the application rules, making them easier to write and maintain. There is a correlation here between the use case boundary and the test boundary - tests should focus on the behaviour expressed by a use case, not on a unit of code. Contrary to Cockburn, we don't suggest using a ATT like FIT or SpecFlow here, preferring to use our xUnit test tool here (and not test implementation details). 
+
+How to implement the API at the Port?
+------------------------------------
+
+One question is, how is our API provided? We are inside an adapter, so we might want to use a Plain Old C# Object (POCO) approach to avoid framework dependencies. A common route is to use the Facade pattern, providing a class that holds the API to lower level components. Indeed this is the classical implementation strategy for the application service layer in an layered architecture. The Facade design pattern provides a high-level interface to a sub-system. shielding the caller from the implementation details of the sub-system. To this extent it meets the needs of our port, providing a clear notion of outside - the caller and inside - the subsystem.
+
+A Facade used in this context is being used in the Service role, where the Service stereotype describes an object that provides co-ordination and control logic.
+
+<code>
+public class MyFatService
+{
+    public void CreateMyThing(/* .. parameters ...*/)
+    {
+        /*Stuff*/
+    }
+
+    public void UpdateMyThingForFoo(/* .. parameters ...*/)
+    {
+       /*Other Stuff*/
+    }
+
+     public void UpdateMyThingForBar(/* .. parameters ...*/)
+     {
+        /*Other Stuff*/
+     }
+
+     /*Loads more of these*/
+}
+<code/>
+
+The Interface Segregation Principle states that clients should not be forced to depend on methods on an interface that they do not use. This is because we do not want to update the client because the interface changes to service other clients in a way that the client itself does not care about. An Operation Script style domain service classes force consumers (for example MVC controllers) to become dependent on methods on the domain service class that they do not consume.
+
+Now this can be obviated by having the domain service implement a number of interfaces, and hand to its clients interfaces that only cover the concerns they have. With application service layers this naturally tends towards one method per interface.
+
+<code>
+public interface ICreateMyThingService
+{
+    void CreateMyThing(/* .. parameters ...*/);
+}
+
+public interface IUpdateMyThingForFooService
+{
+    void UpdateMyThingForFoo(/* .. parameters ...*/);
+}
+
+public interface IUpdateMyThingForBarService
+{
+   void UpdateMyThingForBar(/* .. parameters ...*/);
+}
+
+public class MyFatService : ICreateMyThingService, IUpdateMyThingForFooService, IUpdateMyThingForBarService
+{
+   public void CreateMyThing(/* .. parameters ...*/)
+  {
+      /*Stuff*/
+   }
+
+   public void UpdateMyThingForFoo(/* .. parameters ...*/)
+  {
+      /*Other Stuff*/
+  }
+
+   public void UpdateMyThingForBar(/* .. parameters ...*/)
+   {
+      /*Other Stuff*/
+    }
+
+/*Loads more of these*/
+
+}
+<code/>
+
+Now the Single Responsibility Principle suggests that a class should have one and only one reason to change. All these separate interfaces begin to suggest that a separate class might be better for each interface, to avoid updating a class for concerns that it does not have. So we tend to move toward one class per API endpoint.
+
+public interface ICreateMyThingService
+{
+    void CreateMyThing(/* .. parameters ...*/);
+}
+
+public class CreateMyThingService : ICreateMyThingService
+{
+    public void CreateMyThing(/* .. parameters ...*/)
+    {
+       /*Stuff */
+    }
+}
+
+public interface IUpdateMyThingForFooService
+{
+    void UpdateMyThingForFoo(/* .. parameters ...*/);
+}
+
+public class UpdateMyThingForFooService : IUpdateMyThingForBarService
+{
+    public void UpdateMyThingForBar(/* .. parameters ...*/)
+   {
+      /*Other Stuff*/
+   }
+}
+
+public interface IUpdateMyThingForFooService
+{
+   void UpdateMyThingForBar(/* .. parameters ...*/);
+}
+
+public class UpdateMyThingForFooService : IUpdateMyThingForFooService
+{
+   public void UpdateMyThingForFoo(/* .. parameters ...*/)
+  {
+    /*Other Stuff*/
+  }
+}
+
+We may begin to realize that we are implementing something that resembles the Command design pattern.
+
+Command Design Pattern
+----------------------
+The command design pattern encapsulates a request as an object, allowing reuse, queueing or logging of requests, or undoable operations. It also serves to decouple the implementation of the request from the requestor. The caller of a command object does not need to understand how the command is actioned, only that the command exists. When the caller and the implementer are decoupled it becomes easy to replace or refactor the implementation of the request, without impacting the caller - our system is more modifiable. Our ability to test the command in isolation of the caller - allows us to implement the ports and adapters model easily - we can instantiate the command, provide 'fake' parameters to it and confirm the results. We can also use the command from multiple callers, although this is not a differentiator from the service class approach.
+
+From our perspective, the single method API endpoints are in fact commands. We could rewrite
+
+<code>
+public class UpdateMyThingForFooinService : IUpdateMyThingForFooinService
+{
+   public void UpdateMyThingForFoo(/* .. parameters ...*/)
+  {
+    /*Other Stuff*/
+  }
+}
+<code/>
+
+using an interface to represent a command as
+
+<code>
+public interface IAmACommand
+{
+		void Execute();
+}
+
+public class UpdateMyThingForFooFooCommand 
+{
+	public UpdateMyThingForFooCommand(/* .. parameters ...*/)
+	{
+		/* Initialize state of command for members */
+	}
+
+  public void Execute()
+  {
+    /*Other Stuff*/
+  }
+}
+
+<code/>
+
+So we could implement our ports in our hexagonal architecure as a set of commands. They can be called from primary actors such as tests or a REST API or used as an outing secondary port. In practice we often use other patterns such as the Repository pattern for our secondary ports and it is more common to see the command used by a primary adapter against a primary port
+
+Implementation Example - Hystrix
+--------------------------------
+
+Command Processor Pattern
+Decouple - Chain of Responsibility
+Extend - Decorators
+
+
+
