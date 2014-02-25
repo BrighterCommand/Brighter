@@ -16,7 +16,7 @@ The layer between the adapter and the domain is identified as the Ports layer. O
 One particular asset is testability. Our tests can be written agains the ports, instead of the adapters. This decouples our tests from the adapters - which may change over time as we add or remove external entities we wish to use to surface the application. It also means that our functionality must be contained inside the port, against which the test runs, and cannot bleed into other layers. A traditional problem of n-tier architectures is bleeding of domain logic out of the domain and into the presentation layer. The ports and adapters model seeks to solve this, by forcing adapters to use the API exposed by the port. Writing TDD unit tests at this layer means that the test driven-development pushes the domain logic required to implement behind the port.
 
 $See figure hexagonal_architecture.vsd
-$See hexagonal_architecture.vsd
+$See figure hexagonal_architecture.vsd
 
 We have a notion of primary and secondary actors in use cases which map to the adapter and port layer. Primary actors exercise our application, they are inputs into our application. A primary actor uses a primary adapter, which calls a primary port - the chain is one of inputs into our application. So our REST API is a primary adapter, so are our tests. A secondary actor is one that our application exercises as part of its work, they are outputs from out application. So our Db is a secondary adapter, as our mocks and we talk to them over a secondary port. Many applications seem to consist only of one primary and one secondary, which leads to the n-tier style, but once we factor in tests we may begin to observe that we have more, and by building for multiple ports we make our application more modifiable to new ports in future.
 
@@ -27,7 +27,7 @@ A port is the 'use case boundary'. Use cases become problematic when they become
 How to implement the API at the Port?
 ------------------------------------
 
-One question is, how is our API provided? We are inside an adapter, so we might want to use a Plain Old C# Object (POCO) approach to avoid framework dependencies. A common route is to use the Facade pattern, providing a class that holds the API to lower level components. Indeed this is the classical implementation strategy for the application service layer in an layered architecture. The Facade design pattern provides a high-level interface to a sub-system. shielding the caller from the implementation details of the sub-system. To this extent it meets the needs of our port, providing a clear notion of outside - the caller and inside - the subsystem.
+One question is, how is our API provided? We are inside an adapter, so we might want to use a Plain Old C# Object (POCO) approach to avoid framework dependencies. A common route is to use the Facade pattern, providing a class that holds the API to lower level components. Indeed this is the classical implementation strategy for the application service layer in an layered architecture. The Facade design pattern provides a high-level interface to a sub-system, shielding the caller from the implementation details of the sub-system. This both reduces complexity for the caller, and decouples the caller from the implementation allowing us to vary it without amending the caller. To this extent it meets the needs of our port, providing a clear notion of outside - the caller and inside - the subsystem. 
 
 A Facade used in this context is being used in the Service role, where the Service stereotype describes an object that provides co-ordination and control logic.
 
@@ -142,6 +142,20 @@ Command Design Pattern
 ----------------------
 The command design pattern encapsulates a request as an object, allowing reuse, queueing or logging of requests, or undoable operations. It also serves to decouple the implementation of the request from the requestor. The caller of a command object does not need to understand how the command is actioned, only that the command exists. When the caller and the implementer are decoupled it becomes easy to replace or refactor the implementation of the request, without impacting the caller - our system is more modifiable. Our ability to test the command in isolation of the caller - allows us to implement the ports and adapters model easily - we can instantiate the command, provide 'fake' parameters to it and confirm the results. We can also use the command from multiple callers, although this is not a differentiator from the service class approach.
 
+In addition we can structure a system transactionally using commands. A command is essentially a transactional boundary.
+
+The pattern is simple, we implement a command interface, that has a method to execute the command. We then create a concrete instance of the command that derives from this interface. The invoking class executes the command without being directly coupled to the reciever which the command uses to implement the action requested.
+
+<code>
+public interface IAmACommand
+{
+		void Execute();
+}
+<code/>
+
+$See figure Command Sequence diagram
+
+
 From our perspective, the single method API endpoints are in fact commands. We could rewrite
 
 <code>
@@ -181,8 +195,16 @@ So we could implement our ports in our hexagonal architecure as a set of command
 
 Implementation Example - Hystrix
 --------------------------------
+https://github.com/Netflix/Hystrix
 
 Command Processor Pattern
+-------------------------
+
+Implementation Details - MFC
+----------------------------
+http://www.microsoft.com/msj/0795/dilascia/dilascia.aspx
+
+
 Decouple - Chain of Responsibility
 Extend - Decorators
 
