@@ -44,7 +44,7 @@
   <ItemGroup>
     <Compile Include="PipelineBuilder.cs" />
     <Compile Include="PipelineTracer.cs" />
-    <Compile Include="ChainOfResponsibility.cs" />
+    <Compile Include="Pipelines.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandProcessor.cs" />
     <Compile Include="Event.cs" />
