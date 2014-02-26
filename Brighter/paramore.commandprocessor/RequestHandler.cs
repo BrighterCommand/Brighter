@@ -14,7 +14,7 @@ namespace paramore.commandprocessor
 
         public IRequestContext Context {get; set; }
 
-        public void DescribePath(IChainPathExplorer pathExplorer)
+        public void DescribePath(IAmAPipelineTracer pathExplorer)
         {
             pathExplorer.AddToPath(Name());
             if (_successor != null)

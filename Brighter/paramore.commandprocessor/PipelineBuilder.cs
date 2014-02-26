@@ -1,16 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using paramore.commandprocessor.extensions;
 
 namespace paramore.commandprocessor
 {
-    internal class ChainofResponsibilityBuilder<TRequest> : IChainofResponsibilityBuilder<TRequest> where TRequest : class, IRequest
+    internal class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest> where TRequest : class, IRequest
     {
         private readonly IAdaptAnInversionOfControlContainer  container;
         private readonly Type implicithandlerType;
 
-        public ChainofResponsibilityBuilder(IAdaptAnInversionOfControlContainer  container)
+        public PipelineBuilder(IAdaptAnInversionOfControlContainer  container)
         {
             this.container = container;
 
@@ -20,17 +19,17 @@ namespace paramore.commandprocessor
 
         }
 
-        public Chains<TRequest> Build(IRequestContext requestContext)
+        public Pipelines<TRequest> Build(IRequestContext requestContext)
         {
             var handlers = GetHandlers();
             
-            var chains = new Chains<TRequest>();
+            var pipelines = new Pipelines<TRequest>();
             foreach (var handler in handlers)
             {
-                chains.Add(BuildChain(handler, requestContext));
+                pipelines.Add(BuildPipeline(handler, requestContext));
             }
 
-            return chains;
+            return pipelines;
         }
 
         private IEnumerable<RequestHandler<TRequest>> GetHandlers()
@@ -39,48 +38,48 @@ namespace paramore.commandprocessor
             return handlers;
         }
 
-        private IHandleRequests<TRequest> BuildChain(RequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
+        private IHandleRequests<TRequest> BuildPipeline(RequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
         {
             implicitHandler.Context = requestContext;
 
             var preAttributes = 
                 implicitHandler.FindHandlerMethod()
-                .GetOtherHandlersInChain()
+                .GetOtherHandlersInPipeline()
                 .Where(attribute => attribute.Timing == HandlerTiming.Before)
                 .OrderByDescending(attribute => attribute.Step); 
 
-            var firstInChain = PushOntoChain(preAttributes, implicitHandler, requestContext);
+            var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext);
             
             var postAttributes = 
                 implicitHandler.FindHandlerMethod()
-                .GetOtherHandlersInChain()
+                .GetOtherHandlersInPipeline()
                 .Where(attribute => attribute.Timing == HandlerTiming.After)
                 .OrderByDescending(attribute => attribute.Step);
 
-            AppendToChain(postAttributes, implicitHandler, requestContext);
-            return firstInChain;
+            AppendToPipeline(postAttributes, implicitHandler, requestContext);
+            return firstInPipeline;
         }
 
-        private void AppendToChain(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
+        private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
         {
-            IHandleRequests<TRequest> lastInChain = implicitHandler;
+            IHandleRequests<TRequest> lastInPipeline = implicitHandler;
             foreach (var attribute in attributes) 
             {
                 var decorator = new HandlerFactory<TRequest>(attribute, container, requestContext).CreateRequestHandler();
-                lastInChain.Successor = decorator;
-                lastInChain = decorator;
+                lastInPipeline.Successor = decorator;
+                lastInPipeline = decorator;
             }
         }
 
-        private IHandleRequests<TRequest> PushOntoChain(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInChain, IRequestContext requestContext)
+        private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
         {
             foreach (var attribute in attributes) 
             {
                 var decorator = new HandlerFactory<TRequest>(attribute, container, requestContext).CreateRequestHandler();
-                decorator.Successor = lastInChain;
-                lastInChain = decorator;
+                decorator.Successor = lastInPipeline;
+                lastInPipeline = decorator;
             }
-            return lastInChain;
+            return lastInPipeline;
         }
     }
 }

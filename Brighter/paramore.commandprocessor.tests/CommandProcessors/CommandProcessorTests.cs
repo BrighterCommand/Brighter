@@ -124,7 +124,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();
     }
 
-    public class When_an_exception_is_thrown_terminate_the_chain
+    public class When_an_exception_is_thrown_terminate_the_pipeline
     {
         static CommandProcessor commandProcessor;
         static readonly MyCommand myCommand = new MyCommand();
@@ -143,7 +143,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         It should_fail_the_pipeline_not_execute_it = () => MyUnusedCommandHandler.ShouldRecieve(myCommand).ShouldBeFalse();
     }
 
-    public class When_there_are_no_failures_execute_all_the_steps_in_the_chain
+    public class When_there_are_no_failures_execute_all_the_steps_in_the_pipeline
     {
         static CommandProcessor commandProcessor;
         static readonly MyCommand myCommand = new MyCommand();

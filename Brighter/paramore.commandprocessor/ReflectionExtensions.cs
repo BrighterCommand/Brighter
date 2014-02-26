@@ -7,7 +7,7 @@ namespace paramore.commandprocessor
 {
     internal static class ReflectionExtensions
     {
-        internal static IEnumerable<RequestHandlerAttribute> GetOtherHandlersInChain(this MethodInfo targetMethod)
+        internal static IEnumerable<RequestHandlerAttribute> GetOtherHandlersInPipeline(this MethodInfo targetMethod)
         {
             var customAttributes = targetMethod.GetCustomAttributes(true);
             return customAttributes
