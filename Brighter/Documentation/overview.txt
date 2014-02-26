@@ -142,9 +142,21 @@ Command Design Pattern
 ----------------------
 The command design pattern encapsulates a request as an object, allowing reuse, queueing or logging of requests, or undoable operations. It also serves to decouple the implementation of the request from the requestor. The caller of a command object does not need to understand how the command is actioned, only that the command exists. When the caller and the implementer are decoupled it becomes easy to replace or refactor the implementation of the request, without impacting the caller - our system is more modifiable. Our ability to test the command in isolation of the caller - allows us to implement the ports and adapters model easily - we can instantiate the command, provide 'fake' parameters to it and confirm the results. We can also use the command from multiple callers, although this is not a differentiator from the service class approach.
 
-In addition we can structure a system transactionally using commands. A command is essentially a transactional boundary.
+In addition we can structure a system transactionally using commands. A command is essentially a transactional boundary. Because a command is a transactional boundary, when using the Domain Driven Development technique of an aggregate there is a natural affinity between the command, which operates on a transactional boundary and the aggregate which is a transactional boundary within the domain model. The aggregate is the Reciever stereotype within the Command Design pattern. Because we want to seperate use of outgoing adapters via a secondary port, such as a Repository in the DDD case, this can lead to a pattern for implementaton of a command:
 
-The pattern is simple, we implement a command interface, that has a method to execute the command. We then create a concrete instance of the command that derives from this interface. The invoking class executes the command without being directly coupled to the reciever which the command uses to implement the action requested.
+1: Begin Transaction
+2: Load from Repository
+3: Operate on Aggregate
+4: Flush to Repository
+5: Commit Transaction
+
+In Domain Driven Design we may need to notify other aggregates that can be eventually consistent of the change within the transactionally consistent boundary. The pattern suggested there is to raise a domain event. Because the handling of that domain event is in itself likely to be a transactional boundary for a different aggregate we can encapsulate this domain event with the Command design pattern as well, which gives rise to the following additional step to the sequence, outside the original transactional boundary:
+
+6: Invoke Command Encapsulating Domain Event
+
+Implementing the pattern is simple, we implement a command interface, that has a method to execute the command. We then create a concrete instance of the command that derives from this interface. The invoking class executes the command without being directly coupled to the reciever which the command uses to implement the action requested.
+
+A Macro command is a command that consists of other commands. At its simplest form this is just a class that contains a list of commands to execute in sequence. A Macro Command has no Receiver, because each Command in the list has its own Receiver 
 
 <code>
 public interface IAmACommand
@@ -191,7 +203,7 @@ public class UpdateMyThingForFooFooCommand
 
 <code/>
 
-So we could implement our ports in our hexagonal architecure as a set of commands. They can be called from primary actors such as tests or a REST API or used as an outing secondary port. In practice we often use other patterns such as the Repository pattern for our secondary ports and it is more common to see the command used by a primary adapter against a primary port
+So we could implement our ports in our hexagonal architecure as a collection of commands. Those commands form the API for our application, and they can be called from primary actors such as tests or a REST API. In turn those command may use an outbound secondary port, as discussed in the discussion of the Command and Aggregate patterns above. 
 
 Implementation Example - Hystrix
 --------------------------------
@@ -199,6 +211,26 @@ https://github.com/Netflix/Hystrix
 
 Command Processor Pattern
 -------------------------
+The Command design pattern encapsulates request, and decouples the caller from the implementation details of the request. The pattern description discusses the opportunity that commands give to manage a sequence of requests (for example providing support for undo) or support orthogonal operations such as logging, but gives few details on how to do that. The Command Processor pattern provides details of how to manage a set of commands used to seperate the request for service from its execution. The Command Processor accepts requests for Commands, schedules and executes them, manages their history (such as storing for later undo or replay) and performs any other orthogonal housekeeping operations. The client is decoupled from the responsibilities of managing and scheduling commands.
+
+A Command Processor enforces quality of service and maximizes throughput.
+
+The command processor provides the primary port in our ports and adapters model, because it provides the API which can be used to drive the domain model
+
+A command processor can also be used with a Message instead of a Command. Because the responsibility for executing a Command lies with the Command Processor not with the Client, we do not necessarily wish to expose that operation to the Client. Instead we can use a Message - in this case a flat data structure that potentially has both header and body - and have the Command Processor find the Command that it needs to execute in order to service the request represented by the Message.
+
+The Command Processor needs to map the Message to a Command. One option is to use the Intepreter to parse the Message and route it - this can be as simple as using reflection on the Command type and finding an associated Command.
+ 
+
+Invoker Pattern
+---------------
+
+Pipes and Filters
+-----------------
+
+Chain of Responsibility
+-----------------------
+Find the pipeline to use for the command
 
 Implementation Details - MFC
 ----------------------------

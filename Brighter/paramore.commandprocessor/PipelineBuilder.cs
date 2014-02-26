@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,22 +5,18 @@ namespace paramore.commandprocessor
 {
     internal class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest> where TRequest : class, IRequest
     {
-        private readonly IAdaptAnInversionOfControlContainer  container;
-        private readonly Type implicithandlerType;
+        private readonly IAdaptAnInversionOfControlContainer container;
+        private readonly Interpreter<TRequest> interpreter;
 
         public PipelineBuilder(IAdaptAnInversionOfControlContainer  container)
         {
             this.container = container;
-
-            var handlerGenericType = typeof(IHandleRequests<>);
-
-            implicithandlerType = handlerGenericType.MakeGenericType(typeof(TRequest));
-
+            interpreter = new Interpreter<TRequest>(container);
         }
 
         public Pipelines<TRequest> Build(IRequestContext requestContext)
         {
-            var handlers = GetHandlers();
+            var handlers = interpreter.GetHandlers(typeof(TRequest));
             
             var pipelines = new Pipelines<TRequest>();
             foreach (var handler in handlers)
@@ -30,12 +25,6 @@ namespace paramore.commandprocessor
             }
 
             return pipelines;
-        }
-
-        private IEnumerable<RequestHandler<TRequest>> GetHandlers()
-        {
-            var handlers = new RequestHandlers<TRequest>(container.GetAllInstances(implicithandlerType));
-            return handlers;
         }
 
         private IHandleRequests<TRequest> BuildPipeline(RequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
