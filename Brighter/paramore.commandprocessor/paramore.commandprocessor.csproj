@@ -42,6 +42,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Interpreter.cs" />
     <Compile Include="PipelineBuilder.cs" />
     <Compile Include="PipelineTracer.cs" />
     <Compile Include="Pipelines.cs" />
