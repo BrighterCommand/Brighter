@@ -19,14 +19,14 @@ namespace paramore.commandprocessor
 
         }
 
-        public Pipelines<TRequest> Build(IRequestContext requestContext)
+        public ChainOfResponsibility<TRequest> Build(IRequestContext requestContext)
         {
             var handlers = GetHandlers();
             
-            var pipelines = new Pipelines<TRequest>();
+            var pipelines = new ChainOfResponsibility<TRequest>();
             foreach (var handler in handlers)
             {
-                pipelines.Add(BuildPipeline(handler, requestContext));
+                pipelines.AddPipeline(BuildPipeline(handler, requestContext));
             }
 
             return pipelines;
