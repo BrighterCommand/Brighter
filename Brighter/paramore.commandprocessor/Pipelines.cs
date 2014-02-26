@@ -3,13 +3,13 @@ using System.Collections.Generic;
 
 namespace paramore.commandprocessor
 {
-    public class Chains<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest
+    public class Pipelines<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest
     {
-        private readonly List<IHandleRequests<TRequest>> chains = new List<IHandleRequests<TRequest>>();
+        private readonly List<IHandleRequests<TRequest>> filters = new List<IHandleRequests<TRequest>>();
 
         public IEnumerator<IHandleRequests<TRequest>> GetEnumerator()
         {
-            return chains.GetEnumerator();
+            return filters.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -19,7 +19,7 @@ namespace paramore.commandprocessor
 
         public void Add(IHandleRequests<TRequest> handler)
         {
-            chains.Add(handler);
+            filters.Add(handler);
         }
     }
 }

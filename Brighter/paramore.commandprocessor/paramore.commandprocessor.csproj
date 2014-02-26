@@ -42,9 +42,9 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ChainofResponsibilityBuilder.cs" />
-    <Compile Include="ChainPathExplorer.cs" />
-    <Compile Include="Chains.cs" />
+    <Compile Include="PipelineBuilder.cs" />
+    <Compile Include="PipelineTracer.cs" />
+    <Compile Include="Pipelines.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandProcessor.cs" />
     <Compile Include="Event.cs" />
@@ -55,8 +55,8 @@
     <Compile Include="IAmACommandProcessor.cs" />
     <Compile Include="IAdaptAnInversionOfControlContainer.cs" />
     <Compile Include="IAmARequestContextFactory.cs" />
-    <Compile Include="IChainofResponsibilityBuilder.cs" />
-    <Compile Include="IChainPathExplorer.cs" />
+    <Compile Include="IAmAPipelineBuilder.cs" />
+    <Compile Include="IAmAPipelineTracer.cs" />
     <Compile Include="ICommand.cs" />
     <Compile Include="IHandleRequests.cs" />
     <Compile Include="InMemoryRequestContextFactory.cs" />
