@@ -2,9 +2,9 @@
 {
     public class InMemoryRequestContextFactory : IAmARequestContextFactory
     {
-        public RequestContext Create()
+        public RequestContext Create(IAdaptAnInversionOfControlContainer container)
         {
-            return new RequestContext();
+            return new RequestContext(container);
         }
     }
 }

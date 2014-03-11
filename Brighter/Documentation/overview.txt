@@ -220,6 +220,19 @@ The command processor provides the primary port in our ports and adapters model,
 A command processor can also be used with a Message instead of a Command. Because the responsibility for executing a Command lies with the Command Processor not with the Client, we do not necessarily wish to expose that operation to the Client. Instead we can use a Message - in this case a flat data structure that potentially has both header and body - and have the Command Processor find the Command that it needs to execute in order to service the request represented by the Message.
 
 The Command Processor needs to map the Message to a Command. One option is to use the Intepreter to parse the Message and route it - this can be as simple as using reflection on the Command type and finding an associated Command.
+
+Interpreter Pattern
+-------------------
+
+Timeout and Circuit Breaker
+---------------------------
+When dealing with a distributed application we want to avoid the failure of one component causing the failure of other components - a chain failure. For example if we need to access a resource across the network such as a database, a webservice or REST API, a network file share is not available, then we will find that requests that access those resources will fail. However, they may fail slowly, as our application waits for the connection to respond. This ties up a thread waiting for that resource to respond. In a multi-threaded web server, requests are serviced from a thread pool. If a thread 
+
+If there is no timeout then 
+
+
+Command Dispatcher Pattern
+--------------------------
  
 
 Invoker Pattern
@@ -231,6 +244,8 @@ Pipes and Filters
 Chain of Responsibility
 -----------------------
 Find the pipeline to use for the command
+
+---> Related patterns diagram. Do a related patterns diagram with Command Processor at the center and then pushing out to all the other patterns we use as part of the solution
 
 Implementation Details - MFC
 ----------------------------

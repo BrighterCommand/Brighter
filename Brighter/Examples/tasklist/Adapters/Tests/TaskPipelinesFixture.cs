@@ -17,7 +17,7 @@ namespace Tasklist.Adapters.Tests
     {
         static AddTaskCommand cmd;
         static IAmACommandProcessor commandProcessor;
-        static readonly RequestContext requestContext = new RequestContext();
+        static RequestContext requestContext; 
 
         Establish context = () =>
         {
@@ -25,9 +25,10 @@ namespace Tasklist.Adapters.Tests
             container.Register<ITasksDAO, TasksDAO>();
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ITraceOutput, ConsoleTrace>();
+            requestContext = new RequestContext(container);
 
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
-            A.CallTo(() => requestContextFactory.Create()).Returns(requestContext);
+            A.CallTo(() => requestContextFactory.Create(container)).Returns(requestContext);
 
             commandProcessor = new CommandProcessor(container, requestContextFactory);
 

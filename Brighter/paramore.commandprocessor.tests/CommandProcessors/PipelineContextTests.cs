@@ -12,12 +12,13 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     {
         private static PipelineBuilder<MyCommand> Chain_Builder;
         private static IHandleRequests<MyCommand> Chain_Of_Responsibility;
-        private static readonly RequestContext request_context = new RequestContext();
+        private static RequestContext request_context ;
 
         Establish context = () =>
         {
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
+            request_context = new RequestContext(container);
 
             Chain_Builder = new PipelineBuilder<MyCommand>(container);
         };
@@ -32,7 +33,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     public class When_putting_a_variable_into_the_bag_should_be_accessible_in_the_handler
     {
         private const string I_AM_A_TEST_OF_THE_CONTEXT_BAG = "I am a test of the context bag";
-        private static readonly RequestContext request_context = new RequestContext();
+        private static RequestContext request_context;
         private static CommandProcessor commandProcessor;
         private static MyCommand myCommand;
 
@@ -40,12 +41,13 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyContextAwareCommandHandler>().AsMultiInstance();
+            request_context = new RequestContext(container);
 
             myCommand = new MyCommand();
             MyContextAwareCommandHandler.TestString = null;
 
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
-            A.CallTo(() => requestContextFactory.Create()).Returns(request_context);
+            A.CallTo(() => requestContextFactory.Create(container)).Returns(request_context);
 
             commandProcessor = new CommandProcessor(container, requestContextFactory);
 

@@ -11,7 +11,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
 
         Establish context = () => _container = new TinyIoCAdapter(new TinyIoCContainer());
 
-        It should_create_a_wrapped_IoC_container = () => _container.ShouldBeOfType<IAdaptAnInversionOfControlContainer>();
+        It should_create_a_wrapped_IoC_container = () => _container.ShouldBeAssignableTo<IAdaptAnInversionOfControlContainer>();
     }
 
     public class When_resolving_an_interface_implementation
@@ -22,7 +22,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
 
         Because of = () => _container.Register<IMyInterface, MyInterfaceImpl>();
 
-        It should_resolve_instances_of_the_interface = () => _container.GetInstance(typeof(IMyInterface)).ShouldBeOfType<IMyInterface>();
+        It should_resolve_instances_of_the_interface = () => _container.GetInstance(typeof(IMyInterface)).ShouldBeAssignableTo<IMyInterface>();
     }
 
     public class When_resolving_an_interface_implementation_using_generic_shorthand
@@ -33,7 +33,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
 
         Because of = () => _container.Register<IMyInterface, MyInterfaceImpl>();
 
-        It should_resolve_instances_of_the_interface = () => _container.GetInstance<IMyInterface>().ShouldBeOfType<IMyInterface>();
+        It should_resolve_instances_of_the_interface = () => _container.GetInstance<IMyInterface>().ShouldBeAssignableTo<IMyInterface>();
     }
 
     public class When_resolving_an_interface_implementation_should_allow_disambiguation_by_name
@@ -47,7 +47,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
             _container.Register<IMyInterface, MyOtherIntefaceImpl>("SecondImpl");
         };
 
-        It should_resolve_instances_of_the_interface = () => _container.GetInstance(typeof(IMyInterface), "FirstImpl").ShouldBeOfType<MyInterfaceImpl>();
+        It should_resolve_instances_of_the_interface = () => _container.GetInstance(typeof(IMyInterface), "FirstImpl").ShouldBeAssignableTo<MyInterfaceImpl>();
     }
 
     public class When_resolving_an_interface_implementation_using_generics_should_allow_disambiguation_by_name
@@ -61,7 +61,7 @@ namespace paramore.commandprocessor.tests.IoCContainers
             _container.Register<IMyInterface, MyOtherIntefaceImpl>("SecondImpl");
         };
 
-        It should_resolve_instances_of_the_interface = () => _container.GetInstance<IMyInterface>("FirstImpl").ShouldBeOfType<MyInterfaceImpl>();
+        It should_resolve_instances_of_the_interface = () => _container.GetInstance<IMyInterface>("FirstImpl").ShouldBeAssignableTo<MyInterfaceImpl>();
     }
     public class When_resolving_an_interface_implementation_should_support_singleton
     {
