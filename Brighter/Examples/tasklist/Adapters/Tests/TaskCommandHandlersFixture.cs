@@ -131,6 +131,6 @@ namespace Tasklist.Adapters.Tests
         Because of = () => exception = Catch.Exception(() => handler.Handle(cmd));
 
         It should_get_the_task_from_the_db = () => A.CallTo(() => tasksDAO.FindById(TASK_ID)).MustHaveHappened();
-        It should_fail = () => exception.ShouldBeOfType<ArgumentOutOfRangeException>();
+        It should_fail = () => exception.ShouldBeAssignableTo<ArgumentOutOfRangeException>();
     }
 }

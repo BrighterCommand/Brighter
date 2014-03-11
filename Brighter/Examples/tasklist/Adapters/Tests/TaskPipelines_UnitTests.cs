@@ -41,7 +41,7 @@ namespace Tasklist.Adapters.Tests
         Because of = () => exception = Catch.Exception(() => commandProcessor.Send(cmd));
 
         It should_throw_a_validation_exception = () => exception.ShouldNotBeNull();
-        It should_be_of_the_correct_type = () => exception.ShouldBeOfType<ArgumentException>();
+        It should_be_of_the_correct_type = () => exception.ShouldBeAssignableTo<ArgumentException>();
         It should_show_a_suitable_message = () => exception.ShouldContainErrorMessage("The commmand was not valid");
     }
 
@@ -73,7 +73,7 @@ namespace Tasklist.Adapters.Tests
         Because of = () => exception = Catch.Exception(() => commandProcessor.Send(cmd));
 
         It should_throw_a_validation_exception = () => exception.ShouldNotBeNull();
-        It should_be_of_the_correct_type = () => exception.ShouldBeOfType<ArgumentException>();
+        It should_be_of_the_correct_type = () => exception.ShouldBeAssignableTo<ArgumentException>();
         It should_show_a_suitable_message = () => exception.ShouldContainErrorMessage("The commmand was not valid");
     }
 
