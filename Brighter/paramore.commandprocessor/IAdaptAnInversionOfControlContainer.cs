@@ -14,6 +14,9 @@ namespace paramore.commandprocessor
             where RegisterType : class 
             where RegisterImplementation : class, RegisterType;
 
+        IAdaptAnInversionOfControlContainer Register<RegisterImplementation>(string name, RegisterImplementation instance)
+            where RegisterImplementation : class;
+
         void AsMultiInstance();
         void AsSingleton();
     }

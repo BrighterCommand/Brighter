@@ -1,7 +1,7 @@
 ﻿using System;
-using paramore.commandprocessor.policy.Handlers;
+using paramore.commandprocessor.exceptionpolicy.Handlers;
 
-namespace paramore.commandprocessor.policy.Attributes
+namespace paramore.commandprocessor.exceptionpolicy.Attributes
 {
     public class UsePolicyAttribute : RequestHandlerAttribute
     {
@@ -10,6 +10,11 @@ namespace paramore.commandprocessor.policy.Attributes
         public UsePolicyAttribute(string policy, int step) : base(step, HandlerTiming.Before)
         {
             this.policy = policy;
+        }
+
+        public override object[] InitializerParams()
+        {
+            return new object[] {policy};
         }
 
         public override Type GetHandlerType()

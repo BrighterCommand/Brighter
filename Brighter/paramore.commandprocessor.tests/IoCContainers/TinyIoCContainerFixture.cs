@@ -50,6 +50,20 @@ namespace paramore.commandprocessor.tests.IoCContainers
         It should_resolve_instances_of_the_interface = () => _container.GetInstance(typeof(IMyInterface), "FirstImpl").ShouldBeAssignableTo<MyInterfaceImpl>();
     }
 
+    public class When_resolving_an_interface_implementation_should_allow_specific_instance
+    {
+        static TinyIoCAdapter _container;
+        static readonly MyInterfaceImpl myInterfaceImpl = new MyInterfaceImpl();
+
+        Establish context = () =>
+        {
+            _container = new TinyIoCAdapter(new TinyIoCContainer());
+            _container.Register<IMyInterface, MyInterfaceImpl>(myInterfaceImpl);
+        };
+
+        It should_resolve_instances_of_the_interface = () => _container.GetInstance(typeof (IMyInterface)).ShouldBeTheSameAs(myInterfaceImpl);
+    }
+
     public class When_resolving_an_interface_implementation_using_generics_should_allow_disambiguation_by_name
     {
         static TinyIoCAdapter _container;
