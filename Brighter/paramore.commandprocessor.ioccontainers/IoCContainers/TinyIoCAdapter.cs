@@ -34,6 +34,12 @@ namespace paramore.commandprocessor.ioccontainers.IoCContainers
             return this;
         }
 
+        public IAdaptAnInversionOfControlContainer Register<RegisterImplementation>(string name, RegisterImplementation instance)  where RegisterImplementation : class 
+        {
+            _registerOptions = _container.Register<RegisterImplementation, RegisterImplementation>(instance, name);
+            return this;
+        }
+
         public void AsMultiInstance()
         {
             Debug.Assert(_registerOptions != null);

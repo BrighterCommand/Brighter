@@ -7,6 +7,7 @@ namespace paramore.commandprocessor
     {
         private IHandleRequests<TRequest> _successor;
 
+
         public IHandleRequests<TRequest> Successor
         {
             set { _successor = value; }
@@ -33,18 +34,21 @@ namespace paramore.commandprocessor
             return command;
         }
 
-       protected HandlerName Name()
-       {
-           return new HandlerName(GetType().Name);
-       }
+            //default is just to do nothing - use this if you need to pass data from an attribute into a handler
+        public virtual void InitializeFromAttributeParams(params object[] initializerList) {}
 
-       internal MethodInfo FindHandlerMethod()
-       {
+        protected HandlerName Name()
+        {
+           return new HandlerName(GetType().Name);
+        }
+
+        internal MethodInfo FindHandlerMethod()
+        {
             var methods = GetType().GetMethods();
             return methods
                 .Where(method => method.Name == "Handle")
                 .Where(method => method.GetParameters().Count() == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest))
                 .SingleOrDefault();
-       }
+        }
     }
 }
