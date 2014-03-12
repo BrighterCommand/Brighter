@@ -220,21 +220,48 @@ The command processor provides the primary port in our ports and adapters model,
 A command processor can also be used with a Message instead of a Command. Because the responsibility for executing a Command lies with the Command Processor not with the Client, we do not necessarily wish to expose that operation to the Client. Instead we can use a Message - in this case a flat data structure that potentially has both header and body - and have the Command Processor find the Command that it needs to execute in order to service the request represented by the Message.
 
 The Command Processor needs to map the Message to a Command. One option is to use the Intepreter to parse the Message and route it - this can be as simple as using reflection on the Command type and finding an associated Command.
- 
 
-Invoker Pattern
----------------
+Interpreter
+-------------
+POSA Vol 4 Chapter 18
+"When designing a Command Processor (343) that receives request messages, or a Command (412) or Component Configurator (490) that receives script-based configuration parameters, or—more generally— a parameterizable Encapsulated Implementation (313) . . .
 
-Pipes and Filters
------------------
+. . . a mechanism is needed to interpret the data or scripts and execute the right services on the component.
 
-Chain of Responsibility
------------------------
-Find the pipeline to use for the command
+Some problems are often resolved via interpretation rather than by precompiled algorithms. For example, searching for strings that match a particular pattern can be resolved by interpreting regular expressions. Interpreting an input stream or a data model in a little domain-specific language, however, requires grammar representation and an implementation of execution semantics."
+
+Command Dispatcher
+------------------
+http://doanduyhai.wordpress.com/2012/08/04/design-pattern-the-asynchronous-dispatcher/
+http://my.safaribooksonline.com/9780132964937/ch12lev1sec3
+Reengineering >NET Chapter 12
+The basic idea is to have a set of classes called Commands, each of which is self-contained and able to perform a specific function. These commands are registered with the command dispatcher service along with a specific condition that the command is capable of handling. During run-time, the business logic submits the parameters describing a certain condition that is possibly unpredictable at design time, and the dispatcher determines which one or more of the commands to execute.
+http://weblogs.asp.net/shijuvarghese/archive/2011/10/18/cqrs-commands-command-handlers-and-command-dispatcher.aspx
+http://hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf
 
 Implementation Details - MFC
 ----------------------------
 http://www.microsoft.com/msj/0795/dilascia/dilascia.aspx
+
+CanRoute? We should add this to our Command Processor
+
+> Command Dispatcher is not about orthogonal services with commands, but mapping message to command (I'd say it's a variation implicit in using the message version of command processor, but...)
+> Pipeline is one way to do the orthogonal services
+ 
+Pipes and Filters
+-----------------
+POSA vol 4, chapter 9
+"A Pipes and Filters architecture decouples different data processing steps so that they can evolve independently of one another and support an incremental data processing approach.
+
+Within a Pipes and Filters architecture, filters are the units of domain-specific computation. Each filter can be implemented as a Domain Object (208) that represents a specific, self-contained data processing step. Filters with a concurrent Domain Object implementation enable incremental and concurrent data processing, which increases the performance and throughput of a Pipes and Filters arrangement. If a filter performs a long-duration activity, consider integrating multiple parallel instances of the filter into the processing chain. Such a configuration can further increase system performance and throughput, as some filter instances can start processing new data streams while others are processing previous data streams.
+
+Pipes are the medium of data exchange and coordination within a Pipes and Filters architecture. Each pipe is a Domain Object that implements a policy for buffering and passing data along the filter chain: data producing filters write data into a pipe, while data consuming filters receive their input from a pipe. The integration of pipes decouples adjacent filters so that the filters can operate independently of one another, which maximizes their individual operational performance.
+
+In a single-process Pipes and Filters arrangement, pipes are typically implemented as queues. Pipes with a concurrent Domain Object implementation enable incremental and concurrent data processing, as do concurrent filters. In a distributed arrangement, pipes are realized as some form of Messaging (221) infrastructure that passes data streams between remote filters. Pipes that are implemented as a Domain Object shield filters from a knowledge of their specific implementation, which also allows transparent swapping of implementation forms. Such a design supports a flexible (re-)deployment of filters in a distributed Pipes and Filters arrangement. Messages (420) help to encapsulate the data streams that are passed along the pipes."
+
+>We should talk about Interceptors as an alternative
+Interceptor
+
 
 
 Decouple - Chain of Responsibility
