@@ -20,10 +20,13 @@ namespace paramore.commandprocessor
 
         public IHandleRequests<TRequest> CreateRequestHandler()
         {
+            //Create an instance of the hander type by reflection
             var handlerType = attribute.GetHandlerType().MakeGenericType(messageType);
             var parameters = handlerType.GetConstructors()[0].GetParameters().Select(param => container.GetInstance(param.ParameterType)).ToArray();
             var handler = (IHandleRequests<TRequest>)Activator.CreateInstance(handlerType, parameters);
+            //Lod the context befor the initializer - in case we want to use the context from within the initializer
             handler.Context = requestContext;
+            handler.InitializeFromAttributeParams(attribute.InitializerParams());
             return handler;
         }
     }

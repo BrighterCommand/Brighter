@@ -43,7 +43,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () =>  exception = Catch.Exception(() => commandProcessor.Send(myCommand));
 
-        It should_fail_because_multiple_recievers_found = () => exception.ShouldBeOfType(typeof (ArgumentException));
+        It should_fail_because_multiple_recievers_found = () => exception.ShouldBeAssignableTo(typeof (ArgumentException));
         It should_have_an_error_message_that_tells_you_why = () => exception.ShouldContainErrorMessage("More than one handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.");
     }
 
@@ -63,7 +63,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () =>  exception = Catch.Exception(() => commandProcessor.Send(myCommand));
 
-        It should_fail_because_multiple_recievers_found = () => exception.ShouldBeOfType(typeof (ArgumentException));
+        It should_fail_because_multiple_recievers_found = () => exception.ShouldBeAssignableTo(typeof (ArgumentException));
         It should_have_an_error_message_that_tells_you_why = () => exception.ShouldContainErrorMessage("No command handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should have only one handler."); 
     }
 
