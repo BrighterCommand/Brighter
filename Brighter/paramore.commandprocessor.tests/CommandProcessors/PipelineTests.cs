@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Linq;
 using Machine.Specifications;
 using TinyIoC;
@@ -11,18 +12,19 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     {
         private static PipelineBuilder<MyCommand> Pipeline_Builder;
         private static IHandleRequests<MyCommand> Pipeline;
+        private static IAdaptAnInversionOfControlContainer Container;
 
         Establish context = () =>
         {
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();            
+            Container = new TinyIoCAdapter(new TinyIoCContainer());
+            Container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();            
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(container); 
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container); 
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
+        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
 
-        It should_return_the_my_command_handler_as_the_implicit_handler = () => Pipeline.ShouldBeOfType(typeof(MyCommandHandler));
+        It should_return_the_my_command_handler_as_the_implicit_handler = () => Pipeline.ShouldBeAssignableTo(typeof(MyCommandHandler));
         It should_be_the_only_element_in_the_chain = () => TracePipeline().ToString().ShouldEqual("MyCommandHandler|");
 
         private static PipelineTracer TracePipeline()
@@ -38,21 +40,22 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     {
         private static PipelineBuilder<MyCommand> Pipeline_Builder;
         private static IHandleRequests<MyCommand> Pipeline;
+        private static IAdaptAnInversionOfControlContainer Container;
 
         Establish context = () =>
         {
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
+            Container = new TinyIoCAdapter(new TinyIoCContainer());
 
-            container.Register<IUnitOfWork, FakeSession>().AsMultiInstance();
-            container.Register<IRepository<MyAggregate>, FakeRepository<MyAggregate>>().AsMultiInstance();
-            container.Register<IHandleRequests<MyCommand>, MyDependentCommandHandler>().AsMultiInstance();
+            Container.Register<IUnitOfWork, FakeSession>().AsMultiInstance();
+            Container.Register<IRepository<MyAggregate>, FakeRepository<MyAggregate>>().AsMultiInstance();
+            Container.Register<IHandleRequests<MyCommand>, MyDependentCommandHandler>().AsMultiInstance();
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(container);
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
+        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
 
-        It should_return_the_command_handler_as_the_implicit_handler = () => Pipeline.ShouldBeOfType(typeof(MyDependentCommandHandler));
+        It should_return_the_command_handler_as_the_implicit_handler = () => Pipeline.ShouldBeAssignableTo(typeof(MyDependentCommandHandler));
         It should_be_the_only_element_in_the_chain = () => TracePipeline().ToString().ShouldEqual("MyDependentCommandHandler|");
 
         private static PipelineTracer TracePipeline()
@@ -68,16 +71,17 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     {
         private static PipelineBuilder<MyCommand> Pipeline_Builder;
         private static IHandleRequests<MyCommand> Pipeline;
+        private static IAdaptAnInversionOfControlContainer Container;
 
         Establish context = () =>
         {
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>().AsMultiInstance();
+            Container = new TinyIoCAdapter(new TinyIoCContainer());
+            Container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>().AsMultiInstance();
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(container);
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
+        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
 
         It should_include_my_command_handler_filter_in_the_chain = () => TracePipeline().ToString().Contains("MyImplicitHandler").ShouldBeTrue();
         It should_include_my_logging_handler_in_the_chain = () => TracePipeline().ToString().Contains("MyLoggingHandler").ShouldBeTrue();
@@ -95,15 +99,16 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     {
         private static PipelineBuilder<MyCommand> Pipeline_Builder;
         private static IHandleRequests<MyCommand> Pipeline;
+        private static IAdaptAnInversionOfControlContainer Container;
 
         Establish context = () =>
         {
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyCommand>, MyDoubleDecoratedHandler>().AsMultiInstance();
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(container);
+            Container = new TinyIoCAdapter(new TinyIoCContainer());
+            Container.Register<IHandleRequests<MyCommand>, MyDoubleDecoratedHandler>().AsMultiInstance();
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
+        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
 
         It should_add_handlers_in_the_correct_sequence_into_the_chain = () => PipelineTracer().ToString().ShouldEqual("MyLoggingHandler`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
 
@@ -120,15 +125,16 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     {
         private static PipelineBuilder<MyCommand> Pipeline_Builder;
         private static IHandleRequests<MyCommand> Pipeline;
+        private static IAdaptAnInversionOfControlContainer Container;
 
         Establish context = () =>
         {
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsMultiInstance();
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(container);
+            Container = new TinyIoCAdapter(new TinyIoCContainer());
+            Container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsMultiInstance();
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
+        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
 
         It should_add_handlers_in_the_correct_sequence_into_the_chain = () => TraceFilters().ToString().ShouldEqual("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|");
 

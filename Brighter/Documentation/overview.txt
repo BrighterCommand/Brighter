@@ -221,6 +221,13 @@ A command processor can also be used with a Message instead of a Command. Becaus
 
 The Command Processor needs to map the Message to a Command. One option is to use the Intepreter to parse the Message and route it - this can be as simple as using reflection on the Command type and finding an associated Command.
 
+
+Timeout and Circuit Breaker
+---------------------------
+When dealing with a distributed application we want to avoid the failure of one component causing the failure of other components - a chain failure. For example if we need to access a resource across the network such as a database, a webservice or REST API, a network file share is not available, then we will find that requests that access those resources will fail. However, they may fail slowly, as our application waits for the connection to respond. This ties up a thread waiting for that resource to respond. In a multi-threaded web server, requests are serviced from a thread pool. If a thread 
+
+If there is no timeout then 
+
 Interpreter
 -------------
 POSA Vol 4 Chapter 18
@@ -238,6 +245,8 @@ Reengineering >NET Chapter 12
 The basic idea is to have a set of classes called Commands, each of which is self-contained and able to perform a specific function. These commands are registered with the command dispatcher service along with a specific condition that the command is capable of handling. During run-time, the business logic submits the parameters describing a certain condition that is possibly unpredictable at design time, and the dispatcher determines which one or more of the commands to execute.
 http://weblogs.asp.net/shijuvarghese/archive/2011/10/18/cqrs-commands-command-handlers-and-command-dispatcher.aspx
 http://hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf
+
+---> Related patterns diagram. Do a related patterns diagram with Command Processor at the center and then pushing out to all the other patterns we use as part of the solution
 
 Implementation Details - MFC
 ----------------------------

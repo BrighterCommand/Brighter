@@ -5,11 +5,14 @@ namespace paramore.commandprocessor
 {
     public class RequestContext : IRequestContext
     {
-        public RequestContext()
+        public IAdaptAnInversionOfControlContainer Container { get; set; }
+        public Dictionary<string, object> Bag { get; private set; }
+
+        public RequestContext(IAdaptAnInversionOfControlContainer container)
         {
+            Container = container;
             Bag = new Dictionary<string, object>();
         }
 
-        public Dictionary<string, object> Bag { get; private set; }
     }
 }
