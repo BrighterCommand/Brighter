@@ -100,7 +100,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\paramore.commandprocessor.exceptionpolicy\paramore.commandprocessor.exceptionpolicy.csproj">
-      <Project>{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}</Project>
+      <Project>{09bba2df-aab0-4801-b646-a1b13d0e7d38}</Project>
       <Name>paramore.commandprocessor.exceptionpolicy</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.commandprocessor.ioccontainers\paramore.commandprocessor.ioccontainers.csproj">
