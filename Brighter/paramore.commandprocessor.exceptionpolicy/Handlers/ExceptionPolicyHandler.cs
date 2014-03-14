@@ -3,7 +3,7 @@ using Polly;
 
 namespace paramore.commandprocessor.exceptionpolicy.Handlers
 {
-    class PolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
+    class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         private Policy policy;
 

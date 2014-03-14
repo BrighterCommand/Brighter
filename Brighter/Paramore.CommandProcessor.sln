@@ -17,6 +17,8 @@ Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "AcceptanceTests", "Examples
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.commandprocessor.exceptionpolicy", "paramore.commandprocessor.exceptionpolicy\paramore.commandprocessor.exceptionpolicy.csproj", "{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.commandprocessor.timeoutpolicy", "paramore.commandprocessor.timeoutpolicy\paramore.commandprocessor.timeoutpolicy.csproj", "{8879C4FA-1395-4B6B-93A5-0BC705EA169D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,16 @@ Global
 		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|x86.ActiveCfg = Release|Any CPU
+		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
