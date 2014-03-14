@@ -35,6 +35,8 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
                 });
             container.Register<Policy>("MyDivideByZeroPolicy", policy);
 
+            MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
+
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
 
         };
@@ -46,7 +48,45 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
        It should_retry_three_times = () => retryCount.ShouldEqual(3);
     }
 
-   [Subject("Basic policy on a handler")]
+    [Subject("Basic policy on a handler")]
+    public class When_sending_a_command_to_the_processor_passes_policy_check
+    {
+        static CommandProcessor commandProcessor;
+        static readonly MyCommand myCommand = new MyCommand();
+        static int retryCount;
+
+        Establish context = () =>
+        {
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
+            //Handler is decorated with UsePolicy and fails with divide by zero error
+            container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler >().AsMultiInstance();
+            var policy = Policy
+                .Handle<DivideByZeroException>()
+                .WaitAndRetry(new[]
+                {
+                    1.Seconds(),
+                    2.Seconds(),
+                    3.Seconds()
+                }, (exception, timeSpan) => 
+                {
+                    retryCount++;
+                });
+            container.Register<Policy>("MyDivideByZeroPolicy", policy);
+
+            MyDoesNotFailPolicyHandler.ReceivedCommand = false;
+
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+
+        };
+
+       //We have to catch the final exception that bubbles out after retry
+        Because of = () => commandProcessor.Send(myCommand);
+
+       It should_send_the_command_to_the_command_handler = () => MyDoesNotFailPolicyHandler .ShouldRecieve(myCommand).ShouldBeTrue();
+       It should_not_retry = () => retryCount.ShouldEqual(0);
+    }
+
+    [Subject("Basic policy on a handler")]
     public class When_sending_a_command_to_the_processor_with_a_circuit_breaker
     {
         static CommandProcessor commandProcessor;
@@ -66,6 +106,8 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
                 .CircuitBreaker(2, TimeSpan.FromMinutes(1));
 
             container.Register<Policy>("MyDivideByZeroPolicy", policy);
+
+            MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
 

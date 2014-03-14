@@ -19,7 +19,7 @@ namespace paramore.commandprocessor.exceptionpolicy.Attributes
 
         public override Type GetHandlerType()
         {
-            return typeof (PolicyHandler<>);
+            return typeof (ExceptionPolicyHandler<>);
         }
     }
 }
