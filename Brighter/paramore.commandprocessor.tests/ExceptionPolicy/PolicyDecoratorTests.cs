@@ -91,7 +91,6 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
     {
         static CommandProcessor commandProcessor;
         static readonly MyCommand myCommand = new MyCommand();
-        static int retryCount;
         static Exception thirdException;
         static Exception firstException;
         static Exception secondException;

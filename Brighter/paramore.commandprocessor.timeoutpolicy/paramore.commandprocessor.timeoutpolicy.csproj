@@ -43,7 +43,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Attributes\TimeoutPolicyAttribute.cs" />
-    <Compile Include="Extensions\TaskTimeoutExtensions.cs" />
     <Compile Include="Handlers\TimeoutPolicyHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
