@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Machine.Specifications;
 using TinyIoC;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
@@ -12,7 +13,7 @@ namespace paramore.commandprocessor.tests.Timeout
     {
         static CommandProcessor commandProcessor;
         static readonly MyCommand myCommand = new MyCommand();
-        static Exception thrownException;
+        static AggregateException thrownException;
 
         Establish context = () =>
         {
@@ -21,12 +22,14 @@ namespace paramore.commandprocessor.tests.Timeout
             container.Register<IHandleRequests<MyCommand>, MyFailsDueToTimeoutHandler>().AsMultiInstance();
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
 
+            MyFailsDueToTimeoutHandler.WasCancelled = false;
         };
 
         //We have to catch the final exception that bubbles out after retry
-        Because of = () => thrownException = Catch.Exception(() => commandProcessor.Send(myCommand));
+        Because of = () => thrownException = (AggregateException)Catch.Exception(() => commandProcessor.Send(myCommand));
 
-        It should_throw_a_timeout_exception = () => thrownException.ShouldBeOfExactType<TimeoutException>() ;
+        It should_throw_a_timeout_exception = () => thrownException.Flatten().InnerExceptions.First().ShouldBeOfExactType<TimeoutException>() ;
+        It should_signal_that_a_timeout_occured_and_handler_should_be_cancelled = () => MyFailsDueToTimeoutHandler.WasCancelled.ShouldBeTrue();
     }
 
     [Subject("Basic policy on a handler")]
@@ -34,7 +37,6 @@ namespace paramore.commandprocessor.tests.Timeout
     {
         static CommandProcessor commandProcessor;
         static readonly MyCommand myCommand = new MyCommand();
-        static Exception thrownException;
 
         Establish context = () =>
         {
