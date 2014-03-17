@@ -9,6 +9,8 @@ namespace paramore.commandprocessor.tests.Timeout.TestDoubles
     internal class MyFailsDueToTimeoutHandler: RequestHandler<MyCommand>
     {
         public static bool WasCancelled { get; set; }
+        public static bool TaskCompleted { get; set; }
+
 
         [TimeoutPolicy(milliseconds: 1000, step: 1)]
         public override MyCommand Handle(MyCommand command)
@@ -26,11 +28,11 @@ namespace paramore.commandprocessor.tests.Timeout.TestDoubles
                 {
                     if (ct.IsCancellationRequested)
                         WasCancelled = true;
+                    else
+                        TaskCompleted = !WasCancelled;
                 }).Wait();
-
-                return base.Handle(command);
             }
+            return base.Handle(command);
         }
-
     }
 }

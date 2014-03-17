@@ -23,6 +23,7 @@ namespace paramore.commandprocessor.tests.Timeout
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
 
             MyFailsDueToTimeoutHandler.WasCancelled = false;
+            MyFailsDueToTimeoutHandler.TaskCompleted = false;
         };
 
         //We have to catch the final exception that bubbles out after retry
@@ -30,6 +31,7 @@ namespace paramore.commandprocessor.tests.Timeout
 
         It should_throw_a_timeout_exception = () => thrownException.Flatten().InnerExceptions.First().ShouldBeOfExactType<TimeoutException>() ;
         It should_signal_that_a_timeout_occured_and_handler_should_be_cancelled = () => MyFailsDueToTimeoutHandler.WasCancelled.ShouldBeTrue();
+        It should_not_run_to_completion = () => MyFailsDueToTimeoutHandler.TaskCompleted.ShouldBeFalse();
     }
 
     [Subject("Basic policy on a handler")]

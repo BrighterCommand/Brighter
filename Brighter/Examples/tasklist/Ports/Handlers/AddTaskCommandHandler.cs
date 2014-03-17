@@ -2,6 +2,7 @@
 using Tasklist.Domain;
 using Tasklist.Ports.Commands;
 using paramore.commandprocessor;
+using paramore.commandprocessor.timeoutpolicy.Attributes;
 
 namespace Tasklist.Ports.Handlers
 {
@@ -14,8 +15,9 @@ namespace Tasklist.Ports.Handlers
             this.tasksDAO = tasksDAO;
         }
 
-        [Validation(step: 2, timing: HandlerTiming.Before)]
         [Trace(step:1, timing: HandlerTiming.Before)]
+        [Validation(step: 2, timing: HandlerTiming.Before)]
+        [TimeoutPolicy(step: 3, milliseconds: 300)]
         public override AddTaskCommand Handle(AddTaskCommand addTaskCommand)
         {
             var inserted = tasksDAO.Add(
