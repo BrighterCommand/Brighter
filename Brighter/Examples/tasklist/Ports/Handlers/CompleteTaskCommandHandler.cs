@@ -3,6 +3,7 @@ using Tasklist.Adapters.DataAccess;
 using Tasklist.Domain;
 using Tasklist.Ports.Commands;
 using paramore.commandprocessor;
+using paramore.commandprocessor.timeoutpolicy.Attributes;
 
 namespace Tasklist.Ports.Handlers
 {
@@ -15,8 +16,9 @@ namespace Tasklist.Ports.Handlers
             tasksDAO = tasksDao;
         }
 
-        [Validation(step: 2, timing: HandlerTiming.Before)]
         [Trace(step:1, timing: HandlerTiming.Before)]
+        [Validation(step: 2, timing: HandlerTiming.Before)]
+        [TimeoutPolicy(step: 3, milliseconds: 300)]
         public override CompleteTaskCommand Handle(CompleteTaskCommand completeTaskCommand)
         {
             Task task = tasksDAO.FindById(completeTaskCommand.TaskId);
