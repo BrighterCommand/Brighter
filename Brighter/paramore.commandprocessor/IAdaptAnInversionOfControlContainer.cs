@@ -4,6 +4,7 @@ namespace paramore.commandprocessor
 {
     public interface IAdaptAnInversionOfControlContainer : IServiceLocator
     {
+        //Register
         IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>()
             where RegisterType : class
             where RegisterImplementation : class, RegisterType;
@@ -17,7 +18,9 @@ namespace paramore.commandprocessor
         IAdaptAnInversionOfControlContainer Register<RegisterImplementation>(string name, RegisterImplementation instance)
             where RegisterImplementation : class;
 
+        //Manage Lifetime
         void AsMultiInstance();
         void AsSingleton();
+        void ReleaseInstance<T>(T instance);
     }
 }

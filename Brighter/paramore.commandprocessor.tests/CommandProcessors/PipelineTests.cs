@@ -153,6 +153,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private static PipelineBuilder<MyCommand> Pipeline_Builder;
         private static IHandleRequests<MyCommand> Pipeline;
         private static IAdaptAnInversionOfControlContainer Container;
+        private static MyPreAndPostDecoratedHandler handler;
 
         Establish context = () =>
         {
@@ -162,14 +163,15 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             //it could use trace like approach to collect all handlers and then kill them via iOC
 
             Container = A.Fake<IAdaptAnInversionOfControlContainer>();
-            A.CallTo(() => Container.GetInstance<IHandleRequests<MyCommand>>()).Returns(new MyPreAndPostDecoratedHandler());
+            handler = new MyPreAndPostDecoratedHandler();
+            A.CallTo(() => Container.GetInstance<IHandleRequests<MyCommand>>()).Returns(handler);
 
             Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
         };
 
         Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
 
-        It should_call_each_handlers_dispose_method = () => false.ShouldBeTrue();
+        It should_call_each_handlers_dispose_method = () => A.CallTo(() => Container.ReleaseInstance<IHandleRequests<MyCommand>>(handler)).MustHaveHappened();
 
     
     }
