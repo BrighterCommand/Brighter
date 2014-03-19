@@ -52,6 +52,11 @@ namespace paramore.commandprocessor.ioccontainers.IoCContainers
             _registerOptions.AsSingleton();
         }
 
+        public void ReleaseInstance<T>(T instance)
+        {
+            throw new NotImplementedException();
+        }
+
         protected override object DoGetInstance(Type serviceType, string key)
         {
             return key != null ? _container.Resolve(serviceType, key) : _container.Resolve(serviceType);
