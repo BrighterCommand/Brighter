@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Linq;
+using FakeItEasy;
 using Machine.Specifications;
 using TinyIoC;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
@@ -144,6 +145,33 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             Pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
+    }
+
+    [Subject(typeof(PipelineBuilder<>))]
+    public class When_we_have_exercised_the_pipeline_cleanup_its_handlers
+    {
+        private static PipelineBuilder<MyCommand> Pipeline_Builder;
+        private static IHandleRequests<MyCommand> Pipeline;
+        private static IAdaptAnInversionOfControlContainer Container;
+
+        Establish context = () =>
+        {
+            //TODO: use mock ioc container
+            //have pipelinebuilder record what it makes
+            //have it kill pipeline (pipeline is just a linked list and has no metadata, so we need to do it here
+            //it could use trace like approach to collect all handlers and then kill them via iOC
+
+            Container = A.Fake<IAdaptAnInversionOfControlContainer>();
+            A.CallTo(() => Container.GetInstance<IHandleRequests<MyCommand>>()).Returns(new MyPreAndPostDecoratedHandler());
+
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
+        };
+
+        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
+
+        It should_call_each_handlers_dispose_method = () => false.ShouldBeTrue();
+
+    
     }
     
 }
