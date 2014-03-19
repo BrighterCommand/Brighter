@@ -54,4 +54,7 @@ namespace paramore.commandprocessor.tests.Timeout
 
         It should_complete_the_command_before_an_exception = () => MyPassesTimeoutHandler.ShouldRecieve(myCommand);
     }
+
+
+    //TODO: Combine Timeout and Exception Policy in one pipeline
 }
