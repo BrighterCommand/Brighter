@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using FakeItEasy;
@@ -153,6 +154,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private static PipelineBuilder<MyCommand> Pipeline_Builder;
         private static IHandleRequests<MyCommand> Pipeline;
         private static IAdaptAnInversionOfControlContainer Container;
+        private static IAdaptAnInversionOfControlContainer ChildContainer;
         private static MyPreAndPostDecoratedHandler handler;
 
         Establish context = () =>
@@ -163,16 +165,19 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             //it could use trace like approach to collect all handlers and then kill them via iOC
 
             Container = A.Fake<IAdaptAnInversionOfControlContainer>();
+            ChildContainer = A.Fake<IAdaptAnInversionOfControlContainer>();
             handler = new MyPreAndPostDecoratedHandler();
-            A.CallTo(() => Container.GetInstance<IHandleRequests<MyCommand>>()).Returns(handler);
+            A.CallTo(() => Container.CreateScopedContainer()).Returns(ChildContainer);
+            A.CallTo(() => ChildContainer.GetAllInstances<IHandleRequests<MyCommand>>()).Returns(new List<IHandleRequests<MyCommand>>(){handler});
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(ChildContainer);
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
+        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(ChildContainer)).First();
 
-        It should_call_each_handlers_dispose_method = () => A.CallTo(() => Container.ReleaseInstance<IHandleRequests<MyCommand>>(handler)).MustHaveHappened();
+        It should_create_a_scope_for_the_pipeline = () => A.CallTo(() => Container.CreateScopedContainer()).MustHaveHappened();
 
+        It should_call_dispose_on_the_container = () => A.CallTo(() => Container.Dispose()).MustHaveHappened();
     
     }
     

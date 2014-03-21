@@ -241,6 +241,7 @@ Command Dispatcher
 ------------------
 http://doanduyhai.wordpress.com/2012/08/04/design-pattern-the-asynchronous-dispatcher/
 http://my.safaribooksonline.com/9780132964937/ch12lev1sec3
+
 Reengineering >NET Chapter 12
 The basic idea is to have a set of classes called Commands, each of which is self-contained and able to perform a specific function. These commands are registered with the command dispatcher service along with a specific condition that the command is capable of handling. During run-time, the business logic submits the parameters describing a certain condition that is possibly unpredictable at design time, and the dispatcher determines which one or more of the commands to execute.
 http://weblogs.asp.net/shijuvarghese/archive/2011/10/18/cqrs-commands-command-handlers-and-command-dispatcher.aspx

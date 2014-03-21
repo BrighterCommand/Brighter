@@ -40,21 +40,23 @@ namespace paramore.commandprocessor.ioccontainers.IoCContainers
             return this;
         }
 
-        public void AsMultiInstance()
+        public IAdaptAnInversionOfControlContainer  AsMultiInstance()
         {
             Debug.Assert(_registerOptions != null);
             _registerOptions.AsMultiInstance();
+            return this;
         }
 
-        public void AsSingleton()
+        public IAdaptAnInversionOfControlContainer  AsSingleton()
         {
             Debug.Assert(_registerOptions != null);
             _registerOptions.AsSingleton();
+            return this;
         }
 
-        public void ReleaseInstance<T>(T instance)
+        public IAdaptAnInversionOfControlContainer CreateScopedContainer()
         {
-            throw new NotImplementedException();
+            return new TinyIoCAdapter(_container.GetChildContainer());
         }
 
         protected override object DoGetInstance(Type serviceType, string key)
@@ -65,6 +67,11 @@ namespace paramore.commandprocessor.ioccontainers.IoCContainers
         protected override IEnumerable<object> DoGetAllInstances(Type serviceType)
         {
             return _container.ResolveAll(serviceType, true);
+        }
+
+        public void Dispose()
+        {
+           _container.Dispose(); 
         }
     }
 }

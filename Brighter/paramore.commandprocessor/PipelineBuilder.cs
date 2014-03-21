@@ -70,5 +70,10 @@ namespace paramore.commandprocessor
             }
             return lastInPipeline;
         }
+
+        public void Dispose()
+        {
+           container.Dispose();
+        }
     }
 }
