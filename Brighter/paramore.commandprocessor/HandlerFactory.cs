@@ -21,6 +21,7 @@ namespace paramore.commandprocessor
         public IHandleRequests<TRequest> CreateRequestHandler()
         {
             //Create an instance of the hander type by reflection
+            //This prevents you needing to register a type per decorator as it is a generic and varies by message type
             var handlerType = attribute.GetHandlerType().MakeGenericType(messageType);
             var parameters = handlerType.GetConstructors()[0].GetParameters().Select(param => container.GetInstance(param.ParameterType)).ToArray();
             var handler = (IHandleRequests<TRequest>)Activator.CreateInstance(handlerType, parameters);

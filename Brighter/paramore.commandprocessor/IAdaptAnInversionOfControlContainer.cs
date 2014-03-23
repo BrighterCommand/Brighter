@@ -3,7 +3,7 @@ using Microsoft.Practices.ServiceLocation;
 
 namespace paramore.commandprocessor
 {
-    public interface IAdaptAnInversionOfControlContainer : IServiceLocator, IDisposable
+    public interface IAdaptAnInversionOfControlContainer : IServiceLocator, IManageLifetimes, IDisposable
     {
         //Register
         IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>()
@@ -22,8 +22,5 @@ namespace paramore.commandprocessor
         //Declare Lifetime
         IAdaptAnInversionOfControlContainer AsMultiInstance();
         IAdaptAnInversionOfControlContainer AsSingleton();
-
-        //Manage Lifetimes. Anything created within the scope, should be released on dispose (isntance or singleton)
-        IAdaptAnInversionOfControlContainer  CreateScopedContainer();
     }
 }

@@ -1,7 +1,4 @@
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using FakeItEasy;
 using Machine.Specifications;
 using TinyIoC;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
@@ -152,33 +149,27 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     public class When_we_have_exercised_the_pipeline_cleanup_its_handlers
     {
         private static PipelineBuilder<MyCommand> Pipeline_Builder;
-        private static IHandleRequests<MyCommand> Pipeline;
         private static IAdaptAnInversionOfControlContainer Container;
-        private static IAdaptAnInversionOfControlContainer ChildContainer;
-        private static MyPreAndPostDecoratedHandler handler;
+        private static int trackedItemCount;
+        private static int decoratorCount;
 
         Establish context = () =>
         {
-            //TODO: use mock ioc container
-            //have pipelinebuilder record what it makes
-            //have it kill pipeline (pipeline is just a linked list and has no metadata, so we need to do it here
-            //it could use trace like approach to collect all handlers and then kill them via iOC
+            Container = new TinyIoCAdapter(new TinyIoCContainer());
+            Container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsMultiInstance();
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
+            Pipeline_Builder.Build(new RequestContext(Container)).First();
+            trackedItemCount = Container.TrackedItemCount;
+            decoratorCount = Pipeline_Builder.Decorators.Count();
 
-            Container = A.Fake<IAdaptAnInversionOfControlContainer>();
-            ChildContainer = A.Fake<IAdaptAnInversionOfControlContainer>();
-            handler = new MyPreAndPostDecoratedHandler();
-            A.CallTo(() => Container.CreateScopedContainer()).Returns(ChildContainer);
-            A.CallTo(() => ChildContainer.GetAllInstances<IHandleRequests<MyCommand>>()).Returns(new List<IHandleRequests<MyCommand>>(){handler});
-
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(ChildContainer);
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(ChildContainer)).First();
+        Because of = () => Pipeline_Builder.Dispose(); 
 
-        It should_create_a_scope_for_the_pipeline = () => A.CallTo(() => Container.CreateScopedContainer()).MustHaveHappened();
-
-        It should_call_dispose_on_the_container = () => A.CallTo(() => Container.Dispose()).MustHaveHappened();
-    
+        It should_have_a_tracked_item_count_equal_to_number_of_handlers_before = () => trackedItemCount.ShouldEqual(1);
+        It should_have_no_tracked_items_once_disposed = () => Container.TrackedItemCount.ShouldEqual(0);
+        It should_have_two_decorators_once_the_pipeline_is_built = () => decoratorCount.ShouldEqual(2);
+        It should_have_no_decorators_once_the_pipeline_builder_is_torn_down = () => Pipeline_Builder.Decorators.Count().ShouldEqual(0);
     }
     
 }
