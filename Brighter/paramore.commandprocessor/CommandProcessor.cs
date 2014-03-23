@@ -11,7 +11,7 @@ namespace paramore.commandprocessor
 
         public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory)
         {
-            this.container = container.CreateScopedContainer();
+            this.container = container;
             this.requestContextFactory = requestContextFactory;
         }
 

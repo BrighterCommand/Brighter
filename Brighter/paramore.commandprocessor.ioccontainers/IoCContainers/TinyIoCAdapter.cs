@@ -6,7 +6,7 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.ioccontainers.IoCContainers
 {
-    public class TinyIoCAdapter : ServiceLocatorImplBase, IAdaptAnInversionOfControlContainer
+    public class TinyIoCAdapter : TrackedServiceLocator, IAdaptAnInversionOfControlContainer
     {
         private readonly TinyIoCContainer _container;
         private TinyIoCContainer.RegisterOptions _registerOptions;
@@ -54,19 +54,18 @@ namespace paramore.commandprocessor.ioccontainers.IoCContainers
             return this;
         }
 
-        public IAdaptAnInversionOfControlContainer CreateScopedContainer()
-        {
-            return new TinyIoCAdapter(_container.GetChildContainer());
-        }
-
         protected override object DoGetInstance(Type serviceType, string key)
         {
-            return key != null ? _container.Resolve(serviceType, key) : _container.Resolve(serviceType);
+            var instance = key != null ? _container.Resolve(serviceType, key) : _container.Resolve(serviceType);
+            base.TrackItem(instance);
+            return instance ;
         }
 
         protected override IEnumerable<object> DoGetAllInstances(Type serviceType)
         {
-            return _container.ResolveAll(serviceType, true);
+            var allInstances = _container.ResolveAll(serviceType, true);
+            base.TrackItems(allInstances);
+            return allInstances;
         }
 
         public void Dispose()

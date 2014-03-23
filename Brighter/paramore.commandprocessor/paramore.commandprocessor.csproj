@@ -46,6 +46,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IManageLifetimes.cs" />
     <Compile Include="Interpreter.cs" />
     <Compile Include="PipelineBuilder.cs" />
     <Compile Include="PipelineTracer.cs" />
@@ -73,6 +74,7 @@
     <Compile Include="RequestHandler.cs" />
     <Compile Include="RequestHandlerAttribute.cs" />
     <Compile Include="RequestHandlers.cs" />
+    <Compile Include="TrackedServiceLocator.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

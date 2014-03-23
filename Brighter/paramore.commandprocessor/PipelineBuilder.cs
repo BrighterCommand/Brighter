@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -7,12 +8,20 @@ namespace paramore.commandprocessor
     {
         private readonly IAdaptAnInversionOfControlContainer container;
         private readonly Interpreter<TRequest> interpreter;
+        private readonly IDisposable instanceScope;
+        private readonly IList<IHandleRequests<TRequest>> decorators = new List<IHandleRequests<TRequest>>(); 
 
         public PipelineBuilder(IAdaptAnInversionOfControlContainer  container)
         {
             this.container = container;
+            instanceScope = container.CreateLifetime();
             interpreter = new Interpreter<TRequest>(container);
         }
+
+        public IEnumerable<IHandleRequests<TRequest>> Decorators
+        {
+            get { return decorators; }
+        } 
 
         public Pipelines<TRequest> Build(IRequestContext requestContext)
         {
@@ -55,6 +64,7 @@ namespace paramore.commandprocessor
             foreach (var attribute in attributes) 
             {
                 var decorator = new HandlerFactory<TRequest>(attribute, container, requestContext).CreateRequestHandler();
+                decorators.Add(decorator);
                 lastInPipeline.Successor = decorator;
                 lastInPipeline = decorator;
             }
@@ -65,6 +75,7 @@ namespace paramore.commandprocessor
             foreach (var attribute in attributes) 
             {
                 var decorator = new HandlerFactory<TRequest>(attribute, container, requestContext).CreateRequestHandler();
+                decorators.Add(decorator);
                 decorator.Successor = lastInPipeline;
                 lastInPipeline = decorator;
             }
@@ -73,7 +84,17 @@ namespace paramore.commandprocessor
 
         public void Dispose()
         {
-           container.Dispose();
+            foreach (var decorator in decorators)
+            {
+                var disposable = decorator as IDisposable;
+                if (disposable != null)
+                {
+                    disposable.Dispose();
+                }
+            }
+
+            decorators.Clear();
+            instanceScope.Dispose();
         }
     }
 }
