@@ -1,7 +1,7 @@
 
 using System.Collections.Generic;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     public class RequestContext : IRequestContext
     {

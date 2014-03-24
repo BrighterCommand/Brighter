@@ -1,5 +1,5 @@
 ﻿using System;
-using paramore.commandprocessor;
+using paramore.brighter.commandprocessor;
 
 namespace Tasklist.Ports.Commands
 {

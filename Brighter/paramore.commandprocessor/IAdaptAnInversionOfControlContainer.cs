@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Practices.ServiceLocation;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     public interface IAdaptAnInversionOfControlContainer : IServiceLocator, IManageLifetimes, IDisposable
     {

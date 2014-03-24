@@ -8,8 +8,8 @@
     <ProjectGuid>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>paramore.commandprocessor</RootNamespace>
-    <AssemblyName>paramore.commandprocessor</AssemblyName>
+    <RootNamespace>paramore.brighter.commandprocessor</RootNamespace>
+    <AssemblyName>paramore.brighter.commandprocessor</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />

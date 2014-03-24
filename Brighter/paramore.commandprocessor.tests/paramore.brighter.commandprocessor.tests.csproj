@@ -103,21 +103,21 @@
     <Compile Include="Timeout\TimeoutDecoratorTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\paramore.commandprocessor.exceptionpolicy\paramore.commandprocessor.exceptionpolicy.csproj">
+    <ProjectReference Include="..\paramore.commandprocessor.exceptionpolicy\paramore.brighter.commandprocessor.exceptionpolicy.csproj">
       <Project>{09bba2df-aab0-4801-b646-a1b13d0e7d38}</Project>
-      <Name>paramore.commandprocessor.exceptionpolicy</Name>
+      <Name>paramore.brighter.commandprocessor.exceptionpolicy</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.commandprocessor.ioccontainers\paramore.commandprocessor.ioccontainers.csproj">
+    <ProjectReference Include="..\paramore.commandprocessor.ioccontainers\paramore.brighter.commandprocessor.ioccontainers.csproj">
       <Project>{7B7A3ADA-CED8-4BCF-B643-493607C4579F}</Project>
-      <Name>paramore.commandprocessor.ioccontainers</Name>
+      <Name>paramore.brighter.commandprocessor.ioccontainers</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.commandprocessor.timeoutpolicy\paramore.commandprocessor.timeoutpolicy.csproj">
+    <ProjectReference Include="..\paramore.commandprocessor.timeoutpolicy\paramore.brighter.commandprocessor.timeoutpolicy.csproj">
       <Project>{8879c4fa-1395-4b6b-93a5-0bc705ea169d}</Project>
-      <Name>paramore.commandprocessor.timeoutpolicy</Name>
+      <Name>paramore.brighter.commandprocessor.timeoutpolicy</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.commandprocessor\paramore.commandprocessor.csproj">
+    <ProjectReference Include="..\paramore.commandprocessor\paramore.brighter.commandprocessor.csproj">
       <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
-      <Name>paramore.commandprocessor</Name>
+      <Name>paramore.brighter.commandprocessor</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

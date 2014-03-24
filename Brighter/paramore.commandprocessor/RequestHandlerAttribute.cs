@@ -1,6 +1,6 @@
 using System;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     [AttributeUsage(AttributeTargets.Method)]
     public abstract class RequestHandlerAttribute : Attribute

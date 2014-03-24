@@ -1,6 +1,6 @@
 using System;
 using Tasklist.Ports.Handlers;
-using paramore.commandprocessor;
+using paramore.brighter.commandprocessor;
 
 namespace Tasklist.Ports
 {

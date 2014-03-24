@@ -1,8 +1,9 @@
 using System.Threading;
 using System.Threading.Tasks;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.timeoutpolicy.Attributes;
+using paramore.brighter.commandprocessor.timeoutpolicy.Handlers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
-using paramore.commandprocessor.timeoutpolicy.Attributes;
-using paramore.commandprocessor.timeoutpolicy.Handlers;
 
 namespace paramore.commandprocessor.tests.Timeout.TestDoubles
 {

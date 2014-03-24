@@ -1,9 +1,11 @@
 using System;
+using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     internal class MyPostLoggingHandlerAttribute : RequestHandlerAttribute
     {
+        
         public MyPostLoggingHandlerAttribute(int step, HandlerTiming timing)
             : base(step, timing)
         {
@@ -13,5 +15,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         {
             return typeof(MyLoggingHandler<>);
         }
+
     }
 }

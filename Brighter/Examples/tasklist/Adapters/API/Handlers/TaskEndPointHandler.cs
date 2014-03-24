@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using OpenRasta.Web;
 using Tasklist.Adapters.API.Resources;
 using Tasklist.Ports.Commands;
 using Tasklist.Ports.ViewModelRetrievers;
-using paramore.commandprocessor;
+using paramore.brighter.commandprocessor;
 
 namespace Tasklist.Adapters.API.Handlers
 {

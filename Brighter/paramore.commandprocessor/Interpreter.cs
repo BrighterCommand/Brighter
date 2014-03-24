@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     internal class Interpreter<TRequest> where TRequest : class, IRequest
     {

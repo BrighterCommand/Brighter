@@ -1,11 +1,10 @@
-
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 
 //TImeoutAfter method after Joe Hoag http://blogs.msdn.com/b/pfxteam/archive/2011/11/10/10235834.aspx 
 
-namespace paramore.commandprocessor.timeoutpolicy.Handlers
+namespace paramore.brighter.commandprocessor.timeoutpolicy.Handlers
 {
     public class TimeoutPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {

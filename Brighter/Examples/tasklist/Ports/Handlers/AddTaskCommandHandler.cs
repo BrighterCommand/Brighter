@@ -1,8 +1,8 @@
 ﻿using Tasklist.Adapters.DataAccess;
 using Tasklist.Domain;
 using Tasklist.Ports.Commands;
-using paramore.commandprocessor;
-using paramore.commandprocessor.timeoutpolicy.Attributes;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.timeoutpolicy.Attributes;
 
 namespace Tasklist.Ports.Handlers
 {

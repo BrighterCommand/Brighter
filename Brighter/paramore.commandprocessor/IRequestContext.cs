@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     public interface IRequestContext
     {

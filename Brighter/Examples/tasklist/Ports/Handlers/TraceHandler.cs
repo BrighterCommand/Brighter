@@ -1,7 +1,7 @@
 using System;
 using Newtonsoft.Json;
 using Tasklist.Ports.Commands;
-using paramore.commandprocessor;
+using paramore.brighter.commandprocessor;
 
 namespace Tasklist.Ports.Handlers
 {

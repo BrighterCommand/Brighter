@@ -1,7 +1,7 @@
 using System.Linq;
 using System.Reflection;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     public abstract class RequestHandler<TRequest> : IHandleRequests<TRequest> where TRequest : class, IRequest
     {

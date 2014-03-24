@@ -1,7 +1,8 @@
 using System;
 using Machine.Specifications;
 using TinyIoC;
-using paramore.commandprocessor.ioccontainers.IoCContainers;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.ioccontainers.IoCContainers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandProcessors

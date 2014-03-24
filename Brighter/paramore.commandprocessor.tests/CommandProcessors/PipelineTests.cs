@@ -1,7 +1,8 @@
 using System.Linq;
 using Machine.Specifications;
 using TinyIoC;
-using paramore.commandprocessor.ioccontainers.IoCContainers;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.ioccontainers.IoCContainers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
@@ -161,7 +162,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             Pipeline_Builder.Build(new RequestContext(Container)).First();
             trackedItemCount = Container.TrackedItemCount;
             decoratorCount = Pipeline_Builder.Decorators.Count();
-
         };
 
         Because of = () => Pipeline_Builder.Dispose(); 
@@ -170,6 +170,31 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         It should_have_no_tracked_items_once_disposed = () => Container.TrackedItemCount.ShouldEqual(0);
         It should_have_two_decorators_once_the_pipeline_is_built = () => decoratorCount.ShouldEqual(2);
         It should_have_no_decorators_once_the_pipeline_builder_is_torn_down = () => Pipeline_Builder.Decorators.Count().ShouldEqual(0);
+        It should_have_called_dispose_on_instances_from_ioc = () => MyPreAndPostDecoratedHandler.DisposeWasCalled.ShouldBeTrue();
+        It should_have_called_dispose_on_instances_from_pipeline_builder = () => MyLoggingHandler<MyCommand>.DisposeWasCalled.ShouldBeTrue();
+    }
+
+    [Subject(typeof(PipelineBuilder<>))]
+    public class When_we_cleanup_do_not_dispose_of_singletons
+    {
+        private static PipelineBuilder<MyCommand> Pipeline_Builder;
+        private static IAdaptAnInversionOfControlContainer Container;
+        private static int trackedItemCount;
+        
+        Establish context = () =>
+        {
+            Container = new TinyIoCAdapter(new TinyIoCContainer());
+            Container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsSingleton();
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
+            Pipeline_Builder.Build(new RequestContext(Container)).First();
+            trackedItemCount = Container.TrackedItemCount;
+        };
+
+        Because of = () => Pipeline_Builder.Dispose();
+
+        It should_not_add_the_singleton_to_the_tracked_list = () => trackedItemCount.ShouldEqual(0);
+
+        It should_not_call_dispose_on_the_singleton = () => MyPreAndPostDecoratedHandler.DisposeWasCalled.ShouldBeFalse();
     }
     
 }

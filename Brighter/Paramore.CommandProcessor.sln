@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.commandprocessor", "paramore.commandprocessor\paramore.commandprocessor.csproj", "{2ACB382A-38FA-49A6-A9CD-212881D3CD37}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor", "paramore.commandprocessor\paramore.brighter.commandprocessor.csproj", "{2ACB382A-38FA-49A6-A9CD-212881D3CD37}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.commandprocessor.tests", "paramore.commandprocessor.tests\paramore.commandprocessor.tests.csproj", "{65BADB63-5F98-4F24-84D7-8C99263F88C6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.tests", "paramore.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj", "{65BADB63-5F98-4F24-84D7-8C99263F88C6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.commandprocessor.ioccontainers", "paramore.commandprocessor.ioccontainers\paramore.commandprocessor.ioccontainers.csproj", "{7B7A3ADA-CED8-4BCF-B643-493607C4579F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.ioccontainers", "paramore.commandprocessor.ioccontainers\paramore.brighter.commandprocessor.ioccontainers.csproj", "{7B7A3ADA-CED8-4BCF-B643-493607C4579F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
 EndProject
@@ -15,9 +15,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tasklist", "Examples\taskli
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "AcceptanceTests", "Examples\AcceptanceTests\AcceptanceTests.pyproj", "{28BC2727-9C1D-4750-91C4-91941BE8CD45}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.commandprocessor.exceptionpolicy", "paramore.commandprocessor.exceptionpolicy\paramore.commandprocessor.exceptionpolicy.csproj", "{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.exceptionpolicy", "paramore.commandprocessor.exceptionpolicy\paramore.brighter.commandprocessor.exceptionpolicy.csproj", "{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.commandprocessor.timeoutpolicy", "paramore.commandprocessor.timeoutpolicy\paramore.commandprocessor.timeoutpolicy.csproj", "{8879C4FA-1395-4B6B-93A5-0BC705EA169D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.timeoutpolicy", "paramore.commandprocessor.timeoutpolicy\paramore.brighter.commandprocessor.timeoutpolicy.csproj", "{8879C4FA-1395-4B6B-93A5-0BC705EA169D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
