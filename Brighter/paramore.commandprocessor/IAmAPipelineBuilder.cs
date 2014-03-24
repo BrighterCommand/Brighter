@@ -1,6 +1,6 @@
 using System;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     public interface IAmAPipelineBuilder<TRequest> : IDisposable where TRequest : class, IRequest 
     {

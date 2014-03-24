@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace paramore.commandprocessor.extensions
+namespace paramore.brighter.commandprocessor.extensions
 {
     public static class EnumerationExtensions
     {

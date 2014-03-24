@@ -1,4 +1,4 @@
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     public class HandlerName
     {

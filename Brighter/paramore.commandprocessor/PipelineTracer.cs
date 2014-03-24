@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     internal class PipelineTracer : IAmAPipelineTracer
     {

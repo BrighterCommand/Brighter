@@ -1,4 +1,5 @@
 ﻿using System;
+using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {

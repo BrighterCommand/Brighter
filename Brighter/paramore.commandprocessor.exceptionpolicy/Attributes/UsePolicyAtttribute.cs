@@ -1,7 +1,7 @@
 ﻿using System;
-using paramore.commandprocessor.exceptionpolicy.Handlers;
+using paramore.brighter.commandprocessor.exceptionpolicy.Handlers;
 
-namespace paramore.commandprocessor.exceptionpolicy.Attributes
+namespace paramore.brighter.commandprocessor.exceptionpolicy.Attributes
 {
     public class UsePolicyAttribute : RequestHandlerAttribute
     {

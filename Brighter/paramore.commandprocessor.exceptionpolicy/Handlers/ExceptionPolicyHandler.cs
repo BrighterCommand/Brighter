@@ -1,7 +1,7 @@
 ﻿using System;
 using Polly;
 
-namespace paramore.commandprocessor.exceptionpolicy.Handlers
+namespace paramore.brighter.commandprocessor.exceptionpolicy.Handlers
 {
     class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {

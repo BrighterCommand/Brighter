@@ -1,5 +1,6 @@
 ﻿using System;
-using paramore.commandprocessor.exceptionpolicy.Attributes;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.exceptionpolicy.Attributes;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles

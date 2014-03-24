@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using paramore.commandprocessor.extensions;
+using paramore.brighter.commandprocessor.extensions;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     public class CommandProcessor : IAmACommandProcessor
     {

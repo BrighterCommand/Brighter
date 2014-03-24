@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     public class Pipelines<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest
     {

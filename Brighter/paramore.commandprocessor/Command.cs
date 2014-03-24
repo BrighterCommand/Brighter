@@ -1,6 +1,6 @@
 using System;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     [Serializable]
     public class Command : ICommand

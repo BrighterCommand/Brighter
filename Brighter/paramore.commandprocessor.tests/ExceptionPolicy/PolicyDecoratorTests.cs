@@ -4,7 +4,8 @@ using Machine.Specifications;
 using Polly;
 using Polly.CircuitBreaker;
 using TinyIoC;
-using paramore.commandprocessor.ioccontainers.IoCContainers;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.ioccontainers.IoCContainers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles;
 

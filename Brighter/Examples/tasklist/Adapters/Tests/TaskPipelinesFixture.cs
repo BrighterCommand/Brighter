@@ -8,8 +8,8 @@ using Tasklist.Ports.Commands;
 using Tasklist.Ports.Handlers;
 using Tasklist.Utilities;
 using TinyIoC;
-using paramore.commandprocessor;
-using paramore.commandprocessor.ioccontainers.IoCContainers;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.ioccontainers.IoCContainers;
 
 namespace Tasklist.Adapters.Tests
 {

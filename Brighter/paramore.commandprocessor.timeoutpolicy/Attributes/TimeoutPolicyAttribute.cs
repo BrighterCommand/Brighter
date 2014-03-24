@@ -1,7 +1,7 @@
 using System;
-using paramore.commandprocessor.timeoutpolicy.Handlers;
+using paramore.brighter.commandprocessor.timeoutpolicy.Handlers;
 
-namespace paramore.commandprocessor.timeoutpolicy.Attributes
+namespace paramore.brighter.commandprocessor.timeoutpolicy.Attributes
 {
     public class TimeoutPolicyAttribute : RequestHandlerAttribute
     {

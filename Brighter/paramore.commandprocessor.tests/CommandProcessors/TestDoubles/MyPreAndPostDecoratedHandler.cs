@@ -1,12 +1,17 @@
+using System;
+using paramore.brighter.commandprocessor;
+
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class MyPreAndPostDecoratedHandler : RequestHandler<MyCommand>
+    internal class MyPreAndPostDecoratedHandler : RequestHandler<MyCommand>, IDisposable
     {
         private static MyCommand command;
+        public static bool DisposeWasCalled { get; set; }
 
         public MyPreAndPostDecoratedHandler()
         {
             command = null;
+            DisposeWasCalled = false;
         }
 
         [MyPreValidationHandlerAttribute(step: 2, timing: HandlerTiming.Before)]
@@ -25,6 +30,11 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         private void LogCommand(MyCommand request)
         {
             command = request;
+        }
+
+        public void Dispose()
+        {
+            DisposeWasCalled = true;
         }
     }
 }

@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 
-namespace paramore.commandprocessor
+namespace paramore.brighter.commandprocessor
 {
     internal class HandlerFactory<TRequest> where TRequest : class, IRequest
     {
