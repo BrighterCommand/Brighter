@@ -1,4 +1,5 @@
 using System;
+using FakeItEasy;
 using Machine.Specifications;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
@@ -125,6 +126,40 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();
     }
 
+
+    public class When_using_decoupled_invocation_to_send_a_message_asynchronously
+    {
+        static CommandProcessor commandProcessor;
+        static readonly MyCommand myCommand = new MyCommand();
+
+        Establish context = () =>
+        {
+            myCommand.Id = Guid.NewGuid();
+            myCommand.Value = "Hello World";
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
+            var commandRepository = A.Fake<IMessageStore<Command>>();
+            var messsagingGateway = A.Fake<IAmAMessagingGateway>();
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messsagingGateway);
+
+        };
+
+        Because of = () => commandProcessor.Post(myCommand);
+
+        It should_store_the_command_in_the_sent_command_repository = () => commandRepository.Add(myCommand);
+
+        It should_send_a_message_via_the_messaging_gateway = () => 
+            A.CallTo(() => messagingGateway.SendMessage(
+                new CommandMessage(
+                    header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
+                    body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myComand.Value)))));
+    }
+
+    pubic class When_resending_a_message_asynchrnonously
+    {
+        
+        Because of = () => commandProcessor.Repost(myCommand.Id);
+    }
+
     public class When_an_exception_is_thrown_terminate_the_pipeline
     {
         static CommandProcessor commandProcessor;
@@ -163,6 +198,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         It should_send_the_command_to_the_command_handler = () => MyPreAndPostDecoratedHandler.ShouldRecieve(myCommand).ShouldBeTrue();
         It should_call_the_post_validation_handler = () => MyLoggingHandler<MyCommand>.ShouldRecieve(myCommand).ShouldBeTrue();
     }
+
 }
 
     

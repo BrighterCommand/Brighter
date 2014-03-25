@@ -11,5 +11,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         }
 
         public Guid Id { get; private set; }
+
+        public string Value { get; set; }
     }
 }

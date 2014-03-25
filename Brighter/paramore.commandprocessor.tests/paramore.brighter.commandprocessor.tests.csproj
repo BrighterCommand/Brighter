@@ -107,9 +107,9 @@
       <Project>{09bba2df-aab0-4801-b646-a1b13d0e7d38}</Project>
       <Name>paramore.brighter.commandprocessor.exceptionpolicy</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.commandprocessor.ioccontainers\paramore.brighter.commandprocessor.ioccontainers.csproj">
-      <Project>{7B7A3ADA-CED8-4BCF-B643-493607C4579F}</Project>
-      <Name>paramore.brighter.commandprocessor.ioccontainers</Name>
+    <ProjectReference Include="..\paramore.commandprocessor.ioccontainers.tinyioc\paramore.brighter.commandprocessor.ioccontainers.tinyioc.csproj">
+      <Project>{7b7a3ada-ced8-4bcf-b643-493607c4579f}</Project>
+      <Name>paramore.brighter.commandprocessor.ioccontainers.tinyioc</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.commandprocessor.timeoutpolicy\paramore.brighter.commandprocessor.timeoutpolicy.csproj">
       <Project>{8879c4fa-1395-4b6b-93a5-0bc705ea169d}</Project>
