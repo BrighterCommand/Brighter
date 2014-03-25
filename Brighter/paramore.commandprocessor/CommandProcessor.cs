@@ -8,11 +8,20 @@ namespace paramore.brighter.commandprocessor
     {
         private readonly IAdaptAnInversionOfControlContainer container;
         private readonly IAmARequestContextFactory requestContextFactory;
+        private IAmAMessageStore<CommandMessage> commandRepository;
+        private IAmAMessagingGateway messsagingGateway;
 
         public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory)
         {
             this.container = container;
             this.requestContextFactory = requestContextFactory;
+        }
+
+        public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory, IAmAMessageStore<CommandMessage> commandRepository, IAmAMessagingGateway messsagingGateway)
+            :this(container, requestContextFactory)
+        {
+            this.commandRepository = commandRepository;
+            this.messsagingGateway = messsagingGateway;
         }
 
         public void Send<T>(T command) where T : class, IRequest
@@ -42,6 +51,14 @@ namespace paramore.brighter.commandprocessor
 
                 handlerChain.Each(chain => chain.Handle(@event));
             }
+        }
+
+        public void Post<T>(T command) where T : class, IRequest
+        {
+        }
+
+        public void Repost(Guid messageId)
+        {
         }
     }
 }

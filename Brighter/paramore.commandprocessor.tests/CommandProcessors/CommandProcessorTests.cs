@@ -3,7 +3,7 @@ using FakeItEasy;
 using Machine.Specifications;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.IoCContainers;
+using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
@@ -131,33 +131,56 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     {
         static CommandProcessor commandProcessor;
         static readonly MyCommand myCommand = new MyCommand();
-
+        static CommandMessage commandMessage;
+        static IAmAMessageStore<CommandMessage> commandRepository;
+        static IAmAMessagingGateway messagingGateway ;
+        
         Establish context = () =>
         {
-            myCommand.Id = Guid.NewGuid();
             myCommand.Value = "Hello World";
             var container = new TinyIoCAdapter(new TinyIoCContainer());
-            var commandRepository = A.Fake<IMessageStore<Command>>();
-            var messsagingGateway = A.Fake<IAmAMessagingGateway>();
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messsagingGateway);
-
+            commandRepository = A.Fake<IAmAMessageStore<CommandMessage>>();
+            messagingGateway = A.Fake<IAmAMessagingGateway>();
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway);
+            commandMessage = new CommandMessage(
+                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
+                body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
+                );
         };
 
         Because of = () => commandProcessor.Post(myCommand);
 
-        It should_store_the_command_in_the_sent_command_repository = () => commandRepository.Add(myCommand);
+        It should_store_the_command_in_the_sent_command_repository = () => commandRepository.Add(commandMessage);
 
-        It should_send_a_message_via_the_messaging_gateway = () => 
-            A.CallTo(() => messagingGateway.SendMessage(
-                new CommandMessage(
-                    header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
-                    body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myComand.Value)))));
+        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.SendMessage(commandMessage)).MustHaveHappened();
     }
 
-    pubic class When_resending_a_message_asynchrnonously
+    public class When_resending_a_message_asynchrnonously
     {
         
-        Because of = () => commandProcessor.Repost(myCommand.Id);
+        static CommandProcessor commandProcessor;
+        static readonly MyCommand myCommand = new MyCommand();
+        static CommandMessage commandMessage;
+        static IAmAMessageStore<CommandMessage> commandRepository;
+        static IAmAMessagingGateway messagingGateway ;
+        
+        Establish context = () =>
+        {
+            myCommand.Value = "Hello World";
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
+            commandRepository = A.Fake<IAmAMessageStore<CommandMessage>>();
+            messagingGateway = A.Fake<IAmAMessagingGateway>();
+            commandMessage = new CommandMessage(
+                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
+                body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
+                );
+            A.CallTo(() => commandRepository.Get(commandMessage.Header.MessageId)).Returns(commandMessage);
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway);
+        };
+
+        Because of = () => commandProcessor.Repost(commandMessage.Header.MessageId);
+
+        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.SendMessage(commandMessage)).MustHaveHappened();
     }
 
     public class When_an_exception_is_thrown_terminate_the_pipeline

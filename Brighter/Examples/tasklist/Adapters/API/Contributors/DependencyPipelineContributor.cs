@@ -9,7 +9,7 @@ using Tasklist.Ports.ViewModelRetrievers;
 using Tasklist.Utilities;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.IoCContainers;
+using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 
 namespace Tasklist.Adapters.API.Contributors
 {

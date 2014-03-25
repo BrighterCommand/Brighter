@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using TinyIoC;
 
-namespace paramore.brighter.commandprocessor.ioccontainers.IoCContainers
+namespace paramore.brighter.commandprocessor.ioccontainers.Adapters
 {
     public class TinyIoCAdapter : TrackedServiceLocator, IAdaptAnInversionOfControlContainer
     {

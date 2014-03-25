@@ -46,8 +46,13 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommandMessage.cs" />
+    <Compile Include="IAmAMessagingGateway.cs" />
     <Compile Include="IManageLifetimes.cs" />
+    <Compile Include="IAmAMessageStore.cs" />
     <Compile Include="Interpreter.cs" />
+    <Compile Include="MessageBody.cs" />
+    <Compile Include="MessageHeader.cs" />
     <Compile Include="PipelineBuilder.cs" />
     <Compile Include="PipelineTracer.cs" />
     <Compile Include="Pipelines.cs" />

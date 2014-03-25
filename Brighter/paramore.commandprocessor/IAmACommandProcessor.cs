@@ -4,5 +4,6 @@ namespace paramore.brighter.commandprocessor
     {
         void Send<T>(T command) where T : class, IRequest;
         void Publish<T>(T @event) where T : class, IRequest;
+        void Post<T>(T command) where T : class, IRequest;
     }
 }

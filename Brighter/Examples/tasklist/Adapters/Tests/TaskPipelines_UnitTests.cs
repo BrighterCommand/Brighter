@@ -9,7 +9,7 @@ using Tasklist.Ports.Commands;
 using Tasklist.Ports.Handlers;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.IoCContainers;
+using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 
 namespace Tasklist.Adapters.Tests
 {
