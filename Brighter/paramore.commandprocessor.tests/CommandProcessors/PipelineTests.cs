@@ -2,7 +2,7 @@ using System.Linq;
 using Machine.Specifications;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.IoCContainers;
+using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
