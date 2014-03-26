@@ -2,9 +2,9 @@ using System;
 
 namespace paramore.brighter.commandprocessor
 {
-    public interface IAmAMessageStore<T> where T : CommandMessage
+    public interface IAmAMessageStore<T> where T : Message
     {
         void Add(T message);
-        CommandMessage Get(Guid messageId);
+        Message Get(Guid messageId);
     }
 }

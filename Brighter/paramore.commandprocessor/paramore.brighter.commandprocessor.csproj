@@ -46,7 +46,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CommandMessage.cs" />
+    <Compile Include="Message.cs" />
     <Compile Include="IAmAMessageMapper.cs" />
     <Compile Include="IAmAMessagingGateway.cs" />
     <Compile Include="IManageLifetimes.cs" />

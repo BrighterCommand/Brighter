@@ -8,7 +8,7 @@ namespace paramore.brighter.commandprocessor
     {
         private readonly IAdaptAnInversionOfControlContainer container;
         private readonly IAmARequestContextFactory requestContextFactory;
-        private IAmAMessageStore<CommandMessage> commandRepository;
+        private IAmAMessageStore<Message> messageStore;
         private IAmAMessagingGateway messsagingGateway;
 
         public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory)
@@ -17,10 +17,10 @@ namespace paramore.brighter.commandprocessor
             this.requestContextFactory = requestContextFactory;
         }
 
-        public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory, IAmAMessageStore<CommandMessage> commandRepository, IAmAMessagingGateway messsagingGateway)
+        public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory, IAmAMessageStore<Message> messageStore, IAmAMessagingGateway messsagingGateway)
             :this(container, requestContextFactory)
         {
-            this.commandRepository = commandRepository;
+            this.messageStore = messageStore;
             this.messsagingGateway = messsagingGateway;
         }
 
@@ -55,10 +55,16 @@ namespace paramore.brighter.commandprocessor
 
         public void Post<T>(T command) where T : class, IRequest
         {
+            var messageMapper = container.GetInstance<IAmAMessageMapper<T, Message>>();
+            var message = messageMapper.Map(command);
+            messageStore.Add(message);
+            messsagingGateway.SendMessage(message);
         }
 
         public void Repost(Guid messageId)
         {
+            var message = messageStore.Get(messageId);
+            messsagingGateway.SendMessage(message);
         }
     }
 }
