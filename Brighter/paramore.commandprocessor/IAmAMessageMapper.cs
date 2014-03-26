@@ -1,6 +1,7 @@
 namespace paramore.brighter.commandprocessor
 {
-    public interface IAmAMessageMapper<TCommand, TCommandMessage> where TCommand : class, IRequest where TCommandMessage: CommandMessage
+    public interface IAmAMessageMapper<TRequest, TMessage> where TRequest : class, IRequest where TMessage: Message
     {
+        TMessage Map(TRequest request);
     }
 }

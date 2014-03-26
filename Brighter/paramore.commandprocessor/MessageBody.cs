@@ -4,9 +4,11 @@ namespace paramore.brighter.commandprocessor
 {
     public class MessageBody
     {
-        public MessageBody(string format)
+        public string Body { get; private set; }
+
+        public MessageBody(string body)
         {
-            throw new NotImplementedException();
+            Body = body;
         }
     }
 }
