@@ -134,11 +134,13 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static CommandMessage commandMessage;
         static IAmAMessageStore<CommandMessage> commandRepository;
         static IAmAMessagingGateway messagingGateway ;
+        static IAmAMessageMapper<MyCommand, CommandMessage> myCommandMessageMapper;
+        static IAdaptAnInversionOfControlContainer container;
         
         Establish context = () =>
         {
             myCommand.Value = "Hello World";
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
+            container = A.Fake<IAdaptAnInversionOfControlContainer>();
             commandRepository = A.Fake<IAmAMessageStore<CommandMessage>>();
             messagingGateway = A.Fake<IAmAMessagingGateway>();
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway);
@@ -146,16 +148,16 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
                 body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
                 );
+            A.CallTo(() => container.GetInstance<IAmAMessageMapper<MyCommand, CommandMessage>>()).Returns( new MyCommandMessageMapper());
         };
 
         Because of = () => commandProcessor.Post(myCommand);
 
-        It should_store_the_command_in_the_sent_command_repository = () => commandRepository.Add(commandMessage);
-
+        It should_store_the_message_in_the_sent_command_message_repository = () => commandRepository.Add(commandMessage);
         It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.SendMessage(commandMessage)).MustHaveHappened();
     }
 
-    public class When_resending_a_message_asynchrnonously
+    public class When_resending_a_message_asynchronously
     {
         
         static CommandProcessor commandProcessor;

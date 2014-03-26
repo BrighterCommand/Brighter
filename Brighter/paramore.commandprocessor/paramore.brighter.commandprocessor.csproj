@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommandMessage.cs" />
+    <Compile Include="IAmAMessageMapper.cs" />
     <Compile Include="IAmAMessagingGateway.cs" />
     <Compile Include="IManageLifetimes.cs" />
     <Compile Include="IAmAMessageStore.cs" />
