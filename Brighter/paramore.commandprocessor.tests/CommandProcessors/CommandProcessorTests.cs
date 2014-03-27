@@ -176,11 +176,11 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
                 body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
                 );
-            A.CallTo(() => commandRepository.Get(message.Header.MessageId)).Returns(message);
+            A.CallTo(() => commandRepository.Get(message.Header.Id)).Returns(message);
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway);
         };
 
-        Because of = () => commandProcessor.Repost(message.Header.MessageId);
+        Because of = () => commandProcessor.Repost(message.Header.Id);
 
         It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.SendMessage(message)).MustHaveHappened();
     }
