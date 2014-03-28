@@ -27,11 +27,11 @@ namespace paramore.brighter.commandprocessor
 {
     public class MessageBody
     {
-        public string Body { get; private set; }
+        public string Value { get; private set; }
 
         public MessageBody(string body)
         {
-            Body = body;
+            Value = body;
         }
     }
 }
