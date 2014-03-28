@@ -21,12 +21,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Threading.Tasks;
+
 namespace paramore.brighter.commandprocessor
 {
     public interface IAmACommandProcessor
     {
         void Send<T>(T command) where T : class, IRequest;
         void Publish<T>(T @event) where T : class, IRequest;
-        void Post<T>(T command) where T : class, IRequest;
+        Task Post<T>(T command) where T : class, IRequest;
     }
 }

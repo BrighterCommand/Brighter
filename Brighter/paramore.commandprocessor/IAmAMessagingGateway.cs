@@ -21,10 +21,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Threading.Tasks;
+
 namespace paramore.brighter.commandprocessor
 {
     public interface IAmAMessagingGateway
     {
-        void SendMessage(Message message);
+        Task SendMessage(Message message);
     }
 }
