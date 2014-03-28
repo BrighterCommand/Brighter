@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using paramore.brighter.commandprocessor.extensions;
 
 namespace paramore.brighter.commandprocessor
@@ -76,18 +77,18 @@ namespace paramore.brighter.commandprocessor
             }
         }
 
-        public void Post<T>(T command) where T : class, IRequest
+        public async Task Post<T>(T command) where T : class, IRequest
         {
             var messageMapper = container.GetInstance<IAmAMessageMapper<T, Message>>();
             var message = messageMapper.Map(command);
-            messageStore.Add(message);
-            messsagingGateway.SendMessage(message);
+            await messageStore.Add(message);
+            await messsagingGateway.SendMessage(message);
         }
 
-        public void Repost(Guid messageId)
+        public async Task Repost(Guid messageId)
         {
-            var message = messageStore.Get(messageId);
-            messsagingGateway.SendMessage(message);
+            var message = await messageStore.Get(messageId);
+            await messsagingGateway.SendMessage(message);
         }
     }
 }
