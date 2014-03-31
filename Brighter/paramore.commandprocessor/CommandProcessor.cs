@@ -77,10 +77,11 @@ namespace paramore.brighter.commandprocessor
             }
         }
 
-        public async Task Post<T>(T command) where T : class, IRequest
+        public async Task Post<T>(T request) where T : class, IRequest
         {
+            //TODO: Use Polly Policy (with settings from config) to control retry and circuit breaker
             var messageMapper = container.GetInstance<IAmAMessageMapper<T, Message>>();
-            var message = messageMapper.Map(command);
+            var message = messageMapper.Map(request);
             await messageStore.Add(message);
             await messsagingGateway.SendMessage(message);
         }

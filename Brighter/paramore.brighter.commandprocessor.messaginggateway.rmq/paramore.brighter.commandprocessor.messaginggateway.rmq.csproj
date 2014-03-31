@@ -7,8 +7,8 @@
     <ProjectGuid>{380AF497-D2B5-49B2-AA7A-B0D86991B390}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>paramore.brighter.commandprocessor.messaginggateway._0mq</RootNamespace>
-    <AssemblyName>paramore.brighter.commandprocessor.messaginggateway.0mq</AssemblyName>
+    <RootNamespace>paramore.brighter.commandprocessor.messaginggateway.rmq</RootNamespace>
+    <AssemblyName>paramore.brighter.commandprocessor.messaginggateway.rmq</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -38,10 +38,12 @@
       <HintPath>..\packages\RabbitMQ.Client.3.2.4\lib\net30\RabbitMQ.Client.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RMQMessagingGateway.cs" />
   </ItemGroup>

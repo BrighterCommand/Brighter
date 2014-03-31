@@ -81,6 +81,10 @@
     <Reference Include="Polly">
       <HintPath>..\packages\Polly.1.1.0\lib\net45\Polly.dll</HintPath>
     </Reference>
+    <Reference Include="RabbitMQ.Client, Version=3.2.4.0, Culture=neutral, PublicKeyToken=89e7d7c5feba84ce, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\RabbitMQ.Client.3.2.4\lib\net30\RabbitMQ.Client.dll</HintPath>
+    </Reference>
     <Reference Include="Raven.Abstractions">
       <HintPath>..\packages\RavenDB.Client.2.5.2851\lib\net45\Raven.Abstractions.dll</HintPath>
     </Reference>
@@ -101,6 +105,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
@@ -150,8 +155,8 @@
     <Compile Include="IoCContainers\TinyIoCContainerFixture.cs" />
     <Compile Include="ExceptionPolicy\PolicyDecoratorTests.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
+    <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RavenTests\CanCallLastOnArray.cs" />
     <Compile Include="Timeout\Test Doubles\MyPassesTimeoutHandler.cs" />
     <Compile Include="Timeout\Test Doubles\MyFailsDueToTimeoutHandler.cs" />
     <Compile Include="Timeout\TimeoutDecoratorTests.cs" />
@@ -160,6 +165,10 @@
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj">
       <Project>{224f828a-1abf-4d7b-8c48-66856bfd1ded}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.ravendb</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
+      <Project>{380AF497-D2B5-49B2-AA7A-B0D86991B390}</Project>
+      <Name>paramore.brighter.commandprocessor.messaginggateway.rmq</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.commandprocessor.exceptionpolicy\paramore.brighter.commandprocessor.exceptionpolicy.csproj">
       <Project>{09bba2df-aab0-4801-b646-a1b13d0e7d38}</Project>
