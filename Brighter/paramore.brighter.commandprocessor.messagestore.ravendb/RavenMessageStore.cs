@@ -22,7 +22,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 using Raven.Client;
 
 namespace paramore.brighter.commandprocessor.messagestore.ravendb
@@ -36,20 +35,20 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
             this.documentStore = documentStore;
         }
 
-        public async Task Add(Message message)
+        public void Add(Message message)
         {
-            using (var session = documentStore.OpenAsyncSession())
+            using (var session = documentStore.OpenSession())
             {
-                await session.StoreAsync(message);
-                await session.SaveChangesAsync();
+                session.Store(message);
+                session.SaveChanges();
             }
         }
 
-        public Task<Message> Get(Guid messageId)
+        public Message Get(Guid messageId)
         {
-            using (var session = documentStore.OpenAsyncSession())
+            using (var session = documentStore.OpenSession())
             {
-                return session.LoadAsync<Message>(messageId);
+                return session.Load<Message>(messageId);
             }
         }
     }

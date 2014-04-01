@@ -24,16 +24,17 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Polly;
 using paramore.brighter.commandprocessor.extensions;
 
 namespace paramore.brighter.commandprocessor
 {
     public class CommandProcessor : IAmACommandProcessor
     {
-        private readonly IAdaptAnInversionOfControlContainer container;
-        private readonly IAmARequestContextFactory requestContextFactory;
-        private IAmAMessageStore<Message> messageStore;
-        private IAmAMessagingGateway messsagingGateway;
+        readonly IAdaptAnInversionOfControlContainer container;
+        readonly IAmARequestContextFactory requestContextFactory;
+        readonly IAmAMessageStore<Message> messageStore;
+        readonly IAmAMessagingGateway messagingGateway;
 
         public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory)
         {
@@ -41,11 +42,11 @@ namespace paramore.brighter.commandprocessor
             this.requestContextFactory = requestContextFactory;
         }
 
-        public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory, IAmAMessageStore<Message> messageStore, IAmAMessagingGateway messsagingGateway)
+        public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory, IAmAMessageStore<Message> messageStore, IAmAMessagingGateway messagingGateway)
             :this(container, requestContextFactory)
         {
             this.messageStore = messageStore;
-            this.messsagingGateway = messsagingGateway;
+            this.messagingGateway = messagingGateway;
         }
 
         public void Send<T>(T command) where T : class, IRequest
@@ -77,19 +78,46 @@ namespace paramore.brighter.commandprocessor
             }
         }
 
-        public async Task Post<T>(T request) where T : class, IRequest
+        public void Post<T>(T request) where T : class, IRequest
         {
-            //TODO: Use Polly Policy (with settings from config) to control retry and circuit breaker
+            //TODO: Initialize policy from configuration; make the call async (appeared to conflict with polly previously)
             var messageMapper = container.GetInstance<IAmAMessageMapper<T, Message>>();
             var message = messageMapper.Map(request);
-            await messageStore.Add(message);
-            await messsagingGateway.SendMessage(message);
+            messageStore.Add(message);
+            CheckCircuit(() => messagingGateway.SendMessage(message));
         }
 
-        public async Task Repost(Guid messageId)
+        public void Repost(Guid messageId)
         {
-            var message = await messageStore.Get(messageId);
-            await messsagingGateway.SendMessage(message);
+            var message = messageStore.Get(messageId);
+            messagingGateway.SendMessage(message);
+        }
+
+        //private void RetryAndBreakCircuit(Action send)
+        //{
+        //    CheckCircuit(Retry(send));
+        //}
+
+        private void CheckCircuit(Action send)
+        {
+            var circuitBreakerPolicy = Policy
+                .Handle<Exception>()
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(300000));
+            circuitBreakerPolicy.Execute(() => send());
+        }
+
+        private void Retry(Action send)
+        {
+            var retryPolicy = Policy
+                .Handle<Exception>()
+                .WaitAndRetry(new[]
+                    {
+                        TimeSpan.FromMilliseconds(50),
+                        TimeSpan.FromMilliseconds(100),
+                        TimeSpan.FromMilliseconds(150)
+                    });
+
+            retryPolicy.Execute(() => send());
         }
     }
 }

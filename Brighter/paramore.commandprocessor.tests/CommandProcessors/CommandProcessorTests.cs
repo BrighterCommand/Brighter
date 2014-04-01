@@ -1,6 +1,10 @@
 using System;
+using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
+using Polly;
+using Polly.CircuitBreaker;
+using RabbitMQ.Client.Exceptions;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.ioccontainers.Adapters;
@@ -222,6 +226,84 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         It should_call_the_pre_validation_handler = () => MyValidationHandler<MyCommand>.ShouldRecieve(myCommand).ShouldBeTrue();
         It should_send_the_command_to_the_command_handler = () => MyPreAndPostDecoratedHandler.ShouldRecieve(myCommand).ShouldBeTrue();
         It should_call_the_post_validation_handler = () => MyLoggingHandler<MyCommand>.ShouldRecieve(myCommand).ShouldBeTrue();
+    }
+
+
+    public class When_using_decoupled_invocation_messaging_gateway_throws_an_error_retry_n_times_then_break_circuit
+    {
+        static CommandProcessor commandProcessor;
+        static readonly MyCommand myCommand = new MyCommand();
+        static Message message;
+        static IAmAMessageStore<Message> commandRepository;
+        static IAmAMessagingGateway messagingGateway ;
+        static IAmAMessageMapper<MyCommand, Message> myCommandMessageMapper;
+        static IAdaptAnInversionOfControlContainer container;
+        static Exception failedException;
+        static Exception circuitBrokenException;
+        
+        Establish context = () =>
+        {
+            myCommand.Value = "Hello World";
+            container = A.Fake<IAdaptAnInversionOfControlContainer>();
+            commandRepository = A.Fake<IAmAMessageStore<Message>>();
+            messagingGateway = A.Fake<IAmAMessagingGateway>();
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway);
+            message = new Message(
+                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
+                body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
+                );
+
+            A.CallTo(() => container.GetInstance<IAmAMessageMapper<MyCommand, Message>>()).Returns( new MyCommandMessageMapper());
+            A.CallTo(() => messagingGateway.SendMessage(message)).Throws<Exception>().NumberOfTimes(4);
+        };
+
+        Because of = () =>
+            {
+                //break circuit with retries
+                failedException = Catch.Exception(() => commandProcessor.Post(myCommand));
+                //now resond with broken ciruit
+                circuitBrokenException = (BrokenCircuitException) Catch.Exception(() => commandProcessor.Post(myCommand));
+            };
+
+        //It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.SendMessage(message)).MustHaveHappened(Repeated.Exactly.Times(4));
+        //It should_throw_a_exception_out_once_all_retries_exhausted = () => failedException.ShouldBeOfExactType(typeof(Exception));
+        It should_throw_a_circuit_broken_exception_once_circuit_broken = () => circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
+    }
+
+
+    public class SanityCheck
+    {
+        Because of = () =>
+            {
+                var circuitBreakerPolicy = Policy
+                    .Handle<Exception>()
+                    .CircuitBreaker(1, TimeSpan.FromMilliseconds(3000));
+
+                try
+                {
+                    circuitBreakerPolicy.Execute(() => func());
+                }
+                catch (Exception e)
+                {
+                    int i = 1; //noop
+                }
+
+                try
+                {
+                    circuitBreakerPolicy.Execute(() => func());
+                }
+                catch (Exception e)
+                {
+                    int i = 1; //noop
+                }
+            };
+
+        static void func()
+        {
+            throw new Exception();
+        }
+
+        private It should_have_happend = () => true.ShouldBeTrue();
     }
 
 }

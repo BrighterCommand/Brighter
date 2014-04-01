@@ -27,6 +27,6 @@ namespace paramore.brighter.commandprocessor
 {
     public interface IAmAMessagingGateway
     {
-        Task SendMessage(Message message);
+        void SendMessage(Message message);
     }
 }

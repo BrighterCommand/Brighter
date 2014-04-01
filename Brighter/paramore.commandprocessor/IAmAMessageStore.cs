@@ -22,13 +22,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
 {
     public interface IAmAMessageStore<T> where T : Message
     {
-        Task Add(T message);
-        Task<Message> Get(Guid messageId);
+        void Add(T message);
+        Message Get(Guid messageId);
     }
 }
