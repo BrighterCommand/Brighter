@@ -50,7 +50,9 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             connectionFactory = new ConnectionFactory{Uri = configuration.AMPQUri.Uri.ToString()};
             connection = connectionFactory.CreateConnection();
             channel = connection.CreateModel();
+            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, false);
             channel.QueueDeclare(this.channelName, false, false, false, null);
+            channel.QueueBind(this.channelName, configuration.Exchange.Name, this.channelName);
         }
 
         public string Listen()
@@ -60,6 +62,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 var result = channel.BasicGet(this.channelName, true);
                 if (result != null)
                 {
+                    channel.BasicAck(result.DeliveryTag, false);
                     var message = Encoding.UTF8.GetString(result.Body);
                     return message;
                 }
