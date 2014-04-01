@@ -41,8 +41,8 @@ namespace paramore.commandprocessor.tests.MessageStore.RavenDb
                 var messageStore = new RavenMessageStore(store);
                 //act
                 var message = new Message(new MessageHeader(Guid.NewGuid(), "Test"), new MessageBody("Body"));               
-                messageStore.Add(message).Wait();
-                var retrievedMessage = messageStore.Get(message.Id).Result;
+                messageStore.Add(message);
+                var retrievedMessage = messageStore.Get(message.Id);
 
                 //assert
                Assert.IsTrue(message == retrievedMessage); 
