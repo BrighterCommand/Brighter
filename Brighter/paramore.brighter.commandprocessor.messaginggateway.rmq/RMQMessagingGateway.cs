@@ -11,7 +11,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     {
         public Task SendMessage(Message message)
         {
-            //TODO: We want to make this async if we can
+            //RabbitMQ .NET Client does not have an async publish, so fake this for now as we want to support messaging frameworks that do have this option
             var tcs = new TaskCompletionSource<object>();
 
             var configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration(); 
@@ -21,29 +21,20 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             IModel channel = null;
             try
             {
-                //create the connection
-                connection = connectionFactory.CreateConnection();
-                //open a channel on the connection
-                channel = connection.CreateModel();
-                //desired state configuration of the exchange
-                channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, false);
+                connection = Connect(connectionFactory);
 
-                //create message header
-                var basicProperties = channel.CreateBasicProperties();
-                basicProperties.DeliveryMode = 1; 
-                //TODO: do we want JSONify the object graph of the message?
-                basicProperties.ContentType = "application/json";
-                basicProperties.MessageId = message.Id.ToString();
+                channel = OpenChannel(connection);
 
-                //publish message
-                channel.TxSelect();
-                channel.BasicPublish(configuration.Exchange.Name, message.Header.Topic, false, false, basicProperties, Encoding.UTF8.GetBytes(message.Body.Value));
-                channel.TxCommit();
+                DeclareExchange(channel, configuration);
+
+                PublishMessage(message, channel, configuration, CreateMessageHeader(message, channel));
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 if (channel != null)
                     channel.TxRollback();
+                tcs.SetException(e);
+                throw;
             }
             finally
             {
@@ -53,6 +44,47 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             tcs.SetResult(new object());
             return tcs.Task;
+        }
+
+        private static void PublishMessage(Message message, IModel channel,
+                                           RMQMessagingGatewayConfigurationSection configuration,
+                                           IBasicProperties basicProperties)
+        {
+            //publish message
+            channel.TxSelect();
+            channel.BasicPublish(configuration.Exchange.Name, message.Header.Topic, false, false, basicProperties,
+                                 Encoding.UTF8.GetBytes(message.Body.Value));
+            channel.TxCommit();
+        }
+
+        private static IBasicProperties CreateMessageHeader(Message message, IModel channel)
+        {
+            //create message header
+            var basicProperties = channel.CreateBasicProperties();
+            basicProperties.DeliveryMode = 1;
+            basicProperties.ContentType = "text/plain";
+            basicProperties.MessageId = message.Id.ToString();
+            return basicProperties;
+        }
+
+        private static void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
+        {
+            //desired state configuration of the exchange
+            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, false);
+        }
+
+        private static IModel OpenChannel(IConnection connection)
+        {
+            //open a channel on the connection
+            var channel = connection.CreateModel();
+            return channel;
+        }
+
+        private static IConnection Connect(ConnectionFactory connectionFactory)
+        {
+            //create the connection
+            var connection = connectionFactory.CreateConnection();
+            return connection;
         }
     }
 }
