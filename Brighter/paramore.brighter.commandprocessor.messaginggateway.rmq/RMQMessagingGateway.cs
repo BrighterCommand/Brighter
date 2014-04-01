@@ -25,7 +25,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
                 PublishMessage(message, channel, configuration, CreateMessageHeader(message, channel));
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 if (channel != null)
                     channel.TxRollback();
