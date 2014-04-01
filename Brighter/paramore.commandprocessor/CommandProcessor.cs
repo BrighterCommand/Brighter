@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Polly;
@@ -35,6 +36,10 @@ namespace paramore.brighter.commandprocessor
         readonly IAmARequestContextFactory requestContextFactory;
         readonly IAmAMessageStore<Message> messageStore;
         readonly IAmAMessagingGateway messagingGateway;
+        readonly Policy retryPolicy;
+        readonly Policy circuitBreakerPolicy;
+        public const string CIRCUITBREAKER = "Paramore.Brighter.CommandProcessor.CircuitBreaker";
+        public const string RETRYPOLICY = "Paramore.Brighter.CommandProcessor.RetryPolicy";
 
         public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory)
         {
@@ -47,7 +52,11 @@ namespace paramore.brighter.commandprocessor
         {
             this.messageStore = messageStore;
             this.messagingGateway = messagingGateway;
+            retryPolicy = container.GetInstance<Policy>(RETRYPOLICY);
+            Debug.Assert(retryPolicy != null, "Provide a policy for retrying failed posts and reposts");
+            circuitBreakerPolicy = container.GetInstance<Policy>(CIRCUITBREAKER);
         }
+
 
         public void Send<T>(T command) where T : class, IRequest
         {
@@ -80,43 +89,31 @@ namespace paramore.brighter.commandprocessor
 
         public void Post<T>(T request) where T : class, IRequest
         {
-            //TODO: Initialize policy from configuration; make the call async (appeared to conflict with polly previously)
+            //TODO: Make the call async 
             var messageMapper = container.GetInstance<IAmAMessageMapper<T, Message>>();
             var message = messageMapper.Map(request);
             messageStore.Add(message);
-            CheckCircuit(() => messagingGateway.SendMessage(message));
+            RetryAndBreakCircuit(() => messagingGateway.SendMessage(message));
         }
 
         public void Repost(Guid messageId)
         {
             var message = messageStore.Get(messageId);
-            messagingGateway.SendMessage(message);
+            RetryAndBreakCircuit(() => messagingGateway.SendMessage(message));
         }
 
-        //private void RetryAndBreakCircuit(Action send)
-        //{
-        //    CheckCircuit(Retry(send));
-        //}
+        private void RetryAndBreakCircuit(Action send)
+        {
+            CheckCircuit(() => Retry(send));
+        }
 
         private void CheckCircuit(Action send)
         {
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(300000));
             circuitBreakerPolicy.Execute(() => send());
         }
 
         private void Retry(Action send)
         {
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .WaitAndRetry(new[]
-                    {
-                        TimeSpan.FromMilliseconds(50),
-                        TimeSpan.FromMilliseconds(100),
-                        TimeSpan.FromMilliseconds(150)
-                    });
-
             retryPolicy.Execute(() => send());
         }
     }

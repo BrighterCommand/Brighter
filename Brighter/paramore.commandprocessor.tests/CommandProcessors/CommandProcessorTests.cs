@@ -138,7 +138,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static Message message;
         static IAmAMessageStore<Message> commandRepository;
         static IAmAMessagingGateway messagingGateway ;
-        static IAmAMessageMapper<MyCommand, Message> myCommandMessageMapper;
         static IAdaptAnInversionOfControlContainer container;
         
         Establish context = () =>
@@ -236,25 +235,43 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static Message message;
         static IAmAMessageStore<Message> commandRepository;
         static IAmAMessagingGateway messagingGateway ;
-        static IAmAMessageMapper<MyCommand, Message> myCommandMessageMapper;
         static IAdaptAnInversionOfControlContainer container;
         static Exception failedException;
+        static IDisposable lifetime;
         static Exception circuitBrokenException;
         
         Establish context = () =>
         {
             myCommand.Value = "Hello World";
-            container = A.Fake<IAdaptAnInversionOfControlContainer>();
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
+            lifetime = container.CreateLifetime();
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
             messagingGateway = A.Fake<IAmAMessagingGateway>();
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway);
             message = new Message(
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
                 body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
                 );
 
-            A.CallTo(() => container.GetInstance<IAmAMessageMapper<MyCommand, Message>>()).Returns( new MyCommandMessageMapper());
             A.CallTo(() => messagingGateway.SendMessage(message)).Throws<Exception>().NumberOfTimes(4);
+
+            var retryPolicy = Policy
+                .Handle<Exception>()
+                .WaitAndRetry(new[]
+                    {
+                        TimeSpan.FromMilliseconds(50),
+                        TimeSpan.FromMilliseconds(100),
+                        TimeSpan.FromMilliseconds(150)
+                    });
+
+            var circuitBreakerPolicy = Policy
+                .Handle<Exception>()
+                .CircuitBreaker(1, TimeSpan.FromMinutes(1));
+
+            container.Register<Policy>(CommandProcessor.RETRYPOLICY, retryPolicy);
+            container.Register<Policy>(CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy);
+            container.Register<IAmAMessageMapper<MyCommand, Message>, MyCommandMessageMapper>(new MyCommandMessageMapper());
+
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway);
         };
 
         Because of = () =>
@@ -265,47 +282,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 circuitBrokenException = (BrokenCircuitException) Catch.Exception(() => commandProcessor.Post(myCommand));
             };
 
-        //It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.SendMessage(message)).MustHaveHappened(Repeated.Exactly.Times(4));
-        //It should_throw_a_exception_out_once_all_retries_exhausted = () => failedException.ShouldBeOfExactType(typeof(Exception));
+        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.SendMessage(message)).MustHaveHappened(Repeated.Exactly.Times(4));
+        It should_throw_a_exception_out_once_all_retries_exhausted = () => failedException.ShouldBeOfExactType(typeof(Exception));
         It should_throw_a_circuit_broken_exception_once_circuit_broken = () => circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
+
+        Cleanup tearDown = () => lifetime.Dispose();
     }
-
-
-    public class SanityCheck
-    {
-        Because of = () =>
-            {
-                var circuitBreakerPolicy = Policy
-                    .Handle<Exception>()
-                    .CircuitBreaker(1, TimeSpan.FromMilliseconds(3000));
-
-                try
-                {
-                    circuitBreakerPolicy.Execute(() => func());
-                }
-                catch (Exception e)
-                {
-                    int i = 1; //noop
-                }
-
-                try
-                {
-                    circuitBreakerPolicy.Execute(() => func());
-                }
-                catch (Exception e)
-                {
-                    int i = 1; //noop
-                }
-            };
-
-        static void func()
-        {
-            throw new Exception();
-        }
-
-        private It should_have_happend = () => true.ShouldBeTrue();
-    }
-
 }
 
     

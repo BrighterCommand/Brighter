@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Microsoft.Practices.ServiceLocation;
 
 namespace paramore.brighter.commandprocessor
@@ -52,6 +53,7 @@ namespace paramore.brighter.commandprocessor
         //used to avoid tracking i.e. a singletone we don't want to kill at the end of the scope
         protected virtual void TrackItem(object instance)
         {
+            Debug.Assert(lifetime != null, "Tracked items must have a scope");
             if(!doNotTrackList.Contains(instance.GetType()))
                 lifetime.Add(instance);
         }
