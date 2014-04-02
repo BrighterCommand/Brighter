@@ -49,6 +49,8 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommandProcessorFactory.cs" />
+    <Compile Include="IAmACommandProcessorFactory.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="IAmAMessageMapper.cs" />
     <Compile Include="IAmAMessagingGateway.cs" />
