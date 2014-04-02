@@ -47,14 +47,19 @@ namespace paramore.brighter.commandprocessor
             this.requestContextFactory = requestContextFactory;
         }
 
-        public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory, IAmAMessageStore<Message> messageStore, IAmAMessagingGateway messagingGateway)
+        public CommandProcessor(
+            IAdaptAnInversionOfControlContainer container, 
+            IAmARequestContextFactory requestContextFactory, 
+            IAmAMessageStore<Message> messageStore, 
+            IAmAMessagingGateway messagingGateway,
+            Policy retryPolicy,
+            Policy circuitBreakerPolicy)
             :this(container, requestContextFactory)
         {
             this.messageStore = messageStore;
             this.messagingGateway = messagingGateway;
-            retryPolicy = container.GetInstance<Policy>(RETRYPOLICY);
-            Debug.Assert(retryPolicy != null, "Provide a policy for retrying failed posts and reposts");
-            circuitBreakerPolicy = container.GetInstance<Policy>(CIRCUITBREAKER);
+            this.retryPolicy = retryPolicy;
+            this.circuitBreakerPolicy = circuitBreakerPolicy;
         }
 
 

@@ -146,11 +146,21 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             container = A.Fake<IAdaptAnInversionOfControlContainer>();
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
             messagingGateway = A.Fake<IAmAMessagingGateway>();
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway);
             message = new Message(
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
                 body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
                 );
+
+            var retryPolicy = Policy
+                .Handle<Exception>()
+                .Retry();
+
+            var circuitBreakerPolicy = Policy
+                .Handle<Exception>()
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway, retryPolicy, circuitBreakerPolicy);
+
             A.CallTo(() => container.GetInstance<IAmAMessageMapper<MyCommand, Message>>()).Returns( new MyCommandMessageMapper());
         };
 
@@ -179,8 +189,16 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
                 body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
                 );
+            var retryPolicy = Policy
+                .Handle<Exception>()
+                .Retry();
+
+            var circuitBreakerPolicy = Policy
+                .Handle<Exception>()
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+
             A.CallTo(() => commandRepository.Get(message.Header.Id)).Returns(message);
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway);
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway, retryPolicy, circuitBreakerPolicy);
         };
 
         Because of = () => commandProcessor.Repost(message.Header.Id);
@@ -267,11 +285,9 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMinutes(1));
 
-            container.Register<Policy>(CommandProcessor.RETRYPOLICY, retryPolicy);
-            container.Register<Policy>(CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy);
             container.Register<IAmAMessageMapper<MyCommand, Message>, MyCommandMessageMapper>(new MyCommandMessageMapper());
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway);
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway, retryPolicy, circuitBreakerPolicy);
         };
 
         Because of = () =>
