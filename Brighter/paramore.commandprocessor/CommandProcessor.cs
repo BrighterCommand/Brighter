@@ -92,19 +92,28 @@ namespace paramore.brighter.commandprocessor
             }
         }
 
+        //NOTE: Don't rewrite with await, compiles but Policy does not call await on the lambda so becomes fire and forget, see http://blogs.msdn.com/b/pfxteam/archive/2012/02/08/10265476.aspx
+
         public void Post<T>(T request) where T : class, IRequest
         {
-            //TODO: Make the call async 
             var messageMapper = container.GetInstance<IAmAMessageMapper<T, Message>>();
             var message = messageMapper.Map(request);
-            messageStore.Add(message);
-            RetryAndBreakCircuit(() => messagingGateway.SendMessage(message));
+            RetryAndBreakCircuit(() =>
+                {
+                    messageStore.Add(message).Wait();
+                    messagingGateway.SendMessage(message).Wait();
+                });
         }
 
         public void Repost(Guid messageId)
         {
-            var message = messageStore.Get(messageId);
-            RetryAndBreakCircuit(() => messagingGateway.SendMessage(message));
+            RetryAndBreakCircuit(() =>
+                { 
+                    var task = messageStore.Get(messageId);
+                    task.Wait();
+                    var message = task.Result;
+                    messagingGateway.SendMessage(message);
+                });
         }
 
         private void RetryAndBreakCircuit(Action send)
@@ -114,12 +123,12 @@ namespace paramore.brighter.commandprocessor
 
         private void CheckCircuit(Action send)
         {
-            circuitBreakerPolicy.Execute(() => send());
+            circuitBreakerPolicy.Execute(send);
         }
 
         private void Retry(Action send)
         {
-            retryPolicy.Execute(() => send());
+            retryPolicy.Execute(send);
         }
     }
 }

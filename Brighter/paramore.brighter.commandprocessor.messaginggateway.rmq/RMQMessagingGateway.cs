@@ -1,16 +1,20 @@
 ﻿using System;
 using System.Text;
+using System.Threading.Tasks;
 using RabbitMQ.Client;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
-    //TODO: Add some logging - important to log at a gateway
+     //TODO: Add some logging - important to log at a gateway
     public class RMQMessagingGateway : IAmAMessagingGateway
     {
-        public void SendMessage(Message message)
+        public Task SendMessage(Message message)
         {
-            var configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration(); 
+            //RabbitMQ .NET Client does not have an async publish, so fake this for now as we want to support messaging frameworks that do have this option
+            var tcs = new TaskCompletionSource<object>();
+
+            var configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
             var connectionFactory = new ConnectionFactory{Uri = configuration.AMPQUri.Uri.ToString()};
 
             IConnection connection = null;
@@ -25,10 +29,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
                 PublishMessage(message, channel, configuration, CreateMessageHeader(message, channel));
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 if (channel != null)
                     channel.TxRollback();
+                tcs.SetException(e);
                 throw;
             }
             finally
@@ -36,9 +41,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 if (connection != null) connection.Dispose();
                 if (channel != null) channel.Dispose();
             }
+
+            tcs.SetResult(new object());
+            return tcs.Task;
         }
 
-        private static void PublishMessage(Message message, IModel channel, RMQMessagingGatewayConfigurationSection configuration, IBasicProperties basicProperties)
+        private static void PublishMessage(Message message, IModel channel,
+                                           RMQMessagingGatewayConfigurationSection configuration,
+                                           IBasicProperties basicProperties)
         {
             //publish message
             channel.TxSelect();

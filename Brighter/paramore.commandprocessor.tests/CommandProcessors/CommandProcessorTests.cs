@@ -1,10 +1,8 @@
 using System;
-using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
 using Polly;
 using Polly.CircuitBreaker;
-using RabbitMQ.Client.Exceptions;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.ioccontainers.Adapters;
@@ -256,7 +254,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static IAdaptAnInversionOfControlContainer container;
         static Exception failedException;
         static IDisposable lifetime;
-        static Exception circuitBrokenException;
+        static BrokenCircuitException circuitBrokenException;
         
         Establish context = () =>
         {
@@ -299,7 +297,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             };
 
         It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.SendMessage(message)).MustHaveHappened(Repeated.Exactly.Times(4));
-        It should_throw_a_exception_out_once_all_retries_exhausted = () => failedException.ShouldBeOfExactType(typeof(Exception));
+        private It should_throw_a_exception_out_once_all_retries_exhausted = () => failedException.ShouldBeOfExactType(typeof(Exception));
         It should_throw_a_circuit_broken_exception_once_circuit_broken = () => circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
 
         Cleanup tearDown = () => lifetime.Dispose();
