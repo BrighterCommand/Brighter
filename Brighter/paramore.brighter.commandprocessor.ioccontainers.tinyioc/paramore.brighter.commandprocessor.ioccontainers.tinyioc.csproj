@@ -8,8 +8,8 @@
     <ProjectGuid>{7B7A3ADA-CED8-4BCF-B643-493607C4579F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>paramore.brighter.commandprocessor.ioccontainers</RootNamespace>
-    <AssemblyName>paramore.brighter.commandprocessor.ioccontainers</AssemblyName>
+    <RootNamespace>paramore.brighter.commandprocessor.ioccontainers.tinyioc</RootNamespace>
+    <AssemblyName>paramore.brighter.commandprocessor.ioccontainers.tinyioc</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -47,7 +47,7 @@
     <Compile Include="TinyIoC.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\paramore.commandprocessor\paramore.brighter.commandprocessor.csproj">
+    <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
       <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
       <Name>paramore.brighter.commandprocessor</Name>
     </ProjectReference>
