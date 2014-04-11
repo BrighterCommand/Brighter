@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+    <metadata>
+        <id>paramore.brighter.commandprocessor.messaginggateway.rmq</id>
+        <version>1.0.0-alpha</version>
+        <title>paramore.brighter.commandprocessor.messaginggateway.0mq</title>
+        <authors>Ian Cooper</authors>
+        <owners>Ian Cooper</owners>
+        <licenseUrl>http://ianhammondcooper.mit-license.org/</licenseUrl>
+        <projectUrl>http://iancooper.github.io/Paramore</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>The Command Dispatchter pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers</description>
+        <summary>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter.CommandProcessor pipeline, using RabbitMQ</summary>
+        <releaseNotes>This is an early alpha intended to support Progressive.NET 2014. Further releases to follow</releaseNotes>
+        <copyright>Copyright ©  2014 Ian Cooper</copyright>
+        <language>en-GB</language>
+        <tags>.NET</tags>
+        <dependencies>
+            <dependency id="RabbitMQ.Client" version="3.2.4" />
+            <dependency id="CommonServiceLocator" version="1.2" />
+            <dependency id="Polly" version="2.0.0" />
+        </dependencies>
+        <frameworkAssemblies>
+            <frameworkAssembly assemblyName="System" targetFramework="" />
+            <frameworkAssembly assemblyName="System.Configuration" targetFramework="" />
+        </frameworkAssemblies>
+    </metadata>
+    <files>
+        <file src="lib\net45\paramore.brighter.commandprocessor.dll" target="lib\net45\paramore.brighter.commandprocessor.dll" />
+        <file src="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" />
+        <file src="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.pdb" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.pdb" />
+        <file src="lib\net45\paramore.brighter.commandprocessor.pdb" target="lib\net45\paramore.brighter.commandprocessor.pdb" />
+        <file src="src\paramore.brighter.commandprocessor\extensions\Each.cs" target="src\paramore.brighter.commandprocessor\extensions\Each.cs" />
+        <file src="src\paramore.brighter.commandprocessor\Properties\AssemblyInfo.cs" target="src\paramore.brighter.commandprocessor\Properties\AssemblyInfo.cs" />
+        <file src="src\paramore.brighter.commandprocessor\Command.cs" target="src\paramore.brighter.commandprocessor\Command.cs" />
+        <file src="src\paramore.brighter.commandprocessor\CommandProcessor.cs" target="src\paramore.brighter.commandprocessor\CommandProcessor.cs" />
+        <file src="src\paramore.brighter.commandprocessor\CommandProcessorFactory.cs" target="src\paramore.brighter.commandprocessor\CommandProcessorFactory.cs" />
+        <file src="src\paramore.brighter.commandprocessor\Event.cs" target="src\paramore.brighter.commandprocessor\Event.cs" />
+        <file src="src\paramore.brighter.commandprocessor\HandlerFactory.cs" target="src\paramore.brighter.commandprocessor\HandlerFactory.cs" />
+        <file src="src\paramore.brighter.commandprocessor\HandlerName.cs" target="src\paramore.brighter.commandprocessor\HandlerName.cs" />
+        <file src="src\paramore.brighter.commandprocessor\HandlerTiming.cs" target="src\paramore.brighter.commandprocessor\HandlerTiming.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IAdaptAnInversionOfControlContainer.cs" target="src\paramore.brighter.commandprocessor\IAdaptAnInversionOfControlContainer.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IAmACommandProcessor.cs" target="src\paramore.brighter.commandprocessor\IAmACommandProcessor.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IAmACommandProcessorFactory.cs" target="src\paramore.brighter.commandprocessor\IAmACommandProcessorFactory.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IAmAMessageMapper.cs" target="src\paramore.brighter.commandprocessor\IAmAMessageMapper.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IAmAMessageStore.cs" target="src\paramore.brighter.commandprocessor\IAmAMessageStore.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IAmAMessagingGateway.cs" target="src\paramore.brighter.commandprocessor\IAmAMessagingGateway.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IAmAPipelineBuilder.cs" target="src\paramore.brighter.commandprocessor\IAmAPipelineBuilder.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IAmAPipelineTracer.cs" target="src\paramore.brighter.commandprocessor\IAmAPipelineTracer.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IAmARequestContextFactory.cs" target="src\paramore.brighter.commandprocessor\IAmARequestContextFactory.cs" />
+        <file src="src\paramore.brighter.commandprocessor\ICommand.cs" target="src\paramore.brighter.commandprocessor\ICommand.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IHandleRequests.cs" target="src\paramore.brighter.commandprocessor\IHandleRequests.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IManageLifetimes.cs" target="src\paramore.brighter.commandprocessor\IManageLifetimes.cs" />
+        <file src="src\paramore.brighter.commandprocessor\InMemoryRequestContextFactory.cs" target="src\paramore.brighter.commandprocessor\InMemoryRequestContextFactory.cs" />
+        <file src="src\paramore.brighter.commandprocessor\Interpreter.cs" target="src\paramore.brighter.commandprocessor\Interpreter.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IRequest.cs" target="src\paramore.brighter.commandprocessor\IRequest.cs" />
+        <file src="src\paramore.brighter.commandprocessor\IRequestContext.cs" target="src\paramore.brighter.commandprocessor\IRequestContext.cs" />
+        <file src="src\paramore.brighter.commandprocessor\Message.cs" target="src\paramore.brighter.commandprocessor\Message.cs" />
+        <file src="src\paramore.brighter.commandprocessor\MessageBody.cs" target="src\paramore.brighter.commandprocessor\MessageBody.cs" />
+        <file src="src\paramore.brighter.commandprocessor\MessageHeader.cs" target="src\paramore.brighter.commandprocessor\MessageHeader.cs" />
+        <file src="src\paramore.brighter.commandprocessor\PipelineBuilder.cs" target="src\paramore.brighter.commandprocessor\PipelineBuilder.cs" />
+        <file src="src\paramore.brighter.commandprocessor\Pipelines.cs" target="src\paramore.brighter.commandprocessor\Pipelines.cs" />
+        <file src="src\paramore.brighter.commandprocessor\PipelineTracer.cs" target="src\paramore.brighter.commandprocessor\PipelineTracer.cs" />
+        <file src="src\paramore.brighter.commandprocessor\ReflectionExtensions.cs" target="src\paramore.brighter.commandprocessor\ReflectionExtensions.cs" />
+        <file src="src\paramore.brighter.commandprocessor\RequestContext.cs" target="src\paramore.brighter.commandprocessor\RequestContext.cs" />
+        <file src="src\paramore.brighter.commandprocessor\RequestHandler.cs" target="src\paramore.brighter.commandprocessor\RequestHandler.cs" />
+        <file src="src\paramore.brighter.commandprocessor\RequestHandlerAttribute.cs" target="src\paramore.brighter.commandprocessor\RequestHandlerAttribute.cs" />
+        <file src="src\paramore.brighter.commandprocessor\RequestHandlers.cs" target="src\paramore.brighter.commandprocessor\RequestHandlers.cs" />
+        <file src="src\paramore.brighter.commandprocessor\TrackedServiceLocator.cs" target="src\paramore.brighter.commandprocessor\TrackedServiceLocator.cs" />
+        <file src="src\paramore.brighter.commandprocessor.messaginggateway.rmq\MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" target="src\paramore.brighter.commandprocessor.messaginggateway.rmq\MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" />
+        <file src="src\paramore.brighter.commandprocessor.messaginggateway.rmq\Properties\AssemblyInfo.cs" target="src\paramore.brighter.commandprocessor.messaginggateway.rmq\Properties\AssemblyInfo.cs" />
+        <file src="src\paramore.brighter.commandprocessor.messaginggateway.rmq\RMQMessagingGateway.cs" target="src\paramore.brighter.commandprocessor.messaginggateway.rmq\RMQMessagingGateway.cs" />
+    </files>
+</package>

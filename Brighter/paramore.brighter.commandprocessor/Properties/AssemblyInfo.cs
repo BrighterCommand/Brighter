@@ -28,14 +28,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("paramore.commandprocessor")]
-[assembly: AssemblyDescription("")]
-[assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("paramore.commandprocessor")]
-[assembly: AssemblyCopyright("Copyright ©  2011")]
-[assembly: AssemblyTrademark("")]
-[assembly: AssemblyCulture("")]
+[assembly: AssemblyTitle("paramore.brighter.commandprocessor")]
+[assembly: AssemblyDescription("The Command Dispatchter pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers")]
+[assembly: AssemblyConfiguration("Debug")]
+[assembly: AssemblyCompany("Ian Cooper")]
+[assembly: AssemblyProduct("paramore.brighter.commandprocessor")]
+[assembly: AssemblyCopyright("Copyright ©  2014 Ian Cooper")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 
