@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/01/nuspec.xsd">
+    <metadata minClientVersion="4.5">
+        <id>Paramore.Brighter.CommandProcessor.ExceptionPolicy</id>
+        <version>1.0.0-alpha</version>
+        <title>Paramore.Brighter.CommandProcessor.ExceptionPolicy</title>
+        <authors>Ian Cooper</authors>
+        <owners>Ian Cooper</owners>
+        <licenseUrl>http://ianhammondcooper.mit-license.org/</licenseUrl>
+        <projectUrl>http://iancooper.github.io/Paramore/</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>Brighter is a .NET implementation of the Command Processor and Command Dispatcher patterns. It decouples invoker from target and provides common services to the command pipeline.</description>
+        <summary>Provides an integration between Polly's declarative exception policy (retry and circuit breaker) and the Brighter pipeline, allowing declaration of policy on handlers for exceptions.</summary>
+        <releaseNotes>Early alpha, intended to support Progressive.NET 2014 release, updates to follow</releaseNotes>
+        <copyright>Copyright ©  Ian Cooper 2014</copyright>
+        <language>en-GB</language>
+        <tags>.NET</tags>
+        <dependencies>
+            <dependency id="CommonServiceLocator" version="1.2" />
+            <dependency id="Polly" version="2.0.0" />
+        </dependencies>
+    </metadata>
+    <files>
+        <file src="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll" target="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll" />
+        <file src="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.pdb" target="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.pdb" />
+        <file src="src\Attributes\UsePolicyAtttribute.cs" target="src\Attributes\UsePolicyAtttribute.cs" />
+        <file src="src\Handlers\ExceptionPolicyHandler.cs" target="src\Handlers\ExceptionPolicyHandler.cs" />
+        <file src="src\Properties\AssemblyInfo.cs" target="src\Properties\AssemblyInfo.cs" />
+    </files>
+</package>
