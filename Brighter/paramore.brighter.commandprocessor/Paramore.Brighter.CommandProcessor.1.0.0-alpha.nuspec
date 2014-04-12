@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://schemas.microsoft.com/packaging/2013/01/nuspec.xsd">
-    <metadata minClientVersion="4.5">
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+    <metadata>
         <id>Paramore.Brighter.CommandProcessor</id>
         <version>1.0.0-alpha</version>
         <title>Paramore.Brighter.CommandProcessor</title>
