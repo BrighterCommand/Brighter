@@ -26,6 +26,7 @@
         </frameworkAssemblies>
     </metadata>
     <files>
+        <file src="web.config.install.xdt" target="content\web.config.install.xdt" />
         <file src="lib\net45\paramore.brighter.commandprocessor.dll" target="lib\net45\paramore.brighter.commandprocessor.dll" />
         <file src="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" />
         <file src="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.pdb" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.pdb" />
