@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="web.config.install.xdt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
