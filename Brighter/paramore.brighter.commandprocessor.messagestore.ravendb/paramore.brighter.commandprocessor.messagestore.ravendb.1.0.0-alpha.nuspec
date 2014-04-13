@@ -1,32 +1,29 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
     <metadata>
-        <id>paramore.brighter.commandprocessor.messaginggateway.rmq</id>
+        <id>paramore.brighter.commandprocessor.messagestore.ravendb</id>
         <version>1.0.0-alpha</version>
-        <title>paramore.brighter.commandprocessor.messaginggateway.0mq</title>
+        <title>paramore.brighter.commandprocessor.messagestore.ravendb</title>
         <authors>Ian Cooper</authors>
         <owners>Ian Cooper</owners>
         <licenseUrl>http://ianhammondcooper.mit-license.org/</licenseUrl>
         <projectUrl>http://iancooper.github.io/Paramore</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>The Command Dispatchter pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers</description>
-        <summary>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter.CommandProcessor pipeline, using RabbitMQ</summary>
+        <summary>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter.CommandProcessor, using RavenDB</summary>
         <releaseNotes>This is an early alpha intended to support Progressive.NET 2014. Further releases to follow</releaseNotes>
         <copyright>Copyright ©  2014 Ian Cooper</copyright>
+        <language>en-GB</language>
+        <tags>.NET</tags>
         <dependencies>
-            <dependency id="RabbitMQ.Client" version="3.2.4" />
-            <dependency id="CommonServiceLocator" version="1.2" />
-            <dependency id="Polly" version="2.0.0" />
+            <dependency id="RavenDB.Client" version="2.5.2851" />
             <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />
-            <frameworkAssembly assemblyName="System.Configuration" targetFramework="" />
         </frameworkAssemblies>
     </metadata>
     <files>
-        <file src="content\web.config.install.xdt" target="content\web.config.install.xdt" />
-        <file src="lib\net45\paramore.brighter.commandprocessor.dll" target="lib\net45\paramore.brighter.commandprocessor.dll" />
-        <file src="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" />
+        <file src="lib\net45\paramore.brighter.commandprocessor.messagestore.ravendb.dll" target="lib\net45\paramore.brighter.commandprocessor.messagestore.ravendb.dll" />
     </files>
 </package>
