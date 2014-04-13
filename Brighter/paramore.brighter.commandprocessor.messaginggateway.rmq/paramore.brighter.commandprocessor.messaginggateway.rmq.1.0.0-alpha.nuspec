@@ -17,6 +17,7 @@
             <dependency id="RabbitMQ.Client" version="3.2.4" />
             <dependency id="CommonServiceLocator" version="1.2" />
             <dependency id="Polly" version="2.0.0" />
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />
@@ -24,7 +25,8 @@
         </frameworkAssemblies>
     </metadata>
     <files>
-        <file src="web.config.install.xdt" target="content\web.config.install.xdt" />
+        <file src="content\web.config.install.xdt" target="content\web.config.install.xdt" />
+        <file src="web.config.uninstall.xdt" target="content\web.config.uninstall.xdt" />
         <file src="lib\net45\paramore.brighter.commandprocessor.dll" target="lib\net45\paramore.brighter.commandprocessor.dll" />
         <file src="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" />
     </files>

@@ -46,6 +46,7 @@
     <Compile Include="RMQMessagingGateway.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="web.config.uninstall.xdt" />
     <None Include="packages.config" />
     <None Include="web.config.install.xdt" />
   </ItemGroup>

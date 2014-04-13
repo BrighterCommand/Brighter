@@ -15,6 +15,9 @@
         <copyright>Copyright ©  2014 Ian Cooper</copyright>
         <language>en-GB</language>
         <tags>.NET</tags>
+        <dependencies>
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha" />
+        </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />
         </frameworkAssemblies>
