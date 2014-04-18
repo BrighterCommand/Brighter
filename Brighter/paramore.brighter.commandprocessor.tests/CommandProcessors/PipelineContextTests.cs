@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
+using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
 using TinyIoC;
@@ -73,7 +74,9 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
             A.CallTo(() => requestContextFactory.Create(container)).Returns(request_context);
 
-            commandProcessor = new CommandProcessor(container, requestContextFactory);
+            var logger = A.Fake<ILog>();
+
+            commandProcessor = new CommandProcessor(container, requestContextFactory, logger);
 
             request_context.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
         };

@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using Common.Logging;
+using FakeItEasy;
 using Machine.Specifications;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
@@ -41,10 +43,11 @@ namespace paramore.commandprocessor.tests.Timeout
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             //Handler is decorated with UsePolicy and fails with divide by zero error
             container.Register<IHandleRequests<MyCommand>, MyFailsDueToTimeoutHandler>().AsMultiInstance();
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
             MyFailsDueToTimeoutHandler.WasCancelled = false;
             MyFailsDueToTimeoutHandler.TaskCompleted = false;
@@ -66,10 +69,11 @@ namespace paramore.commandprocessor.tests.Timeout
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             //Handler is decorated with UsePolicy and fails with divide by zero error
             container.Register<IHandleRequests<MyCommand>, MyPassesTimeoutHandler>().AsMultiInstance();
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
         };
 
