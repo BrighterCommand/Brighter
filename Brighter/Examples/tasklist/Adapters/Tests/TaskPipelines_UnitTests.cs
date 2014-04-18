@@ -1,4 +1,5 @@
 ﻿using System;
+using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
@@ -24,6 +25,7 @@ namespace Tasklist.Adapters.Tests
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
             traceOutput = A.Fake<ITraceOutput>();
@@ -33,7 +35,7 @@ namespace Tasklist.Adapters.Tests
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ITraceOutput, ITraceOutput>(traceOutput);
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
             cmd = new AddTaskCommand("Test task", null);
         };
@@ -56,6 +58,7 @@ namespace Tasklist.Adapters.Tests
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
             traceOutput = A.Fake<ITraceOutput>();
@@ -65,7 +68,7 @@ namespace Tasklist.Adapters.Tests
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ITraceOutput, ITraceOutput>(traceOutput);
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
             cmd = new AddTaskCommand(null, "Test that we store a task");
         };
@@ -86,6 +89,7 @@ namespace Tasklist.Adapters.Tests
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
             traceOutput = A.Fake<ITraceOutput>();
@@ -95,7 +99,7 @@ namespace Tasklist.Adapters.Tests
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ITraceOutput, ITraceOutput>(traceOutput);
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
             cmd = new AddTaskCommand("Test task", "Test that we store a task", DateTime.Now);
         };
@@ -114,6 +118,7 @@ namespace Tasklist.Adapters.Tests
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
             traceOutput = A.Fake<ITraceOutput>();
@@ -123,7 +128,7 @@ namespace Tasklist.Adapters.Tests
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ITraceOutput, ITraceOutput>(traceOutput);
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
             cmd = new AddTaskCommand("Test task", "Test that we store a task");
         };

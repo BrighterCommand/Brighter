@@ -1,4 +1,5 @@
 using System;
+using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
 using Tasklist.Adapters.DataAccess;
@@ -27,10 +28,11 @@ namespace Tasklist.Adapters.Tests
             container.Register<ITraceOutput, ConsoleTrace>();
             requestContext = new RequestContext(container);
 
+            var logger = A.Fake<ILog>();
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
             A.CallTo(() => requestContextFactory.Create(container)).Returns(requestContext);
 
-            commandProcessor = new CommandProcessor(container, requestContextFactory);
+            commandProcessor = new CommandProcessor(container, requestContextFactory, logger);
 
             cmd = new AddTaskCommand("New Task", "Test that we store a task", DateTime.Now.AddDays(3));
 

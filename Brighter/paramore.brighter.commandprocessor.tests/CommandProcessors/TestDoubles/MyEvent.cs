@@ -32,7 +32,5 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         {
             Id = Guid.NewGuid();
         }
-
-        public Guid Id { get; private set; }
     }
 }

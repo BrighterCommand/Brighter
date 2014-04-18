@@ -22,6 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Common.Logging;
+using FakeItEasy;
 using FluentAssertions;
 using Machine.Specifications;
 using Polly;
@@ -43,6 +45,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             //Handler is decorated with UsePolicy and fails with divide by zero error
             container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsMultiInstance();
@@ -61,7 +64,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
 
             MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
         };
 
@@ -81,6 +84,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             //Handler is decorated with UsePolicy and fails with divide by zero error
             container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler >().AsMultiInstance();
@@ -99,7 +103,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
 
             MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
         };
 
@@ -121,6 +125,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             //Handler is decorated with UsePolicy and fails with divide by zero error
             container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsMultiInstance();
@@ -132,7 +137,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
 
             MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory());
+            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
         };
 

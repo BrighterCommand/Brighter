@@ -22,9 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
+using Common.Logging;
 using Polly;
 using paramore.brighter.commandprocessor.extensions;
 
@@ -34,6 +33,7 @@ namespace paramore.brighter.commandprocessor
     {
         readonly IAdaptAnInversionOfControlContainer container;
         readonly IAmARequestContextFactory requestContextFactory;
+        readonly ILog logger;
         readonly IAmAMessageStore<Message> messageStore;
         readonly IAmAMessagingGateway messagingGateway;
         readonly Policy retryPolicy;
@@ -41,10 +41,11 @@ namespace paramore.brighter.commandprocessor
         public const string CIRCUITBREAKER = "Paramore.Brighter.CommandProcessor.CircuitBreaker";
         public const string RETRYPOLICY = "Paramore.Brighter.CommandProcessor.RetryPolicy";
 
-        public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory)
+        public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory, ILog logger)
         {
             this.container = container;
             this.requestContextFactory = requestContextFactory;
+            this.logger = logger;
         }
 
         public CommandProcessor(
@@ -53,8 +54,9 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageStore<Message> messageStore, 
             IAmAMessagingGateway messagingGateway,
             Policy retryPolicy,
-            Policy circuitBreakerPolicy)
-            :this(container, requestContextFactory)
+            Policy circuitBreakerPolicy, 
+            ILog logger)
+            :this(container, requestContextFactory, logger)
         {
             this.messageStore = messageStore;
             this.messagingGateway = messagingGateway;
@@ -68,10 +70,13 @@ namespace paramore.brighter.commandprocessor
             using (var builder = new PipelineBuilder<T>(container))
             {
                 var requestContext = requestContextFactory.Create(container);
+
+                logger.Info(m => m("Building send pipeline for command: {0}", command.Id));
                 var handlerChain = builder.Build(requestContext);
 
                 var handlerCount = handlerChain.Count();
 
+                logger.Info(m => m("Found {0} pipelines for command: {1}", handlerCount, command.Id));
                 if (handlerCount > 1)
                     throw new ArgumentException(string.Format("More than one handler was found for the typeof command {0} - a command should only have one handler.", typeof (T)));
                 if (handlerCount == 0)
@@ -86,7 +91,13 @@ namespace paramore.brighter.commandprocessor
             using (var builder = new PipelineBuilder<T>(container))
             {
                 var requestContext = new RequestContext(container);
+
+                logger.Info(m => m("Building send pipeline for command: {0}", @event.Id));
                 var handlerChain = builder.Build(requestContext);
+
+                var handlerCount = handlerChain.Count();
+
+                logger.Info(m => m("Found {0} pipelines for command: {0}", handlerCount, @event.Id));
 
                 handlerChain.Each(chain => chain.Handle(@event));
             }
@@ -96,6 +107,8 @@ namespace paramore.brighter.commandprocessor
 
         public void Post<T>(T request) where T : class, IRequest
         {
+            logger.Info(m => m("Decoupled invocation of request: {0}", request.Id));
+
             var messageMapper = container.GetInstance<IAmAMessageMapper<T, Message>>();
             var message = messageMapper.Map(request);
             RetryAndBreakCircuit(() =>
@@ -107,6 +120,9 @@ namespace paramore.brighter.commandprocessor
 
         public void Repost(Guid messageId)
         {
+            var requestedMessageid = messageId; //avoid closure on this
+            logger.Info(m => m("Resend of request: {0}", requestedMessageid));
+
             RetryAndBreakCircuit(() =>
                 { 
                     var task = messageStore.Get(messageId);

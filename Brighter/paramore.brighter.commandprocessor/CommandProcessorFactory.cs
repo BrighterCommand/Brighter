@@ -1,4 +1,5 @@
-﻿using Polly;
+﻿using Common.Logging;
+using Polly;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -18,6 +19,7 @@ namespace paramore.brighter.commandprocessor
             var messagingGateway = container.GetInstance<IAmAMessagingGateway>();
             var retryPolicy = container.GetInstance<Policy>(CommandProcessor.RETRYPOLICY);
             var circuitBreakerPolicy = container.GetInstance<Policy>(CommandProcessor.CIRCUITBREAKER);
+            var logger = container.GetInstance<ILog>();
 
             return new CommandProcessor(
                 container: container,
@@ -25,7 +27,8 @@ namespace paramore.brighter.commandprocessor
                 messageStore: messageStore,
                 messagingGateway: messagingGateway,
                 retryPolicy: retryPolicy,
-                circuitBreakerPolicy: circuitBreakerPolicy);
+                circuitBreakerPolicy: circuitBreakerPolicy,
+                logger: logger);
         }
     }
 }
