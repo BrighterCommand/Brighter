@@ -1,31 +1,32 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://schemas.microsoft.com/packaging/2013/01/nuspec.xsd">
-    <metadata minClientVersion="4.5">
-        <id>Paramore.Brighter.CommandProcessor.ExceptionPolicy</id>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+    <metadata>
+        <id>Paramore.Brighter.CommandProcessor</id>
         <version>1.0.0-alpha</version>
-        <title>Paramore.Brighter.CommandProcessor.ExceptionPolicy</title>
+        <title>Paramore.Brighter.CommandProcessor</title>
         <authors>Ian Cooper</authors>
         <owners>Ian Cooper</owners>
-        <licenseUrl>http://ianhammondcooper.mit-license.org/</licenseUrl>
+        <licenseUrl>http://ianhammondcooper.mit-license.org</licenseUrl>
         <projectUrl>http://iancooper.github.io/Paramore/</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <description>Brighter is a .NET implementation of the Command Processor and Command Dispatcher patterns. It decouples invoker from target and provides common services to the command pipeline.</description>
-        <summary>Provides an integration between Polly's declarative exception policy (retry and circuit breaker) and the Brighter pipeline, allowing declaration of policy on handlers for exceptions.</summary>
+        <description>The Command Dispatchter pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers</description>
+        <summary>Brighter is a .NET implementation of the Command Processor and Command Dispatcher patterns. It decouples invoker from target and provides common services to the command pipeline.</summary>
         <releaseNotes>Early alpha, intended to support Progressive.NET 2014 release, updates to follow</releaseNotes>
-        <copyright>Copyright ©  Ian Cooper 2014</copyright>
+        <copyright>Ian Cooper 2013</copyright>
         <language>en-GB</language>
-        <tags>4.5</tags>
+        <tags>.NET</tags>
         <dependencies>
-            <dependency id="CommonServiceLocator" version="1.2" />
             <dependency id="Polly" version="2.0.0" />
-            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha" />
+            <dependency id="CommonServiceLocator" version="1.2" />
+            <dependency id="Common.Logging" version="2.2.0" />
         </dependencies>
         <frameworkAssemblies>
+            <frameworkAssembly assemblyName="Microsoft.CSharp" targetFramework="" />
             <frameworkAssembly assemblyName="System" targetFramework="" />
+            <frameworkAssembly assemblyName="System.Core" targetFramework="" />
         </frameworkAssemblies>
     </metadata>
     <files>
-        <file src="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll" target="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll" />
-        <file src="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.pdb" target="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.pdb" />
+        <file src="lib\net45\paramore.commandprocessor.dll" target="lib\net45\paramore.commandprocessor.dll" />
     </files>
 </package>
