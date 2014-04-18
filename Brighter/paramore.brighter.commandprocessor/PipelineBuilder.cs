@@ -24,19 +24,22 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Common.Logging;
 
 namespace paramore.brighter.commandprocessor
 {
     internal class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest> where TRequest : class, IRequest
     {
         private readonly IAdaptAnInversionOfControlContainer container;
+        private readonly ILog logger;
         private readonly Interpreter<TRequest> interpreter;
         private readonly IDisposable instanceScope;
         private readonly IList<IHandleRequests<TRequest>> decorators = new List<IHandleRequests<TRequest>>(); 
 
-        public PipelineBuilder(IAdaptAnInversionOfControlContainer  container)
+        public PipelineBuilder(IAdaptAnInversionOfControlContainer  container, ILog logger)
         {
             this.container = container;
+            this.logger = logger;
             instanceScope = container.CreateLifetime();
             interpreter = new Interpreter<TRequest>(container);
         }
@@ -78,6 +81,7 @@ namespace paramore.brighter.commandprocessor
                 .OrderByDescending(attribute => attribute.Step);
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext);
+            logger.Info(m => m("New handler pipeline created: {0}", TracePipeline(firstInPipeline)));
             return firstInPipeline;
         }
 
@@ -103,6 +107,13 @@ namespace paramore.brighter.commandprocessor
                 lastInPipeline = decorator;
             }
             return lastInPipeline;
+        }
+
+        private PipelineTracer TracePipeline(IHandleRequests<TRequest> firstInPipeline)
+        {
+            var pipelineTracer = new PipelineTracer();
+            firstInPipeline.DescribePath(pipelineTracer);
+            return pipelineTracer;
         }
 
         public void Dispose()

@@ -41,11 +41,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
             request_context = new RequestContext(container);
 
-            Chain_Builder = new PipelineBuilder<MyCommand>(container);
+            Chain_Builder = new PipelineBuilder<MyCommand>(container, logger);
         };
 
         Because of = () => Chain_Of_Responsibility = Chain_Builder.Build(request_context).First();
