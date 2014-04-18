@@ -162,6 +162,7 @@
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithDivideByZeroHandler.cs" />
     <Compile Include="IoCContainers\TinyIoCContainerFixture.cs" />
     <Compile Include="ExceptionPolicy\PolicyDecoratorTests.cs" />
+    <Compile Include="MessageDispatcher\MessageDispatchFixture.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreFactoryTests.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
@@ -202,9 +203,7 @@
     </None>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="MessageDispatcher\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

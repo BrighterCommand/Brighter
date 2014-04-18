@@ -22,6 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
+using Common.Logging;
+using FakeItEasy;
 using Machine.Specifications;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
@@ -39,10 +41,11 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             Container = new TinyIoCAdapter(new TinyIoCContainer());
             Container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();            
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container); 
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container, logger); 
         };
 
         Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
@@ -67,13 +70,14 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             Container = new TinyIoCAdapter(new TinyIoCContainer());
 
             Container.Register<IUnitOfWork, FakeSession>().AsMultiInstance();
             Container.Register<IRepository<MyAggregate>, FakeRepository<MyAggregate>>().AsMultiInstance();
             Container.Register<IHandleRequests<MyCommand>, MyDependentCommandHandler>().AsMultiInstance();
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container, logger);
         };
 
         Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
@@ -98,10 +102,11 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             Container = new TinyIoCAdapter(new TinyIoCContainer());
             Container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>().AsMultiInstance();
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container, logger);
         };
 
         Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
@@ -126,9 +131,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             Container = new TinyIoCAdapter(new TinyIoCContainer());
             Container.Register<IHandleRequests<MyCommand>, MyDoubleDecoratedHandler>().AsMultiInstance();
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container, logger);
         };
 
         Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
@@ -152,9 +158,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             Container = new TinyIoCAdapter(new TinyIoCContainer());
             Container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsMultiInstance();
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container, logger);
         };
 
         Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
@@ -179,9 +186,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             Container = new TinyIoCAdapter(new TinyIoCContainer());
             Container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsMultiInstance();
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container, logger);
             Pipeline_Builder.Build(new RequestContext(Container)).First();
             trackedItemCount = Container.TrackedItemCount;
             decoratorCount = Pipeline_Builder.Decorators.Count();
@@ -206,9 +214,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             Container = new TinyIoCAdapter(new TinyIoCContainer());
             Container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsSingleton();
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container);
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container, logger);
             Pipeline_Builder.Build(new RequestContext(Container)).First();
             trackedItemCount = Container.TrackedItemCount;
         };

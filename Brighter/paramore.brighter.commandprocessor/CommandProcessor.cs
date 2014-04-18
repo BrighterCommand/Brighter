@@ -67,7 +67,7 @@ namespace paramore.brighter.commandprocessor
 
         public void Send<T>(T command) where T : class, IRequest
         {
-            using (var builder = new PipelineBuilder<T>(container))
+            using (var builder = new PipelineBuilder<T>(container, logger))
             {
                 var requestContext = requestContextFactory.Create(container);
 
@@ -88,7 +88,7 @@ namespace paramore.brighter.commandprocessor
 
         public void Publish<T>(T @event) where T : class, IRequest
         {
-            using (var builder = new PipelineBuilder<T>(container))
+            using (var builder = new PipelineBuilder<T>(container, logger))
             {
                 var requestContext = new RequestContext(container);
 
