@@ -16,8 +16,8 @@
     <div class="wrapper">
       <header>
         <h1>Paramore</h1>
-        <p>A web site for hosting user group meetings (more about practicing some techniques than intended to be re-usable by others.)</p>
-        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+          <p>Explorations in architectural styles for .NET, Intended as reusable libraries, demos for training, and self-exploration</p>
+          <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
         <ul>
           <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
           <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
@@ -26,7 +26,7 @@
       </header>
       <section>
         <h1>Paramore</h1>
-        <p>Paramore is a collection of projects whose main purpose is to supplement talks or blog posts. </p>
+        <p>Paramore is a collection of projects whose main purpose is to explore architectural styles in .NET. It contains reusable libraries, though its main intention is to supplement talks or blog posts with example code. It is also a place for me to explore various ideas in .NET acrchitectural styles. </p>
 
         <p>I often find that both of these suffer from the lack of my ability to provide an example that attendees
         or readers can explore in more depth when the presentation is finished or they have read the blog post. </p>
@@ -35,7 +35,7 @@
 
         <ul>
         <li>
-        <strong><a href="Brighter.html">Brighter</a></a></strong>: Harvested from Rewind, this project is a Command Processor implementation that can be reused in other projects. It defaults to using TinyIoC as an IoC container to resolve handlers, but this dependency is abstracted to allow other IoC containers. </li>
+        <strong><a href="Brighter.html">Brighter</a></a></strong>: Harvested from Rewind, this project is a Command Processor & Dispatcher implementation that can be reused in other projects. It defaults to using TinyIoC as an IoC container to resolve handlers, Rabbit MQ for messaging, and Raven DB as a message store but these dependencies is abstracted to allow other implementations. </li>
         <li>
         <strong>Rewind</strong>: A project demonstrating the CQRS architectural pattern and the use of DDD to create a domain model. The project also uses RavenDb as a backing store - partially to show the affinity between aggregates and document databases. In addition the project uses OpenRasta to expose functionality as a REST endpoing and an SPA to provide web access.</li>
         <li>
