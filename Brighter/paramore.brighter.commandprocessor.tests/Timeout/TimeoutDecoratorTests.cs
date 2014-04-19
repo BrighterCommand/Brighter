@@ -47,6 +47,7 @@ namespace paramore.commandprocessor.tests.Timeout
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             //Handler is decorated with UsePolicy and fails with divide by zero error
             container.Register<IHandleRequests<MyCommand>, MyFailsDueToTimeoutHandler>().AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
             MyFailsDueToTimeoutHandler.WasCancelled = false;
@@ -71,8 +72,9 @@ namespace paramore.commandprocessor.tests.Timeout
         {
             var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
-            //Handler is decorated with UsePolicy and fails with divide by zero error
+            //Handler is decorated with UsePolicy 
             container.Register<IHandleRequests<MyCommand>, MyPassesTimeoutHandler>().AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
         };

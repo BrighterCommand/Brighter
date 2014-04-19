@@ -1,4 +1,5 @@
-﻿using Tasklist.Adapters.DataAccess;
+﻿using Common.Logging;
+using Tasklist.Adapters.DataAccess;
 using Tasklist.Domain;
 using Tasklist.Ports.Commands;
 using paramore.brighter.commandprocessor;
@@ -10,12 +11,12 @@ namespace Tasklist.Ports.Handlers
     {
         private readonly ITasksDAO tasksDAO;
 
-        public AddTaskCommandHandler(ITasksDAO tasksDAO)
+        public AddTaskCommandHandler(ITasksDAO tasksDAO, ILog logger): base(logger)
         {
             this.tasksDAO = tasksDAO;
         }
 
-        [Trace(step:1, timing: HandlerTiming.Before)]
+        [RequestLogging(step:1, timing: HandlerTiming.Before)]
         [Validation(step: 2, timing: HandlerTiming.Before)]
         [TimeoutPolicy(step: 3, milliseconds: 300)]
         public override AddTaskCommand Handle(AddTaskCommand addTaskCommand)

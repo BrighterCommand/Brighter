@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.timeoutpolicy.Attributes;
 using paramore.brighter.commandprocessor.timeoutpolicy.Handlers;
@@ -32,6 +33,9 @@ namespace paramore.commandprocessor.tests.Timeout.TestDoubles
 {
     internal class MyFailsDueToTimeoutHandler: RequestHandler<MyCommand>
     {
+        public MyFailsDueToTimeoutHandler(ILog logger) : base(logger)
+        {}
+
         public static bool WasCancelled { get; set; }
         public static bool TaskCompleted { get; set; }
 

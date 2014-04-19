@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
@@ -29,7 +30,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
     {
         private static MyEvent receivedEvent;
 
-        public MyOtherEventHandler()
+        public MyOtherEventHandler(ILog logger) : base(logger)
         {
             receivedEvent = null;
         }

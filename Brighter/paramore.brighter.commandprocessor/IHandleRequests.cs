@@ -30,5 +30,6 @@ namespace paramore.brighter.commandprocessor
         TRequest Handle(TRequest command);
         void InitializeFromAttributeParams(params object[] initializerList);
         IHandleRequests<TRequest> Successor { set; }
+        HandlerName Name { get; }
     }
 }

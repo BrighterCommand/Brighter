@@ -22,13 +22,14 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Common.Logging;
 
 namespace paramore.brighter.commandprocessor
 {
     public interface IManageLifetimes
     {
         //Manage Lifetimes. Anything created within the scope, should be released on dispose (isntance or singleton)
-        IDisposable CreateLifetime();
+        IDisposable CreateLifetime(ILog logger = null);
         int TrackedItemCount { get; }
 
     }

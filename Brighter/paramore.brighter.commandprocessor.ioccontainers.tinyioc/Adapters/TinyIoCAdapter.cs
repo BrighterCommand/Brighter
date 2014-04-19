@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Common.Logging;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.ioccontainers.Adapters

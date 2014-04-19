@@ -1,4 +1,5 @@
 using System;
+using Common.Logging;
 using Tasklist.Adapters.DataAccess;
 using Tasklist.Domain;
 using Tasklist.Ports.Commands;
@@ -11,12 +12,12 @@ namespace Tasklist.Ports.Handlers
     {
         readonly ITasksDAO tasksDAO;
 
-        public CompleteTaskCommandHandler(ITasksDAO tasksDao)
+        public CompleteTaskCommandHandler(ITasksDAO tasksDao, ILog logger) : base(logger)
         {
             tasksDAO = tasksDao;
         }
 
-        [Trace(step:1, timing: HandlerTiming.Before)]
+        [RequestLogging(step:1, timing: HandlerTiming.Before)]
         [Validation(step: 2, timing: HandlerTiming.Before)]
         [TimeoutPolicy(step: 3, milliseconds: 300)]
         public override CompleteTaskCommand Handle(CompleteTaskCommand completeTaskCommand)

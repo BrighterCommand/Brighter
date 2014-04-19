@@ -4,10 +4,8 @@ using FakeItEasy;
 using Machine.Specifications;
 using Tasklist.Adapters.DataAccess;
 using Tasklist.Domain;
-using Tasklist.Ports;
 using Tasklist.Ports.Commands;
 using Tasklist.Ports.Handlers;
-using Tasklist.Utilities;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.ioccontainers.Adapters;
@@ -25,7 +23,7 @@ namespace Tasklist.Adapters.Tests
             IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<ITasksDAO, TasksDAO>();
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
-            container.Register<ITraceOutput, ConsoleTrace>();
+            container.Register<ILog, ILog>(A.Fake<ILog>());
             requestContext = new RequestContext(container);
 
             var logger = A.Fake<ILog>();

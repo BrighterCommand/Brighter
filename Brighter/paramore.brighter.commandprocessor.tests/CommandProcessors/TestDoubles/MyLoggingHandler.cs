@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
@@ -31,7 +32,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         private TRequest command;
         public static bool DisposeWasCalled { get; set; }
 
-        public MyLoggingHandler()
+        public MyLoggingHandler(ILog logger) :base(logger)
         {
             command = null;
             DisposeWasCalled = false;

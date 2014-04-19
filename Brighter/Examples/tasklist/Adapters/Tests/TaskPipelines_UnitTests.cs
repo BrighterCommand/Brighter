@@ -20,7 +20,6 @@ namespace Tasklist.Adapters.Tests
         static AddTaskCommand cmd;
         static IAmACommandProcessor commandProcessor;
         static ITasksDAO tasksDAO;
-        static ITraceOutput traceOutput;
         static Exception exception;
 
         Establish context = () =>
@@ -28,12 +27,12 @@ namespace Tasklist.Adapters.Tests
             var logger = A.Fake<ILog>();
             tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
-            traceOutput = A.Fake<ITraceOutput>();
+            var log = A.Fake<ILog>();
 
             IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
-            container.Register<ITraceOutput, ITraceOutput>(traceOutput);
+            container.Register<ILog, ILog>(log);
 
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
@@ -53,7 +52,6 @@ namespace Tasklist.Adapters.Tests
         static AddTaskCommand cmd;
         static IAmACommandProcessor commandProcessor;
         static ITasksDAO tasksDAO;
-        static ITraceOutput traceOutput;
         static Exception exception;
 
         Establish context = () =>
@@ -61,12 +59,12 @@ namespace Tasklist.Adapters.Tests
             var logger = A.Fake<ILog>();
             tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
-            traceOutput = A.Fake<ITraceOutput>();
+            var log = A.Fake<ILog>();
 
             IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
-            container.Register<ITraceOutput, ITraceOutput>(traceOutput);
+            container.Register<ILog, ILog>(log);
 
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
@@ -85,19 +83,18 @@ namespace Tasklist.Adapters.Tests
         static AddTaskCommand cmd;
         static IAmACommandProcessor commandProcessor;
         static ITasksDAO tasksDAO;
-        static ITraceOutput traceOutput;
 
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
             tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
-            traceOutput = A.Fake<ITraceOutput>();
+            var log = A.Fake<ILog>();
 
             IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
-            container.Register<ITraceOutput, ITraceOutput>(traceOutput);
+            container.Register<ILog, ILog>(log);
 
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
@@ -114,19 +111,19 @@ namespace Tasklist.Adapters.Tests
         static AddTaskCommand cmd;
         static IAmACommandProcessor commandProcessor;
         static ITasksDAO tasksDAO;
-        static ITraceOutput traceOutput;
+        private static ILog log;
 
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
             tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
-            traceOutput = A.Fake<ITraceOutput>();
+            log = A.Fake<ILog>();
 
             IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
-            container.Register<ITraceOutput, ITraceOutput>(traceOutput);
+            container.Register<ILog, ILog>(log);
 
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
@@ -135,7 +132,7 @@ namespace Tasklist.Adapters.Tests
 
         Because of = () => commandProcessor.Send(cmd);
 
-        It should_log_the_call_before_the_command_handler = () => A.CallTo(() => traceOutput.WriteLine(string.Format("Calling handler for {0} with values of {1} at: {2}", typeof (AddTaskCommand), JsonConvert.SerializeObject(cmd), DateTime.UtcNow))).MustHaveHappened();
-        It should_add_a_call_after_the_command_handler = () => A.CallTo(() => traceOutput.WriteLine(string.Format("Finished calling handler for {0} at: {1}", typeof (AddTaskCommand), DateTime.UtcNow))).MustHaveHappened();
+        It should_log_the_call_before_the_command_handler = () => A.CallTo(() =>log.Debug(m => m("Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}", HandlerTiming.Before.ToString(), typeof (AddTaskCommand), JsonConvert.SerializeObject(cmd), DateTime.UtcNow))).MustHaveHappened();
+        It should_add_a_call_after_the_command_handler = () => A.CallTo(() =>log.Debug(m => m("Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}", HandlerTiming.After.ToString(), typeof (AddTaskCommand), JsonConvert.SerializeObject(cmd), DateTime.UtcNow))).MustHaveHappened();
     }
 }

@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
@@ -30,7 +31,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         private readonly IRepository<MyAggregate> repository;
         private static MyCommand command;
 
-        public MyDependentCommandHandler(IRepository<MyAggregate> repository)
+        public MyDependentCommandHandler(IRepository<MyAggregate> repository, ILog logger) : base(logger)
         {
             this.repository = repository;
             command = null;

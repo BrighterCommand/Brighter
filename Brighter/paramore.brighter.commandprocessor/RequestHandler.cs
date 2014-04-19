@@ -23,24 +23,35 @@ THE SOFTWARE. */
 
 using System.Linq;
 using System.Reflection;
+using Common.Logging;
 
 namespace paramore.brighter.commandprocessor
 {
     public abstract class RequestHandler<TRequest> : IHandleRequests<TRequest> where TRequest : class, IRequest
     {
+        protected readonly ILog logger;
         private IHandleRequests<TRequest> _successor;
 
+        protected RequestHandler(ILog logger)
+        {
+            this.logger = logger;
+        }
+
+        public IRequestContext Context {get; set; }
+
+        public HandlerName Name
+        {
+            get { return new HandlerName(GetType().Name); }
+        }
 
         public IHandleRequests<TRequest> Successor
         {
             set { _successor = value; }
         }
 
-        public IRequestContext Context {get; set; }
-
         public void DescribePath(IAmAPipelineTracer pathExplorer)
         {
-            pathExplorer.AddToPath(Name());
+            pathExplorer.AddToPath(Name);
             if (_successor != null)
             {
                 _successor.DescribePath(pathExplorer);
@@ -51,6 +62,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
+                logger.Debug(m => m("Passing request from {0} to {1)", Name, _successor.Name));
                 return _successor.Handle(command);
             }
 
@@ -60,10 +72,6 @@ namespace paramore.brighter.commandprocessor
             //default is just to do nothing - use this if you need to pass data from an attribute into a handler
         public virtual void InitializeFromAttributeParams(params object[] initializerList) {}
 
-        protected HandlerName Name()
-        {
-           return new HandlerName(GetType().Name);
-        }
 
         internal MethodInfo FindHandlerMethod()
         {
