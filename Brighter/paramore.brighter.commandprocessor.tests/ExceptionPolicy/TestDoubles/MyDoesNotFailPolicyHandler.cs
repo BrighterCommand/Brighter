@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.exceptionpolicy.Attributes;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
@@ -29,6 +30,9 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles
 {
     internal class MyDoesNotFailPolicyHandler : RequestHandler<MyCommand>
     {
+        public MyDoesNotFailPolicyHandler(ILog logger) : base(logger)
+        {}
+
         public static bool ReceivedCommand { get; set; }
 
         static MyDoesNotFailPolicyHandler()

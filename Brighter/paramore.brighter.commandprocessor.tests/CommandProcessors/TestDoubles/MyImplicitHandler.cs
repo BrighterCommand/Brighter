@@ -21,12 +21,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     internal class MyImplicitHandler : RequestHandler<MyCommand>
     {
+        public MyImplicitHandler(ILog logger) : base(logger)
+        {}
+
         [MyLoggingHandler(step:1)]
         public override MyCommand Handle(MyCommand command)
         {

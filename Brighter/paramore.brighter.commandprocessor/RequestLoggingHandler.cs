@@ -1,15 +1,20 @@
 ﻿using System;
 using Common.Logging;
+using Newtonsoft.Json;
 
 namespace paramore.brighter.commandprocessor
 {
     public class RequestLoggingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
-        private readonly ILog logger;
+        private HandlerTiming timing;
 
         public RequestLoggingHandler(ILog logger)
+            :base(logger)
+        {}
+
+        public override void InitializeFromAttributeParams(params object[] initializerList)
         {
-            this.logger = logger;
+            timing = (HandlerTiming)initializerList[0];
         }
 
         public override TRequest Handle(TRequest command)
@@ -20,7 +25,7 @@ namespace paramore.brighter.commandprocessor
         
         private void LogCommand(TRequest request)
         {
-            logger.Info(m => m("Logging request type {0} with request id {1) at {2}", request.GetType().ToString(), request.Id, DateTime.UtcNow));
+            logger.Info(m => m("Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}", timing.ToString(), typeof (TRequest), JsonConvert.SerializeObject(request),DateTime.UtcNow));
         }
     }
 }

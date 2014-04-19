@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.exceptionpolicy.Attributes;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
@@ -30,6 +31,9 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles
 {
    internal class MyFailsWithDivideByZeroHandler : RequestHandler<MyCommand>
     {
+       public MyFailsWithDivideByZeroHandler(ILog logger) : base(logger)
+       {}
+
        public static bool ReceivedCommand { get; set; }
 
        static MyFailsWithDivideByZeroHandler()

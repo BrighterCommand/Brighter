@@ -44,6 +44,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\CommonServiceLocator.1.2\lib\portable-windows8+net40+sl5+windowsphone8\Microsoft.Practices.ServiceLocation.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.6.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="Polly">
       <HintPath>..\packages\Polly.2.0.0\lib\net45\Polly.dll</HintPath>
     </Reference>
@@ -87,7 +90,7 @@
     <Compile Include="RequestContext.cs" />
     <Compile Include="RequestHandler.cs" />
     <Compile Include="RequestHandlerAttribute.cs" />
-    <Compile Include="RequestLoggingHandlerAttribute.cs" />
+    <Compile Include="RequestLoggingAttribute.cs" />
     <Compile Include="RequestHandlers.cs" />
     <Compile Include="RequestLoggingHandler.cs" />
     <Compile Include="TrackedServiceLocator.cs" />

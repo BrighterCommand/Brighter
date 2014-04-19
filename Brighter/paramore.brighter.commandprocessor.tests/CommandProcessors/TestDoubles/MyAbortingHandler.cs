@@ -22,12 +22,16 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     public class MyAbortingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
+        public MyAbortingHandler(ILog logger) : base(logger)
+        {}
+
         public override TRequest Handle(TRequest command)
         {
            throw new Exception("Aborting chain"); 

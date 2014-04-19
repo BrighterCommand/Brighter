@@ -1,4 +1,5 @@
 ﻿using System;
+using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
 using Tasklist.Adapters.DataAccess;
@@ -21,6 +22,7 @@ namespace Tasklist.Adapters.Tests
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             tasksDAO = A.Fake<ITasksDAO>( _ => _.Strict());
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored))
                 .Invokes(
@@ -29,7 +31,7 @@ namespace Tasklist.Adapters.Tests
 
             cmd = new AddTaskCommand(TASK_NAME, TASK_DESCRIPTION, NOW);
 
-            handler = new AddTaskCommandHandler(tasksDAO);                            
+            handler = new AddTaskCommandHandler(tasksDAO, logger);                            
         };
 
         Because of = () => handler.Handle(cmd);
@@ -55,6 +57,7 @@ namespace Tasklist.Adapters.Tests
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             taskToBeEdited = new Task(TASK_ID, "My Task", "My Task Description", DateTime.Now);   
             tasksDAO = A.Fake<ITasksDAO>(_ => _.Strict());
             A.CallTo(() => tasksDAO.FindById(TASK_ID)).Returns(taskToBeEdited);
@@ -65,7 +68,7 @@ namespace Tasklist.Adapters.Tests
 
             cmd = new EditTaskCommand(TASK_ID, NEW_TASK_NAME, NEW_TASK_DESCRIPTION, NEW_TIME);
 
-            handler = new EditTaskCommandHandler(tasksDAO);
+            handler = new EditTaskCommandHandler(tasksDAO, logger);
         };
 
         Because of = () => handler.Handle(cmd);
@@ -89,6 +92,7 @@ namespace Tasklist.Adapters.Tests
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             taskToBeCompleted = new Task(TASK_ID, "My Task", "My Task Description", DateTime.Now);   
             tasksDAO = A.Fake<ITasksDAO>(_ => _.Strict());
             A.CallTo(() => tasksDAO.FindById(TASK_ID)).Returns(taskToBeCompleted);
@@ -99,7 +103,7 @@ namespace Tasklist.Adapters.Tests
 
             cmd = new CompleteTaskCommand(TASK_ID, COMPLETION_DATE);
 
-            handler = new CompleteTaskCommandHandler(tasksDAO);                                    
+            handler = new CompleteTaskCommandHandler(tasksDAO, logger);                                    
         };
 
         Because of = () => handler.Handle(cmd);
@@ -121,11 +125,12 @@ namespace Tasklist.Adapters.Tests
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             tasksDAO = A.Fake<ITasksDAO>(_ => _.Strict());
             A.CallTo(() => tasksDAO.FindById(TASK_ID)).Returns(null);
             cmd = new CompleteTaskCommand(TASK_ID, COMPLETION_DATE);
 
-            handler = new CompleteTaskCommandHandler(tasksDAO);                                    
+            handler = new CompleteTaskCommandHandler(tasksDAO, logger);                                    
         };
 
         Because of = () => exception = Catch.Exception(() => handler.Handle(cmd));

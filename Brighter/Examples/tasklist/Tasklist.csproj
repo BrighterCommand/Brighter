@@ -49,9 +49,15 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Common.Logging.Core.2.2.0\lib\net40\Common.Logging.Core.dll</HintPath>
     </Reference>
+    <Reference Include="Common.Logging.Log4Net">
+      <HintPath>..\..\packages\Common.Logging.Log4Net.2.0.1\lib\net20\Common.Logging.Log4Net.dll</HintPath>
+    </Reference>
     <Reference Include="FakeItEasy, Version=1.18.0.0, Culture=neutral, PublicKeyToken=eff28e2146d5fd2c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\FakeItEasy.1.18.0\lib\net40\FakeItEasy.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net">
+      <HintPath>..\..\packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Machine.Specifications, Version=0.7.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -117,9 +123,6 @@
     <Compile Include="Ports\Handlers\AddTaskCommandHandler.cs" />
     <Compile Include="Ports\Handlers\CompleteTaskCommandHandler.cs" />
     <Compile Include="Ports\Handlers\EditTaskCommandHandler.cs" />
-    <Compile Include="Ports\ITraceOutput.cs" />
-    <Compile Include="Ports\TraceAttribute.cs" />
-    <Compile Include="Ports\Handlers\TraceHandler.cs" />
     <Compile Include="Ports\ValidationAttribute.cs" />
     <Compile Include="Ports\Handlers\ValidationHandler.cs" />
     <Compile Include="Domain\Task.cs" />
@@ -132,7 +135,6 @@
     <Compile Include="Adapters\Tests\TaskPipelinesFixture.cs" />
     <Compile Include="Adapters\Tests\TaskPipelines_UnitTests.cs" />
     <Compile Include="Adapters\API\Handlers\TaskEndPointHandler.cs" />
-    <Compile Include="Utilities\ConsoleTrace.cs" />
     <Compile Include="Ports\ViewModelRetrievers\ITaskListRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\SimpleDataRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\TaskListRetriever.cs" />

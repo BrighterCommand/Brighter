@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Common.Logging;
 using Polly;
 
 namespace paramore.brighter.commandprocessor.exceptionpolicy.Handlers
@@ -29,6 +30,9 @@ namespace paramore.brighter.commandprocessor.exceptionpolicy.Handlers
     class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         private Policy policy;
+
+        public ExceptionPolicyHandler(ILog logger) : base(logger)
+        {}
 
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {

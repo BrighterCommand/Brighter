@@ -1,3 +1,4 @@
+using Common.Logging;
 using Tasklist.Adapters.DataAccess;
 using Tasklist.Domain;
 using Tasklist.Ports.Commands;
@@ -10,12 +11,12 @@ namespace Tasklist.Ports.Handlers
     {
         private readonly ITasksDAO tasksDAO;
 
-        public EditTaskCommandHandler(ITasksDAO tasksDAO)
+        public EditTaskCommandHandler(ITasksDAO tasksDAO, ILog logger) : base(logger)
         {
             this.tasksDAO = tasksDAO;
         }
 
-        [Trace(step:1, timing: HandlerTiming.Before)]
+        [RequestLogging(step:1, timing: HandlerTiming.Before)]
         [Validation(step: 2, timing: HandlerTiming.Before)]
         [TimeoutPolicy(step: 3, milliseconds: 300)]
         public override EditTaskCommand Handle(EditTaskCommand editTaskCommand)

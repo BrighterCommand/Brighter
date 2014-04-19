@@ -1,3 +1,4 @@
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
@@ -6,7 +7,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
     {
         private static MyCommand command;
 
-        public MyCommandHandler()
+        public MyCommandHandler(ILog logger)
+            :base(logger)
         {
             command = null;
         }

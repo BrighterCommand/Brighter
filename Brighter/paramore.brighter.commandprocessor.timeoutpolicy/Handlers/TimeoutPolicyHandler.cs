@@ -61,6 +61,7 @@ THE SOFTWARE.
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Common.Logging;
 
 
 namespace paramore.brighter.commandprocessor.timeoutpolicy.Handlers
@@ -69,6 +70,9 @@ namespace paramore.brighter.commandprocessor.timeoutpolicy.Handlers
     {
         public const string CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN = "TimeoutCancellationToken"; 
         private int milliseconds;
+
+        public TimeoutPolicyHandler(ILog logger) : base(logger)
+        {}
 
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {

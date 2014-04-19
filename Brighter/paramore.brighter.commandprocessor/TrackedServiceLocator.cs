@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using Common.Logging;
 using Microsoft.Practices.ServiceLocation;
 
 namespace paramore.brighter.commandprocessor
@@ -33,9 +34,10 @@ namespace paramore.brighter.commandprocessor
         private readonly HashSet<Type> doNotTrackList = new HashSet<Type>(); 
 
         //When we pass the instance out, we only expose the IDisposable, all a consumer can do is choose to release
-        public IDisposable CreateLifetime()
+        //Pass in a logger if you need to debug instance tracking
+        public IDisposable CreateLifetime(ILog logger = null)
         {
-            lifetime = new LifetimeScope();
+            lifetime = new LifetimeScope(logger);
             return lifetime;
         }
 
@@ -56,23 +58,25 @@ namespace paramore.brighter.commandprocessor
         protected virtual void TrackItem(object instance)
         {
             if (lifetime != null)
-            {
                 if (!doNotTrackList.Contains(instance.GetType()))
                     lifetime.Add(instance);
-            }
         }
         
         protected virtual void TrackItems(IEnumerable<object> instances)
         {
             foreach (var instance in instances)
-            {
                TrackItem(instance); 
-            }
         }
 
         internal class LifetimeScope: IDisposable
         {
+            private readonly ILog logger;
             private readonly List<object> trackedObjects = new List<object>();
+
+            public LifetimeScope(ILog logger = null)
+            {
+                this.logger = logger;
+            }
 
             public int TrackedItemCount
             {
@@ -82,6 +86,7 @@ namespace paramore.brighter.commandprocessor
             public void Add(object instance)
             {
                 trackedObjects.Add(instance);
+                if (logger != null) logger.Debug(m => m("Tracking instance {0} of type {1}", instance.GetHashCode(), instance.GetType()));
             }
 
             public void Dispose()
@@ -91,7 +96,10 @@ namespace paramore.brighter.commandprocessor
                     //free disposableitems
                     var disposableItem = trackedItem as IDisposable;
                     if (disposableItem != null)
+                    {
                         disposableItem.Dispose();
+                        if (logger != null) logger.Debug(m => m("Disposting of instance {0} of type {1}", disposableItem.GetHashCode(), disposableItem.GetType()));
+                    }
                 }
 
                 //clear our tracking

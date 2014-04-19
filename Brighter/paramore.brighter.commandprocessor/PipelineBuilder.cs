@@ -81,7 +81,7 @@ namespace paramore.brighter.commandprocessor
                 .OrderByDescending(attribute => attribute.Step);
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext);
-            logger.Info(m => m("New handler pipeline created: {0}", TracePipeline(firstInPipeline)));
+            logger.Debug(m => m("New handler pipeline created: {0}", TracePipeline(firstInPipeline)));
             return firstInPipeline;
         }
 

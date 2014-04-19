@@ -22,6 +22,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
         };
 
@@ -43,6 +44,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>("DefaultHandler").AsMultiInstance();
             container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>("Implicit Handler").AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
         };
@@ -85,6 +87,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
         };
 
@@ -124,6 +127,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyEvent>, MyEventHandler>("My Event Handler").AsMultiInstance();
             container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("My Other Event Handler").AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
         };
 
@@ -167,6 +171,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway, retryPolicy, circuitBreakerPolicy, logger);
 
             A.CallTo(() => container.GetInstance<IAmAMessageMapper<MyCommand, Message>>()).Returns( new MyCommandMessageMapper());
+            A.CallTo(() => container.GetInstance<ILog>()).Returns(logger);
         };
 
         Because of = () => commandProcessor.Post(myCommand);
@@ -189,6 +194,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
             var container = new TinyIoCAdapter(new TinyIoCContainer());
+            container.Register<ILog, ILog>(logger);
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
             messagingGateway = A.Fake<IAmAMessagingGateway>();
             message = new Message(
@@ -242,6 +248,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
         };
@@ -294,6 +301,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .CircuitBreaker(1, TimeSpan.FromMinutes(1));
 
             container.Register<IAmAMessageMapper<MyCommand, Message>, MyCommandMessageMapper>(new MyCommandMessageMapper());
+            container.Register<ILog, ILog>(logger);
 
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway, retryPolicy, circuitBreakerPolicy, logger);
         };

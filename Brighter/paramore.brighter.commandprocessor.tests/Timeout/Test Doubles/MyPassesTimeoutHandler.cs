@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.timeoutpolicy.Attributes;
 using paramore.brighter.commandprocessor.timeoutpolicy.Handlers;
@@ -32,9 +33,12 @@ namespace paramore.commandprocessor.tests.Timeout.TestDoubles
 {
     internal class MyPassesTimeoutHandler : RequestHandler<MyCommand>
     {
+        public MyPassesTimeoutHandler(ILog logger) : base(logger)
+        {}
+
         public static bool CommandRecieved { get; set; }
 
-        [TimeoutPolicy(milliseconds: 1000, step: 1)]
+        [TimeoutPolicy(milliseconds: 10000, step: 1)]
         public override MyCommand Handle(MyCommand command)
         {
             var ct = (CancellationToken) Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];

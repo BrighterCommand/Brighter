@@ -49,6 +49,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             //Handler is decorated with UsePolicy and fails with divide by zero error
             container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             var policy = Policy
                 .Handle<DivideByZeroException>()
                 .WaitAndRetry(new[]
@@ -88,6 +89,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             //Handler is decorated with UsePolicy and fails with divide by zero error
             container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler >().AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             var policy = Policy
                 .Handle<DivideByZeroException>()
                 .WaitAndRetry(new[]
@@ -129,6 +131,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             //Handler is decorated with UsePolicy and fails with divide by zero error
             container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             var policy = Policy
                 .Handle<DivideByZeroException>()
                 .CircuitBreaker(2, TimeSpan.FromMinutes(1));

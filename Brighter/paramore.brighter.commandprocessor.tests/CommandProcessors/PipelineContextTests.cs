@@ -44,6 +44,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             request_context = new RequestContext(container);
 
             Chain_Builder = new PipelineBuilder<MyCommand>(container, logger);
@@ -65,8 +66,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Establish context = () =>
         {
+            var logger = A.Fake<ILog>();
             var container = new TinyIoCAdapter(new TinyIoCContainer());
             container.Register<IHandleRequests<MyCommand>, MyContextAwareCommandHandler>().AsMultiInstance();
+            container.Register<ILog, ILog>(logger);
             request_context = new RequestContext(container);
 
             myCommand = new MyCommand();
@@ -74,8 +77,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
             A.CallTo(() => requestContextFactory.Create(container)).Returns(request_context);
-
-            var logger = A.Fake<ILog>();
 
             commandProcessor = new CommandProcessor(container, requestContextFactory, logger);
 
