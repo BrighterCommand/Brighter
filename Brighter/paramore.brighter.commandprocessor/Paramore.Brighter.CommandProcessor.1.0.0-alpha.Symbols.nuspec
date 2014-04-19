@@ -18,6 +18,7 @@
             <dependency id="CommonServiceLocator" version="1.2" />
             <dependency id="Polly" version="2.0.0" />
             <dependency id="Common.Logging" version="2.2.0" />
+            <dependency id="Newtonsoft.Json" version="6.0.2" />
         </dependencies>
     </metadata>
     <files>

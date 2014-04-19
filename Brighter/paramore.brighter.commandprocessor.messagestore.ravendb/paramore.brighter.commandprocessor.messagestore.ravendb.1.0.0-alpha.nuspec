@@ -18,6 +18,7 @@
         <dependencies>
             <dependency id="RavenDB.Client" version="2.5.2851" />
             <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha" />
+            <dependency id="Common.Logging" version="2.2.0" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />
