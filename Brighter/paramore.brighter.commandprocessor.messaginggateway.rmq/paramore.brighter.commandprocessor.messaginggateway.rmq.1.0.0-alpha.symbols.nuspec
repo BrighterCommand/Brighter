@@ -20,6 +20,7 @@
             <dependency id="CommonServiceLocator" version="1.2" />
             <dependency id="Polly" version="2.0.0" />
             <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha" />
+            <dependency id="Common.Logging" version="2.2.0" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />
@@ -28,7 +29,7 @@
     </metadata>
     <files>
         <file src="content\web.config.install.xdt" target="content\web.config.install.xdt" />
-        <file src="web.config.uninstall.xdt" target="content\web.config.uninstall.xdt" />
+        <file src="content\web.config.uninstall.xdt" target="content\web.config.uninstall.xdt" />
         <file src="lib\net45\paramore.brighter.commandprocessor.dll" target="lib\net45\paramore.brighter.commandprocessor.dll" />
         <file src="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" />
         <file src="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.pdb" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.pdb" />
