@@ -1,4 +1,5 @@
 ﻿using System;
+using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
 using Polly;
@@ -18,9 +19,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private Establish context = () =>
             {
                 container = A.Fake<IAdaptAnInversionOfControlContainer>();
+                var logger = A.Fake<ILog>();
                 A.CallTo(() => container.GetInstance<IAmARequestContextFactory>()).Returns(new InMemoryRequestContextFactory());
-                A.CallTo(() => container.GetInstance<IAmAMessageStore<Message>>()).Returns(new RavenMessageStore(new EmbeddableDocumentStore()));
-                A.CallTo(() => container.GetInstance<IAmAMessagingGateway>()).Returns(new RMQMessagingGateway());
+                A.CallTo(() => container.GetInstance<IAmAMessageStore<Message>>()).Returns(new RavenMessageStore(new EmbeddableDocumentStore(), logger));
+                A.CallTo(() => container.GetInstance<IAmAMessagingGateway>()).Returns(new RMQMessagingGateway(logger));
                 var retryPolicy = Policy
                     .Handle<Exception>()
                     .WaitAndRetry(new[]

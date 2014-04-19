@@ -22,6 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Common.Logging;
+using FakeItEasy;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Raven.Tests.Helpers;
 using paramore.brighter.commandprocessor;
@@ -38,7 +40,8 @@ namespace paramore.commandprocessor.tests.MessageStore.RavenDb
             //arrange
             using (var store = NewDocumentStore())
             {
-                var messageStore = new RavenMessageStore(store);
+                var logger = A.Fake<ILog>();
+                var messageStore = new RavenMessageStore(store, logger);
                 //act
                 var message = new Message(new MessageHeader(Guid.NewGuid(), "Test"), new MessageBody("Body"));               
                 messageStore.Add(message).Wait();
