@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Text;
+using Common.Logging;
+using FakeItEasy;
 using Machine.Specifications;
 using RabbitMQ.Client;
 using paramore.brighter.commandprocessor;
@@ -18,7 +20,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Establish context = () =>
             {
-                messagingGateway = new RMQMessagingGateway();
+                var logger = A.Fake<ILog>();
+                messagingGateway = new RMQMessagingGateway(logger);
                 message = new Message(
                     header: new MessageHeader(Guid.NewGuid(), "test"), 
                     body:new MessageBody("test content")

@@ -1,14 +1,22 @@
 ﻿using System;
 using System.Text;
 using System.Threading.Tasks;
+using Common.Logging;
+using Newtonsoft.Json;
 using RabbitMQ.Client;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
-     //TODO: Add some logging - important to log at a gateway
     public class RMQMessagingGateway : IAmAMessagingGateway
     {
+        private readonly ILog logger;
+
+        public RMQMessagingGateway(ILog logger)
+        {
+            this.logger = logger;
+        }
+
         public Task SendMessage(Message message)
         {
             //RabbitMQ .NET Client does not have an async publish, so fake this for now as we want to support messaging frameworks that do have this option
@@ -17,17 +25,24 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
             var connectionFactory = new ConnectionFactory{Uri = configuration.AMPQUri.Uri.ToString()};
 
+            logger.Debug(m=> m("Preparing  to sending message {0} via exchange {1}", configuration.Exchange.Name, JsonConvert.SerializeObject(message)));
+
             IConnection connection = null;
             IModel channel = null;
             try
             {
+                logger.Debug(m=> m("Creating connection to Rabbit MQ on AMPQUri {0}", configuration.AMPQUri.Uri.ToString()));
                 connection = Connect(connectionFactory);
 
+                logger.Debug(m=> m("Opening channel to Rabbit MQ on connection {0}", configuration.AMPQUri.Uri.ToString()));
                 channel = OpenChannel(connection);
 
+                logger.Debug(m => m("Declaring exchange {0} on connection {1}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString()));
                 DeclareExchange(channel, configuration);
 
+                logger.Debug(m => m("Publishing message to exchange {0} on connection {1} with topic {2} and id {3}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id));
                 PublishMessage(message, channel, configuration, CreateMessageHeader(message, channel));
+                logger.Debug(m => m("Published message to exchange {0} on connection {1} with topic {2} and id {3} at {4}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, DateTime.UtcNow));
             }
             catch (Exception e)
             {
