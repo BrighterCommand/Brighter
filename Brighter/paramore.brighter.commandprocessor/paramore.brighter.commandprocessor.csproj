@@ -87,7 +87,9 @@
     <Compile Include="RequestContext.cs" />
     <Compile Include="RequestHandler.cs" />
     <Compile Include="RequestHandlerAttribute.cs" />
+    <Compile Include="RequestLoggingHandlerAttribute.cs" />
     <Compile Include="RequestHandlers.cs" />
+    <Compile Include="RequestLoggingHandler.cs" />
     <Compile Include="TrackedServiceLocator.cs" />
   </ItemGroup>
   <ItemGroup>
