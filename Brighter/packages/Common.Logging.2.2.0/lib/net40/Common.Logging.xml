@@ -1,0 +1,489 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Common.Logging</name>
+    </assembly>
+    <members>
+        <member name="T:CoverageExcludeAttribute">
+            <summary>
+            Indicates classes or members to be ignored by NCover
+            </summary>
+            <remarks>
+            Note, the name is chosen, because TestDriven.NET uses it as //ea argument to "Test With... Coverage"
+            </remarks>
+            <author>Erich Eichinger</author>
+        </member>
+        <member name="T:Common.Logging.Configuration.NameValueCollectionHelper">
+            <summary>
+            Helper class for working with NameValueCollection
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Configuration.NameValueCollectionHelper.ToCommonLoggingCollection(System.Collections.Specialized.NameValueCollection)">
+            <summary>
+            Convert a <see cref="T:System.Collections.Specialized.NameValueCollection"/> into the corresponding 
+            common logging equivalent <see cref="T:Common.Logging.Configuration.NameValueCollection"/>
+            </summary>
+            <param name="properties">The properties.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Common.Logging.Simple.CommonLoggingTraceListener">
+            <summary>
+            A <see cref="T:System.Diagnostics.TraceListener"/> implementation sending all <see cref="T:System.Diagnostics.Trace">System.Diagnostics.Trace</see> output to 
+            the Common.Logging infrastructure.
+            </summary>
+            <remarks>
+            This listener captures all output sent by calls to <see cref="T:System.Diagnostics.Trace">System.Diagnostics.Trace</see> and
+            and <see cref="T:System.Diagnostics.TraceSource"/> and sends it to an <see cref="T:Common.Logging.ILog"/> instance.<br/>
+            The <see cref="T:Common.Logging.ILog"/> instance to be used is obtained by calling
+            <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>. The name of the logger is created by passing 
+            this listener's <see cref="P:System.Diagnostics.TraceListener.Name"/> and any <c>source</c> or <c>category</c> passed 
+            into this listener (see <see cref="M:System.Diagnostics.TraceListener.WriteLine(System.Object,System.String)"/> or <see cref="M:System.Diagnostics.TraceListener.TraceEvent(System.Diagnostics.TraceEventCache,System.String,System.Diagnostics.TraceEventType,System.Int32,System.String,System.Object[])"/> for example).
+            </remarks>
+            <example>
+            The snippet below shows how to add and configure this listener to your app.config:
+            <code lang="XML">
+            &lt;system.diagnostics&gt;
+              &lt;sharedListeners&gt;
+                &lt;add name="Diagnostics"
+                     type="Common.Logging.Simple.CommonLoggingTraceListener, Common.Logging"
+                     initializeData="DefaultTraceEventType=Information; LoggerNameFormat={listenerName}.{sourceName}"&gt;
+                  &lt;filter type="System.Diagnostics.EventTypeFilter" initializeData="Information"/&gt;
+                &lt;/add&gt;
+              &lt;/sharedListeners&gt;
+              &lt;trace&gt;
+                &lt;listeners&gt;
+                  &lt;add name="Diagnostics" /&gt;
+                &lt;/listeners&gt;
+              &lt;/trace&gt;
+            &lt;/system.diagnostics&gt;
+            </code>
+            </example>
+            <author>Erich Eichinger</author>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.#ctor">
+            <summary>
+            Creates a new instance with the default name "Diagnostics" and <see cref="T:Common.Logging.LogLevel"/> "Trace".
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.#ctor(System.String)">
+            <summary>
+            Creates a new instance initialized with properties from the <paramref name="initializeData"/>. string.
+            </summary>
+            <remarks>
+            <paramref name="initializeData"/> is a semicolon separated string of name/value pairs, where each pair has
+            the form <c>key=value</c>. E.g.
+            "<c>Name=MyLoggerName;LogLevel=Debug</c>"
+            </remarks>
+            <param name="initializeData">a semicolon separated list of name/value pairs.</param>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.#ctor(System.Collections.Specialized.NameValueCollection)">
+            <summary>
+            Creates a new instance initialized with the specified properties.
+            </summary>
+            <param name="properties">name/value configuration properties.</param>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.Log(System.Diagnostics.TraceEventType,System.String,System.Int32,System.String,System.Object[])">
+            <summary>
+            Logs the given message to the Common.Logging infrastructure.
+            </summary>
+            <param name="eventType">the eventType</param>
+            <param name="source">the <see cref="T:System.Diagnostics.TraceSource"/> name or category name passed into e.g. <see cref="M:System.Diagnostics.Trace.Write(System.Object,System.String)"/>.</param>
+            <param name="id">the id of this event</param>
+            <param name="format">the message format</param>
+            <param name="args">the message arguments</param>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.Write(System.Object)">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.Write(System.Object,System.String)">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.Write(System.String)">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.Write(System.String,System.String)">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.WriteLine(System.Object)">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.WriteLine(System.Object,System.String)">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.WriteLine(System.String)">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.WriteLine(System.String,System.String)">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.TraceEvent(System.Diagnostics.TraceEventCache,System.String,System.Diagnostics.TraceEventType,System.Int32)">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.TraceEvent(System.Diagnostics.TraceEventCache,System.String,System.Diagnostics.TraceEventType,System.Int32,System.String)">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.TraceEvent(System.Diagnostics.TraceEventCache,System.String,System.Diagnostics.TraceEventType,System.Int32,System.String,System.Object[])">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.TraceData(System.Diagnostics.TraceEventCache,System.String,System.Diagnostics.TraceEventType,System.Int32,System.Object[])">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.CommonLoggingTraceListener.TraceData(System.Diagnostics.TraceEventCache,System.String,System.Diagnostics.TraceEventType,System.Int32,System.Object)">
+            <summary>
+            Writes message to logger provided by <see cref="M:Common.Logging.LogManager.GetLogger(System.String)"/>
+            </summary>
+        </member>
+        <member name="P:Common.Logging.Simple.CommonLoggingTraceListener.DefaultTraceEventType">
+            <summary>
+            Sets the default <see cref="T:System.Diagnostics.TraceEventType"/> to use for logging
+            all events emitted by <see cref="T:System.Diagnostics.Trace"/><c>.Write(...)</c> and
+            <see cref="T:System.Diagnostics.Trace"/><c>.WriteLine(...)</c> methods.
+            </summary>
+            <remarks>
+            This listener captures all output sent by calls to <see cref="T:System.Diagnostics.Trace"/> and
+            sends it to an <see cref="T:Common.Logging.ILog"/> instance using the <see cref="T:Common.Logging.LogLevel"/> specified
+            on <see cref="T:Common.Logging.LogLevel"/>.
+            </remarks>
+        </member>
+        <member name="P:Common.Logging.Simple.CommonLoggingTraceListener.LoggerNameFormat">
+            <summary>
+            Format to use for creating the logger name. Defaults to "{listenerName}.{sourceName}".
+            </summary>
+            <remarks>
+            Available placeholders are:
+            <list type="bullet">
+            <item>{listenerName}: the configured name of this listener instance.</item>
+            <item>{sourceName}: the trace source name an event originates from (see e.g. <see cref="M:System.Diagnostics.TraceListener.TraceEvent(System.Diagnostics.TraceEventCache,System.String,System.Diagnostics.TraceEventType,System.Int32,System.String,System.Object[])"/>.</item>
+            </list>
+            </remarks>
+        </member>
+        <member name="T:Common.Logging.ConfigurationSectionHandler">
+            <summary>
+            Used in an application's configuration file (App.Config or Web.Config) to configure the logging subsystem.
+            </summary>
+            <example>
+            An example configuration section that writes log messages to the Console using the
+            built-in Console Logger.
+            <code lang="XML">
+            &lt;configuration&gt;
+                &lt;configSections&gt;
+                  &lt;sectionGroup name=&quot;common&quot;&gt;
+                    &lt;section name=&quot;logging&quot; type=&quot;Common.Logging.ConfigurationSectionHandler, Common.Logging&quot; /&gt;
+                  &lt;/sectionGroup&gt; 
+                &lt;/configSections&gt;
+                &lt;common&gt;
+                  &lt;logging&gt;
+                    &lt;factoryAdapter type=&quot;Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter, Common.Logging&quot;&gt;
+                      &lt;arg key=&quot;showLogName&quot; value=&quot;true&quot; /&gt;
+                      &lt;arg key=&quot;showDataTime&quot; value=&quot;true&quot; /&gt;
+                      &lt;arg key=&quot;level&quot; value=&quot;ALL&quot; /&gt;
+                      &lt;arg key=&quot;dateTimeFormat&quot; value=&quot;yyyy/MM/dd HH:mm:ss:fff&quot; /&gt;
+                    &lt;/factoryAdapter&gt;
+                  &lt;/logging&gt;
+                &lt;/common&gt;
+            &lt;/configuration&gt;
+            </code>
+            </example>
+        </member>
+        <member name="M:Common.Logging.ConfigurationSectionHandler.#cctor">
+            <summary>
+            Ensure static fields get initialized before any class member 
+            can be accessed (avoids beforeFieldInit)
+            </summary>
+        </member>
+        <member name="M:Common.Logging.ConfigurationSectionHandler.#ctor">
+            <summary>
+            Constructor
+            </summary>
+        </member>
+        <member name="M:Common.Logging.ConfigurationSectionHandler.ReadConfiguration(System.Xml.XmlNode)">
+            <summary>
+            Retrieves the <see cref="T:System.Type"/> of the logger the use by looking at the logFactoryAdapter element
+            of the logging configuration element.
+            </summary>
+            <param name="section"></param>
+            <returns>
+            A <see cref="T:Common.Logging.Configuration.LogSetting"/> object containing the specified type that implements 
+            <see cref="T:Common.Logging.ILoggerFactoryAdapter"/> along with zero or more properties that will be 
+            passed to the logger factory adapter's constructor as an <see cref="T:System.Collections.IDictionary"/>.
+            </returns>
+        </member>
+        <member name="M:Common.Logging.ConfigurationSectionHandler.Create(Common.Logging.Configuration.LogSetting,System.Object,System.Xml.XmlNode)">
+            <summary>
+            Verifies that the logFactoryAdapter element appears once in the configuration section.
+            </summary>
+            <param name="parent">settings of a parent section - atm this must always be null</param>
+            <param name="configContext">Additional information about the configuration process.</param>
+            <param name="section">The configuration section to apply an XPath query too.</param>
+            <returns>
+            A <see cref="T:Common.Logging.Configuration.LogSetting"/> object containing the specified logFactoryAdapter type
+            along with user supplied configuration properties.
+            </returns>
+        </member>
+        <member name="M:Common.Logging.ConfigurationSectionHandler.System#Configuration#IConfigurationSectionHandler#Create(System.Object,System.Object,System.Xml.XmlNode)">
+            <summary>
+            Verifies that the logFactoryAdapter element appears once in the configuration section.
+            </summary>
+            <param name="parent">The parent of the current item.</param>
+            <param name="configContext">Additional information about the configuration process.</param>
+            <param name="section">The configuration section to apply an XPath query too.</param>
+            <returns>
+            A <see cref="T:Common.Logging.Configuration.LogSetting"/> object containing the specified logFactoryAdapter type
+            along with user supplied configuration properties.
+            </returns>
+        </member>
+        <member name="T:Common.Logging.Simple.ConsoleOutLogger">
+            <summary>
+            Sends log messages to <see cref="P:System.Console.Out"/>.
+            </summary>
+            <author>Gilles Bayon</author>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLogger.#ctor(System.String,Common.Logging.LogLevel,System.Boolean,System.Boolean,System.Boolean,System.String)">
+            <summary>
+            Creates and initializes a logger that writes messages to <see cref="P:System.Console.Out"/>.
+            </summary>
+            <param name="logName">The name, usually type name of the calling class, of the logger.</param>
+            <param name="logLevel">The current logging threshold. Messages recieved that are beneath this threshold will not be logged.</param>
+            <param name="showLevel">Include the current log level in the log message.</param>
+            <param name="showDateTime">Include the current time in the log message.</param>
+            <param name="showLogName">Include the instance name in the log message.</param>
+            <param name="dateTimeFormat">The date and time format to use in the log message.</param>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLogger.WriteInternal(Common.Logging.LogLevel,System.Object,System.Exception)">
+            <summary>
+            Do the actual logging by constructing the log message using a <see cref="T:System.Text.StringBuilder"/> then
+            sending the output to <see cref="P:System.Console.Out"/>.
+            </summary>
+            <param name="level">The <see cref="T:Common.Logging.LogLevel"/> of the message.</param>
+            <param name="message">The log message.</param>
+            <param name="e">An optional <see cref="T:System.Exception"/> associated with the message.</param>
+        </member>
+        <member name="T:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter">
+            <summary>
+            Factory for creating <see cref="T:Common.Logging.ILog"/> instances that write data to <see cref="P:System.Console.Out"/>.
+            </summary>
+            <remarks>
+            <example>
+            Below is an example how to configure this adapter:
+            <code>
+            &lt;configuration&gt;
+            
+              &lt;configSections&gt;
+                &lt;sectionGroup name="common"&gt;
+                  &lt;section name="logging"
+                           type="Common.Logging.ConfigurationSectionHandler, Common.Logging"
+                           requirePermission="false" /&gt;
+                &lt;/sectionGroup&gt;
+              &lt;/configSections&gt;
+            
+              &lt;common&gt;
+                &lt;logging&gt;
+                  &lt;factoryAdapter type="Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter, Common.Logging"&gt;
+                    &lt;arg key="level" value="ALL" /&gt;
+                  &lt;/factoryAdapter&gt;
+                &lt;/logging&gt;
+              &lt;/common&gt;
+            
+            &lt;/configuration&gt;
+            </code>
+            </example>
+            </remarks>
+            <seealso cref="T:Common.Logging.Simple.AbstractSimpleLoggerFactoryAdapter"/>
+            <seealso cref="P:Common.Logging.LogManager.Adapter"/>
+            <seealso cref="T:Common.Logging.ConfigurationSectionHandler"/>
+            <author>Gilles Bayon</author>
+            <author>Mark Pollack</author>
+            <author>Erich Eichinger</author>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter"/> class using default 
+            settings.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter.#ctor(Common.Logging.Configuration.NameValueCollection)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter"/> class.
+            </summary>
+            <remarks>
+            Looks for level, showDateTime, showLogName, dateTimeFormat items from 
+            <paramref name="properties"/> for use when the GetLogger methods are called.
+            <see cref="T:Common.Logging.ConfigurationSectionHandler"/> for more information on how to use the 
+            standard .NET application configuraiton file (App.config/Web.config) 
+            to configure this adapter.
+            </remarks>
+            <param name="properties">The name value collection, typically specified by the user in 
+            a configuration section named common/logging.</param>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter.#ctor(System.Collections.Specialized.NameValueCollection)">
+            <summary>
+            Constructor for binary backwards compatibility with non-portableversions
+            </summary>
+            <param name="properties">The properties.</param>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter.#ctor(Common.Logging.LogLevel,System.Boolean,System.Boolean,System.Boolean,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Common.Logging.Simple.AbstractSimpleLoggerFactoryAdapter"/> class with 
+            default settings for the loggers created by this factory.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter.CreateLogger(System.String,Common.Logging.LogLevel,System.Boolean,System.Boolean,System.Boolean,System.String)">
+            <summary>
+            Creates a new <see cref="T:Common.Logging.Simple.ConsoleOutLogger"/> instance.
+            </summary>
+        </member>
+        <member name="T:Common.Logging.Simple.TraceLogger">
+            <summary>
+            Logger sending everything to the trace output stream using <see cref="T:System.Diagnostics.Trace"/>.
+            </summary>
+            <remarks>
+            Beware not to use <see cref="T:Common.Logging.Simple.CommonLoggingTraceListener"/> in combination with this logger as 
+            this would result in an endless loop for obvious reasons!
+            </remarks>
+            <seealso cref="P:Common.Logging.LogManager.Adapter"/>
+            <seealso cref="T:Common.Logging.ConfigurationSectionHandler"/>
+            <author>Gilles Bayon</author>
+            <author>Erich Eichinger</author>
+        </member>
+        <member name="M:Common.Logging.Simple.TraceLogger.#ctor(System.Boolean,System.String,Common.Logging.LogLevel,System.Boolean,System.Boolean,System.Boolean,System.String)">
+            <summary>
+            Creates a new TraceLogger instance.
+            </summary>
+            <param name="useTraceSource">whether to use <see cref="T:System.Diagnostics.TraceSource"/> or <see cref="T:System.Diagnostics.Trace"/> for logging.</param>
+            <param name="logName">the name of this logger</param>
+            <param name="logLevel">the default log level to use</param>
+            <param name="showLevel">Include the current log level in the log message.</param>
+            <param name="showDateTime">Include the current time in the log message.</param>
+            <param name="showLogName">Include the instance name in the log message.</param>
+            <param name="dateTimeFormat">The date and time format to use in the log message.</param>
+        </member>
+        <member name="M:Common.Logging.Simple.TraceLogger.IsLevelEnabled(Common.Logging.LogLevel)">
+            <summary>
+            Determines if the given log level is currently enabled.
+            checks <see cref="P:System.Diagnostics.TraceSource.Switch"/> if <see cref="P:Common.Logging.Simple.TraceLoggerFactoryAdapter.UseTraceSource"/> is true.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.TraceLogger.WriteInternal(Common.Logging.LogLevel,System.Object,System.Exception)">
+            <summary>
+            Do the actual logging.
+            </summary>
+            <param name="level"></param>
+            <param name="message"></param>
+            <param name="e"></param>
+        </member>
+        <member name="M:Common.Logging.Simple.TraceLogger.OnDeserialization(System.Object)">
+            <summary>
+            Called after deserialization completed.
+            </summary>
+        </member>
+        <member name="T:Common.Logging.Simple.TraceLogger.FormatOutputMessage">
+            <summary>
+            Used to defer message formatting until it is really needed.
+            </summary>
+            <remarks>
+            This class also improves performance when multiple 
+            <see cref="T:System.Diagnostics.TraceListener"/>s are configured.
+            </remarks>
+        </member>
+        <member name="T:Common.Logging.Simple.TraceLoggerFactoryAdapter">
+            <summary>
+            Factory for creating <see cref="T:Common.Logging.ILog"/> instances that send 
+            everything to the <see cref="T:System.Diagnostics.Trace"/> output stream.
+            </summary>
+            <remarks>
+            Beware not to use <see cref="T:Common.Logging.Simple.CommonLoggingTraceListener"/> in combination with this logger factory
+            as this would result in an endless loop for obvious reasons!
+            <example>
+            Below is an example how to configure this adapter:
+            <code>
+            &lt;configuration&gt;
+            
+              &lt;configSections&gt;
+                &lt;sectionGroup name="common"&gt;
+                  &lt;section name="logging"
+                           type="Common.Logging.ConfigurationSectionHandler, Common.Logging"
+                           requirePermission="false" /&gt;
+                &lt;/sectionGroup&gt;
+              &lt;/configSections&gt;
+            
+              &lt;common&gt;
+                &lt;logging&gt;
+                  &lt;factoryAdapter type="Common.Logging.Simple.TraceLoggerFactoryAdapter, Common.Logging"&gt;
+                    &lt;arg key="level" value="ALL" /&gt;
+                  &lt;/factoryAdapter&gt;
+                &lt;/logging&gt;
+              &lt;/common&gt;
+            
+            &lt;/configuration&gt;
+            </code>
+            </example>
+            </remarks>
+            <seealso cref="T:Common.Logging.Simple.AbstractSimpleLoggerFactoryAdapter"/>
+            <seealso cref="P:Common.Logging.LogManager.Adapter"/>
+            <seealso cref="T:Common.Logging.ConfigurationSectionHandler"/>
+            <author>Gilles Bayon</author>
+            <author>Mark Pollack</author>
+            <author>Erich Eichinger</author>
+        </member>
+        <member name="M:Common.Logging.Simple.TraceLoggerFactoryAdapter.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Common.Logging.Simple.TraceLoggerFactoryAdapter"/> class using default settings.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.TraceLoggerFactoryAdapter.#ctor(Common.Logging.Configuration.NameValueCollection)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Common.Logging.Simple.TraceLoggerFactoryAdapter"/> class.
+            </summary>
+            <remarks>
+            Looks for level, showDateTime, showLogName, dateTimeFormat items from 
+            <paramref name="properties"/> for use when the GetLogger methods are called.
+            <see cref="T:Common.Logging.ConfigurationSectionHandler"/> for more information on how to use the 
+            standard .NET application configuraiton file (App.config/Web.config) 
+            to configure this adapter.
+            </remarks>
+            <param name="properties">The name value collection, typically specified by the user in 
+            a configuration section named common/logging.</param>
+        </member>
+        <member name="M:Common.Logging.Simple.TraceLoggerFactoryAdapter.#ctor(Common.Logging.LogLevel,System.Boolean,System.Boolean,System.Boolean,System.String,System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Common.Logging.Simple.AbstractSimpleLoggerFactoryAdapter"/> class with 
+            default settings for the loggers created by this factory.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.TraceLoggerFactoryAdapter.CreateLogger(System.String,Common.Logging.LogLevel,System.Boolean,System.Boolean,System.Boolean,System.String)">
+            <summary>
+            Creates a new <see cref="T:Common.Logging.Simple.TraceLogger"/> instance.
+            </summary>
+        </member>
+        <member name="P:Common.Logging.Simple.TraceLoggerFactoryAdapter.UseTraceSource">
+            <summary>
+            Whether to use <see cref="T:System.Diagnostics.Trace"/>.<c>TraceXXXX(string,object[])</c> methods for logging
+            or <see cref="T:System.Diagnostics.TraceSource"/>.
+            </summary>
+        </member>
+    </members>
+</doc>

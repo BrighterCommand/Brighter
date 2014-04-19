@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>TinyIoC</id>
+    <version>1.2</version>
+    <title>TinyIoC</title>
+    <authors>Steven Robbins</authors>
+    <owners>Steven Robbins</owners>
+    <licenseUrl>https://github.com/grumpydev/TinyIoC/blob/master/src/licence.txt</licenseUrl>
+    <projectUrl>https://github.com/grumpydev/TinyIoC</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>An easy to use, hassle free, Inversion of Control Container for small projects, libraries and beginners alike</description>
+    <releaseNotes />
+    <copyright />
+    <language />
+    <tags>IoC</tags>
+    <references />
+  </metadata>
+</package>
