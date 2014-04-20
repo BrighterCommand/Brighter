@@ -23,7 +23,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 var logger = A.Fake<ILog>();
                 messagingGateway = new RMQMessagingGateway(logger);
                 message = new Message(
-                    header: new MessageHeader(Guid.NewGuid(), "test"), 
+                    header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")
                     );
 
