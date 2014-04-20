@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.messagedispatcher
+namespace paramore.brighter.serviceactivator
 {
     public interface IAmAMessagePump<TRequest> where TRequest : class, IRequest
     {

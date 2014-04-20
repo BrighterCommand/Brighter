@@ -7,8 +7,8 @@
     <ProjectGuid>{B9126B00-5A97-4C7D-B395-755456E5FA28}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>paramore.brighter.messagedispatcher</RootNamespace>
-    <AssemblyName>paramore.brighter.messagedispatcher</AssemblyName>
+    <RootNamespace>paramore.brighter.serviceactivator</RootNamespace>
+    <AssemblyName>paramore.brighter.serviceactivator</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
