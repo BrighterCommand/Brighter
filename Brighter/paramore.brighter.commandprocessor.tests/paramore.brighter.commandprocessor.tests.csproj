@@ -136,6 +136,7 @@
     <Compile Include="IoCContainers\TinyIoCContainerFixture.cs" />
     <Compile Include="ExceptionPolicy\PolicyDecoratorTests.cs" />
     <Compile Include="MessageDispatcher\MessageDispatchFixture.cs" />
+    <Compile Include="MessageDispatcher\ServiceActivatorFixture.cs" />
     <Compile Include="MessageDispatcher\TestDoubles\MyEventMessageMapper.cs" />
     <Compile Include="MessageDispatcher\TestDoubles\SpyCommandProcessor.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreFactoryTests.cs" />
@@ -171,9 +172,9 @@
       <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
       <Name>paramore.brighter.commandprocessor</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.messagedispatcher\paramore.brighter.messagedispatcher.csproj">
+    <ProjectReference Include="..\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj">
       <Project>{b9126b00-5a97-4c7d-b395-755456e5fa28}</Project>
-      <Name>paramore.brighter.messagedispatcher</Name>
+      <Name>paramore.brighter.serviceactivator</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

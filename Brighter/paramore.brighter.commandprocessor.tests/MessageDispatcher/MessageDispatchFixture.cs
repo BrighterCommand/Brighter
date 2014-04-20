@@ -26,8 +26,8 @@ using System;
 using Machine.Specifications;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.messagedispatcher;
-using paramore.brighter.messagedispatcher.TestHelpers;
+using paramore.brighter.serviceactivator;
+using paramore.brighter.serviceactivator.TestHelpers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using paramore.commandprocessor.tests.MessageDispatcher.TestDoubles;
 

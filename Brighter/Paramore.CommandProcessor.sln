@@ -28,7 +28,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandpr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.ioccontainers.tinyioc", "paramore.brighter.commandprocessor.ioccontainers.tinyioc\paramore.brighter.commandprocessor.ioccontainers.tinyioc.csproj", "{7B7A3ADA-CED8-4BCF-B643-493607C4579F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.messagedispatcher", "paramore.brighter.messagedispatcher\paramore.brighter.messagedispatcher.csproj", "{B9126B00-5A97-4C7D-B395-755456E5FA28}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.serviceactivator", "paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj", "{B9126B00-5A97-4C7D-B395-755456E5FA28}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

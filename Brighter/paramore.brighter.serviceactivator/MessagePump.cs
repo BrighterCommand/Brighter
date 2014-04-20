@@ -24,8 +24,15 @@ THE SOFTWARE. */
 
 using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.messagedispatcher
+namespace paramore.brighter.serviceactivator
 {
+    /*
+     * The message pump is a classic event loop and is intended to be run on a single-thread
+     * The event loop is terminated when reading a MT_QUIT message on the channel
+     * The event loop blocks on the Channel Listen call, though it will timeout - this is why you should spin up a thread for your message pump to avoid blocking your main control path
+     * Retry and circuit breaker should be provided by exception policy using an attribute on the handler
+     * Timeout on the handler should be provided by timeout policy using an attribute on the handler
+     */
     public class MessagePump<TRequest> : IAmAMessagePump<TRequest> where TRequest : class, IRequest
     {
         private readonly IMessageChannel channel;
@@ -56,10 +63,15 @@ namespace paramore.brighter.messagedispatcher
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                     break;
 
-                var request = TranslateMessage(message);
-                DispatchRequest(message.Header.MessageType, request);
+                DispatchRequest(message.Header.MessageType, TranslateMessage(message));
+                AcknowledgeMessage(message);
 
             } while (true);
+        }
+
+        private void AcknowledgeMessage(Message message)
+        {
+            channel.AcknowledgeMessage(message);
         }
 
         private void DispatchRequest(MessageType messageType, TRequest request)

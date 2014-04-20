@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.messagedispatcher.TestHelpers
+namespace paramore.brighter.serviceactivator.TestHelpers
 {
     public class InMemoryChannel : IMessageChannel
     {
@@ -40,5 +40,8 @@ namespace paramore.brighter.messagedispatcher.TestHelpers
         {
             messageQueue.Enqueue(message);
         }
+
+        public void AcknowledgeMessage(Message message)
+        {}
     }
 }
