@@ -35,12 +35,12 @@ namespace paramore.brighter.serviceactivator
      */
     public class MessagePump<TRequest> : IAmAMessagePump<TRequest> where TRequest : class, IRequest
     {
-        private readonly IMessageChannel channel;
+        private readonly IAmAMessageChannel channel;
         private readonly IAmACommandProcessor commandProcessor;
         private readonly IAmAMessageMapper<TRequest> messageMapper;
         private readonly int timeoutInMilliseconds;
 
-        public MessagePump(IMessageChannel channel, IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper, int timeoutInMilliseconds)
+        public MessagePump(IAmAMessageChannel channel, IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper, int timeoutInMilliseconds)
         {
             this.channel = channel;
             this.commandProcessor = commandProcessor;
