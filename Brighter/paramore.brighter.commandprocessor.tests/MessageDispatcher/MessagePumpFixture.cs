@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 using Machine.Specifications;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
@@ -34,33 +33,31 @@ using paramore.commandprocessor.tests.MessageDispatcher.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatcher
 {
-    public class When_running_a_message_pump_on_a_thread_should_be_able_to_stop
+    public class When_reading_a_message_from_a_channel_pump_out_to_command_processor
     {
-        static Performer<MyEvent> performer;
-        private static SpyCommandProcessor commandProcessor;
-        private static InMemoryChannel channel;
-        private static Task performerTask;
+        static IAmAMessagePump<MyEvent> messagePump;
+        private static IAmAMessageChannel channel;
+        static SpyCommandProcessor commandProcessor;
+        static MyEvent @event;
 
-        private Establish context = () =>
+        Establish context = () =>
         {
             commandProcessor = new SpyCommandProcessor();
             channel = new InMemoryChannel();
             var mapper = new MyEventMessageMapper();
-            var messagePump = new MessagePump<MyEvent>(channel, commandProcessor, mapper, 40000);
+            messagePump = new MessagePump<MyEvent>(channel, commandProcessor, mapper, 5000);
 
-            var @event = new MyEvent();
+            @event = new MyEvent();
+
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
             channel.Enqueue(message);
-
-            performer = new Performer<MyEvent>(channel, messagePump);
-            performerTask = performer.Run();
-            performer.Stop();
+            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            channel.Enqueue(quitMessage);
         };
 
-        Because of = () => performerTask.Wait() ;
-        It should_terminate_successfully = () => performerTask.IsCompleted.ShouldBeTrue();
-        It should_not_have_errored = () => performerTask.IsFaulted.ShouldBeFalse();
-        It should_not_show_as_cancelled = () => performerTask.IsCanceled.ShouldBeFalse();
-        It should_have_consumed_the_messages_in_the_channel = () => channel.Length.ShouldEqual(0);
+        Because of = () => messagePump.Run();
+
+        It should_send_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
+        It should_convert_the_message_into_an_event = () => ((MyEvent) commandProcessor.Request).ShouldEqual(@event);
     }
 }
