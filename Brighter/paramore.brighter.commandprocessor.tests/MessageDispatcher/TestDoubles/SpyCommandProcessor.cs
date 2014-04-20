@@ -19,37 +19,46 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
-using Common.Logging;
-using FakeItEasy;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Raven.Tests.Helpers;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messagestore.ravendb;
 
-namespace paramore.commandprocessor.tests.MessageStore.RavenDb
+namespace paramore.commandprocessor.tests.MessageDispatcher.TestDoubles
 {
-    [TestClass]
-    public class MessageStoreTests : RavenTestBase
+    internal class SpyCommandProcessor : IAmACommandProcessor
     {
-        [TestMethod]
-        public void Writing_and_reading_a_message_from_the_store()
-        {
-            //arrange
-            using (var store = NewDocumentStore())
-            {
-                var logger = A.Fake<ILog>();
-                var messageStore = new RavenMessageStore(store, logger);
-                //act
-                var message = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));               
-                messageStore.Add(message).Wait();
-                var retrievedMessage = messageStore.Get(message.Id).Result;
+        public IRequest Request { get; private set; }
+        public bool SendHappened { get; private set; }
+        public bool PublishHappened { get; private set; }
+        public bool PostHappened { get; set; }
+        public bool RepostHappened { get; set; }
 
-                //assert
-               Assert.IsTrue(message == retrievedMessage); 
-            }
+        public void Send<T>(T command) where T : class, IRequest
+        {
+            SendHappened = true;
+            Request = command;
         }
+
+        public void Publish<T>(T @event) where T : class, IRequest
+        {
+            PublishHappened = true;
+            Request = @event;
+        }
+
+
+        public void Post<T>(T request) where T : class, IRequest
+        {
+            PostHappened = true;
+            Request = request;
+        }
+
+
+        public void Repost(Guid messageId)
+        {
+            RepostHappened = true;
+        }
+
     }
 }

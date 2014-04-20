@@ -21,18 +21,30 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class MyCommandMessageMapper : IAmAMessageMapper<MyCommand, Message>
+    internal class MyCommandMessageMapper : IAmAMessageMapper<MyCommand>
     {
-        public Message Map(MyCommand request)
+        public Message MapToMessage(MyCommand request)
         {
-            var header = new MessageHeader(messageId: request.Id, topic: "MyCommand");
+            var header = new MessageHeader(messageId: request.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND);
             var body = new MessageBody(string.Format("id:{0}, value:{1} ", request.Id, request.Value));
             var message = new Message(header, body);
             return message;
+        }
+
+        public MyCommand MapToRequest(Message message)
+        {
+            var command = new MyCommand();
+            var bodyItems = message.Body.Value.Split('.');
+            var id = Guid.Parse(bodyItems[0].Split(':')[1]);
+            var value = bodyItems[1].Split(':')[1];
+            command.Id = id;
+            command.Value = value;
+            return command;
         }
     }
 }

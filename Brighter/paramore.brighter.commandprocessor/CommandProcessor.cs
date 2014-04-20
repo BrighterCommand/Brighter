@@ -109,8 +109,8 @@ namespace paramore.brighter.commandprocessor
         {
             logger.Info(m => m("Decoupled invocation of request: {0}", request.Id));
 
-            var messageMapper = container.GetInstance<IAmAMessageMapper<T, Message>>();
-            var message = messageMapper.Map(request);
+            var messageMapper = container.GetInstance<IAmAMessageMapper<T>>();
+            var message = messageMapper.MapToMessage(request);
             RetryAndBreakCircuit(() =>
                 {
                     messageStore.Add(message).Wait();

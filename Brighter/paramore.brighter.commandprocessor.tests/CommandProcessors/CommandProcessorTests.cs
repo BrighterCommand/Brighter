@@ -156,7 +156,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
             messagingGateway = A.Fake<IAmAMessagingGateway>();
             message = new Message(
-                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
+                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
                 body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
                 );
 
@@ -170,7 +170,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway, retryPolicy, circuitBreakerPolicy, logger);
 
-            A.CallTo(() => container.GetInstance<IAmAMessageMapper<MyCommand, Message>>()).Returns( new MyCommandMessageMapper());
+            A.CallTo(() => container.GetInstance<IAmAMessageMapper<MyCommand>>()).Returns( new MyCommandMessageMapper());
             A.CallTo(() => container.GetInstance<ILog>()).Returns(logger);
         };
 
@@ -198,7 +198,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
             messagingGateway = A.Fake<IAmAMessagingGateway>();
             message = new Message(
-                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
+                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand",messageType: MessageType.MT_COMMAND),
                 body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
                 );
             var retryPolicy = Policy
@@ -281,7 +281,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
             messagingGateway = A.Fake<IAmAMessagingGateway>();
             message = new Message(
-                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand"),
+                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand",messageType: MessageType.MT_COMMAND),
                 body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
                 );
 
@@ -300,7 +300,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMinutes(1));
 
-            container.Register<IAmAMessageMapper<MyCommand, Message>, MyCommandMessageMapper>(new MyCommandMessageMapper());
+            container.Register<IAmAMessageMapper<MyCommand>, MyCommandMessageMapper>(new MyCommandMessageMapper());
             container.Register<ILog, ILog>(logger);
 
             commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway, retryPolicy, circuitBreakerPolicy, logger);

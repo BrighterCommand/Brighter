@@ -19,37 +19,29 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
-using System;
-using Common.Logging;
-using FakeItEasy;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Raven.Tests.Helpers;
+using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messagestore.ravendb;
+using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.MessageStore.RavenDb
+namespace paramore.commandprocessor.tests.MessageDispatcher.TestDoubles
 {
-    [TestClass]
-    public class MessageStoreTests : RavenTestBase
+    internal class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
     {
-        [TestMethod]
-        public void Writing_and_reading_a_message_from_the_store()
+        public Message MapToMessage(MyEvent request)
         {
-            //arrange
-            using (var store = NewDocumentStore())
-            {
-                var logger = A.Fake<ILog>();
-                var messageStore = new RavenMessageStore(store, logger);
-                //act
-                var message = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));               
-                messageStore.Add(message).Wait();
-                var retrievedMessage = messageStore.Get(message.Id).Result;
 
-                //assert
-               Assert.IsTrue(message == retrievedMessage); 
-            }
+            var header = new MessageHeader(messageId: request.Id, topic: "MyEvent", messageType: MessageType.MT_EVENT);
+            var body = new MessageBody(JsonConvert.SerializeObject(request));
+            var message = new Message(header, body);
+            return message;
+        }
+
+        public MyEvent MapToRequest(Message message)
+        {
+            return JsonConvert.DeserializeObject<MyEvent>(message.Body.Value);
         }
     }
 }
