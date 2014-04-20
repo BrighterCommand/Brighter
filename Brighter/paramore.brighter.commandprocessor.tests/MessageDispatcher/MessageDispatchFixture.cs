@@ -33,4 +33,7 @@ using paramore.commandprocessor.tests.MessageDispatcher.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatcher
 {
+    public class When_a_message_dispatcher
+    {
+    }
 }
