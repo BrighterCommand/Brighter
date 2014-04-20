@@ -136,7 +136,7 @@
     <Compile Include="IoCContainers\TinyIoCContainerFixture.cs" />
     <Compile Include="ExceptionPolicy\PolicyDecoratorTests.cs" />
     <Compile Include="MessageDispatcher\MessageDispatchFixture.cs" />
-    <Compile Include="MessageDispatcher\ServiceActivatorFixture.cs" />
+    <Compile Include="MessageDispatcher\PerformerFixture.cs" />
     <Compile Include="MessageDispatcher\TestDoubles\MyEventMessageMapper.cs" />
     <Compile Include="MessageDispatcher\TestDoubles\SpyCommandProcessor.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreFactoryTests.cs" />
