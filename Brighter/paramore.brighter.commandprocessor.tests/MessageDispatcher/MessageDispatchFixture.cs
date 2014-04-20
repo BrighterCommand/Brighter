@@ -33,31 +33,4 @@ using paramore.commandprocessor.tests.MessageDispatcher.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatcher
 {
-    public class When_reading_a_message_from_a_channel_pump_out_to_command_processor
-    {
-        static IAmAMessagePump<MyEvent> messagePump;
-        private static IAmAMessageChannel channel;
-        static SpyCommandProcessor commandProcessor;
-        static MyEvent @event;
-
-        Establish context = () =>
-        {
-            commandProcessor = new SpyCommandProcessor();
-            channel = new InMemoryChannel();
-            var mapper = new MyEventMessageMapper();
-            messagePump = new MessagePump<MyEvent>(channel, commandProcessor, mapper, 5000);
-
-            @event = new MyEvent();
-
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
-            channel.Enqueue(message);
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            channel.Enqueue(quitMessage);
-        };
-
-        Because of = () => messagePump.Run();
-
-        It should_send_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
-        It should_convert_the_message_into_an_event = () => ((MyEvent) commandProcessor.Request).ShouldEqual(@event);
-    }
 }
