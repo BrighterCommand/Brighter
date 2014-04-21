@@ -25,6 +25,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Common.Logging;
+using paramore.brighter.commandprocessor.extensions;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -54,10 +55,7 @@ namespace paramore.brighter.commandprocessor
             var handlers = interpreter.GetHandlers(typeof(TRequest));
             
             var pipelines = new Pipelines<TRequest>();
-            foreach (var handler in handlers)
-            {
-                pipelines.Add(BuildPipeline(handler, requestContext));
-            }
+            handlers.Each((handler) => pipelines.Add(BuildPipeline(handler, requestContext)));
 
             return pipelines;
         }
@@ -88,24 +86,24 @@ namespace paramore.brighter.commandprocessor
         private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
         {
             IHandleRequests<TRequest> lastInPipeline = implicitHandler;
-            foreach (var attribute in attributes) 
+            attributes.Each((attribute) =>
             {
                 var decorator = new HandlerFactory<TRequest>(attribute, container, requestContext).CreateRequestHandler();
                 decorators.Add(decorator);
                 lastInPipeline.Successor = decorator;
                 lastInPipeline = decorator;
-            }
+            });
         }
 
         private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
         {
-            foreach (var attribute in attributes) 
+            attributes.Each((attribute) =>
             {
                 var decorator = new HandlerFactory<TRequest>(attribute, container, requestContext).CreateRequestHandler();
                 decorators.Add(decorator);
                 decorator.Successor = lastInPipeline;
                 lastInPipeline = decorator;
-            }
+            });
             return lastInPipeline;
         }
 
@@ -118,14 +116,14 @@ namespace paramore.brighter.commandprocessor
 
         public void Dispose()
         {
-            foreach (var decorator in decorators)
+            decorators.Each((decorator) =>
             {
                 var disposable = decorator as IDisposable;
                 if (disposable != null)
                 {
                     disposable.Dispose();
                 }
-            }
+            });
 
             decorators.Clear();
             instanceScope.Dispose();

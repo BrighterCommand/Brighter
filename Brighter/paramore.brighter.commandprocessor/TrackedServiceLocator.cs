@@ -25,6 +25,7 @@ using System;
 using System.Collections.Generic;
 using Common.Logging;
 using Microsoft.Practices.ServiceLocation;
+using paramore.brighter.commandprocessor.extensions;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -64,8 +65,7 @@ namespace paramore.brighter.commandprocessor
         
         protected virtual void TrackItems(IEnumerable<object> instances)
         {
-            foreach (var instance in instances)
-               TrackItem(instance); 
+            instances.Each((instance) => TrackItem(instance)); 
         }
 
         internal class LifetimeScope: IDisposable
@@ -91,16 +91,18 @@ namespace paramore.brighter.commandprocessor
 
             public void Dispose()
             {
-                foreach (var trackedItem in trackedObjects)
+                trackedObjects.Each((trackedItem) =>
                 {
                     //free disposableitems
                     var disposableItem = trackedItem as IDisposable;
                     if (disposableItem != null)
                     {
                         disposableItem.Dispose();
-                        if (logger != null) logger.Debug(m => m("Disposting of instance {0} of type {1}", disposableItem.GetHashCode(), disposableItem.GetType()));
+                        if (logger != null)
+                            logger.Debug(
+                                m => m("Disposting of instance {0} of type {1}", disposableItem.GetHashCode(), disposableItem.GetType()));
                     }
-                }
+                });
 
                 //clear our tracking
                 trackedObjects.Clear();
