@@ -28,12 +28,12 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator
 {
-    public class Performer<TRequest> : IAmAPerformer where TRequest : class, IRequest
+    public class Performer : IAmAPerformer 
     {
         private readonly IAmAMessageChannel channel;
-        private readonly IAmAMessagePump<TRequest> messagePump;
+        private readonly IAmAMessagePump messagePump;
 
-        public Performer(IAmAMessageChannel channel, IAmAMessagePump<TRequest> messagePump)
+        public Performer(IAmAMessageChannel channel, IAmAMessagePump messagePump)
         {
             this.channel = channel;
             this.messagePump = messagePump;

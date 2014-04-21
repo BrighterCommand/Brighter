@@ -26,8 +26,10 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator
 {
-    public interface IAmAMessagePump<TRequest> where TRequest : class, IRequest
+    public interface IAmAMessagePump
     {
         void Run();
+        int TimeoutInMilliseconds { get; set; }
+        IAmAMessageChannel Channel { get; set; }
     }
 }

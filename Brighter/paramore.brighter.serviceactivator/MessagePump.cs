@@ -33,26 +33,25 @@ namespace paramore.brighter.serviceactivator
      * Retry and circuit breaker should be provided by exception policy using an attribute on the handler
      * Timeout on the handler should be provided by timeout policy using an attribute on the handler
      */
-    public class MessagePump<TRequest> : IAmAMessagePump<TRequest> where TRequest : class, IRequest
+    public class MessagePump<TRequest> : IAmAMessagePump where TRequest : class, IRequest
     {
-        private readonly IAmAMessageChannel channel;
         private readonly IAmACommandProcessor commandProcessor;
         private readonly IAmAMessageMapper<TRequest> messageMapper;
-        private readonly int timeoutInMilliseconds;
+        public int TimeoutInMilliseconds { get; set; }
+        public IAmAMessageChannel Channel { get; set; }
 
-        public MessagePump(IAmAMessageChannel channel, IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper, int timeoutInMilliseconds)
+        public MessagePump(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
         {
-            this.channel = channel;
+            this.Channel = Channel;
             this.commandProcessor = commandProcessor;
             this.messageMapper = messageMapper;
-            this.timeoutInMilliseconds = timeoutInMilliseconds;
         }
 
         public void Run()
         {
             do
             {
-                var message = channel.Listen(timeoutInMilliseconds);
+                var message = Channel.Listen(TimeoutInMilliseconds);
                 
                 if (message == null)
                 {
@@ -71,7 +70,7 @@ namespace paramore.brighter.serviceactivator
 
         private void AcknowledgeMessage(Message message)
         {
-            channel.AcknowledgeMessage(message);
+            Channel.AcknowledgeMessage(message);
         }
 
         private void DispatchRequest(MessageType messageType, TRequest request)

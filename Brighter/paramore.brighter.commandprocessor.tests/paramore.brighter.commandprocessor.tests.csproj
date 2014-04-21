@@ -135,11 +135,11 @@
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithDivideByZeroHandler.cs" />
     <Compile Include="IoCContainers\TinyIoCContainerFixture.cs" />
     <Compile Include="ExceptionPolicy\PolicyDecoratorTests.cs" />
-    <Compile Include="MessageDispatcher\MessageDispatchFixture.cs" />
-    <Compile Include="MessageDispatcher\MessagePumpFixture.cs" />
-    <Compile Include="MessageDispatcher\PerformerFixture.cs" />
-    <Compile Include="MessageDispatcher\TestDoubles\MyEventMessageMapper.cs" />
-    <Compile Include="MessageDispatcher\TestDoubles\SpyCommandProcessor.cs" />
+    <Compile Include="MessageDispatch\MessageDispatchFixture.cs" />
+    <Compile Include="MessageDispatch\MessagePumpFixture.cs" />
+    <Compile Include="MessageDispatch\PerformerFixture.cs" />
+    <Compile Include="MessageDispatch\TestDoubles\MyEventMessageMapper.cs" />
+    <Compile Include="MessageDispatch\TestDoubles\SpyCommandProcessor.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreFactoryTests.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
