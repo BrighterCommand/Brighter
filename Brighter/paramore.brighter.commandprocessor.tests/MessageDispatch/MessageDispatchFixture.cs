@@ -22,13 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
-using Newtonsoft.Json;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.ioccontainers.Adapters;
@@ -59,7 +57,7 @@ namespace paramore.commandprocessor.tests.MessageDispatcher
                 dispatcher = new Dispatcher(container, new List<Plug>{plug}, logger);
 
                 var @event = new MyEvent();
-                var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
+                var message = new MyEventMessageMapper().MapToMessage(@event);
                 channel.Enqueue(message);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
@@ -75,5 +73,91 @@ namespace paramore.commandprocessor.tests.MessageDispatcher
 
             It should_have_consumed_the_messages_in_the_channel = () => channel.Length.ShouldEqual(0);
             It should_have_a_stopped_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+    }
+
+    public class When_a_message_dispatcher_starts_multiple_performers
+    {
+        private static Dispatcher dispatcher;
+        private static IAmAMessageChannel channel;
+        private static IAmACommandProcessor commandProcessor;
+
+        Establish context = () =>
+            {
+                var container = new TinyIoCAdapter(new TinyIoCContainer());
+                channel = new InMemoryChannel();
+                commandProcessor = new SpyCommandProcessor();
+
+                var logger = A.Fake<ILog>();
+                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
+                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
+
+                var plug = new Plug(cord: channel, jack: typeof (MyEvent), noOfPeformers: 3, timeoutInMiliseconds: 1000);
+                dispatcher = new Dispatcher(container, new List<Plug> {plug}, logger);
+
+                var @event = new MyEvent();
+                var message = new MyEventMessageMapper().MapToMessage(@event);
+                for (var i =0; i < 6; i++)
+                    channel.Enqueue(message);
+
+                dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+                dispatcher.Recieve();
+            };
+
+
+        Because of = () =>
+            {
+                Task.Delay(1000).Wait();
+                dispatcher.End().Wait();
+            };
+
+        It should_have_consumed_the_messages_in_the_channel = () => channel.Length.ShouldEqual(0);
+        It should_have_a_stopped_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+    }
+
+     public class When_a_message_dispatcher_starts_different_types_of_performers
+    {
+        private static Dispatcher dispatcher;
+        private static IAmAMessageChannel eventChannel;
+        private static IAmAMessageChannel commandChannel;
+        private static IAmACommandProcessor commandProcessor;
+
+        Establish context = () =>
+            {
+                var container = new TinyIoCAdapter(new TinyIoCContainer());
+                eventChannel = new InMemoryChannel();
+                commandChannel = new InMemoryChannel();
+                commandProcessor = new SpyCommandProcessor();
+
+                var logger = A.Fake<ILog>();
+                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
+                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
+                container.Register<IAmAMessageMapper<MyCommand>, MyCommandMessageMapper>();
+
+                var myEventPlug = new Plug(cord: eventChannel, jack: typeof (MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                var myCommandPlug = new Plug(cord: commandChannel, jack: typeof (MyCommand), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                dispatcher = new Dispatcher(container, new List<Plug> {myEventPlug, myCommandPlug}, logger);
+
+                var @event = new MyEvent();
+                var eventMessage = new MyEventMessageMapper().MapToMessage(@event);
+                eventChannel.Enqueue(eventMessage);
+
+                var command = new MyCommand();
+                var commandMessage = new MyCommandMessageMapper().MapToMessage(command);
+                commandChannel.Enqueue(commandMessage);
+
+                dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+                dispatcher.Recieve();
+            };
+
+
+        Because of = () =>
+            {
+                Task.Delay(1000).Wait();
+                dispatcher.End().Wait();
+            };
+
+        It should_have_consumed_the_messages_in_the_event_channel = () => eventChannel.Length.ShouldEqual(0);
+        It should_have_consumed_the_messages_in_the_command_channel = () => commandChannel.Length.ShouldEqual(0);
+        It should_have_a_stopped_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
     }
 }

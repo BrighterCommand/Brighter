@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
@@ -31,19 +32,14 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         public Message MapToMessage(MyCommand request)
         {
             var header = new MessageHeader(messageId: request.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND);
-            var body = new MessageBody(string.Format("id:{0}, value:{1} ", request.Id, request.Value));
+            var body = new MessageBody(JsonConvert.SerializeObject(request));
             var message = new Message(header, body);
             return message;
         }
 
         public MyCommand MapToRequest(Message message)
         {
-            var command = new MyCommand();
-            var bodyItems = message.Body.Value.Split('.');
-            var id = Guid.Parse(bodyItems[0].Split(':')[1]);
-            var value = bodyItems[1].Split(':')[1];
-            command.Id = id;
-            command.Value = value;
+            var command = JsonConvert.DeserializeObject<MyCommand>(message.Body.Value);
             return command;
         }
     }
