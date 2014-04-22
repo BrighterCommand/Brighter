@@ -49,6 +49,7 @@
     <Compile Include="IAmAMessageChannel.cs" />
     <Compile Include="IAmAPerformer.cs" />
     <Compile Include="Lamp.cs" />
+    <Compile Include="LampFactory.cs" />
     <Compile Include="MessagePump.cs" />
     <Compile Include="Performer.cs" />
     <Compile Include="Plug.cs" />

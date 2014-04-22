@@ -29,18 +29,7 @@ namespace paramore.brighter.serviceactivator
             plugs.Each((plug) =>
                 {
                     for (var i = 0; i < plug.NoOfPeformers; i++)
-                    {
-                        var messagePumpType = typeof (MessagePump<>).MakeGenericType(plug.Jack);
-                        var parameters =
-                            messagePumpType.GetConstructors()[0].GetParameters()
-                                                                .Select(param => container.GetInstance(param.ParameterType))
-                                                                .ToArray();
-                        var messagePump = (IAmAMessagePump) Activator.CreateInstance(messagePumpType, parameters);
-                        messagePump.Channel = plug.Cord;
-                        messagePump.TimeoutInMilliseconds = plug.TimeoutInMiliseconds;
-                        var lamp = new Lamp(plug.Cord, messagePump);
-                        lamps.Add(lamp);
-                    }
+                        lamps.Add(LampFactory.Create(container, plug));
                 });
             State = DispatcherState.DS_AWAITING;
         }
@@ -54,6 +43,7 @@ namespace paramore.brighter.serviceactivator
                 if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
                 {
                     State = DispatcherState.DS_RUNNING;
+
                     lamps.Each((lamp) => lamp.Light());
 
                     var tasks = lamps.Select(lamp => lamp.Job).ToList();
