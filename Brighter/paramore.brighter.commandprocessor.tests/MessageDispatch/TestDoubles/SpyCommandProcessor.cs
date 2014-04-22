@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using paramore.brighter.commandprocessor;
 
-namespace paramore.commandprocessor.tests.MessageDispatcher.TestDoubles
+namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
 {
     internal class SpyCommandProcessor : IAmACommandProcessor
     {

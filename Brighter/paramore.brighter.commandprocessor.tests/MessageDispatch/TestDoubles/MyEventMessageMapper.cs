@@ -26,7 +26,7 @@ using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.MessageDispatcher.TestDoubles
+namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
 {
     internal class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
     {
