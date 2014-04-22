@@ -45,9 +45,7 @@ namespace paramore.commandprocessor.tests.MessageDispatcher
             commandProcessor = new SpyCommandProcessor();
             channel = new InMemoryChannel();
             var mapper = new MyEventMessageMapper();
-            messagePump = new MessagePump<MyEvent>(commandProcessor, mapper);
-            messagePump.Channel = channel;
-            messagePump.TimeoutInMilliseconds = 5000;
+            messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) {Channel = channel, TimeoutInMilliseconds = 5000};
 
             @event = new MyEvent();
 

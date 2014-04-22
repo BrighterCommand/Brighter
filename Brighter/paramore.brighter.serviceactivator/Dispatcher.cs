@@ -53,8 +53,8 @@ namespace paramore.brighter.serviceactivator
             {
                 if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
                 {
-                    lamps.Each((lamp) => lamp.Light());
                     State = DispatcherState.DS_RUNNING;
+                    lamps.Each((lamp) => lamp.Light());
 
                     var tasks = lamps.Select(lamp => lamp.Job).ToList();
 
