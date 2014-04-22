@@ -48,11 +48,11 @@
     <Compile Include="IAmAMessagePump.cs" />
     <Compile Include="IAmAMessageChannel.cs" />
     <Compile Include="IAmAPerformer.cs" />
-    <Compile Include="Lamp.cs" />
-    <Compile Include="LampFactory.cs" />
+    <Compile Include="Consumer.cs" />
+    <Compile Include="ConsumerFactory.cs" />
     <Compile Include="MessagePump.cs" />
     <Compile Include="Performer.cs" />
-    <Compile Include="Plug.cs" />
+    <Compile Include="Connection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestHelpers\InMemoryChannel.cs" />
   </ItemGroup>

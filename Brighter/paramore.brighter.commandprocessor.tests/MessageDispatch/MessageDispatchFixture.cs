@@ -53,8 +53,8 @@ namespace paramore.commandprocessor.tests.MessageDispatcher
                 container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
                 container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
 
-                var plug = new Plug(cord: channel, jack: typeof(MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
-                dispatcher = new Dispatcher(container, new List<Plug>{plug}, logger);
+                var connection = new Connection(channel: channel, dataType: typeof(MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                dispatcher = new Dispatcher(container, new List<Connection>{connection}, logger);
 
                 var @event = new MyEvent();
                 var message = new MyEventMessageMapper().MapToMessage(@event);
@@ -91,8 +91,8 @@ namespace paramore.commandprocessor.tests.MessageDispatcher
                 container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
                 container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
 
-                var plug = new Plug(cord: channel, jack: typeof (MyEvent), noOfPeformers: 3, timeoutInMiliseconds: 1000);
-                dispatcher = new Dispatcher(container, new List<Plug> {plug}, logger);
+                var connection = new Connection(channel: channel, dataType: typeof (MyEvent), noOfPeformers: 3, timeoutInMiliseconds: 1000);
+                dispatcher = new Dispatcher(container, new List<Connection> {connection}, logger);
 
                 var @event = new MyEvent();
                 var message = new MyEventMessageMapper().MapToMessage(@event);
@@ -133,9 +133,9 @@ namespace paramore.commandprocessor.tests.MessageDispatcher
                 container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
                 container.Register<IAmAMessageMapper<MyCommand>, MyCommandMessageMapper>();
 
-                var myEventPlug = new Plug(cord: eventChannel, jack: typeof (MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
-                var myCommandPlug = new Plug(cord: commandChannel, jack: typeof (MyCommand), noOfPeformers: 1, timeoutInMiliseconds: 1000);
-                dispatcher = new Dispatcher(container, new List<Plug> {myEventPlug, myCommandPlug}, logger);
+                var myEventConnection = new Connection(channel: eventChannel, dataType: typeof (MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                var myCommandConnection = new Connection(channel: commandChannel, dataType: typeof (MyCommand), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                dispatcher = new Dispatcher(container, new List<Connection> {myEventConnection, myCommandConnection}, logger);
 
                 var @event = new MyEvent();
                 var eventMessage = new MyEventMessageMapper().MapToMessage(@event);
