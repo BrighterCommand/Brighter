@@ -30,9 +30,9 @@ using paramore.brighter.commandprocessor;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.TestHelpers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
-using paramore.commandprocessor.tests.MessageDispatcher.TestDoubles;
+using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
-namespace paramore.commandprocessor.tests.MessageDispatcher
+namespace paramore.commandprocessor.tests.MessageDispatch
 {
     public class When_running_a_message_pump_on_a_thread_should_be_able_to_stop
     {

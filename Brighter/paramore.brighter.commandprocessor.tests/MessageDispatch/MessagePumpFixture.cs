@@ -29,9 +29,9 @@ using paramore.brighter.commandprocessor;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.TestHelpers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
-using paramore.commandprocessor.tests.MessageDispatcher.TestDoubles;
+using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
-namespace paramore.commandprocessor.tests.MessageDispatcher
+namespace paramore.commandprocessor.tests.MessageDispatch
 {
     public class When_reading_a_message_from_a_channel_pump_out_to_command_processor
     {

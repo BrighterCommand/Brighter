@@ -33,9 +33,9 @@ using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.TestHelpers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
-using paramore.commandprocessor.tests.MessageDispatcher.TestDoubles;
+using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
-namespace paramore.commandprocessor.tests.MessageDispatcher
+namespace paramore.commandprocessor.tests.MessageDispatch
 {
     public class When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler
     {
