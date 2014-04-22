@@ -19,17 +19,17 @@ namespace paramore.brighter.serviceactivator
     public class Dispatcher
     {
         private readonly ILog logger;
-        private readonly List<Lamp> lamps = new List<Lamp>();
+        private readonly List<Consumer> consumers = new List<Consumer>();
         private Task controlTask;
 
-        public Dispatcher(IAdaptAnInversionOfControlContainer container, IEnumerable<Plug> plugs, ILog logger)
+        public Dispatcher(IAdaptAnInversionOfControlContainer container, IEnumerable<Connection> connections, ILog logger)
         {
             this.logger = logger;
             State = DispatcherState.DS_NOTREADY;
-            plugs.Each((plug) =>
+            connections.Each((connection) =>
                 {
-                    for (var i = 0; i < plug.NoOfPeformers; i++)
-                        lamps.Add(LampFactory.Create(container, plug));
+                    for (var i = 0; i < connection.NoOfPeformers; i++)
+                        consumers.Add(ConsumerFactory.Create(container, connection));
                 });
             State = DispatcherState.DS_AWAITING;
         }
@@ -44,9 +44,9 @@ namespace paramore.brighter.serviceactivator
                 {
                     State = DispatcherState.DS_RUNNING;
 
-                    lamps.Each((lamp) => lamp.Light());
+                    consumers.Each((consumer) => consumer.Wake());
 
-                    var tasks = lamps.Select(lamp => lamp.Job).ToList();
+                    var tasks = consumers.Select(lamp => lamp.Job).ToList();
 
                     while (tasks.Any())
                     {
@@ -74,7 +74,7 @@ namespace paramore.brighter.serviceactivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                lamps.Each((lamp) => lamp.Snuff());
+                consumers.Each((consumer) => consumer.Sleep());
             }
 
             return controlTask;
