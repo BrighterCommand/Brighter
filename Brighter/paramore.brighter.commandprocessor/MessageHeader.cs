@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -34,17 +35,53 @@ namespace paramore.brighter.commandprocessor
         MT_QUIT = 4
     }
 
-    public class MessageHeader
+    public class MessageHeader : IEquatable<MessageHeader>
     {
         public Guid Id { get; private set; }
         public string Topic { get; private set; }
         public MessageType MessageType { get; private set; }
+        public Dictionary<string, object> Bag { get; private set; } //intended for extended headers
 
         public MessageHeader(Guid messageId, string topic, MessageType messageType)
         {
             Id = messageId;
             Topic = topic;
             MessageType = messageType;
+            Bag = new Dictionary<string, object>();
+        }
+
+        public bool Equals(MessageHeader other)
+        {
+            return Id.Equals(other.Id) && Topic == other.Topic && MessageType == other.MessageType;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((MessageHeader) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = Id.GetHashCode();
+                hashCode = (hashCode*397) ^ (Topic != null ? Topic.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (int) MessageType;
+                return hashCode;
+            }
+        }
+
+        public static bool operator ==(MessageHeader left, MessageHeader right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(MessageHeader left, MessageHeader right)
+        {
+            return !Equals(left, right);
         }
     }
 }

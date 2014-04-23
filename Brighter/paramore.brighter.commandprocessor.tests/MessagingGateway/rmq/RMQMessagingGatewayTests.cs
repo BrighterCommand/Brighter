@@ -37,6 +37,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             };
 
         It should_send_a_message_via_rmq_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
+
+        Cleanup tearDown = () => messagingGateway.Dispose();
     }
 
     internal class TestRMQListener
@@ -77,5 +79,34 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             }
             return null;
         }
+    }
+
+      [Subject("Messaging Gateway")]
+    public class When_reading_a_message_via_the_messaging_gateway
+    {
+        static IAmAMessagingGateway messagingGateway;
+        static IAmAMessagingGateway client;
+        static Message sentMessage;
+        static Message recievedMessage;
+
+        Establish context = () =>
+            {
+                var logger = A.Fake<ILog>();
+                messagingGateway = new RMQMessagingGateway(logger);
+                sentMessage= new Message(
+                    header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
+                    body:new MessageBody("test content")
+                    );
+
+                client = new RMQMessagingGateway(logger);
+            };
+
+        Because of = () =>
+        {
+            messagingGateway.SendMessage(sentMessage);
+            recievedMessage = client.Listen(sentMessage.Header.Topic, 2000);
+        };
+
+        It should_send_a_message_via_rmq_with_the_matching_body = () => recievedMessage.Equals(sentMessage).ShouldBeTrue();
     }
 }

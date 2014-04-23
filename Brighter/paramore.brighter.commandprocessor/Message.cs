@@ -4,6 +4,7 @@ namespace paramore.brighter.commandprocessor
 {
     public class Message : IEquatable<Message>
     {
+
         public MessageHeader Header { get; private set; }
         public MessageBody Body { get; private set; }
 
@@ -11,6 +12,7 @@ namespace paramore.brighter.commandprocessor
         {
             get { return Header.Id; }  
         }
+
 
         public Message(MessageHeader header, MessageBody body)
         {
@@ -22,7 +24,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Header.Id.Equals(other.Header.Id);
+            return Header.Equals(other.Header) && Body.Equals(other.Body);
         }
 
         public override bool Equals(object obj)
@@ -35,7 +37,10 @@ namespace paramore.brighter.commandprocessor
 
         public override int GetHashCode()
         {
-            return Header.Id.GetHashCode();
+            unchecked
+            {
+                return ((Header != null ? Header.GetHashCode() : 0)*397) ^ (Body != null ? Body.GetHashCode() : 0);
+            }
         }
 
         public static bool operator ==(Message left, Message right)

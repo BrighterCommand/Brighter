@@ -57,7 +57,7 @@ namespace paramore.brighter.serviceactivator
             {
                 var message = Channel.Listen(TimeoutInMilliseconds);
                 
-                if (message == null)
+                if (message.Header.MessageType == MessageType.MT_NONE)
                 {
                     Task.Delay(500).Wait();
                     continue;
@@ -81,7 +81,6 @@ namespace paramore.brighter.serviceactivator
         {
             switch (messageType)
             {
-                case MessageType.MT_NONE:
                 case MessageType.MT_COMMAND:
                     {
                         commandProcessor.Send(request);
