@@ -25,13 +25,41 @@ using System;
 
 namespace paramore.brighter.commandprocessor
 {
-    public class MessageBody
+    public class MessageBody : IEquatable<MessageBody>
     {
         public string Value { get; private set; }
 
         public MessageBody(string body)
         {
             Value = body;
+        }
+
+        public bool Equals(MessageBody other)
+        {
+            return Value == other.Value;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((MessageBody) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Value != null ? Value.GetHashCode() : 0);
+        }
+
+        public static bool operator ==(MessageBody left, MessageBody right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(MessageBody left, MessageBody right)
+        {
+            return !Equals(left, right);
         }
     }
 }
