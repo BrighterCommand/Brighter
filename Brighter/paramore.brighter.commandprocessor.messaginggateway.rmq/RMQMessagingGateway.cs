@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Common.Logging;
@@ -6,6 +7,7 @@ using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 using RabbitMQ.Client.Events;
+using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
@@ -41,12 +43,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             logger.Debug(m => m("Preparing  to retrieve next message via exchange {1}", configuration.Exchange.Name));
 
-            if (!Connect())
+            if (!Connect(queueName))
             {
+                logger.Debug(m => m("Unable to connect to the exchange {1}", configuration.Exchange.Name));
                 throw connectionFailure;
             }
 
-            //create an 'empty' message
             var message = CreateEmptyMessage();
             try
             {
@@ -56,13 +58,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue);
                 if (fromQueue != null)
                 {
-                    var messageId = fromQueue.BasicProperties.MessageId;
-                    message = new Message(
-                        new MessageHeader(Guid.Parse(messageId), fromQueue.RoutingKey, MessageType.MT_EVENT),
-                        new MessageBody(Encoding.UTF8.GetString(fromQueue.Body))
-                        );
-
-                    message.Header.Bag["DeliveryTag"] = fromQueue.DeliveryTag;
+                    message = CreateMessage(fromQueue);
                 }
             }
             catch (Exception e)
@@ -75,6 +71,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         }
 
+
         public Task SendMessage(Message message)
         {
             //RabbitMQ .NET Client does not have an async publish, so fake this for now as we want to support messaging frameworks that do have this option
@@ -82,7 +79,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             logger.Debug(m=> m("Preparing  to sending message {0} via exchange {1}", configuration.Exchange.Name, JsonConvert.SerializeObject(message)));
 
-            if (!Connect())
+            if (!Connect(message.Header.Topic))
             {
                 tcs.SetException(connectionFailure);
                 throw connectionFailure;
@@ -97,7 +94,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             catch (Exception e)
             {
                 if (channel != null)
-                    channel.TxRollback();
                 tcs.SetException(e);
                 throw;
             }
@@ -121,7 +117,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
         }
 
-        private bool Connect()
+        private bool Connect(string queueName)
         {
             try
             {
@@ -134,8 +130,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     channel = OpenChannel(connection);
                     channel.BasicQos(0, 1, false);
 
-                    logger.Debug(m =>m("Declaring exchange {0} on connection {1}", configuration.Exchange.Name,configuration.AMPQUri.Uri.ToString()));
+                    logger.Debug(m =>m("Declaring exchange {0} on connection {1}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString()));
                     DeclareExchange(channel, configuration);
+
+                    logger.Debug(m =>m("Declaring queue {0} on connection {1}", queueName, configuration.AMPQUri.Uri.ToString()));
+                    channel.QueueDeclare(queueName, false, false, false, null);
                 }
             }
             catch (BrokerUnreachableException e)
@@ -155,6 +154,22 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return message;
         }
 
+        private Message CreateMessage(BasicDeliverEventArgs fromQueue)
+        {
+            var messageId = fromQueue.BasicProperties.MessageId;
+            var message = new Message(
+                new MessageHeader(Guid.Parse(messageId), fromQueue.BasicProperties.Headers["Topic"].ToString(), GetMessageType(fromQueue)),
+                new MessageBody(Encoding.UTF8.GetString(fromQueue.Body))
+                );
+
+
+            fromQueue.BasicProperties.Headers.Each((header) => message.Header.Bag.Add(header.Key, header.Value));
+
+            message.Header.Bag["DeliveryTag"] = fromQueue.DeliveryTag;
+            return message;
+        }
+
+
         private IBasicProperties CreateMessageHeader(Message message, IModel channel)
         {
             //create message header
@@ -162,6 +177,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             basicProperties.DeliveryMode = 1;
             basicProperties.ContentType = "text/plain";
             basicProperties.MessageId = message.Id.ToString();
+            basicProperties.Headers = new Dictionary<string, object>
+                {
+                    {"MessageType", message.Header.MessageType.ToString()},
+                    {"Topic", message.Header.Topic}
+                };
+            message.Header.Bag.Each((header) => basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value)));
             return basicProperties;
         }
 
@@ -185,13 +206,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return connection;
         }
 
+        private MessageType GetMessageType(BasicDeliverEventArgs fromQueue)
+        {
+            return (MessageType)Enum.Parse(typeof(MessageType), fromQueue.BasicProperties.Headers["MessageType"].ToString());
+        }
+
         private void PublishMessage(Message message, IModel channel, RMQMessagingGatewayConfigurationSection configuration, IBasicProperties basicProperties)
         {
             //publish message
-            channel.TxSelect();
-            channel.BasicPublish(configuration.Exchange.Name, message.Header.Topic, false, false, basicProperties,
-                                 Encoding.UTF8.GetBytes(message.Body.Value));
-            channel.TxCommit();
+            channel.BasicPublish(configuration.Exchange.Name, message.Header.Topic, false, false, basicProperties, Encoding.UTF8.GetBytes(message.Body.Value));
         }
     }
 }
