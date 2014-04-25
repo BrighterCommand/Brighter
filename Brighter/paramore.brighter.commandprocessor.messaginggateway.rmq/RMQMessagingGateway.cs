@@ -135,6 +135,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
                     logger.Debug(m =>m("Declaring queue {0} on connection {1}", queueName, configuration.AMPQUri.Uri.ToString()));
                     channel.QueueDeclare(queueName, false, false, false, null);
+                    channel.QueueBind(queueName, configuration.Exchange.Name, queueName);
+
                 }
             }
             catch (BrokerUnreachableException e)
@@ -158,12 +160,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             var messageId = fromQueue.BasicProperties.MessageId;
             var message = new Message(
-                new MessageHeader(Guid.Parse(messageId), fromQueue.BasicProperties.Headers["Topic"].ToString(), GetMessageType(fromQueue)),
+                new MessageHeader(Guid.Parse(messageId), 
+                    Encoding.UTF8.GetString((byte[])fromQueue.BasicProperties.Headers["Topic"]), 
+                    GetMessageType(fromQueue)),
                 new MessageBody(Encoding.UTF8.GetString(fromQueue.Body))
                 );
 
 
-            fromQueue.BasicProperties.Headers.Each((header) => message.Header.Bag.Add(header.Key, header.Value));
+            fromQueue.BasicProperties.Headers.Each((header) => message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString((byte[])header.Value)));
 
             message.Header.Bag["DeliveryTag"] = fromQueue.DeliveryTag;
             return message;
@@ -208,7 +212,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         private MessageType GetMessageType(BasicDeliverEventArgs fromQueue)
         {
-            return (MessageType)Enum.Parse(typeof(MessageType), fromQueue.BasicProperties.Headers["MessageType"].ToString());
+            return (MessageType)Enum.Parse(typeof(MessageType),  Encoding.UTF8.GetString((byte[])fromQueue.BasicProperties.Headers["MessageType"]));
         }
 
         private void PublishMessage(Message message, IModel channel, RMQMessagingGatewayConfigurationSection configuration, IBasicProperties basicProperties)
