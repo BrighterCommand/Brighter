@@ -142,6 +142,7 @@
     <Compile Include="MessageDispatch\TestDoubles\SpyCommandProcessor.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreFactoryTests.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
+    <Compile Include="MessagingGateway\rmq\RMQMessageChannelTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Timeout\Test Doubles\MyPassesTimeoutHandler.cs" />

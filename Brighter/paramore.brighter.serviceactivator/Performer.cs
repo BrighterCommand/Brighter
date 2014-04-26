@@ -30,17 +30,17 @@ namespace paramore.brighter.serviceactivator
 {
     public class Performer : IAmAPerformer 
     {
-        private readonly IAmAMessageChannel channel;
+        private readonly IAmAnInputChannel channel;
         private readonly IAmAMessagePump messagePump;
 
-        public Performer(IAmAMessageChannel channel, IAmAMessagePump messagePump)
+        public Performer(IAmAnInputChannel channel, IAmAMessagePump messagePump)
         {
             this.channel = channel;
             this.messagePump = messagePump;
         }
         public void Stop()
         {
-            channel.Enqueue(CreateQuitMessage());
+            channel.Send(CreateQuitMessage());
         }
 
         public Task Run()

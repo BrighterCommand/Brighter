@@ -46,7 +46,7 @@
   <ItemGroup>
     <Compile Include="Dispatcher.cs" />
     <Compile Include="IAmAMessagePump.cs" />
-    <Compile Include="IAmAMessageChannel.cs" />
+    <Compile Include="IAmAnInputChannel.cs" />
     <Compile Include="IAmAPerformer.cs" />
     <Compile Include="Consumer.cs" />
     <Compile Include="ConsumerFactory.cs" />

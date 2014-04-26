@@ -32,7 +32,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Because of = () =>
             {
-                messagingGateway.SendMessage(message);
+                messagingGateway.Send(message);
                 messageBody = client.Listen();
             };
 
@@ -103,8 +103,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Because of = () =>
         {
-            messagingGateway.SendMessage(sentMessage);
-            recievedMessage = client.Listen(sentMessage.Header.Topic, 2000);
+            messagingGateway.Send(sentMessage);
+            recievedMessage = client.Receive(sentMessage.Header.Topic, 2000);
         };
 
         It should_send_a_message_via_rmq_with_the_matching_body = () => recievedMessage.Equals(sentMessage).ShouldBeTrue();

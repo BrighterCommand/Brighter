@@ -52,7 +52,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
             var @event = new MyEvent();
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
-            channel.Enqueue(message);
+            channel.Send(message);
 
             performer = new Performer(channel, messagePump);
             performerTask = performer.Run();

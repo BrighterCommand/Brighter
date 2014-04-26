@@ -28,7 +28,9 @@ namespace paramore.brighter.commandprocessor
 {
     public interface IAmAMessagingGateway: IDisposable
     {
-        Task SendMessage(Message message);
-        Message Listen(string queueName, int timeoutInMilliseconds);
+        Task Send(Message message);
+        Message Receive(string queueName, int timeoutInMilliseconds);
+        void Acknowledge(Message message);
+        void Reject(Message message, bool requeue);
     }
 }

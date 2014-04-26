@@ -42,7 +42,7 @@ namespace paramore.brighter.serviceactivator
         private readonly IAmACommandProcessor commandProcessor;
         private readonly IAmAMessageMapper<TRequest> messageMapper;
         public int TimeoutInMilliseconds { get; set; }
-        public IAmAMessageChannel Channel { get; set; }
+        public IAmAnInputChannel Channel { get; set; }
 
         public MessagePump(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
         {
@@ -55,7 +55,7 @@ namespace paramore.brighter.serviceactivator
         {
             do
             {
-                var message = Channel.Listen(TimeoutInMilliseconds);
+                var message = Channel.Receive(TimeoutInMilliseconds);
                 
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
@@ -74,7 +74,7 @@ namespace paramore.brighter.serviceactivator
 
         private void AcknowledgeMessage(Message message)
         {
-            Channel.AcknowledgeMessage(message);
+            Channel.Acknowledge(message);
         }
 
         private void DispatchRequest(MessageType messageType, TRequest request)

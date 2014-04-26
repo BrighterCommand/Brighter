@@ -177,7 +177,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Because of = () => commandProcessor.Post(myCommand);
 
         It should_store_the_message_in_the_sent_command_message_repository = () => commandRepository.Add(message);
-        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.SendMessage(message)).MustHaveHappened();
+        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.Send(message)).MustHaveHappened();
     }
 
     public class When_resending_a_message_asynchronously
@@ -215,7 +215,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () => commandProcessor.Repost(message.Header.Id);
 
-        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.SendMessage(message)).MustHaveHappened();
+        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.Send(message)).MustHaveHappened();
     }
 
     public class When_an_exception_is_thrown_terminate_the_pipeline
@@ -285,7 +285,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 body: new MessageBody(string.Format("id:{0}, value:{1} ", myCommand.Id, myCommand.Value))
                 );
 
-            A.CallTo(() => messagingGateway.SendMessage(message)).Throws<Exception>().NumberOfTimes(4);
+            A.CallTo(() => messagingGateway.Send(message)).Throws<Exception>().NumberOfTimes(4);
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -314,7 +314,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 circuitBrokenException = (BrokenCircuitException) Catch.Exception(() => commandProcessor.Post(myCommand));
             };
 
-        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.SendMessage(message)).MustHaveHappened(Repeated.Exactly.Times(4));
+        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.Send(message)).MustHaveHappened(Repeated.Exactly.Times(4));
         private It should_throw_a_exception_out_once_all_retries_exhausted = () => failedException.ShouldBeOfExactType(typeof(Exception));
         It should_throw_a_circuit_broken_exception_once_circuit_broken = () => circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
 
