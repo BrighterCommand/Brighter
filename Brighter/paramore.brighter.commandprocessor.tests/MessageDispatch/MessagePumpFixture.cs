@@ -36,7 +36,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_reading_a_message_from_a_channel_pump_out_to_command_processor
     {
         static IAmAMessagePump messagePump;
-        private static IAmAMessageChannel channel;
+        private static IAmAnInputChannel channel;
         static SpyCommandProcessor commandProcessor;
         static MyEvent @event;
 
@@ -50,9 +50,9 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             @event = new MyEvent();
 
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
-            channel.Enqueue(message);
+            channel.Send(message);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            channel.Enqueue(quitMessage);
+            channel.Send(quitMessage);
         };
 
         Because of = () => messagePump.Run();

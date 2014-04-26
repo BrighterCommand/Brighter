@@ -28,28 +28,31 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator.TestHelpers
 {
-    public class InMemoryChannel : IAmAMessageChannel
+    public class InMemoryChannel : IAmAnInputChannel
     {
         private readonly ConcurrentQueue<Message> messageQueue = new ConcurrentQueue<Message>();
+
+        public void Reject(Message message)
+        {}
 
         public int Length
         {
             get { return messageQueue.Count; }
         }
 
-        public Message Listen(int timeoutinMilliseconds)
+        public Message Receive(int timeoutinMilliseconds)
         {
             Message message;
             messageQueue.TryDequeue(out message);
             return message;
         }
 
-        public void Enqueue(Message message)
+        public void Send(Message message)
         {
             messageQueue.Enqueue(message);
         }
 
-        public void AcknowledgeMessage(Message message)
+        public void Acknowledge(Message message)
         {}
     }
 }

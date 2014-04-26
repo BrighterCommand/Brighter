@@ -38,7 +38,7 @@ namespace paramore.brighter.serviceactivator
         public ConsumerState State { get; set; }
         public Task Job { get; set; }
 
-        public Consumer(IAmAMessageChannel channel, IAmAMessagePump messagePump)
+        public Consumer(IAmAnInputChannel channel, IAmAMessagePump messagePump)
         {
             Performer = new Performer(channel, messagePump);
             State = ConsumerState.Sleeping;

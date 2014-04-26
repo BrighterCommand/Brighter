@@ -29,7 +29,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             connectionFactory = new ConnectionFactory{Uri = configuration.AMPQUri.Uri.ToString()};
         }
 
-        public void AcknowledgeMessage(Message message)
+        public void Acknowledge(Message message)
          {
             if (channel != null)
             {
@@ -37,8 +37,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 channel.BasicAck((ulong)message.Header.Bag["DeliveryTag"], false);
             }
          }
+        
+        public void Reject(Message message, bool requeue)
+        {
+            if (channel != null)
+            {
+                logger.Debug(m => m("NoAck message {0}", message.Id));
+                channel.BasicNack((ulong)message.Header.Bag["DeliveryTag"], false, requeue);
+            }
+        }
 
-        public Message Listen(string queueName, int timeoutInMilliseconds)
+        public Message Receive(string queueName, int timeoutInMilliseconds)
         {
 
             logger.Debug(m => m("Preparing  to retrieve next message via exchange {1}", configuration.Exchange.Name));
@@ -72,7 +81,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         }
 
 
-        public Task SendMessage(Message message)
+        public Task Send(Message message)
         {
             //RabbitMQ .NET Client does not have an async publish, so fake this for now as we want to support messaging frameworks that do have this option
             var tcs = new TaskCompletionSource<object>();

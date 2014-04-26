@@ -40,7 +40,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler
     {
         static Dispatcher dispatcher;
-        static IAmAMessageChannel channel;
+        static IAmAnInputChannel channel;
         static IAmACommandProcessor commandProcessor;
 
         Establish context = () =>
@@ -58,7 +58,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 var @event = new MyEvent();
                 var message = new MyEventMessageMapper().MapToMessage(@event);
-                channel.Enqueue(message);
+                channel.Send(message);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
                 dispatcher.Recieve();
@@ -78,7 +78,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_a_message_dispatcher_starts_multiple_performers
     {
         private static Dispatcher dispatcher;
-        private static IAmAMessageChannel channel;
+        private static IAmAnInputChannel channel;
         private static IAmACommandProcessor commandProcessor;
 
         Establish context = () =>
@@ -97,7 +97,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 var @event = new MyEvent();
                 var message = new MyEventMessageMapper().MapToMessage(@event);
                 for (var i =0; i < 6; i++)
-                    channel.Enqueue(message);
+                    channel.Send(message);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
                 dispatcher.Recieve();
@@ -117,8 +117,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
      public class When_a_message_dispatcher_starts_different_types_of_performers
     {
         private static Dispatcher dispatcher;
-        private static IAmAMessageChannel eventChannel;
-        private static IAmAMessageChannel commandChannel;
+        private static IAmAnInputChannel eventChannel;
+        private static IAmAnInputChannel commandChannel;
         private static IAmACommandProcessor commandProcessor;
 
         Establish context = () =>
@@ -139,11 +139,11 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 var @event = new MyEvent();
                 var eventMessage = new MyEventMessageMapper().MapToMessage(@event);
-                eventChannel.Enqueue(eventMessage);
+                eventChannel.Send(eventMessage);
 
                 var command = new MyCommand();
                 var commandMessage = new MyCommandMessageMapper().MapToMessage(command);
-                commandChannel.Enqueue(commandMessage);
+                commandChannel.Send(commandMessage);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
                 dispatcher.Recieve();

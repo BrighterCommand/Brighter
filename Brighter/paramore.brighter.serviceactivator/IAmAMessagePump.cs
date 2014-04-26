@@ -30,6 +30,6 @@ namespace paramore.brighter.serviceactivator
     {
         void Run();
         int TimeoutInMilliseconds { get; set; }
-        IAmAMessageChannel Channel { get; set; }
+        IAmAnInputChannel Channel { get; set; }
     }
 }
