@@ -107,7 +107,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             recievedMessage = client.Receive(sentMessage.Header.Topic, 2000);
         };
 
-        It should_send_a_message_via_rmq_with_the_matching_body = () => recievedMessage.Equals(sentMessage).ShouldBeTrue();
+        It should_send_a_message_via_rmq_with_the_matching_body = () => recievedMessage.ShouldEqual(sentMessage);
 
       Cleanup teardown = () =>
       {

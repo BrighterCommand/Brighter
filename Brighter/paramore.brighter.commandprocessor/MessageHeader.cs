@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor
 
         public bool Equals(MessageHeader other)
         {
-            return Id.Equals(other.Id) && Topic == other.Topic && MessageType == other.MessageType;
+            return Topic == other.Topic && MessageType == other.MessageType;
         }
 
         public override bool Equals(object obj)
