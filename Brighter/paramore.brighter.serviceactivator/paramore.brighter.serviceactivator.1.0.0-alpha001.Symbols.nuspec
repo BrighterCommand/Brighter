@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
     <metadata>
         <id>paramore.brighter.serviceactivator</id>
-        <version>1.0.0-alpha</version>
+        <version>1.0.0-alpha001</version>
         <title>paramore.brighter.serviceactivator</title>
         <authors>Ian Cooper</authors>
         <owners>Ian Cooper</owners>
@@ -18,7 +18,7 @@
         <dependencies>
             <dependency id="Common.Logging" version="2.2.0" />
             <dependency id="CommonServiceLocator" version="1.2" />
-            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha" />
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha001" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />

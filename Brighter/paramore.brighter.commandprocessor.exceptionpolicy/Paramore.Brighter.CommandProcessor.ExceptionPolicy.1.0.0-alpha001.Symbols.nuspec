@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
     <metadata>
         <id>Paramore.Brighter.CommandProcessor.ExceptionPolicy</id>
-        <version>1.0.0-alpha</version>
+        <version>1.0.0-alpha001</version>
         <title>Paramore.Brighter.CommandProcessor.ExceptionPolicy</title>
         <authors>Ian Cooper</authors>
         <owners>Ian Cooper</owners>
@@ -14,19 +14,19 @@
         <releaseNotes>Early alpha, intended to support Progressive.NET 2014 release, updates to follow</releaseNotes>
         <copyright>Copyright ©  Ian Cooper 2014</copyright>
         <language>en-GB</language>
-        <tags>4.5</tags>
+        <tags>.NET</tags>
         <dependencies>
             <dependency id="CommonServiceLocator" version="1.2" />
             <dependency id="Polly" version="2.0.0" />
-            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha" />
             <dependency id="Common.Logging" version="2.2.0" />
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha001" />
         </dependencies>
-        <frameworkAssemblies>
-            <frameworkAssembly assemblyName="System" targetFramework="" />
-        </frameworkAssemblies>
     </metadata>
     <files>
         <file src="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll" target="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll" />
         <file src="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.pdb" target="lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.pdb" />
+        <file src="src\Attributes\UsePolicyAtttribute.cs" target="src\Attributes\UsePolicyAtttribute.cs" />
+        <file src="src\Handlers\ExceptionPolicyHandler.cs" target="src\Handlers\ExceptionPolicyHandler.cs" />
+        <file src="src\Properties\AssemblyInfo.cs" target="src\Properties\AssemblyInfo.cs" />
     </files>
 </package>

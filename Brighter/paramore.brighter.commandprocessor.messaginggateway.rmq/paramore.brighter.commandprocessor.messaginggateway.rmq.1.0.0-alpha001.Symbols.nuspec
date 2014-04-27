@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
     <metadata>
         <id>paramore.brighter.commandprocessor.messaginggateway.rmq</id>
-        <version>1.0.0-alpha</version>
+        <version>1.0.0-alpha001</version>
         <title>paramore.brighter.commandprocessor.messaginggateway.0mq</title>
         <authors>Ian Cooper</authors>
         <owners>Ian Cooper</owners>
@@ -19,9 +19,9 @@
             <dependency id="RabbitMQ.Client" version="3.2.4" />
             <dependency id="CommonServiceLocator" version="1.2" />
             <dependency id="Polly" version="2.0.0" />
-            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha" />
             <dependency id="Common.Logging" version="2.2.0" />
             <dependency id="Newtonsoft.Json" version="6.0.2" />
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha001" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />
