@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
     <metadata>
         <id>paramore.brighter.commandprocessor.ioccontainers.tinyioc</id>
-        <version>1.0.0-alpha</version>
+        <version>1.0.0-alpha001</version>
         <title>paramore.brighter.commandprocessor.ioccontainers.tinyioc</title>
         <authors>Ian Cooper</authors>
         <owners>Ian Cooper</owners>
@@ -18,8 +18,8 @@
         <dependencies>
             <dependency id="CommonServiceLocator" version="1.2" />
             <dependency id="TinyIoC" version="1.2" />
-            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha" />
             <dependency id="Common.Logging" version="2.2.0" />
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha001" />
         </dependencies>
     </metadata>
     <files>
