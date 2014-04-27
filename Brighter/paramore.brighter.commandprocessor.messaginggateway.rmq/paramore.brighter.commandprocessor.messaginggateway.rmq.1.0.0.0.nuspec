@@ -13,13 +13,15 @@
         <summary>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter.CommandProcessor pipeline, using RabbitMQ</summary>
         <releaseNotes>This is an early alpha intended to support Progressive.NET 2014. Further releases to follow</releaseNotes>
         <copyright>Copyright ©  2014 Ian Cooper</copyright>
+        <language>en-GB</language>
+        <tags>.NET</tags>
         <dependencies>
             <dependency id="RabbitMQ.Client" version="3.2.4" />
             <dependency id="CommonServiceLocator" version="1.2" />
             <dependency id="Polly" version="2.0.0" />
             <dependency id="Common.Logging" version="2.2.0" />
             <dependency id="Newtonsoft.Json" version="6.0.2" />
-            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha001" />
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0.0" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />
@@ -27,9 +29,13 @@
         </frameworkAssemblies>
     </metadata>
     <files>
-        <file src="content\web.config.install.xdt" target="content\web.config.install.xdt" />
-        <file src="content\web.config.uninstall.xdt" target="content\web.config.uninstall.xdt" />
-        <file src="lib\net45\paramore.brighter.commandprocessor.dll" target="lib\net45\paramore.brighter.commandprocessor.dll" />
-        <file src="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" />
+        <file src="web.config.install.xdt" target="content\web.config.install.xdt" />
+        <file src="web.config.uninstall.xdt" target="content\web.config.uninstall.xdt" />
+        <file src="bin\Debug\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" />
+        <file src= "bin\Debug\paramore.brighter.commandprocessor.messaginggateway.rmq.pdb" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.pdb" />
+        <file src="MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" target="src\MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" />
+        <file src="Properties\AssemblyInfo.cs" target="src\Properties\AssemblyInfo.cs" />
+        <file src="RMQMessagingGateway.cs" target="src\RMQMessagingGateway.cs" />
+        <file src="RMQInputChannel.cs" target="src\RMQInputChannel.cs" />
     </files>
 </package>

@@ -18,25 +18,25 @@
         <dependencies>
             <dependency id="Common.Logging" version="2.2.0" />
             <dependency id="CommonServiceLocator" version="1.2" />
-            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha001" />
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0.0" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />
         </frameworkAssemblies>
     </metadata>
     <files>
-        <file src="lib\net45\paramore.brighter.serviceactivator.dll" target="lib\net45\paramore.brighter.serviceactivator.dll" />
-        <file src="lib\net45\paramore.brighter.serviceactivator.pdb" target="lib\net45\paramore.brighter.serviceactivator.pdb" />
-        <file src="src\Properties\AssemblyInfo.cs" target="src\Properties\AssemblyInfo.cs" />
-        <file src="src\TestHelpers\InMemoryChannel.cs" target="src\TestHelpers\InMemoryChannel.cs" />
-        <file src="src\Connection.cs" target="src\Connection.cs" />
-        <file src="src\Consumer.cs" target="src\Consumer.cs" />
-        <file src="src\ConsumerFactory.cs" target="src\ConsumerFactory.cs" />
-        <file src="src\Dispatcher.cs" target="src\Dispatcher.cs" />
-        <file src="src\IAmAMessagePump.cs" target="src\IAmAMessagePump.cs" />
-        <file src="src\IAmAnInputChannel.cs" target="src\IAmAnInputChannel.cs" />
-        <file src="src\IAmAPerformer.cs" target="src\IAmAPerformer.cs" />
-        <file src="src\MessagePump.cs" target="src\MessagePump.cs" />
-        <file src="src\Performer.cs" target="src\Performer.cs" />
+        <file src="bin\Debug\paramore.brighter.serviceactivator.dll" target="lib\net45\paramore.brighter.serviceactivator.dll" />
+        <file src="bin\Debug\paramore.brighter.serviceactivator.pdb" target="lib\net45\paramore.brighter.serviceactivator.pdb" />
+        <file src="Properties\AssemblyInfo.cs" target="src\Properties\AssemblyInfo.cs" />
+        <file src="TestHelpers\InMemoryChannel.cs" target="src\TestHelpers\InMemoryChannel.cs" />
+        <file src="Connection.cs" target="src\Connection.cs" />
+        <file src="Consumer.cs" target="src\Consumer.cs" />
+        <file src="ConsumerFactory.cs" target="src\ConsumerFactory.cs" />
+        <file src="Dispatcher.cs" target="src\Dispatcher.cs" />
+        <file src="IAmAMessagePump.cs" target="src\IAmAMessagePump.cs" />
+        <file src="IAmAnInputChannel.cs" target="src\IAmAnInputChannel.cs" />
+        <file src="IAmAPerformer.cs" target="src\IAmAPerformer.cs" />
+        <file src="MessagePump.cs" target="src\MessagePump.cs" />
+        <file src="Performer.cs" target="src\Performer.cs" />
     </files>
 </package>

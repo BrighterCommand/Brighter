@@ -17,17 +17,17 @@
         <tags>.NET</tags>
         <dependencies>
             <dependency id="Common.Logging" version="2.2.0" />
-            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0-alpha001" />
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0.0" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />
         </frameworkAssemblies>
     </metadata>
     <files>
-        <file src="lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.dll" target="lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.dll" />
-        <file src="lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.pdb" target="lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.pdb" />
-        <file src="src\Attributes\TimeoutPolicyAttribute.cs" target="src\Attributes\TimeoutPolicyAttribute.cs" />
-        <file src="src\Handlers\TimeoutPolicyHandler.cs" target="src\Handlers\TimeoutPolicyHandler.cs" />
-        <file src="src\Properties\AssemblyInfo.cs" target="src\Properties\AssemblyInfo.cs" />
+        <file src="bin\Debug\paramore.brighter.commandprocessor.timeoutpolicy.dll" target="lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.dll" />
+        <file src="bin\Debug\paramore.brighter.commandprocessor.timeoutpolicy.pdb" target="lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.pdb" />
+        <file src="Attributes\TimeoutPolicyAttribute.cs" target="src\Attributes\TimeoutPolicyAttribute.cs" />
+        <file src="Handlers\TimeoutPolicyHandler.cs" target="src\Handlers\TimeoutPolicyHandler.cs" />
+        <file src="Properties\AssemblyInfo.cs" target="src\Properties\AssemblyInfo.cs" />
     </files>
 </package>
