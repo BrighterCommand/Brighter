@@ -1,0 +1,1 @@
+NuGet Pack "Paramore.Brighter.CommandProcessor.1.0.0.0.nuspec" -Version 1.0.0.0 -Symbols
