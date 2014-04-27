@@ -68,11 +68,59 @@
       <HintPath>..\..\packages\Machine.Specifications.Should.0.7.1\lib\net45\Machine.Specifications.Should.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.2.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\CommonServiceLocator.1.2\lib\portable-windows8+net40+sl5+windowsphone8\Microsoft.Practices.ServiceLocation.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Newtonsoft.Json.6.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="OpenRasta">
       <HintPath>Libs\OpenRasta\OpenRasta.dll</HintPath>
     </Reference>
     <Reference Include="OpenRasta.Hosting.AspNet">
       <HintPath>Libs\OpenRasta\OpenRasta.Hosting.AspNet.dll</HintPath>
+    </Reference>
+    <Reference Include="paramore.brighter.commandprocessor, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.1.0.0.0\lib\net45\paramore.brighter.commandprocessor.dll</HintPath>
+    </Reference>
+    <Reference Include="paramore.brighter.commandprocessor.exceptionpolicy, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.ExceptionPolicy.1.0.0.0\lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll</HintPath>
+    </Reference>
+    <Reference Include="paramore.brighter.commandprocessor.ioccontainers.tinyioc, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\paramore.brighter.commandprocessor.ioccontainers.tinyioc.1.0.0.0\lib\net45\paramore.brighter.commandprocessor.ioccontainers.tinyioc.dll</HintPath>
+    </Reference>
+    <Reference Include="paramore.brighter.commandprocessor.messagestore.ravendb, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\paramore.brighter.commandprocessor.messagestore.ravendb.1.0.0.0\lib\net45\paramore.brighter.commandprocessor.messagestore.ravendb.dll</HintPath>
+    </Reference>
+    <Reference Include="paramore.brighter.commandprocessor.messaginggateway.rmq, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\paramore.brighter.commandprocessor.messaginggateway.rmq.1.0.0.0\lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll</HintPath>
+    </Reference>
+    <Reference Include="paramore.brighter.commandprocessor.timeoutpolicy, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\paramore.brighter.commandprocessor.timeoutpolicy.1.0.0.0\lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.dll</HintPath>
+    </Reference>
+    <Reference Include="Polly, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Polly.2.0.0\lib\net45\Polly.dll</HintPath>
+    </Reference>
+    <Reference Include="RabbitMQ.Client, Version=3.2.4.0, Culture=neutral, PublicKeyToken=89e7d7c5feba84ce, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\RabbitMQ.Client.3.2.4\lib\net30\RabbitMQ.Client.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Abstractions, Version=2.5.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\RavenDB.Client.2.5.2851\lib\net45\Raven.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Client.Lightweight, Version=2.5.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\RavenDB.Client.2.5.2851\lib\net45\Raven.Client.Lightweight.dll</HintPath>
     </Reference>
     <Reference Include="Simple.Data, Version=0.19.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
