@@ -91,7 +91,8 @@ namespace paramore.brighter.serviceactivator
 
                     State = DispatcherState.DS_STOPPED;
                 }
-            });
+            },
+            TaskCreationOptions.LongRunning);
         }
 
         public Task End()
