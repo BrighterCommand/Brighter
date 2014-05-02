@@ -30,7 +30,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandpr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.serviceactivator", "paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj", "{B9126B00-5A97-4C7D-B395-755456E5FA28}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskMailer", "TaskMailer\TaskMailer.csproj", "{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskMailer", "Examples\TaskMailer\TaskMailer.csproj", "{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
