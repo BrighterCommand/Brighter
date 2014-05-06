@@ -81,7 +81,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 throw connectionFailure;
             }
 
-            var message = CreateEmptyMessage();
+            var message = new Message();
             try
             {
                 var consumer = new QueueingBasicConsumer(channel);
@@ -179,13 +179,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             return true;
 
-        }
-
-        private static Message CreateEmptyMessage()
-        {
-            var message = new Message(new MessageHeader(Guid.Empty, string.Empty, MessageType.MT_NONE),
-                                      new MessageBody(string.Empty));
-            return message;
         }
 
         private Message CreateMessage(BasicDeliverEventArgs fromQueue)

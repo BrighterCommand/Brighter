@@ -27,6 +27,6 @@ namespace paramore.brighter.commandprocessor
 {
     public class Event : IRequest
     {
-        public Guid Id { get; protected set; }
+        public Guid Id { get; set; }
     }
 }
