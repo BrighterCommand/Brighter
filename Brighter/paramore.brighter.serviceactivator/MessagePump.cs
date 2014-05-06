@@ -22,7 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator
@@ -43,6 +46,7 @@ namespace paramore.brighter.serviceactivator
         private readonly IAmAMessageMapper<TRequest> messageMapper;
         public int TimeoutInMilliseconds { get; set; }
         public IAmAnInputChannel Channel { get; set; }
+        public ILog Logger { get; set; }
 
         public MessagePump(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
         {
@@ -55,8 +59,11 @@ namespace paramore.brighter.serviceactivator
         {
             do
             {
+                if (Logger != null) Logger.Debug(m => m("MessagePump: Receiving messages on thread # {0}", Thread.CurrentThread.ManagedThreadId));
                 var message = Channel.Receive(TimeoutInMilliseconds);
                 
+                if (message == null) throw new Exception("Could not recieve message. Note that should return an MT_NONE from an empty queue on timeout");
+
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
                     Task.Delay(500).Wait();
@@ -64,7 +71,10 @@ namespace paramore.brighter.serviceactivator
                 }
 
                 if (message.Header.MessageType == MessageType.MT_QUIT)
+                {
+                    if (Logger != null) Logger.Debug(m => m("MessagePump: Quit receiving messages on thread # {0}", Thread.CurrentThread.ManagedThreadId));
                     break;
+                }
 
                 DispatchRequest(message.Header.MessageType, TranslateMessage(message));
                 AcknowledgeMessage(message);
@@ -74,11 +84,13 @@ namespace paramore.brighter.serviceactivator
 
         private void AcknowledgeMessage(Message message)
         {
+            if (Logger != null) Logger.Debug(m => m("MessagePump: Acknowledge message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId));
             Channel.Acknowledge(message);
         }
 
         private void DispatchRequest(MessageType messageType, TRequest request)
         {
+            if (Logger != null) Logger.Debug(m => m("MessagePump: Dispatching message {0} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId));
             switch (messageType)
             {
                 case MessageType.MT_COMMAND:
@@ -97,6 +109,7 @@ namespace paramore.brighter.serviceactivator
 
         private TRequest TranslateMessage(Message message)
         {
+            if (Logger != null) Logger.Debug(m => m("MessagePump: Translate message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId));
             return messageMapper.MapToRequest(message);
         }
     }

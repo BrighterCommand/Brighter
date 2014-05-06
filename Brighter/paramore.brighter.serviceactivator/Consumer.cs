@@ -26,20 +26,23 @@ using System.Threading.Tasks;
 
 namespace paramore.brighter.serviceactivator
 {
-    internal enum ConsumerState
+    public enum ConsumerState
     {
         Sleeping=0,
         Awake=1
     }
 
-    internal class Consumer
+    public class Consumer
     {
+        public ConnectionName Name { get; set; }
         public IAmAPerformer Performer { get; private set; }
         public ConsumerState State { get; set; }
         public Task Job { get; set; }
 
-        public Consumer(IAmAnInputChannel channel, IAmAMessagePump messagePump)
+
+        public Consumer(ConnectionName name, IAmAnInputChannel channel, IAmAMessagePump messagePump)
         {
+            Name = name;
             Performer = new Performer(channel, messagePump);
             State = ConsumerState.Sleeping;
         }

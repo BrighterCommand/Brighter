@@ -36,6 +36,11 @@ namespace paramore.brighter.commandprocessor
             get { return Header.Id; }  
         }
 
+        public Message()
+        {
+            Header = new MessageHeader(messageId: Guid.Empty, topic: string.Empty, messageType:MessageType.MT_NONE);
+            Body = new MessageBody(string.Empty);
+        }
 
         public Message(MessageHeader header, MessageBody body)
         {
