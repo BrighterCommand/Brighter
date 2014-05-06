@@ -42,29 +42,23 @@ namespace paramore.brighter.serviceactivator
 
     public class Dispatcher
     {
-        private readonly ILog logger;
+        private IAdaptAnInversionOfControlContainer container;
+        private ILog logger;
         private Task controlTask;
+        private List<Task> tasks; 
 
         public List<Consumer> Consumers { get; private set; }
+        public DispatcherState State { get; private set; }
 
         public Dispatcher(IAdaptAnInversionOfControlContainer container, IEnumerable<Connection> connections, ILog logger)
         {
+            this.container = container;
             this.logger = logger;
             State = DispatcherState.DS_NOTREADY;
-            Consumers = new List<Consumer>();
-            connections.Each((connection) =>
-                {
-                    for (var i = 0; i < connection.NoOfPeformers; i++)
-                    {
-                        logger.Debug(m => m("Dispatcher: Creating performer {0} for connection: {1}", i, connection.Name));
-                        Consumers.Add(ConsumerFactory.Create(container, connection, logger));
-                    }
-                });
+            Consumers = new List<Consumer>(CreateConsumers(connections));
             State = DispatcherState.DS_AWAITING;
             logger.Debug(m => m("Dispatcher is ready to recieve"));
         }
-
-        public DispatcherState State { get; private set; }
 
         public void Recieve()
         {
@@ -77,7 +71,8 @@ namespace paramore.brighter.serviceactivator
 
                     Consumers.Each((consumer) => consumer.Wake());
 
-                    var tasks = Consumers.Select(consumer => consumer.Job).ToList();
+                    tasks = Consumers.Select(consumer => consumer.Job).ToList();
+
                     logger.Debug(m => m("Dispatcher: Dispatcher starting {0} performers", tasks.Count));
 
                     while (tasks.Any())
@@ -123,6 +118,40 @@ namespace paramore.brighter.serviceactivator
                 logger.Debug(m => m("Dispatcher: Stopping connection {0}", connection.Name));
                 Consumers.Where(consumer => consumer.Name == connection.Name).Each((consumer) => consumer.Sleep());
             }
+        }
+
+        public void Open(Connection connection)
+        {
+            if (State == DispatcherState.DS_RUNNING)
+            {
+                logger.Debug(m => m("Dispatcher: Opening connection {0}", connection.Name));
+                var addedConsumers = CreateConsumers(new List<Connection>() {connection});
+                addedConsumers.Each((consumer) =>
+                {
+                    Consumers.Add(consumer);
+                    consumer.Wake();
+                    tasks.Add(consumer.Job);
+                } );
+            }
+            else
+            {
+                throw new InvalidOperationException("Use Recieve to start the dispatcher; use Open to start a shut or added connection");
+            }
+        }
+
+        private IEnumerable<Consumer> CreateConsumers(IEnumerable<Connection> connections)
+        {
+            var list = new List<Consumer>();
+            connections.Each((connection) =>
+            {
+                for (var i = 0; i < connection.NoOfPeformers; i++)
+                {
+                    int performer = i;
+                    logger.Debug(m => m("Dispatcher: Creating performer {0} for connection: {1}", performer, connection.Name));
+                    list.Add(ConsumerFactory.Create(this.container, connection, this.logger));
+                }
+            });
+            return list;
         }
     }
 }
