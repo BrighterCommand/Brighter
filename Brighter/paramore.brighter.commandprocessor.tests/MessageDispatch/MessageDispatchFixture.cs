@@ -23,9 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Common.Logging;
-using FakeItEasy;
+using Common.Logging.Configuration;
+using Common.Logging.Simple;
 using Machine.Specifications;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
@@ -49,11 +51,18 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 channel = new InMemoryChannel();
                 commandProcessor = new SpyCommandProcessor();
 
-                var logger = A.Fake<ILog>();
+                var properties = new NameValueCollection();
+                properties["showDateTime"] = "true";
+                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+
+                var logger = LogManager.GetLogger(typeof (Dispatcher));
+
+                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
+                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
                 container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
                 container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
 
-                var connection = new Connection(channel: channel, dataType: typeof(MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                var connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof(MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
                 dispatcher = new Dispatcher(container, new List<Connection>{connection}, logger);
 
                 var @event = new MyEvent();
@@ -87,11 +96,18 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 channel = new InMemoryChannel();
                 commandProcessor = new SpyCommandProcessor();
 
-                var logger = A.Fake<ILog>();
+                var properties = new NameValueCollection();
+                properties["showDateTime"] = "true";
+                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+
+                var logger = LogManager.GetLogger(typeof (Dispatcher));
+
+                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
+                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
                 container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
                 container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
 
-                var connection = new Connection(channel: channel, dataType: typeof (MyEvent), noOfPeformers: 3, timeoutInMiliseconds: 1000);
+                var connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPeformers: 3, timeoutInMiliseconds: 1000);
                 dispatcher = new Dispatcher(container, new List<Connection> {connection}, logger);
 
                 var @event = new MyEvent();
@@ -128,13 +144,20 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 commandChannel = new InMemoryChannel();
                 commandProcessor = new SpyCommandProcessor();
 
-                var logger = A.Fake<ILog>();
+                var properties = new NameValueCollection();
+                properties["showDateTime"] = "true";
+                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+
+                var logger = LogManager.GetLogger(typeof (Dispatcher));
+
+                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
+                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
                 container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
                 container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
                 container.Register<IAmAMessageMapper<MyCommand>, MyCommandMessageMapper>();
 
-                var myEventConnection = new Connection(channel: eventChannel, dataType: typeof (MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
-                var myCommandConnection = new Connection(channel: commandChannel, dataType: typeof (MyCommand), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                var myEventConnection = new Connection(name: new ConnectionName("test"), channel: eventChannel, dataType: typeof (MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                var myCommandConnection = new Connection(name: new ConnectionName("anothertest"), channel: commandChannel, dataType: typeof (MyCommand), noOfPeformers: 1, timeoutInMiliseconds: 1000);
                 dispatcher = new Dispatcher(container, new List<Connection> {myEventConnection, myCommandConnection}, logger);
 
                 var @event = new MyEvent();
@@ -158,6 +181,103 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         It should_have_consumed_the_messages_in_the_event_channel = () => eventChannel.Length.ShouldEqual(0);
         It should_have_consumed_the_messages_in_the_command_channel = () => commandChannel.Length.ShouldEqual(0);
+        It should_have_a_stopped_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+    }
+
+    public class When_a_message_dispatcher_shuts_a_connection
+    {
+        private static Dispatcher dispatcher;
+        private static IAmAnInputChannel channel;
+        private static IAmACommandProcessor commandProcessor;
+        private static Connection connection;
+
+        Establish context = () =>
+            {
+                var container = new TinyIoCAdapter(new TinyIoCContainer());
+                channel = new InMemoryChannel();
+                commandProcessor = new SpyCommandProcessor();
+
+                var properties = new NameValueCollection();
+                properties["showDateTime"] = "true";
+                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+
+                var logger = LogManager.GetLogger(typeof (Dispatcher));
+
+                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
+                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
+
+                connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPeformers: 3, timeoutInMiliseconds: 1000);
+                dispatcher = new Dispatcher(container, new List<Connection> {connection}, logger);
+
+                var @event = new MyEvent();
+                var message = new MyEventMessageMapper().MapToMessage(@event);
+                for (var i =0; i < 6; i++)
+                    channel.Send(message);
+
+                dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+                dispatcher.Recieve();
+            };
+
+
+        Because of = () =>
+            {
+                Task.Delay(1000).Wait();
+                dispatcher.Shut(connection);
+                dispatcher.End().Wait();
+            };
+
+        It should_have_consumed_the_messages_in_the_channel = () => dispatcher.Consumers.Any(consumer => (consumer.Name == connection.Name) && (consumer.State == ConsumerState.Awake)).ShouldBeFalse(); 
+        It should_have_a_stopped_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+    }
+
+    public class When_a_message_dispatcher_restarts_a_connection
+    {
+        private static Dispatcher dispatcher;
+        private static IAmAnInputChannel channel;
+        private static IAmACommandProcessor commandProcessor;
+        private static Connection connection;
+
+        Establish context = () =>
+            {
+                var container = new TinyIoCAdapter(new TinyIoCContainer());
+                channel = new InMemoryChannel();
+                commandProcessor = new SpyCommandProcessor();
+
+                var properties = new NameValueCollection();
+                properties["showDateTime"] = "true";
+                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+
+                var logger = LogManager.GetLogger(typeof (Dispatcher));
+
+                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
+                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
+
+                connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                dispatcher = new Dispatcher(container, new List<Connection> {connection}, logger);
+
+                var @event = new MyEvent();
+                var message = new MyEventMessageMapper().MapToMessage(@event);
+                channel.Send(message);
+
+                dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+                dispatcher.Recieve();
+                Task.Delay(1000).Wait();
+                dispatcher.Shut(connection);
+            };
+
+
+        Because of = () =>
+            {
+                dispatcher.Open(connection);
+
+                var @event = new MyEvent();
+                var message = new MyEventMessageMapper().MapToMessage(@event);
+                channel.Send(message);
+
+                dispatcher.End().Wait();
+            };
+
+        It should_have_consumed_the_messages_in_the_event_channel = () => channel.Length.ShouldEqual(0);
         It should_have_a_stopped_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
     }
 }

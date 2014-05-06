@@ -28,7 +28,7 @@ namespace paramore.brighter.commandprocessor
     [Serializable]
     public class Command : ICommand
     {
-        public Guid Id { get; protected set; }
+        public Guid Id { get; set; }
 
         public Command(Guid id)
         {

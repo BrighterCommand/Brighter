@@ -27,6 +27,6 @@ namespace paramore.brighter.commandprocessor
 {
     public interface IRequest
     {
-        Guid Id { get; }
+        Guid Id { get; set; }
     }
 }

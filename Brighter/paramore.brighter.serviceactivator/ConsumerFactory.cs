@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator
@@ -32,7 +33,7 @@ namespace paramore.brighter.serviceactivator
     {
         private ConsumerFactory() {}
 
-        public static Consumer Create(IAdaptAnInversionOfControlContainer container, Connection connection)
+        public static Consumer Create(IAdaptAnInversionOfControlContainer container, Connection connection, ILog logger)
         {
             var messagePumpType = typeof (MessagePump<>).MakeGenericType(connection.DataType);
             var parameters = messagePumpType.GetConstructors()[0].GetParameters()
@@ -41,7 +42,8 @@ namespace paramore.brighter.serviceactivator
             var messagePump = (IAmAMessagePump) Activator.CreateInstance(messagePumpType, parameters);
             messagePump.Channel = connection.Channel;
             messagePump.TimeoutInMilliseconds = connection.TimeoutInMiliseconds;
-            var lamp = new Consumer(connection.Channel, messagePump);
+            messagePump.Logger = logger;
+            var lamp = new Consumer(connection.Name, connection.Channel, messagePump);
             return lamp;
         }
     }

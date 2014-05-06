@@ -1,0 +1,202 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SendGrid.SmtpApi</name>
+    </assembly>
+    <members>
+        <member name="T:SendGrid.SmtpApi.Header">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="T:SendGrid.SmtpApi.IHeader">
+            <summary>
+            Represents the additional functionality to add SendGrid specific mail headers
+            </summary>
+        </member>
+        <member name="M:SendGrid.SmtpApi.IHeader.AddFilterSetting(System.String,System.Collections.Generic.IEnumerable{System.String},System.String)">
+            <summary>
+            Allows you to specify a filter setting.  You can find a list of filters and settings here:
+            http://docs.sendgrid.com/documentation/api/web-api/filtersettings/
+            </summary>
+            <param name="filter">The name of the filter to set</param>
+            <param name="settings">The multipart name of the parameter being set</param>
+            <param name="value">The value that the settings name will be assigning</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.IHeader.AddSection(System.String,System.String)">
+            <summary>
+            Adds a substitution section to be used during the mail merge.
+            </summary>
+            <param name="tag">string to be replaced with the section in the message</param>
+            <param name="text">The text of the section. May include substituion tags.</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.IHeader.AddSubstitution(System.String,System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            This adds a substitution value to be used during the mail merge.  Substitutions
+            will happen in order added, so calls to this should match calls to AddTo.
+            
+            If a tag already exists, it will be overwritten.
+            </summary>
+            <param name="tag">string to be replaced in the message</param>
+            <param name="substitutions">substitutions to be made, one per recipient</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.IHeader.AddUniqueArgs(System.Collections.Generic.IDictionary{System.String,System.String})">
+            <summary>
+            This adds parameters and values that will be bassed back through SendGrid's
+            Event API if an event notification is triggered by this email.
+            </summary>
+            <param name="identifiers">parameter value pairs to be passed back on event notification</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.IHeader.DisableFilter(System.String)">
+            <summary>
+            Shortcut method for disabling a filter.
+            </summary>
+            <param name="filter">The name of the filter to disable</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.IHeader.EnableFilter(System.String)">
+            <summary>
+            Shortcut method for enabling a filter.
+            </summary>
+            <param name="filter">The name of the filter to enable</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.IHeader.JsonString">
+            <summary>
+            Converts the filter settings into a JSON string.
+            </summary>
+            <returns>String representation of the SendGrid headers</returns>
+        </member>
+        <member name="M:SendGrid.SmtpApi.IHeader.SetCategories(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            This sets the categories for this email.  Statistics are stored on a per category
+            basis, so this can be useful for tracking on a per group basis.
+            </summary>
+            <param name="categories">categories applied to the message</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.IHeader.SetCategory(System.String)">
+            <summary>
+            This sets the category for this email.  Statistics are stored on a per category
+            basis, so this can be useful for tracking on a per group basis.
+            </summary>
+            <param name="category">categories applied to the message</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.IHeader.SetTo(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            This adds the "to" array to the X-SMTPAPI header so that multiple recipients
+            may be addressed in a single email. (but they each get their own email, instead of a single email with multiple TO: addressees)
+            </summary>
+            <param name="addresses">List of email addresses</param>
+        </member>
+        <member name="P:SendGrid.SmtpApi.IHeader.To">
+            <summary>
+            Gets the array of recipient addresses from the X-SMTPAPI header
+            </summary>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Header.#ctor">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Header.AddFilterSetting(System.String,System.Collections.Generic.IEnumerable{System.String},System.String)">
+            <summary>
+            Allows you to specify a filter setting.  You can find a list of filters and settings here:
+            http://docs.sendgrid.com/documentation/api/web-api/filtersettings/
+            </summary>
+            <param name="filter">The name of the filter to set</param>
+            <param name="settings">The multipart name of the parameter being set</param>
+            <param name="value">The value that the settings name will be assigning</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Header.AddSection(System.String,System.String)">
+            <summary>
+            Adds a substitution section to be used during the mail merge.
+            </summary>
+            <param name="tag">string to be replaced with the section in the message</param>
+            <param name="text">The text of the section. May include substituion tags.</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Header.AddSubstitution(System.String,System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            This adds a substitution value to be used during the mail merge.  Substitutions
+            will happen in order added, so calls to this should match calls to AddTo.
+            
+            If a tag already exists, it will be overwritten.
+            </summary>
+            <param name="tag">string to be replaced in the message</param>
+            <param name="substitutions">substitutions to be made, one per recipient</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Header.AddUniqueArgs(System.Collections.Generic.IDictionary{System.String,System.String})">
+            <summary>
+            This adds parameters and values that will be bassed back through SendGrid's
+            Event API if an event notification is triggered by this email.
+            </summary>
+            <param name="identifiers">parameter value pairs to be passed back on event notification</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Header.DisableFilter(System.String)">
+            <summary>
+            Shortcut method for disabling a filter.
+            </summary>
+            <param name="filter">The name of the filter to disable</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Header.EnableFilter(System.String)">
+            <summary>
+            Shortcut method for enabling a filter.
+            </summary>
+            <param name="filter">The name of the filter to enable</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Header.JsonString">
+            <summary>
+            Converts the filter settings into a JSON string.
+            </summary>
+            <returns>String representation of the SendGrid headers</returns>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Header.SetCategories(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            This sets the categories for this email.  Statistics are stored on a per category
+            basis, so this can be useful for tracking on a per group basis.
+            </summary>
+            <param name="categories">categories applied to the message</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Header.SetCategory(System.String)">
+            <summary>
+            This sets the category for this email.  Statistics are stored on a per category
+            basis, so this can be useful for tracking on a per group basis.
+            </summary>
+            <param name="category">categories applied to the message</param>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Header.SetTo(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            This adds the "to" array to the X-SMTPAPI header so that multiple recipients
+            may be addressed in a single email. (but they each get their own email, instead of a single email with multiple TO: addressees)
+            </summary>
+            <param name="addresses">List of email addresses</param>
+        </member>
+        <member name="P:SendGrid.SmtpApi.Header.To">
+            <summary>
+            Gets the array of recipient addresses from the X-SMTPAPI header
+            </summary>
+        </member>
+        <member name="T:SendGrid.SmtpApi.HeaderSettingsNode">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="T:SendGrid.SmtpApi.Utils">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Utils.Serialize``1(``0)">
+            <summary>
+            
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="objectToSerialize"></param>
+            <returns></returns>
+        </member>
+        <member name="M:SendGrid.SmtpApi.Utils.SerializeDictionary(System.Collections.Generic.IDictionary{System.String,System.String})">
+            <summary>
+            
+            </summary>
+            <param name="dictionaryToSerialize"></param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>

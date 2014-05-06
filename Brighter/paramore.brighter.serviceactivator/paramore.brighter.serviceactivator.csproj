@@ -45,6 +45,7 @@
     <Reference Include="System.Configuration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConnectionName.cs" />
     <Compile Include="Dispatcher.cs" />
     <Compile Include="IAmAMessagePump.cs" />
     <Compile Include="IAmAnInputChannel.cs" />
