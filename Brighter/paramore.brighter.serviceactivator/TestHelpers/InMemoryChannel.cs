@@ -43,8 +43,10 @@ namespace paramore.brighter.serviceactivator.TestHelpers
         public Message Receive(int timeoutinMilliseconds)
         {
             Message message;
-            messageQueue.TryDequeue(out message);
-            return message;
+            if (messageQueue.TryDequeue(out message))
+                return message;
+            else
+                return new Message();
         }
 
         public void Send(Message message)

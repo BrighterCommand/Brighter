@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator
@@ -31,5 +32,6 @@ namespace paramore.brighter.serviceactivator
         void Run();
         int TimeoutInMilliseconds { get; set; }
         IAmAnInputChannel Channel { get; set; }
+        ILog Logger { get; set; }
     }
 }
