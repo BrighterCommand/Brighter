@@ -80,6 +80,10 @@
       <HintPath>..\..\packages\SendGrid.SmtpApiPlus.1.0.1\lib\portable-net4+sl5+wp8+win8+wpa81+monotouch+monoandroid\SendGrid.SmtpApi.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="SendGridPlus">
+      <HintPath>..\..\packages\SendGridPlus.4.1\lib\net45\SendGridPlus.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
