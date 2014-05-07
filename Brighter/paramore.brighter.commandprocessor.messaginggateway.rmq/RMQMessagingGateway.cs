@@ -134,9 +134,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             try
             {
-                logger.Debug(m => m("RMQMessagingGateway: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body {4}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value));
+                logger.Debug(m => m("RMQMessagingGateway: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value));
                 PublishMessage(message, channel, configuration, CreateMessageHeader(message, channel));
-                logger.Debug(m => m("RMQMessagingGateway: Published message to exchange {0} on connection {1} with topic {2} and id {3} and body {4} at {5}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value, DateTime.UtcNow));
+                logger.Debug(m => m("RMQMessagingGateway: Published message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4} at {5}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value, DateTime.UtcNow));
             }
             catch (Exception e)
             {
