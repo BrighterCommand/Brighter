@@ -33,5 +33,6 @@ namespace paramore.brighter.serviceactivator
         void Acknowledge(Message message);
         void Reject(Message message);
         int Length { get; }
+        ChannelName Name { get; }
     }
 }

@@ -62,7 +62,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
                 container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
 
-                var connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof(MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                var connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
                 dispatcher = new Dispatcher(container, new List<Connection>{connection}, logger);
 
                 var @event = new MyEvent();
@@ -107,7 +107,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
                 container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
 
-                var connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPeformers: 3, timeoutInMiliseconds: 1000);
+                var connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000);
                 dispatcher = new Dispatcher(container, new List<Connection> {connection}, logger);
 
                 var @event = new MyEvent();
@@ -156,8 +156,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
                 container.Register<IAmAMessageMapper<MyCommand>, MyCommandMessageMapper>();
 
-                var myEventConnection = new Connection(name: new ConnectionName("test"), channel: eventChannel, dataType: typeof (MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
-                var myCommandConnection = new Connection(name: new ConnectionName("anothertest"), channel: commandChannel, dataType: typeof (MyCommand), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                var myEventConnection = new Connection(name: new ConnectionName("test"), channel: eventChannel, dataType: typeof (MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
+                var myCommandConnection = new Connection(name: new ConnectionName("anothertest"), channel: commandChannel, dataType: typeof (MyCommand), noOfPerformers: 1, timeoutInMilliseconds: 1000);
                 dispatcher = new Dispatcher(container, new List<Connection> {myEventConnection, myCommandConnection}, logger);
 
                 var @event = new MyEvent();
@@ -206,7 +206,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
                 container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
 
-                connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPeformers: 3, timeoutInMiliseconds: 1000);
+                connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000);
                 dispatcher = new Dispatcher(container, new List<Connection> {connection}, logger);
 
                 var @event = new MyEvent();
@@ -252,7 +252,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
                 container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
 
-                connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPeformers: 1, timeoutInMiliseconds: 1000);
+                connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
                 dispatcher = new Dispatcher(container, new List<Connection> {connection}, logger);
 
                 var @event = new MyEvent();

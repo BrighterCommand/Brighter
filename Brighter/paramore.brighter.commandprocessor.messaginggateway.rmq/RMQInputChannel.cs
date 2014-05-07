@@ -40,6 +40,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             this.gateway = gateway;
         }
 
+        public ChannelName Name {get { return new ChannelName(queueName); } }
+
         public Message Receive(int timeoutinMilliseconds)
         {
             Message message;
@@ -69,5 +71,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             get { return queue.Count; }
             set { throw new NotImplementedException(); } 
         }
+
     }
 }
