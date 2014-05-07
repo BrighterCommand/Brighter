@@ -24,6 +24,8 @@ THE SOFTWARE. */
 using System;
 using System.Text;
 using Common.Logging;
+using Common.Logging.Configuration;
+using Common.Logging.Simple;
 using FakeItEasy;
 using Machine.Specifications;
 using RabbitMQ.Client;
@@ -114,7 +116,11 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Establish context = () =>
             {
-                var logger = A.Fake<ILog>();
+                var properties = new NameValueCollection();
+                properties["showDateTime"] = "true";
+                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+                var logger = LogManager.GetLogger(typeof(RMQMessagingGateway));  
+             
                 messagingGateway = new RMQMessagingGateway(logger);
                 sentMessage= new Message(
                     header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
@@ -128,12 +134,21 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         {
             messagingGateway.Send(sentMessage);
             recievedMessage = client.Receive(sentMessage.Header.Topic, 2000);
+            client.Acknowledge(recievedMessage);
         };
 
         It should_send_a_message_via_rmq_with_the_matching_body = () => recievedMessage.ShouldEqual(sentMessage);
 
       Cleanup teardown = () =>
       {
+          Message message;
+          do
+          {
+              message = messagingGateway.Receive(sentMessage.Header.Topic, 2000);
+              if (message.Header.MessageType != MessageType.MT_NONE)
+                  client.Acknowledge(message);
+          } while (message.Header.MessageType != MessageType.MT_NONE);
+ 
           messagingGateway.Dispose();
           client.Dispose();
       };

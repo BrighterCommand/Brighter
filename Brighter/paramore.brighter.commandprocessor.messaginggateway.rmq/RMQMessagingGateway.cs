@@ -91,6 +91,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 if (fromQueue != null)
                 {
                     message = CreateMessage(fromQueue);
+                    logger.Debug(m => m("Recieved message from exchange {0} on connection {1} with topic {2} and id {3} and body {4}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value));
+                }
+                else
+                {
+                    logger.Debug(m => m("Time out without recieving message from exchange {0} on connection {1} with topic {2}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), queueName));
                 }
             }
             catch (Exception e)
@@ -119,9 +124,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             try
             {
-                logger.Debug(m => m("Publishing message to exchange {0} on connection {1} with topic {2} and id {3}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id));
+                logger.Debug(m => m("Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body {4}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value));
                 PublishMessage(message, channel, configuration, CreateMessageHeader(message, channel));
-                logger.Debug(m => m("Published message to exchange {0} on connection {1} with topic {2} and id {3} at {4}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, DateTime.UtcNow));
+                logger.Debug(m => m("Published message to exchange {0} on connection {1} with topic {2} and id {3} and body {4} at {5}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value, DateTime.UtcNow));
             }
             catch (Exception e)
             {

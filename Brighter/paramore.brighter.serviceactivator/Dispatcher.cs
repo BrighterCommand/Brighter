@@ -42,12 +42,12 @@ namespace paramore.brighter.serviceactivator
 
     public class Dispatcher
     {
-        private IAdaptAnInversionOfControlContainer container;
-        private ILog logger;
+        private readonly IAdaptAnInversionOfControlContainer container;
+        private readonly ILog logger;
         private Task controlTask;
-        private List<Task> tasks; 
+        private readonly IList<Task> tasks = new SynchronizedCollection<Task>(); 
 
-        public List<Consumer> Consumers { get; private set; }
+        public IList<Consumer> Consumers { get; private set; }
         public DispatcherState State { get; private set; }
 
         public Dispatcher(IAdaptAnInversionOfControlContainer container, IEnumerable<Connection> connections, ILog logger)
@@ -55,7 +55,10 @@ namespace paramore.brighter.serviceactivator
             this.container = container;
             this.logger = logger;
             State = DispatcherState.DS_NOTREADY;
-            Consumers = new List<Consumer>(CreateConsumers(connections));
+
+            Consumers = new SynchronizedCollection<Consumer>();
+            CreateConsumers(connections).Each(consumer => Consumers.Add(consumer));
+            
             State = DispatcherState.DS_AWAITING;
             logger.Debug(m => m("Dispatcher is ready to recieve"));
         }
@@ -71,7 +74,7 @@ namespace paramore.brighter.serviceactivator
 
                     Consumers.Each((consumer) => consumer.Wake());
 
-                    tasks = Consumers.Select(consumer => consumer.Job).ToList();
+                    Consumers.Select(consumer => consumer.Job).Each(job => tasks.Add(job));
 
                     logger.Debug(m => m("Dispatcher: Dispatcher starting {0} performers", tasks.Count));
 
