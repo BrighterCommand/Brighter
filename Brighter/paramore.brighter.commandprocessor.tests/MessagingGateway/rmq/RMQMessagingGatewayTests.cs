@@ -26,7 +26,6 @@ using System.Text;
 using Common.Logging;
 using Common.Logging.Configuration;
 using Common.Logging.Simple;
-using FakeItEasy;
 using Machine.Specifications;
 using RabbitMQ.Client;
 using paramore.brighter.commandprocessor;
@@ -45,7 +44,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Establish context = () =>
             {
-                var logger = A.Fake<ILog>();
+                var properties = new NameValueCollection();
+                properties["showDateTime"] = "true";
+                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+                var logger = LogManager.GetLogger(typeof(RMQMessagingGateway));  
                 messagingGateway = new RMQMessagingGateway(logger);
                 message = new Message(
                     header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 

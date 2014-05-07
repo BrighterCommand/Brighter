@@ -72,7 +72,7 @@ namespace paramore.brighter.serviceactivator
                     State = DispatcherState.DS_RUNNING;
                     logger.Debug(m => m("Dispatcher: Dispatcher starting"));
 
-                    Consumers.Each((consumer) => consumer.Wake());
+                    Consumers.Each((consumer) => consumer.Open());
 
                     Consumers.Select(consumer => consumer.Job).Each(job => tasks.Add(job));
 
@@ -90,7 +90,7 @@ namespace paramore.brighter.serviceactivator
                         {
                             ae.Handle((ex) =>
                                 {
-                                    logger.Error(m => m("Dispatcher: Error on lamp; lamp switched off"));
+                                    logger.Error(m => m("Dispatcher: Error on consumer; consumer shut down"));
                                     return true;
                                 });
                         }
@@ -108,7 +108,7 @@ namespace paramore.brighter.serviceactivator
             if (State == DispatcherState.DS_RUNNING)
             {
                 logger.Debug(m => m("Dispatcher: Stopping dispatcher"));
-                Consumers.Each((consumer) => consumer.Sleep());
+                Consumers.Each((consumer) => consumer.Shut());
             }
 
             return controlTask;
@@ -119,7 +119,7 @@ namespace paramore.brighter.serviceactivator
             if (State == DispatcherState.DS_RUNNING)
             {
                 logger.Debug(m => m("Dispatcher: Stopping connection {0}", connection.Name));
-                Consumers.Where(consumer => consumer.Name == connection.Name).Each((consumer) => consumer.Sleep());
+                Consumers.Where(consumer => consumer.Name == connection.Name).Each((consumer) => consumer.Shut());
             }
         }
 
@@ -132,7 +132,7 @@ namespace paramore.brighter.serviceactivator
                 addedConsumers.Each((consumer) =>
                 {
                     Consumers.Add(consumer);
-                    consumer.Wake();
+                    consumer.Open();
                     tasks.Add(consumer.Job);
                 } );
             }

@@ -226,7 +226,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 dispatcher.End().Wait();
             };
 
-        It should_have_consumed_the_messages_in_the_channel = () => dispatcher.Consumers.Any(consumer => (consumer.Name == connection.Name) && (consumer.State == ConsumerState.Awake)).ShouldBeFalse(); 
+        It should_have_consumed_the_messages_in_the_channel = () => dispatcher.Consumers.Any(consumer => (consumer.Name == connection.Name) && (consumer.State == ConsumerState.Open)).ShouldBeFalse(); 
         It should_have_a_stopped_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
     }
 

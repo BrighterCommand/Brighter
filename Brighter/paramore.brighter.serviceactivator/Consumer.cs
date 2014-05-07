@@ -28,8 +28,8 @@ namespace paramore.brighter.serviceactivator
 {
     public enum ConsumerState
     {
-        Sleeping=0,
-        Awake=1
+        Shut=0,
+        Open=1
     }
 
     public class Consumer
@@ -44,21 +44,21 @@ namespace paramore.brighter.serviceactivator
         {
             Name = name;
             Performer = new Performer(channel, messagePump);
-            State = ConsumerState.Sleeping;
+            State = ConsumerState.Shut;
         }
 
-        public void Wake()
+        public void Open()
         {
-            State = ConsumerState.Awake;
+            State = ConsumerState.Open;
             Job = Performer.Run();
         }
 
-        public void Sleep()
+        public void Shut()
         {
-            if (State == ConsumerState.Awake)
+            if (State == ConsumerState.Open)
             {
                 Performer.Stop();
-                State = ConsumerState.Sleeping;
+                State = ConsumerState.Shut;
             }
         }
     }
