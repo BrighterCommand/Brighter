@@ -63,7 +63,11 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         It should_send_a_message_via_rmq_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
 
-        Cleanup tearDown = () => messagingGateway.Dispose();
+        Cleanup tearDown = () =>
+        {
+            messagingGateway.Purge("test");
+            messagingGateway.Dispose();
+        };
     }
 
     internal class TestRMQListener
@@ -141,14 +145,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
       Cleanup teardown = () =>
       {
-          Message message;
-          do
-          {
-              message = messagingGateway.Receive(sentMessage.Header.Topic, 2000);
-              if (message.Header.MessageType != MessageType.MT_NONE)
-                  client.Acknowledge(message);
-          } while (message.Header.MessageType != MessageType.MT_NONE);
- 
+          messagingGateway.Purge("test");
           messagingGateway.Dispose();
           client.Dispose();
       };
