@@ -135,7 +135,7 @@
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithDivideByZeroHandler.cs" />
     <Compile Include="IoCContainers\TinyIoCContainerFixture.cs" />
     <Compile Include="ExceptionPolicy\PolicyDecoratorTests.cs" />
-    <Compile Include="MessageDispatch\MessageDispatchConfiguration.cs" />
+    <Compile Include="MessageDispatch\MessageDispatchConfigurationFixture.cs" />
     <Compile Include="MessageDispatch\MessageDispatchFixture.cs" />
     <Compile Include="MessageDispatch\MessagePumpFixture.cs" />
     <Compile Include="MessageDispatch\PerformerFixture.cs" />

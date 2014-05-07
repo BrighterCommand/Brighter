@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator.TestHelpers
@@ -31,14 +30,25 @@ namespace paramore.brighter.serviceactivator.TestHelpers
     public class InMemoryChannel : IAmAnInputChannel
     {
         private readonly ConcurrentQueue<Message> messageQueue = new ConcurrentQueue<Message>();
+        private readonly ChannelName channelName;
 
-        public void Reject(Message message)
-        {}
+        public InMemoryChannel(string channelName = "")
+        {
+            this.channelName = new ChannelName(channelName);
+        }
 
         public int Length
         {
             get { return messageQueue.Count; }
         }
+
+        public ChannelName Name
+        {
+            get { return channelName; }
+        }
+
+        public void Acknowledge(Message message)
+        {}
 
         public Message Receive(int timeoutinMilliseconds)
         {
@@ -49,12 +59,13 @@ namespace paramore.brighter.serviceactivator.TestHelpers
                 return new Message();
         }
 
+        public void Reject(Message message)
+        {}
+
         public void Send(Message message)
         {
             messageQueue.Enqueue(message);
         }
 
-        public void Acknowledge(Message message)
-        {}
     }
 }

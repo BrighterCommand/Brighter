@@ -38,8 +38,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
             return new RMQMessagingGatewayConfigurationSection();
         }
 
-        private RMQMessagingGatewayConfigurationSection(){}
-
         [ConfigurationProperty("amqpUri")]
         public AMQPUriSpecification AMPQUri
         {

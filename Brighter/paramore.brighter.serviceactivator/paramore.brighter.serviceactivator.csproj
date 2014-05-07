@@ -46,8 +46,10 @@
     <Reference Include="System.ServiceModel" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChannelName.cs" />
     <Compile Include="ConnectionName.cs" />
     <Compile Include="Dispatcher.cs" />
+    <Compile Include="IAmAChannelFactory.cs" />
     <Compile Include="IAmAMessagePump.cs" />
     <Compile Include="IAmAnInputChannel.cs" />
     <Compile Include="IAmAPerformer.cs" />
@@ -60,6 +62,7 @@
     <Compile Include="ServiceActivatorConfiguraton\ConnectionFactory.cs" />
     <Compile Include="ServiceActivatorConfiguraton\ServiceActivatorConfigurationSection.cs" />
     <Compile Include="TestHelpers\InMemoryChannel.cs" />
+    <Compile Include="TestHelpers\InMemoryChannelFactory.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">

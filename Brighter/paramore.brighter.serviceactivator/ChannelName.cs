@@ -1,12 +1,10 @@
-﻿using System;
-
-namespace paramore.brighter.serviceactivator
+﻿namespace paramore.brighter.serviceactivator
 {
-    public class ConnectionName : IEquatable<ConnectionName>
+    public class ChannelName
     {
         private readonly string name;
 
-        public ConnectionName(string name)
+        public ChannelName(string name)
         {
             this.name = name;
         }
@@ -21,12 +19,12 @@ namespace paramore.brighter.serviceactivator
             return name;
         }
 
-        public static implicit operator string(ConnectionName rhs)
+        public static implicit operator string(ChannelName rhs)
         {
             return rhs.ToString();
         }
 
-        public bool Equals(ConnectionName other)
+        public bool Equals(ChannelName other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
@@ -38,7 +36,7 @@ namespace paramore.brighter.serviceactivator
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((ConnectionName) obj);
+            return Equals((ChannelName) obj);
         }
 
         public override int GetHashCode()
@@ -46,14 +44,13 @@ namespace paramore.brighter.serviceactivator
             return (name != null ? name.GetHashCode() : 0);
         }
 
-        public static bool operator ==(ConnectionName left, ConnectionName right)
+        public static bool operator ==(ChannelName left, ChannelName right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(ConnectionName left, ConnectionName right)
+        public static bool operator !=(ChannelName left, ChannelName right)
         {
             return !Equals(left, right);
-        }
-    }
+        }   }
 }

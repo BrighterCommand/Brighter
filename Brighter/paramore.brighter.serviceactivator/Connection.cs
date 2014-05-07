@@ -34,13 +34,13 @@ namespace paramore.brighter.serviceactivator
         public int NoOfPeformers { get; private set; }
         public int TimeoutInMiliseconds { get; private set; }
 
-        public Connection(ConnectionName name, IAmAnInputChannel channel, Type dataType, int noOfPeformers, int timeoutInMiliseconds)
+        public Connection(ConnectionName name, IAmAnInputChannel channel, Type dataType, int noOfPerformers, int timeoutInMilliseconds)
         {
             Name = name;
             Channel = channel;
             DataType = dataType;
-            NoOfPeformers = noOfPeformers;
-            TimeoutInMiliseconds = timeoutInMiliseconds;
+            NoOfPeformers = noOfPerformers;
+            TimeoutInMiliseconds = timeoutInMilliseconds;
         }
     }
 }
