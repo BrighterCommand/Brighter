@@ -72,9 +72,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Polly.2.0.0\lib\net45\Polly.dll</HintPath>
     </Reference>
-    <Reference Include="RabbitMQ.Client, Version=3.2.4.0, Culture=neutral, PublicKeyToken=89e7d7c5feba84ce, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\RabbitMQ.Client.3.2.4\lib\net30\RabbitMQ.Client.dll</HintPath>
+    <Reference Include="RabbitMQ.Client">
+      <HintPath>..\..\packages\RabbitMQ.Client.3.3.0\lib\net30\RabbitMQ.Client.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="SendGrid.SmtpApi">
       <HintPath>..\..\packages\SendGrid.SmtpApiPlus.1.0.1\lib\portable-net4+sl5+wp8+win8+wpa81+monotouch+monoandroid\SendGrid.SmtpApi.dll</HintPath>
@@ -107,10 +107,10 @@
     <Compile Include="Adapters\ServiceHost\Program.cs" />
     <Compile Include="Adapters\ServiceHost\TaskMailerService.cs" />
     <Compile Include="Adapters\Tests\TaskMailerServiceFixture.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Domain\TaskRemiderMailer.cs" />
     <Compile Include="Ports\MailTaskReminderHander.cs" />
     <Compile Include="Ports\TaskReminderCommand.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
