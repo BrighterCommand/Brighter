@@ -32,5 +32,6 @@ namespace paramore.brighter.commandprocessor
         Message Receive(string queueName, int timeoutInMilliseconds);
         void Acknowledge(Message message);
         void Reject(Message message, bool requeue);
+        void Purge(string queueName);
     }
 }
