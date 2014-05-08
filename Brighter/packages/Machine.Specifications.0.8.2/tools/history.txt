@@ -1,0 +1,169 @@
+Machine.Specifications 0.8.2
+-----------------------------
+- Fixes specs not being loaded into Resharper
+- Fixes specs only temporarily shown when base class has tags attribute
+
+Machine.Specifications 0.8.1
+-----------------------------
+- Support subject attribute on derived and base class in Resharper Runner
+
+Machine.Specifications 0.8.0
+-----------------------------
+- Resharper 8.2 support
+- dotCover 2.7 support
+- dotCover 2.0 to 2.2 support dropped
+- Resharper 6.0 to 7.0 support dropped
+
+Machine.Specifications 0.7.0
+-----------------------------
+- Machine.Specifications.Should has been moved to seperate repository and nuget.
+
+Machine.Specifications 0.6.2
+-----------------------------
+- Enable support for internal specs
+- Enable support for private nested specs
+
+Machine.Specifications 0.6.1
+-----------------------------
+- Nuget package adds proper references for .NET 4.0 and 4.5
+- Nuget package excludes sources
+
+Machine.Specifications 0.6.0
+-----------------------------
+- Should Extension Methods are moved into own assembly which simplifies things for people using other assertion libraries.
+- DelegateUsageAttribute is deprecated and will be remove in next version use new *DelegateAttribute types for custom delegates
+- Dropped support for Gallio
+- Resharper 8.1 support
+- DotCover 2.6 support
+
+Machine.Specifications 0.5.18
+-----------------------------
+- The zip package looks just like the NuGet package, minus NuGet-specific files
+
+Machine.Specifications 0.5.17
+-----------------------------
+- This version was accidentally released as the signed version only. It is equal
+to 0.5.16 unsigned.
+
+Machine.Specifications 0.5.16
+-----------------------------
+- Capturing standard out, standard error and trace streams in ReSharper 8
+(7 does this for us) and the console runners. Output is added to the test result
+XML/HTML. (#158)
+- Some fixes for behaviors in ReSharper (#155)
+
+Machine.Specifications 0.5.15
+-----------------------------
+Fixed an issue with running two spec assemblies: When the first one fails and
+the second one succeeds mspec.exe reported success. I needed to introduce a
+breaking change in the runner, so older versions are not compatible with 0.5.15.
+Update your ReSharper runners when upgrading to 0.5.15!
+
+Machine.Specifications 0.5.14
+-----------------------------
+- Closed #146: MSpec doesn't fail when Machine.Specifications cannot be found for
+a spec assembly. Can be useful if you want to target mspec.exe to a NUnit
+assembly, which is now a no-op.
+- Closed #151: Fixed MSpec slowness with ReSharper 8.
+
+Machine.Specifications 0.5.12
+-----------------------------
+- ReSharper 8 support
+- dotCover 2.5 support by Alexander Mikhailov
+- Documented --filters parameter for mspec.exe by Pieter Germishuys
+- Fix for TeamCity integration by James Crowley
+
+Machine.Specifications 0.5.11
+-----------------------------
+
+- Console output (mspec.exe) is now colored by default. You can disable colored
+output with the --no-color switch
+- Added progress output for the console runner (--progress switch)
+- The console runner now prints a list of failed specifications at the end of
+the test run (for silent, progress and verbose reporting options)
+- Support for custom delegates (i.e. you can replace Establish, Because, It,
+Cleanup, Behaves_like) with your own versions as long as the delegate signatures
+match. Please note that this currently only supported for console and
+TestDriven.Net runners. ReSharper won't find your context/specs if you use
+custom delegates. See Machine.Specifications.Example.CustomDelegates for an
+example. -- Thanks Jonathan Dickinson!
+- Fixed an issue with the ReSharper runner and generic Behaviors like
+Behaves_like<Behavior<Foo>> a_blah_blah;
+- Improved double-click navigation for behavior specifications in ReSharper
+- Dropped support for ReSharper 6.0
+- Fixed bug #17 which caused ReSharper to run IAssemblyContexts for each
+specification in an assembly (now the behavior is the same as with the console
+runner - running them once per assembly)
+- Matt Ellis contributed code that allows you to filter for "unit test usages"
+in ReSharper -- thank you!
+
+Machine.Specifications 0.5.10
+-----------------------------
+
+- ReSharper 7.1 support
+- Various fixes for ReSharper:
+  - Retrieving Subject from outer class
+  - Context sort order
+  - Unimplemented specs are being reported as inconclusive
+
+Machine.Specifications 0.5.9
+----------------------------
+
+- Removed ReSharper runners for ReSharper 4.1, 4.5 and 5.0
+- Added runner for dotCover 2.1
+- Updated runner for Gallio 3.4
+
+Machine.Specifications 0.5.8
+----------------------------
+
+- ReSharper 7.0 runner for RTM
+The installer batches now copy the plugin to a folder that's shared between
+Visual Studio versions, i.e. install for both VS 2010 and VS 2012 at the same
+time
+- Some fixes for ReSharper not picking up TagsAttribute correctly
+- New extension method `ShouldBeLike` to test multiple object properties at once
+using an anonymous object.
+Might be useful for DTOs, we have some samples here: http://bit.ly/Op7tmP
+
+Machine.Specifications 0.5.7
+----------------------------
+
+- Updated ReSharper 7.0 EAP runner (it's the same as in the prerelease
+packages)
+- Added a new runner for dotCover 2.0 EAP
+- Added a new command line switch, --no-teamcity-autodetect, to disable
+TeamCity autodetection in certain scenarios (http://bit.ly/KrOqIh)
+- Added code snippets for VS to the repository (http://bit.ly/KrOrMi)
+
+Machine.Specifications 0.5.6
+----------------------------
+
+- Fixes for the ReSharper runner:
+Our internal unit test data structures caused the runner to silently break on
+renames. Corrected contexts with [Tags("foo")]; besides "foo", they also got the
+ReSharper category of "object".
+
+- New ShouldMatch extension method allowing for custom assertions with a
+Func<T, bool>. Thanks Tomas Ekeli!
+
+Machine.Specifications 0.5.5
+----------------------------
+
+- For CLR4 projects, there are new extension methods in the M.S.Clr4 assembly
+that should make testing Task<T> easier. Thanks Albert Weinert!
+
+- Updated Gallio Adapter, works against Gallio 3.3.454. Thanks Niels Hanberg!
+
+- ReSharper 6.1 templates for MSpec's delegates - see Misc\*.DotSettings in the
+repository. I wrote a blog post some time ago how to use them,
+http://bit.ly/xRZf2s
+Thanks @sksbrg!
+
+- Runner for the current ReSharper 7.0 EAP for VS 11
+Thanks Alexander Zeitler!
+
+- Updated result supplementer for Selenium WebDriver. An example:
+http://bit.ly/A48A2I
+
+- Made AssertComparer public, it should be easier to write custom Should*
+extension methods now.
