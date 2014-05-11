@@ -22,10 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using Common.Logging;
+using FluentAssertions;
 using OpenRasta.DI;
 using OpenRasta.Pipeline;
 using OpenRasta.Web;
+using Polly;
 using Tasklist.Adapters.DataAccess;
 using Tasklist.Ports.Commands;
 using Tasklist.Ports.Handlers;
@@ -33,6 +36,8 @@ using Tasklist.Ports.ViewModelRetrievers;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.ioccontainers.Adapters;
+using paramore.brighter.commandprocessor.messagestore.ravendb;
+using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
 namespace Tasklist.Adapters.API.Contributors
 {
@@ -59,16 +64,48 @@ namespace Tasklist.Adapters.API.Contributors
             container.Register<ITaskListRetriever, TaskListRetriever>().AsMultiInstance();
             container.Register<ITasksDAO, TasksDAO>().AsMultiInstance();
             var logger = LogManager.GetLogger("TaskList");
-            container.Register<ILog, ILog>(logger).AsSingleton();
+            container.Register<ILog, ILog>(logger);
+            container.Register<IAmARequestContextFactory, InMemoryRequestContextFactory>().AsMultiInstance();
+            MessageStoreFactory.InstallRavenDbMessageStore(container);
+            container.Register<IAmAMessageStore<Message>, RavenMessageStore>().AsSingleton();
+            container.Register<IAmAMessagingGateway, RMQMessagingGateway>().AsSingleton();
+            container.Register<Policy>(CommandProcessor.RETRYPOLICY, GetRetryPolicy());
+            container.Register<Policy>(CommandProcessor.CIRCUITBREAKER, GetCircuitBreakerPolicy());
+
+            var commandProcessor = new CommandProcessorFactory(container).Create();
+            container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
 
             resolver.AddDependencyInstance<IAdaptAnInversionOfControlContainer>(container, DependencyLifetime.Singleton);
             resolver.AddDependencyInstance<IAmARequestContextFactory>(new InMemoryRequestContextFactory(), DependencyLifetime.PerRequest);
-            resolver.AddDependency<IAmACommandProcessor, CommandProcessor>(DependencyLifetime.Singleton);
+            resolver.AddDependencyInstance<IAmACommandProcessor>(commandProcessor, DependencyLifetime.Singleton);
             resolver.AddDependency<ITaskRetriever, TaskRetriever>(DependencyLifetime.Singleton);
             resolver.AddDependency<ITaskListRetriever, TaskListRetriever>(DependencyLifetime.Singleton);
 
 
             return PipelineContinuation.Continue;
+        }
+
+        private Policy GetCircuitBreakerPolicy()
+        {
+            return Policy
+                .Handle<Exception>()
+                .CircuitBreaker(2, TimeSpan.FromMilliseconds(500));
+        }
+
+        private Policy GetRetryPolicy()
+        {
+            return Policy
+                .Handle<Exception>()
+                .WaitAndRetry(new[]
+                {
+                    1.Seconds(),
+                    2.Seconds(),
+                    3.Seconds()
+                }, (exception, timeSpan) =>
+                    {
+                        var logger = LogManager.GetLogger("RetryPolicy");
+                        logger.Error(m => m("Error during decoupled invocation attempt: {0}, retrying in {1)", exception, timeSpan));
+                });
         }
     }
 }
