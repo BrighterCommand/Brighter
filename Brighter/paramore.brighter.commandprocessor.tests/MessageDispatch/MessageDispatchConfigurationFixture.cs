@@ -24,10 +24,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Linq;
-using Common.Logging;
-using FakeItEasy;
 using Machine.Specifications;
-using paramore.brighter.commandprocessor;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.ServiceActivatorConfiguraton;
 using paramore.brighter.serviceactivator.TestHelpers;

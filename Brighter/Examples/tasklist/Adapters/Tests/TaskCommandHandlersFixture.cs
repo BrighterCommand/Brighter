@@ -47,23 +47,23 @@ namespace Tasklist.Adapters.Tests
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            tasksDAO = A.Fake<ITasksDAO>( _ => _.Strict());
-            A.CallTo(() => tasksDAO.Add(A<Task>.Ignored))
-                .Invokes(
-                    fake => taskToBeAdded = fake.GetArgument<Task>(0)
-                );
+            tasksDAO = new TasksDAO();
+            tasksDAO.Clear();
 
             cmd = new AddTaskCommand(TASK_NAME, TASK_DESCRIPTION, NOW);
 
             handler = new AddTaskCommandHandler(tasksDAO, logger);                            
         };
 
-        Because of = () => handler.Handle(cmd);
+        Because of = () =>
+        {
+            handler.Handle(cmd);
+            taskToBeAdded = tasksDAO.FindById(cmd.TaskId);
+        };
 
-        It should_add_a_new_task_to_the_db = () => A.CallTo(() => tasksDAO.Add(A<Task>.Ignored)).MustHaveHappened();
         It should_have_the_matching_task_name = () => taskToBeAdded.TaskName.ShouldEqual(TASK_NAME);
         It should_have_the_matching_task_description = () => taskToBeAdded.TaskDescription.ShouldEqual(TASK_DESCRIPTION);
-        It sould_have_the_matching_task_name = () => taskToBeAdded.DueDate.Value.ShouldEqual(NOW);
+        It sould_have_the_matching_task_name = () => taskToBeAdded.DueDate.Value.ToShortDateString().ShouldEqual(NOW.ToShortDateString());
     }
 
     [Subject(typeof(EditTaskCommandHandler))]
@@ -73,8 +73,6 @@ namespace Tasklist.Adapters.Tests
         private static EditTaskCommand cmd;
         private static ITasksDAO tasksDAO;
         private static Task taskToBeEdited;
-        private static Task editedTask;
-        private const int TASK_ID = 1;
         private const string NEW_TASK_NAME = "New Test Task";
         private const string NEW_TASK_DESCRIPTION = "New Test that we store a Task";
         private static readonly DateTime NEW_TIME = DateTime.Now.AddDays(1);
@@ -82,26 +80,25 @@ namespace Tasklist.Adapters.Tests
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            taskToBeEdited = new Task(TASK_ID, "My Task", "My Task Description", DateTime.Now);   
-            tasksDAO = A.Fake<ITasksDAO>(_ => _.Strict());
-            A.CallTo(() => tasksDAO.FindById(TASK_ID)).Returns(taskToBeEdited);
-            A.CallTo(() => tasksDAO.Update(A<Task>.Ignored))
-                .Invokes(
-                    fake => editedTask = fake.GetArgument<Task>(0)
-                );
+            taskToBeEdited = new Task("My Task", "My Task Description", DateTime.Now);   
+            tasksDAO = new TasksDAO();
+            tasksDAO.Clear();
+            taskToBeEdited = tasksDAO.Add(taskToBeEdited);
 
-            cmd = new EditTaskCommand(TASK_ID, NEW_TASK_NAME, NEW_TASK_DESCRIPTION, NEW_TIME);
+            cmd = new EditTaskCommand(taskToBeEdited.Id, NEW_TASK_NAME, NEW_TASK_DESCRIPTION, NEW_TIME);
 
             handler = new EditTaskCommandHandler(tasksDAO, logger);
         };
 
-        Because of = () => handler.Handle(cmd);
+        Because of = () =>
+        {
+            handler.Handle(cmd);
+            taskToBeEdited = tasksDAO.FindById(cmd.TaskId);
+        };
 
-        It should_get_the_task_from_the_db = () => A.CallTo(() => tasksDAO.FindById(TASK_ID)).MustHaveHappened();
-        It should_update_the_task = () => A.CallTo(() => tasksDAO.Update(A<Task>.Ignored)).MustHaveHappened(); 
         It should_update_the_task_with_the_new_task_name = () => taskToBeEdited.TaskName.ShouldEqual(NEW_TASK_NAME);
         It should_update_the_task_with_the_new_task_description = () => taskToBeEdited.TaskDescription.ShouldEqual(NEW_TASK_DESCRIPTION);
-        It should_update_the_task_with_the_new_task_time = () => taskToBeEdited.DueDate.ShouldEqual(NEW_TIME);
+        It should_update_the_task_with_the_new_task_time = () => taskToBeEdited.DueDate.Value.ToShortDateString().ShouldEqual(NEW_TIME.ToShortDateString());
     }
 
     [Subject(typeof(CompleteTaskCommandHandler))]
@@ -111,30 +108,28 @@ namespace Tasklist.Adapters.Tests
         private static CompleteTaskCommand cmd;
         private static ITasksDAO tasksDAO;
         private static Task taskToBeCompleted;
-        private const int TASK_ID = 1;
         private static readonly DateTime COMPLETION_DATE = DateTime.Now.AddDays(-1);
 
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            taskToBeCompleted = new Task(TASK_ID, "My Task", "My Task Description", DateTime.Now);   
-            tasksDAO = A.Fake<ITasksDAO>(_ => _.Strict());
-            A.CallTo(() => tasksDAO.FindById(TASK_ID)).Returns(taskToBeCompleted);
-            A.CallTo(() => tasksDAO.Update(A<Task>.Ignored))
-                .Invokes(
-                    fake => taskToBeCompleted = fake.GetArgument<Task>(0)
-                );
+            taskToBeCompleted = new Task("My Task", "My Task Description", DateTime.Now);   
+            tasksDAO = new TasksDAO();
+            tasksDAO.Clear();
+            taskToBeCompleted = tasksDAO.Add(taskToBeCompleted);
 
-            cmd = new CompleteTaskCommand(TASK_ID, COMPLETION_DATE);
+            cmd = new CompleteTaskCommand(taskToBeCompleted.Id, COMPLETION_DATE);
 
             handler = new CompleteTaskCommandHandler(tasksDAO, logger);                                    
         };
 
-        Because of = () => handler.Handle(cmd);
+        Because of = () =>
+        {
+            handler.Handle(cmd);
+            taskToBeCompleted = tasksDAO.FindById(cmd.TaskId);
+        };
 
-        It should_get_the_task_from_the_db = () => A.CallTo(() => tasksDAO.FindById(TASK_ID)).MustHaveHappened();
-        It should_update_the_task = () => A.CallTo(() => tasksDAO.Update(A<Task>.Ignored)).MustHaveHappened();
-        private It should_update_the_tasks_completed_date = () => taskToBeCompleted.CompletionDate.ShouldEqual(COMPLETION_DATE);
+        It should_update_the_tasks_completed_date = () => taskToBeCompleted.CompletionDate.Value.ToShortDateString().ShouldEqual(COMPLETION_DATE.ToShortDateString());
     }
 
     [Subject(typeof(CompleteTaskCommandHandler))]
@@ -150,8 +145,8 @@ namespace Tasklist.Adapters.Tests
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            tasksDAO = A.Fake<ITasksDAO>(_ => _.Strict());
-            A.CallTo(() => tasksDAO.FindById(TASK_ID)).Returns(null);
+            tasksDAO = new TasksDAO();
+            tasksDAO.Clear();
             cmd = new CompleteTaskCommand(TASK_ID, COMPLETION_DATE);
 
             handler = new CompleteTaskCommandHandler(tasksDAO, logger);                                    
@@ -159,7 +154,6 @@ namespace Tasklist.Adapters.Tests
 
         Because of = () => exception = Catch.Exception(() => handler.Handle(cmd));
 
-        It should_get_the_task_from_the_db = () => A.CallTo(() => tasksDAO.FindById(TASK_ID)).MustHaveHappened();
         It should_fail = () => exception.ShouldBeAssignableTo<ArgumentOutOfRangeException>();
     }
 }
