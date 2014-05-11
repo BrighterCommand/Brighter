@@ -26,7 +26,6 @@ using System;
 using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
-using Newtonsoft.Json;
 using Tasklist.Adapters.DataAccess;
 using Tasklist.Domain;
 using Tasklist.Ports.Commands;
