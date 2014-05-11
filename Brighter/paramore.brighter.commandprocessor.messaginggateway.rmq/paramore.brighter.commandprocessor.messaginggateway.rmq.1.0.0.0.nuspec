@@ -33,9 +33,10 @@
         <file src="web.config.uninstall.xdt" target="content\web.config.uninstall.xdt" />
         <file src="bin\Debug\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll" />
         <file src= "bin\Debug\paramore.brighter.commandprocessor.messaginggateway.rmq.pdb" target="lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.pdb" />
-        <file src="MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" target="src\MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" />
+        <file src="MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" target="src\RMQMessagingGatewayConfigurationSection.cs" />
         <file src="Properties\AssemblyInfo.cs" target="src\Properties\AssemblyInfo.cs" />
         <file src="RMQMessagingGateway.cs" target="src\RMQMessagingGateway.cs" />
         <file src="RMQInputChannel.cs" target="src\RMQInputChannel.cs" />
+        <file src="RMQInputChannelfactory.cs" target="src\RMQInputChannelfactory.cs" />
     </files>
 </package>

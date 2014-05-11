@@ -71,6 +71,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config.install.xdt" />
+    <None Include="app.config.uninstall.xdt" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />

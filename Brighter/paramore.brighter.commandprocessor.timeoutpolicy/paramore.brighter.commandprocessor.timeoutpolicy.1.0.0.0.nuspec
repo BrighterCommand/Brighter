@@ -17,7 +17,7 @@
         <tags>.NET</tags>
         <dependencies>
             <dependency id="Common.Logging" version="2.2.0" />
-            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0.0" />
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.1.0" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />

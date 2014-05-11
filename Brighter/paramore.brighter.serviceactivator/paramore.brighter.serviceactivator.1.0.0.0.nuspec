@@ -18,7 +18,7 @@
         <dependencies>
             <dependency id="Common.Logging" version="2.2.0" />
             <dependency id="CommonServiceLocator" version="1.2" />
-            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.0.0" />
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.1.0" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />
@@ -27,12 +27,20 @@
     <files>
         <file src="bin\Debug\paramore.brighter.serviceactivator.dll" target="lib\net45\paramore.brighter.serviceactivator.dll" />
         <file src="bin\Debug\paramore.brighter.serviceactivator.pdb" target="lib\net45\paramore.brighter.serviceactivator.pdb" />
+        <file src="app.config.install.xdt" target="content\app.config.install.xdt" />
+        <file src="app.config.uninstall.xdt" target="content\app.config.uninstall.xdt" />
         <file src="Properties\AssemblyInfo.cs" target="src\Properties\AssemblyInfo.cs" />
+        <file src="ServiceActivatorConfiguraton\ConnectionFactory.cs" target="src\ConnectionFactory.cs" />
+        <file src="ServiceActivatorConfiguraton\ServiceActivatorConfigurationSection.cs" target="src\ServiceActivatorConfigurationSection.cs" />
         <file src="TestHelpers\InMemoryChannel.cs" target="src\TestHelpers\InMemoryChannel.cs" />
+        <file src="TestHelpers\InMemoryChannelFactory.cs" target="src\TestHelpers\InMemoryChannelFactory.cs" />
+        <file src="ChannelName.cs" target="src\ChannelName.cs" />
         <file src="Connection.cs" target="src\Connection.cs" />
+        <file src="ConnectionName.cs" target="src\ConnectionName.cs" />
         <file src="Consumer.cs" target="src\Consumer.cs" />
         <file src="ConsumerFactory.cs" target="src\ConsumerFactory.cs" />
         <file src="Dispatcher.cs" target="src\Dispatcher.cs" />
+        <file src="IAmAChannelFactory.cs" target="src\IAmAChannelFactory.cs" />
         <file src="IAmAMessagePump.cs" target="src\IAmAMessagePump.cs" />
         <file src="IAmAnInputChannel.cs" target="src\IAmAnInputChannel.cs" />
         <file src="IAmAPerformer.cs" target="src\IAmAPerformer.cs" />

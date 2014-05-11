@@ -32,5 +32,6 @@ namespace Tasklist.Adapters.DataAccess
         Task FindById(int id);
         void Update(Task task);
 
+        void Clear();
     }
 }

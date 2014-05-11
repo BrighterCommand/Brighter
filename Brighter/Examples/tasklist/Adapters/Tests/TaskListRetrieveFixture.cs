@@ -40,7 +40,7 @@ namespace Tasklist.Adapters.Tests
         static Task newTask;
         private static int taskId;
         private static TaskListModel taskList;
-        private static string hostName = "http://localhost:49743";
+        private const string hostName = "http://localhost:49743";
 
         Establish context = () =>
             {
