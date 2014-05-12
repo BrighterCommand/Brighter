@@ -54,7 +54,7 @@ namespace TaskMailer.Adapters.Tests
             
         };
 
-        Because of = () => mailMessage = MailTranslator.Translate(taskReminder);
+        Because of = () => mailMessage = new MailTranslator().Translate(taskReminder);
 
         It should_have_the_correct_subject = () => mailMessage.Subject.ShouldEqual(string.Format("Task Reminder! Task {0} is due on {1}", taskName, dueDate));
         It should_have_the_correct_recipient_addressee = () => mailMessage.To[0].Address.ShouldEqual(recipient);

@@ -31,5 +31,10 @@ namespace TaskMailer.Ports
         public TaskReminderCommand(Guid id) : base(id)
         {
         }
+
+        public string TaskName { get; set; }
+        public DateTime DueDate { get; set; }
+        public string Recipient { get; set; }
+        public string CopyTo { get; set; }
     }
 }
