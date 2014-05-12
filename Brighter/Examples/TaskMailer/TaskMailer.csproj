@@ -116,12 +116,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Adapters\MailGateway\IAmAMailGateway.cs" />
     <Compile Include="Adapters\MailGateway\MailGateway.cs" />
     <Compile Include="Adapters\ServiceHost\Program.cs" />
     <Compile Include="Adapters\ServiceHost\TaskMailerService.cs" />
     <Compile Include="Adapters\Tests\TaskMailerServiceFixture.cs" />
     <Compile Include="Domain\EmailAddress.cs" />
     <Compile Include="Domain\TaskName.cs" />
+    <Compile Include="Ports\IAmAMailTranslator.cs" />
     <Compile Include="Ports\MailTranslator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Domain\TaskReminder.cs" />

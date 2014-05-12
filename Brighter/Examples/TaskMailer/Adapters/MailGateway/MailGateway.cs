@@ -21,9 +21,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Configuration;
+using System.Net;
+using System.Threading.Tasks;
+using SendGrid.Transport;
+using TaskMailer.Domain;
+using TaskMailer.Ports;
+
 namespace TaskMailer.Adapters.MailGateway
 {
-    public class MailGateway
+    public class MailGateway : IAmAMailGateway
     {
+        private readonly IAmAMailTranslator translator;
+
+        public MailGateway(IAmAMailTranslator translator)
+        {
+            this.translator = translator;
+        }
+
+        public Task Send(TaskReminder reminder)
+        {
+            var mail = translator.Translate(reminder);
+            
+            var credentials = new NetworkCredential(
+                ConfigurationManager.AppSettings["sendGridUserName"],
+                ConfigurationManager.AppSettings["sendGridPassword"]
+                );
+
+            var api = Web.GetInstance(credentials);
+
+            return api.DeliverAsync(mail);
+        }
     }
 }

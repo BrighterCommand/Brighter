@@ -3,9 +3,9 @@ using TaskMailer.Domain;
 
 namespace TaskMailer.Ports
 {
-    internal class MailTranslator
+    internal class MailTranslator : IAmAMailTranslator
     {
-        public static Mail Translate(TaskReminder taskReminder)
+        public Mail Translate(TaskReminder taskReminder)
         {
             var mail = Mail.GetInstance();
             mail.AddTo(taskReminder.ReminderTo);

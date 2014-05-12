@@ -23,13 +23,31 @@ THE SOFTWARE. */
 
 using Common.Logging;
 using paramore.brighter.commandprocessor;
+using TaskMailer.Adapters.MailGateway;
+using TaskMailer.Domain;
 
 namespace TaskMailer.Ports
 {
     public class MailTaskReminderHander : RequestHandler<TaskReminderCommand>
     {
-        public MailTaskReminderHander(ILog logger) : base(logger)
+        private readonly IAmAMailGateway mailGateway;
+
+        public MailTaskReminderHander(IAmAMailGateway mailGateway, ILog logger) : base(logger)
         {
+            this.mailGateway = mailGateway;
+        }
+
+        //TODO: Set the NFR's for how we send via email
+        public override TaskReminderCommand Handle(TaskReminderCommand command)
+        {
+            mailGateway.Send(new TaskReminder(
+                taskName: new TaskName(command.TaskName),
+                dueDate: command.DueDate,
+                reminderTo: new EmailAddress(command.Recipient),
+                copyReminderTo: new EmailAddress(command.CopyTo)
+                ));
+
+            return base.Handle(command);
         }
     }
 }
