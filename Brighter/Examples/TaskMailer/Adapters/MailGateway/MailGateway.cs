@@ -23,7 +23,7 @@ THE SOFTWARE. */
 
 namespace TaskMailer.Adapters.MailGateway
 {
-    class MailGateway
+    public class MailGateway
     {
     }
 }
