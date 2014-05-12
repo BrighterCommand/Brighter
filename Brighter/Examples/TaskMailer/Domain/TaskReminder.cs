@@ -21,9 +21,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+
 namespace TaskMailer.Domain
 {
-    class TaskRemiderMailer
+    public class TaskReminder
     {
+        public TaskName TaskName { get; private set; }
+        public DateTime DueDate { get; private set; }
+        public EmailAddress ReminderTo { get; private set; }
+        public EmailAddress CopyReminderTo { get; private set; }
+
+        public TaskReminder(
+            TaskName taskName,
+            DateTime dueDate,
+            EmailAddress reminderTo,
+            EmailAddress copyReminderTo
+            )
+        {
+            TaskName = taskName;
+            DueDate = dueDate;
+            ReminderTo = reminderTo;
+            CopyReminderTo = copyReminderTo;
+        }
     }
 }

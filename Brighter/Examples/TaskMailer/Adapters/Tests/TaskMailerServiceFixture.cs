@@ -21,9 +21,43 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using Machine.Specifications;
+using SendGrid;
+using TaskMailer.Domain;
+using TaskMailer.Ports;
+
 namespace TaskMailer.Adapters.Tests
 {
-    class TaskMailerServiceFixture
+    public class When_marshalling_a_task_reminder_to_a_sendgrid_mail
     {
+        static Mail mailMessage;
+        static TaskReminder taskReminder;
+        static EmailAddress recipient;
+        static EmailAddress copyTo;
+        static TaskName taskName;
+        static DateTime dueDate;
+
+        Establish context = () =>
+        {
+            dueDate = DateTime.UtcNow.AddDays(1);
+            recipient= new EmailAddress("ian.hammond.cooper@gmail.com");
+            copyTo = new EmailAddress("ian@huddle.net");
+            taskName = new TaskName("My Task");
+
+
+            taskReminder = new TaskReminder(
+                taskName: new TaskName(taskName ),
+                dueDate: dueDate,
+                reminderTo: recipient,
+                copyReminderTo: copyTo);
+            
+        };
+
+        Because of = () => mailMessage = MailTranslator.Translate(taskReminder);
+
+        It should_have_the_correct_subject = () => mailMessage.Subject.ShouldEqual(string.Format("Task Reminder! Task {0} is due on {1}", taskName, dueDate));
+        It should_have_the_correct_recipient_addressee = () => mailMessage.To[0].Address.ShouldEqual(recipient);
+        It should_have_the_correct_to_address = () => mailMessage.Cc[0].Address.ShouldEqual(copyTo);
     }
 }
