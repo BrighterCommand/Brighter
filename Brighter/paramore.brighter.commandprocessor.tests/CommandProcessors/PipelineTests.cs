@@ -183,6 +183,34 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     }
 
     [Subject(typeof(PipelineBuilder<>))]
+    public class When_Building_A_Pipeline_Allow_ForiegnAttribues
+    {
+        private static PipelineBuilder<MyCommand> Pipeline_Builder;
+        private static IHandleRequests<MyCommand> Pipeline;
+        private static IAdaptAnInversionOfControlContainer Container;
+
+        Establish context = () =>
+        {
+            var logger = A.Fake<ILog>();
+            Container = new TinyIoCAdapter(new TinyIoCContainer());
+            Container.Register<IHandleRequests<MyCommand>, MyObsoleteCommandHandler >().AsMultiInstance();
+            Container.Register<ILog, ILog>(logger);
+            Pipeline_Builder = new PipelineBuilder<MyCommand>(Container, logger);
+        };
+
+        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext(Container)).First();
+
+        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => TraceFilters().ToString().ShouldEqual("MyValidationHandler`1|MyObsoleteCOmmandHandler|MyLoggingHandler`1|");
+
+        private static PipelineTracer TraceFilters()
+        {
+            var pipelineTracer = new PipelineTracer();
+            Pipeline.DescribePath(pipelineTracer);
+            return pipelineTracer;
+        }
+    }
+
+    [Subject(typeof(PipelineBuilder<>))]
     public class When_we_have_exercised_the_pipeline_cleanup_its_handlers
     {
         private static PipelineBuilder<MyCommand> Pipeline_Builder;
