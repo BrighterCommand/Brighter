@@ -26,7 +26,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace paramore.brighter.commandprocessor
+namespace paramore.brighter.commandprocessor.extensions
 {
     internal static class ReflectionExtensions
     {
