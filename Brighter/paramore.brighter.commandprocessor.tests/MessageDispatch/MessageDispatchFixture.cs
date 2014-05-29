@@ -22,16 +22,22 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Common.Logging;
 using Common.Logging.Configuration;
 using Common.Logging.Simple;
+using FakeItEasy;
 using Machine.Specifications;
+using Polly;
+using Raven.Client.Embedded;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.ioccontainers.Adapters;
+using paramore.brighter.commandprocessor.messagestore.ravendb;
+using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.TestHelpers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
@@ -279,5 +285,57 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         It should_have_consumed_the_messages_in_the_event_channel = () => channel.Length.ShouldEqual(0);
         It should_have_a_stopped_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+    }
+
+    public class When_building_a_dispatcher
+    {
+        static IAmADispatchBuilder builder;
+        static Dispatcher dispatcher;
+
+        Establish context = () =>
+            {
+                var logger = A.Fake<ILog>();
+                var container = new TinyIoCAdapter(new TinyIoCContainer());
+                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
+
+
+                var retryPolicy = Policy
+                    .Handle<Exception>()
+                    .WaitAndRetry(new[]
+                        {
+                            TimeSpan.FromMilliseconds(50),
+                            TimeSpan.FromMilliseconds(100),
+                            TimeSpan.FromMilliseconds(150)
+                        });
+
+                var circuitBreakerPolicy = Policy
+                    .Handle<Exception>()
+                    .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+
+                var gateway = new RMQMessagingGateway(logger);
+
+                builder = DispatchBuilder.With()
+                             .InversionOfControl(container)
+                             .WithLogger(logger)
+                             .WithCommandProcessor(CommandProcessorBuilder.With()
+                                .InversionOfControl(container)
+                                .WithLogger(logger)
+                                .WithMessaging(new MessagingConfiguration(
+                                                messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
+                                                messagingGateway: gateway,
+                                                retryPolicy: retryPolicy,
+                                                circuitBreakerPolicy: circuitBreakerPolicy))
+                                 .WithRequestContextFactory(new InMemoryRequestContextFactory())
+                                .Build()
+                                )
+                             .WithChannelFactory(new RMQInputChannelfactory(gateway)) 
+                             .ConnectionsFromConfiguration();
+
+            };
+
+        Because of = () => dispatcher = builder.Build(); 
+
+        It should_build_a_dispatcher = () => dispatcher.ShouldNotBeNull();
+
     }
 }

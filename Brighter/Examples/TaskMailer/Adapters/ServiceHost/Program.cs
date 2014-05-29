@@ -29,7 +29,7 @@ namespace TaskMailer.Adapters.ServiceHost
     {
         public static void Main()
         {
-            HostFactory.New(x => x.Service<TaskMailerService >(sc =>
+            HostFactory.Run(x => x.Service<TaskMailerService >(sc =>
                 {
                     sc.ConstructUsing(() => new TaskMailerService ());
 

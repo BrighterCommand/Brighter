@@ -41,20 +41,28 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\CommonServiceLocator.1.3\lib\portable-net4+sl5+netcore45+wpa81+wp8\Microsoft.Practices.ServiceLocation.dll</HintPath>
     </Reference>
+    <Reference Include="Polly, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Polly.2.0.0\lib\net45\Polly.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.ServiceModel" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ChannelName.cs" />
+    <Compile Include="CommandProcessorConfiguration.cs" />
     <Compile Include="ConnectionName.cs" />
+    <Compile Include="DispatchBuilder.cs" />
     <Compile Include="Dispatcher.cs" />
+    <Compile Include="DispatcherState.cs" />
     <Compile Include="IAmAChannelFactory.cs" />
     <Compile Include="IAmAMessagePump.cs" />
     <Compile Include="IAmAnInputChannel.cs" />
     <Compile Include="IAmAPerformer.cs" />
     <Compile Include="Consumer.cs" />
     <Compile Include="ConsumerFactory.cs" />
+    <Compile Include="IDispatcher.cs" />
     <Compile Include="MessagePump.cs" />
     <Compile Include="Performer.cs" />
     <Compile Include="Connection.cs" />

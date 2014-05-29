@@ -56,6 +56,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommandProcessorBuilder.cs" />
     <Compile Include="CommandProcessorFactory.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="IAmACommandProcessorFactory.cs" />
@@ -67,6 +68,7 @@
     <Compile Include="Interpreter.cs" />
     <Compile Include="MessageBody.cs" />
     <Compile Include="MessageHeader.cs" />
+    <Compile Include="MessagingConfiguration.cs" />
     <Compile Include="PipelineBuilder.cs" />
     <Compile Include="PipelineTracer.cs" />
     <Compile Include="Pipelines.cs" />

@@ -32,15 +32,7 @@ using paramore.brighter.commandprocessor.extensions;
 
 namespace paramore.brighter.serviceactivator
 {
-    public enum DispatcherState
-    {
-        DS_NOTREADY = 0,
-        DS_AWAITING = 1,
-        DS_RUNNING = 2,
-        DS_STOPPED = 3
-    }
-
-    public class Dispatcher
+    public class Dispatcher : IDispatcher
     {
         private readonly IAdaptAnInversionOfControlContainer container;
         private readonly ILog logger;
