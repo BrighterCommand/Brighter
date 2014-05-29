@@ -1,0 +1,9 @@
+
+/Rewind/paramore.integrationtests/obj
+/Rewind/paramore.integrationtests/bin
+/Rewind/paramore.web/obj
+/Rewind/paramore.web/bin
+*.dotCover
+*.user
+/Brighter/*.suo
+/Brighter/*.bak

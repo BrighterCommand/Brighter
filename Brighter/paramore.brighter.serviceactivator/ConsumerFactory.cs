@@ -43,8 +43,8 @@ namespace paramore.brighter.serviceactivator
             messagePump.Channel = connection.Channel;
             messagePump.TimeoutInMilliseconds = connection.TimeoutInMiliseconds;
             messagePump.Logger = logger;
-            var lamp = new Consumer(connection.Name, connection.Channel, messagePump);
-            return lamp;
+            var consumer = new Consumer(connection.Name, connection.Channel, messagePump);
+            return consumer;
         }
     }
 }
