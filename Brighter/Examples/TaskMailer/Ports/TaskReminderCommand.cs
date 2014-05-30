@@ -26,11 +26,14 @@ using paramore.brighter.commandprocessor;
 
 namespace TaskMailer.Ports
 {
+    //For simpliciy here we don't show a common domain model being shared by TaskMailer and TaskList
+    //But in practice, if these were within one Business Capability (and Bounded Context) we would have a common model
+    //Tasks.Domain that both projects depended on, allowing the command and mappers to exist on both sides
+    //Across Bounded Contexts we would not share the model, and each side would map to and from their own model
+    //as we do here
     public class TaskReminderCommand : Command
     {
-        public TaskReminderCommand(Guid id) : base(id)
-        {
-        }
+        public TaskReminderCommand(Guid id) : base(id) {}
 
         public string TaskName { get; set; }
         public DateTime DueDate { get; set; }

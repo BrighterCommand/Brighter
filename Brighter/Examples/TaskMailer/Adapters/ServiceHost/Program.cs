@@ -37,10 +37,6 @@ namespace TaskMailer.Adapters.ServiceHost
                     sc.WhenStarted((s, hostcontrol) => s.Start(hostcontrol));
                     sc.WhenStopped((s, hostcontrol) => s.Stop(hostcontrol));
 
-                    // optional pause/continue methods if used
-                    sc.WhenPaused((s, hostcontrol) => s.Pause(hostcontrol));
-                    sc.WhenContinued((s, hostcontrol) => s.Continue(hostcontrol));
-
                     // optional, when shutdown is supported
                     sc.WhenShutdown((s, hostcontrol) => s.Shutdown(hostcontrol));
                 }));
