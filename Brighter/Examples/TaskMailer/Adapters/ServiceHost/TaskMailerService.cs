@@ -27,6 +27,7 @@ using Common.Logging.Configuration;
 using Common.Logging.Simple;
 using Polly;
 using Raven.Client.Embedded;
+using TaskMailer.Ports;
 using TinyIoC;
 using Topshelf;
 using paramore.brighter.commandprocessor;
@@ -39,10 +40,14 @@ namespace TaskMailer.Adapters.ServiceHost
 {
     internal class TaskMailerService : ServiceControl
     {
+        private Dispatcher dispatcher;
+
         public TaskMailerService()
         {
-            //construct the container
+                //construct the container
                 var container = new TinyIoCAdapter(new TinyIoCContainer());
+
+                container.Register<IAmAMessageMapper<TaskReminderCommand>, TaskReminderCommandMessageMapper>();
 
                 var properties = new NameValueCollection();
                 properties["showDateTime"] = "true";
@@ -81,32 +86,28 @@ namespace TaskMailer.Adapters.ServiceHost
                                 )
                              .WithChannelFactory(new RMQInputChannelfactory(gateway)) 
                              .ConnectionsFromConfiguration();
+            dispatcher = builder.Build();
 
 
         }
 
         public bool Start(HostControl hostControl)
         {
-            return false;
+            dispatcher.Recieve();
+            return true;
         }
 
         public bool Stop(HostControl hostControl)
         {
-            return false;
-        }
-
-        public bool Pause(HostControl hostcontrol)
-        {
-            return false;
-        }
-
-        public bool Continue(HostControl hostcontrol)
-        {
+            dispatcher.End();
+            dispatcher = null;
             return false;
         }
 
         public void Shutdown(HostControl hostcontrol)
         {
+            if (dispatcher != null)
+                dispatcher.End();
             return;
         }
     }
