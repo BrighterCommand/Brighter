@@ -53,11 +53,11 @@
         <file src="Message.cs" target="src\Message.cs" />
         <file src="MessageBody.cs" target="src\MessageBody.cs" />
         <file src="MessageHeader.cs" target="src\MessageHeader.cs" />
-        <file src="MessageConfiguration.cs" target="src\MessageConfiguration.cs" />
+        <file src="MessagingConfiguration.cs" target="src\MessagingConfiguration.cs" />
         <file src="PipelineBuilder.cs" target="src\PipelineBuilder.cs" />
         <file src="Pipelines.cs" target="src\Pipelines.cs" />
         <file src="PipelineTracer.cs" target="src\PipelineTracer.cs" />
-        <file src="ReflectionExtensions.cs" target="src\ReflectionExtensions.cs" />
+        <file src="extensions\ReflectionExtensions.cs" target="src\ReflectionExtensions.cs" />
         <file src="RequestContext.cs" target="src\RequestContext.cs" />
         <file src="RequestHandler.cs" target="src\RequestHandler.cs" />
         <file src="RequestHandlerAttribute.cs" target="src\RequestHandlerAttribute.cs" />
