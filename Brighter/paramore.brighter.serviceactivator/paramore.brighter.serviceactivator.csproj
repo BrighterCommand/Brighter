@@ -51,7 +51,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ChannelName.cs" />
-    <Compile Include="CommandProcessorConfiguration.cs" />
     <Compile Include="ConnectionName.cs" />
     <Compile Include="DispatchBuilder.cs" />
     <Compile Include="Dispatcher.cs" />

@@ -17,8 +17,8 @@
         <tags>.NET</tags>
         <dependencies>
             <dependency id="Common.Logging" version="2.2.0" />
-            <dependency id="CommonServiceLocator" version="1.2" />
-            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.1.0" />
+            <dependency id="CommonServiceLocator" version="1.3" />
+            <dependency id="Paramore.Brighter.CommandProcessor" version="1.0.2.0" />
         </dependencies>
         <frameworkAssemblies>
             <frameworkAssembly assemblyName="System" targetFramework="" />
@@ -39,6 +39,8 @@
         <file src="ConnectionName.cs" target="src\ConnectionName.cs" />
         <file src="Consumer.cs" target="src\Consumer.cs" />
         <file src="ConsumerFactory.cs" target="src\ConsumerFactory.cs" />
+        <file src="DispatchBuilder.cs" target="src\DispatchBuilder.cs" />
+        <file src="DispatchState.cs" target="src\DispatchState.cs" />
         <file src="Dispatcher.cs" target="src\Dispatcher.cs" />
         <file src="IAmAChannelFactory.cs" target="src\IAmAChannelFactory.cs" />
         <file src="IAmAMessagePump.cs" target="src\IAmAMessagePump.cs" />
