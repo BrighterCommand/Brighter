@@ -21,7 +21,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using Common.Logging;
+using Common.Logging.Configuration;
+using Common.Logging.Simple;
+using Polly;
+using Raven.Client.Embedded;
+using TinyIoC;
 using Topshelf;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.ioccontainers.Adapters;
+using paramore.brighter.commandprocessor.messagestore.ravendb;
+using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.serviceactivator;
 
 namespace TaskMailer.Adapters.ServiceHost
 {
@@ -30,6 +42,46 @@ namespace TaskMailer.Adapters.ServiceHost
         public TaskMailerService()
         {
             //construct the container
+                var container = new TinyIoCAdapter(new TinyIoCContainer());
+
+                var properties = new NameValueCollection();
+                properties["showDateTime"] = "true";
+                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+
+                var logger = LogManager.GetLogger(typeof (Dispatcher));
+
+                var retryPolicy = Policy
+                    .Handle<Exception>()
+                    .WaitAndRetry(new[]
+                        {
+                            TimeSpan.FromMilliseconds(50),
+                            TimeSpan.FromMilliseconds(100),
+                            TimeSpan.FromMilliseconds(150)
+                        });
+
+                var circuitBreakerPolicy = Policy
+                    .Handle<Exception>()
+                    .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+
+                var gateway = new RMQMessagingGateway(logger);
+
+                var builder = DispatchBuilder.With()
+                             .InversionOfControl(container)
+                             .WithLogger(logger)
+                             .WithCommandProcessor(CommandProcessorBuilder.With()
+                                .InversionOfControl(container)
+                                .WithLogger(logger)
+                                .WithMessaging(new MessagingConfiguration(
+                                                messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
+                                                messagingGateway: gateway,
+                                                retryPolicy: retryPolicy,
+                                                circuitBreakerPolicy: circuitBreakerPolicy))
+                                 .WithRequestContextFactory(new InMemoryRequestContextFactory())
+                                .Build()
+                                )
+                             .WithChannelFactory(new RMQInputChannelfactory(gateway)) 
+                             .ConnectionsFromConfiguration();
+
 
         }
 

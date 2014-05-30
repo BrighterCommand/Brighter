@@ -70,6 +70,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\paramore.brighter.commandprocessor.ioccontainers.tinyioc.1.0.1.0\lib\net45\paramore.brighter.commandprocessor.ioccontainers.tinyioc.dll</HintPath>
     </Reference>
+    <Reference Include="paramore.brighter.commandprocessor.messagestore.ravendb">
+      <HintPath>..\tasklist\bin\paramore.brighter.commandprocessor.messagestore.ravendb.dll</HintPath>
+    </Reference>
     <Reference Include="paramore.brighter.commandprocessor.messaginggateway.rmq, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\paramore.brighter.commandprocessor.messaginggateway.rmq.1.0.1.0\lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll</HintPath>
@@ -89,6 +92,12 @@
     <Reference Include="RabbitMQ.Client">
       <HintPath>..\..\packages\RabbitMQ.Client.3.3.0\lib\net30\RabbitMQ.Client.dll</HintPath>
       <Private>True</Private>
+    </Reference>
+    <Reference Include="Raven.Client.Embedded">
+      <HintPath>..\..\paramore.brighter.commandprocessor.tests\bin\Debug\Raven.Client.Embedded.dll</HintPath>
+    </Reference>
+    <Reference Include="Raven.Client.Lightweight">
+      <HintPath>..\tasklist\bin\Raven.Client.Lightweight.dll</HintPath>
     </Reference>
     <Reference Include="SendGrid.SmtpApi">
       <HintPath>..\..\packages\SendGrid.SmtpApiPlus.1.0.1\lib\portable-net4+sl5+wp8+win8+wpa81+monotouch+monoandroid\SendGrid.SmtpApi.dll</HintPath>
