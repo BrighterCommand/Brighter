@@ -40,7 +40,7 @@
         <file src="Consumer.cs" target="src\Consumer.cs" />
         <file src="ConsumerFactory.cs" target="src\ConsumerFactory.cs" />
         <file src="DispatchBuilder.cs" target="src\DispatchBuilder.cs" />
-        <file src="DispatchState.cs" target="src\DispatchState.cs" />
+        <file src="DispatcherState.cs" target="src\DispatcherState.cs" />
         <file src="Dispatcher.cs" target="src\Dispatcher.cs" />
         <file src="IAmAChannelFactory.cs" target="src\IAmAChannelFactory.cs" />
         <file src="IAmAMessagePump.cs" target="src\IAmAMessagePump.cs" />
