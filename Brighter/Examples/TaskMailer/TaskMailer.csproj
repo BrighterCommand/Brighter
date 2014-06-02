@@ -39,8 +39,7 @@
     <Reference Include="Common.Logging">
       <HintPath>..\..\packages\Common.Logging.2.2.0\lib\net40\Common.Logging.dll</HintPath>
     </Reference>
-    <Reference Include="Common.Logging.Core, Version=2.2.0.0, Culture=neutral, PublicKeyToken=af08829b84f0328e, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Common.Logging.Core">
       <HintPath>..\..\packages\Common.Logging.Core.2.2.0\lib\net40\Common.Logging.Core.dll</HintPath>
     </Reference>
     <Reference Include="Machine.Specifications">
@@ -58,31 +57,26 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\packages\Newtonsoft.Json.6.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="paramore.brighter.commandprocessor">
       <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.exceptionpolicy, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="paramore.brighter.commandprocessor.exceptionpolicy">
       <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.ExceptionPolicy.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.ioccontainers.tinyioc, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="paramore.brighter.commandprocessor.ioccontainers.tinyioc">
       <HintPath>..\..\packages\paramore.brighter.commandprocessor.ioccontainers.tinyioc.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.ioccontainers.tinyioc.dll</HintPath>
     </Reference>
     <Reference Include="paramore.brighter.commandprocessor.messagestore.ravendb">
-      <HintPath>..\tasklist\bin\paramore.brighter.commandprocessor.messagestore.ravendb.dll</HintPath>
+      <HintPath>..\..\packages\paramore.brighter.commandprocessor.messagestore.ravendb.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.messagestore.ravendb.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.messaginggateway.rmq, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="paramore.brighter.commandprocessor.messaginggateway.rmq">
       <HintPath>..\..\packages\paramore.brighter.commandprocessor.messaginggateway.rmq.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.timeoutpolicy, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="paramore.brighter.commandprocessor.timeoutpolicy">
       <HintPath>..\..\packages\paramore.brighter.commandprocessor.timeoutpolicy.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.serviceactivator, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="paramore.brighter.serviceactivator">
       <HintPath>..\..\packages\paramore.brighter.serviceactivator.1.0.2.0\lib\net45\paramore.brighter.serviceactivator.dll</HintPath>
     </Reference>
     <Reference Include="Polly, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
@@ -91,13 +85,15 @@
     </Reference>
     <Reference Include="RabbitMQ.Client">
       <HintPath>..\..\packages\RabbitMQ.Client.3.3.0\lib\net30\RabbitMQ.Client.dll</HintPath>
-      <Private>True</Private>
+    </Reference>
+    <Reference Include="Raven.Abstractions">
+      <HintPath>..\..\packages\RavenDB.Client.2.5.2878\lib\net45\Raven.Abstractions.dll</HintPath>
     </Reference>
     <Reference Include="Raven.Client.Embedded">
       <HintPath>..\..\paramore.brighter.commandprocessor.tests\bin\Debug\Raven.Client.Embedded.dll</HintPath>
     </Reference>
     <Reference Include="Raven.Client.Lightweight">
-      <HintPath>..\tasklist\bin\Raven.Client.Lightweight.dll</HintPath>
+      <HintPath>..\..\packages\RavenDB.Client.2.5.2878\lib\net45\Raven.Client.Lightweight.dll</HintPath>
     </Reference>
     <Reference Include="SendGrid.SmtpApi">
       <HintPath>..\..\packages\SendGrid.SmtpApiPlus.1.0.1\lib\portable-net4+sl5+wp8+win8+wpa81+monotouch+monoandroid\SendGrid.SmtpApi.dll</HintPath>
@@ -108,6 +104,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
