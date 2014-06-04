@@ -22,19 +22,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Specialized;
 using Common.Logging;
-using Common.Logging.Configuration;
 using Common.Logging.Simple;
-using Polly;
-using Raven.Client.Embedded;
-using TaskMailer.Ports;
-using TinyIoC;
-using Topshelf;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
+using Polly;
+using Raven.Client.Embedded;
+using TaskMailer.Ports;
+using TinyIoC;
+using Topshelf;
 
 namespace TaskMailer.Adapters.ServiceHost
 {
