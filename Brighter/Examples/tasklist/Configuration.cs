@@ -52,6 +52,14 @@ namespace Tasklist
                          .ForMediaType("application/json")
                          .ForExtension("js")
                          .ForExtension(".json");
+
+                ResourceSpace.Has.ResourcesOfType<TaskReminderModel>()
+                    .AtUri("/tasks/reminders")
+                    .HandledBy<TaskReminderEndpointHandler>()
+                    .TranscodedBy<JsonDataContractCodec>()
+                    .ForMediaType("application/json")
+                    .ForExtension("js")
+                    .ForExtension(".json");
             }
         }
     }
