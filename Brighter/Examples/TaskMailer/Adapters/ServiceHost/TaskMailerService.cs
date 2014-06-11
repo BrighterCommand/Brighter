@@ -32,7 +32,8 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
 using Polly;
 using Raven.Client.Embedded;
-using TaskMailer.Ports;
+using Tasks.Ports;
+using Tasks.Ports.Commands;
 using TinyIoC;
 using Topshelf;
 

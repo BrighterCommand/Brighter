@@ -22,38 +22,41 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Xml.Serialization;
+using System;
+using Common.Logging;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.timeoutpolicy.Attributes;
+using Tasks.Adapters.DataAccess;
 using Tasks.Model;
+using Tasks.Ports.Commands;
 
-namespace Tasklist.Adapters.API.Resources
+namespace Tasks.Ports.Handlers
 {
-    [DataContract, XmlRoot]
-    public class TaskListModel
+    public class CompleteTaskCommandHandler : RequestHandler<CompleteTaskCommand>
     {
-        private Link self;
-        private IEnumerable<Link> links; 
+        readonly ITasksDAO tasksDAO;
 
-        public TaskListModel(IEnumerable<Task> tasks, string hostName)
+        public CompleteTaskCommandHandler(ITasksDAO tasksDao, ILog logger) : base(logger)
         {
-            self = Link.Create(this, hostName);
-            links = tasks.Select(task => Link.Create((Task)task, hostName));
+            tasksDAO = tasksDao;
         }
 
-        [DataMember(Name = "self"), XmlElement(ElementName = "self")]
-        public Link Self
+        [RequestLogging(step:1, timing: HandlerTiming.Before)]
+        [Validation(step: 2, timing: HandlerTiming.Before)]
+        [TimeoutPolicy(step: 3, milliseconds: 300)]
+        public override CompleteTaskCommand Handle(CompleteTaskCommand completeTaskCommand)
         {
-            get { return self; }
-            set { self = value; }
-        }
-
-        [DataMember(Name = "links"), XmlElement(ElementName = "links")]
-        public IEnumerable<Link> Links
-        {
-            get { return links; }
-            set { links = value; }
+            Task task = tasksDAO.FindById(completeTaskCommand.TaskId);
+            if (task != null)
+            {
+                task.CompletionDate = completeTaskCommand.CompletionDate;
+                tasksDAO.Update(task);
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException("completeTaskCommand", completeTaskCommand, "Could not find the task to complete");
+            }
+            return completeTaskCommand;
         }
     }
 }

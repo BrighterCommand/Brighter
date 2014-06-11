@@ -22,38 +22,27 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Xml.Serialization;
-using Tasks.Model;
+using System;
+using Common.Logging;
+using paramore.brighter.commandprocessor;
+using Tasks.Ports.Commands;
 
-namespace Tasklist.Adapters.API.Resources
+namespace Tasks.Ports.Handlers
 {
-    [DataContract, XmlRoot]
-    public class TaskListModel
+    public class ValidationHandler<TRequest> : RequestHandler<TRequest>
+        where TRequest: class, IRequest, ICanBeValidated 
     {
-        private Link self;
-        private IEnumerable<Link> links; 
+        public ValidationHandler(ILog logger) : base(logger)
+        {}
 
-        public TaskListModel(IEnumerable<Task> tasks, string hostName)
+        public override TRequest Handle(TRequest command)
         {
-            self = Link.Create(this, hostName);
-            links = tasks.Select(task => Link.Create((Task)task, hostName));
-        }
+            if (!((ICanBeValidated)command).IsValid())
+            {
+                throw new ArgumentException("The commmand was not valid");
+            }
 
-        [DataMember(Name = "self"), XmlElement(ElementName = "self")]
-        public Link Self
-        {
-            get { return self; }
-            set { self = value; }
-        }
-
-        [DataMember(Name = "links"), XmlElement(ElementName = "links")]
-        public IEnumerable<Link> Links
-        {
-            get { return links; }
-            set { links = value; }
+            return base.Handle(command);
         }
     }
 }

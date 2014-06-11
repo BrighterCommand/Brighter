@@ -22,38 +22,38 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Xml.Serialization;
+using Common.Logging;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.timeoutpolicy.Attributes;
+using Tasks.Adapters.DataAccess;
 using Tasks.Model;
+using Tasks.Ports.Commands;
 
-namespace Tasklist.Adapters.API.Resources
+namespace Tasks.Ports.Handlers
 {
-    [DataContract, XmlRoot]
-    public class TaskListModel
+    public class EditTaskCommandHandler : RequestHandler<EditTaskCommand>
     {
-        private Link self;
-        private IEnumerable<Link> links; 
+        private readonly ITasksDAO tasksDAO;
 
-        public TaskListModel(IEnumerable<Task> tasks, string hostName)
+        public EditTaskCommandHandler(ITasksDAO tasksDAO, ILog logger) : base(logger)
         {
-            self = Link.Create(this, hostName);
-            links = tasks.Select(task => Link.Create((Task)task, hostName));
+            this.tasksDAO = tasksDAO;
         }
 
-        [DataMember(Name = "self"), XmlElement(ElementName = "self")]
-        public Link Self
+        [RequestLogging(step:1, timing: HandlerTiming.Before)]
+        [Validation(step: 2, timing: HandlerTiming.Before)]
+        [TimeoutPolicy(step: 3, milliseconds: 300)]
+        public override EditTaskCommand Handle(EditTaskCommand editTaskCommand)
         {
-            get { return self; }
-            set { self = value; }
-        }
+            Task task = tasksDAO.FindById(editTaskCommand.TaskId);
 
-        [DataMember(Name = "links"), XmlElement(ElementName = "links")]
-        public IEnumerable<Link> Links
-        {
-            get { return links; }
-            set { links = value; }
+            task.TaskName = editTaskCommand.TaskName;
+            task.TaskDescription = editTaskCommand.TaskDescription;
+            task.DueDate = editTaskCommand.TaskDueDate;
+
+            tasksDAO.Update(task);
+
+            return editTaskCommand;
         }
     }
 }

@@ -19,34 +19,38 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
 
-using System;
-using Machine.Specifications;
-using Tasklist.Ports.ViewModelRetrievers;
-using Tasks.Adapters.DataAccess;
+using System.Configuration;
+using System.Net;
+using SendGrid.Transport;
 using Tasks.Model;
+using Tasks.Ports;
+using Task = System.Threading.Tasks.Task;
 
-namespace Tasklist.Adapters.Tests
+namespace Tasks.Adapters.MailGateway
 {
-    [Subject(typeof(TasksDAO))]
-    public class When_retrieving_a_task
+    public class MailGateway : IAmAMailGateway
     {
-        static TasksDAO dao;
-        static readonly TaskRetriever retriever = new TaskRetriever();
-        static Task newTask;
-        static Task addedTask;
+        private readonly IAmAMailTranslator translator;
 
-        Establish context = () =>
-            {
-                dao = new TasksDAO();
-                dao.Clear();
-                newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
-            };
+        public MailGateway(IAmAMailTranslator translator)
+        {
+            this.translator = translator;
+        }
 
-        Because of = () => addedTask = dao.Add(newTask);
+        public Task Send(TaskReminder reminder)
+        {
+            var mail = translator.Translate(reminder);
+            
+            var credentials = new NetworkCredential(
+                ConfigurationManager.AppSettings["sendGridUserName"],
+                ConfigurationManager.AppSettings["sendGridPassword"]
+                );
 
-        It should_add_the_task_into_the_list = () => retriever.Get(addedTask.Id).ShouldNotBeNull();
+            var api = Web.GetInstance(credentials);
+
+            return api.DeliverAsync(mail);
+        }
     }
 }

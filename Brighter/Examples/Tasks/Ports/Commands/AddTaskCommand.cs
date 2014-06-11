@@ -23,30 +23,33 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Machine.Specifications;
-using Tasklist.Ports.ViewModelRetrievers;
-using Tasks.Adapters.DataAccess;
-using Tasks.Model;
+using paramore.brighter.commandprocessor;
 
-namespace Tasklist.Adapters.Tests
+namespace Tasks.Ports.Commands
 {
-    [Subject(typeof(TasksDAO))]
-    public class When_retrieving_a_task
+    public class AddTaskCommand : Command, ICanBeValidated
     {
-        static TasksDAO dao;
-        static readonly TaskRetriever retriever = new TaskRetriever();
-        static Task newTask;
-        static Task addedTask;
+        public string TaskDecription { get; set; }
+        public DateTime? TaskDueDate { get; set; }
+        public int TaskId { get; set; }
+        public string TaskName { get; set; }
 
-        Establish context = () =>
+        public AddTaskCommand(string taskName, string taskDecription, DateTime? dueDate = null)
+            :base(Guid.NewGuid())
+        {
+            TaskName = taskName;
+            TaskDecription = taskDecription;
+            TaskDueDate = dueDate;
+        }
+
+        public bool IsValid()
+        {
+            if ((TaskDecription == null) || (TaskName == null))
             {
-                dao = new TasksDAO();
-                dao.Clear();
-                newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
-            };
+                return false;
+            }
 
-        Because of = () => addedTask = dao.Add(newTask);
-
-        It should_add_the_task_into_the_list = () => retriever.Get(addedTask.Id).ShouldNotBeNull();
+            return true;
+        }
     }
 }

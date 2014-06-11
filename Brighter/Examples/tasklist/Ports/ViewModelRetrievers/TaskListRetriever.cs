@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using OpenRasta.Web;
 using Simple.Data;
 using Tasklist.Adapters.API.Resources;
-using Tasklist.Domain;
+using Tasks.Model;
 
 namespace Tasklist.Ports.ViewModelRetrievers
 {

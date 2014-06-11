@@ -22,38 +22,35 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Xml.Serialization;
-using Tasks.Model;
+using System;
+using paramore.brighter.commandprocessor;
 
-namespace Tasklist.Adapters.API.Resources
+namespace Tasks.Ports.Commands
 {
-    [DataContract, XmlRoot]
-    public class TaskListModel
+    public class EditTaskCommand :  Command, ICanBeValidated
     {
-        private Link self;
-        private IEnumerable<Link> links; 
+        public int TaskId { get; set; }
+        public string TaskDescription { get; set; }
+        public DateTime? TaskDueDate { get; set; }
+        public string TaskName { get; set; }
 
-        public TaskListModel(IEnumerable<Task> tasks, string hostName)
+        public EditTaskCommand(int taskId, string taskName, string taskDecription, DateTime? dueDate = null)
+            :base(Guid.NewGuid())
         {
-            self = Link.Create(this, hostName);
-            links = tasks.Select(task => Link.Create((Task)task, hostName));
+            TaskId = taskId;
+            TaskName = taskName;
+            TaskDescription = taskDecription;
+            TaskDueDate = dueDate;
         }
 
-        [DataMember(Name = "self"), XmlElement(ElementName = "self")]
-        public Link Self
+        public bool IsValid()
         {
-            get { return self; }
-            set { self = value; }
-        }
+            if ((TaskId >= 0) || (TaskDescription == null) || (TaskName == null))
+            {
+                return false;
+            }
 
-        [DataMember(Name = "links"), XmlElement(ElementName = "links")]
-        public IEnumerable<Link> Links
-        {
-            get { return links; }
-            set { links = value; }
+            return true;
         }
     }
 }

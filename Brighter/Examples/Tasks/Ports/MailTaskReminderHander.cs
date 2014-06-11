@@ -19,34 +19,36 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
 
-using System;
-using Machine.Specifications;
-using Tasklist.Ports.ViewModelRetrievers;
-using Tasks.Adapters.DataAccess;
+using Common.Logging;
+using paramore.brighter.commandprocessor;
+using Tasks.Adapters.MailGateway;
 using Tasks.Model;
+using Tasks.Ports.Commands;
 
-namespace Tasklist.Adapters.Tests
+namespace Tasks.Ports
 {
-    [Subject(typeof(TasksDAO))]
-    public class When_retrieving_a_task
+    public class MailTaskReminderHander : RequestHandler<TaskReminderCommand>
     {
-        static TasksDAO dao;
-        static readonly TaskRetriever retriever = new TaskRetriever();
-        static Task newTask;
-        static Task addedTask;
+        private readonly IAmAMailGateway mailGateway;
 
-        Establish context = () =>
-            {
-                dao = new TasksDAO();
-                dao.Clear();
-                newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
-            };
+        public MailTaskReminderHander(IAmAMailGateway mailGateway, ILog logger) : base(logger)
+        {
+            this.mailGateway = mailGateway;
+        }
 
-        Because of = () => addedTask = dao.Add(newTask);
+        //TODO: Set the NFR's for how we send via email
+        public override TaskReminderCommand Handle(TaskReminderCommand command)
+        {
+            mailGateway.Send(new TaskReminder(
+                taskName: new TaskName(command.TaskName),
+                dueDate: command.DueDate,
+                reminderTo: new EmailAddress(command.Recipient),
+                copyReminderTo: new EmailAddress(command.CopyTo)
+                ));
 
-        It should_add_the_task_into_the_list = () => retriever.Get(addedTask.Id).ShouldNotBeNull();
+            return base.Handle(command);
+        }
     }
 }

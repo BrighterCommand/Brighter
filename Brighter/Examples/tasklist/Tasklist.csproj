@@ -184,8 +184,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Adapters\API\Contributors\DependencyPipelineContributor.cs" />
+    <Compile Include="Adapters\API\Handlers\TaskReminderEndpointHandler.cs" />
     <Compile Include="Adapters\API\Resources\Link.cs" />
     <Compile Include="Adapters\API\Resources\TaskListModel.cs" />
+    <Compile Include="Adapters\API\Resources\TaskReminderModel.cs" />
     <Compile Include="Adapters\Tests\TaskListRetrieveFixture.cs" />
     <Compile Include="Adapters\Tests\TaskRetrieverFixture.cs" />
     <Compile Include="Configuration.cs" />
@@ -196,23 +198,9 @@
     <Compile Include="default.aspx.designer.cs">
       <DependentUpon>default.aspx</DependentUpon>
     </Compile>
-    <Compile Include="Ports\Commands\AddTaskCommand.cs" />
-    <Compile Include="Ports\Commands\CompleteTaskCommand.cs" />
-    <Compile Include="Ports\Commands\EditTaskCommand.cs" />
-    <Compile Include="Ports\Commands\ICanBeValidated.cs" />
-    <Compile Include="Adapters\DataAccess\ITasksDAO.cs" />
-    <Compile Include="Adapters\DataAccess\TasksDAO.cs" />
-    <Compile Include="Ports\Handlers\AddTaskCommandHandler.cs" />
-    <Compile Include="Ports\Handlers\CompleteTaskCommandHandler.cs" />
-    <Compile Include="Ports\Handlers\EditTaskCommandHandler.cs" />
-    <Compile Include="Ports\ValidationAttribute.cs" />
-    <Compile Include="Ports\Handlers\ValidationHandler.cs" />
-    <Compile Include="Domain\Task.cs" />
     <Compile Include="Ports\ViewModelRetrievers\ITaskRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\TaskRetriever.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Adapters\Tests\TaskCommandHandlersFixture.cs" />
-    <Compile Include="Adapters\Tests\TaskDAOFixture.cs" />
     <Compile Include="Adapters\API\Resources\TaskModel.cs" />
     <Compile Include="Adapters\Tests\TaskPipelinesFixture.cs" />
     <Compile Include="Adapters\Tests\TaskPipelines_UnitTests.cs" />
@@ -231,7 +219,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Adapters\API\Views\" />
+    <ProjectReference Include="..\Tasks\Tasks.csproj">
+      <Project>{e7900a56-da88-46ca-8418-fb4c2bc2d326}</Project>
+      <Name>Tasks</Name>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

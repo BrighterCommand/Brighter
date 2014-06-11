@@ -22,38 +22,16 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Xml.Serialization;
 using Tasks.Model;
 
-namespace Tasklist.Adapters.API.Resources
+namespace Tasks.Adapters.DataAccess
 {
-    [DataContract, XmlRoot]
-    public class TaskListModel
+    public interface ITasksDAO
     {
-        private Link self;
-        private IEnumerable<Link> links; 
+        Task Add(Task newTask);
+        Task FindById(int id);
+        void Update(Task task);
 
-        public TaskListModel(IEnumerable<Task> tasks, string hostName)
-        {
-            self = Link.Create(this, hostName);
-            links = tasks.Select(task => Link.Create((Task)task, hostName));
-        }
-
-        [DataMember(Name = "self"), XmlElement(ElementName = "self")]
-        public Link Self
-        {
-            get { return self; }
-            set { self = value; }
-        }
-
-        [DataMember(Name = "links"), XmlElement(ElementName = "links")]
-        public IEnumerable<Link> Links
-        {
-            get { return links; }
-            set { links = value; }
-        }
+        void Clear();
     }
 }

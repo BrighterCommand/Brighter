@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using Tasklist.Domain;
+using Tasks.Model;
 
 namespace Tasklist.Adapters.API.Resources
 {

@@ -22,38 +22,57 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Xml.Serialization;
+using System.IO;
+using System.Reflection;
+using Simple.Data;
 using Tasks.Model;
 
-namespace Tasklist.Adapters.API.Resources
+namespace Tasks.Adapters.DataAccess
 {
-    [DataContract, XmlRoot]
-    public class TaskListModel
+    public class TasksDAO : ITasksDAO
     {
-        private Link self;
-        private IEnumerable<Link> links; 
+        private dynamic db;
 
-        public TaskListModel(IEnumerable<Task> tasks, string hostName)
+        public TasksDAO()
         {
-            self = Link.Create(this, hostName);
-            links = tasks.Select(task => Link.Create((Task)task, hostName));
+
+            if (System.Web.HttpContext.Current != null)
+            {
+                var databasePath = System.Web.HttpContext.Current.Server.MapPath("~\\App_Data\\Tasks.sdf");
+                db = Database.Opener.OpenFile(databasePath);
+            }
+            else
+            {
+                var file =  Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\Tasks.sdf");
+    
+                db = Database.OpenFile(file);
+            }
+        }
+ 
+        public Task Add(Task newTask)
+        {
+            return db.Tasks.Insert(newTask);
         }
 
-        [DataMember(Name = "self"), XmlElement(ElementName = "self")]
-        public Link Self
+        public void Update(Task task)
         {
-            get { return self; }
-            set { self = value; }
+            db.Tasks.UpdateById(task);
         }
 
-        [DataMember(Name = "links"), XmlElement(ElementName = "links")]
-        public IEnumerable<Link> Links
+        public void Clear()
         {
-            get { return links; }
-            set { links = value; }
+            db.Tasks.DeleteAll();
         }
+
+        public Task FindById(int taskId)
+        {
+            return db.Tasks.FindById(taskId);
+        }
+
+        public Task FindByName(string taskName)
+        {
+            return db.Tasks.FindBy(taskName: taskName);
+        }
+
     }
 }

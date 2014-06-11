@@ -22,31 +22,40 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using Machine.Specifications;
-using Tasklist.Ports.ViewModelRetrievers;
+using Common.Logging;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.timeoutpolicy.Attributes;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
+using Tasks.Ports.Commands;
 
-namespace Tasklist.Adapters.Tests
+namespace Tasks.Ports.Handlers
 {
-    [Subject(typeof(TasksDAO))]
-    public class When_retrieving_a_task
+    public class AddTaskCommandHandler : RequestHandler<AddTaskCommand>
     {
-        static TasksDAO dao;
-        static readonly TaskRetriever retriever = new TaskRetriever();
-        static Task newTask;
-        static Task addedTask;
+        private readonly ITasksDAO tasksDAO;
 
-        Establish context = () =>
-            {
-                dao = new TasksDAO();
-                dao.Clear();
-                newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
-            };
+        public AddTaskCommandHandler(ITasksDAO tasksDAO, ILog logger): base(logger)
+        {
+            this.tasksDAO = tasksDAO;
+        }
 
-        Because of = () => addedTask = dao.Add(newTask);
+        [RequestLogging(step:1, timing: HandlerTiming.Before)]
+        [Validation(step: 2, timing: HandlerTiming.Before)]
+        [TimeoutPolicy(step: 3, milliseconds: 300)]
+        public override AddTaskCommand Handle(AddTaskCommand addTaskCommand)
+        {
+            var inserted = tasksDAO.Add(
+                new Task(
+                    taskName: addTaskCommand.TaskName, 
+                    taskDecription: addTaskCommand.TaskDecription,
+                    dueDate: addTaskCommand.TaskDueDate
+                    )
+                );
 
-        It should_add_the_task_into_the_list = () => retriever.Get(addedTask.Id).ShouldNotBeNull();
+            addTaskCommand.TaskId = inserted.Id;
+
+            return addTaskCommand;
+        }
     }
 }

@@ -23,30 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Machine.Specifications;
-using Tasklist.Ports.ViewModelRetrievers;
-using Tasks.Adapters.DataAccess;
-using Tasks.Model;
+using paramore.brighter.commandprocessor;
 
-namespace Tasklist.Adapters.Tests
+namespace Tasks.Ports.Handlers
 {
-    [Subject(typeof(TasksDAO))]
-    public class When_retrieving_a_task
+    public class ValidationAttribute : RequestHandlerAttribute
     {
-        static TasksDAO dao;
-        static readonly TaskRetriever retriever = new TaskRetriever();
-        static Task newTask;
-        static Task addedTask;
+        public ValidationAttribute(int step, HandlerTiming timing)
+            : base(step, timing)
+        {}
 
-        Establish context = () =>
-            {
-                dao = new TasksDAO();
-                dao.Clear();
-                newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
-            };
-
-        Because of = () => addedTask = dao.Add(newTask);
-
-        It should_add_the_task_into_the_list = () => retriever.Get(addedTask.Id).ShouldNotBeNull();
+        public override Type GetHandlerType()
+        {
+            return typeof(ValidationHandler<>);
+        }
     }
 }
