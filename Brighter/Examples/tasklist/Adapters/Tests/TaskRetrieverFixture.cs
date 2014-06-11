@@ -24,9 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using Machine.Specifications;
-using Tasklist.Adapters.DataAccess;
-using Tasklist.Domain;
 using Tasklist.Ports.ViewModelRetrievers;
+using Tasks.Adapters.DataAccess;
+using Tasks.Model;
 
 namespace Tasklist.Adapters.Tests
 {

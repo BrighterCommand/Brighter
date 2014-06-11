@@ -26,9 +26,9 @@ using System;
 using System.Linq;
 using Machine.Specifications;
 using Tasklist.Adapters.API.Resources;
-using Tasklist.Adapters.DataAccess;
-using Tasklist.Domain;
 using Tasklist.Ports.ViewModelRetrievers;
+using Tasks.Adapters.DataAccess;
+using Tasks.Model;
 
 namespace Tasklist.Adapters.Tests
 {

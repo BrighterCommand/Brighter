@@ -32,6 +32,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.serviceac
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskMailer", "Examples\TaskMailer\TaskMailer.csproj", "{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tasks", "Examples\Tasks\Tasks.csproj", "{E7900A56-DA88-46CA-8418-FB4C2BC2D326}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -152,6 +154,16 @@ Global
 		{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}.Release|x86.ActiveCfg = Release|Any CPU
+		{E7900A56-DA88-46CA-8418-FB4C2BC2D326}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E7900A56-DA88-46CA-8418-FB4C2BC2D326}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E7900A56-DA88-46CA-8418-FB4C2BC2D326}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{E7900A56-DA88-46CA-8418-FB4C2BC2D326}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{E7900A56-DA88-46CA-8418-FB4C2BC2D326}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E7900A56-DA88-46CA-8418-FB4C2BC2D326}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E7900A56-DA88-46CA-8418-FB4C2BC2D326}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E7900A56-DA88-46CA-8418-FB4C2BC2D326}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{E7900A56-DA88-46CA-8418-FB4C2BC2D326}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{E7900A56-DA88-46CA-8418-FB4C2BC2D326}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -160,6 +172,7 @@ Global
 		{9D36D28B-F9AE-4B51-A120-453D55360778} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{28BC2727-9C1D-4750-91C4-91941BE8CD45} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{B7729FE8-B4DB-406F-B54D-49C40A4E49BE} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
+		{E7900A56-DA88-46CA-8418-FB4C2BC2D326} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{65BADB63-5F98-4F24-84D7-8C99263F88C6} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 	EndGlobalSection
 EndGlobal

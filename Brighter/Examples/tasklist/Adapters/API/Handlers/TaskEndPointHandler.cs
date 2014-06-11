@@ -25,9 +25,9 @@ THE SOFTWARE. */
 using System;
 using OpenRasta.Web;
 using Tasklist.Adapters.API.Resources;
-using Tasklist.Ports.Commands;
 using Tasklist.Ports.ViewModelRetrievers;
 using paramore.brighter.commandprocessor;
+using Tasks.Ports.Commands;
 
 namespace Tasklist.Adapters.API.Handlers
 {
