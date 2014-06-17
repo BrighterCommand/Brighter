@@ -8,17 +8,22 @@ Paramore is a proving ground for approaches to distributed development in .NET. 
 The primary influences on the approaches here are:
 
 Exploration of Architectural Styles
------------------------------------
-N-Tier inc. Hexagonal Architecture (Ports and Adapters)
-CQRS
-Pipelines
-Broker
-REST
-SPA
+===  
+* Hierachical Systems  
+  * N-Tier inc. Hexagonal Architecture (Ports and Adapters) 
+  * CQRS
+* Data Centric Systems  
+  * OO Domain Model (see below..  )
+* Data Flow Systems  
+  * Piplines
+* Interacting Processess  
+  * Broker
+* Client-Server (REST, SPA)  
+
 
 Exploration of Domain Modelling Techniques
-------------------------------------------
-Responsibility Driven Design
-Domain Driven Design
-Tell Don't Ask
+===  
+* Responsibility Driven Design  
+* Domain Driven Design  
+* Tell Don't Ask  
 
