@@ -22,25 +22,19 @@
             <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
             <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
         </ul>
+        <p><a href="index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
         </header>
         <section>
             <h1>Brighter</h1>
-            <p>Brighter is a .NET implementation of the Command Processor pattern.</p>
-            <blockquote cite="http://books.google.co.uk/books?id=0kUFZDuqvmEC&lpg=PA288&ots=MJzBAU9zGr&dq=posa%20command%20processor&pg=PA277#v=onepage&q&f=false">
-            The command processor pattern separates the request for a service from its execution. A command processor component manages requests as separate objects,
-                schedules their execution, and provides additional services such as the storing of request objects for later undo.
-            </blockquote>
-            <p>A command dispatcher is often used with a Model-View-Controller architecture to avoid the <a href="FatController.html">Fat Controller</a> problem.
-                It can act as the port layer in a <a href="http://alistair.cockburn.us/Hexagonal+architecture">ports & adapters </a>architecture.</p>
-            <p>A command dispatcher provides loose coupling between the sender and the receiver. In addition to improving the modifiability quality attribute of the application
-                - we can change the receiver without the sender knowing and the sender does not have to understand dependencies that the receiver needs to fulfill out the request.
-                - A command processor allows us to implement orthogonal operations such as logging, or scheduling without forcing the sender to be aware of them. We provide support for exception policy through Polly, which
-                - allows us to control retries or provide a circuit breaker pattern for failure. We also provide support for timeouts. Other orthogonal dependencies can be added by the consumer</p>
             <ul>
-                <li><a href="WhyCommandProcessor.html">Why Command Processor?</a></li>
-                <li><a href="ImplementingCommmandProcessor.html">Implementing a Command Processor</a></li>
+                <li><a href="QuickStart.html">Getting Started using the Brighter Command Processor</a></li>
+                <li><a href="CommandsCommandDispatcherandProcessor.html">Commands, Command Dispatcher, Command Processor and Ports & Adapters</a></li>
+                <li><a href="WhyCommandProcessor.html">Decoupling via a Command Processor</a></li>
+                <li><a href="ImplementingCommmandProcessor.html">Implementing a Command Dispatcher and Processor</a></li>
+                <li><a href="WhatsInAName">Bus, Processor or Dispatcher, what's in a name?</a></li>
             </ul>
-            <p>Brighter is available from NuGet under the paramore.brighter.* set of packages. The package structure allows opt in to timeout, exception policy, messaging gateway, and message store</p>
+            <p><em>Brighter is available from NuGet under the paramore.brighter.* set of packages. The package structure allows opt in to timeout, exception policy, messaging gateway, and message store</em></p>
         </section>
         <footer>
             <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
