@@ -65,7 +65,8 @@
         </blockquote>
         <br/>
         <p>A <a href="http://en.wikipedia.org/wiki/Command_pattern"><strong>Command Dispatcher</strong></a> is often used with a <em>hierarchical architecture</em> to avoid
-            the <a href="FatController.html">Fat Controller</a> problem. It can act as the <em>port</em> layer in a <a href="PortsAndAdapters.html"><em>ports & adapters</em></a>architecture.</p>
+            the <a href="FatController.html">Fat Controller</a> problem and allow us to <a href="WhyCommandProcessor.html">decouple from the caller</a>. </p>
+        <p>It can also act as the <em>port</em> layer in a <a href="PortsAndAdapters.html"><em>Ports & Adapters</em></a>architecture.</p>
         <blockquote>An Action-Request object is an object that both encapsulates the identity of the action we want to fire and the parameters for this action, i.e. the extrinsic
             state of the action to undertake. In other words, an Action-Request object is a representation of the action to undertake, which is identified using a key,
             possibly a string such as 'set_depth'. An Action-Handler is the object that knows how to perform a particular action, and is passed the parameters at run-time. It is
@@ -79,7 +80,7 @@
         <p>We may distinguish between a Command Action-Request that has one Action Handler and an Event Action-Request that has many</p>
         <img src="images/Command%20Dispatcher.png" alt="Command Dispatcher sequence diagram">
         <br/>
-        <h2>Command Processor</h2>
+         <h2>Command Processor</h2>
         <p>Brighter is a .NET implementation of the <a href="http://wiki.hsr.ch/APF/files/CommandProcessor.pdf"><strong>Command Processor</strong> pattern.</a></p>
         <blockquote cite="http://books.google.co.uk/books?id=0kUFZDuqvmEC&lpg=PA288&ots=MJzBAU9zGr&dq=posa%20command%20processor&pg=PA277#v=onepage&q&f=false">
             The Command Processor pattern separates the request for a service from its execution. A Command Processor component manages requests as separate objects,
