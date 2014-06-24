@@ -33,10 +33,10 @@
             more modifiable. Our ability to test the Command in isolation of the caller - allows us to implement the ports and adapters model easily - we can instantiate the Command,
             provide 'fake' parameters to it and confirm the results. We can also use the command from multiple callers, although this is not a differentiator from the service class approach.
         </p>
-        <p>In addition we can structure a system transaction ally using Commands. A Command is a transactional boundary. Because a Command is a transactional boundary,
+        <p>In addition we can structure a system transactionally using Commands. A Command is a transactional boundary. Because a Command is a transactional boundary,
             when using the <a href="http://en.wikipedia.org/wiki/Domain-driven_design"><em>Domain Driven Design</em></a> technique of an aggregate there is a natural affinity between the Command, which
             operates on a transactional boundary and the <em>Aggregate</em> which is a transactional boundary within the domain model. The Aggregate is the Receiver stereotype within the Command Design pattern.
-            Because we want to separate use of outgoing <em>Adapters</em>em> via a <em>secondary Port</em>, such as a <a href="http://martinfowler.com/eaaCatalog/repository.html"><em>Repository</em></a>
+            Because we want to separate use of outgoing <em>Adapters</em> via a <em>secondary Port</em>, such as a <a href="http://martinfowler.com/eaaCatalog/repository.html"><em>Repository</em></a>
             in the DDD case, this can lead to a pattern for implementation of a Command:</p>
         <ol>
             <li>Begin Transaction</li>

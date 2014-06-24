@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Explorations in architectural styles for .NET, Intended as reusable libraries, demos for training, and self-exploration</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+    </header>
+    <section>
+        <h1>Introduction</h1>
+        <h2>What is Brighter?</h2>
+        <p>Brighter is an implementation of the Command Dispatcher and Command Processor patterns. These allow you to decouple a endpoint,
+            such as an <a href="http://martinfowler.com/eaaCatalog/modelViewController.html">MVC Input Controller</a> from the domain logic that handles the request. The intent
+            is to support the Open-Closed Principle - open to extension, closed for modification - by allowing handlers to be replaced or added, without modifying the calling code;
+            or for the endpoint framework to be replaced without impacting the domain code.</p>
+        <p>Brighter is intended to be a library not a framework, so it is consciously lightweight and divided into packages that allow you to consume only those facilities that you need in your
+            project.</p>
+        <p>Brighter provides utility packages to help build quality of service into the handler pipeline, which can also serve as examples for your own pipelines.</p>
+        <p>In addition, Brighter supports tasks queues: passing commands and events over an amqp broker, such as RabbitMQ, to be handle asynchronously by one or more event consumers.</p>
+        <p> The intent of Brighter is to make the difference between synchronous and asynchronous handling as small as possible: both write the same handlers with the same steps in the sequence.
+        On the producer side, sending asynchronously is just a different method on the dispatcher. On the consumer side a Service Activator library helps implement the endpoint code
+            so that marshalling to an asynchronous handler is as friction-free a manner as possible.</p>
+        <p>The latter functionality has similar goals to <em>NServiceBus</em>, <em>Mass Transit</em>, <em>Fubu Bus</em>, <em>Rebus</em> or <em>Celery</em></p>
+        <p></p>
+        <h2>Bus, Processor or Dispatcher, what's in a name?</h2>
+        <p>.NET projects that support task queues - pushing work onto a queue to be handled asynchronously by one or more consumers - tend to use the term BUS in their naming
+        regardless of whether or not they are implemented using a Bus topology (i.e. publish subscribe, with no central message broker). Brighter tries to avoid this confusion by talking about
+        Dispatcher, Processor, Service Activator patterns and a Broker architectural style instead</p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>

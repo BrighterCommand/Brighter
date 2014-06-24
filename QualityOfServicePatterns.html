@@ -40,7 +40,7 @@
             fault that appears transient is not. See Circuit Breaker as well.</p>
         <p>We need to exercise caution with a multiple retry approach that is does not overload a service that already has too many requests with increased traffic (an Attack of Self-Denial).
             For this reason we should delay further retry attempts by using an algorithm that increases the interval between retries</p>
-        <p> It is useful to use a retry policy library that encapsulates calls within a retry policy, instead of forcing each call to a remote component to implement retry afresh. I recommend
+        <p> It is useful to use a retry policy library that encapsulates calls within a retry policy, instead of forcing each call to a remote component to implement retry afresh. We recommend
             <a href="https://github.com/michael-wolfenden/Polly"><strong>Polly</strong></a> as a suitable library on the .NET framework. Brighter supports this through its ExceptionPolicy assembly
             which provides an attribute for running subsequent steps in the pipeline within a retry policy. The
             <a href="http://msdn.microsoft.com/en-us/library/hh680934%28v=pandp.50%29.aspx">Transient Fault Handling Application Block</a> provides similar functionality, though we don't have explicit
@@ -55,7 +55,7 @@
             an exception or timing out. An additional aspect it that the circuit remains open for a time period, after which we put the circuit in a half-open state. The next call 'tests' the circuit.
         If the call succeeds we close the circuit, if the call fails we wait for another time period (possibly increasing the delay with each try) before half-opening again. </p>
         <p>The client needs to handle a broken circuit gracefully - one option is for a server to throttle requests when it breaks a circuit</p>
-        <p> It is useful to use a cicruit breaker library, instead of forcing each call to implement afresh. Again I recommend
+        <p> It is useful to use a cicruit breaker library, instead of forcing each call to implement afresh. Again we recommend
             <a href="https://github.com/michael-wolfenden/Polly"><strong>Polly</strong></a> as a suitable library on the .NET framework. Brighter supports this through its ExceptionPolicy assembly
             which provides an attribute for running subsequent steps in the pipeline within a Circuit Breaker policy.</p>
     </section>
