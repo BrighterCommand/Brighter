@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Explorations in architectural styles for .NET, Intended as reusable libraries, demos for training, and self-exploration</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+    </header>
+    <section>
+        <h3>Step One</h3>
+        <p>Create a C# Console Application, targeting .NET 4.5. (Note that you can use any kind of host application, a console application is just the simplest way to get up and running in an example.</p>
+        <h3>Step Two</h3>
+        <p>Install the <strong>Paramore.Brighter.CommandProcessor</strong> and <strong>Paramore.Brighter.CommandProcessor.IocContainers.TinyIOC</strong> packages from NuGet</p>
+        <ul>
+            <li>PM> Install-Package Paramore.Brighter.CommandProcessor</li>
+            <li>PM> Install-Package paramore.brighter.commandprocessor.ioccontainers.tinyioc</li>
+        </ul>
+        <p><em>Note: delete the copy of TinyIoC in the Hello World project, it's a known defect that needs fixing that the container is copied.</em></p>
+        <h4>Abstracting the IoC Container</h4>
+        <p>Brighter builds a pipeline to handle requests. To do this it needs to create an instance of your handler(s), and by inference your handler's dependencies. A <em>Command Dispatcher</em>
+            works by looking up registered handlers for the command or event. We do this by creating a concrete type from a generic type <strong>IHandleRequests<></strong> and a Command or Event type derived
+            <strong>IRequest</strong>. So we need you to be able to register handler types with us. Once we have one or more types matching the request we need to create your matching implementation of
+            <strong>IHandleRequests<></strong>.  This is complicated by your handler having its own dependencies which need to be created, which may have their own dependencies and so on.
+            So we need to call a factory that builds this entire dependency chain, not just the handler.</p>
+        <p>To effect this, we require you to implement an interface that provide the services we depend on: registration of handlers, lookup of those registered handlers, and construction of handlers
+            and their dependency chain.</p>
+        <p>Sounds like a tough barrier to entry!</p>
+        <p>Our approach to this is to assume that you already have an <em>Inversion of Control container</em> that allows you to register interfaces with implementations and resolve dependency chains.
+            So we allow you to use that to provide those services to us; we provide an
+            <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/IAdaptAnInversionOfControlContainer.cs">IAdaptAnInversionOfControlContainer</a>
+            interface to implement (which in turn derives from IServiceLocator from the <a href="http://commonservicelocator.codeplex.com/">Microsoft.Practices.ServiceLocation</a> NuGet package).
+            An advantage of deriving from that package is that there are already implementations of IServiceLocator for many common IoC containers meaning there is less for you to implement.</p>
+        <p>We provide a NuGet package that implements <strong>IAdaptAnInversionOfControlContainer</strong> for the <a href="https://github.com/grumpydev/TinyIoC">TinyIoC</a> container
+            <a href="http://www.nuget.org/packages/paramore.brighter.commandprocessor.ioccontainers.tinyioc/">Paramore.Brighter.CommandProcessor.IoCContainers.TinyIoC</a></p>
+        <p>Brighter manage the lifetimes of handlers and the dependencies of handlers that are not marked as singleton, as we are the request pipeline.</p>
+        <p>It's worth noting mark Seeman's <a href="http://blog.ploeh.dk/2014/05/19/conforming-container/">objection to the 'Conforming Conainer' approach</a> and moving to more tailored factories
+            that are simpler to implement using an IoC container is a likely changeon the Brighter roadmap.</p>
+        <h3>Step Three</h3>
+        <p>With this example creating an instance of the Command Processor is fairly trivial, and you don't really need to use a factory or builder, but we'll show you how to do that way
+            because it makes the more complicated construction cases simpler. Just remember the builder and factory our conveniences to help you wire this up, and in this case (no messaging requirement)
+            you could just as simply use the CommandProcessor's constructor.</p>
+        <p>Add the following code to the Main class:</p>
+         <pre><code>
+ var properties = new NameValueCollection();
+ properties["showDateTime"] = "true";
+ LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+ var logger = LogManager.GetLogger(typeof (Program));
+
+ var builder = CommandProcessorBuilder.With()
+ .InversionOfControl(new TinyIoCAdapter(new TinyIoCContainer()))
+ .Logger(logger)
+ .NoMessaging()
+ .RequestContextFactory(new InMemoryRequestContextFactory());
+
+ var commandProcessor = builder.Build();
+         </code></pre>
+        <h3>Step Four</h3>
+        <h4>Our First Command</h4>
+        <p>Now that you have a command processor, we want to create a message, and a handler for that message. We'll choose to implement a command, that in the finest tradition of demo applications
+        just displays hello [name} on the console.</p>
+        <p>Add a new class to the project called GreetingCommand and enter the following code:</p>
+         <pre><code>
+ class GreetingCommand : IRequest
+ {
+    public GreetingCommand(string name)
+    {
+        Id = Guid.NewGuid();
+        Name = name;
+    }
+
+    public Guid Id { get; set; }
+    public string Name { get; private set; }
+ }
+         </code></pre>
+        <h4>Our First Handler</h4>
+        <p>Now that we have a Command we need to write a handler for it. Add a new class to the project called GreetingCommandHandler and then enter the following code:</p>
+         <pre><code>
+ class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
+ {
+    public GreetingCommandHandler(ILog logger) : base(logger) {}
+
+    public override GreetingCommand Handle(GreetingCommand command)
+    {
+        Console.WriteLine("Hello {0}", command.Name);
+        return command;
+    }
+ }
+         </code></pre>
+        <p>Note that we derive from RequestHandler here, and don't directly implement IHandleRequests<> You could directly implement the base class, but as we provide
+        useful functionality to make sure that your handler participates in the handler pipeline correctly you should derive from this class unless you have a compelling
+        reason to implement that support yourself.</p>
+        <p>As each handler participates in the chain it is expected that you will return the input you were given, the command or event, so that the next handler in the chain
+        can also process the request.</p>
+        <p>In a 'real' application you would load your domain model's state from persistent storage here, process the request using your domain model and then save the
+        state of the domain model. See <a href="CommandsCommandDispatcherandProcessor.html">Commands, Command Dispatcher and Processor</a> for more on this idiom.</p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>

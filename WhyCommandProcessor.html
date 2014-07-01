@@ -167,7 +167,7 @@ public class UpdateMyThingForFooDomainService :
         <p>This also serves to reduce the number of interfaces that we must implement as the generic interface can stand in for most of them.</p>
         <p>&nbsp;</p>
         <pre><code>
-public interface IHandleMessages
+public interface IHandleMessages&lt;T&gt;
 {
     void Handle(T command);
 }
