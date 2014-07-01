@@ -42,13 +42,13 @@ namespace paramore.brighter.commandprocessor
             return this;
         }
 
-        public INeedMessaging WithLogger(ILog logger)
+        public INeedMessaging Logger(ILog logger)
         {
             container.Register<ILog, ILog>(logger);
             return this;
         }
 
-        public INeedARequestContext WithMessaging(MessagingConfiguration configuration)
+        public INeedARequestContext Messaging(MessagingConfiguration configuration)
         {
             container.Register<IAmAMessageStore<Message>, IAmAMessageStore<Message>>(configuration.MessageStore);
             container.Register<IAmAMessagingGateway, IAmAMessagingGateway>(configuration.MessagingGateway);
@@ -57,7 +57,12 @@ namespace paramore.brighter.commandprocessor
             return this;
         }
 
-        public IAmACommandProcessorBuilder WithRequestContextFactory(IAmARequestContextFactory requestContextFactory)
+        public INeedARequestContext NoMessaging()
+        {
+            return this;
+        }
+
+        public IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory)
         {
             container.Register<IAmARequestContextFactory, IAmARequestContextFactory>(requestContextFactory);
             return this;
@@ -77,17 +82,18 @@ namespace paramore.brighter.commandprocessor
 
     public interface INeedALogging
     {
-        INeedMessaging WithLogger(ILog logger);
+        INeedMessaging Logger(ILog logger);
     }
 
     public interface INeedMessaging
     {
-        INeedARequestContext WithMessaging(MessagingConfiguration configuration);
+        INeedARequestContext Messaging(MessagingConfiguration configuration);
+        INeedARequestContext NoMessaging();
     }
 
     public interface INeedARequestContext
     {
-        IAmACommandProcessorBuilder WithRequestContextFactory(IAmARequestContextFactory requestContextFactory);
+        IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory);
     }
     public interface IAmACommandProcessorBuilder
     {
