@@ -319,13 +319,13 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                              .WithLogger(logger)
                              .WithCommandProcessor(CommandProcessorBuilder.With()
                                 .InversionOfControl(container)
-                                .WithLogger(logger)
-                                .WithMessaging(new MessagingConfiguration(
+                                .Logger(logger)
+                                .Messaging(new MessagingConfiguration(
                                                 messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
                                                 messagingGateway: gateway,
                                                 retryPolicy: retryPolicy,
                                                 circuitBreakerPolicy: circuitBreakerPolicy))
-                                 .WithRequestContextFactory(new InMemoryRequestContextFactory())
+                                 .RequestContextFactory(new InMemoryRequestContextFactory())
                                 .Build()
                                 )
                              .WithChannelFactory(new RMQInputChannelfactory(gateway)) 
