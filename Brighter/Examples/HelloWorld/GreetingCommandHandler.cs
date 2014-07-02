@@ -1,4 +1,5 @@
-﻿using Common.Logging;
+﻿using System;
+using Common.Logging;
 using paramore.brighter.commandprocessor;
 
 namespace HelloWorld
@@ -7,8 +8,10 @@ namespace HelloWorld
     {
         public GreetingCommandHandler(ILog logger) : base(logger) {}
 
-        public GreetingCommand Handle(GreetingCommand command)
+        public override GreetingCommand Handle(GreetingCommand command)
         {
+            Console.WriteLine("Hello {0}", command.Name);
+            return command;
         }
     }
 }

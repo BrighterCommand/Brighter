@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using Common.Logging;
 using Polly;
 
@@ -37,12 +38,12 @@ namespace paramore.brighter.commandprocessor
 
         public CommandProcessor Create()
         {
-            var requestContextFactory = container.GetInstance<IAmARequestContextFactory>();
-            var messageStore = container.GetInstance<IAmAMessageStore<Message>>();
-            var messagingGateway = container.GetInstance<IAmAMessagingGateway>();
-            var retryPolicy = container.GetInstance<Policy>(CommandProcessor.RETRYPOLICY);
-            var circuitBreakerPolicy = container.GetInstance<Policy>(CommandProcessor.CIRCUITBREAKER);
-            var logger = container.GetInstance<ILog>();
+            var requestContextFactory = RequestContextFactory();
+            var messageStore = MessageStore();
+            var messagingGateway = MessagingGateway();
+            var retryPolicy = GetInstance();
+            var circuitBreakerPolicy = CircuitBreakerPolicy();
+            var logger = Logger();
 
             return new CommandProcessor(
                 container: container,
@@ -52,6 +53,78 @@ namespace paramore.brighter.commandprocessor
                 retryPolicy: retryPolicy,
                 circuitBreakerPolicy: circuitBreakerPolicy,
                 logger: logger);
+        }
+
+        private ILog Logger()
+        {
+            return container.GetInstance<ILog>();
+        }
+
+        private Policy CircuitBreakerPolicy()
+        {
+            try
+            {
+                return container.GetInstance<Policy>(CommandProcessor.CIRCUITBREAKER);
+            }
+            catch(Exception)
+            {
+                return null;
+            }
+        }
+
+        private Policy GetInstance()
+        {
+            try
+            {
+                return container.GetInstance<Policy>(CommandProcessor.RETRYPOLICY);
+            }
+            catch (Exception)
+            {
+
+                return null;
+            }
+            
+        }
+
+        private IAmAMessagingGateway MessagingGateway()
+        {
+            try
+            {
+                return container.GetInstance<IAmAMessagingGateway>();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+            
+        }
+
+        private IAmAMessageStore<Message> MessageStore()
+        {
+            try
+            {
+                return container.GetInstance<IAmAMessageStore<Message>>();
+            }
+            catch (Exception)
+            {
+
+                return null;
+            }
+            
+        }
+
+        private IAmARequestContextFactory RequestContextFactory()
+        {
+            try
+            {
+                return container.GetInstance<IAmARequestContextFactory>();
+            }
+            catch (Exception)
+            {
+
+                return null;
+            }
+            
         }
     }
 }
