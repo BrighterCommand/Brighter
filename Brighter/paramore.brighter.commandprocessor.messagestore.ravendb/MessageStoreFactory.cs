@@ -46,10 +46,5 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
         {
             get { return DOCUMENT_STORE.Value; }
         }
-
-        public static void InstallRavenDbMessageStore(IAdaptAnInversionOfControlContainer container)
-        {
-            container.Register<IDocumentStore, DocumentStore>(DOCUMENT_STORE.Value);
-        }
     }
 }

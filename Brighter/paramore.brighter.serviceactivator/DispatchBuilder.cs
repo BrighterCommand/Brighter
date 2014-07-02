@@ -32,36 +32,37 @@ namespace paramore.brighter.serviceactivator
     //one option could be to use types not instances here, and do more assembly in build
     //currently configuration is a weak spot and has an early NH configuration mess feel to it
 
-    public class DispatchBuilder : INeedAnInversionOfControlContainer, INeedALogger, INeedACommandProcessor, INeedAChannelFactory, INeedAListOfConnections, IAmADispatchBuilder
+    public class DispatchBuilder : INeedALogger, INeedACommandProcessor, INeedAChannelFactory, INeedAListOfConnections, IAmADispatchBuilder
     {
-        private IAdaptAnInversionOfControlContainer container;
         private IAmAChannelFactory channelFactory;
         private IEnumerable<Connection> connections;
         private ILog logger;
+        private CommandProcessor commandProcessor;
+        private IAmAMessageMapperRegistry messageMapperRegistry;
         private DispatchBuilder() {}
 
 
-        public static INeedAnInversionOfControlContainer With()
+        public static INeedALogger With()
         {
             return new DispatchBuilder();
         }
 
-        public INeedALogger InversionOfControl(IAdaptAnInversionOfControlContainer theContainer)
-        {
-            this.container = theContainer;
-            return this;
-        }
 
         public INeedACommandProcessor WithLogger(ILog logger)
         {
             this.logger = logger;
-            container.Register<ILog, ILog>(logger);
             return this;
         }
 
-        public INeedAChannelFactory WithCommandProcessor(CommandProcessor commandProcessor)
+        public INeedAChannelFactory WithCommandProcessor(CommandProcessor theCommandProcessor)
         {
-            container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
+            this.commandProcessor = theCommandProcessor;
+            return this;
+        }
+
+        public INeedAChannelFactory WithMessageMappers(IAmAMessageMapperRegistry theMessageMapperRegistry)
+        {
+            this.messageMapperRegistry = theMessageMapperRegistry;
             return this;
         }
 
@@ -88,17 +89,12 @@ namespace paramore.brighter.serviceactivator
 
         public Dispatcher Build()
         {
-            return new Dispatcher(container, connections, logger);
+            return new Dispatcher(commandProcessor, messageMapperRegistry, connections, logger);
         }
 
     }
 
     #region Progressive Interfaces
-    public interface INeedAnInversionOfControlContainer
-    {
-        INeedALogger InversionOfControl(IAdaptAnInversionOfControlContainer theContainer);
-    }
-
     public interface INeedALogger
     {
         INeedACommandProcessor WithLogger(ILog logger);
@@ -109,6 +105,10 @@ namespace paramore.brighter.serviceactivator
         INeedAChannelFactory WithCommandProcessor(CommandProcessor commandProcessor);
     }
 
+    public interface INeedAMessageMapper
+    {
+        INeedAChannelFactory WithMessageMappers(IAmAMessageMapperRegistry messageMapperRegistry);
+    }
     public interface INeedAChannelFactory
     {
         INeedAListOfConnections WithChannelFactory(IAmAChannelFactory channelFactory);

@@ -26,9 +26,7 @@ using System.Linq;
 using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
-using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using paramore.commandprocessor.tests.Timeout.TestDoubles;
 
@@ -44,11 +42,11 @@ namespace paramore.commandprocessor.tests.Timeout
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            //Handler is decorated with UsePolicy and fails with divide by zero error
-            container.Register<IHandleRequests<MyCommand>, MyFailsDueToTimeoutHandler>().AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+
+            var registry = new TargetHandlerRegistry();
+            registry.Register<MyCommand, MyFailsDueToTimeoutHandler>();
+            var handlerFactory = new TestHandlerFactory<MyCommand, MyFailsDueToTimeoutHandler>(() => new MyFailsDueToTimeoutHandler(logger));
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
 
             MyFailsDueToTimeoutHandler.WasCancelled = false;
             MyFailsDueToTimeoutHandler.TaskCompleted = false;
@@ -71,12 +69,12 @@ namespace paramore.commandprocessor.tests.Timeout
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            //Handler is decorated with UsePolicy 
-            container.Register<IHandleRequests<MyCommand>, MyPassesTimeoutHandler>().AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
+            var registry = new TargetHandlerRegistry();
+            //Handler is decorated with UsePolicy 
+            registry.Register<MyCommand, MyPassesTimeoutHandler>();
+            var handlerFactory = new TestHandlerFactory<MyCommand, MyPassesTimeoutHandler>(() => new MyPassesTimeoutHandler(logger));
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
         };
 
         //We have to catch the final exception that bubbles out after retry

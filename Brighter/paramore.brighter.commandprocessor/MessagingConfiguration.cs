@@ -29,17 +29,20 @@ namespace paramore.brighter.commandprocessor
     {
         public IAmAMessageStore<Message> MessageStore { get; private set; }
         public IAmAMessagingGateway MessagingGateway { get; private set; }
+        public IAmAMessageMapperRegistry MessageMapperRegistry { get; private set; }
         public Policy RetryPolicy { get; private set; }
         public Policy CircuitBreakerPolicy { get; private set; }
 
         public MessagingConfiguration(
             IAmAMessageStore<Message> messageStore, 
             IAmAMessagingGateway messagingGateway, 
+            IAmAMessageMapperRegistry messageMapperRegistry,
             Policy retryPolicy, 
             Policy circuitBreakerPolicy)
         {
             MessageStore = messageStore;
             MessagingGateway = messagingGateway;
+            MessageMapperRegistry = messageMapperRegistry;
             RetryPolicy = retryPolicy;
             CircuitBreakerPolicy = circuitBreakerPolicy;
         }

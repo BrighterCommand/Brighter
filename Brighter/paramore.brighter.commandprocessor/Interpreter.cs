@@ -28,19 +28,16 @@ namespace paramore.brighter.commandprocessor
 {
     internal class Interpreter<TRequest> where TRequest : class, IRequest
     {
-        private readonly IAdaptAnInversionOfControlContainer container;
+        private readonly IAmATargetHandlerRegistry registry;
 
-        public Interpreter(IAdaptAnInversionOfControlContainer container)
+        public Interpreter(IAmATargetHandlerRegistry registry)
         {
-            this.container = container ;
+            this.registry = registry ;
         }
 
         public IEnumerable<RequestHandler<TRequest>> GetHandlers(Type requestType)
         {
-            var handlerGenericType = typeof(IHandleRequests<>);
-            var implicithandlerType = handlerGenericType.MakeGenericType(typeof(TRequest));
-
-            var handlers = new RequestHandlers<TRequest>(container.GetAllInstances(implicithandlerType));
+            var handlers = new RequestHandlers<TRequest>(registry.Get<TRequest>());
             return handlers;
         }
     }

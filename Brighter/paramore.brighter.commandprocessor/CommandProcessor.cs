@@ -31,8 +31,11 @@ namespace paramore.brighter.commandprocessor
 {
     public class CommandProcessor : IAmACommandProcessor
     {
-        readonly IAdaptAnInversionOfControlContainer container;
+        readonly IAmAMessageMapperRegistry mapperRegistry;
+        readonly IAmATargetHandlerRegistry targetHandlerRegistry;
+        private readonly IAmAHandlerFactory handlerFactory;
         readonly IAmARequestContextFactory requestContextFactory;
+        private readonly IAmAPolicyRegistry policyRegistry;
         readonly ILog logger;
         readonly IAmAMessageStore<Message> messageStore;
         readonly IAmAMessagingGateway messagingGateway;
@@ -41,23 +44,34 @@ namespace paramore.brighter.commandprocessor
         public const string CIRCUITBREAKER = "Paramore.Brighter.CommandProcessor.CircuitBreaker";
         public const string RETRYPOLICY = "Paramore.Brighter.CommandProcessor.RetryPolicy";
 
-        public CommandProcessor(IAdaptAnInversionOfControlContainer container, IAmARequestContextFactory requestContextFactory, ILog logger)
+        public CommandProcessor(
+            IAmATargetHandlerRegistry targetHandlerRegistry, 
+            IAmAHandlerFactory handlerFactory, 
+            IAmARequestContextFactory requestContextFactory, 
+            IAmAPolicyRegistry policyRegistry,
+            ILog logger)
         {
-            this.container = container;
+            this.targetHandlerRegistry = targetHandlerRegistry;
+            this.handlerFactory = handlerFactory;
             this.requestContextFactory = requestContextFactory;
+            this.policyRegistry = policyRegistry;
             this.logger = logger;
         }
 
         public CommandProcessor(
-            IAdaptAnInversionOfControlContainer container, 
+            IAmATargetHandlerRegistry targetHandlerRegistry,
+            IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory, 
+            IAmAPolicyRegistry policyRegistry,
+            IAmAMessageMapperRegistry mapperRegistry, 
             IAmAMessageStore<Message> messageStore, 
             IAmAMessagingGateway messagingGateway,
             Policy retryPolicy,
             Policy circuitBreakerPolicy, 
             ILog logger)
-            :this(container, requestContextFactory, logger)
+            :this(targetHandlerRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
         {
+            this.mapperRegistry = mapperRegistry;
             this.messageStore = messageStore;
             this.messagingGateway = messagingGateway;
             this.retryPolicy = retryPolicy;
@@ -67,9 +81,10 @@ namespace paramore.brighter.commandprocessor
 
         public void Send<T>(T command) where T : class, IRequest
         {
-            using (var builder = new PipelineBuilder<T>(container, logger))
+            using (var builder = new PipelineBuilder<T>(targetHandlerRegistry, handlerFactory, logger))
             {
-                var requestContext = requestContextFactory.Create(container);
+                var requestContext = requestContextFactory.Create();
+                requestContext.Policies = policyRegistry;
 
                 logger.Info(m => m("Building send pipeline for command: {0}", command.Id));
                 var handlerChain = builder.Build(requestContext);
@@ -88,9 +103,10 @@ namespace paramore.brighter.commandprocessor
 
         public void Publish<T>(T @event) where T : class, IRequest
         {
-            using (var builder = new PipelineBuilder<T>(container, logger))
+            using (var builder = new PipelineBuilder<T>(targetHandlerRegistry, handlerFactory, logger))
             {
-                var requestContext = new RequestContext(container);
+                var requestContext = requestContextFactory.Create();
+                requestContext.Policies = policyRegistry;
 
                 logger.Info(m => m("Building send pipeline for command: {0}", @event.Id));
                 var handlerChain = builder.Build(requestContext);
@@ -109,7 +125,7 @@ namespace paramore.brighter.commandprocessor
         {
             logger.Info(m => m("Decoupled invocation of request: {0}", request.Id));
 
-            var messageMapper = container.GetInstance<IAmAMessageMapper<T>>();
+            var messageMapper = mapperRegistry.Get<T>();
             var message = messageMapper.MapToMessage(request);
             RetryAndBreakCircuit(() =>
                 {

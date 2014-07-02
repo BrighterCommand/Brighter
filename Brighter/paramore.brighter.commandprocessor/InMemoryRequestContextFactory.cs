@@ -25,9 +25,9 @@ namespace paramore.brighter.commandprocessor
 {
     public class InMemoryRequestContextFactory : IAmARequestContextFactory
     {
-        public RequestContext Create(IAdaptAnInversionOfControlContainer container)
+        public RequestContext Create()
         {
-            return new RequestContext(container);
+            return new RequestContext();
         }
     }
 }

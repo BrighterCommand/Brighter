@@ -21,34 +21,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using System.Linq;
+using Polly;
 
 namespace paramore.brighter.commandprocessor
 {
-    internal class HandlerFactory<TRequest> where TRequest : class, IRequest
+    public interface IAmAPolicyRegistry
     {
-        private readonly RequestHandlerAttribute attribute;
-        private readonly IAmAHandlerFactory factory;
-        private readonly Type messageType;
-        private IRequestContext requestContext;
-
-        public HandlerFactory(RequestHandlerAttribute attribute, IAmAHandlerFactory factory, IRequestContext requestContext)
-        {
-            this.attribute = attribute;
-            this.factory = factory;
-            this.requestContext = requestContext;
-            messageType = typeof(TRequest);
-        }
-
-        public IHandleRequests<TRequest> CreateRequestHandler()
-        {
-            var handlerType = attribute.GetHandlerType().MakeGenericType(messageType);
-            var handler = (IHandleRequests<TRequest>) factory.Create(handlerType);
-            //Lod the context befor the initializer - in case we want to use the context from within the initializer
-            handler.Context = requestContext;
-            handler.InitializeFromAttributeParams(attribute.InitializerParams());
-            return handler;
-        }
+        Policy Get(string policyName);
     }
 }

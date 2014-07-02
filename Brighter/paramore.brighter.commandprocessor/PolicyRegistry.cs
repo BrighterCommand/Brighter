@@ -21,29 +21,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using Microsoft.Practices.ServiceLocation;
+using System.Collections.Generic;
+using Polly;
 
 namespace paramore.brighter.commandprocessor
 {
-    public interface IAdaptAnInversionOfControlContainer : IServiceLocator, IManageLifetimes, IDisposable
+    public class PolicyRegistry : IAmAPolicyRegistry
     {
-        //Register
-        IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>()
-            where RegisterType : class
-            where RegisterImplementation : class, RegisterType;
-        IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>(string name) 
-            where RegisterType : class 
-            where RegisterImplementation : class, RegisterType;
-        IAdaptAnInversionOfControlContainer Register<RegisterType, RegisterImplementation>(RegisterImplementation instance)
-            where RegisterType : class 
-            where RegisterImplementation : class, RegisterType;
+        readonly Dictionary<string, Policy> policies = new Dictionary<string, Policy>();
 
-        IAdaptAnInversionOfControlContainer Register<RegisterImplementation>(string name, RegisterImplementation instance)
-            where RegisterImplementation : class;
-
-        //Declare Lifetime
-        IAdaptAnInversionOfControlContainer AsMultiInstance();
-        IAdaptAnInversionOfControlContainer AsSingleton();
+        public Policy Get(string policyName)
+        {
+            return policies.ContainsKey(policyName) ? policies[policyName] : null;
+        }
     }
 }

@@ -34,7 +34,8 @@ namespace paramore.brighter.serviceactivator
 {
     public class Dispatcher : IDispatcher
     {
-        private readonly IAdaptAnInversionOfControlContainer container;
+        private readonly IAmACommandProcessor commandProcessor;
+        private readonly IAmAMessageMapperRegistry messageMapperRegistry;
         private readonly ILog logger;
         private Task controlTask;
         private readonly IList<Task> tasks = new SynchronizedCollection<Task>(); 
@@ -42,9 +43,10 @@ namespace paramore.brighter.serviceactivator
         public IList<Consumer> Consumers { get; private set; }
         public DispatcherState State { get; private set; }
 
-        public Dispatcher(IAdaptAnInversionOfControlContainer container, IEnumerable<Connection> connections, ILog logger)
+        public Dispatcher(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, IEnumerable<Connection> connections, ILog logger)
         {
-            this.container = container;
+            this.commandProcessor = commandProcessor;
+            this.messageMapperRegistry = messageMapperRegistry;
             this.logger = logger;
             State = DispatcherState.DS_NOTREADY;
 
@@ -144,7 +146,10 @@ namespace paramore.brighter.serviceactivator
                 {
                     int performer = i;
                     logger.Debug(m => m("Dispatcher: Creating performer {0} for connection: {1}", performer, connection.Name));
-                    list.Add(ConsumerFactory.Create(this.container, connection, this.logger));
+                    var consumerFactoryType = typeof (ConsumerFactory<>).MakeGenericType(connection.DataType);
+                    var consumerFactory = (IConsumerFactory) Activator.CreateInstance(consumerFactoryType, new object[]{commandProcessor, messageMapperRegistry, connection, logger });
+  
+                    list.Add(consumerFactory.Create());
                 }
             });
             return list;

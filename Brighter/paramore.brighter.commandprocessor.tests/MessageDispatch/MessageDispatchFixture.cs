@@ -318,7 +318,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                              .InversionOfControl(container)
                              .WithLogger(logger)
                              .WithCommandProcessor(CommandProcessorBuilder.With()
-                                .InversionOfControl(container)
+                                .Handlers(container)
                                 .Logger(logger)
                                 .Messaging(new MessagingConfiguration(
                                                 messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),

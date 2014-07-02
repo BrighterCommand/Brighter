@@ -23,13 +23,18 @@ THE SOFTWARE. */
 
 namespace paramore.brighter.commandprocessor
 {
-    public interface IHandleRequests<TRequest> where TRequest : class, IRequest
+    public interface IHandleRequests
     {
         IRequestContext Context { get; set; }
         void DescribePath(IAmAPipelineTracer pathExplorer);
-        TRequest Handle(TRequest command);
         void InitializeFromAttributeParams(params object[] initializerList);
-        IHandleRequests<TRequest> Successor { set; }
         HandlerName Name { get; }
+       
+    }
+
+    public interface IHandleRequests<TRequest> : IHandleRequests where TRequest : class, IRequest
+    {
+        TRequest Handle(TRequest command);
+        IHandleRequests<TRequest> Successor { set; }
     }
 }

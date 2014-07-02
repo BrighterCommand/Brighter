@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Common.Logging.Simple;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
@@ -44,10 +45,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+            
+            var registry = new TargetHandlerRegistry();
+            registry.Register<MyCommand, MyDependentCommandHandler>();
+            var handlerFactory = new TestHandlerFactory<MyCommand, MyDependentCommandHandler>(() => new MyDependentCommandHandler(new FakeRepository<MyAggregate>(new FakeSession()),logger));
+
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
         };
 
         Because of = () => commandProcessor.Send(myCommand);
@@ -65,12 +68,19 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>("DefaultHandler").AsMultiInstance();
-            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>("Implicit Handler").AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
 
+            var registry = new TargetHandlerRegistry();
+            registry.Register<MyCommand, MyDependentCommandHandler>();
+            registry.Register<MyCommand, MyImplicitHandler>();
+            
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>("DefaultHandler").AsMultiInstance();
+            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>("ImplicitHandler").AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
+            container.Register<ILog, NoOpLogger>().AsSingleton();
+
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
         };
 
         Because of = () =>  exception = Catch.Exception(() => commandProcessor.Send(myCommand));
@@ -89,8 +99,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+            commandProcessor = new CommandProcessor(new TargetHandlerRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer()),  new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
         };
 
@@ -109,10 +118,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+
+            var registry = new TargetHandlerRegistry();
+            registry.Register<MyEvent, MyEventHandler>();
+            var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler(logger));
+
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
         };
 
         Because of = () => commandProcessor.Publish(myEvent);
@@ -130,7 +141,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            commandProcessor = new CommandProcessor(new TinyIoCAdapter(new TinyIoCContainer()), new InMemoryRequestContextFactory(), logger);                                    
+            var registry = new TargetHandlerRegistry();
+            var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler(logger));
+
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
         };
 
         Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
@@ -148,11 +162,17 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyEvent>, MyEventHandler>("My Event Handler").AsMultiInstance();
-            container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("My Other Event Handler").AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+
+            var registry = new TargetHandlerRegistry();
+            registry.Register<MyEvent, MyEventHandler>();
+            registry.Register<MyEvent, MyEventHandler>();
+            
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsSingleton();
+            container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsSingleton();
+
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
         };
 
         Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));

@@ -60,10 +60,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor.ioccontainers.tinyioc\paramore.brighter.commandprocessor.ioccontainers.tinyioc.csproj">
-      <Project>{7b7a3ada-ced8-4bcf-b643-493607c4579f}</Project>
-      <Name>paramore.brighter.commandprocessor.ioccontainers.tinyioc</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
       <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
       <Name>paramore.brighter.commandprocessor</Name>

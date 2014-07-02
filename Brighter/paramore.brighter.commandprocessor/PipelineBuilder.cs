@@ -31,24 +31,18 @@ namespace paramore.brighter.commandprocessor
 {
     internal class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest> where TRequest : class, IRequest
     {
-        private readonly IAdaptAnInversionOfControlContainer container;
+        private readonly IAmAHandlerFactory handlerFactory;
         private readonly ILog logger;
         private readonly Interpreter<TRequest> interpreter;
-        private readonly IDisposable instanceScope;
-        private readonly IList<IHandleRequests<TRequest>> decorators = new List<IHandleRequests<TRequest>>(); 
+        private readonly IAmALifetime instanceScope;
 
-        public PipelineBuilder(IAdaptAnInversionOfControlContainer  container, ILog logger)
+        public PipelineBuilder(IAmATargetHandlerRegistry registry, IAmAHandlerFactory handlerFactory, ILog logger)
         {
-            this.container = container;
+            this.handlerFactory = handlerFactory;
             this.logger = logger;
-            instanceScope = container.CreateLifetime();
-            interpreter = new Interpreter<TRequest>(container);
+            instanceScope = new LifetimeScope(handlerFactory);
+            interpreter = new Interpreter<TRequest>(registry);
         }
-
-        public IEnumerable<IHandleRequests<TRequest>> Decorators
-        {
-            get { return decorators; }
-        } 
 
         public Pipelines<TRequest> Build(IRequestContext requestContext)
         {
@@ -88,8 +82,7 @@ namespace paramore.brighter.commandprocessor
             IHandleRequests<TRequest> lastInPipeline = implicitHandler;
             attributes.Each((attribute) =>
             {
-                var decorator = new HandlerFactory<TRequest>(attribute, container, requestContext).CreateRequestHandler();
-                decorators.Add(decorator);
+                var decorator = new HandlerFactory<TRequest>(attribute, handlerFactory, requestContext).CreateRequestHandler();
                 lastInPipeline.Successor = decorator;
                 lastInPipeline = decorator;
             });
@@ -99,8 +92,7 @@ namespace paramore.brighter.commandprocessor
         {
             attributes.Each((attribute) =>
             {
-                var decorator = new HandlerFactory<TRequest>(attribute, container, requestContext).CreateRequestHandler();
-                decorators.Add(decorator);
+                var decorator = new HandlerFactory<TRequest>(attribute, handlerFactory, requestContext).CreateRequestHandler();
                 decorator.Successor = lastInPipeline;
                 lastInPipeline = decorator;
             });
@@ -116,16 +108,6 @@ namespace paramore.brighter.commandprocessor
 
         public void Dispose()
         {
-            decorators.Each((decorator) =>
-            {
-                var disposable = decorator as IDisposable;
-                if (disposable != null)
-                {
-                    disposable.Dispose();
-                }
-            });
-
-            decorators.Clear();
             instanceScope.Dispose();
         }
     }
