@@ -16,13 +16,19 @@ namespace HelloWorld
             LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
             var logger = LogManager.GetLogger(typeof (Program));
 
+            var container = new TinyIoCAdapter(new TinyIoCContainer());
+            container.Register<IHandleRequests<GreetingCommand>, GreetingCommandHandler>();
+
+
             var builder = CommandProcessorBuilder.With()
-                .InversionOfControl(new TinyIoCAdapter(new TinyIoCContainer()))
+                .InversionOfControl(container)
                 .Logger(logger)
                 .NoMessaging()
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 
             var commandProcessor = builder.Build();
+
+            commandProcessor.Send(new GreetingCommand("Ian"));
         }
     }
 }
