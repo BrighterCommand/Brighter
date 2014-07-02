@@ -26,34 +26,55 @@ using Polly;
 
 namespace paramore.brighter.commandprocessor
 {
-    public class CommandProcessorBuilder : INeedAnIOCContainer, INeedALogging, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
+    public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedLogging, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
-        private IAdaptAnInversionOfControlContainer container;
+        private ILog logger;
+        private IAmAMessageStore<Message> messageStore;
+        private IAmAMessagingGateway messagingGateway;
+        private IAmAMessageMapperRegistry messageMapperRegistry;
+        private Policy retryPolicy;
+        private Policy circuitBreakerPolicy;
+        private IAmARequestContextFactory requestContextFactory;
+        private IAmATargetHandlerRegistry registry;
+        private IAmAHandlerFactory handlerFactory;
+        private IAmAPolicyRegistry policyRegistry;
         private CommandProcessorBuilder() {}
 
-        public static INeedAnIOCContainer With()
+        public static INeedAHandlers With()
         {
             return new CommandProcessorBuilder();
         }
 
-        public INeedALogging InversionOfControl(IAdaptAnInversionOfControlContainer theContainer)
+        public INeedPolicy Handlers(HandlerConfiguration handlerConfiguration)
         {
-            this.container = theContainer;
+            registry = handlerConfiguration.TargetHandlerRegistry;
+            handlerFactory = handlerConfiguration.HandlerFactory;
+            return this;
+        }
+        
+        public INeedLogging Policies(IAmAPolicyRegistry thePolicyRegistry)
+        {
+            policyRegistry = thePolicyRegistry;
             return this;
         }
 
+        public INeedLogging NoPolicy()
+        {
+            return this;
+        }
         public INeedMessaging Logger(ILog logger)
         {
-            container.Register<ILog, ILog>(logger);
+            this.logger = logger;
             return this;
         }
 
         public INeedARequestContext Messaging(MessagingConfiguration configuration)
         {
-            container.Register<IAmAMessageStore<Message>, IAmAMessageStore<Message>>(configuration.MessageStore);
-            container.Register<IAmAMessagingGateway, IAmAMessagingGateway>(configuration.MessagingGateway);
-            container.Register<Policy>(CommandProcessor.RETRYPOLICY, configuration.RetryPolicy);
-            container.Register<Policy>(CommandProcessor.CIRCUITBREAKER, configuration.RetryPolicy);
+            this.messageStore = configuration.MessageStore;
+            this.messagingGateway = configuration.MessagingGateway;
+            this.messageMapperRegistry = configuration.MessageMapperRegistry;
+            this.retryPolicy = configuration.RetryPolicy;
+            this.circuitBreakerPolicy = configuration.CircuitBreakerPolicy;
             return this;
         }
 
@@ -64,23 +85,41 @@ namespace paramore.brighter.commandprocessor
 
         public IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory)
         {
-            container.Register<IAmARequestContextFactory, IAmARequestContextFactory>(requestContextFactory);
+            this.requestContextFactory = requestContextFactory;
             return this;
         }
 
         public CommandProcessor Build()
         {
-            return new CommandProcessorFactory(container).Create();
+            return new CommandProcessor(
+                targetHandlerRegistry: registry,
+                handlerFactory: handlerFactory,
+                requestContextFactory: requestContextFactory,
+                policyRegistry: policyRegistry,
+                mapperRegistry: messageMapperRegistry,
+                messageStore: messageStore,
+                messagingGateway: messagingGateway,
+                retryPolicy: retryPolicy,
+                circuitBreakerPolicy:circuitBreakerPolicy,
+                logger: logger
+                );
         }
+
     }
 
     #region Progressive interfaces
-    public interface INeedAnIOCContainer
+    public interface INeedAHandlers
     {
-        INeedALogging InversionOfControl(IAdaptAnInversionOfControlContainer theContainer);
+        INeedPolicy Handlers(HandlerConfiguration theRegistry);
     }
 
-    public interface INeedALogging
+    public interface INeedPolicy
+    {
+        INeedLogging Policies(IAmAPolicyRegistry policyRegistry);
+        INeedLogging NoPolicy();
+    }
+
+    public interface INeedLogging
     {
         INeedMessaging Logger(ILog logger);
     }

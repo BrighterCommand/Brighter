@@ -25,9 +25,7 @@ using System.Linq;
 using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
-using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
@@ -39,15 +37,15 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private static IHandleRequests<MyCommand> Chain_Of_Responsibility;
         private static RequestContext request_context ;
 
-        Establish context = () =>
+        private Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>().AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
-            request_context = new RequestContext(container);
+            var registry = new TargetHandlerRegistry();
+            registry.Register<MyCommand, MyCommandHandler>();
+            var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
+            request_context = new RequestContext();
 
-            Chain_Builder = new PipelineBuilder<MyCommand>(container, logger);
+            Chain_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
         Because of = () => Chain_Of_Responsibility = Chain_Builder.Build(request_context).First();
@@ -67,18 +65,18 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyCommand>, MyContextAwareCommandHandler>().AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
-            request_context = new RequestContext(container);
 
+            var registry = new TargetHandlerRegistry();
+            registry.Register<MyCommand, MyContextAwareCommandHandler>();
+            var handlerFactory = new TestHandlerFactory<MyCommand, MyContextAwareCommandHandler>(() => new MyContextAwareCommandHandler(logger));
+            request_context = new RequestContext();
             myCommand = new MyCommand();
             MyContextAwareCommandHandler.TestString = null;
 
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
-            A.CallTo(() => requestContextFactory.Create(container)).Returns(request_context);
+            A.CallTo(() => requestContextFactory.Create()).Returns(request_context);
 
-            commandProcessor = new CommandProcessor(container, requestContextFactory, logger);
+            commandProcessor = new CommandProcessor(registry, handlerFactory, requestContextFactory, new PolicyRegistry(),  logger);
 
             request_context.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
         };

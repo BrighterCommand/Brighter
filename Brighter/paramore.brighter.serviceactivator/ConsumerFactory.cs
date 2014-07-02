@@ -22,27 +22,34 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Linq;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator
 {
-    internal class ConsumerFactory
+    internal class ConsumerFactory<TRequest> : IConsumerFactory where TRequest : class, IRequest
     {
-        private ConsumerFactory() {}
+        private readonly IAmACommandProcessor commandProcessor;
+        private readonly IAmAMessageMapperRegistry messageMapperRegistry;
+        private readonly Connection connection;
+        private readonly ILog logger;
 
-        public static Consumer Create(IAdaptAnInversionOfControlContainer container, Connection connection, ILog logger)
+        private ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, Connection connection, ILog logger)
         {
-            var messagePumpType = typeof (MessagePump<>).MakeGenericType(connection.DataType);
-            var parameters = messagePumpType.GetConstructors()[0].GetParameters()
-                                                    .Select(param => container.GetInstance(param.ParameterType))
-                                                    .ToArray();
-            var messagePump = (IAmAMessagePump) Activator.CreateInstance(messagePumpType, parameters);
-            messagePump.Channel = connection.Channel;
-            messagePump.TimeoutInMilliseconds = connection.TimeoutInMiliseconds;
-            messagePump.Logger = logger;
+            this.commandProcessor = commandProcessor;
+            this.messageMapperRegistry = messageMapperRegistry;
+            this.connection = connection;
+            this.logger = logger;
+        }
+
+        public Consumer Create()
+        {
+            var messagePump = new MessagePump<TRequest>(commandProcessor, messageMapperRegistry.Get<TRequest>())
+            {
+                Channel = connection.Channel,
+                TimeoutInMilliseconds = connection.TimeoutInMiliseconds,
+                Logger = logger
+            };
             var consumer = new Consumer(connection.Name, connection.Channel, messagePump);
             return consumer;
         }

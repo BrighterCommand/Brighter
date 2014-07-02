@@ -22,30 +22,25 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
-using Polly;
+using System.Collections.Generic;
+using System.Linq;
 
-namespace paramore.brighter.commandprocessor.exceptionpolicy.Handlers
+namespace paramore.brighter.commandprocessor
 {
-    class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
+    public class TargetHandlerRegistry : IAmATargetHandlerRegistry
     {
-        private Policy policy;
-
-        public ExceptionPolicyHandler(ILog logger) : base(logger)
-        {}
-
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        private readonly Dictionary<Type, Type> registeredTargethandlers = new Dictionary<Type, Type>(); 
+        public IEnumerable<IHandleRequests<TRequest>> Get<TRequest>() where TRequest : class, IRequest
         {
-            //we expect the first and only parameter to be a string
-            var policyName = (string) initializerList[0];
-            policy = Context.Policies.Get(policyName);
-            if (policy == null)
-                throw new ArgumentException("Could not find the policy for this attribute, did you register it with the command processor's container", "initializerList");
+            return registeredTargethandlers
+                .Where(registryEntry => registryEntry.Key == typeof (TRequest))
+                .Select(registryEntry => registryEntry.Value)
+                .Cast<IHandleRequests<TRequest>>();
         }
 
-        public override TRequest Handle(TRequest command)
+        public void Register<TRequest, TImplementation>() where TRequest: class, IRequest where TImplementation: class, IHandleRequests<TRequest>
         {
-            return policy.Execute(() => base.Handle(command));
+            registeredTargethandlers.Add(typeof(TRequest), typeof(TImplementation));
         }
     }
 }

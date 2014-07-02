@@ -57,13 +57,18 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommandProcessorBuilder.cs" />
-    <Compile Include="CommandProcessorFactory.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
-    <Compile Include="IAmACommandProcessorFactory.cs" />
+    <Compile Include="HandlerConfiguration.cs" />
+    <Compile Include="IAmAPolicyRegistry.cs" />
+    <Compile Include="PolicyRegistry.cs" />
+    <Compile Include="TargetHandlerRegistry.cs" />
+    <Compile Include="IAmAHandlerFactory.cs" />
+    <Compile Include="IAmATargetHandlerRegistry.cs" />
+    <Compile Include="IAmALifetime.cs" />
+    <Compile Include="IAmAMessageMapperRegistry.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="IAmAMessageMapper.cs" />
     <Compile Include="IAmAMessagingGateway.cs" />
-    <Compile Include="IManageLifetimes.cs" />
     <Compile Include="IAmAMessageStore.cs" />
     <Compile Include="Interpreter.cs" />
     <Compile Include="MessageBody.cs" />
@@ -80,7 +85,6 @@
     <Compile Include="HandlerName.cs" />
     <Compile Include="HandlerTiming.cs" />
     <Compile Include="IAmACommandProcessor.cs" />
-    <Compile Include="IAdaptAnInversionOfControlContainer.cs" />
     <Compile Include="IAmARequestContextFactory.cs" />
     <Compile Include="IAmAPipelineBuilder.cs" />
     <Compile Include="IAmAPipelineTracer.cs" />
@@ -96,7 +100,7 @@
     <Compile Include="RequestLoggingAttribute.cs" />
     <Compile Include="RequestHandlers.cs" />
     <Compile Include="RequestLoggingHandler.cs" />
-    <Compile Include="TrackedServiceLocator.cs" />
+    <Compile Include="LifetimeManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

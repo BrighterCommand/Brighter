@@ -151,9 +151,10 @@
     <Compile Include="CommandProcessors\TestDoubles\MyPreValidationHandlerAttribute.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyValidationHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyValidationHandlerAttribute.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\TestHandlerFactory.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\TinyIocHandlerFactory.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyDoesNotFailPolicyHandler.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithDivideByZeroHandler.cs" />
-    <Compile Include="IoCContainers\TinyIoCContainerFixture.cs" />
     <Compile Include="ExceptionPolicy\PolicyDecoratorTests.cs" />
     <Compile Include="MessageDispatch\MessageDispatchConfigurationFixture.cs" />
     <Compile Include="MessageDispatch\MessageDispatchFixture.cs" />
@@ -161,7 +162,6 @@
     <Compile Include="MessageDispatch\PerformerFixture.cs" />
     <Compile Include="MessageDispatch\TestDoubles\MyEventMessageMapper.cs" />
     <Compile Include="MessageDispatch\TestDoubles\SpyCommandProcessor.cs" />
-    <Compile Include="MessageStore\RavenDb\MessageStoreFactoryTests.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessageChannelTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
@@ -169,12 +169,9 @@
     <Compile Include="Timeout\Test Doubles\MyPassesTimeoutHandler.cs" />
     <Compile Include="Timeout\Test Doubles\MyFailsDueToTimeoutHandler.cs" />
     <Compile Include="Timeout\TimeoutDecoratorTests.cs" />
+    <Compile Include="TinyIoC.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.ioccontainers.tinyioc\paramore.brighter.commandprocessor.ioccontainers.tinyioc.csproj">
-      <Project>{7b7a3ada-ced8-4bcf-b643-493607c4579f}</Project>
-      <Name>paramore.brighter.commandprocessor.ioccontainers.tinyioc</Name>
-    </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj">
       <Project>{224f828a-1abf-4d7b-8c48-66856bfd1ded}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.ravendb</Name>

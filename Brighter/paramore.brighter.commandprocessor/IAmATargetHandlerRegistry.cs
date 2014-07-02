@@ -22,30 +22,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
-using Polly;
+using System.Collections.Generic;
 
-namespace paramore.brighter.commandprocessor.exceptionpolicy.Handlers
+namespace paramore.brighter.commandprocessor
 {
-    class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
+    public interface IAmATargetHandlerRegistry
     {
-        private Policy policy;
-
-        public ExceptionPolicyHandler(ILog logger) : base(logger)
-        {}
-
-        public override void InitializeFromAttributeParams(params object[] initializerList)
-        {
-            //we expect the first and only parameter to be a string
-            var policyName = (string) initializerList[0];
-            policy = Context.Policies.Get(policyName);
-            if (policy == null)
-                throw new ArgumentException("Could not find the policy for this attribute, did you register it with the command processor's container", "initializerList");
-        }
-
-        public override TRequest Handle(TRequest command)
-        {
-            return policy.Execute(() => base.Handle(command));
-        }
+        IEnumerable<IHandleRequests<T>> Get<T>() where T : class, IRequest;
     }
 }

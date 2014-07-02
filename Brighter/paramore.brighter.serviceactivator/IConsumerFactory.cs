@@ -19,18 +19,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
-using System;
 using Common.Logging;
+using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.commandprocessor
+namespace paramore.brighter.serviceactivator
 {
-    public interface IManageLifetimes
+    public interface IConsumerFactory
     {
-        //Manage Lifetimes. Anything created within the scope, should be released on dispose (isntance or singleton)
-        IDisposable CreateLifetime(ILog logger = null);
-        int TrackedItemCount { get; }
-
+        Consumer Create();
     }
 }
