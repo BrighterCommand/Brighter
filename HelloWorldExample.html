@@ -112,6 +112,73 @@
         can also process the request.</p>
         <p>In a 'real' application you would load your domain model's state from persistent storage here, process the request using your domain model and then save the
         state of the domain model. See <a href="CommandsCommandDispatcherandProcessor.html">Commands, Command Dispatcher and Processor</a> for more on this idiom.</p>
+        <h3>Step Four</h3>
+        <p>Having created a handler we have to tell Brighter about it. So we need to extract a variable for the container adapter from the builder's fluent interface,
+            so that we can register handlers with the container</p>
+        <pre><code>
+var container = new TinyIoCAdapter(new TinyIoCContainer());
+container.Register&lt;IHandleRequests&lt;GreetingCommand&gt;, GreetingCommandHandler&gt;();
+        </code></pre>
+        <h3>Step Five</h3>
+        <p>Now that we have a handler registered, it is time to send it a message. The command processor exposes a send for point-to-point messaging (usually a command would have one
+        handler), and publish for broadcast to zero or more handlers (usually an event has zero or more handlers)</p>
+        <pre><code>
+            commandProcessor.Send(new GreetingCommand("Ian"));
+        </code></pre>
+        <h3>Step Six</h3>
+        <p>let's just review the code. It's not a fine example of software development, but it serves to show you how Brighter works without any fuss</p>
+        <pre><code>
+class Program
+{
+    static void Main(string[] args)
+    {
+        var properties = new NameValueCollection();
+        properties["showDateTime"] = "true";
+        LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+        var logger = LogManager.GetLogger(typeof (Program));
+
+        var container = new TinyIoCAdapter(new TinyIoCContainer());
+        container.Register&lt;IHandleRequests&lt;GreetingCommand&gt;, GreetingCommandHandler>();
+
+
+        var builder = CommandProcessorBuilder.With()
+            .InversionOfControl(container)
+            .Logger(logger)
+            .NoMessaging()
+            .RequestContextFactory(new InMemoryRequestContextFactory());
+
+        var commandProcessor = builder.Build();
+
+        commandProcessor.Send(new GreetingCommand("Ian"));
+    }
+}
+
+class GreetingCommand : IRequest
+{
+    public GreetingCommand(string name)
+    {
+        Id = Guid.NewGuid();
+        Name = name;
+    }
+
+    public Guid Id { get; set; }
+    public string Name { get; private set; }
+}
+
+class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
+{
+    public GreetingCommandHandler(ILog logger) : base(logger) {}
+
+    public override GreetingCommand Handle(GreetingCommand command)
+    {
+        Console.WriteLine("Hello {0}", command.Name);
+        return command;
+    }
+}
+        </code></pre>
+        <h3>Step Seven</h3>
+        <p>Now just build and run. You should see your greeting pumped out to the console.</p>
+        <p>That is a brief introduction in how to get a command processor working. We explore a fuller example in <a href="TasksExample.html">Next Steps</a></p>
     </section>
     <footer>
         <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
