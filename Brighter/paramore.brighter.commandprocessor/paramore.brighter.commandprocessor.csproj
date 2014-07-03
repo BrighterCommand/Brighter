@@ -60,10 +60,11 @@
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="HandlerConfiguration.cs" />
     <Compile Include="IAmAPolicyRegistry.cs" />
+    <Compile Include="MessageMapperRegistry.cs" />
     <Compile Include="PolicyRegistry.cs" />
-    <Compile Include="TargetHandlerRegistry.cs" />
+    <Compile Include="SubscriberRegistry.cs" />
     <Compile Include="IAmAHandlerFactory.cs" />
-    <Compile Include="IAmATargetHandlerRegistry.cs" />
+    <Compile Include="IAmASubscriberRegistry.cs" />
     <Compile Include="IAmALifetime.cs" />
     <Compile Include="IAmAMessageMapperRegistry.cs" />
     <Compile Include="Message.cs" />

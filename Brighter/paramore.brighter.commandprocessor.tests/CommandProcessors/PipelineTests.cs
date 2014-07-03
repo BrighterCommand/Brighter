@@ -42,7 +42,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
 
@@ -72,7 +72,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDependentCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyDependentCommandHandler>(() => new MyDependentCommandHandler(new FakeRepository<MyAggregate>(new FakeSession()),logger));
 
@@ -102,7 +102,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyImplicitHandler>();
 
             var container = new TinyIoCContainer();
@@ -137,7 +137,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDoubleDecoratedHandler>();
 
             var container = new TinyIoCContainer();
@@ -172,12 +172,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDoubleDecoratedHandler>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyDoubleDecoratedHandler>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
             container.Register<ILog, NoOpLogger>().AsSingleton();
@@ -207,7 +207,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyObsoleteCommandHandler >();
 
             var container = new TinyIoCContainer();
@@ -243,7 +243,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
             registry.Register<MyCommand, MyLoggingHandler<MyCommand>>();
 
@@ -274,7 +274,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
 
             var container = new TinyIoCContainer();
