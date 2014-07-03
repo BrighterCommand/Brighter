@@ -30,7 +30,6 @@ using Polly;
 using Polly.CircuitBreaker;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using Common.Logging;
 
@@ -46,7 +45,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
             
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDependentCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyDependentCommandHandler>(() => new MyDependentCommandHandler(new FakeRepository<MyAggregate>(new FakeSession()),logger));
 
@@ -69,7 +68,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDependentCommandHandler>();
             registry.Register<MyCommand, MyImplicitHandler>();
             
@@ -99,7 +98,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            commandProcessor = new CommandProcessor(new TargetHandlerRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer()),  new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            commandProcessor = new CommandProcessor(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer()),  new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
         };
 
@@ -119,7 +118,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
             var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler(logger));
 
@@ -141,7 +140,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler(logger));
 
             commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
@@ -163,7 +162,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
             registry.Register<MyEvent, MyEventHandler>();
             
@@ -190,13 +189,11 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static Message message;
         static IAmAMessageStore<Message> commandRepository;
         static IAmAMessagingGateway messagingGateway ;
-        static IAdaptAnInversionOfControlContainer container;
         
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
-            container = A.Fake<IAdaptAnInversionOfControlContainer>();
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
             messagingGateway = A.Fake<IAmAMessagingGateway>();
             message = new Message(
@@ -212,10 +209,14 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway, retryPolicy, circuitBreakerPolicy, logger);
+            commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(), 
+                new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
+                new MessageMapperRegistry(), 
+                commandRepository, 
+                messagingGateway, 
+                logger);
 
-            A.CallTo(() => container.GetInstance<IAmAMessageMapper<MyCommand>>()).Returns( new MyCommandMessageMapper());
-            A.CallTo(() => container.GetInstance<ILog>()).Returns(logger);
         };
 
         Because of = () => commandProcessor.Post(myCommand);
@@ -237,8 +238,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<ILog, ILog>(logger);
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
             messagingGateway = A.Fake<IAmAMessagingGateway>();
             message = new Message(
@@ -254,7 +253,13 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
             A.CallTo(() => commandRepository.Get(message.Header.Id)).Returns(message);
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway, retryPolicy, circuitBreakerPolicy, logger);
+            commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(), 
+                new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
+                new MessageMapperRegistry(), 
+                commandRepository, 
+                messagingGateway, 
+                logger);
         };
 
         Because of = () => commandProcessor.Repost(message.Header.Id);
@@ -268,12 +273,14 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static readonly MyCommand myCommand = new MyCommand();
         static Exception exception;
 
-        Establish context = () =>
+        private Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyCommand>, MyUnusedCommandHandler>().AsMultiInstance();
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+
+            var registry = new SubscriberRegistry() {{typeof (MyCommand), typeof (MyUnusedCommandHandler)}};
+            var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
+        
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
         Because of = () => exception = Catch.Exception(() => commandProcessor.Send(myCommand));
@@ -290,10 +297,17 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
+            registry.Register<MyCommand, MyLoggingHandler<MyCommand>>();
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
+            container.Register<ILog, NoOpLogger>().AsSingleton();
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
         };
 
@@ -320,8 +334,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            lifetime = container.CreateLifetime();
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
             messagingGateway = A.Fake<IAmAMessagingGateway>();
             message = new Message(
@@ -344,11 +356,14 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMinutes(1));
 
-            container.Register<IAmAMessageMapper<MyCommand>, MyCommandMessageMapper>(new MyCommandMessageMapper());
-            container.Register<ILog, ILog>(logger);
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), commandRepository, messagingGateway, retryPolicy, circuitBreakerPolicy, logger);
-        };
+           commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(), 
+                new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
+                new MessageMapperRegistry(), 
+                commandRepository, 
+                messagingGateway, 
+                logger);       };
 
         Because of = () =>
             {

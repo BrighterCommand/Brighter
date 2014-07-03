@@ -36,7 +36,7 @@ namespace paramore.brighter.commandprocessor
         private readonly Interpreter<TRequest> interpreter;
         private readonly IAmALifetime instanceScope;
 
-        public PipelineBuilder(IAmATargetHandlerRegistry registry, IAmAHandlerFactory handlerFactory, ILog logger)
+        public PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory, ILog logger)
         {
             this.handlerFactory = handlerFactory;
             this.logger = logger;

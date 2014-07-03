@@ -16,18 +16,18 @@ namespace HelloWorld
             LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
             var logger = LogManager.GetLogger(typeof (Program));
 
-            var registry = new TargetHandlerRegistry(); 
+            var registry = new SubscriberRegistry(); 
             registry.Register<GreetingCommand, GreetingCommandHandler>();
 
 
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(
-                     targetHandlerRegistry: new TargetHandlerRegistry(),
+                     subscriberRegistry: new SubscriberRegistry(),
                      handlerFactory: new TinyIoCHandlerFactory(logger)
                     ))
                 .NoPolicy()
                 .Logger(logger)
-                .NoMessaging()
+                .NoTaskQueues()
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 
             var commandProcessor = builder.Build();

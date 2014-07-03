@@ -40,7 +40,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
             request_context = new RequestContext();
@@ -66,7 +66,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyContextAwareCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyContextAwareCommandHandler>(() => new MyContextAwareCommandHandler(logger));
             request_context = new RequestContext();

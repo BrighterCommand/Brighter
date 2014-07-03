@@ -32,56 +32,69 @@ namespace paramore.brighter.commandprocessor
     public class CommandProcessor : IAmACommandProcessor
     {
         readonly IAmAMessageMapperRegistry mapperRegistry;
-        readonly IAmATargetHandlerRegistry targetHandlerRegistry;
+        readonly IAmASubscriberRegistry subscriberRegistry;
         private readonly IAmAHandlerFactory handlerFactory;
         readonly IAmARequestContextFactory requestContextFactory;
         private readonly IAmAPolicyRegistry policyRegistry;
         readonly ILog logger;
         readonly IAmAMessageStore<Message> messageStore;
         readonly IAmAMessagingGateway messagingGateway;
-        readonly Policy retryPolicy;
-        readonly Policy circuitBreakerPolicy;
         public const string CIRCUITBREAKER = "Paramore.Brighter.CommandProcessor.CircuitBreaker";
         public const string RETRYPOLICY = "Paramore.Brighter.CommandProcessor.RetryPolicy";
 
+        //use when no task queue support required
         public CommandProcessor(
-            IAmATargetHandlerRegistry targetHandlerRegistry, 
+            IAmASubscriberRegistry subscriberRegistry, 
             IAmAHandlerFactory handlerFactory, 
             IAmARequestContextFactory requestContextFactory, 
             IAmAPolicyRegistry policyRegistry,
             ILog logger)
         {
-            this.targetHandlerRegistry = targetHandlerRegistry;
+            this.subscriberRegistry = subscriberRegistry;
             this.handlerFactory = handlerFactory;
             this.requestContextFactory = requestContextFactory;
             this.policyRegistry = policyRegistry;
             this.logger = logger;
         }
 
+        //Use when only task queue support required
         public CommandProcessor(
-            IAmATargetHandlerRegistry targetHandlerRegistry,
+            IAmARequestContextFactory requestContextFactory, 
+            IAmAPolicyRegistry policyRegistry,
+            IAmAMessageMapperRegistry mapperRegistry, 
+            IAmAMessageStore<Message> messageStore, 
+            IAmAMessagingGateway messagingGateway,
+            ILog logger)
+        {
+            this.requestContextFactory = requestContextFactory;
+            this.policyRegistry = policyRegistry;
+            this.logger = logger;
+            this.mapperRegistry = mapperRegistry;
+            this.messageStore = messageStore;
+            this.messagingGateway = messagingGateway;
+        }
+
+        //Use when task queue and command processor support required
+        public CommandProcessor(
+            IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory, 
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry, 
             IAmAMessageStore<Message> messageStore, 
             IAmAMessagingGateway messagingGateway,
-            Policy retryPolicy,
-            Policy circuitBreakerPolicy, 
             ILog logger)
-            :this(targetHandlerRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
+            :this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
         {
             this.mapperRegistry = mapperRegistry;
             this.messageStore = messageStore;
             this.messagingGateway = messagingGateway;
-            this.retryPolicy = retryPolicy;
-            this.circuitBreakerPolicy = circuitBreakerPolicy;
         }
 
 
         public void Send<T>(T command) where T : class, IRequest
         {
-            using (var builder = new PipelineBuilder<T>(targetHandlerRegistry, handlerFactory, logger))
+            using (var builder = new PipelineBuilder<T>(subscriberRegistry, handlerFactory, logger))
             {
                 var requestContext = requestContextFactory.Create();
                 requestContext.Policies = policyRegistry;
@@ -103,7 +116,7 @@ namespace paramore.brighter.commandprocessor
 
         public void Publish<T>(T @event) where T : class, IRequest
         {
-            using (var builder = new PipelineBuilder<T>(targetHandlerRegistry, handlerFactory, logger))
+            using (var builder = new PipelineBuilder<T>(subscriberRegistry, handlerFactory, logger))
             {
                 var requestContext = requestContextFactory.Create();
                 requestContext.Policies = policyRegistry;
@@ -155,12 +168,12 @@ namespace paramore.brighter.commandprocessor
 
         private void CheckCircuit(Action send)
         {
-            circuitBreakerPolicy.Execute(send);
+            policyRegistry.Get(CIRCUITBREAKER).Execute(send);
         }
 
         private void Retry(Action send)
         {
-            retryPolicy.Execute(send);
+            policyRegistry.Get(RETRYPOLICY).Execute(send);
         }
     }
 }

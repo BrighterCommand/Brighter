@@ -26,11 +26,11 @@ using Common.Logging;
 using FakeItEasy;
 using FluentAssertions;
 using Machine.Specifications;
+using paramore.brighter.commandprocessor.exceptionpolicy.Handlers;
 using Polly;
 using Polly.CircuitBreaker;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles;
 
@@ -46,10 +46,17 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            //Handler is decorated with UsePolicy and fails with divide by zero error
-            container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
+
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, MyFailsWithDivideByZeroHandler >();
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>().AsSingleton();
+
+            var policyRegistry = new PolicyRegistry();
+
             var policy = Policy
                 .Handle<DivideByZeroException>()
                 .WaitAndRetry(new[]
@@ -61,11 +68,11 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
                 {
                     retryCount++;
                 });
-            container.Register<Policy>("MyDivideByZeroPolicy", policy);
+            policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
             MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
 
         };
 
@@ -86,10 +93,17 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            //Handler is decorated with UsePolicy and fails with divide by zero error
-            container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler >().AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
+
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, MyDoesNotFailPolicyHandler >();
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler >().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>().AsSingleton();
+
+            var policyRegistry = new PolicyRegistry();
+
             var policy = Policy
                 .Handle<DivideByZeroException>()
                 .WaitAndRetry(new[]
@@ -101,11 +115,11 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
                 {
                     retryCount++;
                 });
-            container.Register<Policy>("MyDivideByZeroPolicy", policy);
+            policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
             MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
 
         };
 
@@ -128,19 +142,26 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            //Handler is decorated with UsePolicy and fails with divide by zero error
-            container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsMultiInstance();
-            container.Register<ILog, ILog>(logger);
+
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, MyFailsWithDivideByZeroHandler >();
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>().AsSingleton();
+
+            var policyRegistry = new PolicyRegistry();
+
             var policy = Policy
                 .Handle<DivideByZeroException>()
                 .CircuitBreaker(2, TimeSpan.FromMinutes(1));
 
-            container.Register<Policy>("MyDivideByZeroPolicy", policy);
+            policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
             MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
 
         };
 
@@ -150,7 +171,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
                 //First two should be caught, and increment the count
                 firstException = Catch.Exception(() => commandProcessor.Send(myCommand));
                 secondException = Catch.Exception(() => commandProcessor.Send(myCommand));
-                //this one should tell us that the circuit ir broken
+                //this one should tell us that the circuit is broken
                 thirdException = Catch.Exception(() => commandProcessor.Send(myCommand));
             };
 

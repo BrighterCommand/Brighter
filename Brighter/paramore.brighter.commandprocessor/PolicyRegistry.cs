@@ -21,18 +21,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Collections;
 using System.Collections.Generic;
 using Polly;
 
 namespace paramore.brighter.commandprocessor
 {
-    public class PolicyRegistry : IAmAPolicyRegistry
+    public class PolicyRegistry : IAmAPolicyRegistry, IEnumerable<KeyValuePair<string, Policy>>
     {
         readonly Dictionary<string, Policy> policies = new Dictionary<string, Policy>();
 
         public Policy Get(string policyName)
         {
             return policies.ContainsKey(policyName) ? policies[policyName] : null;
+        }
+
+        public void Add(string policyName, Policy policy)
+        {
+            policies.Add(policyName, policy);
+        }
+
+        public IEnumerator<KeyValuePair<string, Policy>> GetEnumerator()
+        {
+            return policies.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

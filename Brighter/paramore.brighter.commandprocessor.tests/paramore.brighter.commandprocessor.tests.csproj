@@ -120,7 +120,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CommandProcessors\CommandProcessorFactoryTests.cs" />
     <Compile Include="CommandProcessors\PipelineTests.cs" />
     <Compile Include="CommandProcessors\CommandProcessorTests.cs" />
     <Compile Include="CommandProcessors\PipelineContextTests.cs" />

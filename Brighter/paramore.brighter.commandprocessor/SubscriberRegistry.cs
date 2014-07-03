@@ -22,25 +22,42 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace paramore.brighter.commandprocessor
 {
-    public class TargetHandlerRegistry : IAmATargetHandlerRegistry
+    public class SubscriberRegistry : IAmASubscriberRegistry, IEnumerable<KeyValuePair<Type, Type>>
     {
-        private readonly Dictionary<Type, Type> registeredTargethandlers = new Dictionary<Type, Type>(); 
+        private readonly Dictionary<Type, Type> registeredSubscribers = new Dictionary<Type, Type>(); 
         public IEnumerable<IHandleRequests<TRequest>> Get<TRequest>() where TRequest : class, IRequest
         {
-            return registeredTargethandlers
+            return registeredSubscribers
                 .Where(registryEntry => registryEntry.Key == typeof (TRequest))
                 .Select(registryEntry => registryEntry.Value)
                 .Cast<IHandleRequests<TRequest>>();
         }
 
+        //Support object initializer syntax
+        public void Add(Type requestType, Type handlerType)
+        {
+            registeredSubscribers.Add(requestType, handlerType);
+        }
+
         public void Register<TRequest, TImplementation>() where TRequest: class, IRequest where TImplementation: class, IHandleRequests<TRequest>
         {
-            registeredTargethandlers.Add(typeof(TRequest), typeof(TImplementation));
+            registeredSubscribers.Add(typeof(TRequest), typeof(TImplementation));
+        }
+
+        public IEnumerator<KeyValuePair<Type, Type>> GetEnumerator()
+        {
+            return registeredSubscribers.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

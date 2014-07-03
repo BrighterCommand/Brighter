@@ -27,7 +27,7 @@ using Polly;
 
 namespace paramore.brighter.commandprocessor.exceptionpolicy.Handlers
 {
-    class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
+    public class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         private Policy policy;
 

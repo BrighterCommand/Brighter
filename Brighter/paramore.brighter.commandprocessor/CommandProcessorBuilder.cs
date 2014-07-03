@@ -32,10 +32,8 @@ namespace paramore.brighter.commandprocessor
         private IAmAMessageStore<Message> messageStore;
         private IAmAMessagingGateway messagingGateway;
         private IAmAMessageMapperRegistry messageMapperRegistry;
-        private Policy retryPolicy;
-        private Policy circuitBreakerPolicy;
         private IAmARequestContextFactory requestContextFactory;
-        private IAmATargetHandlerRegistry registry;
+        private IAmASubscriberRegistry registry;
         private IAmAHandlerFactory handlerFactory;
         private IAmAPolicyRegistry policyRegistry;
         private CommandProcessorBuilder() {}
@@ -47,7 +45,7 @@ namespace paramore.brighter.commandprocessor
 
         public INeedPolicy Handlers(HandlerConfiguration handlerConfiguration)
         {
-            registry = handlerConfiguration.TargetHandlerRegistry;
+            registry = handlerConfiguration.SubscriberRegistry;
             handlerFactory = handlerConfiguration.HandlerFactory;
             return this;
         }
@@ -68,17 +66,15 @@ namespace paramore.brighter.commandprocessor
             return this;
         }
 
-        public INeedARequestContext Messaging(MessagingConfiguration configuration)
+        public INeedARequestContext TaskQueues(MessagingConfiguration configuration)
         {
-            this.messageStore = configuration.MessageStore;
-            this.messagingGateway = configuration.MessagingGateway;
-            this.messageMapperRegistry = configuration.MessageMapperRegistry;
-            this.retryPolicy = configuration.RetryPolicy;
-            this.circuitBreakerPolicy = configuration.CircuitBreakerPolicy;
+            messageStore = configuration.MessageStore;
+            messagingGateway = configuration.MessagingGateway;
+            messageMapperRegistry = configuration.MessageMapperRegistry;
             return this;
         }
 
-        public INeedARequestContext NoMessaging()
+        public INeedARequestContext NoTaskQueues()
         {
             return this;
         }
@@ -92,15 +88,13 @@ namespace paramore.brighter.commandprocessor
         public CommandProcessor Build()
         {
             return new CommandProcessor(
-                targetHandlerRegistry: registry,
+                subscriberRegistry: registry,
                 handlerFactory: handlerFactory,
                 requestContextFactory: requestContextFactory,
                 policyRegistry: policyRegistry,
                 mapperRegistry: messageMapperRegistry,
                 messageStore: messageStore,
                 messagingGateway: messagingGateway,
-                retryPolicy: retryPolicy,
-                circuitBreakerPolicy:circuitBreakerPolicy,
                 logger: logger
                 );
         }
@@ -126,8 +120,8 @@ namespace paramore.brighter.commandprocessor
 
     public interface INeedMessaging
     {
-        INeedARequestContext Messaging(MessagingConfiguration configuration);
-        INeedARequestContext NoMessaging();
+        INeedARequestContext TaskQueues(MessagingConfiguration configuration);
+        INeedARequestContext NoTaskQueues();
     }
 
     public interface INeedARequestContext

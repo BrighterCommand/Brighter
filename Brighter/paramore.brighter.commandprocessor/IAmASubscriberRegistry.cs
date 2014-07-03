@@ -26,8 +26,9 @@ using System.Collections.Generic;
 
 namespace paramore.brighter.commandprocessor
 {
-    public interface IAmATargetHandlerRegistry
+    public interface IAmASubscriberRegistry
     {
         IEnumerable<IHandleRequests<T>> Get<T>() where T : class, IRequest;
+        void Register<TRequest, TImplementation>() where TRequest: class, IRequest where TImplementation: class, IHandleRequests<TRequest>;
     }
 }

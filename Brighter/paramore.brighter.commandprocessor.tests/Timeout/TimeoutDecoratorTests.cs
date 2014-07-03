@@ -43,7 +43,7 @@ namespace paramore.commandprocessor.tests.Timeout
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsDueToTimeoutHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyFailsDueToTimeoutHandler>(() => new MyFailsDueToTimeoutHandler(logger));
             commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
@@ -70,7 +70,7 @@ namespace paramore.commandprocessor.tests.Timeout
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new TargetHandlerRegistry();
+            var registry = new SubscriberRegistry();
             //Handler is decorated with UsePolicy 
             registry.Register<MyCommand, MyPassesTimeoutHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyPassesTimeoutHandler>(() => new MyPassesTimeoutHandler(logger));

@@ -35,7 +35,6 @@ using Polly;
 using Raven.Client.Embedded;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
@@ -53,7 +52,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         Establish context = () =>
             {
-                var container = new TinyIoCAdapter(new TinyIoCContainer());
                 channel = new InMemoryChannel();
                 commandProcessor = new SpyCommandProcessor();
 
@@ -63,13 +61,11 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 var logger = LogManager.GetLogger(typeof (Dispatcher));
 
-                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
-                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
-                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
-                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
+                var messageMapperRegistry = new MessageMapperRegistry();
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
 
                 var connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
-                dispatcher = new Dispatcher(container, new List<Connection>{connection}, logger);
+                dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection>{connection}, logger);
 
                 var @event = new MyEvent();
                 var message = new MyEventMessageMapper().MapToMessage(@event);
@@ -98,7 +94,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         Establish context = () =>
             {
-                var container = new TinyIoCAdapter(new TinyIoCContainer());
                 channel = new InMemoryChannel();
                 commandProcessor = new SpyCommandProcessor();
 
@@ -108,13 +103,11 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 var logger = LogManager.GetLogger(typeof (Dispatcher));
 
-                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
-                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
-                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
-                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
+                var messageMapperRegistry = new MessageMapperRegistry();
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
 
                 var connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000);
-                dispatcher = new Dispatcher(container, new List<Connection> {connection}, logger);
+                dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection>{connection}, logger);
 
                 var @event = new MyEvent();
                 var message = new MyEventMessageMapper().MapToMessage(@event);
@@ -145,7 +138,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         Establish context = () =>
             {
-                var container = new TinyIoCAdapter(new TinyIoCContainer());
                 eventChannel = new InMemoryChannel();
                 commandChannel = new InMemoryChannel();
                 commandProcessor = new SpyCommandProcessor();
@@ -156,15 +148,14 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 var logger = LogManager.GetLogger(typeof (Dispatcher));
 
-                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
-                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
-                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
-                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
-                container.Register<IAmAMessageMapper<MyCommand>, MyCommandMessageMapper>();
+                var messageMapperRegistry = new MessageMapperRegistry();
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
+                messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>(new MyCommandMessageMapper());
+
 
                 var myEventConnection = new Connection(name: new ConnectionName("test"), channel: eventChannel, dataType: typeof (MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
                 var myCommandConnection = new Connection(name: new ConnectionName("anothertest"), channel: commandChannel, dataType: typeof (MyCommand), noOfPerformers: 1, timeoutInMilliseconds: 1000);
-                dispatcher = new Dispatcher(container, new List<Connection> {myEventConnection, myCommandConnection}, logger);
+                dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection> {myEventConnection, myCommandConnection}, logger);
 
                 var @event = new MyEvent();
                 var eventMessage = new MyEventMessageMapper().MapToMessage(@event);
@@ -199,7 +190,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         Establish context = () =>
             {
-                var container = new TinyIoCAdapter(new TinyIoCContainer());
                 channel = new InMemoryChannel();
                 commandProcessor = new SpyCommandProcessor();
 
@@ -209,11 +199,11 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 var logger = LogManager.GetLogger(typeof (Dispatcher));
 
-                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
-                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
+                var messageMapperRegistry = new MessageMapperRegistry();
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
 
                 connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000);
-                dispatcher = new Dispatcher(container, new List<Connection> {connection}, logger);
+                dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection> {connection}, logger);
 
                 var @event = new MyEvent();
                 var message = new MyEventMessageMapper().MapToMessage(@event);
@@ -245,7 +235,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         Establish context = () =>
             {
-                var container = new TinyIoCAdapter(new TinyIoCContainer());
                 channel = new InMemoryChannel();
                 commandProcessor = new SpyCommandProcessor();
 
@@ -255,11 +244,11 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 var logger = LogManager.GetLogger(typeof (Dispatcher));
 
-                container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
-                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
+                var messageMapperRegistry = new MessageMapperRegistry();
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
 
                 connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
-                dispatcher = new Dispatcher(container, new List<Connection> {connection}, logger);
+                dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection> {connection}, logger);
 
                 var @event = new MyEvent();
                 var message = new MyEventMessageMapper().MapToMessage(@event);
@@ -295,9 +284,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         Establish context = () =>
             {
                 var logger = A.Fake<ILog>();
-                var container = new TinyIoCAdapter(new TinyIoCContainer());
-                container.Register<IAmAMessageMapper<MyEvent>, MyEventMessageMapper>();
-
+                var messageMapperRegistry = new MessageMapperRegistry();
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
 
                 var retryPolicy = Policy
                     .Handle<Exception>()
@@ -315,16 +303,15 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 var gateway = new RMQMessagingGateway(logger);
 
                 builder = DispatchBuilder.With()
-                             .InversionOfControl(container)
                              .WithLogger(logger)
                              .WithCommandProcessor(CommandProcessorBuilder.With()
-                                .Handlers(container)
+                                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer())))
+                                .Policies(new PolicyRegistry() {{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}})
                                 .Logger(logger)
-                                .Messaging(new MessagingConfiguration(
+                                .TaskQueues(new MessagingConfiguration(
                                                 messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
                                                 messagingGateway: gateway,
-                                                retryPolicy: retryPolicy,
-                                                circuitBreakerPolicy: circuitBreakerPolicy))
+                                                messageMapperRegistry: messageMapperRegistry))
                                  .RequestContextFactory(new InMemoryRequestContextFactory())
                                 .Build()
                                 )

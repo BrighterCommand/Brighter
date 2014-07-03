@@ -28,9 +28,9 @@ namespace paramore.brighter.commandprocessor
 {
     internal class Interpreter<TRequest> where TRequest : class, IRequest
     {
-        private readonly IAmATargetHandlerRegistry registry;
+        private readonly IAmASubscriberRegistry registry;
 
-        public Interpreter(IAmATargetHandlerRegistry registry)
+        public Interpreter(IAmASubscriberRegistry registry)
         {
             this.registry = registry ;
         }
