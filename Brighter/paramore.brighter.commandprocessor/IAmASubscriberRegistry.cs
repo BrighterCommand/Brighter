@@ -28,7 +28,7 @@ namespace paramore.brighter.commandprocessor
 {
     public interface IAmASubscriberRegistry
     {
-        IEnumerable<IHandleRequests<T>> Get<T>() where T : class, IRequest;
+        IEnumerable<Type> Get<T>() where T : class, IRequest;
         void Register<TRequest, TImplementation>() where TRequest: class, IRequest where TImplementation: class, IHandleRequests<TRequest>;
     }
 }

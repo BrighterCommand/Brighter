@@ -277,7 +277,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
 
-            var registry = new SubscriberRegistry() {{typeof (MyCommand), typeof (MyUnusedCommandHandler)}};
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, MyUnusedCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
         
             commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);

@@ -22,7 +22,7 @@ namespace HelloWorld
 
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(
-                     subscriberRegistry: new SubscriberRegistry(),
+                     subscriberRegistry: registry,
                      handlerFactory: new TinyIoCHandlerFactory(logger)
                     ))
                 .NoPolicy()

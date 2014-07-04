@@ -41,7 +41,7 @@ namespace paramore.brighter.commandprocessor
             this.handlerFactory = handlerFactory;
             this.logger = logger;
             instanceScope = new LifetimeScope(handlerFactory);
-            interpreter = new Interpreter<TRequest>(registry);
+            interpreter = new Interpreter<TRequest>(registry, handlerFactory);
         }
 
         public Pipelines<TRequest> Build(IRequestContext requestContext)
