@@ -28,36 +28,41 @@ using System.Linq;
 
 namespace paramore.brighter.commandprocessor
 {
-    public class SubscriberRegistry : IAmASubscriberRegistry, IEnumerable<KeyValuePair<Type, Type>>
+    public class SubscriberRegistry : IAmASubscriberRegistry
     {
-        private readonly Dictionary<Type, Type> registeredSubscribers = new Dictionary<Type, Type>(); 
-        public IEnumerable<IHandleRequests<TRequest>> Get<TRequest>() where TRequest : class, IRequest
+        class ObservedRequest
         {
-            return registeredSubscribers
-                .Where(registryEntry => registryEntry.Key == typeof (TRequest))
-                .Select(registryEntry => registryEntry.Value)
-                .Cast<IHandleRequests<TRequest>>();
+            public ObservedRequest(Type observedRequestType)
+            {
+                this.observedRequestType = observedRequestType;
+                observers = new List<Type>();
+            }
+
+            public Type observedRequestType { get; set; }
+            public List<Type> observers { get; set; } 
         }
 
-        //Support object initializer syntax
-        public void Add(Type requestType, Type handlerType)
+        private readonly List<ObservedRequest> observedRequests = new List<ObservedRequest>(); 
+        public IEnumerable<Type> Get<TRequest>() where TRequest : class, IRequest
         {
-            registeredSubscribers.Add(requestType, handlerType);
+            var observed = observedRequests.First(or => or.observedRequestType == typeof (TRequest));
+            return observed != null ? observed.observers : new List<Type>();
         }
 
         public void Register<TRequest, TImplementation>() where TRequest: class, IRequest where TImplementation: class, IHandleRequests<TRequest>
         {
-            registeredSubscribers.Add(typeof(TRequest), typeof(TImplementation));
+            Add(typeof(TRequest), typeof(TImplementation));
         }
-
-        public IEnumerator<KeyValuePair<Type, Type>> GetEnumerator()
+        private void Add(Type requestType, Type handlerType)
         {
-            return registeredSubscribers.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
+            var observed = observedRequests.FirstOrDefault(or => or.observedRequestType == requestType);
+            if (observed == null)
+            {
+                observed = new ObservedRequest(requestType);
+                observedRequests.Add(observed);
+            }
+            observed.observers.Add(handlerType);
         }
     }
+
 }

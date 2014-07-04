@@ -23,22 +23,25 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using paramore.brighter.commandprocessor.extensions;
 
 namespace paramore.brighter.commandprocessor
 {
     internal class Interpreter<TRequest> where TRequest : class, IRequest
     {
         private readonly IAmASubscriberRegistry registry;
+        private readonly IAmAHandlerFactory handlerFactory;
 
-        public Interpreter(IAmASubscriberRegistry registry)
+        public Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory)
         {
             this.registry = registry ;
+            this.handlerFactory = handlerFactory;
         }
 
         public IEnumerable<RequestHandler<TRequest>> GetHandlers(Type requestType)
         {
-            var handlers = new RequestHandlers<TRequest>(registry.Get<TRequest>());
-            return handlers;
+            return new RequestHandlers<TRequest>(registry.Get<TRequest>().Select(handlerType => handlerFactory.Create(handlerType)).Cast<IHandleRequests<TRequest>>());
         }
     }
 }

@@ -173,11 +173,11 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyDoubleDecoratedHandler>();
+            registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyDoubleDecoratedHandler>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
             container.Register<ILog, NoOpLogger>().AsSingleton();
@@ -222,7 +222,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
 
-        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => TraceFilters().ToString().ShouldEqual("MyValidationHandler`1|MyObsoleteCOmmandHandler|MyLoggingHandler`1|");
+        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => TraceFilters().ToString().ShouldEqual("MyValidationHandler`1|MyObsoleteCommandHandler|MyLoggingHandler`1|");
 
         private static PipelineTracer TraceFilters()
         {
