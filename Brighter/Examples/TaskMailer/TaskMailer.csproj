@@ -137,6 +137,7 @@
   <ItemGroup>
     <Compile Include="Adapters\ServiceHost\Program.cs" />
     <Compile Include="Adapters\ServiceHost\TaskMailerService.cs" />
+    <Compile Include="Ports\TaskReminderCommandMessageMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

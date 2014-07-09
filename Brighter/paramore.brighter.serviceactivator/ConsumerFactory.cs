@@ -34,7 +34,7 @@ namespace paramore.brighter.serviceactivator
         private readonly Connection connection;
         private readonly ILog logger;
 
-        private ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, Connection connection, ILog logger)
+        public ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, Connection connection, ILog logger)
         {
             this.commandProcessor = commandProcessor;
             this.messageMapperRegistry = messageMapperRegistry;

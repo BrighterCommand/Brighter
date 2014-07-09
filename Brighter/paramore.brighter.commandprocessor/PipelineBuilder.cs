@@ -51,6 +51,8 @@ namespace paramore.brighter.commandprocessor
             var pipelines = new Pipelines<TRequest>();
             handlers.Each((handler) => pipelines.Add(BuildPipeline(handler, requestContext)));
 
+            pipelines.Each((handler) => handler.AddToLifetime(instanceScope));
+  
             return pipelines;
         }
 

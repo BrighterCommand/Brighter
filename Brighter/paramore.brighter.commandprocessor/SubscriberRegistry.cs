@@ -24,29 +24,17 @@ THE SOFTWARE. */
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace paramore.brighter.commandprocessor
 {
-    public class SubscriberRegistry : IAmASubscriberRegistry
+    public class SubscriberRegistry : IAmASubscriberRegistry, IEnumerable<KeyValuePair<Type, List<Type>>>
     {
-        class ObservedRequest
-        {
-            public ObservedRequest(Type observedRequestType)
-            {
-                this.observedRequestType = observedRequestType;
-                observers = new List<Type>();
-            }
+        readonly Dictionary<Type, List<Type>> observers = new Dictionary<Type, List<Type>>(); 
 
-            public Type observedRequestType { get; set; }
-            public List<Type> observers { get; set; } 
-        }
-
-        private readonly List<ObservedRequest> observedRequests = new List<ObservedRequest>(); 
         public IEnumerable<Type> Get<TRequest>() where TRequest : class, IRequest
         {
-            var observed = observedRequests.First(or => or.observedRequestType == typeof (TRequest));
-            return observed != null ? observed.observers : new List<Type>();
+            var observed = observers.ContainsKey(typeof (TRequest));
+            return observed ? observers[typeof (TRequest)] : new List<Type>();
         }
 
         public void Register<TRequest, TImplementation>() where TRequest: class, IRequest where TImplementation: class, IHandleRequests<TRequest>
@@ -55,13 +43,21 @@ namespace paramore.brighter.commandprocessor
         }
         private void Add(Type requestType, Type handlerType)
         {
-            var observed = observedRequests.FirstOrDefault(or => or.observedRequestType == requestType);
-            if (observed == null)
-            {
-                observed = new ObservedRequest(requestType);
-                observedRequests.Add(observed);
-            }
-            observed.observers.Add(handlerType);
+            var observed = observers.ContainsKey(requestType);
+            if (!observed)
+                observers.Add(requestType, new List<Type>{handlerType});
+            else
+                observers[requestType].Add(handlerType);
+        }
+
+        public IEnumerator<KeyValuePair<Type, List<Type>>> GetEnumerator()
+        {
+            return observers.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 

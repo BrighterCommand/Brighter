@@ -54,6 +54,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>().AsSingleton();
+            container.Register<ILog>(logger);
 
             var policyRegistry = new PolicyRegistry();
 
@@ -99,8 +100,9 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler >().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler >("MyDoesNotFailPolicyHandler");
+            container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>("MyExceptionPolicyHandler");
+            container.Register<ILog>(logger);
 
             var policyRegistry = new PolicyRegistry();
 
@@ -150,6 +152,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>().AsSingleton();
+            container.Register<ILog>(logger);
 
             var policyRegistry = new PolicyRegistry();
 

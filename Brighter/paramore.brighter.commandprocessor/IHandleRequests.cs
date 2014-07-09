@@ -36,5 +36,6 @@ namespace paramore.brighter.commandprocessor
     {
         TRequest Handle(TRequest command);
         IHandleRequests<TRequest> Successor { set; }
+        void AddToLifetime(IAmALifetime instanceScope);
     }
 }

@@ -46,6 +46,7 @@ namespace paramore.brighter.commandprocessor
         {
             messageMappers.Add(messageType, messageMapper);
         }
+
         public void Register<TRequest, TMessageMapper>(TMessageMapper mapper) where TRequest: class, IRequest where TMessageMapper : class, IAmAMessageMapper<TRequest>
         {
             if (messageMappers.ContainsKey(typeof(TRequest)))

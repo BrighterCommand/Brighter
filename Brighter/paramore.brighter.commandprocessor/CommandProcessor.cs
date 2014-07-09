@@ -139,6 +139,9 @@ namespace paramore.brighter.commandprocessor
             logger.Info(m => m("Decoupled invocation of request: {0}", request.Id));
 
             var messageMapper = mapperRegistry.Get<T>();
+            if (messageMapper == null)
+                throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
+
             var message = messageMapper.MapToMessage(request);
             RetryAndBreakCircuit(() =>
                 {

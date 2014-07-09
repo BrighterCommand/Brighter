@@ -32,7 +32,7 @@ namespace paramore.brighter.serviceactivator
     //one option could be to use types not instances here, and do more assembly in build
     //currently configuration is a weak spot and has an early NH configuration mess feel to it
 
-    public class DispatchBuilder : INeedALogger, INeedACommandProcessor, INeedAChannelFactory, INeedAListOfConnections, IAmADispatchBuilder
+    public class DispatchBuilder : INeedALogger, INeedACommandProcessor, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfConnections, IAmADispatchBuilder
     {
         private IAmAChannelFactory channelFactory;
         private IEnumerable<Connection> connections;
@@ -54,7 +54,7 @@ namespace paramore.brighter.serviceactivator
             return this;
         }
 
-        public INeedAChannelFactory WithCommandProcessor(CommandProcessor theCommandProcessor)
+        public INeedAMessageMapper WithCommandProcessor(CommandProcessor theCommandProcessor)
         {
             this.commandProcessor = theCommandProcessor;
             return this;
@@ -102,7 +102,7 @@ namespace paramore.brighter.serviceactivator
 
     public interface INeedACommandProcessor
     {
-        INeedAChannelFactory WithCommandProcessor(CommandProcessor commandProcessor);
+        INeedAMessageMapper WithCommandProcessor(CommandProcessor commandProcessor);
     }
 
     public interface INeedAMessageMapper

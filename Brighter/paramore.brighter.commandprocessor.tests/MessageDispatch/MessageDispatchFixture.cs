@@ -308,13 +308,11 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer())))
                                 .Policies(new PolicyRegistry() {{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}})
                                 .Logger(logger)
-                                .TaskQueues(new MessagingConfiguration(
-                                                messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
-                                                messagingGateway: gateway,
-                                                messageMapperRegistry: messageMapperRegistry))
+                                .NoTaskQueues()
                                  .RequestContextFactory(new InMemoryRequestContextFactory())
                                 .Build()
                                 )
+                             .WithMessageMappers(messageMapperRegistry)
                              .WithChannelFactory(new RMQInputChannelfactory(gateway)) 
                              .ConnectionsFromConfiguration();
 

@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 using System.Linq;
 using Common.Logging;
-using Common.Logging.Simple;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
@@ -107,9 +106,9 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog, NoOpLogger>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>();
+            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
+            container.Register<ILog>(logger);
 
             Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger); 
        };
@@ -142,10 +141,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyDoubleDecoratedHandler>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog, NoOpLogger>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyDoubleDecoratedHandler>();
+            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
+            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
+            container.Register<ILog>(logger);
 
             Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger); 
         };
@@ -177,10 +176,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog, NoOpLogger>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>();
+            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
+            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
+            container.Register<ILog>(logger);
 
             Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger); 
         };
@@ -212,10 +211,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyObsoleteCommandHandler >().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog, NoOpLogger>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyObsoleteCommandHandler >();
+            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
+            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
+            container.Register<ILog>(logger);
 
             Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger); 
         };
@@ -236,8 +235,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     public class When_we_have_exercised_the_pipeline_cleanup_its_handlers
     {
         private static PipelineBuilder<MyCommand> Pipeline_Builder;
-        private static int trackedItemCount;
-        private static int decoratorCount;
 
         Establish context = () =>
         {
@@ -249,10 +246,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog, NoOpLogger>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>();
+            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
+            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
+            container.Register<ILog>(logger);
 
             Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
             Pipeline_Builder.Build(new RequestContext()).Any();
@@ -263,36 +260,4 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         It should_have_called_dispose_on_instances_from_ioc = () => MyPreAndPostDecoratedHandler.DisposeWasCalled.ShouldBeTrue();
         It should_have_called_dispose_on_instances_from_pipeline_builder = () => MyLoggingHandler<MyCommand>.DisposeWasCalled.ShouldBeTrue();
     }
-
-    [Subject(typeof(PipelineBuilder<>))]
-    public class When_we_cleanup_do_not_dispose_of_singletons
-    {
-        private static PipelineBuilder<MyCommand> Pipeline_Builder;
-        private static int trackedItemCount;
-        
-        Establish context = () =>
-        {
-            var logger = A.Fake<ILog>();
-
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
-
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog, NoOpLogger>().AsSingleton();
-
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
-            Pipeline_Builder.Build(new RequestContext()).First();
-        };
-
-        Because of = () => Pipeline_Builder.Dispose();
-
-        It should_not_add_the_singleton_to_the_tracked_list = () => trackedItemCount.ShouldEqual(0);
-
-        It should_not_call_dispose_on_the_singleton = () => MyPreAndPostDecoratedHandler.DisposeWasCalled.ShouldBeFalse();
-    }
-    
 }
