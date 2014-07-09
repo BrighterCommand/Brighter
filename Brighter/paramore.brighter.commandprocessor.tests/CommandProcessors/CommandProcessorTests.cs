@@ -26,6 +26,7 @@ using Common.Logging.Simple;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
+using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 using Polly;
 using Polly.CircuitBreaker;
 using TinyIoC;
@@ -46,8 +47,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
             
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyDependentCommandHandler>();
-            var handlerFactory = new TestHandlerFactory<MyCommand, MyDependentCommandHandler>(() => new MyDependentCommandHandler(new FakeRepository<MyAggregate>(new FakeSession()),logger));
+            registry.Register<MyCommand, MyCommandHandler>();
+            var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
 
             commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
         };
@@ -69,15 +70,15 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyDependentCommandHandler>();
+            registry.Register<MyCommand, MyCommandHandler>();
             registry.Register<MyCommand, MyImplicitHandler>();
             
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>("DefaultHandler").AsMultiInstance();
-            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>("ImplicitHandler").AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog, NoOpLogger>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>("DefaultHandler");
+            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>("ImplicitHandler");
+            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
+            container.Register<ILog>(logger);
 
             commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
         };
@@ -126,7 +127,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         };
 
         Because of = () => commandProcessor.Publish(myEvent);
-
         It should_publish_the_command_to_the_event_handlers = () => MyEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();
     }
 
@@ -164,12 +164,13 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
-            registry.Register<MyEvent, MyEventHandler>();
+            registry.Register<MyEvent, MyOtherEventHandler>();
             
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsSingleton();
-            container.Register<IHandleRequests<MyEvent>, MyEventHandler>().AsSingleton();
+            container.Register<IHandleRequests<MyEvent>, MyEventHandler>("MyEventHandler");
+            container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("MyOtherHandler");
+            container.Register<ILog>(logger);
 
             commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
         };
@@ -201,6 +202,9 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 body: new MessageBody(JsonConvert.SerializeObject(myCommand))
                 );
 
+            var messageMapperRegistry = new MessageMapperRegistry();
+            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>(new MyCommandMessageMapper());
+
             var retryPolicy = Policy
                 .Handle<Exception>()
                 .Retry();
@@ -212,7 +216,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
-                new MessageMapperRegistry(), 
+                messageMapperRegistry, 
                 commandRepository, 
                 messagingGateway, 
                 logger);
@@ -279,7 +283,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyUnusedCommandHandler>();
-            var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyUnusedCommandHandler>();
+            container.Register<IHandleRequests<MyCommand>, MyAbortingHandler<MyCommand>>();
+            container.Register<ILog>(logger);
         
             commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
@@ -300,14 +309,13 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
-            registry.Register<MyCommand, MyLoggingHandler<MyCommand>>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog, NoOpLogger>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>();
+            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
+            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
+            container.Register<ILog>(logger);
             commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
         };
@@ -328,7 +336,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static IAmAMessageStore<Message> commandRepository;
         static IAmAMessagingGateway messagingGateway ;
         static Exception failedException;
-        static IDisposable lifetime;
         static BrokenCircuitException circuitBrokenException;
         
         Establish context = () =>
@@ -341,7 +348,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand",messageType: MessageType.MT_COMMAND),
                 body: new MessageBody(JsonConvert.SerializeObject(myCommand))
                 );
-
+            var messageMapperRegistry = new MessageMapperRegistry();
+            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>(new MyCommandMessageMapper());
             A.CallTo(() => messagingGateway.Send(message)).Throws<Exception>().NumberOfTimes(4);
 
             var retryPolicy = Policy
@@ -361,10 +369,11 @@ namespace paramore.commandprocessor.tests.CommandProcessors
            commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
-                new MessageMapperRegistry(), 
+                messageMapperRegistry, 
                 commandRepository, 
                 messagingGateway, 
-                logger);       };
+                logger);       
+        };
 
         Because of = () =>
             {
@@ -375,10 +384,9 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             };
 
         It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.Send(message)).MustHaveHappened(Repeated.Exactly.Times(4));
-        private It should_throw_a_exception_out_once_all_retries_exhausted = () => failedException.ShouldBeOfExactType(typeof(Exception));
+        It should_throw_a_exception_out_once_all_retries_exhausted = () => failedException.ShouldBeOfExactType(typeof(Exception));
         It should_throw_a_circuit_broken_exception_once_circuit_broken = () => circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
 
-        Cleanup tearDown = () => lifetime.Dispose();
     }
 }
 

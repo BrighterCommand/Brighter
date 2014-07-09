@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Linq;
 using System.Reflection;
 using Common.Logging;
@@ -49,13 +50,21 @@ namespace paramore.brighter.commandprocessor
             set { _successor = value; }
         }
 
+        public void AddToLifetime(IAmALifetime instanceScope)
+        {
+            if (this is IDisposable)
+                instanceScope.Add(this);
+
+            if (_successor != null)
+                _successor.AddToLifetime(instanceScope);
+
+        }
+
         public void DescribePath(IAmAPipelineTracer pathExplorer)
         {
             pathExplorer.AddToPath(Name);
             if (_successor != null)
-            {
                 _successor.DescribePath(pathExplorer);
-            }
         }
 
         public virtual TRequest Handle(TRequest command)

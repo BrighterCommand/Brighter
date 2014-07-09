@@ -17,7 +17,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         [MyPreValidationHandlerAttribute(step: 2, timing: HandlerTiming.Before)]
         [MyPostLoggingHandlerAttribute(step: 1, timing: HandlerTiming.After)]
         [Obsolete] // even with attributes non inherting from MessageHandlerDecoratorAttribute it should not fail
-        public override MyCommand  Handle(MyCommand command)
+        public override MyCommand Handle(MyCommand command)
         {
             LogCommand(command);
             return base.Handle(command);
