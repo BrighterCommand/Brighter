@@ -28,6 +28,6 @@ namespace paramore.brighter.commandprocessor
     public interface IAmAMessageMapperRegistry 
     {
         IAmAMessageMapper<T> Get<T>() where T : class, IRequest;
-        void Register<TRequest, TMessageMapper>(TMessageMapper mapper) where TRequest: class, IRequest where TMessageMapper : class, IAmAMessageMapper<TRequest>;
+        void Register<TRequest, TMessageMapper>() where TRequest: class, IRequest where TMessageMapper : class, IAmAMessageMapper<TRequest>;
     }
 }

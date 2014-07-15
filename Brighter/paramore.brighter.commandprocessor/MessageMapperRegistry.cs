@@ -25,37 +25,48 @@ THE SOFTWARE. */
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 
 namespace paramore.brighter.commandprocessor
 {
-    class MessageMapperRegistry : IAmAMessageMapperRegistry, IEnumerable<KeyValuePair<Type, object>>
+    class MessageMapperRegistry : IAmAMessageMapperRegistry, IEnumerable<KeyValuePair<Type, Type>>
     {
-        readonly Dictionary<Type, object> messageMappers = new Dictionary<Type, object>(); 
+        private readonly IAmAMessageMapperFactory messageMapperFactory;
+        readonly Dictionary<Type, Type> messageMappers = new Dictionary<Type, Type>();
+
+        public MessageMapperRegistry(IAmAMessageMapperFactory messageMapperFactory)
+        {
+            this.messageMapperFactory = messageMapperFactory;
+        }
+
         public IAmAMessageMapper<TRequest> Get<TRequest>() where TRequest : class, IRequest
         {
             if (messageMappers.ContainsKey(typeof (TRequest)))
-                return (IAmAMessageMapper<TRequest>) messageMappers[typeof (TRequest)];
+            {
+                var messageMapperType = messageMappers[typeof (TRequest)];
+                return (IAmAMessageMapper<TRequest>)messageMapperFactory.Create(messageMapperType);
+            }
             else
+            {
                 return (IAmAMessageMapper<TRequest>) null;
+            }
 
         }
 
         //support object initializer
-        public void Add(Type messageType, object messageMapper)
+        public void Add(Type messageType, Type messageMapper)
         {
             messageMappers.Add(messageType, messageMapper);
         }
 
-        public void Register<TRequest, TMessageMapper>(TMessageMapper mapper) where TRequest: class, IRequest where TMessageMapper : class, IAmAMessageMapper<TRequest>
+        public void Register<TRequest, TMessageMapper>() where TRequest: class, IRequest where TMessageMapper : class, IAmAMessageMapper<TRequest>
         {
             if (messageMappers.ContainsKey(typeof(TRequest)))
                 throw new ArgumentException(string.Format("Message type {0} alread has a mapper; only one mapper can be registred per type", typeof(TRequest).Name));
 
-            messageMappers.Add(typeof(TRequest), mapper);
+            messageMappers.Add(typeof(TRequest), typeof(TMessageMapper));
         }
 
-        public IEnumerator<KeyValuePair<Type, object>> GetEnumerator()
+        public IEnumerator<KeyValuePair<Type, Type>> GetEnumerator()
         {
             return messageMappers.GetEnumerator();
         }

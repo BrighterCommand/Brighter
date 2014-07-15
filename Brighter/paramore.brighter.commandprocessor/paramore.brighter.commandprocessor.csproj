@@ -59,6 +59,7 @@
     <Compile Include="CommandProcessorBuilder.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="HandlerConfiguration.cs" />
+    <Compile Include="IAmAMessageMapperFactory.cs" />
     <Compile Include="IAmAPolicyRegistry.cs" />
     <Compile Include="MessageMapperRegistry.cs" />
     <Compile Include="PolicyRegistry.cs" />
