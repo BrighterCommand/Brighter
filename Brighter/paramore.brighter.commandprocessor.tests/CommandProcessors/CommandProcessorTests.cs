@@ -202,8 +202,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 body: new MessageBody(JsonConvert.SerializeObject(myCommand))
                 );
 
-            var messageMapperRegistry = new MessageMapperRegistry();
-            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>(new MyCommandMessageMapper());
+            var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyCommandMessageMapper()));
+            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -260,7 +260,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
-                new MessageMapperRegistry(), 
+                new MessageMapperRegistry(new TinyIoCMessageMapperFactory(new TinyIoCContainer())), 
                 commandRepository, 
                 messagingGateway, 
                 logger);
@@ -348,8 +348,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand",messageType: MessageType.MT_COMMAND),
                 body: new MessageBody(JsonConvert.SerializeObject(myCommand))
                 );
-            var messageMapperRegistry = new MessageMapperRegistry();
-            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>(new MyCommandMessageMapper());
+            var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyCommandMessageMapper()));
+            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             A.CallTo(() => messagingGateway.Send(message)).Throws<Exception>().NumberOfTimes(4);
 
             var retryPolicy = Policy

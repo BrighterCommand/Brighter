@@ -23,7 +23,9 @@ THE SOFTWARE. */
 
 namespace paramore.brighter.commandprocessor
 {
-    public interface IAmAMessageMapper<TRequest> where TRequest : class, IRequest
+    public interface IAmAMessageMapper{}
+
+    public interface IAmAMessageMapper<TRequest>: IAmAMessageMapper where TRequest : class, IRequest
     {
         Message MapToMessage(TRequest request);
         TRequest MapToRequest(Message message);

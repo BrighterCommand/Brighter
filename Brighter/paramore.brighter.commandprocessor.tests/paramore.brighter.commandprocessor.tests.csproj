@@ -151,7 +151,9 @@
     <Compile Include="CommandProcessors\TestDoubles\MyValidationHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyValidationHandlerAttribute.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TestHandlerFactory.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\TestMessageMapperFactory.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TinyIocHandlerFactory.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\TinyIoCMessageMapperFactory.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyDoesNotFailPolicyHandler.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithDivideByZeroHandler.cs" />
     <Compile Include="ExceptionPolicy\PolicyDecoratorTests.cs" />

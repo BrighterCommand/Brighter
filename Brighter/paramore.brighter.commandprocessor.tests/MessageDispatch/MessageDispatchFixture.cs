@@ -61,8 +61,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 var logger = LogManager.GetLogger(typeof (Dispatcher));
 
-                var messageMapperRegistry = new MessageMapperRegistry();
-                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
+                var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
                 var connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
                 dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection>{connection}, logger);
@@ -103,8 +103,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 var logger = LogManager.GetLogger(typeof (Dispatcher));
 
-                var messageMapperRegistry = new MessageMapperRegistry();
-                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
+                var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
                 var connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000);
                 dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection>{connection}, logger);
@@ -147,10 +147,13 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
 
                 var logger = LogManager.GetLogger(typeof (Dispatcher));
+                var container = new TinyIoCContainer();
+                container.Register<MyEventMessageMapper>();
+                container.Register<MyCommandMessageMapper>();
 
-                var messageMapperRegistry = new MessageMapperRegistry();
-                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
-                messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>(new MyCommandMessageMapper());
+                var messageMapperRegistry = new MessageMapperRegistry(new TinyIoCMessageMapperFactory(container));
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+                messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
 
                 var myEventConnection = new Connection(name: new ConnectionName("test"), channel: eventChannel, dataType: typeof (MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
@@ -199,8 +202,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 var logger = LogManager.GetLogger(typeof (Dispatcher));
 
-                var messageMapperRegistry = new MessageMapperRegistry();
-                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
+                var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
                 connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000);
                 dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection> {connection}, logger);
@@ -244,8 +247,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 var logger = LogManager.GetLogger(typeof (Dispatcher));
 
-                var messageMapperRegistry = new MessageMapperRegistry();
-                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
+                var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
                 connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof (MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
                 dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection> {connection}, logger);
@@ -284,8 +287,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         Establish context = () =>
             {
                 var logger = A.Fake<ILog>();
-                var messageMapperRegistry = new MessageMapperRegistry();
-                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>(new MyEventMessageMapper());
+                var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
+                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
                 var retryPolicy = Policy
                     .Handle<Exception>()
