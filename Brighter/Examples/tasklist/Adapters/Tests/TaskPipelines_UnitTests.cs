@@ -30,9 +30,8 @@ using Tasks.Adapters.DataAccess;
 using Tasks.Model;
 using Tasks.Ports.Commands;
 using Tasks.Ports.Handlers;
-using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.Adapters;
+using TinyIoC;
 
 namespace Tasklist.Adapters.Tests
 {
@@ -51,12 +50,16 @@ namespace Tasklist.Adapters.Tests
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
             var log = A.Fake<ILog>();
 
-            IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
+            var container = new TinyIoCContainer();
             container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ILog, ILog>(log);
+            var handlerFactory = new TinyIocHandlerFactory(container);
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+            var subscriberRegistry = new SubscriberRegistry();
+            subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
+
+            commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
             cmd = new AddTaskCommand("Test task", null);
         };
@@ -83,12 +86,16 @@ namespace Tasklist.Adapters.Tests
             A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
             var log = A.Fake<ILog>();
 
-            IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
+            var container = new TinyIoCContainer();
             container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ILog, ILog>(log);
+            var handlerFactory = new TinyIocHandlerFactory(container);
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+            var subscriberRegistry = new SubscriberRegistry();
+            subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
+
+            commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
             cmd = new AddTaskCommand(null, "Test that we store a task");
         };
@@ -113,12 +120,16 @@ namespace Tasklist.Adapters.Tests
             tasksDAO.Clear();
             var log = A.Fake<ILog>();
 
-            IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
+            var container = new TinyIoCContainer();
             container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ILog, ILog>(log);
+            var handlerFactory = new TinyIocHandlerFactory(container);
 
-            commandProcessor = new CommandProcessor(container, new InMemoryRequestContextFactory(), logger);
+            var subscriberRegistry = new SubscriberRegistry();
+            subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
+
+            commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
             cmd = new AddTaskCommand("Test task", "Test that we store a task", DateTime.Now);
         };

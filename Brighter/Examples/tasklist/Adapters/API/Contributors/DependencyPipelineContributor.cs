@@ -29,13 +29,13 @@ using OpenRasta.DI;
 using OpenRasta.Pipeline;
 using OpenRasta.Web;
 using Polly;
+using Raven.Client.Embedded;
 using Tasklist.Ports.ViewModelRetrievers;
 using Tasks.Adapters.DataAccess;
 using Tasks.Ports.Commands;
 using Tasks.Ports.Handlers;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
@@ -58,25 +58,60 @@ namespace Tasklist.Adapters.API.Contributors
 
         private PipelineContinuation InitializeContainer(ICommunicationContext arg)
         {
-            var container = new TinyIoCAdapter(new TinyIoCContainer());
-            //HACK! For now dependencies may need to be in both containers to allow resolution
+            var container = new TinyIoCContainer();
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>().AsMultiInstance();
             container.Register<ITaskListRetriever, TaskListRetriever>().AsMultiInstance();
             container.Register<ITasksDAO, TasksDAO>().AsMultiInstance();
             var logger = LogManager.GetLogger("TaskList");
             container.Register<ILog, ILog>(logger);
             container.Register<IAmARequestContextFactory, InMemoryRequestContextFactory>().AsMultiInstance();
-            MessageStoreFactory.InstallRavenDbMessageStore(container);
             container.Register<IAmAMessageStore<Message>, RavenMessageStore>().AsSingleton();
             container.Register<IAmAMessagingGateway, RMQMessagingGateway>().AsSingleton();
-            container.Register<Policy>(CommandProcessor.RETRYPOLICY, GetRetryPolicy());
-            container.Register<Policy>(CommandProcessor.CIRCUITBREAKER, GetCircuitBreakerPolicy());
 
-            var commandProcessor = new CommandProcessorFactory(container).Create();
-            container.Register<IAmACommandProcessor, IAmACommandProcessor>(commandProcessor);
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
 
-            resolver.AddDependencyInstance<IAdaptAnInversionOfControlContainer>(container, DependencyLifetime.Singleton);
-            resolver.AddDependencyInstance<IAmARequestContextFactory>(new InMemoryRequestContextFactory(), DependencyLifetime.PerRequest);
+            var subscriberRegistry = new SubscriberRegistry();
+            subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
+
+            //create policies
+            var retryPolicy = Policy
+                .Handle<Exception>()
+                .WaitAndRetry(new[]
+                    {
+                        TimeSpan.FromMilliseconds(50),
+                        TimeSpan.FromMilliseconds(100),
+                        TimeSpan.FromMilliseconds(150)
+                    });
+
+            var circuitBreakerPolicy = Policy
+                .Handle<Exception>()
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+
+            var policyRegistry = new PolicyRegistry()
+            {
+                {CommandProcessor.RETRYPOLICY, retryPolicy},
+                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+            };
+
+            //create message mappers
+            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory);
+
+            //create the gateway
+            var gateway = new RMQMessagingGateway(logger);
+
+            var commandProcessor = CommandProcessorBuilder.With()
+                    .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+                    .Policies(policyRegistry)
+                    .Logger(logger)
+                    .TaskQueues(new MessagingConfiguration(
+                        messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
+                        messagingGateway: gateway,
+                        messageMapperRegistry: messageMapperRegistry
+                        ))
+                    .RequestContextFactory(new InMemoryRequestContextFactory())
+                    .Build();
+
             resolver.AddDependencyInstance<IAmACommandProcessor>(commandProcessor, DependencyLifetime.Singleton);
             resolver.AddDependency<ITaskRetriever, TaskRetriever>(DependencyLifetime.Singleton);
             resolver.AddDependency<ITaskListRetriever, TaskListRetriever>(DependencyLifetime.Singleton);

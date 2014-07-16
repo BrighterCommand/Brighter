@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Web.UI.WebControls;
 using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
@@ -32,7 +33,6 @@ using Tasks.Ports.Commands;
 using Tasks.Ports.Handlers;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 
 namespace Tasklist.Adapters.Tests
 {
@@ -44,17 +44,22 @@ namespace Tasklist.Adapters.Tests
 
         Establish context = () =>
         {
-            IAdaptAnInversionOfControlContainer container = new TinyIoCAdapter(new TinyIoCContainer());
+            var container = new TinyIoCContainer();
             container.Register<ITasksDAO, TasksDAO>();
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ILog, ILog>(A.Fake<ILog>());
-            requestContext = new RequestContext(container);
+            var handlerFactory = new TinyIocHandlerFactory(container);
+
+            var subscriberRegistry = new SubscriberRegistry();
+            subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
+
+            requestContext = new RequestContext();
 
             var logger = A.Fake<ILog>();
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
-            A.CallTo(() => requestContextFactory.Create(container)).Returns(requestContext);
+            A.CallTo(() => requestContextFactory.Create()).Returns(requestContext);
 
-            commandProcessor = new CommandProcessor(container, requestContextFactory, logger);
+            commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, requestContextFactory, new PolicyRegistry(), logger);
 
             cmd = new AddTaskCommand("New Task", "Test that we store a task", DateTime.Now.AddDays(3));
 

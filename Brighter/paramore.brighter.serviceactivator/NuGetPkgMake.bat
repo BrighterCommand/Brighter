@@ -1,1 +1,1 @@
-C:\Users\ian\NuGet\NuGet.exe Pack paramore.brighter.serviceactivator.1.0.0.0.nuspec -Version 2.0.0.0 -Symbols
+C:\Users\ian\NuGet\NuGet.exe Pack paramore.brighter.serviceactivator.1.0.0.0.nuspec -Version 2.0.1.0 -Symbols
