@@ -1,8 +1,6 @@
-NuGet Push C:\Users\SUNDANCE\iancooper\Paramore\Brighter\paramore.brighter.commandprocessor\Paramore.Brighter.CommandProcessor.1.0.0.0.nupkg
-NuGet Push C:\Users\SUNDANCE\iancooper\Paramore\Brighter\paramore.brighter.commandprocessor.exceptionpolicy\Paramore.Brighter.CommandProcessor.ExceptionPolicy.1.0.0.0.nupkg
-NuGet Push C:\Users\SUNDANCE\iancooper\Paramore\Brighter\paramore.brighter.commandprocessor.ioccontainers.tinyioc\paramore.brighter.commandprocessor.ioccontainers.tinyioc.1.0.0.0.nupkg
-Nuget Push C:\Users\SUNDANCE\iancooper\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.1.0.0.0.nupkg
-NuGet Push C:\Users\SUNDANCE\iancooper\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.1.0.0.0.nupkg
-NuGet Push C:\Users\SUNDANCE\iancooper\Paramore\Brighter\paramore.brighter.commandprocessor.timeoutpolicy\paramore.brighter.commandprocessor.timeoutpolicy.1.0.0.0.nupkg
-NuGet Push C:\Users\SUNDANCE\iancooper\Paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.1.0.0.0.nupkg
-0
+C:\Users\Ian\Nuget\Nuget.exe Push C:\Users\ian\OSS\Paramore\Brighter\Paramore.Brighter.CommandProcessor\Paramore.Brighter.CommandProcessor.2.0.0.0.nupkg
+C:\Users\Ian\Nuget\Nuget.exe Push C:\Users\ian\OSS\Paramore\Brighter\paramore.brighter.commandprocessor.exceptionpolicy\Paramore.Brighter.CommandProcessor.ExceptionPolicy.2.0.0.0.nupkg
+C:\Users\Ian\Nuget\Nuget.exe Push C:\Users\ian\OSS\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.2.0.0.0.nupkg
+C:\Users\Ian\Nuget\Nuget.exe Push C:\Users\ian\OSS\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.2.0.0.0.nupkg
+C:\Users\Ian\Nuget\Nuget.exe Push C:\Users\ian\OSS\Paramore\Brighter\paramore.brighter.commandprocessor.timeoutpolicy\paramore.brighter.commandprocessor.timeoutpolicy.2.0.0.0.nupkg
+C:\Users\Ian\Nuget\Nuget.exe Push C:\Users\ian\OSS\Paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.2.0.0.0.nupkg

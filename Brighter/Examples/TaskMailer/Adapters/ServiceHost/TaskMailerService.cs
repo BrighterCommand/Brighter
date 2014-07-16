@@ -26,7 +26,6 @@ using System.Collections.Specialized;
 using Common.Logging;
 using Common.Logging.Simple;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.ioccontainers.Adapters;
 using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
@@ -45,50 +44,63 @@ namespace TaskMailer.Adapters.ServiceHost
 
         public TaskMailerService()
         {
-                //construct the container
-                var container = new TinyIoCAdapter(new TinyIoCContainer());
+            //Create a logger
+            var properties = new NameValueCollection();
+            properties["showDateTime"] = "true";
+            LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+            var logger = LogManager.GetLogger(typeof (Dispatcher));
+                
+            var container = new TinyIoCContainer();
+            container.Register<IAmAMessageMapper<TaskReminderCommand>, TaskReminderCommandMessageMapper>();
+            var handlerFactory = new TinyIocHandlerFactory(container);
 
-                container.Register<IAmAMessageMapper<TaskReminderCommand>, TaskReminderCommandMessageMapper>();
+            var subscriberRegistry = new SubscriberRegistry();
 
-                var properties = new NameValueCollection();
-                properties["showDateTime"] = "true";
-                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+            //create policies
+            var retryPolicy = Policy
+                .Handle<Exception>()
+                .WaitAndRetry(new[]
+                    {
+                        TimeSpan.FromMilliseconds(50),
+                        TimeSpan.FromMilliseconds(100),
+                        TimeSpan.FromMilliseconds(150)
+                    });
 
-                var logger = LogManager.GetLogger(typeof (Dispatcher));
+            var circuitBreakerPolicy = Policy
+                .Handle<Exception>()
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-                var retryPolicy = Policy
-                    .Handle<Exception>()
-                    .WaitAndRetry(new[]
-                        {
-                            TimeSpan.FromMilliseconds(50),
-                            TimeSpan.FromMilliseconds(100),
-                            TimeSpan.FromMilliseconds(150)
-                        });
+            var policyRegistry = new PolicyRegistry()
+            {
+                {CommandProcessor.RETRYPOLICY, retryPolicy},
+                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+            };
 
-                var circuitBreakerPolicy = Policy
-                    .Handle<Exception>()
-                    .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+            //create message mappers
+            //var messageMapperRegistry = 
 
-                var gateway = new RMQMessagingGateway(logger);
+            //create the gateway
+            var gateway = new RMQMessagingGateway(logger);
 
-                var builder = DispatchBuilder.With()
-                             .InversionOfControl(container)
-                             .WithLogger(logger)
-                             .WithCommandProcessor(CommandProcessorBuilder.With()
-                                .InversionOfControl(container)
-                                .WithLogger(logger)
-                                .WithMessaging(new MessagingConfiguration(
-                                                messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
-                                                messagingGateway: gateway,
-                                                retryPolicy: retryPolicy,
-                                                circuitBreakerPolicy: circuitBreakerPolicy))
-                                 .WithRequestContextFactory(new InMemoryRequestContextFactory())
-                                .Build()
-                                )
-                             .WithChannelFactory(new RMQInputChannelfactory(gateway)) 
-                             .ConnectionsFromConfiguration();
+            var builder = DispatchBuilder.With()
+                        .WithLogger(logger)
+                        .WithCommandProcessor(CommandProcessorBuilder.With()
+                            .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+                            .Policies(policyRegistry)
+                            .Logger(logger)
+                            .TaskQueues(new MessagingConfiguration(
+                                messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
+                                messagingGateway: gateway,
+                                messageMapperRegistry: null
+                                ))
+                            .RequestContextFactory(new InMemoryRequestContextFactory())
+                            .Build()
+                            )
+                            .WithMessageMappers(null)
+                            .WithChannelFactory(new RMQInputChannelfactory(gateway)) 
+                            .ConnectionsFromConfiguration();
+
             dispatcher = builder.Build();
-
 
         }
 
