@@ -104,26 +104,29 @@
     <Reference Include="OpenRasta.Hosting.AspNet">
       <HintPath>Libs\OpenRasta\OpenRasta.Hosting.AspNet.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor">
-      <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.dll</HintPath>
+    <Reference Include="paramore.brighter.commandprocessor, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.exceptionpolicy">
-      <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.ExceptionPolicy.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll</HintPath>
+    <Reference Include="paramore.brighter.commandprocessor.exceptionpolicy, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.ExceptionPolicy.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.ioccontainers.tinyioc">
-      <HintPath>..\..\packages\paramore.brighter.commandprocessor.ioccontainers.tinyioc.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.ioccontainers.tinyioc.dll</HintPath>
+    <Reference Include="paramore.brighter.commandprocessor.messagestore.ravendb, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\paramore.brighter.commandprocessor.messagestore.ravendb.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.messagestore.ravendb.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.messagestore.ravendb">
-      <HintPath>..\..\packages\paramore.brighter.commandprocessor.messagestore.ravendb.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.messagestore.ravendb.dll</HintPath>
+    <Reference Include="paramore.brighter.commandprocessor.messaginggateway.rmq, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\paramore.brighter.commandprocessor.messaginggateway.rmq.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.messaginggateway.rmq">
-      <HintPath>..\..\packages\paramore.brighter.commandprocessor.messaginggateway.rmq.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll</HintPath>
+    <Reference Include="paramore.brighter.commandprocessor.timeoutpolicy, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\paramore.brighter.commandprocessor.timeoutpolicy.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.timeoutpolicy">
-      <HintPath>..\..\packages\paramore.brighter.commandprocessor.timeoutpolicy.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.dll</HintPath>
-    </Reference>
-    <Reference Include="paramore.brighter.serviceactivator">
-      <HintPath>..\..\packages\paramore.brighter.serviceactivator.1.0.2.0\lib\net45\paramore.brighter.serviceactivator.dll</HintPath>
+    <Reference Include="paramore.brighter.serviceactivator, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\paramore.brighter.serviceactivator.2.0.1.0\lib\net45\paramore.brighter.serviceactivator.dll</HintPath>
     </Reference>
     <Reference Include="Polly, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -178,9 +181,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="default.aspx" />
-    <Content Include="Web.config">
-      <SubType>Designer</SubType>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Adapters\API\Contributors\DependencyPipelineContributor.cs" />
@@ -190,6 +190,8 @@
     <Compile Include="Adapters\API\Resources\TaskReminderModel.cs" />
     <Compile Include="Adapters\Tests\TaskListRetrieveFixture.cs" />
     <Compile Include="Adapters\Tests\TaskRetrieverFixture.cs" />
+    <Compile Include="Adapters\TinyIoCHandlerFactory.cs" />
+    <Compile Include="Adapters\TinyIoCMessageMapperFactory.cs" />
     <Compile Include="Configuration.cs" />
     <Compile Include="default.aspx.cs">
       <DependentUpon>default.aspx</DependentUpon>
@@ -208,15 +210,19 @@
     <Compile Include="Ports\ViewModelRetrievers\ITaskListRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\SimpleDataRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\TaskListRetriever.cs" />
+    <Compile Include="TinyIoC.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
-    <None Include="Web.Debug.config">
+    <Content Include="Web.config">
+      <SubType>Designer</SubType>
+    </Content>
+    <Content Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
-    </None>
-    <None Include="Web.Release.config">
+    </Content>
+    <Content Include="Web.Release.config">
       <DependentUpon>Web.config</DependentUpon>
-    </None>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Tasks\Tasks.csproj">

@@ -53,6 +53,7 @@ namespace TaskMailer.Adapters.ServiceHost
             var container = new TinyIoCContainer();
             container.Register<IAmAMessageMapper<TaskReminderCommand>, TaskReminderCommandMessageMapper>();
             var handlerFactory = new TinyIocHandlerFactory(container);
+            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
 
             var subscriberRegistry = new SubscriberRegistry();
 
@@ -77,7 +78,7 @@ namespace TaskMailer.Adapters.ServiceHost
             };
 
             //create message mappers
-            //var messageMapperRegistry = 
+            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory);
 
             //create the gateway
             var gateway = new RMQMessagingGateway(logger);
@@ -91,7 +92,7 @@ namespace TaskMailer.Adapters.ServiceHost
                             .TaskQueues(new MessagingConfiguration(
                                 messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
                                 messagingGateway: gateway,
-                                messageMapperRegistry: null
+                                messageMapperRegistry: messageMapperRegistry
                                 ))
                             .RequestContextFactory(new InMemoryRequestContextFactory())
                             .Build()
