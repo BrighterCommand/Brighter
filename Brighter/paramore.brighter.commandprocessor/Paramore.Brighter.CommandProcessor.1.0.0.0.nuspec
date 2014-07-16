@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
     <metadata>
         <id>Paramore.Brighter.CommandProcessor</id>
-        <version>1.0.0.0</version>
+        <version>2.0.0.0</version>
         <title>Paramore.Brighter.CommandProcessor</title>
         <authors>Ian Cooper</authors>
         <owners>Ian Cooper</owners>
@@ -25,45 +25,49 @@
         <file src="bin\Debug\paramore.brighter.commandprocessor.dll" target="lib\net45\paramore.brighter.commandprocessor.dll" />
         <file src="bin\Debug\paramore.brighter.commandprocessor.pdb" target="lib\net45\paramore.brighter.commandprocessor.pdb" />
         <file src="extensions\Each.cs" target="src\extensions\Each.cs" />
+        <file src="extensions\ReflectionExtensions.cs" target="src\ReflectionExtensions.cs" />
         <file src="Properties\AssemblyInfo.cs" target="src\Properties\AssemblyInfo.cs" />
         <file src="Command.cs" target="src\Command.cs" />
         <file src="CommandProcessor.cs" target="src\CommandProcessor.cs" />
         <file src="CommandProcessorBuilder.cs" target="src\CommandProcessorBuilder.cs" />
-        <file src="CommandProcessorFactory.cs" target="src\CommandProcessorFactory.cs" />
         <file src="Event.cs" target="src\Event.cs" />
+        <file src="HandlerConfiguration.cs" target="src\HandlerConfiguration.cs" />
         <file src="HandlerFactory.cs" target="src\HandlerFactory.cs" />
         <file src="HandlerName.cs" target="src\HandlerName.cs" />
         <file src="HandlerTiming.cs" target="src\HandlerTiming.cs" />
-        <file src="IAdaptAnInversionOfControlContainer.cs" target="src\IAdaptAnInversionOfControlContainer.cs" />
         <file src="IAmACommandProcessor.cs" target="src\IAmACommandProcessor.cs" />
-        <file src="IAmACommandProcessorFactory.cs" target="src\IAmACommandProcessorFactory.cs" />
+        <file src="IAmAHandlerFactory.cs" target="src\IAmAHandlerFactory.cs" />
+        <file src="IAmALifetime.cs" target="src\IAmALifetime.cs" />
         <file src="IAmAMessageMapper.cs" target="src\IAmAMessageMapper.cs" />
         <file src="IAmAMessageStore.cs" target="src\IAmAMessageStore.cs" />
         <file src="IAmAMessagingGateway.cs" target="src\IAmAMessagingGateway.cs" />
         <file src="IAmAPipelineBuilder.cs" target="src\IAmAPipelineBuilder.cs" />
         <file src="IAmAPipelineTracer.cs" target="src\IAmAPipelineTracer.cs" />
         <file src="IAmARequestContextFactory.cs" target="src\IAmARequestContextFactory.cs" />
+        <file src="IAmASubscriberRegistry.cs" target="src\IAmASubscribeerRegistry.cs" />
         <file src="ICommand.cs" target="src\ICommand.cs" />
         <file src="IHandleRequests.cs" target="src\IHandleRequests.cs" />
-        <file src="IManageLifetimes.cs" target="src\IManageLifetimes.cs" />
         <file src="InMemoryRequestContextFactory.cs" target="src\InMemoryRequestContextFactory.cs" />
         <file src="Interpreter.cs" target="src\Interpreter.cs" />
         <file src="IRequest.cs" target="src\IRequest.cs" />
         <file src="IRequestContext.cs" target="src\IRequestContext.cs" />
+        <file src="LifetimeManager.cs" target="src\LifetimeManager.cs" />
         <file src="Message.cs" target="src\Message.cs" />
         <file src="MessageBody.cs" target="src\MessageBody.cs" />
         <file src="MessageHeader.cs" target="src\MessageHeader.cs" />
+        <file src="MessageMapperRegistry.cs" target="src\MessageMapperRegistry.cs" />
         <file src="MessagingConfiguration.cs" target="src\MessagingConfiguration.cs" />
         <file src="PipelineBuilder.cs" target="src\PipelineBuilder.cs" />
         <file src="Pipelines.cs" target="src\Pipelines.cs" />
         <file src="PipelineTracer.cs" target="src\PipelineTracer.cs" />
-        <file src="extensions\ReflectionExtensions.cs" target="src\ReflectionExtensions.cs" />
+        <file src="PolicyRegistry.cs" target="src\PolicyRegistry.cs" />
+        <file src="PolicyRegistry.cs" target="src\PolicyRegisry.cs" />
         <file src="RequestContext.cs" target="src\RequestContext.cs" />
         <file src="RequestHandler.cs" target="src\RequestHandler.cs" />
         <file src="RequestHandlerAttribute.cs" target="src\RequestHandlerAttribute.cs" />
+        <file src="RequestHandlers.cs" target="src\RequestHandlers.cs" />
         <file src="RequestLoggingAttribute.cs" target="src\RequestLoggingAttribute.cs" />
         <file src="RequestLoggingHandler.cs" target="src\RequestLoggingHandler.cs" />
-        <file src="RequestHandlers.cs" target="src\RequestHandlers.cs" />
-        <file src="TrackedServiceLocator.cs" target="src\TrackedServiceLocator.cs" />
+        <file src="SubscriberRegistry.cs" target="src\SubscriberRegistry.cs" />
     </files>
 </package>

@@ -28,7 +28,7 @@ using System.Collections.Generic;
 
 namespace paramore.brighter.commandprocessor
 {
-    class MessageMapperRegistry : IAmAMessageMapperRegistry, IEnumerable<KeyValuePair<Type, Type>>
+    public class MessageMapperRegistry : IAmAMessageMapperRegistry, IEnumerable<KeyValuePair<Type, Type>>
     {
         private readonly IAmAMessageMapperFactory messageMapperFactory;
         readonly Dictionary<Type, Type> messageMappers = new Dictionary<Type, Type>();

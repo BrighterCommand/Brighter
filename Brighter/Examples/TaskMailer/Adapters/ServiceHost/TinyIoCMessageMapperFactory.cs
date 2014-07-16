@@ -19,47 +19,26 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
 
-using System.Threading.Tasks;
+using System;
+using paramore.brighter.commandprocessor;
+using TinyIoC;
 
-namespace paramore.brighter.serviceactivator
+namespace TaskMailer.Adapters.ServiceHost
 {
-    public enum ConsumerState
+    class TinyIoCMessageMapperFactory : IAmAMessageMapperFactory
     {
-        Shut=0,
-        Open=1
-    }
+        private readonly TinyIoCContainer container;
 
-    public class Consumer
-    {
-        public ConnectionName Name { get; set; }
-        public IAmAPerformer Performer { get; private set; }
-        public ConsumerState State { get; set; }
-        public Task Job { get; set; }
-
-
-        public Consumer(ConnectionName name, IAmAnInputChannel channel, IAmAMessagePump messagePump)
+        public TinyIoCMessageMapperFactory(TinyIoCContainer container)
         {
-            Name = name;
-            Performer = new Performer(channel, messagePump);
-            State = ConsumerState.Shut;
+            this.container = container;
         }
 
-        public void Open()
+        public IAmAMessageMapper Create(Type messageMapperType)
         {
-            State = ConsumerState.Open;
-            Job = Performer.Run();
-        }
-
-        public void Shut()
-        {
-            if (State == ConsumerState.Open)
-            {
-                Performer.Stop();
-                State = ConsumerState.Shut;
-            }
+            return (IAmAMessageMapper) container.Resolve(messageMapperType);
         }
     }
 }

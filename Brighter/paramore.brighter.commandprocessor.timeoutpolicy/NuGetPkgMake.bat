@@ -1,1 +1,1 @@
-Nuget Pack paramore.brighter.commandprocessor.timeoutpolicy.1.0.0.0.nuspec -Version 1.0.2.0 -Symbols 
+C:\Users\ian\NuGet\NuGet.exe Pack paramore.brighter.commandprocessor.timeoutpolicy.1.0.0.0.nuspec -Version 2.0.0.0 -Symbols 
