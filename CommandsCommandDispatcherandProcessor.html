@@ -53,6 +53,7 @@
         <ul>
             <li>6. Invoke Command Encapsulating Notification</li>
         </ul>
+        <p>This has obvious similarities to the <a href="http://en.wikipedia.org/wiki/Actor_model">actor model</a>, particularly if you use a Task Queue.</p>
         <p>The problems with the Command pattern are that the caller is coupled to a specific Command at the call site - which undermines the promise of being extensible through use of Commands.
             To change that Command, or call orthogonal services before calling the command requires us to amend the calling code, wherever the Command is used. To decouple a higher and lower layers we want to be able alter
             the implementation of the commands that we call on the lower layer without altering the calling layer.</p>

@@ -33,47 +33,30 @@
         <ul>
             <li>PM> Install-Package Paramore.Brighter.CommandProcessor</li>
         </ul>
-        <h4>Implementing a Handler Factory</h4>
-        <p>Brighter builds a pipeline to handle requests. To do this it needs to create an instance of the target handler(s), and by inference your handler's dependencies.
+        <h3>Step Three</h3>
+        <h4>Requests and Request Handlers</h4>
         <p>A <em>Command Dispatcher</em> works by looking up registered handlers for the command or event and forwarding the request to them, i.e. publish-subscribe.</p>
-        <p>For this, we need you to register your subscribers and published messages: you publish a Command or Event derived from <strong>IRequest</strong>;
-            a subscribing handler derives from <strong>IHandleRequests&lt;TRequest&gt;</strong> where TRequest is the type of Command or Event you are subscribing to.
-            You use the <em>SubscriberRegistry</em> class to register those subscriptions. So for a command <em>GreetingCommand</em> we expect you to register a type derived
-            from <em>IHandleRequests&lt;GreetingCommand&gt;</em> using the Register method on the <strong>SubscriberRegistry</strong>
+        <p>For this you need: to publish a Command or Event derived from <strong>IRequest</strong> and
+            implement a subscribing handler that derives from <strong>IHandleRequests&lt;TRequest&gt;</strong> where TRequest is the type of Command or Event you are subscribing to.</p>
+        <p>You use the <strong>SubscriberRegistry</strong> class to register those subscriptions. So for a command <em>GreetingCommand</em> we expect you to register a type derived
+            from <em>IHandleRequests&lt;GreetingCommand&gt;</em>, let's call it <em>GreetingCommandHandler</em>, using the Register method on the SubscriberRegistry
             e.g. <em>subscriberRegistry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;()</em>.</p>
-        <p>Once we have found  one or more registered handlers for the type of the request we need to create instances of them.  This is complicated by your handler having its own dependencies
-            which need to be created, which may have their own dependencies and so on. We don't know how to construct your handler so we call a factory, that you provide us, to build this entire
+        <h4>Handler Factories</h4>
+        <p>At runtime, when you send a message to Brighter, it builds a pipeline to handle requests. To do this it looks up all the handlers you just registered with the subscriber registry
+            for your command or event.</p>
+        <p>Once we have found one or more registered handlers for the type of the request we need to create instances of them.  This is complicated by your handler having its own dependencies
+            which need to be created, which may have their own dependencies and so on.</p>
+        <p>We don't know how to construct your handler so we call a factory, that you provide us, to build this entire
             dependency chain. This factory needs to implement the interface defined in <strong>IAmAHandlerFactory</strong>.</p>
         <p>Brighter manages the lifetimes of handlers, as we consider the request pipeline to be a scope, and we will call your factory again asking to release those handlers once we have terminated
             the pipeline and finished processing the request. You should take appropriate action to clear up the handler and its dependencies in response to that call</p>
         <p>It's worth reading Mark Seeman's article on <a href="http://blog.ploeh.dk/2014/05/19/di-friendly-framework/">DI Friendly Frameworks</a> to understand this technique. Brighter originally
             used a conforming container but switched to user defined factories as per Mark's blog.</p>
-        <p>In this case, the handler factory does not need to be implemented using an IoC container. We'll show that in a fuller example, but here it is trivial. For this simple program we just add
-            this it the Program.cs file.</p>
-                <pre><code>
-internal class SimpleHandlerFactory : IAmAHandlerFactory
-{
-    private readonly ILog logger;
-
-    public SimpleHandlerFactory(ILog logger)
-    {
-        this.logger = logger;
-    }
-
-    public IHandleRequests Create(Type handlerType)
-    {
-        return new GreetingCommandHandler(logger);
-    }
-
-    public void Release(IHandleRequests handler)
-    {
-    }
-}
-                </code></pre>
-                <h3>Step Three</h3>
+        <h4>The Command Processor Builder</h4>
         <p>With this example creating an instance of the Command Processor is straightforward: as we provide a builder with a fluent interface to help you set up the builder. Because we ask
             you to provide factories where we need to create objects in your project, there are a number of items that you will need to configure. But you do this once, at the composition root,
             are then done with it.</p>
+        <h4>Show me the Code!</h4>
         <p>Add the following code to the Main class:</p>
          <pre><code>
  var properties = new NameValueCollection();
@@ -95,6 +78,28 @@ internal class SimpleHandlerFactory : IAmAHandlerFactory
 
  var commandProcessor = builder.Build();
          </code></pre>
+        <p>In this case, the handler factory does not need to be implemented using an IoC container. We'll show that in a fuller example, but here it is trivial. For this simple program we just add
+            this it the Program.cs file.</p>
+        <pre><code>
+internal class SimpleHandlerFactory : IAmAHandlerFactory
+{
+    private readonly ILog logger;
+
+    public SimpleHandlerFactory(ILog logger)
+    {
+        this.logger = logger;
+    }
+
+    public IHandleRequests Create(Type handlerType)
+    {
+        //TODO: Create an instance of the request type
+    }
+
+    public void Release(IHandleRequests handler)
+    {
+    }
+}
+        </code></pre>
         <p>When we create a command processor we need the registry of subscribers to message types, and the factory for creating those handlers, that we discussed above.</p>
         <p> We also require a logger, which will give you diagnostic information about the processing of a message.</p>
         <p> Finally we want to give it a request context - a data structure passed to each handler in the chain, with global information including a property bag.
@@ -149,6 +154,14 @@ internal class SimpleHandlerFactory : IAmAHandlerFactory
         <pre><code>
 var registry = new SubscriberRegistry();
 registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
+        </code></pre>
+        <p>We also need to tell the handler factory how to build an instance of this class on request. We go for a simple implementation here, just to get up and running. This
+        is obviously not production code. replace the TODO in the Handler Factory above with the following code</p>
+        <pre><code>
+public IHandleRequests Create(Type handlerType)
+{
+    return new GreetingCommandHandler(logger);
+}
         </code></pre>
         <h3>Step Five</h3>
         <p>Now that we have a handler registered, it is time to send it a message. The command processor exposes a send for point-to-point messaging (usually a command would have one
