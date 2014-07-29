@@ -38,7 +38,7 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAPolicyRegistry policyRegistry;
         readonly ILog logger;
         readonly IAmAMessageStore<Message> messageStore;
-        readonly IAmAMessagingGateway messagingGateway;
+        readonly IAmASendMessageGateway messagingGateway;
         public const string CIRCUITBREAKER = "Paramore.Brighter.CommandProcessor.CircuitBreaker";
         public const string RETRYPOLICY = "Paramore.Brighter.CommandProcessor.RetryPolicy";
 
@@ -63,7 +63,7 @@ namespace paramore.brighter.commandprocessor
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry, 
             IAmAMessageStore<Message> messageStore, 
-            IAmAMessagingGateway messagingGateway,
+            IAmASendMessageGateway messagingGateway,
             ILog logger)
         {
             this.requestContextFactory = requestContextFactory;
@@ -82,7 +82,7 @@ namespace paramore.brighter.commandprocessor
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry, 
             IAmAMessageStore<Message> messageStore, 
-            IAmAMessagingGateway messagingGateway,
+            IAmASendMessageGateway messagingGateway,
             ILog logger)
             :this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
         {

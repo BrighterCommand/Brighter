@@ -27,19 +27,20 @@ using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.serviceactivator;
 
 namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 {
     public class When_listening_to_messages_on_a_channel
     {
         private static IAmAnInputChannel channel;
-        private static IAmAMessagingGateway gateway;
+        private static IAmAReceiveMessageGateway gateway;
         private static Message receivedMessage;
         private static Message sentMessage;
 
         Establish context = () =>
         {
-            gateway = A.Fake<IAmAMessagingGateway>();
+            gateway = A.Fake<IAmAReceiveMessageGateway>();
 
             channel = new RMQInputChannel("test", gateway);
 
@@ -59,13 +60,13 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     public class When_a_stop_message_is_added_to_a_channel
     {
         private static IAmAnInputChannel channel;
-        private static IAmAMessagingGateway gateway;
+        private static IAmAReceiveMessageGateway gateway;
         private static Message receivedMessage;
         private static Message sentMessage;
 
         Establish context = () =>
         {
-            gateway = A.Fake<IAmAMessagingGateway>();
+            gateway = A.Fake<IAmAReceiveMessageGateway>();
 
             channel = new RMQInputChannel("test", gateway);
 
@@ -86,12 +87,12 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     public class When_acknowledge_is_called_on_a_channel
     {
         private static IAmAnInputChannel channel;
-        private static IAmAMessagingGateway gateway;
+        private static IAmAReceiveMessageGateway gateway;
         private static Message receivedMessage;
 
         Establish context = () =>
         {
-            gateway = A.Fake<IAmAMessagingGateway>();
+            gateway = A.Fake<IAmAReceiveMessageGateway>();
 
             channel = new RMQInputChannel("test", gateway);
 
@@ -112,12 +113,12 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     public class When_no_acknowledge_is_called_on_a_channel
     {
         private static IAmAnInputChannel channel;
-        private static IAmAMessagingGateway gateway;
+        private static IAmAReceiveMessageGateway gateway;
         private static Message receivedMessage;
 
         Establish context = () =>
         {
-            gateway = A.Fake<IAmAMessagingGateway>();
+            gateway = A.Fake<IAmAReceiveMessageGateway>();
 
             channel = new RMQInputChannel("test", gateway);
 

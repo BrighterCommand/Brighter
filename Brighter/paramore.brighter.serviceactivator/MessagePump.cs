@@ -50,7 +50,6 @@ namespace paramore.brighter.serviceactivator
 
         public MessagePump(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
         {
-            this.Channel = Channel;
             this.commandProcessor = commandProcessor;
             this.messageMapper = messageMapper;
         }

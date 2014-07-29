@@ -28,12 +28,12 @@ namespace paramore.brighter.commandprocessor
     public class MessagingConfiguration
     {
         public IAmAMessageStore<Message> MessageStore { get; private set; }
-        public IAmAMessagingGateway MessagingGateway { get; private set; }
+        public IAmASendMessageGateway MessagingGateway { get; private set; }
         public IAmAMessageMapperRegistry MessageMapperRegistry { get; private set; }
 
         public MessagingConfiguration(
             IAmAMessageStore<Message> messageStore, 
-            IAmAMessagingGateway messagingGateway, 
+            IAmASendMessageGateway messagingGateway, 
             IAmAMessageMapperRegistry messageMapperRegistry
             )
         {
