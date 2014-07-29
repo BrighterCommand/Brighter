@@ -56,11 +56,17 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChannelName.cs" />
     <Compile Include="CommandProcessorBuilder.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="HandlerConfiguration.cs" />
+    <Compile Include="IAmAChannel.cs" />
+    <Compile Include="IAmAChannelFactory.cs" />
     <Compile Include="IAmAMessageMapperFactory.cs" />
+    <Compile Include="IAmAnInputChannel.cs" />
+    <Compile Include="IAmAnOutputChannel.cs" />
     <Compile Include="IAmAPolicyRegistry.cs" />
+    <Compile Include="MessageFactory.cs" />
     <Compile Include="MessageMapperRegistry.cs" />
     <Compile Include="PolicyRegistry.cs" />
     <Compile Include="SubscriberRegistry.cs" />

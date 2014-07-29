@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Threading.Tasks;
+using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator
 {

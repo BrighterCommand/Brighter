@@ -19,29 +19,58 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
-using paramore.brighter.serviceactivator;
+using System.Collections.Concurrent;
+using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace paramore.brighter.serviceactivator.TestHelpers
 {
-    public class RMQInputChannelfactory : IAmAChannelFactory 
+    public class FakeChannel : IAmAnInputChannel, IAmAnOutputChannel
     {
-        private readonly RMQMessagingGateway gateway;
+        private readonly ConcurrentQueue<Message> messageQueue = new ConcurrentQueue<Message>();
+        private readonly ChannelName channelName;
 
-        public RMQInputChannelfactory(RMQMessagingGateway gateway)
+        public FakeChannel(string channelName = "")
         {
-            this.gateway = gateway;
+            this.channelName = new ChannelName(channelName);
         }
 
-        public IAmAnInputChannel CreateInputChannel(string channelName)
+        public int Length
         {
-            return new RMQInputChannel(channelName, gateway);
+            get { return messageQueue.Count; }
         }
 
-        public IAmAnInputChannel CreateOutputChannel(string channelName)
+        public ChannelName Name
         {
-            return new RMQInputChannel(channelName, gateway);
+            get { return channelName; }
         }
+
+        public void Acknowledge(Message message)
+        {}
+
+        public Message Receive(int timeoutinMilliseconds)
+        {
+            Message message;
+            if (messageQueue.TryDequeue(out message))
+                return message;
+            else
+                return new Message();
+        }
+
+        public void Reject(Message message)
+        {}
+
+        public void Stop()
+        {
+            messageQueue.Enqueue(MessageFactory.CreateQuitMessage());
+        }
+
+        public void Send(Message message)
+        {
+            messageQueue.Enqueue(message);
+        }
+
     }
 }

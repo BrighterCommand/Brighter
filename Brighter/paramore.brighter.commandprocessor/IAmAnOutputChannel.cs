@@ -22,17 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor;
-
-namespace paramore.brighter.serviceactivator
+namespace paramore.brighter.commandprocessor
 {
-    public interface IAmAnInputChannel
+    public interface IAmAnOutputChannel : IAmAChannel
     {
-        Message Receive(int timeoutinMilliseconds);
         void Send(Message message);
-        void Acknowledge(Message message);
-        void Reject(Message message);
-        int Length { get; }
-        ChannelName Name { get; }
     }
 }

@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
-using paramore.brighter.serviceactivator;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
@@ -52,11 +51,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return message;
         }
 
-        public void Send(Message message)
-        {
-            queue.Enqueue(message);
-        }
-
         public void Acknowledge(Message message)
         {
             gateway.Acknowledge(message);
@@ -67,10 +61,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             gateway.Reject(message, false);
         }
 
+        public void Stop()
+        {
+            queue.Enqueue(MessageFactory.CreateQuitMessage());
+        }
+
         public int Length {
             get { return queue.Count; }
             set { throw new NotImplementedException(); } 
         }
+
 
     }
 }

@@ -27,7 +27,6 @@ using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.brighter.serviceactivator;
 
 namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 {
@@ -63,7 +62,6 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         private static IAmAMessagingGateway gateway;
         private static Message receivedMessage;
         private static Message sentMessage;
-        private static Message quitMessage;
 
         Establish context = () =>
         {
@@ -75,11 +73,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
-            quitMessage = new Message(
-                new MessageHeader(Guid.Empty, string.Empty, MessageType.MT_QUIT),
-                new MessageBody(string.Empty));
-
-            channel.Send(quitMessage);
+            channel.Stop();
                 
             A.CallTo(() => gateway.Receive("test", 1000)).Returns(sentMessage);
         };
@@ -87,7 +81,6 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         Because of = () => receivedMessage = channel.Receive(1000);
 
         It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive("test", 1000)).MustNotHaveHappened();
-        It should_return_the_next_message_from_the_gateway = () => receivedMessage.ShouldEqual(quitMessage);
     }
 
     public class When_acknowledge_is_called_on_a_channel

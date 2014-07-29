@@ -47,12 +47,12 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler
     {
         static Dispatcher dispatcher;
-        static IAmAnInputChannel channel;
+        static FakeChannel channel;
         static IAmACommandProcessor commandProcessor;
 
         Establish context = () =>
             {
-                channel = new InMemoryChannel();
+                channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
                 var properties = new NameValueCollection();
@@ -89,12 +89,12 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_a_message_dispatcher_starts_multiple_performers
     {
         private static Dispatcher dispatcher;
-        private static IAmAnInputChannel channel;
+        private static FakeChannel channel;
         private static IAmACommandProcessor commandProcessor;
 
         Establish context = () =>
             {
-                channel = new InMemoryChannel();
+                channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
                 var properties = new NameValueCollection();
@@ -132,14 +132,14 @@ namespace paramore.commandprocessor.tests.MessageDispatch
      public class When_a_message_dispatcher_starts_different_types_of_performers
     {
         private static Dispatcher dispatcher;
-        private static IAmAnInputChannel eventChannel;
-        private static IAmAnInputChannel commandChannel;
+        private static FakeChannel eventChannel;
+        private static FakeChannel commandChannel;
         private static IAmACommandProcessor commandProcessor;
 
         Establish context = () =>
             {
-                eventChannel = new InMemoryChannel();
-                commandChannel = new InMemoryChannel();
+                eventChannel = new FakeChannel();
+                commandChannel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
                 var properties = new NameValueCollection();
@@ -187,13 +187,13 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_a_message_dispatcher_shuts_a_connection
     {
         private static Dispatcher dispatcher;
-        private static IAmAnInputChannel channel;
+        private static FakeChannel channel;
         private static IAmACommandProcessor commandProcessor;
         private static Connection connection;
 
         Establish context = () =>
             {
-                channel = new InMemoryChannel();
+                channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
                 var properties = new NameValueCollection();
@@ -232,13 +232,13 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_a_message_dispatcher_restarts_a_connection
     {
         private static Dispatcher dispatcher;
-        private static IAmAnInputChannel channel;
+        private static FakeChannel channel;
         private static IAmACommandProcessor commandProcessor;
         private static Connection connection;
 
         Establish context = () =>
             {
-                channel = new InMemoryChannel();
+                channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
                 var properties = new NameValueCollection();

@@ -36,14 +36,14 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_reading_a_message_from_a_channel_pump_out_to_command_processor
     {
         static IAmAMessagePump messagePump;
-        private static IAmAnInputChannel channel;
+        private static FakeChannel channel;
         static SpyCommandProcessor commandProcessor;
         static MyEvent @event;
 
         Establish context = () =>
         {
             commandProcessor = new SpyCommandProcessor();
-            channel = new InMemoryChannel();
+            channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
             messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) {Channel = channel, TimeoutInMilliseconds = 5000};
 
