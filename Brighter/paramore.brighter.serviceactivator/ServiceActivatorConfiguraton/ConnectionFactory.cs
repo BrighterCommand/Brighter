@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
 {
@@ -44,7 +45,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
                from ConnectionElement connectionElement in connectionElements 
                select new Connection(
                    name: new ConnectionName(connectionElement.ConnectionName), 
-                   channel: channelFactory.Create(connectionElement.ChannelName), 
+                   channel: channelFactory.CreateInputChannel(connectionElement.ChannelName), 
                    dataType: GetType(connectionElement.DataType), 
                    noOfPerformers: connectionElement.NoOfPerformers, 
                    timeoutInMilliseconds: connectionElement.TimeoutInMiliseconds)

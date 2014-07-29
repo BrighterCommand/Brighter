@@ -22,49 +22,20 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Concurrent;
-using paramore.brighter.commandprocessor;
+using System;
 
-namespace paramore.brighter.serviceactivator.TestHelpers
+namespace paramore.brighter.commandprocessor
 {
-    public class InMemoryChannel : IAmAnInputChannel
+    public static class MessageFactory
     {
-        private readonly ConcurrentQueue<Message> messageQueue = new ConcurrentQueue<Message>();
-        private readonly ChannelName channelName;
-
-        public InMemoryChannel(string channelName = "")
+        public static Message CreateEmptyMessage()
         {
-            this.channelName = new ChannelName(channelName);
+            return new Message();
         }
-
-        public int Length
+        
+        public static Message CreateQuitMessage()
         {
-            get { return messageQueue.Count; }
-        }
-
-        public ChannelName Name
-        {
-            get { return channelName; }
-        }
-
-        public void Acknowledge(Message message)
-        {}
-
-        public Message Receive(int timeoutinMilliseconds)
-        {
-            Message message;
-            if (messageQueue.TryDequeue(out message))
-                return message;
-            else
-                return new Message();
-        }
-
-        public void Reject(Message message)
-        {}
-
-        public void Send(Message message)
-        {
-            messageQueue.Enqueue(message);
+            return new Message(new MessageHeader(Guid.Empty, string.Empty, MessageType.MT_QUIT), new MessageBody(string.Empty));
         }
 
     }

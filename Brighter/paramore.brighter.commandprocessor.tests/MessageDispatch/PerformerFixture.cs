@@ -38,13 +38,13 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     {
         static Performer performer;
         private static SpyCommandProcessor commandProcessor;
-        private static InMemoryChannel channel;
+        private static FakeChannel channel;
         private static Task performerTask;
 
         private Establish context = () =>
         {
             commandProcessor = new SpyCommandProcessor();
-            channel = new InMemoryChannel();
+            channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
             var messagePump = new MessagePump<MyEvent>(commandProcessor, mapper);
             messagePump.Channel = channel;

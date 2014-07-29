@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator
 {

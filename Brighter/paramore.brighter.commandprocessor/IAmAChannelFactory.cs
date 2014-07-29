@@ -19,29 +19,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
-using paramore.brighter.serviceactivator;
-
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace paramore.brighter.commandprocessor
 {
-    public class RMQInputChannelfactory : IAmAChannelFactory 
+    public interface IAmAChannelFactory
     {
-        private readonly RMQMessagingGateway gateway;
-
-        public RMQInputChannelfactory(RMQMessagingGateway gateway)
-        {
-            this.gateway = gateway;
-        }
-
-        public IAmAnInputChannel CreateInputChannel(string channelName)
-        {
-            return new RMQInputChannel(channelName, gateway);
-        }
-
-        public IAmAnInputChannel CreateOutputChannel(string channelName)
-        {
-            return new RMQInputChannel(channelName, gateway);
-        }
+        IAmAnInputChannel CreateInputChannel(string channelName);
+        IAmAnInputChannel CreateOutputChannel(string channelName);
     }
 }

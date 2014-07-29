@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 
@@ -40,7 +39,7 @@ namespace paramore.brighter.serviceactivator
         }
         public void Stop()
         {
-            channel.Send(CreateQuitMessage());
+            channel.Stop();
         }
 
         public Task Run()
@@ -48,9 +47,5 @@ namespace paramore.brighter.serviceactivator
             return Task.Factory.StartNew(() => messagePump.Run(), TaskCreationOptions.LongRunning);
         }
 
-        private Message CreateQuitMessage()
-        {
-            return new Message(new MessageHeader(Guid.Empty, string.Empty, MessageType.MT_QUIT), new MessageBody(string.Empty));
-        }
     }
 }
