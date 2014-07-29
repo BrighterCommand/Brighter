@@ -30,7 +30,7 @@ namespace paramore.brighter.commandprocessor
     {
         private ILog logger;
         private IAmAMessageStore<Message> messageStore;
-        private IAmAMessagingGateway messagingGateway;
+        private IAmASendMessageGateway messagingGateway;
         private IAmAMessageMapperRegistry messageMapperRegistry;
         private IAmARequestContextFactory requestContextFactory;
         private IAmASubscriberRegistry registry;

@@ -66,6 +66,7 @@
     <Compile Include="IAmAnInputChannel.cs" />
     <Compile Include="IAmAnOutputChannel.cs" />
     <Compile Include="IAmAPolicyRegistry.cs" />
+    <Compile Include="IAmASendMessageGateway.cs" />
     <Compile Include="MessageFactory.cs" />
     <Compile Include="MessageMapperRegistry.cs" />
     <Compile Include="PolicyRegistry.cs" />
@@ -76,7 +77,6 @@
     <Compile Include="IAmAMessageMapperRegistry.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="IAmAMessageMapper.cs" />
-    <Compile Include="IAmAMessagingGateway.cs" />
     <Compile Include="IAmAMessageStore.cs" />
     <Compile Include="Interpreter.cs" />
     <Compile Include="MessageBody.cs" />

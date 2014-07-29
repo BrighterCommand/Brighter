@@ -27,9 +27,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     public class RMQInputChannelfactory : IAmAChannelFactory 
     {
-        private readonly RMQMessagingGateway gateway;
+        private readonly RMQReceiveMessageGateway gateway;
 
-        public RMQInputChannelfactory(RMQMessagingGateway gateway)
+        public RMQInputChannelfactory(RMQReceiveMessageGateway gateway)
         {
             this.gateway = gateway;
         }

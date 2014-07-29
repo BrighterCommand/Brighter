@@ -24,16 +24,17 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using paramore.brighter.serviceactivator;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     public class RMQInputChannel : IAmAnInputChannel
     {
         private readonly string queueName;
-        private readonly IAmAMessagingGateway gateway;
+        private readonly IAmAReceiveMessageGateway gateway;
         private readonly ConcurrentQueue<Message> queue = new ConcurrentQueue<Message>();
 
-        public RMQInputChannel(string queueName, IAmAMessagingGateway gateway)
+        public RMQInputChannel(string queueName, IAmAReceiveMessageGateway gateway)
         {
             this.queueName = queueName;
             this.gateway = gateway;

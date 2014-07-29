@@ -22,13 +22,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
+using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.commandprocessor
+namespace paramore.brighter.serviceactivator
 {
-    public interface IAmAMessagingGateway: IDisposable
+    public interface IAmAReceiveMessageGateway: IDisposable 
     {
-        Task Send(Message message);
         Message Receive(string queueName, int timeoutInMilliseconds);
         void Acknowledge(Message message);
         void Reject(Message message, bool requeue);
