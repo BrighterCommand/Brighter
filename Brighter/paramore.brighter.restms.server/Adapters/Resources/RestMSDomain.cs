@@ -21,34 +21,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using paramore.brighter.commandprocessor;
-using TinyIoC;
+using System.Runtime.Serialization;
+using System.Xml.Serialization;
 
-namespace TaskMailer.Adapters.ServiceHost
+namespace paramore.brighter.restms.server.Adapters.Resources
 {
-    class TinyIocHandlerFactory : IAmAHandlerFactory
+    [DataContract, XmlRoot]
+    public class RestMSDomain
     {
-        private readonly TinyIoCContainer container;
+        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
+        public string Name { get; set; }
+        [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
+        public string Title { get; set; }
+        [DataMember(Name = "profile"), XmlAttribute(AttributeName = "profile")]
+        public RestMSProfile Profile {get; set;}
 
-        public TinyIocHandlerFactory(TinyIoCContainer container)
-        {
-            this.container = container;
-        }
+    }
 
-        public IHandleRequests Create(Type handlerType)
-        {
-            return (IHandleRequests)container.Resolve(handlerType);
-        }
-
-        public void Release(IHandleRequests handler)
-        {
-            var disposable = handler as IDisposable;
-            if (disposable != null)
-            {
-                disposable.Dispose();
-            }
-            handler = null;
-        }
+    [DataContract, XmlRoot]
+    public class RestMSProfile
+    {
+        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
+        public string Name { get; set; }
+        [DataMember(Name="name"), XmlAttribute(AttributeName = "name")]
+        public string Href { get; set; }
     }
 }

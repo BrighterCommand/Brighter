@@ -21,34 +21,46 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using paramore.brighter.commandprocessor;
-using TinyIoC;
-
-namespace TaskMailer.Adapters.ServiceHost
+namespace paramore.brighter.restms.server.Model
 {
-    class TinyIocHandlerFactory : IAmAHandlerFactory
+    public class Domain
     {
-        private readonly TinyIoCContainer container;
+        public Name Name { get; private set; }
+        public Title Title { get; private set; }
+        public Profile Profile { get; private set; }
 
-        public TinyIocHandlerFactory(TinyIoCContainer container)
+        public Domain(Name name, Title title, Profile profile)
         {
-            this.container = container;
+            Name = name;
+            Title = title;
+            Profile = profile;
+        }
+        protected bool Equals(Domain other)
+        {
+            return Equals(Name, other.Name);
         }
 
-        public IHandleRequests Create(Type handlerType)
+        public override bool Equals(object obj)
         {
-            return (IHandleRequests)container.Resolve(handlerType);
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Domain) obj);
         }
 
-        public void Release(IHandleRequests handler)
+        public override int GetHashCode()
         {
-            var disposable = handler as IDisposable;
-            if (disposable != null)
-            {
-                disposable.Dispose();
-            }
-            handler = null;
+            return (Name != null ? Name.GetHashCode() : 0);
+        }
+
+        public static bool operator ==(Domain left, Domain right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Domain left, Domain right)
+        {
+            return !Equals(left, right);
         }
     }
 }

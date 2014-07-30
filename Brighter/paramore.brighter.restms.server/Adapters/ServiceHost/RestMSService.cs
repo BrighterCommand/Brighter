@@ -22,33 +22,28 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
-using TinyIoC;
-
-namespace TaskMailer.Adapters.ServiceHost
+using Topshelf;
+using Microsoft.Owin.Hosting;
+namespace paramore.brighter.restms.server.Adapters.ServiceHost
 {
-    class TinyIocHandlerFactory : IAmAHandlerFactory
+    class RestMSService : ServiceControl
     {
-        private readonly TinyIoCContainer container;
-
-        public TinyIocHandlerFactory(TinyIoCContainer container)
+        IDisposable app;
+        public bool Start(HostControl hostControl)
         {
-            this.container = container;
+           app = WebApp.Start<WebPipeline>("http://localhost:3416"); 
+           return true;
         }
 
-        public IHandleRequests Create(Type handlerType)
+        public bool Stop(HostControl hostControl)
         {
-            return (IHandleRequests)container.Resolve(handlerType);
+            app.Dispose();
+            return true;
         }
 
-        public void Release(IHandleRequests handler)
+       public void Shutdown(HostControl hostcontrol)
         {
-            var disposable = handler as IDisposable;
-            if (disposable != null)
-            {
-                disposable.Dispose();
-            }
-            handler = null;
+            return;
         }
     }
 }

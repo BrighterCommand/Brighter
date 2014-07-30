@@ -19,33 +19,52 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
 
-using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
+using System;
 
-namespace paramore.brighter.serviceactivator
+namespace paramore.brighter.restms.server.Model
 {
-    public class Performer : IAmAPerformer 
+    public class Title
     {
-        private readonly IAmAnInputChannel channel;
-        private readonly IAmAMessagePump messagePump;
+        public string Value { get; private set; }
 
-        public Performer(IAmAnInputChannel channel, IAmAMessagePump messagePump)
+        public Title(string value)
         {
-            this.channel = channel;
-            this.messagePump = messagePump;
-        }
-        public void Stop()
-        {
-            channel.Stop();
+            Value = value;
         }
 
-        public Task Run()
+        public override string ToString()
         {
-            return Task.Factory.StartNew(() => messagePump.Run(), TaskCreationOptions.LongRunning);
+            return string.Format("Value: {0}", Value);
         }
 
+        protected bool Equals(Title other)
+        {
+            return string.Equals(Value, other.Value);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Title)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Value != null ? Value.GetHashCode() : 0);
+        }
+
+        public static bool operator ==(Title left, Title right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Title left, Title right)
+        {
+            return !Equals(left, right);
+        }
     }
 }

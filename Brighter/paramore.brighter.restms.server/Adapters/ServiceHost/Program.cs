@@ -21,34 +21,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using paramore.brighter.commandprocessor;
-using TinyIoC;
+using Topshelf;
 
-namespace TaskMailer.Adapters.ServiceHost
+namespace paramore.brighter.restms.server.Adapters.ServiceHost
 {
-    class TinyIocHandlerFactory : IAmAHandlerFactory
+    class Program
     {
-        private readonly TinyIoCContainer container;
-
-        public TinyIocHandlerFactory(TinyIoCContainer container)
+        static void Main(string[] args)
         {
-            this.container = container;
-        }
+                HostFactory.Run(x => x.Service<RestMSService >(sc =>
+                {
+                    sc.ConstructUsing(() => new RestMSService ());
 
-        public IHandleRequests Create(Type handlerType)
-        {
-            return (IHandleRequests)container.Resolve(handlerType);
-        }
+                    // the start and stop methods for the service
+                    sc.WhenStarted((s, hostcontrol) => s.Start(hostcontrol));
+                    sc.WhenStopped((s, hostcontrol) => s.Stop(hostcontrol));
 
-        public void Release(IHandleRequests handler)
-        {
-            var disposable = handler as IDisposable;
-            if (disposable != null)
-            {
-                disposable.Dispose();
-            }
-            handler = null;
-        }
+                    // optional, when shutdown is supported
+                    sc.WhenShutdown((s, hostcontrol) => s.Shutdown(hostcontrol));
+                }));   }
     }
 }
