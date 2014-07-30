@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Explorations in architectural styles for .NET, Intended as reusable libraries, demos for training, and self-exploration</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+    </header>
+    <section>
+        <h1>Tasks: A Fuller Example</h1>
+        <p>Tasks is intended to give a slightly fuller example of the use of Brighter.</p>
+        <p> Whilst we show snippets of code here, you will either want to clone Paramore from GitHub to follow along, or
+            <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples">browse the code</a> on the web.</p>
+        <p>The scenario is an application that manages a user's todo list, and sends notifications about imminent or overdue tasks. The example application is not fully-featured: we don't include a UI
+        in the example and are missing many methods it would need to be truly functional. The components of the example are:</p>
+        <ul>
+            <li><strong>Tasks</strong>: A core library that models tasks used by both Tasklist and TaskMailer</li>
+            <li><strong>Tasklist</strong>: An HTTP API for tasks</li>
+            <li><strong>TaskMailer</strong>: As service that notifies task owners of upcoming or overdue tasks</li>
+        </ul>
+        <p>In a production SOA application we would consider all of these components to be part of the Tasks SOA and would be happy for these Autonomous Components within that  to
+            share a model, as we are not crossing an SOA boundary. If we were to cross an SOA boundary we would not share the core library as we do here. Another way of stating this is to point out that these
+            components are logically within a single bounded context, even though they are physically separate and we are using messaging to support Work Queues not integration SOA boundaries.
+            We could use Brighter for SOA integration, but we would not share a model in that case, as a Service should share schema not type, and have explicit boundaries.</p>
+        <h2>Tasks</h2>
+        <p>Tasks uses a <strong><a href="PortsAndAdapters.html">Ports and Adapters architecture</a></strong> and the structure of the assembly surfaces that architectural style.</p>
+        <p>The <strong>Ports</strong> folder contains a folder for our <strong>Handlers</strong>, which implement <strong>IHandleRequests&lt;TRequest&gt;</strong>. These form the ports into our application. </p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>
