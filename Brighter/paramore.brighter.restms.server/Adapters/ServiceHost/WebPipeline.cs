@@ -21,34 +21,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using paramore.brighter.commandprocessor;
-using TinyIoC;
+using System.Web.Http;
+using Owin;
 
-namespace TaskMailer.Adapters.ServiceHost
+namespace paramore.brighter.restms.server.Adapters.ServiceHost
 {
-    class TinyIocHandlerFactory : IAmAHandlerFactory
+    internal class WebPipeline
     {
-        private readonly TinyIoCContainer container;
-
-        public TinyIocHandlerFactory(TinyIoCContainer container)
+        public void Configuration(IAppBuilder builder)
         {
-            this.container = container;
-        }
-
-        public IHandleRequests Create(Type handlerType)
-        {
-            return (IHandleRequests)container.Resolve(handlerType);
-        }
-
-        public void Release(IHandleRequests handler)
-        {
-            var disposable = handler as IDisposable;
-            if (disposable != null)
-            {
-                disposable.Dispose();
-            }
-            handler = null;
+            var configuration = new HttpConfiguration();
+            configuration.MapHttpAttributeRoutes();
+            builder.UseWebApi(configuration);
         }
     }
 }

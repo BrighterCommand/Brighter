@@ -21,34 +21,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using paramore.brighter.commandprocessor;
-using TinyIoC;
+using System.Threading.Tasks;
+using System.Web.Http;
+using paramore.brighter.restms.server.Adapters.Resources;
 
-namespace TaskMailer.Adapters.ServiceHost
+namespace paramore.brighter.restms.server.Adapters.Controllers
 {
-    class TinyIocHandlerFactory : IAmAHandlerFactory
+    public class DomainController : ApiController
     {
-        private readonly TinyIoCContainer container;
-
-        public TinyIocHandlerFactory(TinyIoCContainer container)
+        [Route("restms/domain/default")]
+        [HttpGet]
+        public async Task<RestMSDomain> GetDefaultDomain()
         {
-            this.container = container;
-        }
-
-        public IHandleRequests Create(Type handlerType)
-        {
-            return (IHandleRequests)container.Resolve(handlerType);
-        }
-
-        public void Release(IHandleRequests handler)
-        {
-            var disposable = handler as IDisposable;
-            if (disposable != null)
-            {
-                disposable.Dispose();
-            }
-            handler = null;
+            var tcs = new TaskCompletionSource<RestMSDomain>();
+            await tcs.Task;
         }
     }
 }

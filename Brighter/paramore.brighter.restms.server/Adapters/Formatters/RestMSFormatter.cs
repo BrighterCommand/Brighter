@@ -21,34 +21,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using paramore.brighter.commandprocessor;
-using TinyIoC;
-
-namespace TaskMailer.Adapters.ServiceHost
+namespace paramore.brighter.restms.server.Adapters.Formatters
 {
-    class TinyIocHandlerFactory : IAmAHandlerFactory
+    class RestMSFormatter
     {
-        private readonly TinyIoCContainer container;
-
-        public TinyIocHandlerFactory(TinyIoCContainer container)
-        {
-            this.container = container;
-        }
-
-        public IHandleRequests Create(Type handlerType)
-        {
-            return (IHandleRequests)container.Resolve(handlerType);
-        }
-
-        public void Release(IHandleRequests handler)
-        {
-            var disposable = handler as IDisposable;
-            if (disposable != null)
-            {
-                disposable.Dispose();
-            }
-            handler = null;
-        }
     }
 }
