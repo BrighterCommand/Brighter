@@ -74,6 +74,7 @@
   <ItemGroup>
     <Compile Include="Adapters\Controllers\DomainController.cs" />
     <Compile Include="Adapters\Formatters\RestMSFormatter.cs" />
+    <Compile Include="Adapters\Repositories\DomainRepository.cs" />
     <Compile Include="Adapters\Resources\RestMSDomain.cs" />
     <Compile Include="Adapters\ServiceHost\Program.cs" />
     <Compile Include="Adapters\ServiceHost\RestMSService.cs" />
@@ -82,6 +83,10 @@
     <Compile Include="Model\Name.cs" />
     <Compile Include="Model\Profile.cs" />
     <Compile Include="Model\Title.cs" />
+    <Compile Include="Ports\Common\AggregateVersion.cs" />
+    <Compile Include="Ports\Common\IAmAnAggregate.cs" />
+    <Compile Include="Ports\Common\IAmARepository.cs" />
+    <Compile Include="Ports\Common\Identity.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
