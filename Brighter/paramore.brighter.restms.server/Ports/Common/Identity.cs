@@ -1,9 +1,9 @@
-Ôªø#region Licence
+#region Licence
 /* The MIT License (MIT)
-Copyright ¬© 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the ‚ÄúSoftware‚Äù), to deal
+of this software and associated documentation files (the ìSoftwareî), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -12,7 +12,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED ‚ÄúAS IS‚Äù, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED ìAS ISî, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -21,30 +21,25 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using paramore.brighter.restms.server.Ports.Common;
-
-namespace paramore.brighter.restms.server.Model
+namespace paramore.brighter.restms.server.Ports.Common
 {
-    public class Domain : IAmAnAggregate
+    public class Identity
     {
-        public Name Name { get; private set; }
-        public Title Title { get; private set; }
-        public Profile Profile { get; private set; }
-        
-        public Identity Id { get; private set; }
-        public AggregateVersion Version { get; private set; }
+        public string Value { get; private set; }
 
-        public Domain(Name name, Title title, Profile profile, AggregateVersion version)
+        public Identity(string identifier)
         {
-            Name = name;
-            Title = title;
-            Profile = profile;
-            Version = version;
+            Value = identifier;
         }
         
-        protected bool Equals(Domain other)
+        public override string ToString()
         {
-            return Equals(Name, other.Name);
+            return string.Format("Value: {0}", Value);
+        }
+
+        protected bool Equals(Identity other)
+        {
+            return string.Equals(Value, other.Value);
         }
 
         public override bool Equals(object obj)
@@ -52,20 +47,20 @@ namespace paramore.brighter.restms.server.Model
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((Domain) obj);
+            return Equals((Identity) obj);
         }
 
         public override int GetHashCode()
         {
-            return (Name != null ? Name.GetHashCode() : 0);
+            return (Value != null ? Value.GetHashCode() : 0);
         }
 
-        public static bool operator ==(Domain left, Domain right)
+        public static bool operator ==(Identity left, Identity right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(Domain left, Domain right)
+        public static bool operator !=(Identity left, Identity right)
         {
             return !Equals(left, right);
         }
