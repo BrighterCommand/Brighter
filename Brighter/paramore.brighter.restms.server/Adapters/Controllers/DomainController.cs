@@ -21,7 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Threading.Tasks;
 using System.Web.Http;
 using paramore.brighter.restms.server.Adapters.Resources;
 
@@ -31,10 +30,9 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
     {
         [Route("restms/domain/default")]
         [HttpGet]
-        public async Task<RestMSDomain> GetDefaultDomain()
+        public RestMSDomain GetDefaultDomain()
         {
-            var tcs = new TaskCompletionSource<RestMSDomain>();
-            await tcs.Task;
+            return new RestMSDomain();
         }
     }
 }
