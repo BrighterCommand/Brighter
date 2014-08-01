@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="Interpreter.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -26,19 +39,36 @@ using System.Collections.Generic;
 using System.Linq;
 using paramore.brighter.commandprocessor.extensions;
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Class Interpreter.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
+    /// <typeparam name="TRequest">The type of the t request.</typeparam>
     internal class Interpreter<TRequest> where TRequest : class, IRequest
     {
         private readonly IAmASubscriberRegistry registry;
         private readonly IAmAHandlerFactory handlerFactory;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Interpreter{TRequest}"/> class.
+        /// </summary>
+        /// <param name="registry">The registry.</param>
+        /// <param name="handlerFactory">The handler factory.</param>
         public Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory)
         {
             this.registry = registry ;
             this.handlerFactory = handlerFactory;
         }
 
+        /// <summary>
+        /// Gets the handlers.
+        /// </summary>
+        /// <param name="requestType">Type of the request.</param>
+        /// <returns>IEnumerable&lt;RequestHandler&lt;TRequest&gt;&gt;.</returns>
         public IEnumerable<RequestHandler<TRequest>> GetHandlers(Type requestType)
         {
             return new RequestHandlers<TRequest>(registry.Get<TRequest>().Select(handlerType => handlerFactory.Create(handlerType)).Cast<IHandleRequests<TRequest>>());

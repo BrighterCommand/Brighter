@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="IAmACommandProcessor.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -24,13 +37,38 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Interface IAmACommandProcessor{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
     public interface IAmACommandProcessor
     {
+        /// <summary>
+        /// Sends the specified command.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="command">The command.</param>
         void Send<T>(T command) where T : class, IRequest;
+        /// <summary>
+        /// Publishes the specified event.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="event">The event.</param>
         void Publish<T>(T @event) where T : class, IRequest;
+        /// <summary>
+        /// Posts the specified request.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="request">The request.</param>
         void Post<T>(T request) where T : class, IRequest;
+        /// <summary>
+        /// Reposts the specified message identifier.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
         void Repost(Guid messageId);
     }
 }

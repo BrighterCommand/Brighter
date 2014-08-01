@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="IHandleRequests.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,21 +34,60 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Interface IHandleRequests{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
     public interface IHandleRequests
     {
+        /// <summary>
+        /// Gets or sets the context.
+        /// </summary>
+        /// <value>The context.</value>
         IRequestContext Context { get; set; }
+        /// <summary>
+        /// Describes the path.
+        /// </summary>
+        /// <param name="pathExplorer">The path explorer.</param>
         void DescribePath(IAmAPipelineTracer pathExplorer);
+        /// <summary>
+        /// Initializes from attribute parameters.
+        /// </summary>
+        /// <param name="initializerList">The initializer list.</param>
         void InitializeFromAttributeParams(params object[] initializerList);
+        /// <summary>
+        /// Gets the name.
+        /// </summary>
+        /// <value>The name.</value>
         HandlerName Name { get; }
        
     }
 
+    /// <summary>
+    /// Interface IHandleRequests{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
+    /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public interface IHandleRequests<TRequest> : IHandleRequests where TRequest : class, IRequest
     {
+        /// <summary>
+        /// Handles the specified command.
+        /// </summary>
+        /// <param name="command">The command.</param>
+        /// <returns>TRequest.</returns>
         TRequest Handle(TRequest command);
+        /// <summary>
+        /// Sets the successor.
+        /// </summary>
+        /// <value>The successor.</value>
         IHandleRequests<TRequest> Successor { set; }
+        /// <summary>
+        /// Adds to lifetime.
+        /// </summary>
+        /// <param name="instanceScope">The instance scope.</param>
         void AddToLifetime(IAmALifetime instanceScope);
     }
 }

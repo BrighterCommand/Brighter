@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-29-2014
+// ***********************************************************************
+// <copyright file="CommandProcessor.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -27,8 +40,14 @@ using Common.Logging;
 using Polly;
 using paramore.brighter.commandprocessor.extensions;
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Class CommandProcessor.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
     public class CommandProcessor : IAmACommandProcessor
     {
         readonly IAmAMessageMapperRegistry mapperRegistry;
@@ -39,10 +58,24 @@ namespace paramore.brighter.commandprocessor
         readonly ILog logger;
         readonly IAmAMessageStore<Message> messageStore;
         readonly IAmASendMessageGateway messagingGateway;
+        /// <summary>
+        /// The circuitbreaker{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+        /// </summary>
         public const string CIRCUITBREAKER = "Paramore.Brighter.CommandProcessor.CircuitBreaker";
+        /// <summary>
+        /// The retrypolicy{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+        /// </summary>
         public const string RETRYPOLICY = "Paramore.Brighter.CommandProcessor.RetryPolicy";
 
         //use when no task queue support required
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry.</param>
+        /// <param name="handlerFactory">The handler factory.</param>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="logger">The logger.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry, 
             IAmAHandlerFactory handlerFactory, 
@@ -58,6 +91,15 @@ namespace paramore.brighter.commandprocessor
         }
 
         //Use when only task queue support required
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// </summary>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="mapperRegistry">The mapper registry.</param>
+        /// <param name="messageStore">The message store.</param>
+        /// <param name="messagingGateway">The messaging gateway.</param>
+        /// <param name="logger">The logger.</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory, 
             IAmAPolicyRegistry policyRegistry,
@@ -75,6 +117,17 @@ namespace paramore.brighter.commandprocessor
         }
 
         //Use when task queue and command processor support required
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry.</param>
+        /// <param name="handlerFactory">The handler factory.</param>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="mapperRegistry">The mapper registry.</param>
+        /// <param name="messageStore">The message store.</param>
+        /// <param name="messagingGateway">The messaging gateway.</param>
+        /// <param name="logger">The logger.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -92,6 +145,13 @@ namespace paramore.brighter.commandprocessor
         }
 
 
+        /// <summary>
+        /// Sends the specified command.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="command">The command.</param>
+        /// <exception cref="System.ArgumentException">
+        /// </exception>
         public void Send<T>(T command) where T : class, IRequest
         {
             using (var builder = new PipelineBuilder<T>(subscriberRegistry, handlerFactory, logger))
@@ -114,6 +174,11 @@ namespace paramore.brighter.commandprocessor
             }
         }
 
+        /// <summary>
+        /// Publishes the specified event.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="event">The event.</param>
         public void Publish<T>(T @event) where T : class, IRequest
         {
             using (var builder = new PipelineBuilder<T>(subscriberRegistry, handlerFactory, logger))
@@ -134,6 +199,12 @@ namespace paramore.brighter.commandprocessor
 
         //NOTE: Don't rewrite with await, compiles but Policy does not call await on the lambda so becomes fire and forget, see http://blogs.msdn.com/b/pfxteam/archive/2012/02/08/10265476.aspx
 
+        /// <summary>
+        /// Posts the specified request.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="request">The request.</param>
+        /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(T request) where T : class, IRequest
         {
             logger.Info(m => m("Decoupled invocation of request: {0}", request.Id));
@@ -150,6 +221,10 @@ namespace paramore.brighter.commandprocessor
                 });
         }
 
+        /// <summary>
+        /// Reposts the specified message identifier.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
         public void Repost(Guid messageId)
         {
             var requestedMessageid = messageId; //avoid closure on this
