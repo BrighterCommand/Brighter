@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="RequestContext.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -23,16 +36,33 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Class RequestContext.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
     public class RequestContext : IRequestContext
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestContext"/> class.
+        /// </summary>
         public RequestContext()
         {
             Bag = new Dictionary<string, object>();
         }
 
+        /// <summary>
+        /// Gets the bag.
+        /// </summary>
+        /// <value>The bag.</value>
         public Dictionary<string, object> Bag { get; private set; }
+        /// <summary>
+        /// Gets the policies.
+        /// </summary>
+        /// <value>The policies.</value>
         public IAmAPolicyRegistry Policies { get; set; }
     }
 }

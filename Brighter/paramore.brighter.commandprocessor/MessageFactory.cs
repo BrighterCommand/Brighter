@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-29-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-29-2014
+// ***********************************************************************
+// <copyright file="MessageFactory.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,15 +37,29 @@ THE SOFTWARE. */
 
 using System;
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Class MessageFactory.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
     public static class MessageFactory
     {
+        /// <summary>
+        /// Creates the empty message.
+        /// </summary>
+        /// <returns>Message.</returns>
         public static Message CreateEmptyMessage()
         {
             return new Message();
         }
-        
+
+        /// <summary>
+        /// Creates the quit message.
+        /// </summary>
+        /// <returns>Message.</returns>
         public static Message CreateQuitMessage()
         {
             return new Message(new MessageHeader(Guid.Empty, string.Empty, MessageType.MT_QUIT), new MessageBody(string.Empty));

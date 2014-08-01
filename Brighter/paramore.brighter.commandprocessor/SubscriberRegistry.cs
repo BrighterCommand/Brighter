@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-02-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="SubscriberRegistry.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,18 +38,34 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
+/// <summary>
+/// The commandprocessor namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Class SubscriberRegistry.
+    /// </summary>
     public class SubscriberRegistry : IAmASubscriberRegistry, IEnumerable<KeyValuePair<Type, List<Type>>>
     {
-        readonly Dictionary<Type, List<Type>> observers = new Dictionary<Type, List<Type>>(); 
+        readonly Dictionary<Type, List<Type>> observers = new Dictionary<Type, List<Type>>();
 
+        /// <summary>
+        /// Gets this instance.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the t request.</typeparam>
+        /// <returns>IEnumerable&lt;Type&gt;.</returns>
         public IEnumerable<Type> Get<TRequest>() where TRequest : class, IRequest
         {
             var observed = observers.ContainsKey(typeof (TRequest));
             return observed ? observers[typeof (TRequest)] : new List<Type>();
         }
 
+        /// <summary>
+        /// Registers this instance.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the t request.</typeparam>
+        /// <typeparam name="TImplementation">The type of the t implementation.</typeparam>
         public void Register<TRequest, TImplementation>() where TRequest: class, IRequest where TImplementation: class, IHandleRequests<TRequest>
         {
             Add(typeof(TRequest), typeof(TImplementation));
@@ -50,6 +79,10 @@ namespace paramore.brighter.commandprocessor
                 observers[requestType].Add(handlerType);
         }
 
+        /// <summary>
+        /// Returns an enumerator that iterates through the collection.
+        /// </summary>
+        /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
         public IEnumerator<KeyValuePair<Type, List<Type>>> GetEnumerator()
         {
             return observers.GetEnumerator();

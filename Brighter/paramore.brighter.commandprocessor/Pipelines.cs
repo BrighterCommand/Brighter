@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="Pipelines.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -24,12 +37,23 @@ THE SOFTWARE. */
 using System.Collections;
 using System.Collections.Generic;
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Class Pipelines.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
+    /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class Pipelines<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest
     {
         private readonly List<IHandleRequests<TRequest>> filters = new List<IHandleRequests<TRequest>>();
 
+        /// <summary>
+        /// Returns an enumerator that iterates through the collection.
+        /// </summary>
+        /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
         public IEnumerator<IHandleRequests<TRequest>> GetEnumerator()
         {
             return filters.GetEnumerator();
@@ -40,6 +64,10 @@ namespace paramore.brighter.commandprocessor
             return GetEnumerator();
         }
 
+        /// <summary>
+        /// Adds the specified handler.
+        /// </summary>
+        /// <param name="handler">The handler.</param>
         public void Add(IHandleRequests<TRequest> handler)
         {
             filters.Add(handler);

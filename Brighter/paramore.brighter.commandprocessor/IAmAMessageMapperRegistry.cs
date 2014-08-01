@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-02-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-15-2014
+// ***********************************************************************
+// <copyright file="IAmAMessageMapperRegistry.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,11 +36,27 @@ THE SOFTWARE. */
 
 using System;
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Interface IAmAMessageMapperRegistry{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
     public interface IAmAMessageMapperRegistry 
     {
+        /// <summary>
+        /// Gets this instance.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns>IAmAMessageMapper&lt;T&gt;.</returns>
         IAmAMessageMapper<T> Get<T>() where T : class, IRequest;
+        /// <summary>
+        /// Registers this instance.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the t request.</typeparam>
+        /// <typeparam name="TMessageMapper">The type of the t message mapper.</typeparam>
         void Register<TRequest, TMessageMapper>() where TRequest: class, IRequest where TMessageMapper : class, IAmAMessageMapper<TRequest>;
     }
 }

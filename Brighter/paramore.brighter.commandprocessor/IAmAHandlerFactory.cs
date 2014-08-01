@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-02-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="IAmAHandlerFactory.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,11 +36,26 @@ THE SOFTWARE. */
 
 using System;
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Interface IAmAHandlerFactory{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
     public interface IAmAHandlerFactory
     {
+        /// <summary>
+        /// Creates the specified handler type.
+        /// </summary>
+        /// <param name="handlerType">Type of the handler.</param>
+        /// <returns>IHandleRequests.</returns>
         IHandleRequests Create(Type handlerType);
+        /// <summary>
+        /// Releases the specified handler.
+        /// </summary>
+        /// <param name="handler">The handler.</param>
         void Release(IHandleRequests handler);
     }
 }

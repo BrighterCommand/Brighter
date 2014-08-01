@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="HandlerTiming.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,11 +34,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Enum HandlerTiming{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
     public enum HandlerTiming
     {
+        /// <summary>
+        /// The before{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+        /// </summary>
         Before = 0,
+        /// <summary>
+        /// The after{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+        /// </summary>
         After = 1
     }
 }

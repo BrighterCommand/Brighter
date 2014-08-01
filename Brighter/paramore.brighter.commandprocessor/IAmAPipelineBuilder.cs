@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="IAmAPipelineBuilder.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -23,10 +36,22 @@ THE SOFTWARE. */
 
 using System;
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Interface IAmAPipelineBuilder{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
+    /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public interface IAmAPipelineBuilder<TRequest> : IDisposable where TRequest : class, IRequest 
     {
+        /// <summary>
+        /// Builds the specified request context.
+        /// </summary>
+        /// <param name="requestContext">The request context.</param>
+        /// <returns>Pipelines&lt;TRequest&gt;.</returns>
         Pipelines<TRequest> Build(IRequestContext requestContext);
     }
 }

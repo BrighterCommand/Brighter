@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-02-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="PolicyRegistry.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -25,22 +38,42 @@ using System.Collections;
 using System.Collections.Generic;
 using Polly;
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Class PolicyRegistry.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
     public class PolicyRegistry : IAmAPolicyRegistry, IEnumerable<KeyValuePair<string, Policy>>
     {
         readonly Dictionary<string, Policy> policies = new Dictionary<string, Policy>();
 
+        /// <summary>
+        /// Gets the specified policy name.
+        /// </summary>
+        /// <param name="policyName">Name of the policy.</param>
+        /// <returns>Policy.</returns>
         public Policy Get(string policyName)
         {
             return policies.ContainsKey(policyName) ? policies[policyName] : null;
         }
 
+        /// <summary>
+        /// Adds the specified policy name.
+        /// </summary>
+        /// <param name="policyName">Name of the policy.</param>
+        /// <param name="policy">The policy.</param>
         public void Add(string policyName, Policy policy)
         {
             policies.Add(policyName, policy);
         }
 
+        /// <summary>
+        /// Returns an enumerator that iterates through the collection.
+        /// </summary>
+        /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
         public IEnumerator<KeyValuePair<string, Policy>> GetEnumerator()
         {
             return policies.GetEnumerator();
