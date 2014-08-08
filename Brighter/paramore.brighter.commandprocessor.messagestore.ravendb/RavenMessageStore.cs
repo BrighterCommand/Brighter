@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messagestore.ravendb
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="RavenMessageStore.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,19 +40,35 @@ using Common.Logging;
 using Newtonsoft.Json;
 using Raven.Client;
 
+/// <summary>
+/// The ravendb namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.messagestore.ravendb
 {
+    /// <summary>
+    /// Class RavenMessageStore.
+    /// </summary>
     public class RavenMessageStore : IAmAMessageStore<Message>
     {
         private readonly IDocumentStore documentStore;
         private readonly ILog logger;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RavenMessageStore"/> class.
+        /// </summary>
+        /// <param name="documentStore">The document store.</param>
+        /// <param name="logger">The logger.</param>
         public RavenMessageStore(IDocumentStore documentStore, ILog logger)
         {
             this.documentStore = documentStore;
             this.logger = logger;
         }
 
+        /// <summary>
+        /// Adds the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <returns>Task.</returns>
         public async Task Add(Message message)
         {
             logger.Debug(m => m("Adding message to RavenDb Message Store: {0}", JsonConvert.SerializeObject(message)));
@@ -51,6 +80,11 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
             }
         }
 
+        /// <summary>
+        /// Gets the specified message identifier.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
+        /// <returns>Task&lt;Message&gt;.</returns>
         public Task<Message> Get(Guid messageId)
         {
             using (var session = documentStore.OpenAsyncSession())

@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-29-2014
+// ***********************************************************************
+// <copyright file="Consumer.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,22 +38,59 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 
+/// <summary>
+/// The serviceactivator namespace.
+/// </summary>
 namespace paramore.brighter.serviceactivator
 {
+    /// <summary>
+    /// Enum ConsumerState
+    /// </summary>
     public enum ConsumerState
     {
+        /// <summary>
+        /// The shut
+        /// </summary>
         Shut=0,
+        /// <summary>
+        /// The open
+        /// </summary>
         Open=1
     }
 
+    /// <summary>
+    /// Class Consumer.
+    /// </summary>
     public class Consumer
     {
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         public ConnectionName Name { get; set; }
+        /// <summary>
+        /// Gets the performer.
+        /// </summary>
+        /// <value>The performer.</value>
         public IAmAPerformer Performer { get; private set; }
+        /// <summary>
+        /// Gets or sets the state.
+        /// </summary>
+        /// <value>The state.</value>
         public ConsumerState State { get; set; }
+        /// <summary>
+        /// Gets or sets the job.
+        /// </summary>
+        /// <value>The job.</value>
         public Task Job { get; set; }
 
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Consumer"/> class.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="channel">The channel.</param>
+        /// <param name="messagePump">The message pump.</param>
         public Consumer(ConnectionName name, IAmAnInputChannel channel, IAmAMessagePump messagePump)
         {
             Name = name;
@@ -48,12 +98,18 @@ namespace paramore.brighter.serviceactivator
             State = ConsumerState.Shut;
         }
 
+        /// <summary>
+        /// Opens this instance.
+        /// </summary>
         public void Open()
         {
             State = ConsumerState.Open;
             Job = Performer.Run();
         }
 
+        /// <summary>
+        /// Shuts this instance.
+        /// </summary>
         public void Shut()
         {
             if (State == ConsumerState.Open)

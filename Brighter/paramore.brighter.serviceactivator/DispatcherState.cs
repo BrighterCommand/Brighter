@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="DispatcherState.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,13 +35,31 @@ THE SOFTWARE. */
 
 #endregion
 
+/// <summary>
+/// The serviceactivator namespace.
+/// </summary>
 namespace paramore.brighter.serviceactivator
 {
+    /// <summary>
+    /// Enum DispatcherState
+    /// </summary>
     public enum DispatcherState
     {
+        /// <summary>
+        /// The d s_ notready
+        /// </summary>
         DS_NOTREADY = 0,
+        /// <summary>
+        /// The d s_ awaiting
+        /// </summary>
         DS_AWAITING = 1,
+        /// <summary>
+        /// The d s_ running
+        /// </summary>
         DS_RUNNING = 2,
+        /// <summary>
+        /// The d s_ stopped
+        /// </summary>
         DS_STOPPED = 3
     }
 }

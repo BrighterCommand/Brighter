@@ -57,6 +57,9 @@ namespace paramore.brighter.commandprocessor
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HandlerConfiguration"/> class.
+        /// We use the <see cref="IAmASubscriberRegistry"/> instance to look up subscribers for messages when dispatching. Use <see cref="SubscriberRegistry"/> unless
+        /// you have some reason to override. We expect a <see cref="CommandProcessor.Send{T}(T)"/> to have one registered handler
+        /// We use the 
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>

@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="Dispatcher.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -30,19 +43,40 @@ using Common.Logging;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.extensions;
 
+/// <summary>
+/// The serviceactivator namespace.
+/// </summary>
 namespace paramore.brighter.serviceactivator
 {
+    /// <summary>
+    /// Class Dispatcher.
+    /// </summary>
     public class Dispatcher : IDispatcher
     {
         private readonly IAmACommandProcessor commandProcessor;
         private readonly IAmAMessageMapperRegistry messageMapperRegistry;
         private readonly ILog logger;
         private Task controlTask;
-        private readonly IList<Task> tasks = new SynchronizedCollection<Task>(); 
+        private readonly IList<Task> tasks = new SynchronizedCollection<Task>();
 
+        /// <summary>
+        /// Gets the consumers.
+        /// </summary>
+        /// <value>The consumers.</value>
         public IList<Consumer> Consumers { get; private set; }
+        /// <summary>
+        /// Gets the state.
+        /// </summary>
+        /// <value>The state.</value>
         public DispatcherState State { get; private set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Dispatcher"/> class.
+        /// </summary>
+        /// <param name="commandProcessor">The command processor.</param>
+        /// <param name="messageMapperRegistry">The message mapper registry.</param>
+        /// <param name="connections">The connections.</param>
+        /// <param name="logger">The logger.</param>
         public Dispatcher(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, IEnumerable<Connection> connections, ILog logger)
         {
             this.commandProcessor = commandProcessor;
@@ -57,6 +91,9 @@ namespace paramore.brighter.serviceactivator
             logger.Debug(m => m("Dispatcher is ready to recieve"));
         }
 
+        /// <summary>
+        /// Recieves this instance.
+        /// </summary>
         public void Recieve()
         {
             controlTask = Task.Factory.StartNew(() =>
@@ -98,6 +135,10 @@ namespace paramore.brighter.serviceactivator
             TaskCreationOptions.LongRunning);
         }
 
+        /// <summary>
+        /// Ends this instance.
+        /// </summary>
+        /// <returns>Task.</returns>
         public Task End()
         {
             if (State == DispatcherState.DS_RUNNING)
@@ -109,6 +150,10 @@ namespace paramore.brighter.serviceactivator
             return controlTask;
         }
 
+        /// <summary>
+        /// Shuts the specified connection.
+        /// </summary>
+        /// <param name="connection">The connection.</param>
         public void Shut(Connection connection)
         {
             if (State == DispatcherState.DS_RUNNING)
@@ -118,6 +163,11 @@ namespace paramore.brighter.serviceactivator
             }
         }
 
+        /// <summary>
+        /// Opens the specified connection.
+        /// </summary>
+        /// <param name="connection">The connection.</param>
+        /// <exception cref="System.InvalidOperationException">Use Recieve to start the dispatcher; use Open to start a shut or added connection</exception>
         public void Open(Connection connection)
         {
             if (State == DispatcherState.DS_RUNNING)

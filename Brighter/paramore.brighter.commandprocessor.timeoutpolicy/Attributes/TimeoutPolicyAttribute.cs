@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.timeoutpolicy
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="TimeoutPolicyAttribute.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -24,22 +37,42 @@ THE SOFTWARE. */
 using System;
 using paramore.brighter.commandprocessor.timeoutpolicy.Handlers;
 
+/// <summary>
+/// The Attributes namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.timeoutpolicy.Attributes
 {
+    /// <summary>
+    /// Class TimeoutPolicyAttribute.
+    /// </summary>
     public class TimeoutPolicyAttribute : RequestHandlerAttribute
     {
         private readonly int milliseconds;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TimeoutPolicyAttribute"/> class.
+        /// </summary>
+        /// <param name="milliseconds">The milliseconds.</param>
+        /// <param name="step">The step.</param>
+        /// <param name="timing">The timing.</param>
         public TimeoutPolicyAttribute(int milliseconds, int step, HandlerTiming timing = HandlerTiming.Before) : base(step, timing)
         {
             this.milliseconds = milliseconds;
         }
 
+        /// <summary>
+        /// Initializers the parameters.
+        /// </summary>
+        /// <returns>System.Object[].</returns>
         public override object[] InitializerParams()
         {
             return new object[] {milliseconds};
         }
 
+        /// <summary>
+        /// Gets the type of the handler.
+        /// </summary>
+        /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
             return typeof (TimeoutPolicyHandler<>);

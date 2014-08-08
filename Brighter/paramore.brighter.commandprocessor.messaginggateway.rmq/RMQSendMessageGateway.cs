@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
+// Author           : ian
+// Created          : 07-29-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-29-2014
+// ***********************************************************************
+// <copyright file="RMQSendMessageGateway.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -31,12 +44,27 @@ using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
 
+/// <summary>
+/// The rmq namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
+    /// <summary>
+    /// Class RMQSendMessageGateway.
+    /// </summary>
     public class RMQSendMessageGateway : RMQMessageGateway, IAmASendMessageGateway
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
         public RMQSendMessageGateway(ILog logger) : base(logger){}
 
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <returns>Task.</returns>
         public Task Send(Message message)
         {
             //RabbitMQ .NET Client does not have an async publish, so fake this for now as we want to support messaging frameworks that do have this option
@@ -89,6 +117,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             channel.BasicPublish(configuration.Exchange.Name, message.Header.Topic, false, false, basicProperties, Encoding.UTF8.GetBytes(message.Body.Value));
         }
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
         public void Dispose()
         {
             CloseConnection();

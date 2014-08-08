@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.exceptionpolicy
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="UsePolicyAtttribute.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,22 +37,41 @@ THE SOFTWARE. */
 using System;
 using paramore.brighter.commandprocessor.exceptionpolicy.Handlers;
 
+/// <summary>
+/// The Attributes namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.exceptionpolicy.Attributes
 {
+    /// <summary>
+    /// Class UsePolicyAttribute.
+    /// </summary>
     public class UsePolicyAttribute : RequestHandlerAttribute
     {
         private readonly string policy;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UsePolicyAttribute"/> class.
+        /// </summary>
+        /// <param name="policy">The policy.</param>
+        /// <param name="step">The step.</param>
         public UsePolicyAttribute(string policy, int step) : base(step, HandlerTiming.Before)
         {
             this.policy = policy;
         }
 
+        /// <summary>
+        /// Initializers the parameters.
+        /// </summary>
+        /// <returns>System.Object[].</returns>
         public override object[] InitializerParams()
         {
             return new object[] {policy};
         }
 
+        /// <summary>
+        /// Gets the type of the handler.
+        /// </summary>
+        /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
             return typeof (ExceptionPolicyHandler<>);

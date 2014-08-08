@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-29-2014
+// ***********************************************************************
+// <copyright file="RMQReceiveMessageGateway.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -29,14 +42,28 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using paramore.brighter.commandprocessor.extensions;
 
+/// <summary>
+/// The rmq namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
+    /// <summary>
+    /// Class RMQReceiveMessageGateway.
+    /// </summary>
     public class RMQReceiveMessageGateway : RMQMessageGateway, IAmAReceiveMessageGateway 
     {
         const bool autoAck = false;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
         public RMQReceiveMessageGateway(ILog logger):base(logger) {}
 
+        /// <summary>
+        /// Acknowledges the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
          {
             if (Channel != null)
@@ -46,6 +73,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
          }
 
+        /// <summary>
+        /// Purges the specified queue name.
+        /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
         public void Purge(string queueName)
         {
             if (Channel != null)
@@ -54,7 +85,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 Channel.QueuePurge(queueName);
             }
         }
-        
+
+        /// <summary>
+        /// Rejects the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         public void Reject(Message message, bool requeue)
         {
             if (Channel != null)
@@ -65,6 +101,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         }
 
 
+        /// <summary>
+        /// Receives the specified queue name.
+        /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <returns>Message.</returns>
         public Message Receive(string queueName, int timeoutInMilliseconds)
         {
 
@@ -103,6 +145,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         }
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
         public void Dispose()
         {
             CloseConnection();

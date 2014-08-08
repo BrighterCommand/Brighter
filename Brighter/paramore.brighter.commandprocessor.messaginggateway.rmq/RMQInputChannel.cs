@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-29-2014
+// ***********************************************************************
+// <copyright file="RMQInputChannel.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,22 +39,42 @@ using System;
 using System.Collections.Concurrent;
 using paramore.brighter.serviceactivator;
 
+/// <summary>
+/// The rmq namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
+    /// <summary>
+    /// Class RMQInputChannel.
+    /// </summary>
     public class RMQInputChannel : IAmAnInputChannel
     {
         private readonly string queueName;
         private readonly IAmAReceiveMessageGateway gateway;
         private readonly ConcurrentQueue<Message> queue = new ConcurrentQueue<Message>();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RMQInputChannel"/> class.
+        /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="gateway">The gateway.</param>
         public RMQInputChannel(string queueName, IAmAReceiveMessageGateway gateway)
         {
             this.queueName = queueName;
             this.gateway = gateway;
         }
 
+        /// <summary>
+        /// Gets the name.
+        /// </summary>
+        /// <value>The name.</value>
         public ChannelName Name {get { return new ChannelName(queueName); } }
 
+        /// <summary>
+        /// Receives the specified timeoutin milliseconds.
+        /// </summary>
+        /// <param name="timeoutinMilliseconds">The timeoutin milliseconds.</param>
+        /// <returns>Message.</returns>
         public Message Receive(int timeoutinMilliseconds)
         {
             Message message;
@@ -52,21 +85,37 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return message;
         }
 
+        /// <summary>
+        /// Acknowledges the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
             gateway.Acknowledge(message);
         }
 
+        /// <summary>
+        /// Rejects the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void Reject(Message message)
         {
             gateway.Reject(message, false);
         }
 
+        /// <summary>
+        /// Stops this instance.
+        /// </summary>
         public void Stop()
         {
             queue.Enqueue(MessageFactory.CreateQuitMessage());
         }
 
+        /// <summary>
+        /// Gets the length.
+        /// </summary>
+        /// <value>The length.</value>
+        /// <exception cref="System.NotImplementedException"></exception>
         public int Length {
             get { return queue.Count; }
             set { throw new NotImplementedException(); } 
