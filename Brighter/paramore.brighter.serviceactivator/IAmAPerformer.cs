@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="IAmAPerformer.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -24,11 +37,24 @@ THE SOFTWARE. */
 
 using System.Threading.Tasks;
 
+/// <summary>
+/// The serviceactivator namespace.
+/// </summary>
 namespace paramore.brighter.serviceactivator
 {
+    /// <summary>
+    /// Interface IAmAPerformer
+    /// </summary>
     public interface IAmAPerformer
     {
+        /// <summary>
+        /// Stops this instance.
+        /// </summary>
         void Stop();
+        /// <summary>
+        /// Runs this instance.
+        /// </summary>
+        /// <returns>Task.</returns>
         Task Run();
     }
 }

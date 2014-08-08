@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messagestore.ravendb
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="MessageStoreFactory.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -25,8 +38,14 @@ using System;
 using Raven.Client;
 using Raven.Client.Document;
 
+/// <summary>
+/// The ravendb namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.messagestore.ravendb
 {
+    /// <summary>
+    /// Class MessageStoreFactory.
+    /// </summary>
     public class MessageStoreFactory
     {
 
@@ -42,6 +61,10 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
             return ds;
         });
 
+        /// <summary>
+        /// Gets the document store.
+        /// </summary>
+        /// <value>The document store.</value>
         public static IDocumentStore DocumentStore
         {
             get { return DOCUMENT_STORE.Value; }

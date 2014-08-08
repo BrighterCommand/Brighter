@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.timeoutpolicy
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="TimeoutPolicyHandler.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* 
 ------------------------------------------------------------------------------------------------  
@@ -64,21 +77,44 @@ using System.Threading.Tasks;
 using Common.Logging;
 
 
+/// <summary>
+/// The Handlers namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.timeoutpolicy.Handlers
 {
+    /// <summary>
+    /// Class TimeoutPolicyHandler.
+    /// </summary>
+    /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class TimeoutPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
+        /// <summary>
+        /// The contex t_ ba g_ timeou t_ cancellatio n_ token
+        /// </summary>
         public const string CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN = "TimeoutCancellationToken"; 
         private int milliseconds;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TimeoutPolicyHandler{TRequest}"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
         public TimeoutPolicyHandler(ILog logger) : base(logger)
         {}
 
+        /// <summary>
+        /// Initializes from attribute parameters.
+        /// </summary>
+        /// <param name="initializerList">The initializer list.</param>
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
             milliseconds = (int) initializerList[0];
         }
 
+        /// <summary>
+        /// Handles the specified command.
+        /// </summary>
+        /// <param name="command">The command.</param>
+        /// <returns>TRequest.</returns>
         public override TRequest Handle(TRequest command)
         {
             var cts = new CancellationTokenSource();

@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-29-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-29-2014
+// ***********************************************************************
+// <copyright file="IAmAReceiveMessageGateway.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -24,13 +37,38 @@ THE SOFTWARE. */
 using System;
 using paramore.brighter.commandprocessor;
 
+/// <summary>
+/// The serviceactivator namespace.
+/// </summary>
 namespace paramore.brighter.serviceactivator
 {
+    /// <summary>
+    /// Interface IAmAReceiveMessageGateway
+    /// </summary>
     public interface IAmAReceiveMessageGateway: IDisposable 
     {
+        /// <summary>
+        /// Receives the specified queue name.
+        /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <returns>Message.</returns>
         Message Receive(string queueName, int timeoutInMilliseconds);
+        /// <summary>
+        /// Acknowledges the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         void Acknowledge(Message message);
+        /// <summary>
+        /// Rejects the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         void Reject(Message message, bool requeue);
+        /// <summary>
+        /// Purges the specified queue name.
+        /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
         void Purge(string queueName);
     }
 }

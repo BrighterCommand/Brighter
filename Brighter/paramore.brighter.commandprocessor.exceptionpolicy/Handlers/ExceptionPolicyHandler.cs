@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.exceptionpolicy
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="ExceptionPolicyHandler.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,15 +38,31 @@ using System;
 using Common.Logging;
 using Polly;
 
+/// <summary>
+/// The Handlers namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.exceptionpolicy.Handlers
 {
+    /// <summary>
+    /// Class ExceptionPolicyHandler.
+    /// </summary>
+    /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         private Policy policy;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExceptionPolicyHandler{TRequest}"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
         public ExceptionPolicyHandler(ILog logger) : base(logger)
         {}
 
+        /// <summary>
+        /// Initializes from attribute parameters.
+        /// </summary>
+        /// <param name="initializerList">The initializer list.</param>
+        /// <exception cref="System.ArgumentException">Could not find the policy for this attribute, did you register it with the command processor's container;initializerList</exception>
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
             //we expect the first and only parameter to be a string
@@ -43,6 +72,11 @@ namespace paramore.brighter.commandprocessor.exceptionpolicy.Handlers
                 throw new ArgumentException("Could not find the policy for this attribute, did you register it with the command processor's container", "initializerList");
         }
 
+        /// <summary>
+        /// Handles the specified command.
+        /// </summary>
+        /// <param name="command">The command.</param>
+        /// <returns>TRequest.</returns>
         public override TRequest Handle(TRequest command)
         {
             return policy.Execute(() => base.Handle(command));

@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-29-2014
+// ***********************************************************************
+// <copyright file="RMQInputChannelfactory.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,22 +36,42 @@ THE SOFTWARE. */
 
 using paramore.brighter.serviceactivator;
 
+/// <summary>
+/// The rmq namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
+    /// <summary>
+    /// Class RMQInputChannelfactory.
+    /// </summary>
     public class RMQInputChannelfactory : IAmAChannelFactory 
     {
         private readonly RMQReceiveMessageGateway gateway;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RMQInputChannelfactory"/> class.
+        /// </summary>
+        /// <param name="gateway">The gateway.</param>
         public RMQInputChannelfactory(RMQReceiveMessageGateway gateway)
         {
             this.gateway = gateway;
         }
 
+        /// <summary>
+        /// Creates the input channel.
+        /// </summary>
+        /// <param name="channelName">Name of the channel.</param>
+        /// <returns>IAmAnInputChannel.</returns>
         public IAmAnInputChannel CreateInputChannel(string channelName)
         {
             return new RMQInputChannel(channelName, gateway);
         }
 
+        /// <summary>
+        /// Creates the output channel.
+        /// </summary>
+        /// <param name="channelName">Name of the channel.</param>
+        /// <returns>IAmAnInputChannel.</returns>
         public IAmAnInputChannel CreateOutputChannel(string channelName)
         {
             return new RMQInputChannel(channelName, gateway);

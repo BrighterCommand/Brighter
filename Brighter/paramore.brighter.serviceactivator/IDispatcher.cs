@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="IDispatcher.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,13 +37,34 @@ THE SOFTWARE. */
 
 using System.Threading.Tasks;
 
+/// <summary>
+/// The serviceactivator namespace.
+/// </summary>
 namespace paramore.brighter.serviceactivator
 {
+    /// <summary>
+    /// Interface IDispatcher
+    /// </summary>
     public interface IDispatcher
     {
+        /// <summary>
+        /// Ends this instance.
+        /// </summary>
+        /// <returns>Task.</returns>
         Task End();
+        /// <summary>
+        /// Opens the specified connection.
+        /// </summary>
+        /// <param name="connection">The connection.</param>
         void Open(Connection connection);
+        /// <summary>
+        /// Recieves this instance.
+        /// </summary>
         void Recieve();
+        /// <summary>
+        /// Shuts the specified connection.
+        /// </summary>
+        /// <param name="connection">The connection.</param>
         void Shut(Connection connection);
     }
 }

@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="IAmAMessagePump.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,13 +38,34 @@ THE SOFTWARE. */
 using Common.Logging;
 using paramore.brighter.commandprocessor;
 
+/// <summary>
+/// The serviceactivator namespace.
+/// </summary>
 namespace paramore.brighter.serviceactivator
 {
+    /// <summary>
+    /// Interface IAmAMessagePump
+    /// </summary>
     public interface IAmAMessagePump
     {
+        /// <summary>
+        /// Runs this instance.
+        /// </summary>
         void Run();
+        /// <summary>
+        /// Gets or sets the timeout in milliseconds.
+        /// </summary>
+        /// <value>The timeout in milliseconds.</value>
         int TimeoutInMilliseconds { get; set; }
+        /// <summary>
+        /// Gets or sets the channel.
+        /// </summary>
+        /// <value>The channel.</value>
         IAmAnInputChannel Channel { get; set; }
+        /// <summary>
+        /// Gets or sets the logger.
+        /// </summary>
+        /// <value>The logger.</value>
         ILog Logger { get; set; }
     }
 }

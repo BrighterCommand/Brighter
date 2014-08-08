@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
+// Author           : ian
+// Created          : 07-29-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-29-2014
+// ***********************************************************************
+// <copyright file="RMQMessageGateway.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -26,17 +39,45 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayCo
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
+/// <summary>
+/// The rmq namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
+    /// <summary>
+    /// Class RMQMessageGateway.
+    /// </summary>
     public class RMQMessageGateway
     {
+        /// <summary>
+        /// The logger
+        /// </summary>
         protected ILog Logger;
+        /// <summary>
+        /// The configuration
+        /// </summary>
         protected RMQMessagingGatewayConfigurationSection Configuration;
+        /// <summary>
+        /// The connection factory
+        /// </summary>
         protected ConnectionFactory ConnectionFactory;
+        /// <summary>
+        /// The connection
+        /// </summary>
         protected IConnection Connection;
+        /// <summary>
+        /// The channel
+        /// </summary>
         protected IModel Channel;
+        /// <summary>
+        /// The connection failure
+        /// </summary>
         protected BrokerUnreachableException ConnectionFailure;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RMQMessageGateway"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
         public RMQMessageGateway(ILog logger)
         {
             this.Logger = logger;
@@ -44,6 +85,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             ConnectionFactory = new ConnectionFactory{Uri = Configuration.AMPQUri.Uri.ToString()};
         }
 
+        /// <summary>
+        /// Connects the specified queue name.
+        /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         protected bool Connect(string queueName)
         {
             try
@@ -89,6 +135,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return channel;
         }
 
+        /// <summary>
+        /// Connects the specified connection factory.
+        /// </summary>
+        /// <param name="connectionFactory">The connection factory.</param>
+        /// <returns>IConnection.</returns>
         protected IConnection Connect(ConnectionFactory connectionFactory)
         {
             //create the connection
@@ -96,6 +147,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return connection;
         }
 
+        /// <summary>
+        /// Closes the connection.
+        /// </summary>
         protected void CloseConnection()
         {
             if (Connection != null)
