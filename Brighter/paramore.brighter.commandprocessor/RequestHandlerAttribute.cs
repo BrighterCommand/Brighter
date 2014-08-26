@@ -43,6 +43,10 @@ namespace paramore.brighter.commandprocessor
 {
     /// <summary>
     /// Class RequestHandlerAttribute.
+    /// To satisfy orthogonal concerns it is possible to create a pipeline of <see cref="IHandleRequests"/> handlers. The 'target' handler should handle the domain
+    /// logic, the other handlers in the pipeline should handle Quality of Service concerns or similar orthogonal concerns. We use an approach of attributing the <see cref="IHandleRequests{T}.Handle"/>
+    /// method to indicate the other handlers in the pipeline that handle orthogonal concerns. This approach is preferred over fluent-pipeline configuration
+    /// because it allows you to easily see orthogonal concerns within the context of the target handler. In this sense Brighter is 'opinionated' about approach.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     public abstract class RequestHandlerAttribute : Attribute

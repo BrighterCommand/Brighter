@@ -37,15 +37,14 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using paramore.brighter.commandprocessor.extensions;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class Interpreter.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class Interpreter
+    /// The <see cref="Interpreter{T}"/> is the dispatcher element of the Command Dispatcher. It looks up the <see cref="IRequest"/> in the <see cref="SubscriberRegistry"/>
+    /// to find registered <see cref="IHandleRequests"/> and returns to the PipelineBuilder, which in turn will call the client provided <see cref="IAmAHandlerFactory"/>
+    /// to create instances of the the handlers.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     internal class Interpreter<TRequest> where TRequest : class, IRequest

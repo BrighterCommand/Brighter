@@ -39,13 +39,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class MessageMapperRegistry.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class MessageMapperRegistry
+    /// In order to use a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> approach we require you to provide
+    /// a <see cref="IAmAMessageMapper"/> to map between <see cref="Command"/> or <see cref="Event"/> and a <see cref="Message"/> 
+    /// registered via <see cref="IAmAMessageMapperRegistry"/>
+    /// This is a default implementation of<see cref="IAmAMessageMapperRegistry"/> which is suitable for most usages, the interface is provided mainly for testing
     /// </summary>
     public class MessageMapperRegistry : IAmAMessageMapperRegistry, IEnumerable<KeyValuePair<Type, Type>>
     {

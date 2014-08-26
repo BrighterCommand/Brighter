@@ -36,13 +36,14 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmAHandlerFactory{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmAHandlerFactory
+    /// We do not know how to create instances of <see cref="IHandleRequests"/> implemented by your application, but need to create instances to instantiate a pipeline.
+    /// To achieve this we require clients of the Paramore.Brighter.CommandProcessor library need to implement <see cref="IAmAHandlerFactory"/> to provide 
+    /// instances of their <see cref="IHandleRequests"/> types. You need to provide a Handler Factory to support all <see cref="IHandleRequests"/> registered 
+    /// with <see cref="IAmASubscriberRegistry"/>. Typically you would use an IoC container to implement the Handler Factory.
     /// </summary>
     public interface IAmAHandlerFactory
     {

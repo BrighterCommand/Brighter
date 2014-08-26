@@ -37,13 +37,11 @@ THE SOFTWARE. */
 using System.Collections;
 using System.Collections.Generic;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class Pipelines.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class Pipelines
+    /// A collection of <see cref="IHandleRequests"/> instances
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class Pipelines<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest

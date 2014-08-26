@@ -35,9 +35,6 @@ THE SOFTWARE. */
 #endregion
 
 using Common.Logging;
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 using Polly;
 
 namespace paramore.brighter.commandprocessor

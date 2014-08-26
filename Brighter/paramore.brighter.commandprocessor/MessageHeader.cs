@@ -37,13 +37,11 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Enum MessageType{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Enum MessageType
+    /// The type of a message, used on the receiving side of a Task Queue to handle the message appropriately
     /// </summary>
     public enum MessageType
     {
@@ -70,7 +68,8 @@ namespace paramore.brighter.commandprocessor
     }
 
     /// <summary>
-    /// Class MessageHeader.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class MessageHeader
+    /// The header for a <see cref="Message"/>
     /// </summary>
     public class MessageHeader : IEquatable<MessageHeader>
     {
@@ -85,7 +84,7 @@ namespace paramore.brighter.commandprocessor
         /// <value>The topic.</value>
         public string Topic { get; private set; }
         /// <summary>
-        /// Gets the type of the message.
+        /// Gets the type of the message. Used for routing the message to a handler
         /// </summary>
         /// <value>The type of the message.</value>
         public MessageType MessageType { get; private set; }

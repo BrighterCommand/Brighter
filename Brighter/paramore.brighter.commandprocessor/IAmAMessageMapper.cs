@@ -34,18 +34,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmAMessageMapper{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmAMessageMapper
+    /// Map between a <see cref="Command"/> or an <see cref="Event"/> and a <see cref="Message"/>. You must implement this for each Command or Message you intend to send over
+    /// a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> 
     /// </summary>
     public interface IAmAMessageMapper{}
 
     /// <summary>
-    /// Interface IAmAMessageMapper{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmAMessageMapper
+    /// In order to use a Task Queue
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public interface IAmAMessageMapper<TRequest>: IAmAMessageMapper where TRequest : class, IRequest

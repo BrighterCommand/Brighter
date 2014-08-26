@@ -40,13 +40,12 @@ using Common.Logging;
 using Polly;
 using paramore.brighter.commandprocessor.extensions;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class CommandProcessor.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class CommandProcessor.
+    /// Implements both the <a href="http://www.hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher</a> 
+    /// and <a href="http://wiki.hsr.ch/APF/files/CommandProcessor.pdf">Command Processor</a> Design Patterns 
     /// </summary>
     public class CommandProcessor : IAmACommandProcessor
     {

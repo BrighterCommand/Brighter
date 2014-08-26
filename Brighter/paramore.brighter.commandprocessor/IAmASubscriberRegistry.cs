@@ -37,13 +37,13 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmASubscriberRegistry{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmASubscriberRegistry
+    /// In order to map an <see cref="IHandleRequests"/> to a <see cref="Command"/> or an <see cref="Event"/> we need you to register the association
+    /// via the <see cref="SubscriberRegistry"/>
+    /// The default implementation of <see cref="SubscriberRegistry"/> is usable in most instances and this is provided for testing
     /// </summary>
     public interface IAmASubscriberRegistry
     {

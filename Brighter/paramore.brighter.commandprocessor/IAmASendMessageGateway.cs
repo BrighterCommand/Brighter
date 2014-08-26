@@ -15,12 +15,19 @@ using System;
 using System.Threading.Tasks;
 
 /// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// The commandprocessor namespace
 /// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmASendMessageGateway{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmASendMessageGateway
+    /// Abstracts away the Application Layer used to push messages onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+    /// Usually clients do not need to instantiate as access is via an <see cref="IAmAChannel"/> derived class.
+    /// We provide the following default gateway applications
+    /// <list type="bullet">
+    /// <item>AMQP</item>
+    /// <item>RESTML</item>
+    /// </list>
     /// </summary>
     public interface IAmASendMessageGateway: IDisposable
     {

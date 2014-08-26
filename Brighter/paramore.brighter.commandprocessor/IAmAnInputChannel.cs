@@ -35,20 +35,19 @@ THE SOFTWARE. */
 
 #endregion
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmAnInputChannel{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmAnInputChannel
+    /// An <see cref="IAmAChannel"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+    /// and acknowledging receipt of those messages
     /// </summary>
     public interface IAmAnInputChannel : IAmAChannel
     {
         /// <summary>
-        /// Receives the specified timeoutin milliseconds.
+        /// Receives the specified timeout in milliseconds.
         /// </summary>
-        /// <param name="timeoutinMilliseconds">The timeoutin milliseconds.</param>
+        /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
         Message Receive(int timeoutinMilliseconds);
         /// <summary>

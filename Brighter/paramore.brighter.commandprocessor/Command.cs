@@ -36,13 +36,11 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class Command.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class Command. 
+    /// A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
     /// </summary>
     [Serializable]
     public class Command : ICommand

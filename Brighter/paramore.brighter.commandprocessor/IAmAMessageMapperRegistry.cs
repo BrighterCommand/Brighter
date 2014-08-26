@@ -36,13 +36,14 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmAMessageMapperRegistry{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmAMessageMapperRegistry
+    /// In order to use a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> approach we require you to provide
+    /// a <see cref="IAmAMessageMapper"/> to map between <see cref="Command"/> or <see cref="Event"/> and a <see cref="Message"/> 
+    /// registered via <see cref="IAmAMessageMapperRegistry"/>
+    /// The default implementation<see cref="MessageMapperRegistry"/> is suitable for most purposes and the interface is provided for testing
     /// </summary>
     public interface IAmAMessageMapperRegistry 
     {

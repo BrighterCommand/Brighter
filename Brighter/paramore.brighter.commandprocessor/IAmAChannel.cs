@@ -35,13 +35,12 @@ THE SOFTWARE. */
 
 #endregion
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmAChannel{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmAChannel
+    /// A channel is an abstraction for an <a href="http://en.wikipedia.org/wiki/OSI_model">OSI model</a> Application Layer used to provide support for a 
+    /// <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> pattern of dispatch and processing
     /// </summary>
     public interface IAmAChannel
     {

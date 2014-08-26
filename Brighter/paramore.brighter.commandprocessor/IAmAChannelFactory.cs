@@ -35,13 +35,16 @@ THE SOFTWARE. */
 
 #endregion
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmAChannelFactory{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmAChannelFactory
+    /// Creates instances of <see cref="IAmAChannel"/>channels. We provide support for some Application Layer channels, and provide factories for those:
+    /// <list type="bullet">
+    /// <item>AMQP</item>
+    /// <item>RestML</item>
+    /// </list>
+    /// If you need to support other Application Layer protocols, please consider issuing a Pull request for your implementation
     /// </summary>
     public interface IAmAChannelFactory
     {

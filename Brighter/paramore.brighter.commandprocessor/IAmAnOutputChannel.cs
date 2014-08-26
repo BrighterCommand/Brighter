@@ -35,13 +35,11 @@ THE SOFTWARE. */
 
 #endregion
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmAnOutputChannel{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmAnOutputChannel
+    /// An <see cref="IAmAChannel"/> for pushing messages onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     /// </summary>
     public interface IAmAnOutputChannel : IAmAChannel
     {
