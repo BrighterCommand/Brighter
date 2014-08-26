@@ -36,13 +36,11 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The commandprocessor namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
     /// Class RequestLoggingAttribute.
+    /// Provides logging of a request using the <see cref="RequestLoggingHandler{T}"/>
     /// </summary>
     public class RequestLoggingAttribute : RequestHandlerAttribute
     {

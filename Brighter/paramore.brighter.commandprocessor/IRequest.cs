@@ -36,13 +36,11 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IRequest{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IRequest
+    /// Base class of <see cref="Command"/> and <see cref="Event"/>. A request that can be handled by the Command Processor/Dispatcher
     /// </summary>
     public interface IRequest
     {

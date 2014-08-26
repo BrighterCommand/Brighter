@@ -34,13 +34,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmAPipelineTracer{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmAPipelineTracer
+    /// It can be useful to understand what <see cref="IHandleRequests"/> will be called to satisfy a request and their order
+    /// The default implementation of <see cref="PipelineTracer"/> can be used in most instances
     /// </summary>
     public interface IAmAPipelineTracer
     {

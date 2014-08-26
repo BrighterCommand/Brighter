@@ -37,13 +37,10 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class HandlerFactory.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class HandlerFactory
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     internal class HandlerFactory<TRequest> where TRequest : class, IRequest

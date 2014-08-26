@@ -39,13 +39,20 @@ using System.Linq;
 using System.Reflection;
 using Common.Logging;
 
-/// <summary>
-/// The commandprocessor namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
     /// Class RequestHandler.
+    /// A target of the <see cref="CommandProcessor"/> either as the target of the Command Dispatcher to provide the domain logic required to handle the <see cref="Command"/>
+    /// or <see cref="Event"/> or as an orthogonal handler used as part of the Command Processor pipeline.
+    /// We recommend deriving your concrete handler from <see cref="RequestHandler{T}"/> instead of implementing the interface as it provides boilerplate
+    /// code for calling the next handler in sequence in the pipeline and describing the path
+    /// By default the <see cref="Name"/> is based of the Type name, and the <see cref="DescribePath"/> adds that <see cref="Name"/> into the <see cref="IAmAPipelineTracer"/> list.
+    /// By default the <see cref="Handle"/> method will log the calls and forward the call to the handler's <see cref="Successor"/>. You should call 
+    /// <code>
+    /// base.Handle(command); 
+    /// </code>
+    /// within your derived class handler to forward the call to the next handler in the chain.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public abstract class RequestHandler<TRequest> : IHandleRequests<TRequest> where TRequest : class, IRequest

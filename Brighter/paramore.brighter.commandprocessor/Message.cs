@@ -36,13 +36,12 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class Message.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class Message
+    /// A message sent over <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> for asynchronous processing of a <see cref="Command"/>
+    /// or <see cref="Event"/>
     /// </summary>
     public class Message : IEquatable<Message>
     {

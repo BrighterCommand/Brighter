@@ -36,13 +36,13 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class RequestContext.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class RequestContext
+    /// Any pipeline has a request context that allows you to flow information between instances of <see cref="IHandleRequests"/>
+    /// The default in-memory <see cref="RequestContext"/> created by an <see cref="InMemoryRequestContextFactory"/> is suitable for most purposes
+    /// and this interface is mainly provided for testing
     /// </summary>
     public class RequestContext : IRequestContext
     {

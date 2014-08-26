@@ -36,13 +36,11 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class MessageBody.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class MessageBody
+    /// The body of a <see cref="Message"/>
     /// </summary>
     public class MessageBody : IEquatable<MessageBody>
     {

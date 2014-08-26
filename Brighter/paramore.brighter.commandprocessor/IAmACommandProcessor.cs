@@ -37,13 +37,15 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmACommandProcessor{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmACommandProcessor
+    /// Paramore.Brighter.CommandProcessor provides the default implementation of this interface <see cref="CommandProcessor"/> and it is unlikely you need
+    /// to override this for anything other than testing purposes. The usual need is that in a <see cref="RequestHandler{T}"/> you intend to publish an  
+    /// <see cref="Event"/> to indicate the handler has completed to other components. In this case your tests should only verify that the correct 
+    /// event was raised by listening to <see cref="Publish{T}"/> calls on this interface, using a mocking framework of your choice or bespoke
+    /// Test Double.
     /// </summary>
     public interface IAmACommandProcessor
     {

@@ -36,13 +36,13 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmAPipelineBuilder{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmAPipelineBuilder
+    /// Builds the pipeline that handles an <see cref="IRequest"/>, with a target <see cref="IHandleRequests"/> and any orthogonal <see cref="IHandleRequests"/> for
+    /// Quality of Service (qos)
+    /// The default implementation is <see cref="PipelineBuilder{T}"/>
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public interface IAmAPipelineBuilder<TRequest> : IDisposable where TRequest : class, IRequest 

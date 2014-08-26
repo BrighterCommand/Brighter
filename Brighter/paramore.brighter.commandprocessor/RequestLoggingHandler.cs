@@ -38,13 +38,12 @@ using System;
 using Common.Logging;
 using Newtonsoft.Json;
 
-/// <summary>
-/// The commandprocessor namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
     /// Class RequestLoggingHandler.
+    /// Logs a request to a <see cref="IHandleRequests"/> handler using the Common.Logging logger registered with the <see cref="CommandProcessor"/>
+    /// The log shows the original <see cref="IRequest"/> properties as well as the timer handling.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class RequestLoggingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest

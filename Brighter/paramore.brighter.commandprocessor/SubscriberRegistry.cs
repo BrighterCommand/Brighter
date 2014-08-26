@@ -38,13 +38,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-/// <summary>
-/// The commandprocessor namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
     /// Class SubscriberRegistry.
+    /// In order to map an <see cref="IHandleRequests"/> to a <see cref="Command"/> or an <see cref="Event"/> we need you to register the association
+    /// via the <see cref="SubscriberRegistry"/>
+    /// The default implementation of <see cref="SubscriberRegistry"/> is usable in most instances and this is provided for testing
     /// </summary>
     public class SubscriberRegistry : IAmASubscriberRegistry, IEnumerable<KeyValuePair<Type, List<Type>>>
     {

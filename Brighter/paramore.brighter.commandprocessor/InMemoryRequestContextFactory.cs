@@ -34,18 +34,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class InMemoryRequestContextFactory.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class InMemoryRequestContextFactory
     /// </summary>
     public class InMemoryRequestContextFactory : IAmARequestContextFactory
     {
         /// <summary>
-        /// Creates this instance.
+        /// Any pipeline has a request context that allows you to flow information between instances of <see cref="IHandleRequests"/>
+        /// The default <see cref="InMemoryRequestContextFactory"/> is usable for most cases.
         /// </summary>
         /// <returns>RequestContext.</returns>
         public RequestContext Create()

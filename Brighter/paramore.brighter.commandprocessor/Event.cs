@@ -36,13 +36,12 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class Event.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class Event
+    /// An event is an indicator to interested parties that 'something has happened'. We expect zero to many receivers as it is one-to-many communication i.e. publish-subscribe
+    /// An event is usually fire-and-forget, because we do not know it is received.
     /// </summary>
     public class Event : IRequest
     {

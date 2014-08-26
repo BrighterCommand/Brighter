@@ -36,13 +36,12 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmALifetime{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmALifetime
+    /// Used to manage the lifetime of objects created for the request handling pipeline
+    /// <see cref="LifetimeScope"/> for default implementation.
     /// </summary>
     public interface IAmALifetime : IDisposable
     {
