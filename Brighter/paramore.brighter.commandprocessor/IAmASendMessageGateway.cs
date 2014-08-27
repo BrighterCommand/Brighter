@@ -14,9 +14,6 @@
 using System;
 using System.Threading.Tasks;
 
-/// <summary>
-/// The commandprocessor namespace
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>

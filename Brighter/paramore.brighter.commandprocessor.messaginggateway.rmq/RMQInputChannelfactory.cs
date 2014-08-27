@@ -36,13 +36,11 @@ THE SOFTWARE. */
 
 using paramore.brighter.serviceactivator;
 
-/// <summary>
-/// The rmq namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
     /// Class RMQInputChannelfactory.
+    /// Creates instances of <see cref="IAmAChannel"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
     /// </summary>
     public class RMQInputChannelfactory : IAmAChannelFactory 
     {

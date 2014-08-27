@@ -40,13 +40,13 @@ using Common.Logging;
 using Newtonsoft.Json;
 using Raven.Client;
 
-/// <summary>
-/// The ravendb namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor.messagestore.ravendb
 {
     /// <summary>
     /// Class RavenMessageStore.
+    /// A <see cref="IAmAMessageStore{T}"/> implementation using RavenDB
+    /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
+    /// store the message into a Message Store to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
     /// </summary>
     public class RavenMessageStore : IAmAMessageStore<Message>
     {
