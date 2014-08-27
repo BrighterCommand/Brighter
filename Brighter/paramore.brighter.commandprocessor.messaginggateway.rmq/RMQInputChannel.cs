@@ -39,13 +39,13 @@ using System;
 using System.Collections.Concurrent;
 using paramore.brighter.serviceactivator;
 
-/// <summary>
-/// The rmq namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
     /// Class RMQInputChannel.
+    /// An <see cref="IAmAChannel"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+    /// and acknowledging receipt of those messages
+    /// The channel uses an AMQP application layer provided by RabbitMQ
     /// </summary>
     public class RMQInputChannel : IAmAnInputChannel
     {

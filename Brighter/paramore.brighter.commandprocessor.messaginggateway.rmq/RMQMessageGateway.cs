@@ -39,13 +39,18 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayCo
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
-/// <summary>
-/// The rmq namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
     /// Class RMQMessageGateway.
+    /// Base class for messaging gateway used by a <see cref="RMQInputChannel"/> to communicate with a RabbitMQ server, to consume messages from the server or
+    /// <see cref="CommandProcessor.Post{T}"/> to send a message to the RabbitMQ server. 
+    /// A channel is associated with a queue name, which binds to a <see cref="MessageHeader.Topic"/> when <see cref="CommandProcessor.Post{T}"/> sends over a task queue. 
+    /// So to listen for messages on that Topic you need to bind to the matching queue name. 
+    /// The configuration holds a &lt;serviceActivatorConnections&gt; section which in turn contains a &lt;connections&gt; collection that contains a set of connections. 
+    /// Each connection identifies a mapping between a queue name and a <see cref="IRequest"/> derived type. At runtime we read this list and listen on the associated channels.
+    /// The <see cref="MessagePump"/> then uses the <see cref="IAmAMessageMapper"/> associated with the configured request type in <see cref="IAmAMessageMapperRegistry"/> to translate between the 
+    /// on-the-wire message and the <see cref="Command"/> or <see cref="Event"/>
     /// </summary>
     public class RMQMessageGateway
     {

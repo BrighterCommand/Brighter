@@ -38,13 +38,12 @@ using System;
 using Raven.Client;
 using Raven.Client.Document;
 
-/// <summary>
-/// The ravendb namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor.messagestore.ravendb
 {
     /// <summary>
     /// Class MessageStoreFactory.
+    /// The MessageStoreFactory creates a RavenDB message store. It is a singleton, and will always return the same message store after the first call, within a given process.
+    /// This is by design, there is no support for multiple message stores, nor envisaged need.
     /// </summary>
     public class MessageStoreFactory
     {
