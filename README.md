@@ -34,3 +34,8 @@ Exploration of Domain Modelling Techniques
 * Domain Driven Design  
 * Tell Don't Ask  
 
+
+<a href="https://scan.coverity.com/projects/2900">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/2900/badge.svg"/>
+</a>
