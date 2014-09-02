@@ -42,13 +42,13 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using paramore.brighter.commandprocessor.extensions;
 
-/// <summary>
-/// The rmq namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
-    /// Class RMQReceiveMessageGateway.
+    /// Class ServerRequestHandler .
+    /// The <see cref="ServerRequestHandler"/> is used on the server to receive messages from the broker. It abstracts away the details of 
+    /// inter-process communication tasks from the server. It handles connection establishment, request reception and dispatching, 
+    /// result sending, and error handling.
     /// </summary>
     public class ServerRequestHandler : MessageGateway, IAmAServerRequestHandler 
     {

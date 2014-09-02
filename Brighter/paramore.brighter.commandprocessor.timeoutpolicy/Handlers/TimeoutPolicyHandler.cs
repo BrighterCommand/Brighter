@@ -77,19 +77,18 @@ using System.Threading.Tasks;
 using Common.Logging;
 
 
-/// <summary>
-/// The Handlers namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor.timeoutpolicy.Handlers
 {
     /// <summary>
     /// Class TimeoutPolicyHandler.
+    /// The handler is injected into the pipeline if the <see cref="TimeoutPolicyAttribute"/>
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class TimeoutPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         /// <summary>
-        /// The contex t_ ba g_ timeou t_ cancellatio n_ token
+        /// The context holds a timeout cancellation token with this key, that can be used by handlers to cancel an operation
+        /// and kill the thread which manages the timeout
         /// </summary>
         public const string CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN = "TimeoutCancellationToken"; 
         private int milliseconds;

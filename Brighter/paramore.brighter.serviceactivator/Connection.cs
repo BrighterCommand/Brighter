@@ -38,13 +38,12 @@ THE SOFTWARE. */
 using System;
 using paramore.brighter.commandprocessor;
 
-/// <summary>
-/// The serviceactivator namespace.
-/// </summary>
 namespace paramore.brighter.serviceactivator
 {
     /// <summary>
     /// Class Connection.
+    /// A <see cref="Connection"/> holds the configuration details of the relationship between a channel provided by a broker, and a <see cref="Command"/> or <see cref="Event"/>. 
+    /// It holds information on the number of threads to use to process <see cref="Message"/>s on the channel, turning them into <see cref="Command"/>s or <see cref="Event"/>s 
     /// </summary>
     public class Connection
     {
@@ -59,7 +58,7 @@ namespace paramore.brighter.serviceactivator
         /// <value>The channel.</value>
         public IAmAnInputChannel Channel { get; private set; }
         /// <summary>
-        /// Gets the type of the data.
+        /// Gets the type of the <see cref="IRequest"/> that <see cref="Message"/>s on the <see cref="Channel"/> can be translated into.
         /// </summary>
         /// <value>The type of the data.</value>
         public Type DataType { get; private set; }
