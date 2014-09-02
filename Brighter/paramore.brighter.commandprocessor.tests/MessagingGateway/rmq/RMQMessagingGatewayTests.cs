@@ -38,8 +38,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     [Subject("Messaging Gateway")]
     public class When_posting_a_message_via_the_messaging_gateway
     {
-        static IAmASendMessageGateway sendMessageGateway;
-        static IAmAReceiveMessageGateway receiveMessageGateway;
+        static IAmAClientRequestHandler clientRequestHandler;
+        static IAmAServerRequestHandler serverRequestHandler;
         static Message message;
         static TestRMQListener client;
         static string messageBody;
@@ -49,9 +49,9 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 var properties = new NameValueCollection();
                 properties["showDateTime"] = "true";
                 LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-                var logger = LogManager.GetLogger(typeof(RMQReceiveMessageGateway));  
-                sendMessageGateway = new RMQSendMessageGateway(logger);
-                receiveMessageGateway = new RMQReceiveMessageGateway(logger);
+                var logger = LogManager.GetLogger(typeof(ServerRequestHandler));  
+                clientRequestHandler = new ClientRequestHandler(logger);
+                serverRequestHandler = new ServerRequestHandler(logger);
                 message = new Message(
                     header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")
@@ -62,7 +62,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Because of = () =>
             {
-                sendMessageGateway.Send(message);
+                clientRequestHandler.Send(message);
                 messageBody = client.Listen();
             };
 
@@ -70,8 +70,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Cleanup tearDown = () =>
         {
-            receiveMessageGateway.Purge("test");
-            sendMessageGateway.Dispose();
+            serverRequestHandler.Purge("test");
+            clientRequestHandler.Dispose();
         };
     }
 
@@ -118,8 +118,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
       [Subject("Messaging Gateway")]
     public class When_reading_a_message_via_the_messaging_gateway
     {
-        static IAmASendMessageGateway sender;
-        static IAmAReceiveMessageGateway receiver;
+        static IAmAClientRequestHandler sender;
+        static IAmAServerRequestHandler receiver;
         static Message sentMessage;
         static Message recievedMessage;
 
@@ -128,10 +128,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 var properties = new NameValueCollection();
                 properties["showDateTime"] = "true";
                 LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-                var logger = LogManager.GetLogger(typeof(RMQReceiveMessageGateway));  
+                var logger = LogManager.GetLogger(typeof(ServerRequestHandler));  
              
-                sender = new RMQSendMessageGateway(logger);
-                receiver = new RMQReceiveMessageGateway(logger);
+                sender = new ClientRequestHandler(logger);
+                receiver = new ServerRequestHandler(logger);
                 sentMessage= new Message(
                     header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")

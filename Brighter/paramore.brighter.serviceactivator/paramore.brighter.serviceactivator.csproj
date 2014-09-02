@@ -58,7 +58,7 @@
     <Compile Include="IAmAPerformer.cs" />
     <Compile Include="Consumer.cs" />
     <Compile Include="ConsumerFactory.cs" />
-    <Compile Include="IAmAReceiveMessageGateway.cs" />
+    <Compile Include="IAmAServerRequestHandler.cs" />
     <Compile Include="IConsumerFactory.cs" />
     <Compile Include="IDispatcher.cs" />
     <Compile Include="MessagePump.cs" />

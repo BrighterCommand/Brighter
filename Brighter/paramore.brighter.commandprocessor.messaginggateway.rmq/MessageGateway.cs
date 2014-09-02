@@ -6,7 +6,7 @@
 // Last Modified By : ian
 // Last Modified On : 07-29-2014
 // ***********************************************************************
-// <copyright file="RMQMessageGateway.cs" company="">
+// <copyright file="MessageGateway.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -43,7 +43,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
     /// Class RMQMessageGateway.
-    /// Base class for messaging gateway used by a <see cref="RMQInputChannel"/> to communicate with a RabbitMQ server, to consume messages from the server or
+    /// Base class for messaging gateway used by a <see cref="InputChannel"/> to communicate with a RabbitMQ server, to consume messages from the server or
     /// <see cref="CommandProcessor.Post{T}"/> to send a message to the RabbitMQ server. 
     /// A channel is associated with a queue name, which binds to a <see cref="MessageHeader.Topic"/> when <see cref="CommandProcessor.Post{T}"/> sends over a task queue. 
     /// So to listen for messages on that Topic you need to bind to the matching queue name. 
@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// The <see cref="MessagePump"/> then uses the <see cref="IAmAMessageMapper"/> associated with the configured request type in <see cref="IAmAMessageMapperRegistry"/> to translate between the 
     /// on-the-wire message and the <see cref="Command"/> or <see cref="Event"/>
     /// </summary>
-    public class RMQMessageGateway
+    public class MessageGateway
     {
         /// <summary>
         /// The logger
@@ -80,10 +80,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         protected BrokerUnreachableException ConnectionFailure;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RMQMessageGateway"/> class.
+        /// Initializes a new instance of the <see cref="MessageGateway"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RMQMessageGateway(ILog logger)
+        public MessageGateway(ILog logger)
         {
             this.Logger = logger;
             Configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
