@@ -6,7 +6,7 @@
 // Last Modified By : ian
 // Last Modified On : 07-29-2014
 // ***********************************************************************
-// <copyright file="RMQReceiveMessageGateway.cs" company="">
+// <copyright file="ServerRequestHandler.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -50,15 +50,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// <summary>
     /// Class RMQReceiveMessageGateway.
     /// </summary>
-    public class RMQReceiveMessageGateway : RMQMessageGateway, IAmAReceiveMessageGateway 
+    public class ServerRequestHandler : MessageGateway, IAmAServerRequestHandler 
     {
-        const bool autoAck = false;
+        const bool AUTO_ACK = false;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
+        /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RMQReceiveMessageGateway(ILog logger):base(logger) {}
+        public ServerRequestHandler(ILog logger):base(logger) {}
 
         /// <summary>
         /// Acknowledges the specified message.
@@ -122,7 +122,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             try
             {
                 var consumer = new QueueingBasicConsumer(Channel);
-                Channel.BasicConsume(queueName, autoAck, consumer);
+                Channel.BasicConsume(queueName, AUTO_ACK, consumer);
                 BasicDeliverEventArgs fromQueue;
                 consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue);
                 if (fromQueue != null)

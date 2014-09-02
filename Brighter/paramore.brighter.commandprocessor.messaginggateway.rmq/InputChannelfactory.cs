@@ -6,7 +6,7 @@
 // Last Modified By : ian
 // Last Modified On : 07-29-2014
 // ***********************************************************************
-// <copyright file="RMQInputChannelfactory.cs" company="">
+// <copyright file="InputChannelfactory.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -42,15 +42,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// Class RMQInputChannelfactory.
     /// Creates instances of <see cref="IAmAChannel"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
     /// </summary>
-    public class RMQInputChannelfactory : IAmAChannelFactory 
+    public class InputChannelfactory : IAmAChannelFactory 
     {
-        private readonly RMQReceiveMessageGateway gateway;
+        private readonly ServerRequestHandler gateway;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RMQInputChannelfactory"/> class.
+        /// Initializes a new instance of the <see cref="InputChannelfactory"/> class.
         /// </summary>
         /// <param name="gateway">The gateway.</param>
-        public RMQInputChannelfactory(RMQReceiveMessageGateway gateway)
+        public InputChannelfactory(ServerRequestHandler gateway)
         {
             this.gateway = gateway;
         }
@@ -62,7 +62,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAnInputChannel CreateInputChannel(string channelName)
         {
-            return new RMQInputChannel(channelName, gateway);
+            return new InputChannel(channelName, gateway);
         }
 
         /// <summary>
@@ -72,7 +72,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAnInputChannel CreateOutputChannel(string channelName)
         {
-            return new RMQInputChannel(channelName, gateway);
+            return new InputChannel(channelName, gateway);
         }
     }
 }

@@ -34,15 +34,15 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     public class When_listening_to_messages_on_a_channel
     {
         private static IAmAnInputChannel channel;
-        private static IAmAReceiveMessageGateway gateway;
+        private static IAmAServerRequestHandler gateway;
         private static Message receivedMessage;
         private static Message sentMessage;
 
         Establish context = () =>
         {
-            gateway = A.Fake<IAmAReceiveMessageGateway>();
+            gateway = A.Fake<IAmAServerRequestHandler>();
 
-            channel = new RMQInputChannel("test", gateway);
+            channel = new InputChannel("test", gateway);
 
             sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
@@ -60,15 +60,15 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     public class When_a_stop_message_is_added_to_a_channel
     {
         private static IAmAnInputChannel channel;
-        private static IAmAReceiveMessageGateway gateway;
+        private static IAmAServerRequestHandler gateway;
         private static Message receivedMessage;
         private static Message sentMessage;
 
         Establish context = () =>
         {
-            gateway = A.Fake<IAmAReceiveMessageGateway>();
+            gateway = A.Fake<IAmAServerRequestHandler>();
 
-            channel = new RMQInputChannel("test", gateway);
+            channel = new InputChannel("test", gateway);
 
             sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
@@ -87,14 +87,14 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     public class When_acknowledge_is_called_on_a_channel
     {
         private static IAmAnInputChannel channel;
-        private static IAmAReceiveMessageGateway gateway;
+        private static IAmAServerRequestHandler gateway;
         private static Message receivedMessage;
 
         Establish context = () =>
         {
-            gateway = A.Fake<IAmAReceiveMessageGateway>();
+            gateway = A.Fake<IAmAServerRequestHandler>();
 
-            channel = new RMQInputChannel("test", gateway);
+            channel = new InputChannel("test", gateway);
 
             receivedMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
@@ -113,14 +113,14 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     public class When_no_acknowledge_is_called_on_a_channel
     {
         private static IAmAnInputChannel channel;
-        private static IAmAReceiveMessageGateway gateway;
+        private static IAmAServerRequestHandler gateway;
         private static Message receivedMessage;
 
         Establish context = () =>
         {
-            gateway = A.Fake<IAmAReceiveMessageGateway>();
+            gateway = A.Fake<IAmAServerRequestHandler>();
 
-            channel = new RMQInputChannel("test", gateway);
+            channel = new InputChannel("test", gateway);
 
             receivedMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),

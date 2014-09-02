@@ -32,10 +32,8 @@ using Common.Logging.Simple;
 using FakeItEasy;
 using Machine.Specifications;
 using Polly;
-using Raven.Client.Embedded;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.TestHelpers;
@@ -303,7 +301,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                     .Handle<Exception>()
                     .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-                var gateway = new RMQReceiveMessageGateway(logger);
+                var gateway = new ServerRequestHandler(logger);
 
                 builder = DispatchBuilder.With()
                              .WithLogger(logger)
@@ -316,7 +314,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                                 .Build()
                                 )
                              .WithMessageMappers(messageMapperRegistry)
-                             .WithChannelFactory(new RMQInputChannelfactory(gateway)) 
+                             .WithChannelFactory(new InputChannelfactory(gateway)) 
                              .ConnectionsFromConfiguration();
 
             };

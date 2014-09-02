@@ -56,7 +56,7 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAPolicyRegistry policyRegistry;
         readonly ILog logger;
         readonly IAmAMessageStore<Message> messageStore;
-        readonly IAmASendMessageGateway messagingGateway;
+        readonly IAmAClientRequestHandler messagingGateway;
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
         /// Register that policy with your <see cref="IAmAPolicyRegistry"/> such as <see cref="PolicyRegistry"/>
@@ -108,7 +108,7 @@ namespace paramore.brighter.commandprocessor
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry, 
             IAmAMessageStore<Message> messageStore, 
-            IAmASendMessageGateway messagingGateway,
+            IAmAClientRequestHandler messagingGateway,
             ILog logger)
         {
             this.requestContextFactory = requestContextFactory;
@@ -138,7 +138,7 @@ namespace paramore.brighter.commandprocessor
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry, 
             IAmAMessageStore<Message> messageStore, 
-            IAmASendMessageGateway messagingGateway,
+            IAmAClientRequestHandler messagingGateway,
             ILog logger)
             :this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
         {

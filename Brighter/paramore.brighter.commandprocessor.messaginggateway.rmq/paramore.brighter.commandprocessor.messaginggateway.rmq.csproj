@@ -54,11 +54,11 @@
   <ItemGroup>
     <Compile Include="MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RMQInputChannel.cs" />
-    <Compile Include="RMQInputChannelfactory.cs" />
-    <Compile Include="RMQMessageGateway.cs" />
-    <Compile Include="RMQReceiveMessageGateway.cs" />
-    <Compile Include="RMQSendMessageGateway.cs" />
+    <Compile Include="InputChannel.cs" />
+    <Compile Include="InputChannelfactory.cs" />
+    <Compile Include="MessageGateway.cs" />
+    <Compile Include="ServerRequestHandler.cs" />
+    <Compile Include="ClientRequestHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="web.config.uninstall.xdt" />

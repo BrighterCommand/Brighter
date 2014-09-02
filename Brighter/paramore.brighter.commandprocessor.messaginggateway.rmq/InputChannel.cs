@@ -6,7 +6,7 @@
 // Last Modified By : ian
 // Last Modified On : 07-29-2014
 // ***********************************************************************
-// <copyright file="RMQInputChannel.cs" company="">
+// <copyright file="InputChannel.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -47,18 +47,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// and acknowledging receipt of those messages
     /// The channel uses an AMQP application layer provided by RabbitMQ
     /// </summary>
-    public class RMQInputChannel : IAmAnInputChannel
+    public class InputChannel : IAmAnInputChannel
     {
         private readonly string queueName;
-        private readonly IAmAReceiveMessageGateway gateway;
+        private readonly IAmAServerRequestHandler gateway;
         private readonly ConcurrentQueue<Message> queue = new ConcurrentQueue<Message>();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RMQInputChannel"/> class.
+        /// Initializes a new instance of the <see cref="InputChannel"/> class.
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="gateway">The gateway.</param>
-        public RMQInputChannel(string queueName, IAmAReceiveMessageGateway gateway)
+        public InputChannel(string queueName, IAmAServerRequestHandler gateway)
         {
             this.queueName = queueName;
             this.gateway = gateway;

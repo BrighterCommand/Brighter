@@ -52,13 +52,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// <summary>
     /// Class RMQSendMessageGateway.
     /// </summary>
-    public class RMQSendMessageGateway : RMQMessageGateway, IAmASendMessageGateway
+    public class ClientRequestHandler : MessageGateway, IAmAClientRequestHandler
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
+        /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RMQSendMessageGateway(ILog logger) : base(logger){}
+        public ClientRequestHandler(ILog logger) : base(logger){}
 
         /// <summary>
         /// Sends the specified message.
