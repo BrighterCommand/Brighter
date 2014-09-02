@@ -44,13 +44,12 @@ using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
 
-/// <summary>
-/// The rmq namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
-    /// Class RMQSendMessageGateway.
+    /// Class ClientRequestHandler .
+    /// The <see cref="ClientRequestHandler"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
+    /// It handles connection establishment, request sending and error handling
     /// </summary>
     public class ClientRequestHandler : MessageGateway, IAmAClientRequestHandler
     {

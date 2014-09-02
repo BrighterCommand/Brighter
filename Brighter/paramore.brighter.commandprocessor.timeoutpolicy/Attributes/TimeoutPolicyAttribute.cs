@@ -37,13 +37,13 @@ THE SOFTWARE. */
 using System;
 using paramore.brighter.commandprocessor.timeoutpolicy.Handlers;
 
-/// <summary>
-/// The Attributes namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor.timeoutpolicy.Attributes
 {
     /// <summary>
     /// Class TimeoutPolicyAttribute.
+    /// This attribute supports setting a timeout on a handler. It is intended for legacy scenarios where the network calls or resource pools used by a handler
+    /// do not natively support a timeout and can be used to prevent a handler from blocking on one of these operations. You should not use it where native
+    /// timeouts are available, use the native timeout instead.
     /// </summary>
     public class TimeoutPolicyAttribute : RequestHandlerAttribute
     {
