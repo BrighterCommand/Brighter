@@ -33,6 +33,15 @@
             more modifiable. Our ability to test the Command in isolation of the caller - allows us to implement the ports and adapters model easily - we can instantiate the Command,
             provide 'fake' parameters to it and confirm the results. We can also use the command from multiple callers, although this is not a differentiator from the service class approach.
         </p>
+        <img src="images/CommandClassDiagram.png" alt="Command Class Diagram">
+        <p><strong>Command</strong> - Declares an interface for executing an operation.</p>
+        <p><strong>ConcreteCommand</strong> –Defines a binding between a Receiver object and an action. Implements Execute by invoking the corresponding operation(s) on Receiver.</p>
+        <p><strong>Client</strong> – creates a ConcreteCommand object and sets its receiver.</p>
+        <p><strong>Invoker</strong> - asks the command to carry out the request.</p>
+        <img src="images/CommandSequence.png" alt="Command Sequence Diagram">
+        <p>An <strong>Invoker</strong> object knows about the <strong>Concrete Command</strong> object. The Invoker issues a request by calling Execute on the <strong>Command</strong>. When commands are un-doable, the Command stores
+            state for undoing the command prior to invoking Execute.The Command object invokes operations on its <strong>Receiver</strong> to carry out the request
+        </p>
         <p>In addition we can structure a system transactionally using Commands. A Command is a transactional boundary. Because a Command is a transactional boundary,
             when using the <a href="http://en.wikipedia.org/wiki/Domain-driven_design"><em>Domain Driven Design</em></a> technique of an aggregate there is a natural affinity between the Command, which
             operates on a transactional boundary and the <em>Aggregate</em> which is a transactional boundary within the domain model. The Aggregate is the Receiver stereotype within the Command Design pattern.
@@ -55,8 +64,8 @@
         </ul>
         <p>This has obvious similarities to the <a href="http://en.wikipedia.org/wiki/Actor_model">actor model</a>, particularly if you use a Task Queue.</p>
         <p>The problems with the Command pattern are that the caller is coupled to a specific Command at the call site - which undermines the promise of being extensible through use of Commands.
-            To change that Command, or call orthogonal services before calling the command requires us to amend the calling code, wherever the Command is used. To decouple a higher and lower layers we want to be able alter
-            the implementation of the commands that we call on the lower layer without altering the calling layer.</p>
+            To change that Command, or call orthogonal services before calling the command requires us to amend the calling code, wherever the Command is used. To decouple a higher and lower layers
+            we want to be able alter the implementation of the commands that we call on the lower layer without altering the calling layer.</p>
         <h2>Command Dispatcher</h2>
         <p>Brighter is a .NET implementation of the <strong>Command Dispatcher</strong> pattern.</p>
         <blockquote cite="http://hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">
@@ -78,6 +87,23 @@
             which knows how to perform that action.</p>
         <p>A Command Dispatcher is an object that links the Action-Request with the appropriate Action-Handler.</p>
         <p>We may distinguish between a Command Action-Request that has one Action Handler and an Event Action-Request that has many</p>
+        <p>The Command Dispatcher allows dynamic registration and removal of Command Handlers, it is an administrative entity that manages linking of commands to the appropriate command handlers.
+        </p>
+        <p>It relates to the Observer pattern in that hooks together publishers and subscribers.
+        <p>Command Dispatcher registration requires a key – provided by the Command Dispatcher for the Commands it can service, using getKey(). [In practice we often use RTTI for this].
+        </p>
+        <p>The Command Handler is fired, when a command with the same name (key) is sent to the Command Dispatcher.
+        </p>
+        <p>The Command Dispatcher is a repository of key-value pairs (key., Command Handler) and when the Command Dispatcher is called it looks up the command’s key in the repository.
+            If there is a match it calls the appropriate method(s) on the handler to process the Command.
+        </p>
+        <img src="images/CommandDispatcherClass.png" alt="Command Dispatcher Class Diagram">
+        <p><strong>Invoker</strong> - has a lit of Commands that are to be executed</p>
+        <p><strong>Command</strong> - represents the request to be processed, encapsulating the parameters to be passed to the command-handler to perform the request</p>
+        <p><strong>Command Handler</strong> - specifies the interface that any command handler must implement</p>
+        <p><strong>Concrete Command Handler</strong> – implements the request</p>
+        <p><strong>Command Dispatcher</strong> – Allows dynamic registration of Command Handlers	 and looks up handlers for commands, by matching command and handler key.</p>
+        <p><strong>Client</strong> – registers Commands with the Command Dispatcher.</p>
         <img src="images/Command%20Dispatcher.png" alt="Command Dispatcher sequence diagram">
         <br/>
         <p>A Command Dispatcher can also act as the <em>port</em> layer in a <a href="PortsAndAdapters.html"><em>Ports & Adapters</em></a>architecture.</p>
@@ -91,12 +117,13 @@
             The Command Processor pattern separates the request for a service from its execution. A Command Processor component manages requests as separate objects,
             schedules their execution, and provides additional services such as the storing of request objects for later undo.
         </blockquote>
-        <p>A Command Dispatcher and a Command Processor are smiliar in that both divorce the caller of a Command from invoker of that Command. However, the motivation is different.
-           A Dispatcher seeks to decouple the caller from the invoker to allow us to easily extend the system without modification to the caller. Conversly the motication behind a Command Processor is to allows us
-            to implement orthogonal operations such as logging, or scheduling without forcing the sender or receiver to be aware of them. It does this by giving those responsibilites to the invoker.</p>
-        <p>Of course as both patterns separate the invoker from sender and reciever, it is possible for us to combine them by having the Command Dispatcher's invoker support executing orthogonal concerns
+        <p>A Command Dispatcher and a Command Processor are similar in that both divorce the caller of a Command from invoker of that Command. However, the motivation is different.
+           A Dispatcher seeks to decouple the caller from the invoker to allow us to easily extend the system without modification to the caller. Conversely the motivation behind a Command Processor
+            is to allows us to implement orthogonal operations such as logging, or scheduling without forcing the sender or receiver to be aware of them. It does this by giving those responsibilities to
+            the invoker.</p>
+        <p>Of course as both patterns separate the invoker from sender and receiver, it is possible for us to combine them by having the Command Dispatcher's invoker support executing orthogonal concerns
         when it invokes the Command</p>
-        <img src="images/CommandProcessor.png"/>
+        <img src="images/CommandProcessorClass.png"/>
         <blockquote>The central command processor easily allows the addition of services related to command execution. An advanced command processor can log or store commands to a file for later
             examination or replay. A command processor can queue commands and schedule them at a later time. This is useful if commands should execute at a specified time, if they are handled according
             to priority, or if they will execute in a separate thread of control. An additional example is a single command processor shared by several concurrent applications that provides a
@@ -104,6 +131,7 @@
         <br/>
         <p>A Command Processor enforces quality of service and maximizes throughput. A Command Processor forms a juncture at which concerns like: <a href="QualityOfServicePatterns.html">retry, timeout and
             circuit breaker</a> can be implemented for all commands</p>
+        <img src="images/CommandProcessor.png" />
     </section>
     <footer>
         <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>

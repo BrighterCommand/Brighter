@@ -29,8 +29,9 @@
         <p>Calls to remote components, such as a database, broker, or http service can fail. Code that makes assumption that they will
             succeed is subject to the <a href="http://mira.sai.msu.ru/~megera/docs/Web/systems/fallacies.pdf"><em>fallacies of distributed computing</em></a>,
             in particular that the network is reliable.</p>
-        <p>For this reason we need to set a limit on the time we wait for a response from the a server (or other remote resource). Otherwise we risk tying up a thread waiting for a response that will never come,
-        potentially causing  </p>
+        <p>For this reason we need to set a limit on the time we wait for a response from the a server (or other remote resource). Otherwise we risk tying up a thread waiting for a response that will never come.
+        This can potentially cause a cascade effect: as the number of blocked threads on the server handling the request waiting for a response increase that server can in turn become unresponsive or even
+        actively refuse requests.</p>
         <h2>Retry</h2>
         <p>In the presence of unreliable calls between two components our first approach to achieving a high quality of service is to recognize that many such failures
         are transient: a timeout because a resource is busy, temporary loss of connectivity, the loss of one node that will be replaced by failover to another. In this case
