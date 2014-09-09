@@ -38,9 +38,6 @@ THE SOFTWARE. */
 using Common.Logging;
 using paramore.brighter.commandprocessor;
 
-/// <summary>
-/// The serviceactivator namespace.
-/// </summary>
 namespace paramore.brighter.serviceactivator
 {
     /// <summary>

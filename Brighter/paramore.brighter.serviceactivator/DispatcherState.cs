@@ -35,30 +35,28 @@ THE SOFTWARE. */
 
 #endregion
 
-/// <summary>
-/// The serviceactivator namespace.
-/// </summary>
 namespace paramore.brighter.serviceactivator
 {
     /// <summary>
     /// Enum DispatcherState
+    /// Identifies the various states of the dispatcher
     /// </summary>
     public enum DispatcherState
     {
         /// <summary>
-        /// The d s_ notready
+        /// Initializing, not ready to receive requests yet 
         /// </summary>
         DS_NOTREADY = 0,
         /// <summary>
-        /// The d s_ awaiting
+        /// Initialized, ready to receive messages on channels
         /// </summary>
         DS_AWAITING = 1,
         /// <summary>
-        /// The d s_ running
+        /// Running, waiting for messages on channels and dispatcing to handlers
         /// </summary>
         DS_RUNNING = 2,
         /// <summary>
-        /// The d s_ stopped
+        /// Stopped, will not dispatch messages unless restarted. Can be closed safely.
         /// </summary>
         DS_STOPPED = 3
     }

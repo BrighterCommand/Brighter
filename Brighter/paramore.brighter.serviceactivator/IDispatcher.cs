@@ -37,9 +37,6 @@ THE SOFTWARE. */
 
 using System.Threading.Tasks;
 
-/// <summary>
-/// The serviceactivator namespace.
-/// </summary>
 namespace paramore.brighter.serviceactivator
 {
     /// <summary>
@@ -58,9 +55,9 @@ namespace paramore.brighter.serviceactivator
         /// <param name="connection">The connection.</param>
         void Open(Connection connection);
         /// <summary>
-        /// Recieves this instance.
+        /// Receives this instance.
         /// </summary>
-        void Recieve();
+        void Receive();
         /// <summary>
         /// Shuts the specified connection.
         /// </summary>

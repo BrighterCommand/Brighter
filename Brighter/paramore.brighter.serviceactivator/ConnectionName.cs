@@ -36,13 +36,11 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The serviceactivator namespace.
-/// </summary>
 namespace paramore.brighter.serviceactivator
 {
     /// <summary>
     /// Class ConnectionName.
+    /// value type that stores the name of a connection. Immutable.
     /// </summary>
     public class ConnectionName : IEquatable<ConnectionName>
     {

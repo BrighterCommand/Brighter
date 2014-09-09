@@ -121,6 +121,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~ClientRequestHandler()
+        {
+            Dispose(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
             CloseConnection();
         }
     }
