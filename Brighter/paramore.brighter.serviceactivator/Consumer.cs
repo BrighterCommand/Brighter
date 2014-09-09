@@ -35,16 +35,16 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 
-/// <summary>
-/// The serviceactivator namespace.
-/// </summary>
 namespace paramore.brighter.serviceactivator
 {
     /// <summary>
     /// Enum ConsumerState
+    /// Identifies the state of a consumer: Open indicates that a consumer is reading messages from a channel, Shut means that a consumer is not reading messages
+    /// from a channel
     /// </summary>
     public enum ConsumerState
     {
@@ -60,8 +60,12 @@ namespace paramore.brighter.serviceactivator
 
     /// <summary>
     /// Class Consumer.
+    /// Manages the message pump used to read messages for a channel. Creation establishes the message pump for a given connection and channel. Open runs the
+    /// message pump, which begins consuming messages from the channel; it return the TPL Task used to run the message pump thread so that it can be
+    /// Watied on by callers. Shut closes the message pump.
+    /// 
     /// </summary>
-    public class Consumer
+    public class Consumer: IDisposable
     {
         /// <summary>
         /// Gets or sets the name.
@@ -116,6 +120,20 @@ namespace paramore.brighter.serviceactivator
             {
                 Performer.Stop();
                 State = ConsumerState.Shut;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Shut();
             }
         }
     }

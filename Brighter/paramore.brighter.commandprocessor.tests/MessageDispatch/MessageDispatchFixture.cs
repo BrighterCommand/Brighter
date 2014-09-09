@@ -70,7 +70,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 channel.Send(message);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-                dispatcher.Recieve();
+                dispatcher.Receive();
             };
 
 
@@ -113,7 +113,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                     channel.Send(message);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-                dispatcher.Recieve();
+                dispatcher.Receive();
             };
 
 
@@ -167,7 +167,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 commandChannel.Send(commandMessage);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-                dispatcher.Recieve();
+                dispatcher.Receive();
             };
 
 
@@ -212,7 +212,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                     channel.Send(message);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-                dispatcher.Recieve();
+                dispatcher.Receive();
             };
 
 
@@ -256,7 +256,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 channel.Send(message);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-                dispatcher.Recieve();
+                dispatcher.Receive();
                 Task.Delay(1000).Wait();
                 dispatcher.Shut(connection);
             };
@@ -304,8 +304,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 var gateway = new ServerRequestHandler(logger);
 
                 builder = DispatchBuilder.With()
-                             .WithLogger(logger)
-                             .WithCommandProcessor(CommandProcessorBuilder.With()
+                             .Logger(logger)
+                             .CommandProcessor(CommandProcessorBuilder.With()
                                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer())))
                                 .Policies(new PolicyRegistry() {{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}})
                                 .Logger(logger)
@@ -313,8 +313,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                                  .RequestContextFactory(new InMemoryRequestContextFactory())
                                 .Build()
                                 )
-                             .WithMessageMappers(messageMapperRegistry)
-                             .WithChannelFactory(new InputChannelfactory(gateway)) 
+                             .MessageMappers(messageMapperRegistry)
+                             .ChannelFactory(new InputChannelfactory(gateway)) 
                              .ConnectionsFromConfiguration();
 
             };

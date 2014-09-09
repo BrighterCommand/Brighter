@@ -43,13 +43,13 @@ using Common.Logging;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.extensions;
 
-/// <summary>
-/// The serviceactivator namespace.
-/// </summary>
 namespace paramore.brighter.serviceactivator
 {
     /// <summary>
     /// Class Dispatcher.
+    /// The 'core' Service Activator class, the Dispatcher controls and co-ordinates the creation of readers from channels, and dispatching the commands and
+    /// events translated from those messages to handlers. It controls the lifetime of the application through <see cref="Receive"/> and <see cref="End"/> and allows
+    /// the stop and start of individual connections through <see cref="Open"/> and <see cref="Shut"/>
     /// </summary>
     public class Dispatcher : IDispatcher
     {
@@ -60,12 +60,12 @@ namespace paramore.brighter.serviceactivator
         private readonly IList<Task> tasks = new SynchronizedCollection<Task>();
 
         /// <summary>
-        /// Gets the consumers.
+        /// Gets the <see cref="Consumer"/>s
         /// </summary>
         /// <value>The consumers.</value>
         public IList<Consumer> Consumers { get; private set; }
         /// <summary>
-        /// Gets the state.
+        /// Gets the state of the <see cref="Dispatcher"/>
         /// </summary>
         /// <value>The state.</value>
         public DispatcherState State { get; private set; }
@@ -92,9 +92,9 @@ namespace paramore.brighter.serviceactivator
         }
 
         /// <summary>
-        /// Recieves this instance.
+        /// Begins listening for messages on channels, and dispatching them to request handlers.
         /// </summary>
-        public void Recieve()
+        public void Receive()
         {
             controlTask = Task.Factory.StartNew(() =>
             {
@@ -136,7 +136,7 @@ namespace paramore.brighter.serviceactivator
         }
 
         /// <summary>
-        /// Ends this instance.
+        /// Stop listening to messages
         /// </summary>
         /// <returns>Task.</returns>
         public Task End()

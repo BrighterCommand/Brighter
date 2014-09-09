@@ -150,9 +150,19 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         public void Dispose()
         {
-            CloseConnection();
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
+        ~ServerRequestHandler()
+        {
+            Dispose(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            CloseConnection();
+        }
 
         private Message CreateMessage(BasicDeliverEventArgs fromQueue)
         {
