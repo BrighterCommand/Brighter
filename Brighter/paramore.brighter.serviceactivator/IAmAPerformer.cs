@@ -37,13 +37,11 @@ THE SOFTWARE. */
 
 using System.Threading.Tasks;
 
-/// <summary>
-/// The serviceactivator namespace.
-/// </summary>
 namespace paramore.brighter.serviceactivator
 {
     /// <summary>
     /// Interface IAmAPerformer
+    /// Abstracts the thread that runs a message pump
     /// </summary>
     public interface IAmAPerformer
     {
