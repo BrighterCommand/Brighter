@@ -43,7 +43,7 @@ namespace paramore.brighter.serviceactivator
     /// <summary>
     /// Interface IConsumerFactory
     /// </summary>
-    public interface IConsumerFactory
+    internal interface IConsumerFactory
     {
         /// <summary>
         /// Creates this instance.

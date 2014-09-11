@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 09-11-2014
+// ***********************************************************************
+// <copyright file="Performer.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -27,21 +40,37 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator
 {
+    /// <summary>
+    /// Class Performer.
+    /// Abstracts the thread that runs a message pump
+    /// </summary>
     public class Performer : IAmAPerformer 
     {
         private readonly IAmAnInputChannel channel;
         private readonly IAmAMessagePump messagePump;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Performer" /> class.
+        /// </summary>
+        /// <param name="channel">The channel.</param>
+        /// <param name="messagePump">The message pump.</param>
         public Performer(IAmAnInputChannel channel, IAmAMessagePump messagePump)
         {
             this.channel = channel;
             this.messagePump = messagePump;
         }
+        /// <summary>
+        /// Stops this instance.
+        /// </summary>
         public void Stop()
         {
             channel.Stop();
         }
 
+        /// <summary>
+        /// Runs this instance.
+        /// </summary>
+        /// <returns>Task.</returns>
         public Task Run()
         {
             return Task.Factory.StartNew(() => messagePump.Run(), TaskCreationOptions.LongRunning);

@@ -41,23 +41,18 @@ using System.Threading.Tasks;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
 
-/// <summary>
-/// The serviceactivator namespace.
-/// </summary>
 namespace paramore.brighter.serviceactivator
 {
-    /*
-     * The message pump is a classic event loop and is intended to be run on a single-thread
-     * The event loop is terminated when reading a MT_QUIT message on the channel
-     * The event loop blocks on the Channel Listen call, though it will timeout
-     * The event loop calls user code synchronously. You can post again for further decoupled invocation, but of course the likelihood is we are supporting decoupled invocation elsewhere
-     * This is why you should spin up a thread for your message pump: to avoid blocking your main control path while you listen for a message and process it
-     * It is also why throughput on a queue needs multiple performers, each with their own message pump
-     * Retry and circuit breaker should be provided by exception policy using an attribute on the handler
-     * Timeout on the handler should be provided by timeout policy using an attribute on the handler
-     */
     /// <summary>
     /// Class MessagePump.
+    /// The message pump is a classic event loop and is intended to be run on a single-thread
+    /// The event loop is terminated when reading a MT_QUIT message on the channel
+    /// The event loop blocks on the Channel Listen call, though it will timeout
+    /// The event loop calls user code synchronously. You can post again for further decoupled invocation, but of course the likelihood is we are supporting decoupled invocation elsewhere
+    /// This is why you should spin up a thread for your message pump: to avoid blocking your main control path while you listen for a message and process it
+    /// It is also why throughput on a queue needs multiple performers, each with their own message pump
+    /// Retry and circuit breaker should be provided by exception policy using an attribute on the handler
+    /// Timeout on the handler should be provided by timeout policy using an attribute on the handler
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class MessagePump<TRequest> : IAmAMessagePump where TRequest : class, IRequest
