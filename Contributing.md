@@ -41,3 +41,6 @@ it isn't wise to build something that can be a part of someone's ecosystem witho
 To safeguard the project we ask you to sign a Contributor Licence Agreement. The goal is to let you keep your copyright, but to assign it to the project so that it can use it in perpetuity. It is still yours, but the project is not at risk from having multiple contributors holding the copyright, with anyone able to hold it to ransom by removing their grant of licence.
 
 The process of signing works through GitHub.
+
+To get started, <a href="https://www.clahub.com/agreements/iancooper/Paramore">sign the Contributor License Agreement</a>. 
+
