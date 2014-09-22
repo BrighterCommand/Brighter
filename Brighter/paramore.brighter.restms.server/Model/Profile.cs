@@ -25,13 +25,8 @@ using System;
 
 namespace paramore.brighter.restms.server.Model
 {
-    public class Profile
+    public class Profile : Resource
     {
-  
-
-        public Name Name { get; private set; }
-        public Uri Href { get; private set; }
-
         public Profile(Name name, Uri href)
         {
             Name = name;

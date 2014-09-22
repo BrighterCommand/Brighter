@@ -108,7 +108,6 @@
     <Compile Include="RequestLoggingAttribute.cs" />
     <Compile Include="RequestHandlers.cs" />
     <Compile Include="RequestLoggingHandler.cs" />
-    <Compile Include="LifetimeScope.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

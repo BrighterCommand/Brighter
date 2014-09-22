@@ -78,14 +78,19 @@
   <ItemGroup>
     <Compile Include="Adapters\Controllers\DomainController.cs" />
     <Compile Include="Adapters\Formatters\RestMSFormatter.cs" />
-    <Compile Include="Adapters\Repositories\DomainRepository.cs" />
+    <Compile Include="Adapters\Repositories\InMemoryDomainRepository.cs" />
+    <Compile Include="Adapters\Repositories\InMemoryFeedRepository.cs" />
+    <Compile Include="Adapters\Repositories\InMemoryRepository.cs" />
     <Compile Include="Adapters\Resources\RestMSDomain.cs" />
     <Compile Include="Adapters\ServiceHost\Program.cs" />
     <Compile Include="Adapters\ServiceHost\RestMSService.cs" />
     <Compile Include="Adapters\ServiceHost\WebPipeline.cs" />
     <Compile Include="Model\Domain.cs" />
+    <Compile Include="Model\Feed.cs" />
+    <Compile Include="Model\FeedType.cs" />
     <Compile Include="Model\Name.cs" />
     <Compile Include="Model\Profile.cs" />
+    <Compile Include="Model\Resource.cs" />
     <Compile Include="Model\Title.cs" />
     <Compile Include="Ports\Common\AggregateVersion.cs" />
     <Compile Include="Ports\Common\IAmAnAggregate.cs" />
