@@ -44,8 +44,23 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 version: new AggregateVersion(0)
                 );
 
-            var domainRepository = new DomainRepository();
+
+            var feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed"),
+                href: new Uri(@"http://host.com/restms/feed/default")
+                );
+
+            var feedRepository = new InMemoryFeedRepository();
+            feedRepository.Add(feed);
+
+            domain.AddFeed(feed.Id);
+
+            var domainRepository = new InMemoryDomainRepository();
             domainRepository.Add(domain);
         };
+
+
     }
 }

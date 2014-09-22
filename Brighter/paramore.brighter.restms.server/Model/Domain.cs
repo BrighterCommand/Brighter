@@ -21,13 +21,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Collections.Generic;
 using paramore.brighter.restms.server.Ports.Common;
 
 namespace paramore.brighter.restms.server.Model
 {
-    public class Domain : IAmAnAggregate
+    public class Domain : Resource, IAmAnAggregate
     {
-        public Name Name { get; private set; }
+        private readonly HashSet<Identity> feeds = new HashSet<Identity>();
         public Title Title { get; private set; }
         public Profile Profile { get; private set; }
         
@@ -70,5 +71,9 @@ namespace paramore.brighter.restms.server.Model
             return !Equals(left, right);
         }
 
+        public void AddFeed(Identity id)
+        {
+            feeds.Add(id);
+        }
     }
 }

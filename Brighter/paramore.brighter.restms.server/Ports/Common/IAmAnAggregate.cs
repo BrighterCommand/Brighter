@@ -1,6 +1,6 @@
 namespace paramore.brighter.restms.server.Ports.Common
 {
-    internal interface IAmAnAggregate
+    public interface IAmAnAggregate
     {
         Identity Id { get; }
         AggregateVersion Version { get; }
