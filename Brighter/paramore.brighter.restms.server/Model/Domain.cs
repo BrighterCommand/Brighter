@@ -31,18 +31,37 @@ namespace paramore.brighter.restms.server.Model
         private readonly HashSet<Identity> feeds = new HashSet<Identity>();
         public Title Title { get; private set; }
         public Profile Profile { get; private set; }
-        
-        public Identity Id { get; private set; }
+
+        public Identity Id
+        {
+            get { return new Identity(Name.Value);}
+        }
         public AggregateVersion Version { get; private set; }
 
-        public Domain(Name name, Title title, Profile profile, AggregateVersion version)
+        public IEnumerable<Identity> Feeds
+        {
+            get { return feeds; }
+        }
+
+        public Domain(Name name, Title title, Profile profile)
         {
             Name = name;
             Title = title;
             Profile = profile;
+            Version = new AggregateVersion(0);
+        }
+
+        public Domain(Name name, Title title, Profile profile, AggregateVersion version)
+            : this(name, title, profile)
+        {
             Version = version;
         }
-        
+        public void AddFeed(Identity id)
+        {
+            feeds.Add(id);
+        }
+
+        #region Equality operators
         protected bool Equals(Domain other)
         {
             return Equals(Name, other.Name);
@@ -70,10 +89,7 @@ namespace paramore.brighter.restms.server.Model
         {
             return !Equals(left, right);
         }
+        #endregion
 
-        public void AddFeed(Identity id)
-        {
-            feeds.Add(id);
-        }
     }
 }

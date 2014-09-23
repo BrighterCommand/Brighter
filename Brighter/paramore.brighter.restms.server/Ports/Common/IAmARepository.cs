@@ -23,9 +23,9 @@ THE SOFTWARE. */
 
 namespace paramore.brighter.restms.server.Ports.Common
 {
-    interface IAmARepository<T> where T: class, IAmAnAggregate
+    public interface IAmARepository<T> where T: class, IAmAnAggregate
     {
         void Add(T aggregate);
-        T this[Identity index] { get; } 
+        T this[Identity index] { get; }
     }
 }
