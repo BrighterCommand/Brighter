@@ -75,10 +75,10 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_have_set_the_domain_name = () => defaultDomain.Name.ShouldEqual(domain.Name.Value);
         It should_have_set_the_title = () => defaultDomain.Title.ShouldEqual(domain.Title.Value);
         It should_have_set_the_profile_name = () => defaultDomain.Profile.Name.ShouldEqual(domain.Profile.Name.Value);
-        It should_have_set_the_profile_href = () => defaultDomain.Profile.Href.ShouldEqual(domain.Profile.Href.PathAndQuery);
-        It should_have_set_the_feed_type = () => defaultDomain.Feeds[0].Type.ShouldEqual(feed.Type);
-        It should_have_set_the_feed_name = () => defaultDomain.Feeds[0].Name.ShouldEqual(feed.Name);
-        It should_have_set_the_feed_title = () => defaultDomain.Feeds[0].Title.ShouldEqual(feed.Title);
-        It should_have_set_the_feed_address = () => defaultDomain.Feeds[0].Href.ShouldEqual(feed.Href);
+        It should_have_set_the_profile_href = () => defaultDomain.Profile.Href.ShouldEqual(domain.Profile.Href.AbsoluteUri);
+        It should_have_set_the_feed_type = () => defaultDomain.Feeds[0].Type.ShouldEqual(feed.Type.ToString());
+        It should_have_set_the_feed_name = () => defaultDomain.Feeds[0].Name.ShouldEqual(feed.Name.Value);
+        It should_have_set_the_feed_title = () => defaultDomain.Feeds[0].Title.ShouldEqual(feed.Title.Value);
+        It should_have_set_the_feed_address = () => defaultDomain.Feeds[0].Href.ShouldEqual(feed.Href.AbsoluteUri);
     }
 }

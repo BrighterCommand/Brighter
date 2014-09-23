@@ -82,9 +82,10 @@
     <Compile Include="Adapters\Repositories\InMemoryFeedRepository.cs" />
     <Compile Include="Adapters\Repositories\InMemoryRepository.cs" />
     <Compile Include="Adapters\Resources\RestMSDomain.cs" />
-    <Compile Include="Adapters\ServiceHost\Program.cs" />
-    <Compile Include="Adapters\ServiceHost\RestMSService.cs" />
-    <Compile Include="Adapters\ServiceHost\WebPipeline.cs" />
+    <Compile Include="Adapters\Service\RestMSServerBuilder.cs" />
+    <Compile Include="Adapters\Service\Program.cs" />
+    <Compile Include="Adapters\Service\RestMSService.cs" />
+    <Compile Include="Adapters\Service\WebPipeline.cs" />
     <Compile Include="Extensions\Each.cs" />
     <Compile Include="Model\Domain.cs" />
     <Compile Include="Model\Feed.cs" />
