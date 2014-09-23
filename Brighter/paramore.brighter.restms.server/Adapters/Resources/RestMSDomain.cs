@@ -38,27 +38,52 @@ namespace paramore.brighter.restms.server.Adapters.Resources
         [DataMember(Name = "profile"), XmlAttribute(AttributeName = "profile")]
         public RestMSProfile Profile {get; set;}
         [DataMember(Name = "feed"), XmlElement(ElementName = "feed")]
-        public Feed[] Feeds;
+        public RestMSFeed[] Feeds;
 
         public RestMSDomain() {/*required for serialization*/}
 
-        public RestMSDomain(Domain domain, Feed[] toArray)
+        public RestMSDomain(Domain domain, Feed[] feeds)
         {
             Name = domain.Name.Value;
+            Title = domain.Title.Value;
+            Profile = new RestMSProfile(domain.Profile);
+            Feeds = new RestMSFeed[feeds.Length];
+            for (int i = 0; i < feeds.Length; i++)
+            {
+                Feeds[i] = new RestMSFeed(feeds[i]);;
+            }
         }
     }
 
     [DataContract, XmlRoot]
     public class RestMSProfile
     {
+
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
         [DataMember(Name="name"), XmlAttribute(AttributeName = "name")]
         public string Href { get; set; }
+
+        public RestMSProfile() {/*required for serialization*/}
+
+        public RestMSProfile(Profile profile)
+        {
+            Name = profile.Name.Value;
+            Href = profile.Href.AbsoluteUri;
+        }
     }
 
     public class RestMSFeed
     {
+        public RestMSFeed() { /* required for serialization */}
+        public RestMSFeed(Feed feed)
+        {
+            Type = feed.Type.ToString();
+            Name = feed.Name.Value;
+            Title = feed.Title.Value;
+            Href = feed.Href.AbsoluteUri;
+        }
+
         [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
         public string Type { get; set; }
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
