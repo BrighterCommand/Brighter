@@ -23,19 +23,29 @@ THE SOFTWARE. */
 
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
+using paramore.brighter.restms.server.Model;
 
 namespace paramore.brighter.restms.server.Adapters.Resources
 {
     [DataContract, XmlRoot]
     public class RestMSDomain
     {
+
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
         [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
         public string Title { get; set; }
         [DataMember(Name = "profile"), XmlAttribute(AttributeName = "profile")]
         public RestMSProfile Profile {get; set;}
+        [DataMember(Name = "feed"), XmlElement(ElementName = "feed")]
+        public Feed[] Feeds;
 
+        public RestMSDomain() {/*required for serialization*/}
+
+        public RestMSDomain(Domain domain, Feed[] toArray)
+        {
+            Name = domain.Name.Value;
+        }
     }
 
     [DataContract, XmlRoot]
@@ -44,6 +54,18 @@ namespace paramore.brighter.restms.server.Adapters.Resources
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
         [DataMember(Name="name"), XmlAttribute(AttributeName = "name")]
+        public string Href { get; set; }
+    }
+
+    public class RestMSFeed
+    {
+        [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
+        public string Type { get; set; }
+        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
+        public string Name { get; set; }
+        [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
+        public string Title { get; set; }
+        [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }
     }
 }

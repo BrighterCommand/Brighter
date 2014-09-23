@@ -85,6 +85,7 @@
     <Compile Include="Adapters\ServiceHost\Program.cs" />
     <Compile Include="Adapters\ServiceHost\RestMSService.cs" />
     <Compile Include="Adapters\ServiceHost\WebPipeline.cs" />
+    <Compile Include="Extensions\Each.cs" />
     <Compile Include="Model\Domain.cs" />
     <Compile Include="Model\Feed.cs" />
     <Compile Include="Model\FeedType.cs" />
@@ -96,6 +97,7 @@
     <Compile Include="Ports\Common\IAmAnAggregate.cs" />
     <Compile Include="Ports\Common\IAmARepository.cs" />
     <Compile Include="Ports\Common\Identity.cs" />
+    <Compile Include="Ports\ViewModelRetrievers\DomainRetriever.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -105,7 +107,6 @@
   <ItemGroup>
     <Folder Include="Ports\Commands\" />
     <Folder Include="Ports\Handlers\" />
-    <Folder Include="Ports\ViewModelRetrievers\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
