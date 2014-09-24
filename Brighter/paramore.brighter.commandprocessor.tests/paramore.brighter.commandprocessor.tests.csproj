@@ -185,7 +185,7 @@
     <Compile Include="MessagingGateway\rmq\RMQMessageChannelTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RestMSServer\DomainBuilderTests.cs" />
+    <Compile Include="RestMSServer\RestMSServerBuilderTests.cs" />
     <Compile Include="RestMSServer\DomainRetrieverTests.cs" />
     <Compile Include="RestMSServer\NewsFeedPublishSubscribeTests.cs" />
     <Compile Include="Timeout\Test Doubles\MyPassesTimeoutHandler.cs" />
