@@ -61,7 +61,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
 
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
-        [DataMember(Name="name"), XmlAttribute(AttributeName = "name")]
+        [DataMember(Name="hrer"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }
 
         public RestMSProfile() {/*required for serialization*/}
