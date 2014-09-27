@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<configuration  xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <configSections  xdt:Transform="InsertIfMissing">
+      <section name="rmqMessagingGateway" type="paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, paramore.brighter.commandprocessor.messaginggateway.rmq" allowLocation="true" allowDefinition="Everywhere"  xdt:Transform="Insert"  />
+  </configSections>
+  <rmqMessagingGateway xdt:Transform="Insert">
+    <amqpUri uri="amqp://guest:guest@localhost:5672/%2f" />
+    <exchange name="paramore.brighter.exchange" />
+  </rmqMessagingGateway>
+</configuration>

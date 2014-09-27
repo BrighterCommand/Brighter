@@ -22,17 +22,30 @@ THE SOFTWARE. */
 #endregion
 
 using System.Web.Http;
+using paramore.brighter.restms.core.Model;
+using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Resources;
+using paramore.brighter.restms.core.Ports.ViewModelRetrievers;
 
 namespace paramore.brighter.restms.server.Adapters.Controllers
 {
     public class DomainController : ApiController
     {
+        readonly IAmARepository<Domain> domainRepository;
+        readonly IAmARepository<Feed> feedRepository;
+
+        public DomainController(IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository)
+        {
+            this.domainRepository = domainRepository;
+            this.feedRepository = feedRepository;
+        }
+
         [Route("restms/domain/default")]
         [HttpGet]
         public RestMSDomain GetDefaultDomain()
         {
-            return new RestMSDomain();
+            var domainRetriever = new DomainRetriever(feedRepository, domainRepository);
+            return domainRetriever.Retrieve(new Name("default"));
         }
     }
 }

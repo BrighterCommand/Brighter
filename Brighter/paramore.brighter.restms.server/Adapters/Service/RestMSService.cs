@@ -24,10 +24,9 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Owin.Hosting;
 using paramore.brighter.restms.core.Ports.Repositories;
-using paramore.brighter.restms.server.Adapters.Service;
 using Topshelf;
 
-namespace paramore.brighter.restms.server.Adapters
+namespace paramore.brighter.restms.server.Adapters.Service
 {
     public class RestMSService : ServiceControl
     {

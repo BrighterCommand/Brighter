@@ -22,15 +22,20 @@ THE SOFTWARE. */
 #endregion
 
 using System.Web.Http;
+using Microsoft.Practices.Unity;
 using Owin;
 
-namespace paramore.brighter.restms.server.Adapters
+namespace paramore.brighter.restms.server.Adapters.Service
 {
     internal class WebPipeline
     {
         public void Configuration(IAppBuilder builder)
         {
             var configuration = new HttpConfiguration();
+            var container = new UnityContainer();
+            IoCConfiguration.Run(container);
+            InitializeDomains.Run(container);
+            configuration.DependencyResolver = new UnityResolver(container);
             configuration.MapHttpAttributeRoutes();
             builder.UseWebApi(configuration);
         }
