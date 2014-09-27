@@ -23,11 +23,11 @@ THE SOFTWARE. */
 
 using System;
 using Machine.Specifications;
-using paramore.brighter.restms.server.Adapters.Repositories;
-using paramore.brighter.restms.server.Adapters.Resources;
-using paramore.brighter.restms.server.Model;
-using paramore.brighter.restms.server.Ports.Common;
-using paramore.brighter.restms.server.Ports.ViewModelRetrievers;
+using paramore.brighter.restms.core.Model;
+using paramore.brighter.restms.core.Ports.Common;
+using paramore.brighter.restms.core.Ports.Repositories;
+using paramore.brighter.restms.core.Ports.Resources;
+using paramore.brighter.restms.core.Ports.ViewModelRetrievers;
 
 namespace paramore.commandprocessor.tests.RestMSServer
 {

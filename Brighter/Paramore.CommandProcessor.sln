@@ -36,6 +36,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorld", "Examples\Hell
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.restms.server", "paramore.brighter.restms.server\paramore.brighter.restms.server.csproj", "{0D2FBF93-0555-45EB-A92F-5A7C822F9AE0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.restms.core", "paramore.brighter.restms.core\paramore.brighter.restms.core.csproj", "{72E03A7F-A406-4364-9861-2A10A746AE3A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -166,6 +168,16 @@ Global
 		{0D2FBF93-0555-45EB-A92F-5A7C822F9AE0}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{0D2FBF93-0555-45EB-A92F-5A7C822F9AE0}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{0D2FBF93-0555-45EB-A92F-5A7C822F9AE0}.Release|x86.ActiveCfg = Release|Any CPU
+		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

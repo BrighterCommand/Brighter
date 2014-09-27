@@ -22,11 +22,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging.Simple;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
-using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 using Polly;
 using Polly.CircuitBreaker;
 using TinyIoC;

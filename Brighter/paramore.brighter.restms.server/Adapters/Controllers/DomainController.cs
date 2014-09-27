@@ -22,7 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Web.Http;
-using paramore.brighter.restms.server.Adapters.Resources;
+using paramore.brighter.restms.core.Ports.Resources;
 
 namespace paramore.brighter.restms.server.Adapters.Controllers
 {
