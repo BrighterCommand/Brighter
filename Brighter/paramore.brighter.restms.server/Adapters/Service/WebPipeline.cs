@@ -22,7 +22,6 @@ THE SOFTWARE. */
 #endregion
 
 using System.Web.Http;
-using Microsoft.Practices.Unity;
 using Owin;
 
 namespace paramore.brighter.restms.server.Adapters.Service
@@ -32,10 +31,10 @@ namespace paramore.brighter.restms.server.Adapters.Service
         public void Configuration(IAppBuilder builder)
         {
             var configuration = new HttpConfiguration();
-            var container = new UnityContainer();
+            var container = UnityResolver.Instance;
             IoCConfiguration.Run(container);
             InitializeDomains.Run(container);
-            configuration.DependencyResolver = new UnityResolver(container);
+            configuration.DependencyResolver = new UnityResolver();
             configuration.MapHttpAttributeRoutes();
             builder.UseWebApi(configuration);
         }

@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Owin.Hosting;
-using paramore.brighter.restms.core.Ports.Repositories;
 using Topshelf;
 
 namespace paramore.brighter.restms.server.Adapters.Service
@@ -33,12 +32,10 @@ namespace paramore.brighter.restms.server.Adapters.Service
         IDisposable app;
         public bool Start(HostControl hostControl)
         {
-            new RestMSServerBuilder()
-                .Repositories(new InMemoryDomainRepository(), new InMemoryFeedRepository())
-                .Do(); 
             app = WebApp.Start<WebPipeline>("http://localhost:3416"); 
             return true;
         }
+
 
         public bool Stop(HostControl hostControl)
         {
