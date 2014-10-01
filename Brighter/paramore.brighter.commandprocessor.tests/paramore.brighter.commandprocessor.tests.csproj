@@ -176,6 +176,7 @@
     <Compile Include="ExceptionPolicy\TestDoubles\MyDoesNotFailPolicyHandler.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithDivideByZeroHandler.cs" />
     <Compile Include="ExceptionPolicy\PolicyDecoratorTests.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="MessageDispatch\MessageDispatchConfigurationFixture.cs" />
     <Compile Include="MessageDispatch\MessageDispatchFixture.cs" />
     <Compile Include="MessageDispatch\MessagePumpFixture.cs" />

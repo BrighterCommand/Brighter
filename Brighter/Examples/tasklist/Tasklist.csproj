@@ -204,6 +204,7 @@
     <Compile Include="default.aspx.designer.cs">
       <DependentUpon>default.aspx</DependentUpon>
     </Compile>
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Ports\ViewModelRetrievers\ITaskRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\TaskRetriever.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

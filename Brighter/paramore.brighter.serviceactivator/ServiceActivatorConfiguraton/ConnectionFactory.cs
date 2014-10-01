@@ -29,7 +29,7 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
 {
-    public class ConnectionFactory
+    internal class ConnectionFactory
     {
         private readonly IAmAChannelFactory channelFactory;
 

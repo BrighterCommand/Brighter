@@ -45,7 +45,7 @@ namespace paramore.brighter.commandprocessor
     /// The default implementation is <see cref="PipelineBuilder{T}"/>
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
-    public interface IAmAPipelineBuilder<TRequest> : IDisposable where TRequest : class, IRequest 
+    internal interface IAmAPipelineBuilder<TRequest> : IDisposable where TRequest : class, IRequest 
     {
         /// <summary>
         /// Builds the specified request context.
