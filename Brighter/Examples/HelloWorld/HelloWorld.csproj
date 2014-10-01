@@ -63,6 +63,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="GreetingCommand.cs" />
     <Compile Include="GreetingCommandHandler.cs" />
     <Compile Include="Program.cs" />

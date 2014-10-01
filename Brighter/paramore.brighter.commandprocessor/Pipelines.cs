@@ -44,7 +44,7 @@ namespace paramore.brighter.commandprocessor
     /// A collection of <see cref="IHandleRequests"/> instances
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
-    public class Pipelines<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest
+    internal class Pipelines<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest
     {
         private readonly List<IHandleRequests<TRequest>> filters = new List<IHandleRequests<TRequest>>();
 
