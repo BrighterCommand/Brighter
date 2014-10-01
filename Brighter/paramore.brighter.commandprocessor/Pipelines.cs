@@ -39,19 +39,10 @@ using System.Collections.Generic;
 
 namespace paramore.brighter.commandprocessor
 {
-    /// <summary>
-    /// Class Pipelines
-    /// A collection of <see cref="IHandleRequests"/> instances
-    /// </summary>
-    /// <typeparam name="TRequest">The type of the t request.</typeparam>
     internal class Pipelines<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest
     {
         private readonly List<IHandleRequests<TRequest>> filters = new List<IHandleRequests<TRequest>>();
 
-        /// <summary>
-        /// Returns an enumerator that iterates through the collection.
-        /// </summary>
-        /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
         public IEnumerator<IHandleRequests<TRequest>> GetEnumerator()
         {
             return filters.GetEnumerator();
@@ -62,10 +53,6 @@ namespace paramore.brighter.commandprocessor
             return GetEnumerator();
         }
 
-        /// <summary>
-        /// Adds the specified handler.
-        /// </summary>
-        /// <param name="handler">The handler.</param>
         public void Add(IHandleRequests<TRequest> handler)
         {
             filters.Add(handler);
