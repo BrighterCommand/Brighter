@@ -22,7 +22,10 @@ THE SOFTWARE. */
 #endregion
 
 using System.Web.Http;
+using Microsoft.Practices.ObjectBuilder2;
+using paramore.brighter.commandprocessor;
 using paramore.brighter.restms.core.Model;
+using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Resources;
 using paramore.brighter.restms.core.Ports.ViewModelRetrievers;
@@ -31,21 +34,43 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
 {
     public class DomainController : ApiController
     {
+        readonly IAmACommandProcessor commandProcessor;
         readonly IAmARepository<Domain> domainRepository;
         readonly IAmARepository<Feed> feedRepository;
 
-        public DomainController(IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository)
+        public DomainController(IAmACommandProcessor commandProcessor, IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository)
         {
+            this.commandProcessor = commandProcessor;
             this.domainRepository = domainRepository;
             this.feedRepository = feedRepository;
         }
 
-        [Route("restms/domain/default")]
+        [Route("restms/domain/{domainName}")]
         [HttpGet]
-        public RestMSDomain GetDefaultDomain()
+        public RestMSDomain Get(string domainName)
         {
             var domainRetriever = new DomainRetriever(feedRepository, domainRepository);
-            return domainRetriever.Retrieve(new Name("default"));
+            return domainRetriever.Retrieve(new Name(domainName));
+        }
+
+        [Route("restms/domain/{domainName}")]
+        [HttpPost]
+        public void Post(RestMSDomain domain)
+        {
+            //All ops idempotent - if exists with this name, update
+            //Do we have any feeds: create them
+            if (domain.Feeds.Length > 0)
+            {
+                domain.Feeds.ForEach(feed =>
+                                     {
+                                         var newFeedCommand = new NewFeedCommand(
+                                             name: feed.Name,
+                                             type: feed.Type,
+                                             title: feed.Title);
+                                         commandProcessor.Send(newFeedCommand);
+                                     });
+            }
+            //Do we have any pipes create them
         }
     }
 }

@@ -54,8 +54,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
             var feed = new Feed(
                 feedType: FeedType.Direct,
                 name: new Name("default"),
-                title: new Title("Default feed"),
-                href: new Uri(@"http://host.com/restms/feed/default")
+                title: new Title("Default feed")
                 );
 
             using (var scope = new TransactionScope())

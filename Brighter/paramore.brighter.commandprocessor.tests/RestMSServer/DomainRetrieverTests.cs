@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using Machine.Specifications;
+using paramore.brighter.restms.core;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Repositories;
@@ -41,6 +42,8 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         Establish context = () =>
         {
+            Globals.HostName = "host.com";
+
             domain = new Domain(
                 name: new Name("default"),
                 title: new Title("title"),
@@ -55,8 +58,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             feed = new Feed(
                 feedType: FeedType.Direct,
                 name: new Name("default"),
-                title: new Title("Default feed"),
-                href: new Uri(@"http://host.com/restms/feed/default")
+                title: new Title("Default feed")
                 );
 
             var feedRepository = new InMemoryFeedRepository();
