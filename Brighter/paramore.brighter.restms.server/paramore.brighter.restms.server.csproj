@@ -106,6 +106,10 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
+    <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
+      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
+      <Name>paramore.brighter.commandprocessor</Name>
+    </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.restms.core\paramore.brighter.restms.core.csproj">
       <Project>{72e03a7f-a406-4364-9861-2a10a746ae3a}</Project>
       <Name>paramore.brighter.restms.core</Name>

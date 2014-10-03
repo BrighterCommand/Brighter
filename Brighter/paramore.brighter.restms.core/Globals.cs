@@ -21,33 +21,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using Microsoft.Owin.Hosting;
-using paramore.brighter.restms.core;
-using Topshelf;
-
-namespace paramore.brighter.restms.server.Adapters.Service
+namespace paramore.brighter.restms.core
 {
-    public class RestMSService : ServiceControl
+    /// <summary>
+    /// This class needs to be initialized by the client of the core lib, we presume reading from a configuration file
+    /// It's not thread safe!!!! 
+    /// </summary>
+    public static class Globals
     {
-        IDisposable app;
-        public bool Start(HostControl hostControl)
-        {
-            Globals.HostName = "localhost";
-            app = WebApp.Start<WebPipeline>("http://localhost:3416"); 
-            return true;
-        }
-
-
-        public bool Stop(HostControl hostControl)
-        {
-            app.Dispose();
-            return true;
-        }
-
-       public void Shutdown(HostControl hostcontrol)
-        {
-            return;
-        }
+        /// <summary>
+        /// Gets or sets the name of the host.
+        /// </summary>
+        /// <value>The name of the host.</value>
+        public static string HostName { get; set; }
     }
 }
