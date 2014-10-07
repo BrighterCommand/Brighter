@@ -22,6 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Common.Logging;
+using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.restms.core;
 using paramore.brighter.restms.core.Model;
@@ -43,6 +45,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         Establish context = () =>
         {
             Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
 
             domain = new Domain(
                 name: new Name("default"),
@@ -61,12 +64,12 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
-            var feedRepository = new InMemoryFeedRepository();
+            var feedRepository = new InMemoryFeedRepository(logger);
             feedRepository.Add(feed);
 
             domain.AddFeed(feed.Id);
 
-            var domainRepository = new InMemoryDomainRepository();
+            var domainRepository = new InMemoryDomainRepository(logger);
             domainRepository.Add(domain);
 
             domainRetriever = new DomainRetriever(feedRepository, domainRepository);
