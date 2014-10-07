@@ -21,6 +21,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Web.Http;
 using Microsoft.Practices.ObjectBuilder2;
 using paramore.brighter.commandprocessor;
@@ -55,22 +59,52 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
 
         [Route("restms/domain/{domainName}")]
         [HttpPost]
-        public void Post(RestMSDomain domain)
+        public HttpResponseMessage Post(RestMSDomain domain)
         {
-            //All ops idempotent - if exists with this name, update
-            //Do we have any feeds: create them
-            if (domain.Feeds.Length > 0)
+            //we only want to one of feed or pipe, make sure request does not include more
+            var anyFeeds = domain.Feeds.Any();
+            var morethanOneFeed = domain.Feeds.Length > 1;
+
+            if (anyFeeds && morethanOneFeed)
             {
-                domain.Feeds.ForEach(feed =>
-                                     {
-                                         var newFeedCommand = new NewFeedCommand(
-                                             name: feed.Name,
-                                             type: feed.Type,
-                                             title: feed.Title);
-                                         commandProcessor.Send(newFeedCommand);
-                                     });
+                return Request.CreateErrorResponse(
+                    HttpStatusCode.BadRequest, 
+                    string.Format("You tried to create {0} feeds, please just create one at a time", domain.Feeds.Length));
+
             }
+            
+            if (anyFeeds) 
+            {
+                return CreateFeed(domain);
+            }
+
             //Do we have any pipes create them
+
+            return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Unknown content in POST");
+        }
+
+        HttpResponseMessage CreateFeed(RestMSDomain domain)
+        {
+            try
+            {
+                var feed = domain.Feeds.First();
+                var newFeedCommand = new NewFeedCommand(
+                    domainName: domain.Name,
+                    name: feed.Name,
+                    type: feed.Type,
+                    title: feed.Title);
+                commandProcessor.Send(newFeedCommand);
+            }
+            catch (DomainNotFoundException dfe)
+            {
+                return Request.CreateErrorResponse(HttpStatusCode.NotFound, string.Format("The domain {0} ws not found", domain.Name));
+            }
+            catch (FeedAlreadyExistsException fe)
+            {
+                return Request.CreateResponse(HttpStatusCode.OK);
+            }
+
+            return Request.CreateResponse(HttpStatusCode.Accepted);
         }
     }
 }

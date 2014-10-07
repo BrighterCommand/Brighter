@@ -59,11 +59,15 @@
     <Compile Include="Model\Profile.cs" />
     <Compile Include="Model\Resource.cs" />
     <Compile Include="Model\Title.cs" />
+    <Compile Include="Ports\Commands\AddFeedToDomainCommand.cs" />
     <Compile Include="Ports\Commands\NewFeedCommand.cs" />
     <Compile Include="Ports\Common\AggregateVersion.cs" />
+    <Compile Include="Ports\Common\DomainNotFoundException.cs" />
+    <Compile Include="Ports\Common\FeedAlreadyExistsException .cs" />
     <Compile Include="Ports\Common\IAmAnAggregate.cs" />
     <Compile Include="Ports\Common\IAmARepository.cs" />
     <Compile Include="Ports\Common\Identity.cs" />
+    <Compile Include="Ports\Handlers\AddFeedToDomainCommandHandler.cs" />
     <Compile Include="Ports\Handlers\NewFeedHandler.cs" />
     <Compile Include="Ports\Repositories\InMemoryDomainRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryFeedRepository.cs" />

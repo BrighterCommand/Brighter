@@ -36,9 +36,6 @@ THE SOFTWARE. */
 
 using System;
 
-/// <summary>
-/// The commandprocessor namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
