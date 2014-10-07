@@ -21,9 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Transactions;
 using Common.Logging;
 using paramore.brighter.restms.core.Ports.Common;
@@ -74,10 +72,19 @@ namespace paramore.brighter.restms.core.Ports.Repositories
         {
             get
             {
-                if (domains.ContainsKey(index))
-                    return domains[index];
-                else
-                    return null;
+                var aggregate = domains.ContainsKey(index) ? domains[index] : null;
+
+                if (aggregate != null)
+                {
+                    var tx = Transaction.Current;
+                    if (tx != null)
+                    {
+                        var op = new GetOperation(domains, aggregate, logger);
+                        tx.EnlistVolatile(op, EnlistmentOptions.None);
+                    }
+                }
+
+                return aggregate;
             }
         }
 
@@ -85,24 +92,24 @@ namespace paramore.brighter.restms.core.Ports.Repositories
         {
             protected readonly ConcurrentDictionary<Identity, T> Domains;
             protected readonly T Aggregate;
-            protected readonly ILog Logger;
+            readonly ILog logger;
 
             protected RepositoryOperation(ConcurrentDictionary<Identity, T> domains, T aggregate, ILog logger)
             {
                 this.Domains = domains;
                 this.Aggregate = aggregate;
-                this.Logger = logger;
+                this.logger = logger;
             }
 
             public void Prepare(PreparingEnlistment preparingEnlistment)
             {
-                Logger.DebugFormat("In Memory Repository, prepare notification received");
+                logger.DebugFormat("In Memory Repository, prepare notification received");
                 preparingEnlistment.Prepared();
             }
 
             public void Commit(Enlistment enlistment)
             {
-                Logger.DebugFormat("In Memory Repository, commit notification received");
+                logger.DebugFormat("In Memory Repository, commit notification received");
                 OnCommit();
                 enlistment.Done();
             }
@@ -112,7 +119,7 @@ namespace paramore.brighter.restms.core.Ports.Repositories
 
             public void Rollback(Enlistment enlistment)
             {
-                Logger.DebugFormat("In Memory Repository, rollback notification received");
+                logger.DebugFormat("In Memory Repository, rollback notification received");
                 OnRollback();
                 enlistment.Done();
             }
@@ -121,7 +128,7 @@ namespace paramore.brighter.restms.core.Ports.Repositories
 
             public void InDoubt(Enlistment enlistment)
             {
-                Logger.DebugFormat("In Memory Repository, In doubt notification received");
+                logger.DebugFormat("In Memory Repository, In doubt notification received");
                 OnInDoubt();
                 enlistment.Done();
             }
@@ -147,6 +154,19 @@ namespace paramore.brighter.restms.core.Ports.Repositories
                 {
                     Domains.TryRemove(Aggregate.Id, out value);
                 }
+            }
+        }
+
+        class GetOperation : RepositoryOperation
+        {
+            public GetOperation(ConcurrentDictionary<Identity, T> domains, T aggregate, ILog logger) 
+                : base(domains, aggregate, logger)
+            {}
+
+            internal override void OnRollback()
+            {
+                //swap the old value back, in case we modified inside a transaction
+                Domains[Aggregate.Id] = Aggregate;
             }
         }
         
