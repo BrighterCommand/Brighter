@@ -21,11 +21,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using Common.Logging;
 using paramore.brighter.restms.core.Model;
 
 namespace paramore.brighter.restms.core.Ports.Repositories
 {
     public class InMemoryFeedRepository : InMemoryRepository<Feed>
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="T:System.Object"/> class.
+        /// </summary>
+        public InMemoryFeedRepository(ILog logger) : base(logger) {}
     }
 }
