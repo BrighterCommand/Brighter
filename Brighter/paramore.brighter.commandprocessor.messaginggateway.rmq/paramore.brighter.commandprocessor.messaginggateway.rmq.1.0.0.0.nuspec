@@ -3,7 +3,7 @@
     <metadata>
         <id>paramore.brighter.commandprocessor.messaginggateway.rmq</id>
         <version>2.0.1.0</version>
-        <title>paramore.brighter.commandprocessor.messaginggateway.0mq</title>
+        <title>paramore.brighter.commandprocessor.messaginggateway.rmq</title>
         <authors>Ian Cooper</authors>
         <owners>Ian Cooper</owners>
         <licenseUrl>http://ianhammondcooper.mit-license.org/</licenseUrl>
