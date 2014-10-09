@@ -21,18 +21,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
-using Microsoft.Practices.ObjectBuilder2;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Resources;
 using paramore.brighter.restms.core.Ports.ViewModelRetrievers;
+using paramore.brighter.restms.server.Adapters.Filters;
 
 namespace paramore.brighter.restms.server.Adapters.Controllers
 {
@@ -51,6 +50,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
 
         [Route("restms/domain/{domainName}")]
         [HttpGet]
+        [DomainNotFoundExceptionFilter]
         public RestMSDomain Get(string domainName)
         {
             var domainRetriever = new DomainRetriever(feedRepository, domainRepository);
@@ -59,6 +59,8 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
 
         [Route("restms/domain/{domainName}")]
         [HttpPost]
+        [DomainNotFoundExceptionFilter]
+        [FeedAlreadyExistsExceptionFilter]
         public HttpResponseMessage Post(RestMSDomain domain)
         {
             //we only want to one of feed or pipe, make sure request does not include more
@@ -75,18 +77,6 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             
             if (anyFeeds) 
             {
-                return CreateFeed(domain);
-            }
-
-            //Do we have any pipes create them
-
-            return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Unknown content in POST");
-        }
-
-        HttpResponseMessage CreateFeed(RestMSDomain domain)
-        {
-            try
-            {
                 var feed = domain.Feeds.First();
                 var newFeedCommand = new NewFeedCommand(
                     domainName: domain.Name,
@@ -94,17 +84,14 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
                     type: feed.Type,
                     title: feed.Title);
                 commandProcessor.Send(newFeedCommand);
-            }
-            catch (DomainNotFoundException dfe)
-            {
-                return Request.CreateErrorResponse(HttpStatusCode.NotFound, string.Format("The domain {0} ws not found", domain.Name));
-            }
-            catch (FeedAlreadyExistsException fe)
-            {
-                return Request.CreateResponse(HttpStatusCode.OK);
+
+                return Request.CreateResponse(HttpStatusCode.Accepted);
             }
 
-            return Request.CreateResponse(HttpStatusCode.Accepted);
+
+            //Do we have any pipes create them
+
+            return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Unknown content in POST");
         }
     }
 }

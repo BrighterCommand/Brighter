@@ -90,6 +90,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Adapters\Controllers\DomainController.cs" />
+    <Compile Include="Adapters\Controllers\FeedController.cs" />
+    <Compile Include="Adapters\Filters\DomainNotFoundExceptionFilterAttribute.cs" />
+    <Compile Include="Adapters\Filters\FeedAlreadyExistsExceptionFilterAttribute.cs" />
+    <Compile Include="Adapters\Filters\FeedDoesNotExistExceptionFilterAttribute.cs" />
     <Compile Include="Adapters\Formatters\RestMSFormatter.cs" />
     <Compile Include="Adapters\Program.cs" />
     <Compile Include="Adapters\Service\InitializeDomains.cs" />

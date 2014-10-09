@@ -64,6 +64,7 @@
     <Compile Include="Ports\Common\AggregateVersion.cs" />
     <Compile Include="Ports\Common\DomainNotFoundException.cs" />
     <Compile Include="Ports\Common\FeedAlreadyExistsException .cs" />
+    <Compile Include="Ports\Common\FeedDoesNotExistException.cs" />
     <Compile Include="Ports\Common\IAmAnAggregate.cs" />
     <Compile Include="Ports\Common\IAmARepository.cs" />
     <Compile Include="Ports\Common\Identity.cs" />
@@ -74,6 +75,7 @@
     <Compile Include="Ports\Repositories\InMemoryRepository.cs" />
     <Compile Include="Ports\Resources\RestMSDomain.cs" />
     <Compile Include="Ports\ViewModelRetrievers\DomainRetriever.cs" />
+    <Compile Include="Ports\ViewModelRetrievers\FeedRetriever.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

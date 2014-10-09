@@ -9,9 +9,43 @@ using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Handlers;
 using paramore.brighter.restms.core.Ports.Repositories;
+using paramore.brighter.restms.core.Ports.Resources;
+using paramore.brighter.restms.core.Ports.ViewModelRetrievers;
 
 namespace paramore.commandprocessor.tests.RestMSServer
 {
+      [Subject("Retrieving a domain via the view model")]
+    public class When_retreiving_a_feed
+    {
+        private static FeedRetriever feedRetriever;
+        private static RestMSFeed restMSfeed;
+        private static Feed feed;
+
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+
+            feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed")
+                );
+
+            var feedRepository = new InMemoryFeedRepository(logger);
+            feedRepository.Add(feed);
+
+
+            feedRetriever = new FeedRetriever(feedRepository);
+        };
+
+        Because of = () => restMSfeed = feedRetriever.Retrieve(new Name("default"));
+
+        It should_have_set_the_feed_type = () => restMSfeed.Type.ShouldEqual(feed.Type.ToString());
+        It should_have_set_the_feed_name = () => restMSfeed.Name.ShouldEqual(feed.Name.Value);
+        It should_have_set_the_feed_title = () => restMSfeed.Title.ShouldEqual(feed.Title.Value);
+        It should_have_set_the_feed_address = () => restMSfeed.Href.ShouldEqual(feed.Href.AbsoluteUri);
+    }
     public class When_a_producer_adds_a_new_feed
     {
         const string FEED_NAME = "testFeed";
