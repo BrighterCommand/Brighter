@@ -45,6 +45,11 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
 
             var domain = domainRepository[new Identity(name.Value)];
 
+            if (domain == null)
+            {
+                throw new DomainNotFoundException(string.Format("Could not find domain {0}", name.Value));
+            }
+
             var feeds = new List<Feed>();
 
             domain.Feeds.Each(feed => feeds.Add(feedRepository[new Identity(feed.Value)]));
