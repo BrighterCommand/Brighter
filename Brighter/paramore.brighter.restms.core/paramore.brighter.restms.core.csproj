@@ -73,6 +73,7 @@
     <Compile Include="Ports\Handlers\AddFeedToDomainCommandHandler.cs" />
     <Compile Include="Ports\Handlers\DeleteFeedCommandHandler.cs" />
     <Compile Include="Ports\Handlers\NewFeedHandler.cs" />
+    <Compile Include="Ports\Handlers\RemoveFeedFromDomainCommandHandler.cs" />
     <Compile Include="Ports\Repositories\InMemoryDomainRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryFeedRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryRepository.cs" />
