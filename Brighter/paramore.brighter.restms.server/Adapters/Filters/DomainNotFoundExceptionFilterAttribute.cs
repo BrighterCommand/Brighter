@@ -21,31 +21,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using paramore.brighter.restms.core.Model;
+using System.Net;
+using System.Net.Http;
+using System.Web.Http.Filters;
 using paramore.brighter.restms.core.Ports.Common;
-using paramore.brighter.restms.core.Ports.Resources;
 
-namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
+namespace paramore.brighter.restms.server.Adapters.Filters
 {
-    public class FeedRetriever
+    public class DomainNotFoundExceptionFilterAttribute : ExceptionFilterAttribute
     {
-        readonly IAmARepository<Feed> feedRepository;
 
-        public FeedRetriever(IAmARepository<Feed> feedRepository)
+        /// <summary>
+        /// Raises the exception event.
+        /// </summary>
+        /// <param name="actionExecutedContext">The context for the action.</param>
+        public override void OnException(HttpActionExecutedContext actionExecutedContext)
         {
-            this.feedRepository = feedRepository;
-        }
-
-        public RestMSFeed Retrieve(Name name)
-        {
-            var feed = feedRepository[new Identity(name.Value)];
-
-            if (feed == null)
+            if (actionExecutedContext.Exception is DomainNotFoundException)
             {
-                throw new FeedDoesNotExistException();
+                actionExecutedContext.Response = new HttpResponseMessage(HttpStatusCode.NotFound);
             }
-
-            return new RestMSFeed(feed);
         }
+
     }
 }
