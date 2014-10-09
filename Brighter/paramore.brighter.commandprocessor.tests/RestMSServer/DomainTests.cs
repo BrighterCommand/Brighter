@@ -90,6 +90,32 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_have_set_the_feed_address = () => defaultDomain.Feeds[0].Href.ShouldEqual(feed.Href.AbsoluteUri);
     }
 
+    public class When_the_domain_is_not_found
+    {
+        const string DOMAIN_NAME = "Default";
+        const string FEED_NAME = "Feed";
+        static AddFeedToDomainCommandHandler addFeedToDomainCommandHandler;
+        static AddFeedToDomainCommand addFeedToDomainCommand;
+        static Domain domain;
+        static bool exceptionThrown = false;
+
+        Establish context = () =>
+        {
+            var logger = A.Fake<ILog>();
+            exceptionThrown = false;
+        
+            var repository = new InMemoryDomainRepository(logger);
+
+            addFeedToDomainCommandHandler = new AddFeedToDomainCommandHandler(repository, logger);
+            addFeedToDomainCommand = new AddFeedToDomainCommand(domainName: DOMAIN_NAME, feedName: FEED_NAME);
+        };
+
+        Because of = () => { try { addFeedToDomainCommandHandler.Handle(addFeedToDomainCommand); } catch (DomainNotFoundException dfe) { exceptionThrown = true; } };
+
+        It should_throw_an_exception_that_the_feed_already_exists = () => exceptionThrown.ShouldBeTrue();
+
+    }
+
     [Subject("Updating the domain")]
     public class When_adding_a_feed_to_a_domain
     {
@@ -120,32 +146,43 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         Because of = () => addFeedToDomainCommandHandler.Handle(addFeedToDomainCommand);
 
-        It should_add_the_feed_to_the_domain = () => domain.Feeds.Any(feed => feed == new Identity(FEED_NAME));
+        It should_add_the_feed_to_the_domain = () => domain.Feeds.Any(feed => feed == new Identity(FEED_NAME)).ShouldBeTrue();
     }
 
-    public class When_the_domain_is_not_found
-    {
+    public class When_removing_a_feed_from_a_domain
+    { 
         const string DOMAIN_NAME = "Default";
-        const string FEED_NAME = "Feed";
-        static AddFeedToDomainCommandHandler addFeedToDomainCommandHandler;
-        static AddFeedToDomainCommand addFeedToDomainCommand;
+        const string FEED_NAME = "Feeed";
+        static RemoveFeedFromDomainCommand removeFeedFromDomainCommand;
+        static RemoveFeedFromDomainCommandHandler removeFeedFromDomainCommandHandler;
         static Domain domain;
-        static bool exceptionThrown = false;
 
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
-            exceptionThrown = false;
-        
-            var repository = new InMemoryDomainRepository(logger);
+            domain = new Domain(
+                name: new Name(DOMAIN_NAME), 
+                title: new Title("Default domain"), 
+                profile: new Profile(
+                    name: new Name("3/Defaults"), 
+                    href: new Uri("http://host.com/restms/feed/default")
+                    )
+                );
 
-            addFeedToDomainCommandHandler = new AddFeedToDomainCommandHandler(repository, logger);
-            addFeedToDomainCommand = new AddFeedToDomainCommand(domainName: DOMAIN_NAME, feedName: FEED_NAME);
+            domain.AddFeed(new Identity(FEED_NAME));
+
+            var repository = new InMemoryDomainRepository(logger);
+            repository.Add(domain);
+
+            removeFeedFromDomainCommand = new RemoveFeedFromDomainCommand(FEED_NAME);
+            removeFeedFromDomainCommandHandler = new RemoveFeedFromDomainCommandHandler(repository, logger);
+
+
         };
 
-        Because of = () => { try { addFeedToDomainCommandHandler.Handle(addFeedToDomainCommand); } catch (DomainNotFoundException dfe) { exceptionThrown = true; } };
+        Because of = () => removeFeedFromDomainCommandHandler.Handle(removeFeedFromDomainCommand);
 
-        It should_throw_an_exception_that_the_feed_already_exists = () => exceptionThrown.ShouldBeTrue();
-
+        It should_remove_the_feed_from_the_domain = () => domain.Feeds.Any(feed => feed == new Identity(FEED_NAME)).ShouldBeFalse();
     }
+
 }
