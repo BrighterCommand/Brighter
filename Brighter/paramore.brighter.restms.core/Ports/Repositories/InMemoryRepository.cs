@@ -88,10 +88,28 @@ namespace paramore.brighter.restms.core.Ports.Repositories
             }
         }
 
+        /// <summary>
+        /// Removes the specified identity.
+        /// </summary>
+        /// <param name="identity">The identity.</param>
+        public void Remove(Identity identity)
+        {
+            var op = new RemoveOperation(domains, identity, logger);
+            var tx = Transaction.Current;
+            if (tx == null)
+            {
+                op.OnCommit();
+            }
+            else
+            {
+                tx.EnlistVolatile(op, EnlistmentOptions.None);
+            }
+        }
+
         abstract class RepositoryOperation : IEnlistmentNotification
         {
             protected readonly ConcurrentDictionary<Identity, T> Domains;
-            protected readonly T Aggregate;
+            protected T Aggregate;
             readonly ILog logger;
 
             protected RepositoryOperation(ConcurrentDictionary<Identity, T> domains, T aggregate, ILog logger)
@@ -167,6 +185,31 @@ namespace paramore.brighter.restms.core.Ports.Repositories
             {
                 //swap the old value back, in case we modified inside a transaction
                 Domains[Aggregate.Id] = Aggregate;
+            }
+        }
+
+        class RemoveOperation : RepositoryOperation
+        {
+            readonly Identity identity;
+
+            public RemoveOperation(ConcurrentDictionary<Identity, T> domains, Identity identity, ILog logger) 
+                : base(domains, null, logger)
+            {
+                this.identity = identity;
+            }
+
+            internal override void OnCommit()
+            {
+                Domains.TryRemove(identity, out Aggregate);
+            }
+
+            internal override void OnRollback()
+            {
+                //we may have already rolled back via Get unwind
+                if (!Domains.ContainsKey(identity))
+                {
+                    Domains[identity] = Aggregate;
+                }
             }
         }
         

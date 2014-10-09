@@ -14,7 +14,7 @@ using paramore.brighter.restms.core.Ports.ViewModelRetrievers;
 
 namespace paramore.commandprocessor.tests.RestMSServer
 {
-      [Subject("Retrieving a domain via the view model")]
+    [Subject("Retrieving a feed via the view model")]
     public class When_retreiving_a_feed
     {
         private static FeedRetriever feedRetriever;
@@ -46,6 +46,32 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_have_set_the_feed_title = () => restMSfeed.Title.ShouldEqual(feed.Title.Value);
         It should_have_set_the_feed_address = () => restMSfeed.Href.ShouldEqual(feed.Href.AbsoluteUri);
     }
+
+
+    [Subject("Retrieving a feed via the view model")]
+    public class When_retrieving_a_missing_feed
+    {
+        static FeedRetriever feedRetriever;
+        static RestMSFeed restMSfeed;
+        static Feed feed;
+        static bool caughtException;
+
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+
+            var feedRepository = new InMemoryFeedRepository(logger);
+
+            feedRetriever = new FeedRetriever(feedRepository);
+        };
+
+       Because of = () => {try{feedRetriever.Retrieve(new Name("default"));}catch (FeedDoesNotExistException){caughtException = true;}};
+
+       It should_raise_a_feed_not_found_exception = () => caughtException.ShouldBeTrue();
+    }
+
+    [Subject("Adding a feed")]
     public class When_a_producer_adds_a_new_feed
     {
         const string FEED_NAME = "testFeed";
@@ -80,6 +106,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_raise_an_event_to_add_the_feed_to_the_domain = () => A.CallTo(() => commandProcessor.Send(A<AddFeedToDomainCommand>.Ignored)).MustHaveHappened();
     }
 
+    [Subject("Adding a feed")]
     public class When_a_producer_adds_a_new_feed_but_it_already_exists
     {
         const string DOMAIN_NAME = "default";
@@ -133,4 +160,90 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         It should_throw_an_already_exists_exception = () => exceptionThrown.ShouldBeTrue();
     }
+
+    [Subject("Deleting a feed")]
+    public class When_deleting_a_feed
+    {
+        const string DOMAIN_NAME = "default";
+        const string FEED_NAME = "Default";
+        static Domain domain;
+        static Feed feed;
+        static DeleteFeedCommand deleteFeedCommand;
+        static DeleteFeedCommandHandler deleteFeedCommandHandler;
+        static InMemoryFeedRepository feedRepository;
+        static IAmACommandProcessor commandProcessor;
+
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+            commandProcessor = A.Fake<IAmACommandProcessor>();
+
+            domain = new Domain(
+                name: new Name(DOMAIN_NAME),
+                title: new Title("title"),
+                profile: new Profile(
+                    name: new Name(@"3/Defaults"),
+                    href: new Uri(@"href://www.restms.org/spec:3/Defaults")
+                    ),
+                version: new AggregateVersion(0)
+                );
+
+
+            feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name(FEED_NAME),
+                title: new Title("Default feed")
+                );
+
+            feedRepository = new InMemoryFeedRepository(logger);
+            feedRepository.Add(feed);
+
+            domain.AddFeed(feed.Id);
+
+            var domainRepository = new InMemoryDomainRepository(logger);
+            domainRepository.Add(domain);
+            
+            deleteFeedCommandHandler = new DeleteFeedCommandHandler(feedRepository, commandProcessor, logger);
+            deleteFeedCommand = new DeleteFeedCommand(FEED_NAME);
+
+        };
+
+        Because of = () => deleteFeedCommandHandler.Handle(deleteFeedCommand);
+
+        It should_remove_the_feed_from_the_repository = () => feedRepository[new Identity(FEED_NAME)].ShouldBeNull();
+        It should_send_a_message_to_remove_feed_from_domain = () => A.CallTo(() => commandProcessor.Send(A<RemoveFeedFromDomainCommand>.Ignored)).MustHaveHappened();
+
+    }
+
+    [Subject("Deleting a feed")]
+    public class When_deleting_a_feed_that_does_not_exist
+    {
+        const string FEED_NAME = "Default";
+        static DeleteFeedCommand deleteFeedCommand;
+        static DeleteFeedCommandHandler deleteFeedCommandHandler;
+        static InMemoryFeedRepository feedRepository;
+        static IAmACommandProcessor commandProcessor;
+        static bool exceptionThrown = false;
+
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+            commandProcessor = A.Fake<IAmACommandProcessor>();
+            exceptionThrown = false;
+
+            feedRepository = new InMemoryFeedRepository(logger);
+
+            deleteFeedCommandHandler = new DeleteFeedCommandHandler(feedRepository, commandProcessor, logger);
+            deleteFeedCommand = new DeleteFeedCommand(FEED_NAME);
+
+        };
+
+        Because of = () => { try { deleteFeedCommandHandler.Handle(deleteFeedCommand); } catch (FeedDoesNotExistException) { exceptionThrown = true; } };
+
+        It should_throw_a_feed_not_found_exeption = () => exceptionThrown.ShouldBeTrue();
+
+    }
+
 }

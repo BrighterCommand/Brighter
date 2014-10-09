@@ -1,12 +1,12 @@
 ﻿// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
-// Created          : 10-01-2014
+// Created          : 10-09-2014
 //
 // Last Modified By : ian
-// Last Modified On : 10-07-2014
+// Last Modified On : 10-09-2014
 // ***********************************************************************
-// <copyright file="NewFeedCommand.cs" company="">
+// <copyright file="DeleteFeedCommand.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -34,57 +34,30 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
+
 using System;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.restms.core.Ports.Commands
 {
     /// <summary>
-    /// Class NewFeedCommand.
+    /// Class DeleteFeedCommand.
     /// </summary>
-    public class NewFeedCommand : Command
+    public class DeleteFeedCommand : Command
     {
+        /// <summary>
+        /// Gets the name of the feed.
+        /// </summary>
+        /// <value>The name of the feed.</value>
+        public string FeedName { get; private set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Command" /> class.
         /// </summary>
-        /// <param name="domainName">Name of the domain.</param>
-        /// <param name="name">The name.</param>
-        /// <param name="type">The type.</param>
-        /// <param name="title">The title.</param>
-        /// <param name="license">The license.</param>
-        public NewFeedCommand(string domainName, string name, string type = null, string title = null, string license = null) : base(Guid.NewGuid())
+        /// <param name="feedName">Name of the feed.</param>
+        public DeleteFeedCommand(string feedName) : base(Guid.NewGuid())
         {
-            DomainName = domainName;
-            Name = name;
-            Title = title;
-            License = license;
-            Type = type;
+            FeedName = feedName;
         }
-
-        /// <summary>
-        /// Gets or sets the name of the domain.
-        /// </summary>
-        /// <value>The name of the domain.</value>
-        public string DomainName { get; set; }
-        /// <summary>
-        /// Gets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        public string Name { get; private set; }
-        /// <summary>
-        /// Gets the type.
-        /// </summary>
-        /// <value>The type.</value>
-        public string Type { get; private set; }
-        /// <summary>
-        /// Gets the title.
-        /// </summary>
-        /// <value>The title.</value>
-        public string Title { get; private set; }
-        /// <summary>
-        /// Gets the license.
-        /// </summary>
-        /// <value>The license.</value>
-        public string License { get; private set; }
     }
 }

@@ -27,5 +27,6 @@ namespace paramore.brighter.restms.core.Ports.Common
     {
         void Add(T aggregate);
         T this[Identity index] { get; }
+        void Remove(Identity identity);
     }
 }

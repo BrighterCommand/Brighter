@@ -21,31 +21,43 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Web.Http;
+using paramore.brighter.commandprocessor;
 using paramore.brighter.restms.core.Model;
+using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Resources;
+using paramore.brighter.restms.core.Ports.ViewModelRetrievers;
+using paramore.brighter.restms.server.Adapters.Filters;
 
-namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
+namespace paramore.brighter.restms.server.Adapters.Controllers
 {
-    public class FeedRetriever
+    public class FeedController : ApiController
     {
+        readonly IAmACommandProcessor commandProcessor;
         readonly IAmARepository<Feed> feedRepository;
 
-        public FeedRetriever(IAmARepository<Feed> feedRepository)
+        public FeedController(IAmACommandProcessor commandProcessor, IAmARepository<Feed> feedRepository)
         {
+            this.commandProcessor = commandProcessor;
             this.feedRepository = feedRepository;
         }
 
-        public RestMSFeed Retrieve(Name name)
+        [Route("restms/feed/{feedName}")]
+        [HttpGet]
+        [FeedDoesNotExistExceptionFilter]
+        public RestMSFeed Get(string feedName)
         {
-            var feed = feedRepository[new Identity(name.Value)];
+            var feedRetriever = new FeedRetriever(feedRepository);
+            return feedRetriever.Retrieve(new Name(feedName));
+        }
 
-            if (feed == null)
-            {
-                throw new FeedDoesNotExistException();
-            }
-
-            return new RestMSFeed(feed);
+        [Route("restms/feed/{feedname}")]
+        [HttpDelete]
+        [FeedDoesNotExistExceptionFilter]
+        public void Delete(string feedName)
+        {
+            var command = new DeleteFeedCommand(feedName: feedName);
         }
     }
 }
