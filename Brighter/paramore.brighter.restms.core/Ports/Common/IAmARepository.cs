@@ -21,6 +21,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using System.Collections.Generic;
+
 namespace paramore.brighter.restms.core.Ports.Common
 {
     public interface IAmARepository<T> where T: class, IAmAnAggregate
@@ -28,5 +31,7 @@ namespace paramore.brighter.restms.core.Ports.Common
         void Add(T aggregate);
         T this[Identity index] { get; }
         void Remove(Identity identity);
+
+         IEnumerable<T> Find(Func<T, bool> query);
     }
 }

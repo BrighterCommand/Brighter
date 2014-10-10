@@ -77,7 +77,7 @@
     <Compile Include="Ports\Repositories\InMemoryDomainRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryFeedRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryRepository.cs" />
-    <Compile Include="Ports\Resources\RestMSDomain.cs" />
+    <Compile Include="Ports\Resources\RestMS.cs" />
     <Compile Include="Ports\ViewModelRetrievers\DomainRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\FeedRetriever.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

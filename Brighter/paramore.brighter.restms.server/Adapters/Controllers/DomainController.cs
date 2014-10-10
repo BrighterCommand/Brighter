@@ -51,7 +51,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [Route("restms/domain/{domainName}")]
         [HttpGet]
         [DomainNotFoundExceptionFilter]
-        public RestMSDomain Get(string domainName)
+        public RestMS Get(string domainName)
         {
             var domainRetriever = new DomainRetriever(feedRepository, domainRepository);
             return domainRetriever.Retrieve(new Name(domainName));
@@ -61,9 +61,10 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [HttpPost]
         [DomainNotFoundExceptionFilter]
         [FeedAlreadyExistsExceptionFilter]
-        public HttpResponseMessage Post(RestMSDomain domain)
+        public HttpResponseMessage Post(RestMS domain)
         {
             //we only want to one of feed or pipe, make sure request does not include more
+            //TODO: Wehen we return 201 we should also return a Location header for the new resource
             var anyFeeds = domain.Feeds.Any();
             var morethanOneFeed = domain.Feeds.Length > 1;
 

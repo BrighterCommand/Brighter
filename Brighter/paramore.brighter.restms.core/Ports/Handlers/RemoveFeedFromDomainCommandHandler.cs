@@ -35,10 +35,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Linq;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.restms.core.Extensions;
+using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;
-using paramore.brighter.restms.core.Ports.Repositories;
+using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Ports.Handlers
 {
@@ -47,16 +50,28 @@ namespace paramore.brighter.restms.core.Ports.Handlers
     /// </summary>
     public class RemoveFeedFromDomainCommandHandler :RequestHandler<RemoveFeedFromDomainCommand>
     {
-        readonly InMemoryDomainRepository repository;
+        readonly IAmARepository<Domain> repository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RemoveFeedFromDomainCommandHandler"/> class.
         /// </summary>
         /// <param name="repository">The repository.</param>
         /// <param name="logger">The logger.</param>
-        public RemoveFeedFromDomainCommandHandler(InMemoryDomainRepository repository, ILog logger) : base(logger)
+        public RemoveFeedFromDomainCommandHandler(IAmARepository<Domain> repository, ILog logger) : base(logger)
         {
             this.repository = repository;
+        }
+
+        /// <summary>
+        /// Handles the specified command.
+        /// </summary>
+        /// <param name="command">The command.</param>
+        /// <returns>TRequest.</returns>
+        public override RemoveFeedFromDomainCommand Handle(RemoveFeedFromDomainCommand command)
+        {
+            var domainsContainingFeed = repository.Find((Domain domain) => domain.Feeds.Any((feed) => feed == new Identity(command.FeedName)));
+            domainsContainingFeed.Each(domain => domain.RemoveFeed(new Identity(command.FeedName)));
+            return base.Handle(command);
         }
     }
 }

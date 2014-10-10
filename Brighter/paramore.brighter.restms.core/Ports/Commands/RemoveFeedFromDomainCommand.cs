@@ -5,6 +5,8 @@ namespace paramore.brighter.restms.core.Ports.Commands
 {
     public class RemoveFeedFromDomainCommand : Command
     {
+        public string FeedName { get; private set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Command"/> class.
         /// </summary>
@@ -12,6 +14,7 @@ namespace paramore.brighter.restms.core.Ports.Commands
         /// <param name="id">The identifier.</param>
         public RemoveFeedFromDomainCommand(string feedName) : base(Guid.NewGuid())
         {
+            FeedName = feedName;
         }
     }
 }

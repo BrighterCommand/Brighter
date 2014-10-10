@@ -21,9 +21,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Transactions;
 using Common.Logging;
+using paramore.brighter.restms.core.Extensions;
 using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Ports.Repositories
@@ -104,6 +109,11 @@ namespace paramore.brighter.restms.core.Ports.Repositories
             {
                 tx.EnlistVolatile(op, EnlistmentOptions.None);
             }
+        }
+
+        public IEnumerable<T> Find(Func<T, bool> query)
+        {
+            return domains.Where((pair) => query(pair.Value)).Select((pair) => pair.Value);
         }
 
         abstract class RepositoryOperation : IEnlistmentNotification

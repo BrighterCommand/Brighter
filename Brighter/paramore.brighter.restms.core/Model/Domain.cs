@@ -91,5 +91,9 @@ namespace paramore.brighter.restms.core.Model
         }
         #endregion
 
+        public void RemoveFeed(Identity identity)
+        {
+            feeds.RemoveWhere(feed => feed == identity);
+        }
     }
 }

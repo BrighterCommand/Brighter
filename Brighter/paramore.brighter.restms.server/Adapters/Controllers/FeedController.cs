@@ -32,6 +32,9 @@ using paramore.brighter.restms.server.Adapters.Filters;
 
 namespace paramore.brighter.restms.server.Adapters.Controllers
 {
+    /// <summary>
+    /// Class FeedController.
+    /// </summary>
     public class FeedController : ApiController
     {
         readonly IAmACommandProcessor commandProcessor;
@@ -48,16 +51,27 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [FeedDoesNotExistExceptionFilter]
         public RestMSFeed Get(string feedName)
         {
+            //TODO: Get needs Last Modified and ETag
             var feedRetriever = new FeedRetriever(feedRepository);
             return feedRetriever.Retrieve(new Name(feedName));
         }
 
+       
         [Route("restms/feed/{feedname}")]
         [HttpDelete]
         [FeedDoesNotExistExceptionFilter]
         public void Delete(string feedName)
         {
+            //TODO: Should support conditional DELETE based on ETag
             var command = new DeleteFeedCommand(feedName: feedName);
+        }
+
+        [Route("restms/feed/{feedname}")]
+        [HttpPost]
+        [FeedDoesNotExistExceptionFilter]
+        public void PostMessageToFeed(RestMSMessage messageSpecification)
+        {
+            
         }
     }
 }
