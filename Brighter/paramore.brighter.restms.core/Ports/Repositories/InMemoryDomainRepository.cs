@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using Common.Logging;
 using paramore.brighter.restms.core.Model;
 
@@ -32,5 +33,6 @@ namespace paramore.brighter.restms.core.Ports.Repositories
         /// Initializes a new instance of the <see cref="T:System.Object"/> class.
         /// </summary>
         public InMemoryDomainRepository(ILog logger) : base(logger){}
+
     }
 }

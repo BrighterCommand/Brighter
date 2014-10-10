@@ -28,7 +28,7 @@ using paramore.brighter.restms.core.Model;
 namespace paramore.brighter.restms.core.Ports.Resources
 {
     [DataContract, XmlRoot]
-    public class RestMSDomain
+    public class RestMS
     {
 
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
@@ -40,9 +40,9 @@ namespace paramore.brighter.restms.core.Ports.Resources
         [DataMember(Name = "feed"), XmlElement(ElementName = "feed")]
         public RestMSFeed[] Feeds;
 
-        public RestMSDomain() {/*required for serialization*/}
+        public RestMS() {/*required for serialization*/}
 
-        public RestMSDomain(Domain domain, Feed[] feeds)
+        public RestMS(Domain domain, Feed[] feeds)
         {
             Name = domain.Name.Value;
             Title = domain.Title.Value;
@@ -93,4 +93,11 @@ namespace paramore.brighter.restms.core.Ports.Resources
         [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }
     }
+
+    public class RestMSMessage
+    {
+        [DataMember(Name = "address"), XmlAttribute(AttributeName = "address")]
+        public string Address { get; set; }
+    }
+
 }

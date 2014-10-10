@@ -41,7 +41,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
     public class When_retreiving_a_domain
     {
         private static DomainRetriever domainRetriever;
-        private static RestMSDomain defaultDomain;
+        private static RestMS defaultDomain;
         private static Domain domain;
         private static Feed feed;
 
@@ -176,8 +176,6 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
             removeFeedFromDomainCommand = new RemoveFeedFromDomainCommand(FEED_NAME);
             removeFeedFromDomainCommandHandler = new RemoveFeedFromDomainCommandHandler(repository, logger);
-
-
         };
 
         Because of = () => removeFeedFromDomainCommandHandler.Handle(removeFeedFromDomainCommand);

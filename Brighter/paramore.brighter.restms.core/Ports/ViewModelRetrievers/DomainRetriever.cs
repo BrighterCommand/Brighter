@@ -40,7 +40,7 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
             this.domainRepository = domainRepository;
         }
 
-        public RestMSDomain Retrieve(Name name)
+        public RestMS Retrieve(Name name)
         {
 
             var domain = domainRepository[new Identity(name.Value)];
@@ -54,7 +54,7 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
 
             domain.Feeds.Each(feed => feeds.Add(feedRepository[new Identity(feed.Value)]));
 
-            return new RestMSDomain(domain, feeds.ToArray());
+            return new RestMS(domain, feeds.ToArray());
         }
     }
 }
