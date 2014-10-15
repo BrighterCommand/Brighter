@@ -41,7 +41,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
     public class When_retreiving_a_domain
     {
         private static DomainRetriever domainRetriever;
-        private static RestMS defaultDomain;
+        private static RestMSDomain defaultDomain;
         private static Domain domain;
         private static Feed feed;
 
