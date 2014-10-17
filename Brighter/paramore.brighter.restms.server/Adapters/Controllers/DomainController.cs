@@ -51,8 +51,9 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [Route("restms/domain/{domainName}")]
         [HttpGet]
         [DomainNotFoundExceptionFilter]
-        public RestMS Get(string domainName)
+        public RestMSDomain Get(string domainName)
         {
+            //TODO: Get needs Last Modified and ETag.
             var domainRetriever = new DomainRetriever(feedRepository, domainRepository);
             return domainRetriever.Retrieve(new Name(domainName));
         }
@@ -61,7 +62,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [HttpPost]
         [DomainNotFoundExceptionFilter]
         [FeedAlreadyExistsExceptionFilter]
-        public HttpResponseMessage Post(RestMS domain)
+        public HttpResponseMessage Post(RestMSDomain domain)
         {
             //we only want to one of feed or pipe, make sure request does not include more
             //TODO: Wehen we return 201 we should also return a Location header for the new resource

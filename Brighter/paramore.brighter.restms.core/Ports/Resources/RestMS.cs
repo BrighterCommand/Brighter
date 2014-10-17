@@ -21,14 +21,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Dynamic;
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
 using paramore.brighter.restms.core.Model;
 
 namespace paramore.brighter.restms.core.Ports.Resources
 {
-    [DataContract, XmlRoot]
-    public class RestMS
+    [DataContract(Name = "domain"), XmlRoot(ElementName = "domain")]
+    public class RestMSDomain
     {
 
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
@@ -40,9 +41,9 @@ namespace paramore.brighter.restms.core.Ports.Resources
         [DataMember(Name = "feed"), XmlElement(ElementName = "feed")]
         public RestMSFeed[] Feeds;
 
-        public RestMS() {/*required for serialization*/}
+        public RestMSDomain() {/*required for serialization*/}
 
-        public RestMS(Domain domain, Feed[] feeds)
+        public RestMSDomain(Domain domain, Feed[] feeds)
         {
             Name = domain.Name.Value;
             Title = domain.Title.Value;
@@ -55,7 +56,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         }
     }
 
-    [DataContract, XmlRoot]
+    [DataContract(Name = "profile"), XmlRoot(ElementName = "profile")]
     public class RestMSProfile
     {
 
@@ -73,6 +74,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         }
     }
 
+    [DataContract(Name = "feed"), XmlRoot(ElementName = "feed")]
     public class RestMSFeed
     {
         public RestMSFeed() { /* required for serialization */}
@@ -94,10 +96,47 @@ namespace paramore.brighter.restms.core.Ports.Resources
         public string Href { get; set; }
     }
 
+    [DataContract(Name = "message"), XmlRoot(ElementName = "message")]
     public class RestMSMessage
     {
         [DataMember(Name = "address"), XmlAttribute(AttributeName = "address")]
         public string Address { get; set; }
+        [DataMember(Name = "message_id"), XmlAttribute(AttributeName = "message_id")]
+        public string MessageId { get; set; }
+        [DataMember(Name = "reply_to"), XmlAttribute(AttributeName = "reply_to")]
+        public string ReplyTo { get; set; }
+        [DataMember(Name = "header"), XmlAttribute(AttributeName = "header")]
+        public RestMSMessageHeader[] Headers { get; set; }
+
+        [DataMember(Name = "content"), XmlAttribute(AttributeName = "content")]
+        public RestMSMessageContent Content { get; set; }
+
+        [DataMember(Name = "feed"), XmlAttribute(AttributeName = "feed")]
+        public RestMSFeed Feed { get; set; }
+
+
     }
+
+
+    [DataContract(Name = "message"), XmlRoot(ElementName = "message")]
+    public class RestMSMessageHeader
+    {
+        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
+        public string Name { get; set; }
+        [DataMember(Name = "value"), XmlAttribute(AttributeName = "value")]
+        public string Value { get; set; }
+    }
+
+    [DataContract(Name = "content"), XmlRoot(ElementName = "content")]
+    public class RestMSMessageContent
+    {
+        [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
+        public string Type { get; set; }
+        [DataMember(Name = "encoding"), XmlAttribute(AttributeName = "type")]
+        public string Encoding { get; set; }
+        [DataMember, XmlText]
+        public string Value { get; set; } 
+    }
+
 
 }
