@@ -246,4 +246,24 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
     }
 
+    public class When_posting_a_message_to_a_feed
+    {
+        static AddMessageToFeedCommand addMessageToFeedCommand;
+        static AddMessageToFeedCommandHandler addmessageToFeedCommandHandler;
+
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+
+            addMessageToFeedCommand = new AddMessageToFeedCommand();
+            addmessageToFeedCommandHandler = new AddMessageToFeedCommandHandler();
+            
+        };
+
+        Because of = () => addmessageToFeedCommandHandler.Handle(addMessageToFeedCommand);
+
+        It should;
+    }
+
 }

@@ -63,7 +63,8 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         public void Delete(string feedName)
         {
             //TODO: Should support conditional DELETE based on ETag
-            var command = new DeleteFeedCommand(feedName: feedName);
+            var deleteFeedCommand = new DeleteFeedCommand(feedName: feedName);
+            commandProcessor.Send(deleteFeedCommand);
         }
 
         [Route("restms/feed/{feedname}")]
