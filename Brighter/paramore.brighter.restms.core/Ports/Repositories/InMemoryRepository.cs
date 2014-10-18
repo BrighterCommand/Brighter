@@ -132,8 +132,11 @@ namespace paramore.brighter.restms.core.Ports.Repositories
             public void Prepare(PreparingEnlistment preparingEnlistment)
             {
                 logger.DebugFormat("In Memory Repository, prepare notification received");
+                OnPrepare();
                 preparingEnlistment.Prepared();
             }
+
+            internal virtual void OnPrepare() {}
 
             public void Commit(Enlistment enlistment)
             {

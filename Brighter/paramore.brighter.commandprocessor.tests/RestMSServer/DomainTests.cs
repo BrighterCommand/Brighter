@@ -90,6 +90,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_have_set_the_feed_address = () => defaultDomain.Feeds[0].Href.ShouldEqual(feed.Href.AbsoluteUri);
     }
 
+    [Subject("Retrieving a domain via the view model")]
     public class When_the_domain_is_not_found
     {
         const string DOMAIN_NAME = "Default";
@@ -149,6 +150,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_add_the_feed_to_the_domain = () => domain.Feeds.Any(feed => feed == new Identity(FEED_NAME)).ShouldBeTrue();
     }
 
+    [Subject("Updating the domain")]
     public class When_removing_a_feed_from_a_domain
     { 
         const string DOMAIN_NAME = "Default";
@@ -183,4 +185,38 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_remove_the_feed_from_the_domain = () => domain.Feeds.Any(feed => feed == new Identity(FEED_NAME)).ShouldBeFalse();
     }
 
+    [Subject("Updating the domain")]
+    public class When_adding_a_pipe_to_a_domain
+    {
+        const string DOMAIN_NAME = "Default";
+        const string PIPE_NAME = "{A9343B6D-ACA2-4D9E-ACFE-78998267C678}";
+        static Domain domain;
+        static AddPipeToDomainCommandHandler addPipeToDomainCommandHandler;
+        static AddPipeToDomainCommand addPipeToDomainCommand;
+
+        Establish context = () =>
+        {
+            var logger = A.Fake<ILog>();
+            domain = new Domain(
+                name: new Name(DOMAIN_NAME), 
+                title: new Title("Default domain"), 
+                profile: new Profile(
+                    name: new Name("3/Defaults"), 
+                    href: new Uri("http://host.com/restms/feed/default")
+                    )
+                );
+
+            var repository = new InMemoryDomainRepository(logger);
+            repository.Add(domain);
+
+            addPipeToDomainCommandHandler = new AddPipeToDomainCommandHandler(repository, logger);
+            addPipeToDomainCommand = new AddPipeToDomainCommand(domainName: DOMAIN_NAME, pipeName: PIPE_NAME);
+        };
+
+        Because of = () => addPipeToDomainCommandHandler.Handle(addPipeToDomainCommand);
+
+        It should_add_the_pipe_into_the_domain = () => domain.Pipes.Any(pipe => pipe == new Identity(PIPE_NAME)).ShouldBeTrue();
+    }                                                                                                                                                                                       
+
 }
+                                                                                                           
