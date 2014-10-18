@@ -257,13 +257,13 @@ namespace paramore.commandprocessor.tests.RestMSServer
             var logger = A.Fake<ILog>();
 
             addMessageToFeedCommand = new AddMessageToFeedCommand();
-            addmessageToFeedCommandHandler = new AddMessageToFeedCommandHandler();
+            addmessageToFeedCommandHandler = new AddMessageToFeedCommandHandler(logger);
             
         };
 
         Because of = () => addmessageToFeedCommandHandler.Handle(addMessageToFeedCommand);
 
-        It should;
+        It should_distribute_the_message_to_every_subscribed_join;
     }
 
 }

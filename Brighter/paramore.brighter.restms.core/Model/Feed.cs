@@ -28,6 +28,8 @@ namespace paramore.brighter.restms.core.Model
 {
     public class Feed : Resource, IAmAnAggregate
     {
+        const string FEED_URI_FORMAT = "http://{0}/restms/feed/{1}";
+
         public Feed(Name name, FeedType feedType = FeedType.Direct, Title title = null, Name license = null)
         {
             Type = feedType;
@@ -35,7 +37,7 @@ namespace paramore.brighter.restms.core.Model
             Title = title;
             License = license;
             Version = new AggregateVersion(0);
-            Href = new Uri(string.Format("http://{0}/restms/feed/{1}", Globals.HostName,Name.Value));
+            Href = new Uri(string.Format(FEED_URI_FORMAT, Globals.HostName,Name.Value));
         }
 
         public Feed(Name name, AggregateVersion version, FeedType feedType = FeedType.Direct, Title title = null, Name license = null)

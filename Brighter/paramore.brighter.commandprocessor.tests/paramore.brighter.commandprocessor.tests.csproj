@@ -189,7 +189,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RestMSServer\DomainTests.cs" />
     <Compile Include="RestMSServer\FeedTests.cs" />
-    <Compile Include="RestMSServer\NewsFeedPublishSubscribeTests.cs" />
+    <Compile Include="RestMSServer\JoinTests.cs" />
+    <Compile Include="RestMSServer\PipeTests.cs" />
     <Compile Include="Timeout\Test Doubles\MyPassesTimeoutHandler.cs" />
     <Compile Include="Timeout\Test Doubles\MyFailsDueToTimeoutHandler.cs" />
     <Compile Include="Timeout\TimeoutDecoratorTests.cs" />

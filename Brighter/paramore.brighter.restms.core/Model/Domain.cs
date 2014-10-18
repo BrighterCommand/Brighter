@@ -28,7 +28,9 @@ namespace paramore.brighter.restms.core.Model
 {
     public class Domain : Resource, IAmAnAggregate
     {
-        private readonly HashSet<Identity> feeds = new HashSet<Identity>();
+        readonly HashSet<Identity> feeds = new HashSet<Identity>();
+        readonly HashSet<Identity> pipes  = new HashSet<Identity>();
+
         public Title Title { get; private set; }
         public Profile Profile { get; private set; }
 
@@ -41,6 +43,11 @@ namespace paramore.brighter.restms.core.Model
         public IEnumerable<Identity> Feeds
         {
             get { return feeds; }
+        }
+
+        public IEnumerable<Identity> Pipes
+        {
+            get { return pipes; }
         }
 
         public Domain(Name name, Title title, Profile profile)
@@ -94,6 +101,11 @@ namespace paramore.brighter.restms.core.Model
         public void RemoveFeed(Identity identity)
         {
             feeds.RemoveWhere(feed => feed == identity);
+        }
+
+        public void AddPipe(Identity id)
+        {
+            pipes.Add(id);
         }
     }
 }
