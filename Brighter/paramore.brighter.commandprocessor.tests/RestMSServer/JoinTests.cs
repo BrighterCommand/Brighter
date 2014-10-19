@@ -70,6 +70,26 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
     public class When_a_feed_does_not_exist
     {
-        
+        const string ADDRESS_PATTERN = "Address Pattern";
+        static AddJoinToFeedCommand addJoinToFeedCommand;
+        static AddJoinToFeedCommandHandler addJoinToFeedCommandHandler;
+        static IAmARepository<Feed> feedRepository;
+        static bool exceptionThrown = false;
+            
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+            feedRepository = new InMemoryFeedRepository(logger);
+            exceptionThrown = false;
+
+            addJoinToFeedCommand = new AddJoinToFeedCommand("http://host.com/restms/feed/123", ADDRESS_PATTERN);
+
+            addJoinToFeedCommandHandler = new AddJoinToFeedCommandHandler(feedRepository, logger);
+        };
+
+        Because of = () => { try { addJoinToFeedCommandHandler.Handle(addJoinToFeedCommand); } catch (FeedDoesNotExistException) { exceptionThrown = true; }};
+
+        It should_throw_a_feed_not_found_exception = () => exceptionThrown.ShouldBeTrue();
     }
 }
