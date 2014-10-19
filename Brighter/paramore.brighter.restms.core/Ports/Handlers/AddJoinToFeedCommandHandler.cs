@@ -32,7 +32,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
             using (var scope = new TransactionScope())
             {
                 var feedUri = new Uri(addJoinToFeedCommand.FeedAddress);
-                var feed = feedRepository.Find(f => f.Href == feedUri).First();
+                var feed = feedRepository.Find(f => f.Href == feedUri).FirstOrDefault();
                 if (feed == null)
                 {
                     throw new FeedDoesNotExistException();
