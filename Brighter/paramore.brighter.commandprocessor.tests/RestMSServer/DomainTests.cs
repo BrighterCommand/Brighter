@@ -91,7 +91,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
     }
 
     [Subject("Retrieving a domain via the view model")]
-    public class When_the_domain_is_not_found
+    public class When_adding_a_feed_and_the_domain_is_not_found
     {
         const string DOMAIN_NAME = "Default";
         const string FEED_NAME = "Feed";
@@ -217,6 +217,33 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         It should_add_the_pipe_into_the_domain = () => domain.Pipes.Any(pipe => pipe == new Identity(PIPE_NAME)).ShouldBeTrue();
     }                                                                                                                                                                                       
+
+        [Subject("Retrieving a domain via the view model")]
+    public class When_adding_a_pipe_and_the_domain_is_not_found
+    {
+        const string DOMAIN_NAME = "Default";
+        const string PIPE_NAME = "{A9343B6D-ACA2-4D9E-ACFE-78998267C678}";
+        static Domain domain;
+        static AddPipeToDomainCommandHandler addPipeToDomainCommandHandler;
+        static AddPipeToDomainCommand addPipeToDomainCommand;
+        static bool exceptionThrown = false;
+
+        Establish context = () =>
+        {
+            var logger = A.Fake<ILog>();
+            exceptionThrown = false;
+        
+            var repository = new InMemoryDomainRepository(logger);
+
+            addPipeToDomainCommandHandler = new AddPipeToDomainCommandHandler(repository, logger);
+            addPipeToDomainCommand = new AddPipeToDomainCommand(domainName: DOMAIN_NAME, pipeName: PIPE_NAME);
+        };
+
+        Because of = () => { try { addPipeToDomainCommandHandler .Handle(addPipeToDomainCommand ); } catch (DomainNotFoundException dfe) { exceptionThrown = true; } };
+
+        It should_throw_an_exception_that_the_feed_already_exists = () => exceptionThrown.ShouldBeTrue();
+
+    }
 
 }
                                                                                                            

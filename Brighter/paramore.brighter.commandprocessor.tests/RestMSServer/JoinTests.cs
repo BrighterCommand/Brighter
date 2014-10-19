@@ -21,46 +21,55 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Linq;
+using Common.Logging;
+using FakeItEasy;
+using Machine.Specifications;
+using paramore.brighter.restms.core;
+using paramore.brighter.restms.core.Model;
+using paramore.brighter.restms.core.Ports.Commands;
+using paramore.brighter.restms.core.Ports.Common;
+using paramore.brighter.restms.core.Ports.Handlers;
+using paramore.brighter.restms.core.Ports.Repositories;
+
 namespace paramore.commandprocessor.tests.RestMSServer
 {
-    public class JoinTests
+    public class When_adding_a_join_to_a_pipe
     {
-        #region Scenario
-        /*
-         * http://zyre-v1.wikidot.com/doc:restms-quick-reference
-         * Newsfeed publish-subscribe scenario
+        const string ADDRESS_PATTERN = "Address Pattern";
+        static AddJoinToFeedCommand addJoinToFeedCommand;
+        static AddJoinToFeedCommandHandler addJoinToFeedCommandHandler;
+        static Feed feed;
+        static IAmARepository<Feed> feedRepository;
+            
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+            feedRepository = new InMemoryFeedRepository(logger);
 
-        * In which publishers distribute messages to subscribers:
+            feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed")
+                );
 
-        * AMQP publisher: 
-         * declare topic exchange: 
-         *  Exchange.Declare name="{feed-name}" type="topic", 
-         * then publish messages to that exchange: 
-         *  Basic.Publish exchange="{feed-name}" routing-key="{category}"
+            feedRepository.Add(feed);
 
-        * AMQP subscriber: 
-         * use private queue: 
-         *  Queue.Declare queue="(empty)" exclusive=1, 
-         * then 
-         *  Basic.Consume 
-         * on queue. 
-         * To subscribe, bind queue to feed exchange, using category pattern: 
-         * Queue.Bind queue="{queue}" exchange="{feed-name}" routing-key="{category pattern}"
+            addJoinToFeedCommand = new AddJoinToFeedCommand(feed.Href.AbsoluteUri, ADDRESS_PATTERN);
 
-        * RestMS publisher: 
-         * create public feed: 
-         *  POST <feed name="{feed-name}" type="topic"/> to /restms/domain/, 
-         * then publish messages to that feed: 
-         *  POST <message address="{category}"/> to /restms/feed/{feed-name}.
+            addJoinToFeedCommandHandler = new AddJoinToFeedCommandHandler(feedRepository, logger);
+        };
 
-        * RestMS subscriber: 
-         * create pipe: 
-         *  POST <pipe/> to /restms/domain/. 
-         * Create join from pipe to feed: 
-         *  POST <join address="{category pattern}" feed="{feed-name}"/> 
-         * Then retrieve message asynclet: GET /restms/resource/{asynclet-hash}.
+        Because of = () => addJoinToFeedCommandHandler.Handle(addJoinToFeedCommand);
 
-         */
-        #endregion
+        It should_add_the_join_to_the_feed = () => feed.Joins[new Address(ADDRESS_PATTERN)].First().Address.ShouldEqual(new Address(ADDRESS_PATTERN));
+        It should_set_the_join_feed_uri = () => feed.Joins[new Address(ADDRESS_PATTERN)].First().FeedHref.ShouldEqual(feed.Href);
+        It should_have_the_default_join_type = () => feed.Joins[new Address(ADDRESS_PATTERN)].First().Type.ShouldEqual(JoinType.Default);
+    }
+
+    public class When_a_feed_does_not_exist
+    {
+        
     }
 }

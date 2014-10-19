@@ -1,13 +1,20 @@
 ﻿using System;
-using System.Transactions;
 using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Model
 {
-    public enum PipeType
-    {
-        Default = 0
-    }
+    /*
+         Pipe - a source of messages delivered to applications.
+        Pipes follow these rules:
+
+        A pipe is a read-only ordered stream of messages meant for a single reader.
+        The order of messages in a pipe is stable only for a single feed.
+        Pipes receive messages from joins, according to the joins defined between the pipe and the feed.
+        Clients MUST create pipes for their own use: all pipes are private and dynamic.
+        To create a new pipe the client POSTs a pipe document to the parent domain's URI.
+        The server MAY do garbage collection on unused, or overflowing pipes.
+
+     */
 
     public class Pipe : Resource, IAmAnAggregate
     {
