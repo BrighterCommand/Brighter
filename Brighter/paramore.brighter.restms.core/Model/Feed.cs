@@ -22,10 +22,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections;
 using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Model
 {
+    /*
+        Feed - a destination for messages published by applications.
+ 
+        Feeds follow these rules:
+
+        A feed is a write-only ordered stream of messages received from one or more writers.
+        The order of messages in a feed is stable per writer.
+        Feeds deliver messages into pipes, according to the joins defined on the feed.
+        Clients can create dynamic feeds for their own use.
+        To create a new feed the client POSTs a feed document to the parent domain URI.
+        The server MAY implement a set of configured public feeds.
+ 
+     */
     public class Feed : Resource, IAmAnAggregate
     {
         const string FEED_URI_FORMAT = "http://{0}/restms/feed/{1}";
@@ -38,6 +52,7 @@ namespace paramore.brighter.restms.core.Model
             License = license;
             Version = new AggregateVersion(0);
             Href = new Uri(string.Format(FEED_URI_FORMAT, Globals.HostName,Name.Value));
+            Joins = new RoutingTable();
         }
 
         public Feed(Name name, AggregateVersion version, FeedType feedType = FeedType.Direct, Title title = null, Name license = null)
@@ -55,6 +70,11 @@ namespace paramore.brighter.restms.core.Model
             get {return new Identity(Name.Value); }
         }
         public AggregateVersion Version { get; private set; }
+        public RoutingTable Joins { get; private set; }
 
+        public void AddJoin(Join join)
+        {
+            Joins[join.Address] = new Join[] {join};
+        }
     }
 }

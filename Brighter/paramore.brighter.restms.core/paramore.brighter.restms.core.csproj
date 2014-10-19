@@ -52,15 +52,21 @@
   <ItemGroup>
     <Compile Include="Extensions\Each.cs" />
     <Compile Include="Globals.cs" />
+    <Compile Include="Model\Address.cs" />
     <Compile Include="Model\Domain.cs" />
     <Compile Include="Model\Feed.cs" />
     <Compile Include="Model\FeedType.cs" />
+    <Compile Include="Model\Join.cs" />
+    <Compile Include="Model\JoinType.cs" />
     <Compile Include="Model\Name.cs" />
     <Compile Include="Model\Pipe.cs" />
+    <Compile Include="Model\PipeType.cs" />
     <Compile Include="Model\Profile.cs" />
     <Compile Include="Model\Resource.cs" />
+    <Compile Include="Model\RoutingTable.cs" />
     <Compile Include="Model\Title.cs" />
     <Compile Include="Ports\Commands\AddFeedToDomainCommand.cs" />
+    <Compile Include="Ports\Commands\AddJoinToFeedCommand.cs" />
     <Compile Include="Ports\Commands\AddMessageToFeedCommand.cs" />
     <Compile Include="Ports\Commands\AddPipeCommand.cs" />
     <Compile Include="Ports\Commands\AddPipeToDomainCommand.cs" />
@@ -75,6 +81,7 @@
     <Compile Include="Ports\Common\IAmARepository.cs" />
     <Compile Include="Ports\Common\Identity.cs" />
     <Compile Include="Ports\Handlers\AddFeedToDomainCommandHandler.cs" />
+    <Compile Include="Ports\Handlers\AddJoinToFeedCommandHandler.cs" />
     <Compile Include="Ports\Handlers\AddMessageToFeedCommandHandler.cs" />
     <Compile Include="Ports\Handlers\AddPipeCommandHandler.cs" />
     <Compile Include="Ports\Handlers\AddPipeToDomainCommandHandler.cs" />

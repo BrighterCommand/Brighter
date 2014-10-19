@@ -26,6 +26,19 @@ using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Model
 {
+    /*
+         Domain - a set of resources managed by one RestMS server or virtual host.
+         Domains follow these rules:
+
+        A domain is a public collection of profiles, feeds, and pipes.
+        The server MAY implement multiple domains and MAY allow routing of messages between domains.
+        Domains MAY be used to partition resources for authenticated access control.
+        Domains are configured resources: clients do not create or destroy domains.
+        Domains act as namespaces for pipes and feeds.
+        The client and server must agree in advance on the domains that exist.
+        The server SHOULD implement a default public domain named "default".
+
+     */
     public class Domain : Resource, IAmAnAggregate
     {
         readonly HashSet<Identity> feeds = new HashSet<Identity>();

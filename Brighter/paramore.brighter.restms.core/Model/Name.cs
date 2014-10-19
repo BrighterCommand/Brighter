@@ -34,7 +34,7 @@ namespace paramore.brighter.restms.core.Model
 
         public override string ToString()
         {
-            return string.Format("Value: {0}", Value);
+            return string.Format("Name: {0}", Value);
         }
 
         protected bool Equals(Name other)
