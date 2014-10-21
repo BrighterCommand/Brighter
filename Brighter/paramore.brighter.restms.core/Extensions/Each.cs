@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 09-26-2014
+//
+// Last Modified By : ian
+// Last Modified On : 09-26-2014
+// ***********************************************************************
+// <copyright file="Each.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,10 +37,20 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 
+/// <summary>
+/// </summary>
 namespace paramore.brighter.restms.core.Extensions
 {
+    /// <summary>
+    /// </summary>
     public static class EnumerationExtensions
     {
+        /// <summary>
+        /// Eaches the specified collection.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="collection">The collection.</param>
+        /// <param name="doThis">The do this.</param>
         public static void Each<T>(this IEnumerable<T> collection, Action<T> doThis)
         {
             foreach(var item in collection)

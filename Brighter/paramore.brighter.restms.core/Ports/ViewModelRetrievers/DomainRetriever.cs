@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 09-26-2014
+//
+// Last Modified By : ian
+// Last Modified On : 10-14-2014
+// ***********************************************************************
+// <copyright file="DomainRetriever.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -29,17 +42,30 @@ using paramore.brighter.restms.core.Ports.Resources;
 
 namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
 {
+    /// <summary>
+    /// </summary>
     public class DomainRetriever
     {
         private readonly IAmARepository<Feed> feedRepository;
         private readonly IAmARepository<Domain> domainRepository;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DomainRetriever"/> class.
+        /// </summary>
+        /// <param name="feedRepository">The feed repository.</param>
+        /// <param name="domainRepository">The domain repository.</param>
         public DomainRetriever(IAmARepository<Feed> feedRepository, IAmARepository<Domain> domainRepository)
         {
             this.feedRepository = feedRepository;
             this.domainRepository = domainRepository;
         }
 
+        /// <summary>
+        /// Retrieves the specified name.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <returns>RestMSDomain.</returns>
+        /// <exception cref="paramore.brighter.restms.core.Ports.Common.DomainNotFoundException"></exception>
         public RestMSDomain Retrieve(Name name)
         {
 

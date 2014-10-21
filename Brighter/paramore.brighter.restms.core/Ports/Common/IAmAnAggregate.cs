@@ -1,3 +1,17 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 09-26-2014
+//
+// Last Modified By : ian
+// Last Modified On : 10-01-2014
+// ***********************************************************************
+// <copyright file="IAmAnAggregate.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -23,9 +37,19 @@ THE SOFTWARE. */
 
 namespace paramore.brighter.restms.core.Ports.Common
 {
+    /// <summary>
+    /// </summary>
     public interface IAmAnAggregate
     {
+        /// <summary>
+        /// Gets the identifier.
+        /// </summary>
+        /// <value>The identifier.</value>
         Identity Id { get; }
+        /// <summary>
+        /// Gets the version.
+        /// </summary>
+        /// <value>The version.</value>
         AggregateVersion Version { get; }
     }
 }

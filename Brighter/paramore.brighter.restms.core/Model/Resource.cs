@@ -1,3 +1,17 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 09-26-2014
+//
+// Last Modified By : ian
+// Last Modified On : 09-26-2014
+// ***********************************************************************
+// <copyright file="Resource.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -25,9 +39,20 @@ using System;
 
 namespace paramore.brighter.restms.core.Model
 {
+    /// <summary>
+    /// Class Resource.
+    /// </summary>
     public class Resource
     {
+        /// <summary>
+        /// Gets or sets the href.
+        /// </summary>
+        /// <value>The href.</value>
         public Uri Href { get; protected set; }
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         public Name Name { get; protected set; }
     }
 }
