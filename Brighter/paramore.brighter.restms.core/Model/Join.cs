@@ -36,6 +36,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Model
 {
@@ -54,12 +55,14 @@ namespace paramore.brighter.restms.core.Model
         /// <summary>
         /// Initializes a new instance of the <see cref="T:System.Object" /> class.
         /// </summary>
-        /// <param name="address">The address.</param>
-        /// <param name="feedHref">The feed href.</param>
-        public Join(Address address, Uri feedHref)
+        /// <param name="pipe">The Pipe this joins the feed to</param>
+        /// <param name="feedHref">The feed href for identifying the feed</param>
+        /// <param name="address">The address pattern to match this join against.</param>
+        public Join(Identity pipe, Uri feedHref, Address address)
         {
             Address = address;
             FeedHref = feedHref;
+            Pipe = pipe;
             Type = JoinType.Default;
         }
 
@@ -73,10 +76,18 @@ namespace paramore.brighter.restms.core.Model
         /// </summary>
         /// <value>The feed href.</value>
         public Uri FeedHref { get; private set; }
+
+        /// <summary>
+        /// The pipe we are attached to.
+        /// </summary>
+        /// <value>The pipe.</value>
+        public Identity Pipe { get; set; }
+
         /// <summary>
         /// Gets the <see cref="JoinType"/>
         /// </summary>
         /// <value>The type.</value>
         public JoinType Type { get; private set; }
+
     }
 }

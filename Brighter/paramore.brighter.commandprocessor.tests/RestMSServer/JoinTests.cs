@@ -38,9 +38,11 @@ namespace paramore.commandprocessor.tests.RestMSServer
     public class When_adding_a_join_to_a_pipe
     {
         const string ADDRESS_PATTERN = "Address Pattern";
+        const string PIPE_NAME = "{E00B52BE-F2C4-4D7F-8472-403E5CC5AB4B}";
         static AddJoinToFeedCommand addJoinToFeedCommand;
         static AddJoinToFeedCommandHandler addJoinToFeedCommandHandler;
         static Feed feed;
+        static Pipe pipe;
         static IAmARepository<Feed> feedRepository;
             
         Establish context = () =>
@@ -55,9 +57,13 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
+            pipe = new Pipe(new Identity(PIPE_NAME), PipeType.Default);
+
             feedRepository.Add(feed);
 
-            addJoinToFeedCommand = new AddJoinToFeedCommand(feed.Href.AbsoluteUri, ADDRESS_PATTERN);
+            //in the POST to the Pipe we know: Pipe identity, the Uri of the feed, and the address type of the join
+            //we don't know the identity of the feed
+            addJoinToFeedCommand = new AddJoinToFeedCommand(pipe.Id.Value, feed.Href.AbsoluteUri, ADDRESS_PATTERN);
 
             addJoinToFeedCommandHandler = new AddJoinToFeedCommandHandler(feedRepository, logger);
         };
@@ -67,15 +73,18 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_add_the_join_to_the_feed = () => feed.Joins[new Address(ADDRESS_PATTERN)].First().Address.ShouldEqual(new Address(ADDRESS_PATTERN));
         It should_set_the_join_feed_uri = () => feed.Joins[new Address(ADDRESS_PATTERN)].First().FeedHref.ShouldEqual(feed.Href);
         It should_have_the_default_join_type = () => feed.Joins[new Address(ADDRESS_PATTERN)].First().Type.ShouldEqual(JoinType.Default);
+        It should_have_a_reference_to_the_pipe = () => feed.Joins[new Address(ADDRESS_PATTERN)].First().Pipe.ShouldEqual(pipe.Id);
     }
 
     [Subject("A join, connection between a feed and a pipe")]
     public class When_a_feed_does_not_exist
     {
         const string ADDRESS_PATTERN = "Address Pattern";
+        const string PIPE_NAME = "{E00B52BE-F2C4-4D7F-8472-403E5CC5AB4B}";
         static AddJoinToFeedCommand addJoinToFeedCommand;
         static AddJoinToFeedCommandHandler addJoinToFeedCommandHandler;
         static IAmARepository<Feed> feedRepository;
+        static Pipe pipe;
         static bool exceptionThrown = false;
             
         Establish context = () =>
@@ -85,7 +94,9 @@ namespace paramore.commandprocessor.tests.RestMSServer
             feedRepository = new InMemoryFeedRepository(logger);
             exceptionThrown = false;
 
-            addJoinToFeedCommand = new AddJoinToFeedCommand("http://host.com/restms/feed/123", ADDRESS_PATTERN);
+            pipe = new Pipe(new Identity(PIPE_NAME), PipeType.Default);
+
+            addJoinToFeedCommand = new AddJoinToFeedCommand(pipe.Id.ToString(), "http://host.com/restms/feed/123", ADDRESS_PATTERN);
 
             addJoinToFeedCommandHandler = new AddJoinToFeedCommandHandler(feedRepository, logger);
         };
