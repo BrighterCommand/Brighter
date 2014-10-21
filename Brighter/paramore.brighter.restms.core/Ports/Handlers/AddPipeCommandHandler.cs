@@ -79,9 +79,23 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                 scope.Complete();
             }
 
+            if (pipe.Type == PipeType.Default)
+            {
+                commandProcessor.Send(new AddJoinToFeedCommand(pipe.Id.Value, GetDefaultFeedUri(), "*"));
+            }
+
             commandProcessor.Send(new AddPipeToDomainCommand(command.DomainName, pipe.Name.Value));
 
             return base.Handle(command);
+        }
+
+        string GetDefaultFeedUri()
+        {
+            return new Feed(
+                feedType: FeedType.Default,
+                name: new Name("default"),
+                title: new Title("Default feed")
+                ).Href.AbsoluteUri;
         }
 
         #endregion

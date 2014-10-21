@@ -75,9 +75,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                     throw new FeedDoesNotExistException();
                 }
 
-                var join = new Join(
-                    new Address(addJoinToFeedCommand.AddressPattern),
-                    new Uri(addJoinToFeedCommand.FeedAddress));
+                var join = new Join(new Identity(addJoinToFeedCommand.PipeIdentity), new Uri(addJoinToFeedCommand.FeedAddress), new Address(addJoinToFeedCommand.AddressPattern));
 
                 feed.AddJoin(join);
 

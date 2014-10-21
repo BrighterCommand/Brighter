@@ -40,19 +40,38 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.restms.core.Ports.Commands
 {
+    /// <summary>
+    /// Class AddJoinToFeedCommand.
+    /// </summary>
     public class AddJoinToFeedCommand : Command
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="Command"/> class.
+        /// Initializes a new instance of the <see cref="Command" /> class.
         /// </summary>
-        /// <param name="id">The identifier.</param>
-        public AddJoinToFeedCommand(string feedAddress, string addressPattern) : base(Guid.NewGuid())
+        /// <param name="pipeIdentity">The pipe identity.</param>
+        /// <param name="feedAddress">The feed address.</param>
+        /// <param name="addressPattern">The address pattern.</param>
+        public AddJoinToFeedCommand(string pipeIdentity, string feedAddress, string addressPattern) : base(Guid.NewGuid())
         {
             FeedAddress = feedAddress;
             AddressPattern = addressPattern;
+            PipeIdentity = pipeIdentity;
         }
 
+        /// <summary>
+        /// Gets the feed address.
+        /// </summary>
+        /// <value>The feed address.</value>
         public string FeedAddress { get; private set; }
+        /// <summary>
+        /// Gets the address pattern.
+        /// </summary>
+        /// <value>The address pattern.</value>
         public string AddressPattern { get; private set; }
+        /// <summary>
+        /// Gets the pipe identity.
+        /// </summary>
+        /// <value>The pipe identity.</value>
+        public string PipeIdentity { get; private set; }
     }
 }
