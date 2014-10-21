@@ -65,7 +65,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         [DataMember(Name = "profile"), XmlAttribute(AttributeName = "profile")]
         public RestMSProfile Profile {get; set;}
         /// <summary>
-        /// The feeds{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+        /// The feeds
         /// </summary>
         [DataMember(Name = "feed"), XmlElement(ElementName = "feed")]
         public RestMSFeed[] Feeds;
@@ -186,18 +186,28 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// <value>The address.</value>
         [DataMember(Name = "address"), XmlAttribute(AttributeName = "address")]
         public string Address { get; set; }
+
         /// <summary>
         /// Gets or sets the message identifier.
         /// </summary>
         /// <value>The message identifier.</value>
         [DataMember(Name = "message_id"), XmlAttribute(AttributeName = "message_id")]
         public string MessageId { get; set; }
+
         /// <summary>
         /// Gets or sets the reply to.
         /// </summary>
         /// <value>The reply to.</value>
         [DataMember(Name = "reply_to"), XmlAttribute(AttributeName = "reply_to")]
         public string ReplyTo { get; set; }
+
+        /// <summary>
+        /// Gets or sets the feed.
+        /// </summary>
+        /// <value>The feed.</value>
+        [DataMember(Name = "feed"), XmlAttribute(AttributeName = "feed")]
+        public RestMSFeed Feed { get; set; }
+
         /// <summary>
         /// Gets or sets the headers.
         /// </summary>
@@ -211,14 +221,6 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// <value>The content.</value>
         [DataMember(Name = "content"), XmlAttribute(AttributeName = "content")]
         public RestMSMessageContent Content { get; set; }
-
-        /// <summary>
-        /// Gets or sets the feed.
-        /// </summary>
-        /// <value>The feed.</value>
-        [DataMember(Name = "feed"), XmlAttribute(AttributeName = "feed")]
-        public RestMSFeed Feed { get; set; }
-
 
     }
 

@@ -36,6 +36,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Model
@@ -53,6 +54,7 @@ namespace paramore.brighter.restms.core.Model
     /// </summary>
     public class Pipe : Resource, IAmAnAggregate
     {
+        readonly List<Message> messages;
         const string PIPE_URI_FORMAT = "http://{0}/restms/pipe/{1}";
         /// <summary>
         /// Gets the identifier.
@@ -76,6 +78,19 @@ namespace paramore.brighter.restms.core.Model
         public PipeType Type { get; private set; }
 
         /// <summary>
+        /// Gets the <see cref="Join"/> that connects the <see cref="Pipe"/> to a <see cref="Feed"/>.
+        /// </summary>
+        /// <value>The join.</value>
+        public Join Join { get; private set; }
+
+        /// <summary>
+        /// Gets the messages on the <see cref="Pipe"/> distributed from the <see cref="Feed"/> because they matched the <see cref="Join"/>.
+        /// </summary>
+        /// <value>The messages.</value>
+        public IEnumerable<Message> Messages {get { return messages; }
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Pipe"/> class.
         /// </summary>
         /// <param name="identity">The identity.</param>
@@ -88,6 +103,7 @@ namespace paramore.brighter.restms.core.Model
             Name = new Name(Id.Value);
             Type = (PipeType) Enum.Parse(typeof (PipeType), pipeType);
             Href = new Uri(string.Format(PIPE_URI_FORMAT, Globals.HostName, identity.Value));
+            messages = new List<Message>();
         }
 
         /// <summary>
@@ -103,6 +119,16 @@ namespace paramore.brighter.restms.core.Model
             Name = new Name(Id.Value);
             Type = pipeType;
             Href = new Uri(string.Format(PIPE_URI_FORMAT, Globals.HostName, identity.Value));
+        }
+
+        public void AddJoin(Join join)
+        {
+            Join = join;
+        }
+
+        public void AddMessage(Message message)
+        {
+            messages.Add(message);
         }
     }
 }
