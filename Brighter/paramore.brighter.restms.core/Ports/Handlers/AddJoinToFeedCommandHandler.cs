@@ -75,8 +75,9 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                     throw new FeedDoesNotExistException();
                 }
 
-                var join = new Join(new Identity(addJoinToFeedCommand.PipeIdentity), new Uri(addJoinToFeedCommand.FeedAddress), new Address(addJoinToFeedCommand.AddressPattern));
-
+                //this creates the same join as added to the pipe - but is a different instance. It will compare equal by value
+                var join = new Join(addJoinToFeedCommand.Pipe, new Uri(addJoinToFeedCommand.FeedAddress), new Address(addJoinToFeedCommand.AddressPattern));
+                
                 feed.AddJoin(join);
 
                 scope.Complete();

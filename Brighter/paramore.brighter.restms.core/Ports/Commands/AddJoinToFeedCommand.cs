@@ -37,6 +37,7 @@ THE SOFTWARE. */
 
 using System;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.restms.core.Model;
 
 namespace paramore.brighter.restms.core.Ports.Commands
 {
@@ -51,11 +52,11 @@ namespace paramore.brighter.restms.core.Ports.Commands
         /// <param name="pipeIdentity">The pipe identity.</param>
         /// <param name="feedAddress">The feed address.</param>
         /// <param name="addressPattern">The address pattern.</param>
-        public AddJoinToFeedCommand(string pipeIdentity, string feedAddress, string addressPattern) : base(Guid.NewGuid())
+        public AddJoinToFeedCommand(Pipe pipe, string feedAddress, string addressPattern) : base(Guid.NewGuid())
         {
             FeedAddress = feedAddress;
             AddressPattern = addressPattern;
-            PipeIdentity = pipeIdentity;
+            Pipe = pipe;
         }
 
         /// <summary>
@@ -72,6 +73,6 @@ namespace paramore.brighter.restms.core.Ports.Commands
         /// Gets the pipe identity.
         /// </summary>
         /// <value>The pipe identity.</value>
-        public string PipeIdentity { get; private set; }
+        public Pipe Pipe { get; private set; }
     }
 }

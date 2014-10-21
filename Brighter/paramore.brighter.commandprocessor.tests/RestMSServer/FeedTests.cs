@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Specialized;
+using System.Linq;
 using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
@@ -250,20 +252,73 @@ namespace paramore.commandprocessor.tests.RestMSServer
     {
         static AddMessageToFeedCommand addMessageToFeedCommand;
         static AddMessageToFeedCommandHandler addmessageToFeedCommandHandler;
+        const string DOMAIN_NAME = "default";
+        const string FEED_NAME = "Default";
+        const string REPLY_TO = "http://host.com/mywebhook/messagereceipt";
+        const string MESSAGE_ADDRESS = "*";
+        const string MY_CUSTOM_HEADER = "Hunting";
+        const string MY_HEADER_VALUE = "Snark";
+        static Domain domain;
+        static Feed feed;
+        static Pipe pipe;
+        static Join join;
+        static NameValueCollection headers;
 
         Establish context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
 
-            addMessageToFeedCommand = new AddMessageToFeedCommand();
-            addmessageToFeedCommandHandler = new AddMessageToFeedCommandHandler(logger);
+            domain = new Domain(
+                name: new Name(DOMAIN_NAME),
+                title: new Title("title"),
+                profile: new Profile(
+                    name: new Name(@"3/Defaults"),
+                    href: new Uri(@"href://www.restms.org/spec:3/Defaults")
+                    ),
+                version: new AggregateVersion(0)
+                );
+
+
+            feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name(FEED_NAME),
+                title: new Title("Default feed")
+                );
+
+            pipe = new Pipe(new Identity(Guid.NewGuid().ToString()), "Default");
+
+            join = new Join(pipe, feed.Href, new Address(MESSAGE_ADDRESS));
+            pipe.AddJoin(join);
+            feed.AddJoin(join);
+
+            var feedRepository = new InMemoryFeedRepository(logger);
+            feedRepository.Add(feed);
+
+            domain.AddFeed(feed.Id);
+
+            var domainRepository = new InMemoryDomainRepository(logger);
+            domainRepository.Add(domain);
+
+            var pipeRepository = new InMemoryPipeRepository(logger);
+            pipeRepository.Add(pipe);
+
+
+            headers = new NameValueCollection {{MY_CUSTOM_HEADER, MY_HEADER_VALUE}};
+            addMessageToFeedCommand = new AddMessageToFeedCommand(feed.Name.Value, MESSAGE_ADDRESS, REPLY_TO, headers);
+            addmessageToFeedCommandHandler = new AddMessageToFeedCommandHandler(feedRepository, logger);
             
         };
 
         Because of = () => addmessageToFeedCommandHandler.Handle(addMessageToFeedCommand);
 
-        It should_distribute_the_message_to_every_subscribed_join;
+        It should_distribute_the_message_to_every_subscribed_join = () => addMessageToFeedCommand.MatchingJoins.ShouldEqual(1);
+        It should_put_the_message_onto_the_pipe_associated_with_the_join = () => pipe.Messages.Count().ShouldEqual(1);
+        It should_store_the_routing_address_on_the_message = () => pipe.Messages.First().Address.Value.ShouldEqual(MESSAGE_ADDRESS);
+        It should_store_a_message_id_for_the_message = () => pipe.Messages.First().MessageId.ShouldNotEqual(Guid.Empty);
+        It should_store_a_reply_to_for_the_message = () => pipe.Messages.First().ReplyTo.AbsoluteUri.ShouldEqual(addMessageToFeedCommand.ReplyTo);
+        It should_add_any_headers_to_the_message = () => pipe.Messages.First().Headers[MY_CUSTOM_HEADER].ShouldEqual(headers[MY_CUSTOM_HEADER]);
+
     }
 
 }

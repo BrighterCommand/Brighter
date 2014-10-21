@@ -35,20 +35,60 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using System.Transactions;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;
+using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Ports.Handlers
 {
     public class AddMessageToFeedCommandHandler : RequestHandler<AddMessageToFeedCommand>
     {
+        readonly IAmARepository<Feed> feedRepository;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
+        /// <param name="feedRepository"></param>
         /// <param name="logger">The logger.</param>
-        public AddMessageToFeedCommandHandler(ILog logger) : base(logger)
+        public AddMessageToFeedCommandHandler(IAmARepository<Feed> feedRepository, ILog logger) : base(logger)
         {
+            this.feedRepository = feedRepository;
         }
+
+        #region Overrides of RequestHandler<AddMessageToFeedCommand>
+
+        /// <summary>
+        /// Handles the specified command.
+        /// </summary>
+        /// <param name="addMessageToFeedCommand">The command.</param>
+        /// <returns>TRequest.</returns>
+        public override AddMessageToFeedCommand Handle(AddMessageToFeedCommand addMessageToFeedCommand)
+        {
+            using (var scope = new TransactionScope())
+            {
+                var feed = feedRepository[new Identity(addMessageToFeedCommand.FeedName)];
+                if (feed == null)
+                {
+                    throw new FeedDoesNotExistException();
+                }
+
+                addMessageToFeedCommand.MatchingJoins = feed.AddMessage(
+                    new Model.Message(
+                        new Address(addMessageToFeedCommand.Address),
+                        new Uri(addMessageToFeedCommand.ReplyTo),
+                        addMessageToFeedCommand.Headers
+                        ));
+
+                scope.Complete();
+            }
+
+            return base.Handle(addMessageToFeedCommand);
+        }
+
+        #endregion
     }
 }

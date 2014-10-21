@@ -1,17 +1,16 @@
 ﻿// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
-// Created          : 10-16-2014
+// Created          : 10-21-2014
 //
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="AddMessageToFeedCommand.cs" company="">
+// <copyright file="PipeNotFoundException.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -36,34 +35,30 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Specialized;
-using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.restms.core.Ports.Commands
+namespace paramore.brighter.restms.core.Ports.Common
 {
-    public class AddMessageToFeedCommand : Command
+    /// <summary>
+    /// Class PipeNotFoundException.
+    /// </summary>
+    public class PipeDoesNotExistException : Exception
     {
-        public string FeedName { get; private set; }
-        public int MatchingJoins { get; set; }
-        public string Address { get; private set; }
-        public string ReplyTo { get; private set; }
-        public NameValueCollection Headers { get; private set; }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PipeDoesNotExistException"/> class.
+        /// </summary>
+        public PipeDoesNotExistException() {}
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Command"/> class.
+        /// Initializes a new instance of the <see cref="PipeDoesNotExistException" /> class with a specified error message.
         /// </summary>
-        /// <param name="feedName"></param>
-        /// <param name="address"></param>
-        /// <param name="replyTo"></param>
-        /// <param name="headers"></param>
-        /// <param name="name"></param>
-        /// <param name="id">The identifier.</param>
-        public AddMessageToFeedCommand(string feedName, string address, string replyTo, NameValueCollection headers) : base(Guid.NewGuid())
-        {
-            FeedName = feedName;
-            Address = address;
-            ReplyTo = replyTo;
-            Headers = headers;
-        }
+        /// <param name="message">The message that describes the error.</param>
+        public PipeDoesNotExistException(string message) : base(message){}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PipeDoesNotExistException"/> class.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="innException">The inn exception.</param>
+        public PipeDoesNotExistException(string message, Exception innException) : base(message, innException){}
     }
 }

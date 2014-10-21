@@ -1,12 +1,12 @@
 ﻿// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
-// Created          : 10-16-2014
+// Created          : 10-21-2014
 //
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="AddMessageToFeedCommand.cs" company="">
+// <copyright file="AddJoinToFeedCommand.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -36,34 +36,42 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Specialized;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.restms.core.Ports.Commands
 {
-    public class AddMessageToFeedCommand : Command
+    /// <summary>
+    /// Class AddJoinToFeedCommand.
+    /// </summary>
+    public class AddJoinToPipeCommand : Command
     {
-        public string FeedName { get; private set; }
-        public int MatchingJoins { get; set; }
-        public string Address { get; private set; }
-        public string ReplyTo { get; private set; }
-        public NameValueCollection Headers { get; private set; }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Command" /> class.
+        /// </summary>
+        /// <param name="pipeIdentity">The pipe identity.</param>
+        /// <param name="feedAddress">The feed address.</param>
+        /// <param name="addressPattern">The address pattern.</param>
+        public AddJoinToPipeCommand(string pipeIdentity, string feedAddress, string addressPattern) : base(Guid.NewGuid())
+        {
+            FeedAddress = feedAddress;
+            AddressPattern = addressPattern;
+            PipeIdentity = pipeIdentity;
+        }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Command"/> class.
+        /// Gets the feed address.
         /// </summary>
-        /// <param name="feedName"></param>
-        /// <param name="address"></param>
-        /// <param name="replyTo"></param>
-        /// <param name="headers"></param>
-        /// <param name="name"></param>
-        /// <param name="id">The identifier.</param>
-        public AddMessageToFeedCommand(string feedName, string address, string replyTo, NameValueCollection headers) : base(Guid.NewGuid())
-        {
-            FeedName = feedName;
-            Address = address;
-            ReplyTo = replyTo;
-            Headers = headers;
-        }
+        /// <value>The feed address.</value>
+        public string FeedAddress { get; private set; }
+        /// <summary>
+        /// Gets the address pattern.
+        /// </summary>
+        /// <value>The address pattern.</value>
+        public string AddressPattern { get; private set; }
+        /// <summary>
+        /// Gets the pipe identity.
+        /// </summary>
+        /// <value>The pipe identity.</value>
+        public string PipeIdentity { get; private set; }
     }
 }

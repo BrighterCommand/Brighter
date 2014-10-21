@@ -26,12 +26,12 @@ using paramore.brighter.restms.core.Model;
 
 namespace paramore.brighter.restms.core.Ports.Repositories
 {
-    public class InMemoryRepositoryPipeRepository : InMemoryRepository<Pipe>
+    public class InMemoryPipeRepository : InMemoryRepository<Pipe>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="T:System.Object"/> class.
         /// </summary>
-        public InMemoryRepositoryPipeRepository(ILog logger) : base(logger)
+        public InMemoryPipeRepository(ILog logger) : base(logger)
         {
         }
     }

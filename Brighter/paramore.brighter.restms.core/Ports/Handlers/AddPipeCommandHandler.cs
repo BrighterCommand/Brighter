@@ -81,7 +81,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
 
             if (pipe.Type == PipeType.Default)
             {
-                commandProcessor.Send(new AddJoinToFeedCommand(pipe.Id.Value, GetDefaultFeedUri(), "*"));
+                commandProcessor.Send(new AddJoinToFeedCommand(pipe, GetDefaultFeedUri(), "*"));
             }
 
             commandProcessor.Send(new AddPipeToDomainCommand(command.DomainName, pipe.Name.Value));

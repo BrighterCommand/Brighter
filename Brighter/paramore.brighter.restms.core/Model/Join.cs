@@ -50,20 +50,24 @@ namespace paramore.brighter.restms.core.Model
     /// If either the feed or the pipe for a join is deleted, the join is also deleted.
     /// http://www.restms.org/spec:2
     /// </summary>
-    public class Join
+    public class Join : Resource
     {
+        const string JOIN_URI_FORMAT = "http://{0}/restms/join/{1}";
         /// <summary>
         /// Initializes a new instance of the <see cref="T:System.Object" /> class.
         /// </summary>
         /// <param name="pipe">The Pipe this joins the feed to</param>
         /// <param name="feedHref">The feed href for identifying the feed</param>
         /// <param name="address">The address pattern to match this join against.</param>
-        public Join(Identity pipe, Uri feedHref, Address address)
+        public Join(Pipe pipe, Uri feedHref, Address address)
         {
             Address = address;
             FeedHref = feedHref;
             Pipe = pipe;
             Type = JoinType.Default;
+            Name = new Name(Guid.NewGuid().ToString());
+            Href = new Uri(string.Format(JOIN_URI_FORMAT, Globals.HostName, Name.Value));
+
         }
 
         /// <summary>
@@ -81,13 +85,54 @@ namespace paramore.brighter.restms.core.Model
         /// The pipe we are attached to.
         /// </summary>
         /// <value>The pipe.</value>
-        public Identity Pipe { get; set; }
+        public Pipe Pipe { get; set; }
 
         /// <summary>
         /// Gets the <see cref="JoinType"/>
         /// </summary>
         /// <value>The type.</value>
         public JoinType Type { get; private set; }
+
+        protected bool Equals(Join other)
+        {
+            return Name == other.Name;
+        }
+
+        /// <summary>
+        /// Determines whether the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>.
+        /// </summary>
+        /// <returns>
+        /// true if the specified object  is equal to the current object; otherwise, false.
+        /// </returns>
+        /// <param name="obj">The object to compare with the current object. </param>
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Join) obj);
+        }
+
+        /// <summary>
+        /// Serves as a hash function for a particular type. 
+        /// </summary>
+        /// <returns>
+        /// A hash code for the current <see cref="T:System.Object"/>.
+        /// </returns>
+        public override int GetHashCode()
+        {
+            return Name.GetHashCode();
+        }
+
+        public static bool operator ==(Join left, Join right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Join left, Join right)
+        {
+            return !Equals(left, right);
+        }
 
     }
 }

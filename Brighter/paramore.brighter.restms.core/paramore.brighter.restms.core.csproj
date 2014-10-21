@@ -58,6 +58,8 @@
     <Compile Include="Model\FeedType.cs" />
     <Compile Include="Model\Join.cs" />
     <Compile Include="Model\JoinType.cs" />
+    <Compile Include="Model\Message.cs" />
+    <Compile Include="Model\MessageHeaders.cs" />
     <Compile Include="Model\Name.cs" />
     <Compile Include="Model\Pipe.cs" />
     <Compile Include="Model\PipeType.cs" />
@@ -66,6 +68,7 @@
     <Compile Include="Model\RoutingTable.cs" />
     <Compile Include="Model\Title.cs" />
     <Compile Include="Ports\Commands\AddFeedToDomainCommand.cs" />
+    <Compile Include="Ports\Commands\AddJoinToPipeCommand.cs" />
     <Compile Include="Ports\Commands\AddJoinToFeedCommand.cs" />
     <Compile Include="Ports\Commands\AddMessageToFeedCommand.cs" />
     <Compile Include="Ports\Commands\AddPipeCommand.cs" />
@@ -80,8 +83,10 @@
     <Compile Include="Ports\Common\IAmAnAggregate.cs" />
     <Compile Include="Ports\Common\IAmARepository.cs" />
     <Compile Include="Ports\Common\Identity.cs" />
+    <Compile Include="Ports\Common\PipeDoesNotExistException.cs" />
     <Compile Include="Ports\Handlers\AddFeedToDomainCommandHandler.cs" />
     <Compile Include="Ports\Handlers\AddJoinToFeedCommandHandler.cs" />
+    <Compile Include="Ports\Handlers\AddJoinToPipeCommandHandler.cs" />
     <Compile Include="Ports\Handlers\AddMessageToFeedCommandHandler.cs" />
     <Compile Include="Ports\Handlers\AddPipeCommandHandler.cs" />
     <Compile Include="Ports\Handlers\AddPipeToDomainCommandHandler.cs" />
@@ -91,7 +96,7 @@
     <Compile Include="Ports\Repositories\InMemoryDomainRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryFeedRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryRepository.cs" />
-    <Compile Include="Ports\Repositories\InMemoryRepositoryPipeRepository.cs" />
+    <Compile Include="Ports\Repositories\InMemoryPipeRepository.cs" />
     <Compile Include="Ports\Resources\RestMS.cs" />
     <Compile Include="Ports\ViewModelRetrievers\DomainRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\FeedRetriever.cs" />
