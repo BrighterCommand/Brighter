@@ -1,4 +1,18 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 10-08-2014
+//
+// Last Modified By : ian
+// Last Modified On : 10-09-2014
+// ***********************************************************************
+// <copyright file="FeedRetriever.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,15 +41,27 @@ using paramore.brighter.restms.core.Ports.Resources;
 
 namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
 {
+    /// <summary>
+    /// </summary>
     public class FeedRetriever
     {
         readonly IAmARepository<Feed> feedRepository;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FeedRetriever"/> class.
+        /// </summary>
+        /// <param name="feedRepository">The feed repository.</param>
         public FeedRetriever(IAmARepository<Feed> feedRepository)
         {
             this.feedRepository = feedRepository;
         }
 
+        /// <summary>
+        /// Retrieves the specified name.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <returns>RestMSFeed.</returns>
+        /// <exception cref="paramore.brighter.restms.core.Ports.Common.FeedDoesNotExistException"></exception>
         public RestMSFeed Retrieve(Name name)
         {
             var feed = feedRepository[new Identity(name.Value)];

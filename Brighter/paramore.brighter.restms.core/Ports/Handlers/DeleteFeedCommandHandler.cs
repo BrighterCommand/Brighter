@@ -1,4 +1,18 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 10-09-2014
+//
+// Last Modified By : ian
+// Last Modified On : 10-21-2014
+// ***********************************************************************
+// <copyright file="DeleteFeedCommandHandler.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +35,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.ComponentModel;
 using System.Transactions;
 using Common.Logging;
 using paramore.brighter.commandprocessor;

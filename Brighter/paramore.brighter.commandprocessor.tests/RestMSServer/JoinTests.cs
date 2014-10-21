@@ -34,6 +34,7 @@ using paramore.brighter.restms.core.Ports.Repositories;
 
 namespace paramore.commandprocessor.tests.RestMSServer
 {
+    [Subject("A join, connection between a feed and a pipe")]
     public class When_adding_a_join_to_a_pipe
     {
         const string ADDRESS_PATTERN = "Address Pattern";
@@ -68,6 +69,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_have_the_default_join_type = () => feed.Joins[new Address(ADDRESS_PATTERN)].First().Type.ShouldEqual(JoinType.Default);
     }
 
+    [Subject("A join, connection between a feed and a pipe")]
     public class When_a_feed_does_not_exist
     {
         const string ADDRESS_PATTERN = "Address Pattern";

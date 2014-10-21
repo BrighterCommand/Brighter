@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 09-27-2014
+//
+// Last Modified By : ian
+// Last Modified On : 10-13-2014
+// ***********************************************************************
+// <copyright file="RestMS.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,28 +34,52 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Dynamic;
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
 using paramore.brighter.restms.core.Model;
 
 namespace paramore.brighter.restms.core.Ports.Resources
 {
+    /// <summary>
+    /// </summary>
     [DataContract(Name = "domain"), XmlRoot(ElementName = "domain")]
     public class RestMSDomain
     {
 
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
+        /// <summary>
+        /// Gets or sets the title.
+        /// </summary>
+        /// <value>The title.</value>
         [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
         public string Title { get; set; }
+        /// <summary>
+        /// Gets or sets the profile.
+        /// </summary>
+        /// <value>The profile.</value>
         [DataMember(Name = "profile"), XmlAttribute(AttributeName = "profile")]
         public RestMSProfile Profile {get; set;}
+        /// <summary>
+        /// The feeds{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+        /// </summary>
         [DataMember(Name = "feed"), XmlElement(ElementName = "feed")]
         public RestMSFeed[] Feeds;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSDomain"/> class.
+        /// </summary>
         public RestMSDomain() {/*required for serialization*/}
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSDomain"/> class.
+        /// </summary>
+        /// <param name="domain">The domain.</param>
+        /// <param name="feeds">The feeds.</param>
         public RestMSDomain(Domain domain, Feed[] feeds)
         {
             Name = domain.Name.Value;
@@ -56,17 +93,34 @@ namespace paramore.brighter.restms.core.Ports.Resources
         }
     }
 
+    /// <summary>
+    /// </summary>
     [DataContract(Name = "profile"), XmlRoot(ElementName = "profile")]
     public class RestMSProfile
     {
 
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
+        /// <summary>
+        /// Gets or sets the href.
+        /// </summary>
+        /// <value>The href.</value>
         [DataMember(Name="hrer"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSProfile"/> class.
+        /// </summary>
         public RestMSProfile() {/*required for serialization*/}
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSProfile"/> class.
+        /// </summary>
+        /// <param name="profile">The profile.</param>
         public RestMSProfile(Profile profile)
         {
             Name = profile.Name.Value;
@@ -74,10 +128,19 @@ namespace paramore.brighter.restms.core.Ports.Resources
         }
     }
 
+    /// <summary>
+    /// </summary>
     [DataContract(Name = "feed"), XmlRoot(ElementName = "feed")]
     public class RestMSFeed
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSFeed"/> class.
+        /// </summary>
         public RestMSFeed() { /* required for serialization */}
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSFeed"/> class.
+        /// </summary>
+        /// <param name="feed">The feed.</param>
         public RestMSFeed(Feed feed)
         {
             Type = feed.Type.ToString();
@@ -86,31 +149,73 @@ namespace paramore.brighter.restms.core.Ports.Resources
             Href = feed.Href.AbsoluteUri;
         }
 
+        /// <summary>
+        /// Gets or sets the type.
+        /// </summary>
+        /// <value>The type.</value>
         [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
         public string Type { get; set; }
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
+        /// <summary>
+        /// Gets or sets the title.
+        /// </summary>
+        /// <value>The title.</value>
         [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
         public string Title { get; set; }
+        /// <summary>
+        /// Gets or sets the href.
+        /// </summary>
+        /// <value>The href.</value>
         [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }
     }
 
+    /// <summary>
+    /// </summary>
     [DataContract(Name = "message"), XmlRoot(ElementName = "message")]
     public class RestMSMessage
     {
+        /// <summary>
+        /// Gets or sets the address.
+        /// </summary>
+        /// <value>The address.</value>
         [DataMember(Name = "address"), XmlAttribute(AttributeName = "address")]
         public string Address { get; set; }
+        /// <summary>
+        /// Gets or sets the message identifier.
+        /// </summary>
+        /// <value>The message identifier.</value>
         [DataMember(Name = "message_id"), XmlAttribute(AttributeName = "message_id")]
         public string MessageId { get; set; }
+        /// <summary>
+        /// Gets or sets the reply to.
+        /// </summary>
+        /// <value>The reply to.</value>
         [DataMember(Name = "reply_to"), XmlAttribute(AttributeName = "reply_to")]
         public string ReplyTo { get; set; }
+        /// <summary>
+        /// Gets or sets the headers.
+        /// </summary>
+        /// <value>The headers.</value>
         [DataMember(Name = "header"), XmlAttribute(AttributeName = "header")]
         public RestMSMessageHeader[] Headers { get; set; }
 
+        /// <summary>
+        /// Gets or sets the content.
+        /// </summary>
+        /// <value>The content.</value>
         [DataMember(Name = "content"), XmlAttribute(AttributeName = "content")]
         public RestMSMessageContent Content { get; set; }
 
+        /// <summary>
+        /// Gets or sets the feed.
+        /// </summary>
+        /// <value>The feed.</value>
         [DataMember(Name = "feed"), XmlAttribute(AttributeName = "feed")]
         public RestMSFeed Feed { get; set; }
 
@@ -118,22 +223,46 @@ namespace paramore.brighter.restms.core.Ports.Resources
     }
 
 
+    /// <summary>
+    /// </summary>
     [DataContract(Name = "message"), XmlRoot(ElementName = "message")]
     public class RestMSMessageHeader
     {
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
+        /// <summary>
+        /// Gets or sets the value.
+        /// </summary>
+        /// <value>The value.</value>
         [DataMember(Name = "value"), XmlAttribute(AttributeName = "value")]
         public string Value { get; set; }
     }
 
+    /// <summary>
+    /// </summary>
     [DataContract(Name = "content"), XmlRoot(ElementName = "content")]
     public class RestMSMessageContent
     {
+        /// <summary>
+        /// Gets or sets the type.
+        /// </summary>
+        /// <value>The type.</value>
         [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
         public string Type { get; set; }
+        /// <summary>
+        /// Gets or sets the encoding.
+        /// </summary>
+        /// <value>The encoding.</value>
         [DataMember(Name = "encoding"), XmlAttribute(AttributeName = "type")]
         public string Encoding { get; set; }
+        /// <summary>
+        /// Gets or sets the value.
+        /// </summary>
+        /// <value>The value.</value>
         [DataMember, XmlText]
         public string Value { get; set; } 
     }

@@ -1,4 +1,18 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 09-26-2014
+//
+// Last Modified By : ian
+// Last Modified On : 10-10-2014
+// ***********************************************************************
+// <copyright file="IAmARepository.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,12 +40,33 @@ using System.Collections.Generic;
 
 namespace paramore.brighter.restms.core.Ports.Common
 {
+    /// <summary>
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public interface IAmARepository<T> where T: class, IAmAnAggregate
     {
+        /// <summary>
+        /// Adds the specified aggregate.
+        /// </summary>
+        /// <param name="aggregate">The aggregate.</param>
         void Add(T aggregate);
+        /// <summary>
+        /// Gets the <see cref="T"/> at the specified index.
+        /// </summary>
+        /// <param name="index">The index.</param>
+        /// <returns>T.</returns>
         T this[Identity index] { get; }
+        /// <summary>
+        /// Removes the specified identity.
+        /// </summary>
+        /// <param name="identity">The identity.</param>
         void Remove(Identity identity);
 
+        /// <summary>
+        /// Finds the specified query.
+        /// </summary>
+        /// <param name="query">The query.</param>
+        /// <returns>IEnumerable&lt;T&gt;.</returns>
          IEnumerable<T> Find(Func<T, bool> query);
     }
 }

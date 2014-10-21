@@ -1,4 +1,18 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 10-07-2014
+//
+// Last Modified By : ian
+// Last Modified On : 10-09-2014
+// ***********************************************************************
+// <copyright file="DomainNotFoundException.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,11 +39,25 @@ using System;
 
 namespace paramore.brighter.restms.core.Ports.Common
 {
+    /// <summary>
+    /// </summary>
     public class DomainNotFoundException : Exception
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DomainNotFoundException"/> class.
+        /// </summary>
         public DomainNotFoundException(){}
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DomainNotFoundException" /> class with a specified error message.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
         public DomainNotFoundException(string message) : base(message){}
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DomainNotFoundException" /> class with a specified error message and a reference to the inner exception that is the cause of this exception.
+        /// </summary>
+        /// <param name="message">The error message that explains the reason for the exception.</param>
+        /// <param name="innerException">The exception that is the cause of the current exception, or a null reference (Nothing in Visual Basic) if no inner exception is specified.</param>
         public DomainNotFoundException(string message, Exception innerException):base(message, innerException) {}
     }
 }

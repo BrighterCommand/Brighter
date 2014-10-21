@@ -11,6 +11,7 @@ using paramore.brighter.restms.core.Ports.Repositories;
 
 namespace paramore.commandprocessor.tests.RestMSServer
 {
+    [Subject("Pipes, a user-defined feed")]
     public class When_adding_a_pipe
     {
         static AddPipeCommand addPipeCommand;
