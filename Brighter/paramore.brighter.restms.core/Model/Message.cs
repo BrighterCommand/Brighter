@@ -37,6 +37,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Specialized;
+using System.Net.Mail;
 using paramore.brighter.restms.core.Extensions;
 
 namespace paramore.brighter.restms.core.Model
@@ -59,7 +60,7 @@ namespace paramore.brighter.restms.core.Model
         /// Initializes a new instance of the <see cref="Message"/> class.
         /// </summary>
         /// <param name="address">The address.</param>
-        public Message(Address address, Uri replyTo, NameValueCollection headers)
+        public Message(Address address, Uri replyTo, NameValueCollection headers, Attachment attachment)
         {
             Address = address;
             ReplyTo = replyTo;
@@ -67,10 +68,11 @@ namespace paramore.brighter.restms.core.Model
             Headers = new MessageHeaders();
             var keys = headers.AllKeys;
             keys.Each(key => Headers.AddHeader(key, headers[key]));
+            Content = new MessageContent(attachment.ContentType, attachment.TransferEncoding, attachment.ContentStream);
         }
 
-        public Message(string address, string replyTo, NameValueCollection headers)
-            :this(new Address(address), new Uri(replyTo), headers)
+        public Message(string address, string replyTo, NameValueCollection headers, Attachment attachment)
+            :this(new Address(address), new Uri(replyTo), headers, attachment)
         { }
 
         /// <summary>
@@ -81,6 +83,7 @@ namespace paramore.brighter.restms.core.Model
 
         public Guid MessageId { get; private set; }
         public Uri ReplyTo { get; private set; }
-        public MessageHeaders Headers { get; set; }
+        public MessageHeaders Headers { get; private set; }
+        public MessageContent Content { get; private set; }
     }
 }

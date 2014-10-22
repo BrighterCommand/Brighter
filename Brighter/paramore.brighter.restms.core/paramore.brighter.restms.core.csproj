@@ -59,6 +59,7 @@
     <Compile Include="Model\Join.cs" />
     <Compile Include="Model\JoinType.cs" />
     <Compile Include="Model\Message.cs" />
+    <Compile Include="Model\MessageContent.cs" />
     <Compile Include="Model\MessageHeaders.cs" />
     <Compile Include="Model\Name.cs" />
     <Compile Include="Model\Pipe.cs" />

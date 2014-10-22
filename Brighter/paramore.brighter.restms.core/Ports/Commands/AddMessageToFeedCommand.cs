@@ -37,6 +37,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Specialized;
+using System.Net.Mail;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.restms.core.Ports.Commands
@@ -48,6 +49,7 @@ namespace paramore.brighter.restms.core.Ports.Commands
         public string Address { get; private set; }
         public string ReplyTo { get; private set; }
         public NameValueCollection Headers { get; private set; }
+        public Attachment Attachment { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Command"/> class.
@@ -56,14 +58,16 @@ namespace paramore.brighter.restms.core.Ports.Commands
         /// <param name="address"></param>
         /// <param name="replyTo"></param>
         /// <param name="headers"></param>
+        /// <param name="attachments"></param>
         /// <param name="name"></param>
         /// <param name="id">The identifier.</param>
-        public AddMessageToFeedCommand(string feedName, string address, string replyTo, NameValueCollection headers) : base(Guid.NewGuid())
+        public AddMessageToFeedCommand(string feedName, string address, string replyTo, NameValueCollection headers, Attachment attachment) : base(Guid.NewGuid())
         {
             FeedName = feedName;
             Address = address;
             ReplyTo = replyTo;
             Headers = headers;
+            Attachment = attachment;
         }
     }
 }
