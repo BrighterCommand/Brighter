@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Net.Mail;
+using System.Net.Mime;
 using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
@@ -258,11 +260,13 @@ namespace paramore.commandprocessor.tests.RestMSServer
         const string MESSAGE_ADDRESS = "*";
         const string MY_CUSTOM_HEADER = "Hunting";
         const string MY_HEADER_VALUE = "Snark";
+        const string MESSAGE_CONTENT = "I am some content";
         static Domain domain;
         static Feed feed;
         static Pipe pipe;
         static Join join;
         static NameValueCollection headers;
+        static Attachment content;
 
         Establish context = () =>
         {
@@ -305,7 +309,8 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
 
             headers = new NameValueCollection {{MY_CUSTOM_HEADER, MY_HEADER_VALUE}};
-            addMessageToFeedCommand = new AddMessageToFeedCommand(feed.Name.Value, MESSAGE_ADDRESS, REPLY_TO, headers);
+            content = Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain);
+            addMessageToFeedCommand = new AddMessageToFeedCommand(feed.Name.Value, MESSAGE_ADDRESS, REPLY_TO, headers, content);
             addmessageToFeedCommandHandler = new AddMessageToFeedCommandHandler(feedRepository, logger);
             
         };
@@ -318,6 +323,9 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_store_a_message_id_for_the_message = () => pipe.Messages.First().MessageId.ShouldNotEqual(Guid.Empty);
         It should_store_a_reply_to_for_the_message = () => pipe.Messages.First().ReplyTo.AbsoluteUri.ShouldEqual(addMessageToFeedCommand.ReplyTo);
         It should_add_any_headers_to_the_message = () => pipe.Messages.First().Headers[MY_CUSTOM_HEADER].ShouldEqual(headers[MY_CUSTOM_HEADER]);
+        It should_have_content_with_a_matching_content_type = () => pipe.Messages.First().Content.ContentType.MediaType.ShouldEqual(content.ContentType.MediaType);
+        It should_have_content_with_a_matching_encoding = () => pipe.Messages.First().Content.Encoding.ShouldEqual(content.TransferEncoding);
+        It should_have_matching_content = () => pipe.Messages.First().Content.AsString().ShouldEqual(MESSAGE_CONTENT);
 
     }
 

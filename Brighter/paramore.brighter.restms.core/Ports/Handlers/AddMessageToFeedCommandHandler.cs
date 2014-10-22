@@ -80,7 +80,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                     new Model.Message(
                         new Address(addMessageToFeedCommand.Address),
                         new Uri(addMessageToFeedCommand.ReplyTo),
-                        addMessageToFeedCommand.Headers
+                        addMessageToFeedCommand.Headers,
+                        addMessageToFeedCommand.Attachment
                         ));
 
                 scope.Complete();
