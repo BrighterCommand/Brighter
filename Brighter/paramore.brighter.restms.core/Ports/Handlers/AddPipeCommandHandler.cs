@@ -72,7 +72,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <returns>TRequest.</returns>
         public override AddPipeCommand Handle(AddPipeCommand command)
         {
-            var pipe = new Pipe(new Identity(command.Id.ToString()), command.Type, new Title(command.Title));
+            var pipe = new Pipe(command.Id.ToString(), command.Type, command.Title);
             using (var scope = new TransactionScope())
             {
                 pipeRepository.Add(pipe);

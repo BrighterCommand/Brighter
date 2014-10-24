@@ -21,9 +21,9 @@ namespace paramore.commandprocessor.tests.RestMSServer
     [Subject("Retrieving a feed via the view model")]
     public class When_retreiving_a_feed
     {
-        private static FeedRetriever feedRetriever;
-        private static RestMSFeed restMSfeed;
-        private static Feed feed;
+        static FeedRetriever feedRetriever;
+        static RestMSFeed restMSfeed;
+        static Feed feed;
 
         Establish context = () =>
         {
@@ -169,7 +169,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
     public class When_deleting_a_feed
     {
         const string DOMAIN_NAME = "default";
-        const string FEED_NAME = "Default";
+        const string FEED_NAME = "MyFeed";
         static Domain domain;
         static Feed feed;
         static DeleteFeedCommand deleteFeedCommand;
@@ -197,7 +197,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             feed = new Feed(
                 feedType: FeedType.Direct,
                 name: new Name(FEED_NAME),
-                title: new Title("Default feed")
+                title: new Title("My feed")
                 );
 
             feedRepository = new InMemoryFeedRepository(logger);
@@ -223,7 +223,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
     [Subject("Deleting a feed")]
     public class When_deleting_a_feed_that_does_not_exist
     {
-        const string FEED_NAME = "Default";
+        const string FEED_NAME = "MissingFeed";
         static DeleteFeedCommand deleteFeedCommand;
         static DeleteFeedCommandHandler deleteFeedCommandHandler;
         static InMemoryFeedRepository feedRepository;
@@ -248,6 +248,61 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         It should_throw_a_feed_not_found_exeption = () => exceptionThrown.ShouldBeTrue();
 
+    }
+
+    public class When_trying_to_delete_the_default_feed
+    {
+        const string FEED_NAME = "Default";
+        const string DOMAIN_NAME = "default";
+        static Domain domain;
+        static Feed feed;
+        static DeleteFeedCommand deleteFeedCommand;
+        static DeleteFeedCommandHandler deleteFeedCommandHandler;
+        static InMemoryFeedRepository feedRepository;
+        static IAmACommandProcessor commandProcessor;
+        static bool exceptionThrown = false;
+
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+            commandProcessor = A.Fake<IAmACommandProcessor>();
+            exceptionThrown = false;
+
+            domain = new Domain(
+                name: new Name(DOMAIN_NAME),
+                title: new Title("title"),
+                profile: new Profile(
+                    name: new Name(@"3/Defaults"),
+                    href: new Uri(@"href://www.restms.org/spec:3/Defaults")
+                    ),
+                version: new AggregateVersion(0)
+                );
+
+
+            feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name(FEED_NAME),
+                title: new Title("Default feed")
+                );
+
+            feedRepository = new InMemoryFeedRepository(logger);
+            feedRepository.Add(feed);
+
+            domain.AddFeed(feed.Id);
+
+            var domainRepository = new InMemoryDomainRepository(logger);
+            domainRepository.Add(domain);
+
+            deleteFeedCommandHandler = new DeleteFeedCommandHandler(feedRepository, commandProcessor, logger);
+            deleteFeedCommand = new DeleteFeedCommand(FEED_NAME);
+
+        };
+
+        Because of = () => { try { deleteFeedCommandHandler.Handle(deleteFeedCommand); } catch (InvalidOperationException) { exceptionThrown = true; } };
+
+        It should_throw_a_feed_not_found_exeption = () => exceptionThrown.ShouldBeTrue();
+        
     }
 
     public class When_posting_a_message_to_a_feed
@@ -290,7 +345,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
-            pipe = new Pipe(new Identity(Guid.NewGuid().ToString()), "Default");
+            pipe = new Pipe(Guid.NewGuid().ToString(), "Default");
 
             join = new Join(pipe, feed.Href, new Address(MESSAGE_ADDRESS));
             pipe.AddJoin(join);

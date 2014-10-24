@@ -101,6 +101,7 @@
     <Compile Include="Ports\Resources\RestMS.cs" />
     <Compile Include="Ports\ViewModelRetrievers\DomainRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\FeedRetriever.cs" />
+    <Compile Include="Ports\ViewModelRetrievers\PipeRetriever.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

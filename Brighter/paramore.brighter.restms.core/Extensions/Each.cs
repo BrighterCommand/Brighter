@@ -37,8 +37,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 
-/// <summary>
-/// </summary>
 namespace paramore.brighter.restms.core.Extensions
 {
     /// <summary>

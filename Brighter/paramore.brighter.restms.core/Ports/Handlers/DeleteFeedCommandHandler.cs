@@ -35,6 +35,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Transactions;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
@@ -76,6 +77,10 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                 if (feed == null)
                 {
                     throw new FeedDoesNotExistException();
+                }
+                else if (feed.Type == FeedType.Default)
+                {
+                    throw new InvalidOperationException("You cannot delete the default feed");
                 }
 
                 feedRepository.Remove(new Identity(command.FeedName));

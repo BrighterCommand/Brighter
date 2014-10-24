@@ -72,6 +72,6 @@ namespace paramore.brighter.restms.core.Model
         /// <summary>
         /// The default feed type is equivalent to Direct
         /// </summary>
-        Default=Direct
+        Default
     }
 }

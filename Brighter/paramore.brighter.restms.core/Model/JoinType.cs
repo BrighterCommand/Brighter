@@ -43,8 +43,12 @@ namespace paramore.brighter.restms.core.Model
     public enum JoinType
     {
         /// <summary>
-        /// The default
+        /// The default which equates to address
         /// </summary>
-        Default = 0
+        Default = 0,
+        /// <summary>
+        /// The address join type is used for address matching
+        /// </summary>
+        Address
     }
 }
