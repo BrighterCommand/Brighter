@@ -79,10 +79,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                 addMessageToFeedCommand.MatchingJoins = feed.AddMessage(
                     new Model.Message(
                         new Address(addMessageToFeedCommand.Address),
-                        new Uri(addMessageToFeedCommand.ReplyTo),
                         addMessageToFeedCommand.Headers,
-                        addMessageToFeedCommand.Attachment
-                        ));
+                        addMessageToFeedCommand.Attachment, new Uri(addMessageToFeedCommand.ReplyTo)));
 
                 scope.Complete();
             }

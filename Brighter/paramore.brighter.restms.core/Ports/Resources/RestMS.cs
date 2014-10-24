@@ -167,6 +167,9 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// <value>The title.</value>
         [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
         public string Title { get; set; }
+
+        [DataMember(Name = "licence"), XmlAttribute(AttributeName = "licence")]
+        public string Licence { get; set; }
         /// <summary>
         /// Gets or sets the href.
         /// </summary>
@@ -174,6 +177,88 @@ namespace paramore.brighter.restms.core.Ports.Resources
         [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }
     }
+
+    [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
+    public class RestMSPipeNew
+    {
+
+        [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
+        public string Type { get; set; }
+
+        [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
+        public string Title { get; set; }
+    }
+
+    [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
+    public class RestMSPipeLink
+    {
+        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
+        public string Name { get; set; }
+
+        [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
+        public string Type { get; set; }
+
+        [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
+        public string Title { get; set; }
+
+        [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
+        public string Href { get; set; }
+    }
+
+    [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
+    public class RestMSPipe
+    {
+        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
+        public string Name { get; set; }
+
+        [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
+        public string Type { get; set; }
+
+        [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
+        public string Title { get; set; }
+
+        [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
+        public string Href { get; set; }
+
+        [DataMember(Name = "join"), XmlElement(ElementName = "join")]
+        public RestMSJoin[] Joins { get; set; }
+    }
+
+    [DataContract(Name = "join"), XmlRoot(ElementName = "join")]
+    public class RestMSJoin
+    {
+        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
+        public string Name { get; set; }
+    }
+
+
+    
+    /// <summary>
+    /// </summary>
+    [DataContract(Name = "message"), XmlRoot(ElementName = "message")]
+    public class RestMSMessageLink
+    {
+        /// <summary>
+        /// Gets or sets the href.
+        /// </summary>
+        /// <value>The href.</value>
+        [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
+        public string Href { get; set; }
+        /// <summary>
+        /// Gets or sets the address.
+        /// </summary>
+        /// <value>The address.</value>
+        [DataMember(Name = "address"), XmlAttribute(AttributeName = "address")]
+        public string Address { get; set; }
+
+        /// <summary>
+        /// Gets or sets the message identifier.
+        /// </summary>
+        /// <value>The message identifier.</value>
+        [DataMember(Name = "message_id"), XmlAttribute(AttributeName = "message_id")]
+        public string MessageId { get; set; }
+    }
+
 
     /// <summary>
     /// </summary>
@@ -227,7 +312,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
 
     /// <summary>
     /// </summary>
-    [DataContract(Name = "message"), XmlRoot(ElementName = "message")]
+    [DataContract(Name = "header"), XmlRoot(ElementName = "header")]
     public class RestMSMessageHeader
     {
         /// <summary>

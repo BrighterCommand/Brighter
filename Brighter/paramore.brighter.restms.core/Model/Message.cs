@@ -60,7 +60,10 @@ namespace paramore.brighter.restms.core.Model
         /// Initializes a new instance of the <see cref="Message"/> class.
         /// </summary>
         /// <param name="address">The address.</param>
-        public Message(Address address, Uri replyTo, NameValueCollection headers, Attachment attachment)
+        /// <param name="headers"></param>
+        /// <param name="attachment"></param>
+        /// <param name="replyTo"></param>
+        public Message(Address address, NameValueCollection headers, Attachment attachment, Uri replyTo = null)
         {
             Address = address;
             ReplyTo = replyTo;
@@ -71,9 +74,14 @@ namespace paramore.brighter.restms.core.Model
             Content = new MessageContent(attachment.ContentType, attachment.TransferEncoding, attachment.ContentStream);
         }
 
-        public Message(string address, string replyTo, NameValueCollection headers, Attachment attachment)
-            :this(new Address(address), new Uri(replyTo), headers, attachment)
-        { }
+        public Message(string address, NameValueCollection headers, Attachment attachment, string replyTo = null)
+            : this(new Address(address), headers, attachment)
+        {
+            if (replyTo != null)
+            {
+                ReplyTo = new Uri(replyTo);
+            }
+        }
 
         /// <summary>
         /// Gets the address.

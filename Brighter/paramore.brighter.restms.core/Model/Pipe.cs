@@ -96,13 +96,13 @@ namespace paramore.brighter.restms.core.Model
         /// <param name="identity">The identity.</param>
         /// <param name="pipeType">Type of the pipe.</param>
         /// <param name="title">The title.</param>
-        public Pipe(Identity identity, string pipeType, Title title= null)
+        public Pipe(string identity, string pipeType, string title= null)
         {
-            Id = identity;
-            Title = title;
+            Id = new Identity(identity);
+            Title = new Title(title);
             Name = new Name(Id.Value);
             Type = (PipeType) Enum.Parse(typeof (PipeType), pipeType);
-            Href = new Uri(string.Format(PIPE_URI_FORMAT, Globals.HostName, identity.Value));
+            Href = new Uri(string.Format(PIPE_URI_FORMAT, Globals.HostName, Id.Value));
             messages = new List<Message>();
         }
 
