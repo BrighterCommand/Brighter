@@ -2,7 +2,7 @@ Paramore
 ========
 More detailed information can be found here: [Paramore](http://iancooper.github.io/Paramore/)
 
-Brighter Reusable Software Library
+Brighter 
 ===
 * Brighter  
   * An implementation of the Command Dispatcher and Command Processor patterns, suitable for providing both dispatch and orthoganal concerns such as retry, circuit breaker, timeout, logging etc.  
