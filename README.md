@@ -1,11 +1,8 @@
 Paramore
 ========
-
-Command Dispatcher, Processor and Distributed Task Queues
-
 More detailed information can be found here: [Paramore](http://iancooper.github.io/Paramore/)
 
-Reusable Software Libraries
+Brighter Reusable Software Library
 ===
 * Brighter  
   * An implementation of the Command Dispatcher and Command Processor patterns, suitable for providing both dispatch and orthoganal concerns such as retry, circuit breaker, timeout, logging etc.  
