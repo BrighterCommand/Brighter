@@ -71,7 +71,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.Debug(m => m("Passing request from {0} to {1)", Name, _successor.Name));
+                logger.Debug(m => m("Passing request from {0} to {1}", Name, _successor.Name));
                 return _successor.Handle(command);
             }
 
