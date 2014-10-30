@@ -71,12 +71,12 @@ namespace paramore.brighter.restms.core.Ports.Resources
         public RestMSFeed[] Feeds;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSDomain"/> class.
+        /// Initializes a new instance of the <see cref="RestMSDomain" /> class.
         /// </summary>
         public RestMSDomain() {/*required for serialization*/}
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSDomain"/> class.
+        /// Initializes a new instance of the <see cref="RestMSDomain" /> class.
         /// </summary>
         /// <param name="domain">The domain.</param>
         /// <param name="feeds">The feeds.</param>
@@ -113,12 +113,12 @@ namespace paramore.brighter.restms.core.Ports.Resources
         public string Href { get; set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSProfile"/> class.
+        /// Initializes a new instance of the <see cref="RestMSProfile" /> class.
         /// </summary>
         public RestMSProfile() {/*required for serialization*/}
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSProfile"/> class.
+        /// Initializes a new instance of the <see cref="RestMSProfile" /> class.
         /// </summary>
         /// <param name="profile">The profile.</param>
         public RestMSProfile(Profile profile)
@@ -134,11 +134,11 @@ namespace paramore.brighter.restms.core.Ports.Resources
     public class RestMSFeed
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSFeed"/> class.
+        /// Initializes a new instance of the <see cref="RestMSFeed" /> class.
         /// </summary>
         public RestMSFeed() { /* required for serialization */}
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSFeed"/> class.
+        /// Initializes a new instance of the <see cref="RestMSFeed" /> class.
         /// </summary>
         /// <param name="feed">The feed.</param>
         public RestMSFeed(Feed feed)
@@ -168,6 +168,10 @@ namespace paramore.brighter.restms.core.Ports.Resources
         [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
         public string Title { get; set; }
 
+        /// <summary>
+        /// Gets or sets the licence.
+        /// </summary>
+        /// <value>The licence.</value>
         [DataMember(Name = "licence"), XmlAttribute(AttributeName = "licence")]
         public string Licence { get; set; }
         /// <summary>
@@ -178,61 +182,116 @@ namespace paramore.brighter.restms.core.Ports.Resources
         public string Href { get; set; }
     }
 
+    /// <summary>
+    /// </summary>
     [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
     public class RestMSPipeNew
     {
 
+        /// <summary>
+        /// Gets or sets the type.
+        /// </summary>
+        /// <value>The type.</value>
         [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
         public string Type { get; set; }
 
+        /// <summary>
+        /// Gets or sets the title.
+        /// </summary>
+        /// <value>The title.</value>
         [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
         public string Title { get; set; }
     }
 
+    /// <summary>
+    /// </summary>
     [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
     public class RestMSPipeLink
     {
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
 
+        /// <summary>
+        /// Gets or sets the type.
+        /// </summary>
+        /// <value>The type.</value>
         [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
         public string Type { get; set; }
 
+        /// <summary>
+        /// Gets or sets the title.
+        /// </summary>
+        /// <value>The title.</value>
         [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
         public string Title { get; set; }
 
+        /// <summary>
+        /// Gets or sets the href.
+        /// </summary>
+        /// <value>The href.</value>
         [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }
     }
 
+    /// <summary>
+    /// </summary>
     [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
     public class RestMSPipe
     {
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
 
+        /// <summary>
+        /// Gets or sets the type.
+        /// </summary>
+        /// <value>The type.</value>
         [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
         public string Type { get; set; }
 
+        /// <summary>
+        /// Gets or sets the title.
+        /// </summary>
+        /// <value>The title.</value>
         [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
         public string Title { get; set; }
 
+        /// <summary>
+        /// Gets or sets the href.
+        /// </summary>
+        /// <value>The href.</value>
         [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }
 
+        /// <summary>
+        /// Gets or sets the joins.
+        /// </summary>
+        /// <value>The joins.</value>
         [DataMember(Name = "join"), XmlElement(ElementName = "join")]
         public RestMSJoin[] Joins { get; set; }
     }
 
+    /// <summary>
+    /// </summary>
     [DataContract(Name = "join"), XmlRoot(ElementName = "join")]
     public class RestMSJoin
     {
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
     }
 
 
-    
     /// <summary>
     /// </summary>
     [DataContract(Name = "message"), XmlRoot(ElementName = "message")]
