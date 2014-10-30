@@ -15,7 +15,7 @@
 <div class="wrapper">
     <header>
         <h1>Paramore</h1>
-        <p>Explorations in architectural styles for .NET, Intended as reusable libraries, demos for training, and self-exploration</p>
+        <p>Explorations of the Ports and Adapters and CQRS architectural styles for .NET, Intended as reusable libraries and supporting examples</p>
         <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
         <ul>
             <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
@@ -50,6 +50,10 @@
                  on the application rules, making them easier to write and maintain. There is a correlation here between the use case boundary and the test boundary - tests should focus on the behaviour
                  expressed by a use case, not on a unit of code. Contrary to Cockburn, I don't suggest using a ATDD like FIT or SpecFlow here, preferring to use our xUnit test tool here (and not test
                  implementation details).</p>
+        <h1>Clean and Onion Architectures</h1>
+        <p>A number of architectures have similar properties to a ports and adapters architecture, such as the <a href="http://jeffreypalermo.com/blog/the-onion-architecture-part-1/">Onion Architecture</a>.
+            In essence they all have the hierarchical architectural style, specifically a layered style, with similar invariants and constraints around the components and connectors within that architectural style.
+            <a href="http://blog.8thlight.com/uncle-bob/archive.html">Bob Martin</a> clubs these together under the heading <a href="http://blog.8thlight.com/uncle-bob/2012/08/13/the-clean-architecture.html">Clean Architecture</a></p>
      </section>
     <footer>
         <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
