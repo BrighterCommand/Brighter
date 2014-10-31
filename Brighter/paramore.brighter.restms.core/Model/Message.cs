@@ -56,6 +56,8 @@ namespace paramore.brighter.restms.core.Model
     /// </summary>
     public class Message: Resource
     {
+        const string MESSAGE_URI_FORMAT = "http://{0}/restms/message/{1}";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Message"/> class.
         /// </summary>
@@ -72,6 +74,7 @@ namespace paramore.brighter.restms.core.Model
             var keys = headers.AllKeys;
             keys.Each(key => Headers.AddHeader(key, headers[key]));
             Content = new MessageContent(attachment.ContentType, attachment.TransferEncoding, attachment.ContentStream);
+            Href = new Uri(string.Format(MESSAGE_URI_FORMAT, Globals.HostName, MessageId));
         }
 
         public Message(string address, NameValueCollection headers, Attachment attachment, string replyTo = null)
