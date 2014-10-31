@@ -50,7 +50,7 @@ namespace paramore.brighter.restms.core.Model
     /// If either the feed or the pipe for a join is deleted, the join is also deleted.
     /// http://www.restms.org/spec:2
     /// </summary>
-    public class Join : Resource
+    public class Join : Resource, IAmAnAggregate
     {
         const string JOIN_URI_FORMAT = "http://{0}/restms/join/{1}";
         /// <summary>
@@ -67,8 +67,22 @@ namespace paramore.brighter.restms.core.Model
             Type = JoinType.Default;
             Name = new Name(Guid.NewGuid().ToString());
             Href = new Uri(string.Format(JOIN_URI_FORMAT, Globals.HostName, Name.Value));
+            Id = new Identity(Name.Value);
+            Version = new AggregateVersion(0);
 
         }
+
+        /// <summary>
+        /// Gets the identifier.
+        /// </summary>
+        /// <value>The identifier.</value>
+        public Identity Id { get; private set; }
+
+        /// <summary>
+        /// Gets the version.
+        /// </summary>
+        /// <value>The version.</value>
+        public AggregateVersion Version { get; private set; }
 
         /// <summary>
         /// Gets the <see cref="Address"/>
@@ -134,5 +148,9 @@ namespace paramore.brighter.restms.core.Model
             return !Equals(left, right);
         }
 
+        #region Implementation of IAmAnAggregate
+
+
+        #endregion
     }
 }

@@ -21,27 +21,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Net;
-using System.Net.Http;
-using System.Web.Http.Filters;
-using paramore.brighter.restms.core.Ports.Common;
+using Common.Logging;
+using paramore.brighter.restms.core.Model;
 
-namespace paramore.brighter.restms.server.Adapters.Filters
+namespace paramore.brighter.restms.core.Ports.Repositories
 {
-    public class DomainNotFoundExceptionFilterAttribute : ExceptionFilterAttribute
+    /// <summary>
+    /// Class InMemoryJoinRepository.
+    /// </summary>
+    public class InMemoryJoinRepository : InMemoryRepository<Join>
     {
-
         /// <summary>
-        /// Raises the exception event.
+        /// Initializes a new instance of the <see cref="T:System.Object"/> class.
         /// </summary>
-        /// <param name="actionExecutedContext">The context for the action.</param>
-        public override void OnException(HttpActionExecutedContext actionExecutedContext)
-        {
-            if (actionExecutedContext.Exception is DomainDoesNotExistException)
-            {
-                actionExecutedContext.Response = new HttpResponseMessage(HttpStatusCode.NotFound);
-            }
-        }
-
+        public InMemoryJoinRepository(ILog logger) : base(logger) {}
     }
 }

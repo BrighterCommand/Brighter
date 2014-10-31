@@ -21,27 +21,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Net;
-using System.Net.Http;
-using System.Web.Http.Filters;
+using Common.Logging;
+using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
+using paramore.brighter.restms.core.Ports.Resources;
 
-namespace paramore.brighter.restms.server.Adapters.Filters
+namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
 {
-    public class DomainNotFoundExceptionFilterAttribute : ExceptionFilterAttribute
+    public class JoinRetriever
     {
+        readonly IAmARepository<Join> joinRepository;
+        readonly ILog logger;
 
-        /// <summary>
-        /// Raises the exception event.
-        /// </summary>
-        /// <param name="actionExecutedContext">The context for the action.</param>
-        public override void OnException(HttpActionExecutedContext actionExecutedContext)
+        public JoinRetriever(IAmARepository<Join> joinRepository, ILog logger)
         {
-            if (actionExecutedContext.Exception is DomainDoesNotExistException)
-            {
-                actionExecutedContext.Response = new HttpResponseMessage(HttpStatusCode.NotFound);
-            }
+            this.joinRepository = joinRepository;
+            this.logger = logger;
         }
 
+        public RestMSJoin Retrieve(Name joinName)
+        {
+            var join = joinRepository[new Identity(joinName.Value)];
+
+            if (join == null)
+            {
+                throw new JoinDoesNotExistException(string.Format("There is no join with the name {0}", joinName));
+            }
+           
+            return new RestMSJoin(join);
+        }
     }
 }

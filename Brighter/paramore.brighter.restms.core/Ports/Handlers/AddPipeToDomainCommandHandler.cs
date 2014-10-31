@@ -70,7 +70,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                 var domain = repository[new Identity(addPipeToDomainCommand.DomainName)];
                 if (domain == null)
                 {
-                    throw new DomainNotFoundException();
+                    throw new DomainDoesNotExistException();
                 }
 
                 domain.AddPipe(new Identity(addPipeToDomainCommand.PipeName));

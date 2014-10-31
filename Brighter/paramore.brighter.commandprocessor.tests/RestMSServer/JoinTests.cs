@@ -32,9 +32,91 @@ using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Handlers;
 using paramore.brighter.restms.core.Ports.Repositories;
+using paramore.brighter.restms.core.Ports.Resources;
+using paramore.brighter.restms.core.Ports.ViewModelRetrievers;
 
 namespace paramore.commandprocessor.tests.RestMSServer
 {
+    [Subject("A join, connection between a feed and a pipe")]
+    public class When_retrieving_a_join
+    {
+        const string ADDRESS_PATTERN = "Address Pattern";
+        const string PIPE_NAME = "{E00B52BE-F2C4-4D7F-8472-403E5CC5AB4B}";
+        static Join join;
+        static Pipe pipe;
+        static Feed feed;
+        static IAmARepository<Join> joinRepository;
+        static JoinRetriever joinRetriever;
+        static RestMSJoin restMSJoin;
+
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+
+            feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed")
+                );
+
+            pipe = new Pipe(new Identity(PIPE_NAME), PipeType.Default);
+
+            join = new Join(pipe, feed.Href, new Address(ADDRESS_PATTERN));
+
+            joinRepository = new InMemoryJoinRepository(logger);
+            joinRepository.Add(join);
+
+            joinRetriever = new JoinRetriever(joinRepository, logger);
+        };
+
+        Because of = () => restMSJoin = joinRetriever.Retrieve(join.Name);
+
+        It should_have_the_join_type = () => restMSJoin.Type.ShouldEqual(join.Type.ToString());
+        It should_have_the_join_address = () => restMSJoin.Address.ShouldEqual(join.Address.Value);
+        It should_have_the_join_feed = () => restMSJoin.Feed.ShouldEqual(join.FeedHref.AbsoluteUri);
+
+    }
+
+    [Subject("A join, connection between a feed and a pipe")]
+    public class When_a_join_is_missing
+    {
+        const string ADDRESS_PATTERN = "Address Pattern";
+        const string PIPE_NAME = "{E00B52BE-F2C4-4D7F-8472-403E5CC5AB4B}";
+        static Join join;
+        static Pipe pipe;
+        static Feed feed;
+        static IAmARepository<Join> joinRepository;
+        static JoinRetriever joinRetriever;
+        static bool exceptionWasThrown;
+
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+            bool exceptionWasThrown = false;
+
+            feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed")
+                );
+
+            pipe = new Pipe(new Identity(PIPE_NAME), PipeType.Default);
+
+            join = new Join(pipe, feed.Href, new Address(ADDRESS_PATTERN));
+
+            joinRepository = new InMemoryJoinRepository(logger);
+
+            joinRetriever = new JoinRetriever(joinRepository, logger);
+        };
+
+        Because of = () => { try { joinRetriever.Retrieve(join.Name); } catch (JoinDoesNotExistException) { exceptionWasThrown = true; } };
+
+        It should_throw_an_exception = () => exceptionWasThrown.ShouldBeTrue();
+
+    };
+
     [Subject("A join, connection between a feed and a pipe")]
     public class When_adding_a_join_to_a_pipe
     {
@@ -117,7 +199,6 @@ namespace paramore.commandprocessor.tests.RestMSServer
         Because of = () => {try { addJoinToFeedCommandHandler.Handle(addJoinToPipeCommand); } catch (PipeDoesNotExistException) { exceptionThrown = true; } };
 
         It should_throw_a_pipe_not_found_exception = () => exceptionThrown.ShouldBeTrue();
-
     }
     [Subject("A join, connection between a feed and a pipe")]
     public class When_adding_a_join_to_a_feed
@@ -129,11 +210,13 @@ namespace paramore.commandprocessor.tests.RestMSServer
         static Feed feed;
         static Pipe pipe;
         static IAmARepository<Feed> feedRepository;
+        static IAmACommandProcessor commandProcessor;
             
         Establish context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
+            commandProcessor = A.Fake<IAmACommandProcessor>();
             feedRepository = new InMemoryFeedRepository(logger);
 
             feed = new Feed(
@@ -150,7 +233,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             //we don't know the identity of the feed
             addJoinToFeedCommand = new AddJoinToFeedCommand(pipe, feed.Href.AbsoluteUri, ADDRESS_PATTERN);
 
-            addJoinToFeedCommandHandler = new AddJoinToFeedCommandHandler(feedRepository, logger);
+            addJoinToFeedCommandHandler = new AddJoinToFeedCommandHandler(feedRepository, commandProcessor, logger);
         };
 
         Because of = () => addJoinToFeedCommandHandler.Handle(addJoinToFeedCommand);
@@ -159,6 +242,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_set_the_join_feed_uri = () => feed.Joins[new Address(ADDRESS_PATTERN)].First().FeedHref.ShouldEqual(feed.Href);
         It should_have_the_default_join_type = () => feed.Joins[new Address(ADDRESS_PATTERN)].First().Type.ShouldEqual(JoinType.Default);
         It should_have_a_reference_to_the_pipe = () => feed.Joins[new Address(ADDRESS_PATTERN)].First().Pipe.ShouldEqual(pipe);
+        It should_raise_an_event_to_add_the_join_to_the_repo  = () => A.CallTo(() => commandProcessor.Send(A<AddJoinCommand>.Ignored)).MustHaveHappened();
     }
 
     [Subject("A join, connection between a feed and a pipe")]
@@ -170,12 +254,14 @@ namespace paramore.commandprocessor.tests.RestMSServer
         static AddJoinToFeedCommandHandler addJoinToFeedCommandHandler;
         static IAmARepository<Feed> feedRepository;
         static Pipe pipe;
-        static bool exceptionThrown = false;
+        static bool exceptionThrown;
+        static IAmACommandProcessor commandProcessor;
             
         Establish context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
+            commandProcessor = A.Fake<IAmACommandProcessor>();
             feedRepository = new InMemoryFeedRepository(logger);
             exceptionThrown = false;
 
@@ -183,11 +269,50 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
             addJoinToFeedCommand = new AddJoinToFeedCommand(pipe, "http://host.com/restms/feed/123", ADDRESS_PATTERN);
 
-            addJoinToFeedCommandHandler = new AddJoinToFeedCommandHandler(feedRepository, logger);
+            addJoinToFeedCommandHandler = new AddJoinToFeedCommandHandler(feedRepository, commandProcessor, logger);
         };
 
         Because of = () => { try { addJoinToFeedCommandHandler.Handle(addJoinToFeedCommand); } catch (FeedDoesNotExistException) { exceptionThrown = true; }};
 
         It should_throw_a_feed_not_found_exception = () => exceptionThrown.ShouldBeTrue();
+    }
+
+
+    public class When_adding_a_join
+    {
+        const string ADDRESS_PATTERN = "Address Pattern";
+        const string PIPE_NAME = "{E00B52BE-F2C4-4D7F-8472-403E5CC5AB4B}";
+        static AddJoinCommand addJoinCommand;
+        static AddJoinCommandHandler addJoinCommandHandler;
+        static IAmARepository<Join> joinRepository;
+        static Join join;
+        static Pipe pipe;
+        static Feed feed;
+
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+
+            feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed")
+                );
+
+            pipe = new Pipe(new Identity(PIPE_NAME), PipeType.Default);
+            join = new Join(pipe, feed.Href, new Address(ADDRESS_PATTERN));
+
+            addJoinCommand = new AddJoinCommand(join);
+
+            joinRepository = new InMemoryJoinRepository(logger);
+            
+            addJoinCommandHandler = new AddJoinCommandHandler(joinRepository, logger);
+
+        };
+            
+        Because of = () => addJoinCommandHandler.Handle(addJoinCommand);
+
+        It should_add_the_join_to_the_repo = () => joinRepository[join.Id].ShouldNotBeNull();
     }
 }

@@ -1,17 +1,16 @@
 ﻿// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
-// Created          : 10-07-2014
+// Created          : 10-31-2014
 //
 // Last Modified By : ian
-// Last Modified On : 10-09-2014
+// Last Modified On : 10-31-2014
 // ***********************************************************************
-// <copyright file="DomainNotFoundException.cs" company="">
+// <copyright file="RestMSMessageContent.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -35,29 +34,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
+using System.Runtime.Serialization;
+using System.Xml.Serialization;
 
-namespace paramore.brighter.restms.core.Ports.Common
+namespace paramore.brighter.restms.core.Ports.Resources
 {
     /// <summary>
+    /// Class RestMSMessageContent.
     /// </summary>
-    public class DomainNotFoundException : Exception
+    [DataContract(Name = "content"), XmlRoot(ElementName = "content")]
+    public class RestMSMessageContent
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="DomainNotFoundException"/> class.
+        /// Gets or sets the type.
         /// </summary>
-        public DomainNotFoundException(){}
-
+        /// <value>The type.</value>
+        [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
+        public string Type { get; set; }
         /// <summary>
-        /// Initializes a new instance of the <see cref="DomainNotFoundException" /> class with a specified error message.
+        /// Gets or sets the encoding.
         /// </summary>
-        /// <param name="message">The message that describes the error.</param>
-        public DomainNotFoundException(string message) : base(message){}
+        /// <value>The encoding.</value>
+        [DataMember(Name = "encoding"), XmlAttribute(AttributeName = "type")]
+        public string Encoding { get; set; }
         /// <summary>
-        /// Initializes a new instance of the <see cref="DomainNotFoundException" /> class with a specified error message and a reference to the inner exception that is the cause of this exception.
+        /// Gets or sets the value.
         /// </summary>
-        /// <param name="message">The error message that explains the reason for the exception.</param>
-        /// <param name="innerException">The exception that is the cause of the current exception, or a null reference (Nothing in Visual Basic) if no inner exception is specified.</param>
-        public DomainNotFoundException(string message, Exception innerException):base(message, innerException) {}
+        /// <value>The value.</value>
+        [DataMember, XmlText]
+        public string Value { get; set; } 
     }
 }

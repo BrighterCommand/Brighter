@@ -49,14 +49,18 @@ namespace paramore.brighter.restms.core.Ports.Handlers
     public class AddJoinToFeedCommandHandler : RequestHandler<AddJoinToFeedCommand>
     {
         readonly IAmARepository<Feed> feedRepository;
+        readonly IAmACommandProcessor commandProcessor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
+        /// <param name="feedRepository"></param>
+        /// <param name="commandProcessor"></param>
         /// <param name="logger">The logger.</param>
-        public AddJoinToFeedCommandHandler(IAmARepository<Feed> feedRepository, ILog logger) : base(logger)
+        public AddJoinToFeedCommandHandler(IAmARepository<Feed> feedRepository, IAmACommandProcessor commandProcessor, ILog logger) : base(logger)
         {
             this.feedRepository = feedRepository;
+            this.commandProcessor = commandProcessor;
         }
 
         /// <summary>
@@ -66,6 +70,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <returns>TRequest.</returns>
         public override AddJoinToFeedCommand Handle(AddJoinToFeedCommand addJoinToFeedCommand)
         {
+            Join join;
             using (var scope = new TransactionScope())
             {
                 var feedUri = new Uri(addJoinToFeedCommand.FeedAddress);
@@ -76,12 +81,14 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                 }
 
                 //this creates the same join as added to the pipe - but is a different instance. It will compare equal by value
-                var join = new Join(addJoinToFeedCommand.Pipe, new Uri(addJoinToFeedCommand.FeedAddress), new Address(addJoinToFeedCommand.AddressPattern));
+                join = new Join(addJoinToFeedCommand.Pipe, new Uri(addJoinToFeedCommand.FeedAddress), new Address(addJoinToFeedCommand.AddressPattern));
                 
                 feed.AddJoin(join);
 
                 scope.Complete();
             }
+
+            commandProcessor.Send(new AddJoinCommand(join));
             return base.Handle(addJoinToFeedCommand);
         }
     }

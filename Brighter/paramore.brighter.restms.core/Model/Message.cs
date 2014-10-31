@@ -39,6 +39,8 @@ using System;
 using System.Collections.Specialized;
 using System.Net.Mail;
 using paramore.brighter.restms.core.Extensions;
+using paramore.brighter.restms.core.Ports.Common;
+using paramore.brighter.restms.core.Ports.Resources;
 
 namespace paramore.brighter.restms.core.Model
 {
@@ -54,7 +56,7 @@ namespace paramore.brighter.restms.core.Model
     /// http://www.restms.org/spec:2
 
     /// </summary>
-    public class Message: Resource
+    public class Message: Resource, IAmAnAggregate
     {
         const string MESSAGE_URI_FORMAT = "http://{0}/restms/message/{1}";
 
@@ -75,6 +77,8 @@ namespace paramore.brighter.restms.core.Model
             keys.Each(key => Headers.AddHeader(key, headers[key]));
             Content = new MessageContent(attachment.ContentType, attachment.TransferEncoding, attachment.ContentStream);
             Href = new Uri(string.Format(MESSAGE_URI_FORMAT, Globals.HostName, MessageId));
+            Id = new Identity(MessageId.ToString());
+            Version = new AggregateVersion(0);
         }
 
         public Message(string address, NameValueCollection headers, Attachment attachment, string replyTo = null)
@@ -87,14 +91,54 @@ namespace paramore.brighter.restms.core.Model
         }
 
         /// <summary>
+        /// Gets the identifier.
+        /// </summary>
+        /// <value>The identifier.</value>
+        public Identity Id { get; private set; }
+
+        /// <summary>
+        /// Gets the version.
+        /// </summary>
+        /// <value>The version.</value>
+        /// 
+        public AggregateVersion Version { get; private set; }
+
+        /// <summary>
         /// Gets the address.
         /// </summary>
         /// <value>The address.</value>
+        /// 
         public Address Address { get; private set; }
 
+        /// <summary>
+        /// Gets the message identifier.
+        /// </summary>
+        /// <value>The message identifier.</value>
         public Guid MessageId { get; private set; }
+
+        /// <summary>
+        /// Gets the reply to.
+        /// </summary>
+        /// <value>The reply to.</value>
         public Uri ReplyTo { get; private set; }
+
+        /// <summary>
+        /// Gets the feed href.
+        /// </summary>
+        /// <value>The feed href.</value>
+        public Uri FeedHref { get; private set; }
+
+        /// <summary>
+        /// Gets the headers.
+        /// </summary>
+        /// <value>The headers.</value>
         public MessageHeaders Headers { get; private set; }
+
+        /// <summary>
+        /// Gets the content.
+        /// </summary>
+        /// <value>The content.</value>
         public MessageContent Content { get; private set; }
+
     }
 }

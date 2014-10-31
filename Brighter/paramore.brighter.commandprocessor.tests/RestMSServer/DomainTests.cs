@@ -125,7 +125,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             addFeedToDomainCommand = new AddFeedToDomainCommand(domainName: DOMAIN_NAME, feedName: FEED_NAME);
         };
 
-        Because of = () => { try { addFeedToDomainCommandHandler.Handle(addFeedToDomainCommand); } catch (DomainNotFoundException) { exceptionThrown = true; } };
+        Because of = () => { try { addFeedToDomainCommandHandler.Handle(addFeedToDomainCommand); } catch (DomainDoesNotExistException) { exceptionThrown = true; } };
 
         It should_throw_an_exception_that_the_feed_already_exists = () => exceptionThrown.ShouldBeTrue();
 
@@ -252,7 +252,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             addPipeToDomainCommand = new AddPipeToDomainCommand(domainName: DOMAIN_NAME, pipeName: PIPE_NAME);
         };
 
-        Because of = () => { try { addPipeToDomainCommandHandler .Handle(addPipeToDomainCommand ); } catch (DomainNotFoundException) { exceptionThrown = true; } };
+        Because of = () => { try { addPipeToDomainCommandHandler .Handle(addPipeToDomainCommand ); } catch (DomainDoesNotExistException) { exceptionThrown = true; } };
 
         It should_throw_an_exception_that_the_feed_already_exists = () => exceptionThrown.ShouldBeTrue();
 
