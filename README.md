@@ -4,7 +4,7 @@
 
 |               |               |
 | ------------- | ------------- |
-|![canon] (https://openclipart.org/people/amilo/canon.svg)|
+|![canon] (https://openclipart.org/people/amilo/canon.svg)|Brighter is a command dispatcher, processor, and task queue|
 | Version  | 2.0.1  |
 | Web  |http://iancooper.github.io/Paramore/  |
 | Download  |https://www.nuget.org/packages/Paramore.Brighter.CommandProcessor/ |
