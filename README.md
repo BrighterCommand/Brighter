@@ -1,5 +1,5 @@
 =================================
- Brighter
+ Paramore Brighter - Command Dispatch
 =================================
 
 |               |               |
