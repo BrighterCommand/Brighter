@@ -1,5 +1,5 @@
 =================================
- Brighter - Command Dispatcher and Processor
+ Brighter
 =================================
 
 |               |               |
