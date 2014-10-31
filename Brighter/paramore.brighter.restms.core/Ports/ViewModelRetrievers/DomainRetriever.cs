@@ -46,17 +46,19 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
     /// </summary>
     public class DomainRetriever
     {
-        private readonly IAmARepository<Feed> feedRepository;
-        private readonly IAmARepository<Domain> domainRepository;
+        readonly IAmARepository<Feed> feedRepository;
+        readonly IAmARepository<Pipe> pipeRepository;
+        readonly IAmARepository<Domain> domainRepository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DomainRetriever"/> class.
         /// </summary>
-        /// <param name="feedRepository">The feed repository.</param>
         /// <param name="domainRepository">The domain repository.</param>
-        public DomainRetriever(IAmARepository<Feed> feedRepository, IAmARepository<Domain> domainRepository)
+        /// <param name="feedRepository">The feed repository.</param>
+        public DomainRetriever(IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository, IAmARepository<Pipe> pipeRepository )
         {
             this.feedRepository = feedRepository;
+            this.pipeRepository = pipeRepository;
             this.domainRepository = domainRepository;
         }
 
@@ -77,10 +79,12 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
             }
 
             var feeds = new List<Feed>();
-
             domain.Feeds.Each(feed => feeds.Add(feedRepository[new Identity(feed.Value)]));
 
-            return new RestMSDomain(domain, feeds.ToArray());
+            var pipes = new List<Pipe>();
+            domain.Pipes.Each(pipe => pipes.Add(pipeRepository[new Identity(pipe.Value)]));
+
+            return new RestMSDomain(domain, feeds, pipes);
         }
     }
 }

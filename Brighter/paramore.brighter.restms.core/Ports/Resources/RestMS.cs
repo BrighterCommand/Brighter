@@ -34,6 +34,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
 using paramore.brighter.restms.core.Model;
@@ -71,177 +73,53 @@ namespace paramore.brighter.restms.core.Ports.Resources
         public RestMSFeed[] Feeds;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSDomain" /> class.
+        /// The pipes
+        /// </summary>
+        [DataMember(Name = "pipe"), XmlElement(ElementName = "pipe")]
+        public RestMSPipeLink[] Pipes;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSDomain"/> class.
         /// </summary>
         public RestMSDomain() {/*required for serialization*/}
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSDomain" /> class.
+        /// Initializes a new instance of the <see cref="RestMSDomain"/> class.
         /// </summary>
         /// <param name="domain">The domain.</param>
         /// <param name="feeds">The feeds.</param>
-        public RestMSDomain(Domain domain, Feed[] feeds)
+        public RestMSDomain(Domain domain, IEnumerable<Feed> feeds, IEnumerable<Pipe> pipes)
         {
             Name = domain.Name.Value;
             Title = domain.Title.Value;
             Profile = new RestMSProfile(domain.Profile);
-            Feeds = new RestMSFeed[feeds.Length];
-            for (int i = 0; i < feeds.Length; i++)
-            {
-                Feeds[i] = new RestMSFeed(feeds[i]);;
-            }
+            Feeds = feeds.Select(feed => new RestMSFeed(feed)).ToArray();
+            Pipes = pipes.Select(pipe => new RestMSPipeLink(pipe)).ToArray();
         }
     }
 
-    /// <summary>
-    /// </summary>
-    [DataContract(Name = "profile"), XmlRoot(ElementName = "profile")]
-    public class RestMSProfile
-    {
-
-        /// <summary>
-        /// Gets or sets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
-        public string Name { get; set; }
-        /// <summary>
-        /// Gets or sets the href.
-        /// </summary>
-        /// <value>The href.</value>
-        [DataMember(Name="hrer"), XmlAttribute(AttributeName = "href")]
-        public string Href { get; set; }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSProfile" /> class.
-        /// </summary>
-        public RestMSProfile() {/*required for serialization*/}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSProfile" /> class.
-        /// </summary>
-        /// <param name="profile">The profile.</param>
-        public RestMSProfile(Profile profile)
-        {
-            Name = profile.Name.Value;
-            Href = profile.Href.AbsoluteUri;
-        }
-    }
-
-    /// <summary>
-    /// </summary>
-    [DataContract(Name = "feed"), XmlRoot(ElementName = "feed")]
-    public class RestMSFeed
-    {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSFeed" /> class.
-        /// </summary>
-        public RestMSFeed() { /* required for serialization */}
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSFeed" /> class.
-        /// </summary>
-        /// <param name="feed">The feed.</param>
-        public RestMSFeed(Feed feed)
-        {
-            Type = feed.Type.ToString();
-            Name = feed.Name.Value;
-            Title = feed.Title.Value;
-            Href = feed.Href.AbsoluteUri;
-        }
-
-        /// <summary>
-        /// Gets or sets the type.
-        /// </summary>
-        /// <value>The type.</value>
-        [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
-        public string Type { get; set; }
-        /// <summary>
-        /// Gets or sets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
-        public string Name { get; set; }
-        /// <summary>
-        /// Gets or sets the title.
-        /// </summary>
-        /// <value>The title.</value>
-        [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
-        public string Title { get; set; }
-
-        /// <summary>
-        /// Gets or sets the licence.
-        /// </summary>
-        /// <value>The licence.</value>
-        [DataMember(Name = "licence"), XmlAttribute(AttributeName = "licence")]
-        public string Licence { get; set; }
-        /// <summary>
-        /// Gets or sets the href.
-        /// </summary>
-        /// <value>The href.</value>
-        [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
-        public string Href { get; set; }
-    }
-
-    /// <summary>
-    /// </summary>
-    [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
-    public class RestMSPipeNew
-    {
-
-        /// <summary>
-        /// Gets or sets the type.
-        /// </summary>
-        /// <value>The type.</value>
-        [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
-        public string Type { get; set; }
-
-        /// <summary>
-        /// Gets or sets the title.
-        /// </summary>
-        /// <value>The title.</value>
-        [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
-        public string Title { get; set; }
-    }
-
-    /// <summary>
-    /// </summary>
-    [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
-    public class RestMSPipeLink
-    {
-        /// <summary>
-        /// Gets or sets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Gets or sets the type.
-        /// </summary>
-        /// <value>The type.</value>
-        [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
-        public string Type { get; set; }
-
-        /// <summary>
-        /// Gets or sets the title.
-        /// </summary>
-        /// <value>The title.</value>
-        [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
-        public string Title { get; set; }
-
-        /// <summary>
-        /// Gets or sets the href.
-        /// </summary>
-        /// <value>The href.</value>
-        [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
-        public string Href { get; set; }
-    }
 
     /// <summary>
     /// </summary>
     [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
     public class RestMSPipe
     {
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSPipe"/> class.
+        /// </summary>
+        public RestMSPipe() {}
+
+        public RestMSPipe(Pipe pipe)
+        {
+            Name = pipe.Name.Value;
+            Type = pipe.Type.ToString();
+            Title = pipe.Title.Value;
+            Href = pipe.Href.AbsoluteUri;
+            Joins = pipe.Joins.Select(join => new RestMSJoin(join)).ToArray();
+            Messages = pipe.Messages.Select(message => new RestMSMessageLink(message)).ToArray();
+        }
+
         /// <summary>
         /// Gets or sets the name.
         /// </summary>
@@ -276,6 +154,13 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// <value>The joins.</value>
         [DataMember(Name = "join"), XmlElement(ElementName = "join")]
         public RestMSJoin[] Joins { get; set; }
+
+        /// <summary>
+        /// Gets or sets the messages.
+        /// </summary>
+        /// <value>The messages.</value>
+        [DataMember(Name = "messages"), XmlElement(ElementName = "messages")]
+        public RestMSMessageLink[] Messages { get; set; }
     }
 
     /// <summary>
@@ -283,6 +168,13 @@ namespace paramore.brighter.restms.core.Ports.Resources
     [DataContract(Name = "join"), XmlRoot(ElementName = "join")]
     public class RestMSJoin
     {
+        public RestMSJoin() { }
+
+        public RestMSJoin(Join join)
+        {
+            Name = join.Name.Value;
+        }
+
         /// <summary>
         /// Gets or sets the name.
         /// </summary>
@@ -292,11 +184,28 @@ namespace paramore.brighter.restms.core.Ports.Resources
     }
 
 
+    
     /// <summary>
     /// </summary>
     [DataContract(Name = "message"), XmlRoot(ElementName = "message")]
     public class RestMSMessageLink
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSMessageLink"/> class.
+        /// </summary>
+        public RestMSMessageLink(){}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSMessageLink"/> class.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public RestMSMessageLink(Message message)
+        {
+            Href = message.Href.AbsoluteUri;
+            Address = message.Address.Value;
+            MessageId = message.MessageId.ToString();
+        }
+
         /// <summary>
         /// Gets or sets the href.
         /// </summary>
@@ -324,6 +233,13 @@ namespace paramore.brighter.restms.core.Ports.Resources
     [DataContract(Name = "message"), XmlRoot(ElementName = "message")]
     public class RestMSMessage
     {
+        public RestMSMessage(){}
+
+        public RestMSMessage(Message message)
+        {
+            
+        }
+
         /// <summary>
         /// Gets or sets the address.
         /// </summary>

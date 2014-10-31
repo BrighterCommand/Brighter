@@ -99,6 +99,10 @@
     <Compile Include="Ports\Repositories\InMemoryRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryPipeRepository.cs" />
     <Compile Include="Ports\Resources\RestMS.cs" />
+    <Compile Include="Ports\Resources\RestMSFeed.cs" />
+    <Compile Include="Ports\Resources\RestMSPipeLink.cs" />
+    <Compile Include="Ports\Resources\RestMSPipeNew.cs" />
+    <Compile Include="Ports\Resources\RestMSProfile.cs" />
     <Compile Include="Ports\ViewModelRetrievers\DomainRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\FeedRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\PipeRetriever.cs" />
