@@ -4,6 +4,7 @@
 
 |               |               |
 | ------------- | ------------- |
+|![canon] (https://openclipart.org/people/amilo/canon.svg)|
 | Version  | 2.0.1  |
 | Web  |http://iancooper.github.io/Paramore/  |
 | Download  |https://www.nuget.org/packages/Paramore.Brighter.CommandProcessor/ |
