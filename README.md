@@ -2,6 +2,7 @@
  Brighter - Command Dispatcher and Processor
 =================================
 
+|               |               |
 | ------------- | ------------- |
 | Version  | 2.0.1  |
 | Web  |http://iancooper.github.io/Paramore/  |
