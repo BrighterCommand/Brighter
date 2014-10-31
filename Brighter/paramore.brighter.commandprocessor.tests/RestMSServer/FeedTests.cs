@@ -56,8 +56,6 @@ namespace paramore.commandprocessor.tests.RestMSServer
     public class When_retrieving_a_missing_feed
     {
         static FeedRetriever feedRetriever;
-        static RestMSFeed restMSfeed;
-        static Feed feed;
         static bool caughtException;
 
         Establish context = () =>
@@ -159,7 +157,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             newFeedCommand = new NewFeedCommand(domainName: DOMAIN_NAME, name: FEED_NAME, type: "Direct", title: "Default feed", license: "");
         };
 
-        Because of = () => { try { newFeedHandler.Handle(newFeedCommand); } catch (FeedAlreadyExistsException fe) { exceptionThrown = true; }  };
+        Because of = () => { try { newFeedHandler.Handle(newFeedCommand); } catch (FeedAlreadyExistsException) { exceptionThrown = true; }  };
 
 
         It should_throw_an_already_exists_exception = () => exceptionThrown.ShouldBeTrue();
