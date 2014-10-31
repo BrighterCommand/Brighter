@@ -1,9 +1,9 @@
 Paramore
 ========
 When implementing a hexagaonal architecture, one question is how to implement a port.
-Paramore shows how to implement ports using a Command approach (with a Command Dispatcher & Processor called Brighter).
-Brighter also provides a Task Queue implementation for handling those commands asynchronously
-More detailed information can be found here: [Paramore](http://iancooper.github.io/Paramore/)
+ Paramore shows how to implement ports using a Command approach (with a Command Dispatcher & Processor called Brighter).
+ Brighter also provides a Task Queue implementation for handling those commands asynchronously
+ More detailed information can be found here: [Paramore](http://iancooper.github.io/Paramore/)
 
 Brighter 
 ===
