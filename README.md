@@ -10,7 +10,7 @@
 | Source  |https://github.com/iancooper/Paramore |
 | Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, c#, command, command dispatcher, command  processor, queue, distributed |
 
-Paramore
+Why a Command Dispatcher, Command Processor, and Task Queue?
 ========
 * When implementing a hexagaonal architecture, one question is how to implement a port.
  * Paramore shows how to implement ports using a Command approach (with a Command Dispatcher & Processor called Brighter).
