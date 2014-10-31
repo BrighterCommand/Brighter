@@ -1,3 +1,17 @@
+=================================
+ Brighter - Command Dispatcher and Processor
+=================================
+
+:Version: 2.0.1
+:Web: http://iancooper.github.io/Paramore/
+:Download: https://www.nuget.org/packages/Paramore.Brighter.CommandProcessor/
+:Source: https://github.com/iancooper/Paramore
+:Keywords: task queue, job queue, asynchronous, async, rabbitmq, amqp, c#, command, command dispatcher,
+  command processor, queue, distributed
+
+--
+
+
 Paramore
 ========
 * When implementing a hexagaonal architecture, one question is how to implement a port.
