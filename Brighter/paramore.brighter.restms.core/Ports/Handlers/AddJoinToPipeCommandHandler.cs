@@ -17,6 +17,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
         /// <param name="pipeRepository"></param>
+        /// <param name="joinRepository"></param>
         /// <param name="commandProcessor"></param>
         /// <param name="logger">The logger.</param>
         public AddJoinToPipeCommandHandler(IAmARepository<Pipe> pipeRepository, IAmACommandProcessor commandProcessor, ILog logger) : base(logger)

@@ -279,7 +279,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
 
             feed = new Feed(
-                feedType: FeedType.Direct,
+                feedType: FeedType.Default,
                 name: new Name(FEED_NAME),
                 title: new Title("Default feed")
                 );
@@ -299,7 +299,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         Because of = () => { try { deleteFeedCommandHandler.Handle(deleteFeedCommand); } catch (InvalidOperationException) { exceptionThrown = true; } };
 
-        It should_throw_a_feed_not_found_exeption = () => exceptionThrown.ShouldBeTrue();
+        It should_throw_an_invalid_operation_exception = () => exceptionThrown.ShouldBeTrue();
         
     }
 

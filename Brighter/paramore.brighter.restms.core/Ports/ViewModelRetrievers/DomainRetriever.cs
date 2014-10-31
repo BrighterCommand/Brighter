@@ -67,7 +67,7 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
         /// </summary>
         /// <param name="name">The name.</param>
         /// <returns>RestMSDomain.</returns>
-        /// <exception cref="paramore.brighter.restms.core.Ports.Common.DomainNotFoundException"></exception>
+        /// <exception cref="DomainDoesNotExistException"></exception>
         public RestMSDomain Retrieve(Name name)
         {
 
@@ -75,7 +75,7 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
 
             if (domain == null)
             {
-                throw new DomainNotFoundException(string.Format("Could not find domain {0}", name.Value));
+                throw new DomainDoesNotExistException(string.Format("Could not find domain {0}", name.Value));
             }
 
             var feeds = new List<Feed>();

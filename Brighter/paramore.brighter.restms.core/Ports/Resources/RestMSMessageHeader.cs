@@ -1,12 +1,12 @@
 // ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
-// Created          : 10-07-2014
+// Created          : 10-31-2014
 //
 // Last Modified By : ian
-// Last Modified On : 10-21-2014
+// Last Modified On : 10-31-2014
 // ***********************************************************************
-// <copyright file="AddFeedToDomainCommandHandler.cs" company="">
+// <copyright file="RestMSMessageHeader.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -35,50 +35,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Transactions;
-using Common.Logging;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.restms.core.Ports.Commands;
-using paramore.brighter.restms.core.Ports.Common;
-using paramore.brighter.restms.core.Ports.Repositories;
+using System.Runtime.Serialization;
+using System.Xml.Serialization;
 
-namespace paramore.brighter.restms.core.Ports.Handlers
+namespace paramore.brighter.restms.core.Ports.Resources
 {
-    public class AddFeedToDomainCommandHandler : RequestHandler<AddFeedToDomainCommand>
+    /// <summary>
+    /// Class RestMSMessageHeader.
+    /// </summary>
+    [DataContract(Name = "header"), XmlRoot(ElementName = "header")]
+    public class RestMSMessageHeader
     {
-        readonly InMemoryDomainRepository repository;
-
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
+        /// Gets or sets the name.
         /// </summary>
-        /// <param name="repository"></param>
-        /// <param name="logger">The logger.</param>
-        public AddFeedToDomainCommandHandler(InMemoryDomainRepository repository, ILog logger) : base(logger)
-        {
-            this.repository = repository;
-        }
-
+        /// <value>The name.</value>
+        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
+        public string Name { get; set; }
         /// <summary>
-        /// Adds the feed to the specified domain
+        /// Gets or sets the value.
         /// </summary>
-        /// <param name="command">The command.</param>
-        /// <returns>TRequest.</returns>
-        public override AddFeedToDomainCommand Handle(AddFeedToDomainCommand command)
-        {
-            using (var scope = new TransactionScope())
-            {
-                var domain = repository[new Identity(command.DomainName)];
-                if (domain == null)
-                {
-                    throw new DomainDoesNotExistException();
-                }
-
-                domain.AddFeed(new Identity(command.FeedName));
-                scope.Complete();
-            }
-
-            return base.Handle(command);
-        }
-
+        /// <value>The value.</value>
+        [DataMember(Name = "value"), XmlAttribute(AttributeName = "value")]
+        public string Value { get; set; }
     }
 }

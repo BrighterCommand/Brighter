@@ -190,6 +190,7 @@
     <Compile Include="RestMSServer\DomainTests.cs" />
     <Compile Include="RestMSServer\FeedTests.cs" />
     <Compile Include="RestMSServer\JoinTests.cs" />
+    <Compile Include="RestMSServer\MessageTests.cs" />
     <Compile Include="RestMSServer\PipeTests.cs" />
     <Compile Include="Timeout\Test Doubles\MyPassesTimeoutHandler.cs" />
     <Compile Include="Timeout\Test Doubles\MyFailsDueToTimeoutHandler.cs" />

@@ -21,27 +21,26 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Net;
-using System.Net.Http;
-using System.Web.Http.Filters;
-using paramore.brighter.restms.core.Ports.Common;
+using System;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.restms.core.Model;
 
-namespace paramore.brighter.restms.server.Adapters.Filters
+namespace paramore.brighter.restms.core.Ports.Commands
 {
-    public class DomainNotFoundExceptionFilterAttribute : ExceptionFilterAttribute
+    /// <summary>
+    /// Class AddJoinCommand.
+    /// </summary>
+    public class AddJoinCommand : Command
     {
+        public Join Join { get; private set; }
 
         /// <summary>
-        /// Raises the exception event.
+        /// Initializes a new instance of the <see cref="Command"/> class.
         /// </summary>
-        /// <param name="actionExecutedContext">The context for the action.</param>
-        public override void OnException(HttpActionExecutedContext actionExecutedContext)
+        /// <param name="join">The join.</param>
+        public AddJoinCommand(Join join) : base(Guid.NewGuid())
         {
-            if (actionExecutedContext.Exception is DomainDoesNotExistException)
-            {
-                actionExecutedContext.Response = new HttpResponseMessage(HttpStatusCode.NotFound);
-            }
+            Join = join;
         }
-
     }
 }
