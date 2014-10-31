@@ -40,12 +40,18 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         readonly IAmACommandProcessor commandProcessor;
         readonly IAmARepository<Domain> domainRepository;
         readonly IAmARepository<Feed> feedRepository;
+        readonly IAmARepository<Pipe> pipeRepository;
 
-        public DomainController(IAmACommandProcessor commandProcessor, IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository)
+        public DomainController(
+            IAmACommandProcessor commandProcessor, 
+            IAmARepository<Domain> domainRepository, 
+            IAmARepository<Feed> feedRepository, 
+            IAmARepository<Pipe> pipeRepository)
         {
             this.commandProcessor = commandProcessor;
             this.domainRepository = domainRepository;
             this.feedRepository = feedRepository;
+            this.pipeRepository = pipeRepository;
         }
 
         [Route("restms/domain/{domainName}")]
@@ -54,7 +60,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         public RestMSDomain Get(string domainName)
         {
             //TODO: Get needs Last Modified and ETag.
-            var domainRetriever = new DomainRetriever(feedRepository, domainRepository);
+            var domainRetriever = new DomainRetriever(domainRepository, feedRepository, pipeRepository);
             return domainRetriever.Retrieve(new Name(domainName));
         }
 

@@ -54,8 +54,10 @@ namespace paramore.brighter.restms.core.Model
     /// </summary>
     public class Pipe : Resource, IAmAnAggregate
     {
-        readonly List<Message> messages;
+        readonly List<Message> messages = new List<Message>();
+        readonly List<Join> joins = new List<Join>(); 
         const string PIPE_URI_FORMAT = "http://{0}/restms/pipe/{1}";
+
         /// <summary>
         /// Gets the identifier.
         /// </summary>
@@ -81,7 +83,8 @@ namespace paramore.brighter.restms.core.Model
         /// Gets the <see cref="Join"/> that connects the <see cref="Pipe"/> to a <see cref="Feed"/>.
         /// </summary>
         /// <value>The join.</value>
-        public Join Join { get; private set; }
+        public IEnumerable<Join> Joins { get { return joins; }
+        }
 
         /// <summary>
         /// Gets the messages on the <see cref="Pipe"/> distributed from the <see cref="Feed"/> because they matched the <see cref="Join"/>.
@@ -103,7 +106,6 @@ namespace paramore.brighter.restms.core.Model
             Name = new Name(Id.Value);
             Type = (PipeType) Enum.Parse(typeof (PipeType), pipeType);
             Href = new Uri(string.Format(PIPE_URI_FORMAT, Globals.HostName, Id.Value));
-            messages = new List<Message>();
         }
 
         /// <summary>
@@ -123,7 +125,7 @@ namespace paramore.brighter.restms.core.Model
 
         public void AddJoin(Join join)
         {
-            Join = join;
+            joins.Add(join);
         }
 
         public void AddMessage(Message message)

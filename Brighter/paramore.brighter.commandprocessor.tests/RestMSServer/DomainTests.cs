@@ -40,10 +40,11 @@ namespace paramore.commandprocessor.tests.RestMSServer
     [Subject("Retrieving a domain via the view model")]
     public class When_retreiving_a_domain
     {
-        private static DomainRetriever domainRetriever;
-        private static RestMSDomain defaultDomain;
-        private static Domain domain;
-        private static Feed feed;
+        static DomainRetriever domainRetriever;
+        static RestMSDomain defaultDomain;
+        static Domain domain;
+        static Feed feed;
+        static Pipe pipe;
 
         Establish context = () =>
         {
@@ -72,10 +73,20 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
             domain.AddFeed(feed.Id);
 
+            pipe = new Pipe(
+                new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
+                PipeType.Fifo,
+                new Title("My Title"));
+
+            var pipeRepository = new InMemoryPipeRepository(logger);
+            pipeRepository.Add(pipe);
+
+            domain.AddPipe(pipe.Id);
+
             var domainRepository = new InMemoryDomainRepository(logger);
             domainRepository.Add(domain);
 
-            domainRetriever = new DomainRetriever(feedRepository, domainRepository);
+            domainRetriever = new DomainRetriever(domainRepository, feedRepository, pipeRepository);
         };
 
         Because of = () => defaultDomain = domainRetriever.Retrieve(new Name("default"));
@@ -88,6 +99,10 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_have_set_the_feed_name = () => defaultDomain.Feeds[0].Name.ShouldEqual(feed.Name.Value);
         It should_have_set_the_feed_title = () => defaultDomain.Feeds[0].Title.ShouldEqual(feed.Title.Value);
         It should_have_set_the_feed_address = () => defaultDomain.Feeds[0].Href.ShouldEqual(feed.Href.AbsoluteUri);
+        It should_have_set_the_pipe_name = () => defaultDomain.Pipes[0].Name.ShouldEqual(pipe.Name.Value);
+        It should_have_set_the_pipe_title = () => defaultDomain.Pipes[0].Title.ShouldEqual(pipe.Title.Value);
+        It should_have_set_the_pipe_type = () => defaultDomain.Pipes[0].Type.ShouldEqual(pipe.Type.ToString());
+        It should_have_set_the_pipe_href = () => defaultDomain.Pipes[0].Href.ShouldEqual(pipe.Href.AbsoluteUri);
     }
 
     [Subject("Retrieving a domain via the view model")]
@@ -97,7 +112,6 @@ namespace paramore.commandprocessor.tests.RestMSServer
         const string FEED_NAME = "Feed";
         static AddFeedToDomainCommandHandler addFeedToDomainCommandHandler;
         static AddFeedToDomainCommand addFeedToDomainCommand;
-        static Domain domain;
         static bool exceptionThrown = false;
 
         Establish context = () =>
@@ -111,7 +125,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             addFeedToDomainCommand = new AddFeedToDomainCommand(domainName: DOMAIN_NAME, feedName: FEED_NAME);
         };
 
-        Because of = () => { try { addFeedToDomainCommandHandler.Handle(addFeedToDomainCommand); } catch (DomainNotFoundException dfe) { exceptionThrown = true; } };
+        Because of = () => { try { addFeedToDomainCommandHandler.Handle(addFeedToDomainCommand); } catch (DomainNotFoundException) { exceptionThrown = true; } };
 
         It should_throw_an_exception_that_the_feed_already_exists = () => exceptionThrown.ShouldBeTrue();
 
@@ -223,7 +237,6 @@ namespace paramore.commandprocessor.tests.RestMSServer
     {
         const string DOMAIN_NAME = "Default";
         const string PIPE_NAME = "{A9343B6D-ACA2-4D9E-ACFE-78998267C678}";
-        static Domain domain;
         static AddPipeToDomainCommandHandler addPipeToDomainCommandHandler;
         static AddPipeToDomainCommand addPipeToDomainCommand;
         static bool exceptionThrown = false;
@@ -239,7 +252,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             addPipeToDomainCommand = new AddPipeToDomainCommand(domainName: DOMAIN_NAME, pipeName: PIPE_NAME);
         };
 
-        Because of = () => { try { addPipeToDomainCommandHandler .Handle(addPipeToDomainCommand ); } catch (DomainNotFoundException dfe) { exceptionThrown = true; } };
+        Because of = () => { try { addPipeToDomainCommandHandler .Handle(addPipeToDomainCommand ); } catch (DomainNotFoundException) { exceptionThrown = true; } };
 
         It should_throw_an_exception_that_the_feed_already_exists = () => exceptionThrown.ShouldBeTrue();
 

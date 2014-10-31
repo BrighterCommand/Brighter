@@ -73,10 +73,10 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         Because of = () => addJoinToFeedCommandHandler.Handle(addJoinToPipeCommand);
 
-        It should_add_the_join_to_the_pipe = () => pipe.Join.Address.ShouldEqual(new Address(ADDRESS_PATTERN));
-        It should_set_the_join_feed_uri = () => pipe.Join.FeedHref.ShouldEqual(feed.Href);
-        It should_have_the_default_join_type = () => pipe.Join.Type.ShouldEqual(JoinType.Default);
-        It should_have_a_reference_to_the_pipe = () => pipe.Join.Pipe.ShouldEqual(pipe);
+        It should_add_the_join_to_the_pipe = () => pipe.Joins.First().Address.ShouldEqual(new Address(ADDRESS_PATTERN));
+        It should_set_the_join_feed_uri = () => pipe.Joins.First().FeedHref.ShouldEqual(feed.Href);
+        It should_have_the_default_join_type = () => pipe.Joins.First().Type.ShouldEqual(JoinType.Default);
+        It should_have_a_reference_to_the_pipe = () => pipe.Joins.First().Pipe.ShouldEqual(pipe);
         It should_raise_an_event_to_add_the_join_to_the_feed  = () => A.CallTo(() => commandProcessor.Send(A<AddJoinToFeedCommand>.Ignored)).MustHaveHappened();
     }
 
