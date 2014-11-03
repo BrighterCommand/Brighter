@@ -34,6 +34,13 @@ namespace paramore.commandprocessor.tests.RestMSServer
         {
             var logger = A.Fake<ILog>();
             Globals.HostName = "host.com";
+
+            var feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed")
+                );
+
             pipe = new Pipe(
                 new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
                 PipeType.Fifo,
@@ -48,6 +55,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
              message = new Message(
                 ADDRESS_PATTERN,
+                feed.Href.AbsoluteUri,
                 new NameValueCollection(),
                 Attachment.CreateAttachmentFromString("", MediaTypeNames.Text.Plain)
                 );
@@ -86,6 +94,12 @@ namespace paramore.commandprocessor.tests.RestMSServer
             Globals.HostName = "host.com";
             exceptionWasThrown = false;
 
+            var feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed")
+                );
+
             pipe = new Pipe(
                 new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
                 PipeType.Fifo,
@@ -100,6 +114,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
              message = new Message(
                 ADDRESS_PATTERN,
+                feed.Href.AbsoluteUri,
                 new NameValueCollection(),
                 Attachment.CreateAttachmentFromString("", MediaTypeNames.Text.Plain)
                 );
@@ -190,6 +205,13 @@ namespace paramore.commandprocessor.tests.RestMSServer
         {
             var logger = A.Fake<ILog>();
             Globals.HostName = "host.com";
+
+            var feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed")
+                );
+
             pipe = new Pipe(
                 new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
                 PipeType.Fifo,
@@ -204,6 +226,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
              message = new Message(
                 ADDRESS_PATTERN,
+                feed.Href.AbsoluteUri,
                 new NameValueCollection(),
                 Attachment.CreateAttachmentFromString("", MediaTypeNames.Text.Plain)
                 );

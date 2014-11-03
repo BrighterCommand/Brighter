@@ -35,6 +35,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
 
@@ -46,6 +47,14 @@ namespace paramore.brighter.restms.core.Ports.Resources
     [DataContract(Name = "header"), XmlRoot(ElementName = "header")]
     public class RestMSMessageHeader
     {
+        public RestMSMessageHeader() {/*required for serialization*/}
+
+        public RestMSMessageHeader(Tuple<string, string> header)
+        {
+            Name = header.Item1;
+            Value = header.Item2;
+        }
+
         /// <summary>
         /// Gets or sets the name.
         /// </summary>

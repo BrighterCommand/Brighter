@@ -16,8 +16,12 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
         public RestMSMessage Retrieve(Name messageName)
         {
             var message = messageRepository[new Identity(messageName.Value)];
+            if (message == null)
+            {
+                throw new MessageDoesNotExistException(string.Format("The message {0} does not exist", messageName.Value));
+            }
 
-            return new RestMSMessage();
+            return new RestMSMessage(message);
         }
     }
 }

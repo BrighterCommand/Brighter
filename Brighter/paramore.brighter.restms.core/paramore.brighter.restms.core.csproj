@@ -87,6 +87,7 @@
     <Compile Include="Ports\Common\IAmARepository.cs" />
     <Compile Include="Ports\Common\Identity.cs" />
     <Compile Include="Ports\Common\JoinDoesNotExistException.cs" />
+    <Compile Include="Ports\Common\MessageDoesNotExistException.cs" />
     <Compile Include="Ports\Common\PipeDoesNotExistException.cs" />
     <Compile Include="Ports\Handlers\AddFeedToDomainCommandHandler.cs" />
     <Compile Include="Ports\Handlers\AddJoinCommandHandler.cs" />

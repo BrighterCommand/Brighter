@@ -36,6 +36,7 @@ THE SOFTWARE. */
 
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
+using paramore.brighter.restms.core.Model;
 
 namespace paramore.brighter.restms.core.Ports.Resources
 {
@@ -45,6 +46,15 @@ namespace paramore.brighter.restms.core.Ports.Resources
     [DataContract(Name = "content"), XmlRoot(ElementName = "content")]
     public class RestMSMessageContent
     {
+        public RestMSMessageContent() {/*required for serialization*/}
+
+        public RestMSMessageContent(MessageContent content)
+        {
+            Encoding = content.Encoding.ToString();
+            Type = content.ContentType.ToString();
+            Value = content.AsString();
+        }
+
         /// <summary>
         /// Gets or sets the type.
         /// </summary>
