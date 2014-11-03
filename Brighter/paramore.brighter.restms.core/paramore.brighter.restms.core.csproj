@@ -76,6 +76,7 @@
     <Compile Include="Ports\Commands\AddPipeCommand.cs" />
     <Compile Include="Ports\Commands\AddPipeToDomainCommand.cs" />
     <Compile Include="Ports\Commands\DeleteFeedCommand.cs" />
+    <Compile Include="Ports\Commands\DeleteMessageCommand.cs" />
     <Compile Include="Ports\Commands\DeletePipeCommand.cs" />
     <Compile Include="Ports\Commands\NewFeedCommand.cs" />
     <Compile Include="Ports\Commands\RemoveFeedFromDomainCommand.cs" />
@@ -97,6 +98,7 @@
     <Compile Include="Ports\Handlers\AddPipeCommandHandler.cs" />
     <Compile Include="Ports\Handlers\AddPipeToDomainCommandHandler.cs" />
     <Compile Include="Ports\Handlers\DeleteFeedCommandHandler.cs" />
+    <Compile Include="Ports\Handlers\DeleteMessageCommandHandler.cs" />
     <Compile Include="Ports\Handlers\DeletePipeCommandHandler.cs" />
     <Compile Include="Ports\Handlers\NewFeedHandler.cs" />
     <Compile Include="Ports\Handlers\RemoveFeedFromDomainCommandHandler.cs" />
