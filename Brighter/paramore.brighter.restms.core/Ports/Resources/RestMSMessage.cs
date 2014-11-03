@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
 using paramore.brighter.restms.core.Model;
@@ -36,7 +38,12 @@ namespace paramore.brighter.restms.core.Ports.Resources
 
         public RestMSMessage(Message message)
         {
-            
+            Address = message.Address.Value;
+            MessageId = message.MessageId.ToString();
+            ReplyTo = message.ReplyTo == null ? "" : message.ReplyTo.AbsoluteUri;
+            Feed = message.FeedHref.AbsoluteUri;
+            Headers = message.Headers.All.Select(header => new RestMSMessageHeader(header)).ToArray();
+            Content = new RestMSMessageContent(message.Content);
         }
 
         /// <summary>

@@ -67,7 +67,7 @@ namespace paramore.brighter.restms.core.Model
         /// <param name="headers"></param>
         /// <param name="attachment"></param>
         /// <param name="replyTo"></param>
-        public Message(Address address, NameValueCollection headers, Attachment attachment, Uri replyTo = null)
+        public Message(Address address, Uri href, NameValueCollection headers, Attachment attachment, Uri replyTo = null)
         {
             Address = address;
             ReplyTo = replyTo;
@@ -77,12 +77,14 @@ namespace paramore.brighter.restms.core.Model
             keys.Each(key => Headers.AddHeader(key, headers[key]));
             Content = new MessageContent(attachment.ContentType, attachment.TransferEncoding, attachment.ContentStream);
             Href = new Uri(string.Format(MESSAGE_URI_FORMAT, Globals.HostName, MessageId));
+            FeedHref = href;
             Id = new Identity(MessageId.ToString());
             Version = new AggregateVersion(0);
+            Name = new Name(MessageId.ToString());
         }
 
-        public Message(string address, NameValueCollection headers, Attachment attachment, string replyTo = null)
-            : this(new Address(address), headers, attachment)
+        public Message(string address, string href, NameValueCollection headers, Attachment attachment, string replyTo = null)
+            : this(new Address(address), new Uri(href), headers, attachment)
         {
             if (replyTo != null)
             {

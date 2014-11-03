@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net.Mime;
@@ -51,13 +52,21 @@ namespace paramore.commandprocessor.tests.RestMSServer
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
 
-            message = new Message(
-                ADDRESS_PATTERN,
-                new NameValueCollection() {{"MyHeader", "MyValue"}},
-                Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain)
+            var feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed")
                 );
 
+            message = new Message(
+                ADDRESS_PATTERN,
+                feed.Href.AbsoluteUri,
+                new NameValueCollection() {{"MyHeader", "MyValue"}},
+                Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain),
+                "http://host.com/");
+
             messageRepository = new InMemoryMessageRepository(logger);
+            messageRepository.Add(message);
 
             messageRetriever = new MessageRetriever(messageRepository);
         };
@@ -71,5 +80,17 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_have_the_header_name_of_the_message = () => restMSMessage.Headers[0].Name.ShouldEqual(message.Headers.All.First().Item1);
         It should_have_the_header_value_of_the_message = () => restMSMessage.Headers[0].Value.ShouldEqual(message.Headers.All.First().Item2);
         It should_have_the_message_content = () => restMSMessage.Content.Value.ShouldEqual(MESSAGE_CONTENT);
+    }
+
+
+    public class When_retrieving_a_missing_message
+    {
+        
+    }
+
+    public class When_deleting_a_message
+    {
+        //deletes the message and all older messages from the pipe.
+        //When the server deletes a message it also deletes any contents that message contains.
     }
 }
