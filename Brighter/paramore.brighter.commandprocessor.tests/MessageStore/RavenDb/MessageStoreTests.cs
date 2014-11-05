@@ -25,6 +25,7 @@ using System;
 using Common.Logging;
 using FakeItEasy;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Raven.Client.Embedded;
 using Raven.Tests.Helpers;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messagestore.ravendb;
@@ -38,7 +39,7 @@ namespace paramore.commandprocessor.tests.MessageStore.RavenDb
         public void Writing_and_reading_a_message_from_the_store()
         {
             //arrange
-            using (var store = NewDocumentStore())
+            using (var store = new EmbeddableDocumentStore())
             {
                 var logger = A.Fake<ILog>();
                 var messageStore = new RavenMessageStore(store, logger);
