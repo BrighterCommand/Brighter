@@ -14,6 +14,7 @@ Paramore contributors (sorted alphabeticaly)
 
 * **[Francesco Pighi](https://github.com/fpighi)**
 
+  * SQL Message Store
   * Various fixes
 
   
