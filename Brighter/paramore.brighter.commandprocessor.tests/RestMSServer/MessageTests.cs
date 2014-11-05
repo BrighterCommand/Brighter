@@ -25,11 +25,13 @@ using System;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net.Mime;
-using System.Runtime.InteropServices;
+using System.Net.Mail;
+using System.Threading.Tasks;
 using Common.Logging;
 using FakeItEasy;
+using FluentAssertions;
 using Machine.Specifications;
-using System.Net.Mail;
+using paramore.brighter.commandprocessor;
 using paramore.brighter.restms.core;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;
@@ -38,6 +40,8 @@ using paramore.brighter.restms.core.Ports.Handlers;
 using paramore.brighter.restms.core.Ports.Repositories;
 using paramore.brighter.restms.core.Ports.Resources;
 using paramore.brighter.restms.core.Ports.ViewModelRetrievers;
+using Raven.Database.Tasks;
+using Message = paramore.brighter.restms.core.Model.Message;
 
 namespace paramore.commandprocessor.tests.RestMSServer
 {
@@ -132,18 +136,22 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         const string ADDRESS_PATTERN = "*";
         const string MESSAGE_CONTENT = "I am some message content";
+        static Pipe pipe;
         static Message message;
         static Message olderMessage;
         static Message newerMessage;
-        static MessageRetriever messageRetriever;
-        static IAmARepository<Message> messageRepository;
         static DeleteMessageCommandHandler deleteMessageCommandHandler;
         static DeleteMessageCommand deleteMessageCommand;
-
+        static IAmACommandProcessor commandProcessor;
+        static IAmARepository<Pipe> pipeRepository;
+        
         Establish context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
+            commandProcessor = A.Fake<IAmACommandProcessor>();
+
+            pipeRepository = new InMemoryPipeRepository(logger);
 
             var feed = new Feed(
                 feedType: FeedType.Direct,
@@ -151,10 +159,12 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
-            var pipe = new Pipe(
+            pipe = new Pipe(
                 new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
                 PipeType.Fifo,
                 new Title("My Title"));
+
+            pipeRepository.Add(pipe);
 
             var join = new Join(
                 pipe,
@@ -179,6 +189,9 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 "http://host.com/");
             pipe.AddMessage(message);
 
+            //delay long enough to ensure last message is 'newer'
+            System.Threading.Tasks.Task.Delay(1.Seconds()).Wait();
+
             newerMessage = new Message(
                 ADDRESS_PATTERN,
                 feed.Href.AbsoluteUri,
@@ -187,17 +200,16 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 "http://host.com/");
             pipe.AddMessage(newerMessage);
 
-            deleteMessageCommand = new DeleteMessageCommand();
-            deleteMessageCommandHandler = new DeleteMessageCommandHandler();
+            deleteMessageCommand = new DeleteMessageCommand(pipe.Name.Value, message.MessageId);
+            deleteMessageCommandHandler = new DeleteMessageCommandHandler(commandProcessor, pipeRepository, logger);
 
         };
 
         Because of = () => deleteMessageCommandHandler.Handle(deleteMessageCommand);
 
-        It should_delete_the_message;
-        It should_delete_the_older_message;
-        It should_not_delete_the_newer_message;
-        It should_raise_an_event_to_delete_the_message_from_the_repository;
-        It should_raise_an_event_to_delete_the_old_message_from_the_repository;
+        It should_delete_the_message = () => pipe.Messages.Any(msg => msg.MessageId == message.MessageId).ShouldBeFalse();
+        It should_delete_the_older_message = () => pipe.Messages.Any(msg => msg.MessageId == olderMessage.MessageId).ShouldBeFalse();
+        It should_not_delete_the_newer_message = () => pipe.Messages.Any(msg => msg.MessageId == newerMessage.MessageId).ShouldBeTrue();
+        It should_raise_events_to_delete_the_messages_from_the_repository = () => A.CallTo(() => commandProcessor.Send(A<RemoveMessageCommand>.Ignored)).MustHaveHappened(Repeated.Exactly.Twice);
     }
 }
