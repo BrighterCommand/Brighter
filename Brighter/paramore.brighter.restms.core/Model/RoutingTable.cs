@@ -35,6 +35,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace paramore.brighter.restms.core.Model
@@ -44,7 +45,7 @@ namespace paramore.brighter.restms.core.Model
     /// </summary>
     public class RoutingTable
     {
-        readonly Dictionary<Address, List<Join>> joins = new Dictionary<Address, List<Join>>();
+        readonly ConcurrentDictionary<Address, List<Join>> joins = new ConcurrentDictionary<Address, List<Join>>();
 
         /// <summary>
         /// Gets or sets the <see cref="IEnumerable{Join}"/> with the specified address.
@@ -78,7 +79,7 @@ namespace paramore.brighter.restms.core.Model
             }
         }
 
-        List<Join> CreateEmptyJoinList()
+        IEnumerable<Join> CreateEmptyJoinList()
         {
             return new List<Join>();
         }

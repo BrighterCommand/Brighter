@@ -80,6 +80,7 @@
     <Compile Include="Ports\Commands\DeletePipeCommand.cs" />
     <Compile Include="Ports\Commands\NewFeedCommand.cs" />
     <Compile Include="Ports\Commands\RemoveFeedFromDomainCommand.cs" />
+    <Compile Include="Ports\Commands\RemoveMessageCommand.cs" />
     <Compile Include="Ports\Common\AggregateVersion.cs" />
     <Compile Include="Ports\Common\DomainDoesNotExistException.cs" />
     <Compile Include="Ports\Common\FeedAlreadyExistsException .cs" />

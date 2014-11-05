@@ -36,7 +36,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using paramore.brighter.restms.core.Extensions;
 using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Model
@@ -54,8 +57,9 @@ namespace paramore.brighter.restms.core.Model
     /// </summary>
     public class Pipe : Resource, IAmAnAggregate
     {
-        readonly List<Message> messages = new List<Message>();
-        readonly List<Join> joins = new List<Join>(); 
+        SortedList<long, List<Message>> messages = new SortedList<long, List<Message>>();
+        readonly object messageSyncRoot = new object();
+        readonly ConcurrentBag<Join> joins = new ConcurrentBag<Join>(); 
         const string PIPE_URI_FORMAT = "http://{0}/restms/pipe/{1}";
 
         /// <summary>
@@ -88,10 +92,10 @@ namespace paramore.brighter.restms.core.Model
 
         /// <summary>
         /// Gets the messages on the <see cref="Pipe"/> distributed from the <see cref="Feed"/> because they matched the <see cref="Join"/>.
+        /// Messages are shown in order of time of being added to the pipe
         /// </summary>
         /// <value>The messages.</value>
-        public IEnumerable<Message> Messages {get { return messages; }
-        }
+        public IEnumerable<Message> Messages { get { return messages.Values.SelectMany(messageList => messageList); } }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Pipe"/> class.
@@ -128,9 +132,114 @@ namespace paramore.brighter.restms.core.Model
             joins.Add(join);
         }
 
+        /// <summary>
+        /// Adds the message. Messages are ordered by time of arrival
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void AddMessage(Message message)
         {
-            messages.Add(message);
+            lock (messageSyncRoot)
+            {
+                long ticks = DateTime.UtcNow.Ticks;
+                var matchingKey = messages.Keys.FirstOrDefault(key => key == ticks);
+                if (matchingKey == 0)
+                {
+                    messages.Add(ticks, new List<Message>() {message});    
+                }
+                else
+                {
+                    messages[ticks].Add(message);
+                }
+                
+            }
         }
+
+        /// <summary>
+        /// Deletes the message. When we delete a message, we delete all older messages.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
+        public IEnumerable<Guid> DeleteMessage(Guid messageId)
+        {
+            lock (messageSyncRoot)
+            {
+                var matchingKey = FindNodeContainingMessage(messageId);
+                if (matchingKey == 0) return new List<Guid>();
+
+                var partitionKey = DeleteRequestedMessage(matchingKey, messageId);
+
+                var deletedMessages = DeleteOlderMessages(partitionKey);
+                deletedMessages.Add(messageId);
+                return deletedMessages;
+            }
+        }
+
+        long FindNodeContainingMessage(Guid messageId)
+        {
+            var matchingKey = (
+                from key in messages.Keys
+                let messageList = messages[key]
+                let message = messageList.FirstOrDefault(msg => msg.MessageId == messageId)
+                where message != null
+                select key
+                )
+                .FirstOrDefault();
+            return matchingKey;
+        }
+
+        int DeleteRequestedMessage(long matchingKey, Guid messageId)
+        {
+            int partitionKey = messages.IndexOfKey(matchingKey);
+            var messageList = messages[matchingKey];
+            var message = messageList.FirstOrDefault(msg => msg.MessageId == messageId);
+            
+            if (message == null) return partitionKey;
+
+            message.Content.Dispose();
+            messageList.Remove(message);
+            if (!messageList.Any())
+            {
+                messages.Remove(matchingKey);
+                partitionKey = partitionKey <= 1 ? 0 : partitionKey--;
+            }
+            return partitionKey;
+        }
+
+        List<Guid> DeleteOlderMessages(int partitionKey)
+        {
+            var partitionedLists = PartitionOlderFromNewerThanMessage(partitionKey);
+            messages = partitionedLists.Item2;
+            return DeleteOldMessages(partitionedLists.Item1);
+        }
+
+        Tuple<SortedList<long, List<Message>>, SortedList<long, List<Message>>> PartitionOlderFromNewerThanMessage(int partitionKey)
+        {
+            var olderMessageList = new SortedList<long, List<Message>>();
+
+            for (var j = 0; j <= partitionKey; j++)
+            {
+                var key = messages.Keys[j];
+                olderMessageList.Add(key, messages[key]);
+            }
+
+            var newerMessageList = new SortedList<long, List<Message>>();
+            var messageListLength = messages.Count();
+            for (var i = partitionKey + 1; i < messageListLength; i++)
+            {
+                var key = messages.Keys[i];
+                newerMessageList.Add(key, messages[key]);
+            }
+
+            return new Tuple<SortedList<long, List<Message>>, SortedList<long, List<Message>>>(olderMessageList, newerMessageList);
+        }
+
+        List<Guid> DeleteOldMessages(SortedList<long, List<Message>> olderMessages)
+        {
+            olderMessages.Values.SelectMany(messageList => messageList).Each(message => message.Content.Dispose());
+            return olderMessages
+                .Values
+                .SelectMany(messageList => messageList.Select(msg => msg.MessageId))
+                .ToList();
+        }
+
     }
 }
