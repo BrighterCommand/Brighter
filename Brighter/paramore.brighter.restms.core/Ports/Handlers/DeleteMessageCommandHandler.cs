@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 using Common.Logging;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.restms.core.Extensions;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Common;
@@ -32,7 +31,6 @@ namespace paramore.brighter.restms.core.Ports.Handlers
 {
     public class DeleteMessageCommandHandler : RequestHandler<DeleteMessageCommand>
     {
-        readonly IAmACommandProcessor commandProcessor;
         readonly IAmARepository<Pipe> pipeRepository;
 
         /// <summary>
@@ -41,9 +39,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <param name="commandProcessor"></param>
         /// <param name="pipeRepository"></param>
         /// <param name="logger">The logger.</param>
-        public DeleteMessageCommandHandler(IAmACommandProcessor commandProcessor, IAmARepository<Pipe> pipeRepository, ILog logger) : base(logger)
+        public DeleteMessageCommandHandler(IAmARepository<Pipe> pipeRepository, ILog logger) : base(logger)
         {
-            this.commandProcessor = commandProcessor;
             this.pipeRepository = pipeRepository;
         }
 
@@ -62,9 +59,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                 throw new PipeDoesNotExistException(string.Format("Could not find pipe {0}", deleteMessageCommand.PipeName));
             }
 
-            var deletedMessages = pipe.DeleteMessage(deleteMessageCommand.MessageId);
-
-            deletedMessages.Each((deletedMessage) => commandProcessor.Send(new RemoveMessageCommand(deletedMessage)));
+            pipe.DeleteMessage(deleteMessageCommand.MessageId);
 
             return base.Handle(deleteMessageCommand);
         }

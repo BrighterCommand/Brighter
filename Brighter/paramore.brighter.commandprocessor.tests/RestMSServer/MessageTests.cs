@@ -21,12 +21,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net.Mime;
 using System.Net.Mail;
-using System.Threading.Tasks;
 using Common.Logging;
 using FakeItEasy;
 using FluentAssertions;
@@ -40,7 +38,6 @@ using paramore.brighter.restms.core.Ports.Handlers;
 using paramore.brighter.restms.core.Ports.Repositories;
 using paramore.brighter.restms.core.Ports.Resources;
 using paramore.brighter.restms.core.Ports.ViewModelRetrievers;
-using Raven.Database.Tasks;
 using Message = paramore.brighter.restms.core.Model.Message;
 
 namespace paramore.commandprocessor.tests.RestMSServer
@@ -51,8 +48,9 @@ namespace paramore.commandprocessor.tests.RestMSServer
         const string MESSAGE_CONTENT = "I am some message content";
         static Message message;
         static MessageRetriever messageRetriever;
-        static IAmARepository<Message> messageRepository; 
+        static IAmARepository<Pipe> pipeRepository; 
         static RestMSMessage restMSMessage;
+        static Pipe pipe;
 
         Establish context = () =>
         {
@@ -65,6 +63,11 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
+            pipe = new Pipe(
+                new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
+                PipeType.Fifo,
+                new Title("My Title"));
+
             message = new Message(
                 ADDRESS_PATTERN,
                 feed.Href.AbsoluteUri,
@@ -72,13 +75,15 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain),
                 "http://host.com/");
 
-            messageRepository = new InMemoryMessageRepository(logger);
-            messageRepository.Add(message);
+            pipe.AddMessage(message);
 
-            messageRetriever = new MessageRetriever(messageRepository);
+            pipeRepository= new InMemoryPipeRepository(logger);
+            pipeRepository.Add(pipe);
+
+            messageRetriever = new MessageRetriever(pipeRepository);
         };
 
-        Because of = () => restMSMessage = messageRetriever.Retrieve(message.Name);
+        Because of = () => restMSMessage = messageRetriever.Retrieve(pipe.Name, message.MessageId);
 
         It should_have_the_message_address_pattern = () => restMSMessage.Address.ShouldEqual(message.Address.Value);
         It should_have_the_message_id = () => restMSMessage.MessageId.ShouldEqual(message.MessageId.ToString());
@@ -96,7 +101,8 @@ namespace paramore.commandprocessor.tests.RestMSServer
         const string MESSAGE_CONTENT = "I am some message content";
         static Message message;
         static MessageRetriever messageRetriever;
-        static IAmARepository<Message> messageRepository; 
+        static IAmARepository<Pipe> pipeRepository;
+        static Pipe pipe;
         static bool exceptionWasThrown;
 
         Establish context = () =>
@@ -111,19 +117,26 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
+            pipe = new Pipe(
+                new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
+                PipeType.Fifo,
+                new Title("My Title"));
+
             message = new Message(
                 ADDRESS_PATTERN,
                 feed.Href.AbsoluteUri,
-                new NameValueCollection() {{"MyHeader", "MyValue"}},
+                new NameValueCollection() { { "MyHeader", "MyValue" } },
                 Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain),
                 "http://host.com/");
 
-            messageRepository = new InMemoryMessageRepository(logger);
+            pipeRepository = new InMemoryPipeRepository(logger);
+            pipeRepository.Add(pipe);
 
-            messageRetriever = new MessageRetriever(messageRepository);
+            messageRetriever = new MessageRetriever(pipeRepository);
         };
 
-        Because of = () => { try { messageRetriever.Retrieve(message.Name); } catch (MessageDoesNotExistException) { exceptionWasThrown = true; }};
+
+        Because of = () => { try { messageRetriever.Retrieve(pipe.Name, message.MessageId); } catch (MessageDoesNotExistException) { exceptionWasThrown = true; }};
 
         It should_throw_an_exception = () => exceptionWasThrown.ShouldBeTrue();
 
@@ -201,7 +214,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             pipe.AddMessage(newerMessage);
 
             deleteMessageCommand = new DeleteMessageCommand(pipe.Name.Value, message.MessageId);
-            deleteMessageCommandHandler = new DeleteMessageCommandHandler(commandProcessor, pipeRepository, logger);
+            deleteMessageCommandHandler = new DeleteMessageCommandHandler(pipeRepository, logger);
 
         };
 
@@ -210,6 +223,5 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_delete_the_message = () => pipe.Messages.Any(msg => msg.MessageId == message.MessageId).ShouldBeFalse();
         It should_delete_the_older_message = () => pipe.Messages.Any(msg => msg.MessageId == olderMessage.MessageId).ShouldBeFalse();
         It should_not_delete_the_newer_message = () => pipe.Messages.Any(msg => msg.MessageId == newerMessage.MessageId).ShouldBeTrue();
-        It should_raise_events_to_delete_the_messages_from_the_repository = () => A.CallTo(() => commandProcessor.Send(A<RemoveMessageCommand>.Ignored)).MustHaveHappened(Repeated.Exactly.Twice);
     }
 }

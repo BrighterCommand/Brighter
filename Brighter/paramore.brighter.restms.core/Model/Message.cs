@@ -40,7 +40,6 @@ using System.Collections.Specialized;
 using System.Net.Mail;
 using paramore.brighter.restms.core.Extensions;
 using paramore.brighter.restms.core.Ports.Common;
-using paramore.brighter.restms.core.Ports.Resources;
 
 namespace paramore.brighter.restms.core.Model
 {
@@ -58,7 +57,8 @@ namespace paramore.brighter.restms.core.Model
     /// </summary>
     public class Message: Resource, IAmAnAggregate
     {
-        const string MESSAGE_URI_FORMAT = "http://{0}/restms/message/{1}";
+        Name pipeName;
+        const string MESSAGE_URI_FORMAT = "http://{0}/restms/pipe{1}/message/{2}";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Message"/> class.
@@ -67,7 +67,7 @@ namespace paramore.brighter.restms.core.Model
         /// <param name="headers"></param>
         /// <param name="attachment"></param>
         /// <param name="replyTo"></param>
-        public Message(Address address, Uri href, NameValueCollection headers, Attachment attachment, Uri replyTo = null)
+        public Message(Address address, Uri feedHref, NameValueCollection headers, Attachment attachment, Uri replyTo = null)
         {
             Address = address;
             ReplyTo = replyTo;
@@ -76,20 +76,32 @@ namespace paramore.brighter.restms.core.Model
             var keys = headers.AllKeys;
             keys.Each(key => Headers.AddHeader(key, headers[key]));
             Content = new MessageContent(attachment.ContentType, attachment.TransferEncoding, attachment.ContentStream);
-            Href = new Uri(string.Format(MESSAGE_URI_FORMAT, Globals.HostName, MessageId));
-            FeedHref = href;
+            FeedHref = feedHref;
             Id = new Identity(MessageId.ToString());
             Version = new AggregateVersion(0);
             Name = new Name(MessageId.ToString());
         }
 
-        public Message(string address, string href, NameValueCollection headers, Attachment attachment, string replyTo = null)
-            : this(new Address(address), new Uri(href), headers, attachment)
+        public Message(string address, string feedHref, NameValueCollection headers, Attachment attachment, string replyTo = null)
+            : this(new Address(address), new Uri(feedHref), headers, attachment)
         {
             if (replyTo != null)
             {
                 ReplyTo = new Uri(replyTo);
             }
+        }
+
+        public Message(Message message)
+        {
+            Address = message.Address;
+            ReplyTo = message.ReplyTo;
+            MessageId = message.MessageId;
+            Headers = message.Headers;
+            FeedHref = message.FeedHref;
+            Id = message.Id;
+            Version = message.Version;
+            Name = message.Name;
+            Content = message.Content.Copy();
         }
 
         /// <summary>
@@ -142,5 +154,14 @@ namespace paramore.brighter.restms.core.Model
         /// <value>The content.</value>
         public MessageContent Content { get; private set; }
 
+        public Name PipeName
+        {
+            get { return pipeName; }
+            set
+            {
+                pipeName = value;
+                Href = new Uri(string.Format(MESSAGE_URI_FORMAT, Globals.HostName,pipeName.Value, MessageId));
+            }
+        }
     }
 }

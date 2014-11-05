@@ -1,4 +1,5 @@
-﻿using paramore.brighter.restms.core.Model;
+﻿using System;
+using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Resources;
 
@@ -6,20 +7,28 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
 {
     public class MessageRetriever
     {
-        readonly IAmARepository<Message> messageRepository;
-
-        public MessageRetriever(IAmARepository<Message> messageRepository)
+        readonly IAmARepository<Pipe> pipeRepository;
+        
+        public MessageRetriever(IAmARepository<Pipe> pipeRepository)
         {
-            this.messageRepository = messageRepository;
+            this.pipeRepository = pipeRepository;
         }
 
-        public RestMSMessage Retrieve(Name messageName)
+        public RestMSMessage Retrieve(Name pipeName, Guid messageId)
         {
-            var message = messageRepository[new Identity(messageName.Value)];
+            var pipe = pipeRepository[new Identity(pipeName.Value)];
+            if (pipe == null)
+            {
+                throw new PipeDoesNotExistException(string.Format("The message {0} does not exist", pipeName.Value));
+            }
+
+            var message = pipe.FindMessage(messageId);
+
             if (message == null)
             {
-                throw new MessageDoesNotExistException(string.Format("The message {0} does not exist", messageName.Value));
+                throw new MessageDoesNotExistException(string.Format("Cannot find message {0} on pipe {1}", messageId, pipeName));
             }
+
 
             return new RestMSMessage(message);
         }
