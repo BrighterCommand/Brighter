@@ -110,10 +110,6 @@
     <Reference Include="OpenRasta.Hosting.AspNet">
       <HintPath>Libs\OpenRasta\OpenRasta.Hosting.AspNet.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.dll</HintPath>
-    </Reference>
     <Reference Include="paramore.brighter.commandprocessor.exceptionpolicy, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.ExceptionPolicy.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll</HintPath>
@@ -231,6 +227,10 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
+      <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
+      <Name>paramore.brighter.commandprocessor</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Tasks\Tasks.csproj">
       <Project>{e7900a56-da88-46ca-8418-fb4c2bc2d326}</Project>
       <Name>Tasks</Name>
