@@ -141,9 +141,10 @@ namespace paramore.brighter.restms.core.Model
                 matchingJoins.Each(join =>
                                    {
                                        var pipe = join.Pipe;
-                                       pipe.AddMessage(message);
+                                       pipe.AddMessage(new Message(message));
                                        joinCount ++;
                                    });
+                message.Content.Dispose();
                 return joinCount;
             }
             return 0;

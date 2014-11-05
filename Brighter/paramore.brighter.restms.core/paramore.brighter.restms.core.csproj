@@ -106,7 +106,6 @@
     <Compile Include="Ports\Repositories\InMemoryDomainRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryFeedRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryJoinRepository.cs" />
-    <Compile Include="Ports\Repositories\InMemoryMessageRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryPipeRepository.cs" />
     <Compile Include="Ports\Resources\RestMSDomain.cs" />

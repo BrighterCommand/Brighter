@@ -150,7 +150,8 @@ namespace paramore.brighter.restms.core.Model
                 {
                     messages[ticks].Add(message);
                 }
-                
+
+                message.PipeName = Name;
             }
         }
 
@@ -158,18 +159,16 @@ namespace paramore.brighter.restms.core.Model
         /// Deletes the message. When we delete a message, we delete all older messages.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
-        public IEnumerable<Guid> DeleteMessage(Guid messageId)
+        public void DeleteMessage(Guid messageId)
         {
             lock (messageSyncRoot)
             {
                 var matchingKey = FindNodeContainingMessage(messageId);
-                if (matchingKey == 0) return new List<Guid>();
+                if (matchingKey == 0) return; 
 
                 var partitionKey = DeleteRequestedMessage(matchingKey, messageId);
 
-                var deletedMessages = DeleteOlderMessages(partitionKey);
-                deletedMessages.Add(messageId);
-                return deletedMessages;
+                DeleteOlderMessages(partitionKey);
             }
         }
 
@@ -204,11 +203,11 @@ namespace paramore.brighter.restms.core.Model
             return partitionKey;
         }
 
-        List<Guid> DeleteOlderMessages(int partitionKey)
+        void DeleteOlderMessages(int partitionKey)
         {
             var partitionedLists = PartitionOlderFromNewerThanMessage(partitionKey);
             messages = partitionedLists.Item2;
-            return DeleteOldMessages(partitionedLists.Item1);
+            DeleteOldMessages(partitionedLists.Item1);
         }
 
         Tuple<SortedList<long, List<Message>>, SortedList<long, List<Message>>> PartitionOlderFromNewerThanMessage(int partitionKey)
@@ -232,14 +231,17 @@ namespace paramore.brighter.restms.core.Model
             return new Tuple<SortedList<long, List<Message>>, SortedList<long, List<Message>>>(olderMessageList, newerMessageList);
         }
 
-        List<Guid> DeleteOldMessages(SortedList<long, List<Message>> olderMessages)
+        void DeleteOldMessages(SortedList<long, List<Message>> olderMessages)
         {
             olderMessages.Values.SelectMany(messageList => messageList).Each(message => message.Content.Dispose());
-            return olderMessages
-                .Values
-                .SelectMany(messageList => messageList.Select(msg => msg.MessageId))
-                .ToList();
         }
 
+        public Message FindMessage(Guid messageId)
+        {
+            return (from key in messages.Keys
+             let messageList = messages[key]
+             let message = messageList.FirstOrDefault(msg => msg.MessageId == messageId)
+             select message).FirstOrDefault();
+        }
     }
 }

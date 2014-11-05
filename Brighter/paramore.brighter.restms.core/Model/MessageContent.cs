@@ -14,7 +14,9 @@ namespace paramore.brighter.restms.core.Model
         {
             ContentType = contentType;
             Encoding = encoding;
+            source.Position = 0;
             source.CopyTo(content);
+            content.Position = 0;
         }
 
         public ContentType ContentType { get; private set; }
@@ -23,8 +25,10 @@ namespace paramore.brighter.restms.core.Model
         public string AsString()
         {
             content.Position = 0;
-            var sr = new StreamReader(content);
-            return sr.ReadToEnd();
+            using (var sr = new StreamReader(content))
+            {
+                return sr.ReadToEnd();
+            }
         }
 
         /// <summary>
@@ -47,6 +51,11 @@ namespace paramore.brighter.restms.core.Model
             {
                 content.Dispose();
             }
+        }
+
+        public MessageContent Copy()
+        {
+            return new MessageContent(ContentType, Encoding, content);    
         }
     }
 }

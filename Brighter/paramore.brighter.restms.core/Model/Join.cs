@@ -147,10 +147,5 @@ namespace paramore.brighter.restms.core.Model
         {
             return !Equals(left, right);
         }
-
-        #region Implementation of IAmAnAggregate
-
-
-        #endregion
     }
 }
