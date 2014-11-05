@@ -1,3 +1,17 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="RestMSProfile.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -28,6 +42,7 @@ using paramore.brighter.restms.core.Model;
 namespace paramore.brighter.restms.core.Ports.Resources
 {
     /// <summary>
+    /// Class RestMSProfile.
     /// </summary>
     [DataContract(Name = "profile"), XmlRoot(ElementName = "profile")]
     public class RestMSProfile
@@ -39,6 +54,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// <value>The name.</value>
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
+
         /// <summary>
         /// Gets or sets the href.
         /// </summary>
@@ -47,12 +63,12 @@ namespace paramore.brighter.restms.core.Ports.Resources
         public string Href { get; set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSProfile"/> class.
+        /// Initializes a new instance of the <see cref="RestMSProfile" /> class.
         /// </summary>
         public RestMSProfile() {/*required for serialization*/}
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSProfile"/> class.
+        /// Initializes a new instance of the <see cref="RestMSProfile" /> class.
         /// </summary>
         /// <param name="profile">The profile.</param>
         public RestMSProfile(Profile profile)

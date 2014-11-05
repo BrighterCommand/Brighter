@@ -39,7 +39,6 @@ using System;
 using System.Collections.Specialized;
 using System.Net.Mail;
 using paramore.brighter.restms.core.Extensions;
-using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Model
 {
@@ -80,6 +79,14 @@ namespace paramore.brighter.restms.core.Model
             Name = new Name(MessageId.ToString());
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Message"/> class.
+        /// </summary>
+        /// <param name="address">The address.</param>
+        /// <param name="feedHref">The feed href.</param>
+        /// <param name="headers">The headers.</param>
+        /// <param name="attachment">The attachment.</param>
+        /// <param name="replyTo">The reply to.</param>
         public Message(string address, string feedHref, NameValueCollection headers, Attachment attachment, string replyTo = null)
             : this(new Address(address), new Uri(feedHref), headers, attachment)
         {
@@ -89,14 +96,18 @@ namespace paramore.brighter.restms.core.Model
             }
         }
 
+        /// <summary>
+        /// Copy constructor for the <see cref="Message"/> class.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public Message(Message message)
         {
-            Address = message.Address;
-            ReplyTo = message.ReplyTo;
-            MessageId = message.MessageId;
-            Headers = message.Headers;
-            FeedHref = message.FeedHref;
-            Name = message.Name;
+            Address = new Address(message.Address.Value);
+            ReplyTo = new Uri(message.ReplyTo.AbsoluteUri);
+            MessageId = new Guid(message.MessageId.ToString());
+            Headers = message.Headers.Copy();
+            FeedHref = new Uri(message.FeedHref.AbsoluteUri);
+            Name = new Name(message.Name.Value);
             Content = message.Content.Copy();
         }
 

@@ -1,3 +1,17 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="RestMSMessage.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -22,7 +36,6 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
 using paramore.brighter.restms.core.Model;
@@ -30,12 +43,20 @@ using paramore.brighter.restms.core.Model;
 namespace paramore.brighter.restms.core.Ports.Resources
 {
     /// <summary>
+    /// Class RestMSMessage.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
     /// </summary>
     [DataContract(Name = "message"), XmlRoot(ElementName = "message")]
     public class RestMSMessage
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSMessage"/> class.
+        /// </summary>
         public RestMSMessage(){}
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSMessage"/> class.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public RestMSMessage(Message message)
         {
             Address = message.Address.Value;
