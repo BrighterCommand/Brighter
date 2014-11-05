@@ -55,7 +55,7 @@ namespace paramore.brighter.restms.core.Model
     /// http://www.restms.org/spec:2
 
     /// </summary>
-    public class Message: Resource, IAmAnAggregate
+    public class Message: Resource 
     {
         Name pipeName;
         const string MESSAGE_URI_FORMAT = "http://{0}/restms/pipe{1}/message/{2}";
@@ -77,8 +77,6 @@ namespace paramore.brighter.restms.core.Model
             keys.Each(key => Headers.AddHeader(key, headers[key]));
             Content = new MessageContent(attachment.ContentType, attachment.TransferEncoding, attachment.ContentStream);
             FeedHref = feedHref;
-            Id = new Identity(MessageId.ToString());
-            Version = new AggregateVersion(0);
             Name = new Name(MessageId.ToString());
         }
 
@@ -98,24 +96,9 @@ namespace paramore.brighter.restms.core.Model
             MessageId = message.MessageId;
             Headers = message.Headers;
             FeedHref = message.FeedHref;
-            Id = message.Id;
-            Version = message.Version;
             Name = message.Name;
             Content = message.Content.Copy();
         }
-
-        /// <summary>
-        /// Gets the identifier.
-        /// </summary>
-        /// <value>The identifier.</value>
-        public Identity Id { get; private set; }
-
-        /// <summary>
-        /// Gets the version.
-        /// </summary>
-        /// <value>The version.</value>
-        /// 
-        public AggregateVersion Version { get; private set; }
 
         /// <summary>
         /// Gets the address.
