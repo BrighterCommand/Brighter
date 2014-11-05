@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="InMemoryPipeRepository.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,11 +39,15 @@ using paramore.brighter.restms.core.Model;
 
 namespace paramore.brighter.restms.core.Ports.Repositories
 {
+    /// <summary>
+    /// Class InMemoryPipeRepository.
+    /// </summary>
     public class InMemoryPipeRepository : InMemoryRepository<Pipe>
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="T:System.Object"/> class.
+        /// Initializes a new instance of the <see cref="T:System.Object" /> class.
         /// </summary>
+        /// <param name="logger">The logger.</param>
         public InMemoryPipeRepository(ILog logger) : base(logger)
         {
         }

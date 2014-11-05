@@ -1,3 +1,17 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="RestMSPipeNew.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -27,6 +41,7 @@ using System.Xml.Serialization;
 namespace paramore.brighter.restms.core.Ports.Resources
 {
     /// <summary>
+    /// Class RestMSPipeNew.
     /// </summary>
     [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
     public class RestMSPipeNew

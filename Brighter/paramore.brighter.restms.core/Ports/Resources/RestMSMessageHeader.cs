@@ -47,8 +47,15 @@ namespace paramore.brighter.restms.core.Ports.Resources
     [DataContract(Name = "header"), XmlRoot(ElementName = "header")]
     public class RestMSMessageHeader
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSMessageHeader"/> class.
+        /// </summary>
         public RestMSMessageHeader() {/*required for serialization*/}
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSMessageHeader"/> class.
+        /// </summary>
+        /// <param name="header">The header.</param>
         public RestMSMessageHeader(Tuple<string, string> header)
         {
             Name = header.Item1;
@@ -61,6 +68,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// <value>The name.</value>
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
+
         /// <summary>
         /// Gets or sets the value.
         /// </summary>

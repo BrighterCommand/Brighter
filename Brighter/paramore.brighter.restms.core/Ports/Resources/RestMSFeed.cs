@@ -1,3 +1,17 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="RestMSFeed.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -28,16 +42,18 @@ using paramore.brighter.restms.core.Model;
 namespace paramore.brighter.restms.core.Ports.Resources
 {
     /// <summary>
+    /// Class RestMSFeed.
     /// </summary>
     [DataContract(Name = "feed"), XmlRoot(ElementName = "feed")]
     public class RestMSFeed
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSFeed"/> class.
+        /// Initializes a new instance of the <see cref="RestMSFeed" /> class.
         /// </summary>
         public RestMSFeed() { /* required for serialization */}
+        
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSFeed"/> class.
+        /// Initializes a new instance of the <see cref="RestMSFeed" /> class.
         /// </summary>
         /// <param name="feed">The feed.</param>
         public RestMSFeed(Feed feed)
@@ -54,12 +70,14 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// <value>The type.</value>
         [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
         public string Type { get; set; }
+        
         /// <summary>
         /// Gets or sets the name.
         /// </summary>
         /// <value>The name.</value>
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
+        
         /// <summary>
         /// Gets or sets the title.
         /// </summary>
@@ -67,8 +85,13 @@ namespace paramore.brighter.restms.core.Ports.Resources
         [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
         public string Title { get; set; }
 
+        /// <summary>
+        /// Gets or sets the licence.
+        /// </summary>
+        /// <value>The licence.</value>
         [DataMember(Name = "licence"), XmlAttribute(AttributeName = "licence")]
         public string Licence { get; set; }
+
         /// <summary>
         /// Gets or sets the href.
         /// </summary>

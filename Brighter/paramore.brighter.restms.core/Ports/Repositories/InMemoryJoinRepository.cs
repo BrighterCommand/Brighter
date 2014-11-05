@@ -1,4 +1,18 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="InMemoryJoinRepository.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -32,8 +46,9 @@ namespace paramore.brighter.restms.core.Ports.Repositories
     public class InMemoryJoinRepository : InMemoryRepository<Join>
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="T:System.Object"/> class.
+        /// Initializes a new instance of the <see cref="T:System.Object" /> class.
         /// </summary>
+        /// <param name="logger">The logger.</param>
         public InMemoryJoinRepository(ILog logger) : base(logger) {}
     }
 }

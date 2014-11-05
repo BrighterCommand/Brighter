@@ -45,6 +45,9 @@ using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Ports.Handlers
 {
+    /// <summary>
+    /// Class DeleteFeedCommandHandler.
+    /// </summary>
     public class DeleteFeedCommandHandler : RequestHandler<DeleteFeedCommand>
     {
         readonly IAmARepository<Feed> feedRepository;
@@ -58,6 +61,12 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DeleteFeedCommandHandler"/> class.
+        /// </summary>
+        /// <param name="feedRepository">The feed repository.</param>
+        /// <param name="commandProcessor">The command processor.</param>
+        /// <param name="log">The log.</param>
         public DeleteFeedCommandHandler(IAmARepository<Feed> feedRepository, IAmACommandProcessor commandProcessor, ILog log) : base(log)
         {
             this.feedRepository = feedRepository;

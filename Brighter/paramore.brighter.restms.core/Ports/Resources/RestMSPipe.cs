@@ -1,3 +1,17 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="RestMSPipe.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -29,16 +43,21 @@ using paramore.brighter.restms.core.Model;
 namespace paramore.brighter.restms.core.Ports.Resources
 {
     /// <summary>
+    /// Class RestMSPipe.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
     /// </summary>
     [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
     public class RestMSPipe
     {
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSPipe"/> class.
+        /// Initializes a new instance of the <see cref="RestMSPipe" /> class.
         /// </summary>
         public RestMSPipe() {}
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMSPipe"/> class.
+        /// </summary>
+        /// <param name="pipe">The pipe.</param>
         public RestMSPipe(Pipe pipe)
         {
             Name = pipe.Name.Value;

@@ -45,6 +45,9 @@ using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Ports.Handlers
 {
+    /// <summary>
+    /// Class AddMessageToFeedCommandHandler.
+    /// </summary>
     public class AddMessageToFeedCommandHandler : RequestHandler<AddMessageToFeedCommand>
     {
         readonly IAmARepository<Feed> feedRepository;

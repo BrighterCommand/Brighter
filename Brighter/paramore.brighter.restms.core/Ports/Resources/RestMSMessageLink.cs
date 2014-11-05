@@ -1,3 +1,17 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="RestMSMessageLink.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -28,17 +42,18 @@ using paramore.brighter.restms.core.Model;
 namespace paramore.brighter.restms.core.Ports.Resources
 {
     /// <summary>
+    /// Class RestMSMessageLink.
     /// </summary>
     [DataContract(Name = "message"), XmlRoot(ElementName = "message")]
     public class RestMSMessageLink
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSMessageLink"/> class.
+        /// Initializes a new instance of the <see cref="RestMSMessageLink" /> class.
         /// </summary>
         public RestMSMessageLink(){}
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMSMessageLink"/> class.
+        /// Initializes a new instance of the <see cref="RestMSMessageLink" /> class.
         /// </summary>
         /// <param name="message">The message.</param>
         public RestMSMessageLink(Message message)
@@ -54,6 +69,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// <value>The href.</value>
         [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }
+
         /// <summary>
         /// Gets or sets the address.
         /// </summary>

@@ -1,4 +1,18 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="DeleteMessageCommandHandler.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -29,15 +43,17 @@ using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Ports.Handlers
 {
+    /// <summary>
+    /// Class DeleteMessageCommandHandler.
+    /// </summary>
     public class DeleteMessageCommandHandler : RequestHandler<DeleteMessageCommand>
     {
         readonly IAmARepository<Pipe> pipeRepository;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
+        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}" /> class.
         /// </summary>
-        /// <param name="commandProcessor"></param>
-        /// <param name="pipeRepository"></param>
+        /// <param name="pipeRepository">The pipe repository.</param>
         /// <param name="logger">The logger.</param>
         public DeleteMessageCommandHandler(IAmARepository<Pipe> pipeRepository, ILog logger) : base(logger)
         {
@@ -51,6 +67,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// </summary>
         /// <param name="deleteMessageCommand">The command.</param>
         /// <returns>TRequest.</returns>
+        /// <exception cref="PipeDoesNotExistException"></exception>
         public override DeleteMessageCommand Handle(DeleteMessageCommand deleteMessageCommand)
         {
             var pipe = pipeRepository[new Identity(deleteMessageCommand.PipeName)];

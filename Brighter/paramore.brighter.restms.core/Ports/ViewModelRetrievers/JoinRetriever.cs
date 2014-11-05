@@ -1,4 +1,18 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="JoinRetriever.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,17 +42,31 @@ using paramore.brighter.restms.core.Ports.Resources;
 
 namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
 {
+    /// <summary>
+    /// Class JoinRetriever.
+    /// </summary>
     public class JoinRetriever
     {
         readonly IAmARepository<Join> joinRepository;
         readonly ILog logger;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JoinRetriever"/> class.
+        /// </summary>
+        /// <param name="joinRepository">The join repository.</param>
+        /// <param name="logger">The logger.</param>
         public JoinRetriever(IAmARepository<Join> joinRepository, ILog logger)
         {
             this.joinRepository = joinRepository;
             this.logger = logger;
         }
 
+        /// <summary>
+        /// Retrieves the specified join name.
+        /// </summary>
+        /// <param name="joinName">Name of the join.</param>
+        /// <returns>RestMSJoin.</returns>
+        /// <exception cref="paramore.brighter.restms.core.Ports.Common.JoinDoesNotExistException"></exception>
         public RestMSJoin Retrieve(Name joinName)
         {
             var join = joinRepository[new Identity(joinName.Value)];
