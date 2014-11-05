@@ -38,7 +38,7 @@ namespace Tasklist
             {
                 ResourceSpace.Uses.PipelineContributor<DependencyPipelineContributor>();
                 ResourceSpace.Has.ResourcesOfType<TaskModel>()
-                        .AtUri("/tasks/{id}")
+                        .AtUri("/tasks/{taskId}")
                         .HandledBy<TaskEndPointHandler>()
                         .TranscodedBy<JsonDataContractCodec>()
                         .ForMediaType("application/json")
@@ -59,7 +59,7 @@ namespace Tasklist
                     .TranscodedBy<JsonDataContractCodec>()
                     .ForMediaType("application/json")
                     .ForExtension("js")
-                    .ForExtension(".json");
+                    .ForExtension("json");
             }
         }
     }
