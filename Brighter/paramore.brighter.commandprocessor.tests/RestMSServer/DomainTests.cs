@@ -95,6 +95,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_have_set_the_title = () => defaultDomain.Title.ShouldEqual(domain.Title.Value);
         It should_have_set_the_profile_name = () => defaultDomain.Profile.Name.ShouldEqual(domain.Profile.Name.Value);
         It should_have_set_the_profile_href = () => defaultDomain.Profile.Href.ShouldEqual(domain.Profile.Href.AbsoluteUri);
+        It should_have_set_the_domain_href = () => defaultDomain.Href.ShouldEqual(domain.Href.AbsoluteUri);
         It should_have_set_the_feed_type = () => defaultDomain.Feeds[0].Type.ShouldEqual(feed.Type.ToString());
         It should_have_set_the_feed_name = () => defaultDomain.Feeds[0].Name.ShouldEqual(feed.Name.Value);
         It should_have_set_the_feed_title = () => defaultDomain.Feeds[0].Title.ShouldEqual(feed.Title.Value);
@@ -142,6 +143,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         Establish context = () =>
         {
+            Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
             domain = new Domain(
                 name: new Name(DOMAIN_NAME), 
@@ -210,6 +212,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         Establish context = () =>
         {
+            Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
             domain = new Domain(
                 name: new Name(DOMAIN_NAME), 

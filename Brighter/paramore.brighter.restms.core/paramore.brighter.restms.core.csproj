@@ -78,7 +78,7 @@
     <Compile Include="Ports\Commands\DeleteFeedCommand.cs" />
     <Compile Include="Ports\Commands\DeleteMessageCommand.cs" />
     <Compile Include="Ports\Commands\DeletePipeCommand.cs" />
-    <Compile Include="Ports\Commands\NewFeedCommand.cs" />
+    <Compile Include="Ports\Commands\AddFeedCommand.cs" />
     <Compile Include="Ports\Commands\RemoveFeedFromDomainCommand.cs" />
     <Compile Include="Ports\Common\AggregateVersion.cs" />
     <Compile Include="Ports\Common\DomainDoesNotExistException.cs" />
@@ -100,7 +100,7 @@
     <Compile Include="Ports\Handlers\DeleteFeedCommandHandler.cs" />
     <Compile Include="Ports\Handlers\DeleteMessageCommandHandler.cs" />
     <Compile Include="Ports\Handlers\DeletePipeCommandHandler.cs" />
-    <Compile Include="Ports\Handlers\NewFeedHandler.cs" />
+    <Compile Include="Ports\Handlers\AddFeedCommandHandler.cs" />
     <Compile Include="Ports\Handlers\RemoveFeedFromDomainCommandHandler.cs" />
     <Compile Include="Ports\Repositories\InMemoryDomainRepository.cs" />
     <Compile Include="Ports\Repositories\InMemoryFeedRepository.cs" />
@@ -114,6 +114,7 @@
     <Compile Include="Ports\Resources\RestMSMessageContent.cs" />
     <Compile Include="Ports\Resources\RestMSMessageHeader.cs" />
     <Compile Include="Ports\Resources\RestMSMessageLink.cs" />
+    <Compile Include="Ports\Resources\RestMSMessagePosted.cs" />
     <Compile Include="Ports\Resources\RestMSPipe.cs" />
     <Compile Include="Ports\Resources\RestMSPipeLink.cs" />
     <Compile Include="Ports\Resources\RestMSPipeNew.cs" />

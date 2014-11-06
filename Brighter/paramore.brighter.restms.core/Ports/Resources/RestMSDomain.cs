@@ -45,7 +45,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
 {
     /// <summary>
     /// </summary>
-    [DataContract(Name = "domain"), XmlRoot(ElementName = "domain")]
+    [DataContract(Name = "domain"), XmlRoot(ElementName = "domain", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSDomain
     {
 
@@ -67,6 +67,14 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// <value>The profile.</value>
         [DataMember(Name = "profile"), XmlAttribute(AttributeName = "profile")]
         public RestMSProfile Profile {get; set;}
+
+        /// <summary>
+        /// Gets or sets the href.
+        /// </summary>
+        /// <value>The href.</value>
+        [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
+        public string Href { get; set; }
+
         /// <summary>
         /// The feeds
         /// </summary>
@@ -93,6 +101,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         {
             Name = domain.Name.Value;
             Title = domain.Title.Value;
+            Href = domain.Href.AbsoluteUri;
             Profile = new RestMSProfile(domain.Profile);
             Feeds = feeds.Select(feed => new RestMSFeed(feed)).ToArray();
             Pipes = pipes.Select(pipe => new RestMSPipeLink(pipe)).ToArray();

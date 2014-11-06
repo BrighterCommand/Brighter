@@ -109,7 +109,7 @@ namespace paramore.brighter.restms.core.Model
             Title = new Title(title);
             Name = new Name(Id.Value);
             Type = (PipeType) Enum.Parse(typeof (PipeType), pipeType);
-            Href = new Uri(string.Format(PIPE_URI_FORMAT, Globals.HostName, Id.Value));
+            Href = new Uri(string.Format(PIPE_URI_FORMAT, Globals.HostName, Name.Value));
         }
 
         /// <summary>

@@ -45,7 +45,7 @@ using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Ports.Handlers
 {
-    public class NewFeedHandler : RequestHandler<NewFeedCommand>
+    public class AddFeedCommandHandler : RequestHandler<AddFeedCommand>
     {
         readonly IAmARepository<Feed> feedRepository;
         readonly IAmACommandProcessor commandProcessor;
@@ -56,7 +56,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <param name="logger">The logger.</param>
         /// <param name="feedRepository"></param>
         /// <param name="commandProcessor"></param>
-        public NewFeedHandler(ILog logger, IAmARepository<Feed> feedRepository, IAmACommandProcessor commandProcessor) : base(logger)
+        public AddFeedCommandHandler(ILog logger, IAmARepository<Feed> feedRepository, IAmACommandProcessor commandProcessor) : base(logger)
         {
             this.feedRepository = feedRepository;
             this.commandProcessor = commandProcessor;
@@ -67,7 +67,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// </summary>
         /// <param name="command">The command.</param>
         /// <returns>TRequest.</returns>
-        public override NewFeedCommand Handle(NewFeedCommand command)
+        public override AddFeedCommand Handle(AddFeedCommand command)
         {
             using (var scope = new TransactionScope())
             {

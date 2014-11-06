@@ -81,8 +81,8 @@ namespace paramore.commandprocessor.tests.RestMSServer
         const string FEED_TITLE = "Test Feed";
         const string FEED_LICENSE = "License";
         const string DOMAIN_NAME = "Default";
-        static NewFeedHandler newFeedHandler;
-        static NewFeedCommand newFeedCommand;
+        static AddFeedCommandHandler addFeedCommandHandler;
+        static AddFeedCommand addFeedCommand;
         static IAmARepository<Feed> feedRepository;
         static IAmACommandProcessor commandProcessor;
 
@@ -93,12 +93,12 @@ namespace paramore.commandprocessor.tests.RestMSServer
             commandProcessor = A.Fake<IAmACommandProcessor>();
             feedRepository = new InMemoryFeedRepository(logger);
 
-            newFeedHandler = new NewFeedHandler(logger, feedRepository, commandProcessor);
+            addFeedCommandHandler = new AddFeedCommandHandler(logger, feedRepository, commandProcessor);
 
-            newFeedCommand = new NewFeedCommand(domainName: DOMAIN_NAME, name: FEED_NAME, type: FEED_TYPE, title: FEED_TITLE, license: FEED_LICENSE);
+            addFeedCommand = new AddFeedCommand(domainName: DOMAIN_NAME, name: FEED_NAME, type: FEED_TYPE, title: FEED_TITLE, license: FEED_LICENSE);
         };
 
-        Because of = () => newFeedHandler.Handle(newFeedCommand);
+        Because of = () => addFeedCommandHandler.Handle(addFeedCommand);
 
         It should_update_the_repository_with_the_new_feed = () => feedRepository[new Identity(FEED_NAME)].ShouldNotBeNull();
         It should_name_the_new_feed = () => feedRepository[new Identity(FEED_NAME)].Name.Value.ShouldEqual(FEED_NAME);
@@ -115,8 +115,8 @@ namespace paramore.commandprocessor.tests.RestMSServer
         const string FEED_NAME = "Default";
         static Domain domain;
         static Feed feed;
-        static NewFeedHandler newFeedHandler;
-        static NewFeedCommand newFeedCommand;
+        static AddFeedCommandHandler addFeedCommandHandler;
+        static AddFeedCommand addFeedCommand;
         static IAmACommandProcessor commandProcessor;
         static bool exceptionThrown = false;
 
@@ -152,12 +152,12 @@ namespace paramore.commandprocessor.tests.RestMSServer
             var domainRepository = new InMemoryDomainRepository(logger);
             domainRepository.Add(domain);
 
-            newFeedHandler = new NewFeedHandler(logger, feedRepository, commandProcessor);
+            addFeedCommandHandler = new AddFeedCommandHandler(logger, feedRepository, commandProcessor);
 
-            newFeedCommand = new NewFeedCommand(domainName: DOMAIN_NAME, name: FEED_NAME, type: "Direct", title: "Default feed", license: "");
+            addFeedCommand = new AddFeedCommand(domainName: DOMAIN_NAME, name: FEED_NAME, type: "Direct", title: "Default feed", license: "");
         };
 
-        Because of = () => { try { newFeedHandler.Handle(newFeedCommand); } catch (FeedAlreadyExistsException) { exceptionThrown = true; }  };
+        Because of = () => { try { addFeedCommandHandler.Handle(addFeedCommand); } catch (FeedAlreadyExistsException) { exceptionThrown = true; }  };
 
 
         It should_throw_an_already_exists_exception = () => exceptionThrown.ShouldBeTrue();

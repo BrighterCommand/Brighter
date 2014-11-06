@@ -34,6 +34,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Collections.Generic;
 using paramore.brighter.restms.core.Ports.Common;
 
@@ -55,6 +56,7 @@ namespace paramore.brighter.restms.core.Model
     {
         readonly HashSet<Identity> feeds = new HashSet<Identity>();
         readonly HashSet<Identity> pipes  = new HashSet<Identity>();
+        const string DOMAIN_URI_FORMAT = "http://{0}/restms/domain/{1}";
 
         /// <summary>
         /// Gets the title.
@@ -111,6 +113,7 @@ namespace paramore.brighter.restms.core.Model
             Title = title;
             Profile = profile;
             Version = new AggregateVersion(0);
+            Href = new Uri(string.Format(DOMAIN_URI_FORMAT, Globals.HostName, Name.Value));   
         }
 
         /// <summary>

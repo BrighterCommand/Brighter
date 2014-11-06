@@ -43,7 +43,7 @@ namespace paramore.brighter.restms.core.Ports.Commands
     /// <summary>
     /// Class NewFeedCommand.
     /// </summary>
-    public class NewFeedCommand : Command
+    public class AddFeedCommand : Command
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Command" /> class.
@@ -53,7 +53,7 @@ namespace paramore.brighter.restms.core.Ports.Commands
         /// <param name="type">The type.</param>
         /// <param name="title">The title.</param>
         /// <param name="license">The license.</param>
-        public NewFeedCommand(string domainName, string name, string type = null, string title = null, string license = null) : base(Guid.NewGuid())
+        public AddFeedCommand(string domainName, string name, string type = null, string title = null, string license = null) : base(Guid.NewGuid())
         {
             DomainName = domainName;
             Name = name;

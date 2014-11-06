@@ -81,11 +81,11 @@ namespace paramore.brighter.restms.core.Ports.Handlers
             Pipe pipe;
             using (var scope = new TransactionScope())
             {
-                pipe = pipeRepository[new Identity(addJoinToPipeCommand.PipeIdentity)];
+                pipe = pipeRepository[new Identity(addJoinToPipeCommand.PipeName)];
 
                 if (pipe == null)
                 {
-                    throw new PipeDoesNotExistException(string.Format("Pipe {0} not found", addJoinToPipeCommand.PipeIdentity));
+                    throw new PipeDoesNotExistException(string.Format("Pipe {0} not found", addJoinToPipeCommand.PipeName));
                 }
 
                 //this creates the same join as added to the feed - but is a different instance. It will compare equal by value

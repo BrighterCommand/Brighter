@@ -21,8 +21,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using System.Collections.Specialized;
+using System.Linq.Expressions;
+using System.Net;
+using System.Net.Http;
+using System.Net.Mail;
+using System.Text;
 using System.Web.Http;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.restms.core.Extensions;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Common;
@@ -60,19 +68,49 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [Route("restms/feed/{feedname}")]
         [HttpDelete]
         [FeedDoesNotExistExceptionFilter]
-        public void Delete(string feedName)
+        public HttpResponseMessage Delete(string feedName)
         {
             //TODO: Should support conditional DELETE based on ETag
             var deleteFeedCommand = new DeleteFeedCommand(feedName: feedName);
             commandProcessor.Send(deleteFeedCommand);
+
+            return Request.CreateResponse(HttpStatusCode.OK);
         }
 
         [Route("restms/feed/{feedname}")]
         [HttpPost]
         [FeedDoesNotExistExceptionFilter]
-        public void PostMessageToFeed(RestMSMessage messageSpecification)
+        public HttpResponseMessage PostMessageToFeed(string feedname, RestMSMessage messageSpecification)
         {
-            
+            var addMessageToFeedCommand = new AddMessageToFeedCommand(
+                feedname,
+                messageSpecification.Address,
+                messageSpecification.ReplyTo,
+                GetHeadersFromMessage(messageSpecification),
+                GetAttachmentFromMessage(messageSpecification.Content)
+                );
+
+            commandProcessor.Send(addMessageToFeedCommand);
+
+            var item =new RestMSMessagePosted() {Count = addMessageToFeedCommand.MatchingJoins};
+            var response = Request.CreateResponse<RestMSMessagePosted>(HttpStatusCode.OK, item);
+            return response;
+        }
+
+        Attachment GetAttachmentFromMessage(RestMSMessageContent content)
+        {
+            return Attachment.CreateAttachmentFromString(
+                content.Value,
+                Guid.NewGuid().ToString(),
+                Encoding.GetEncoding(content.Encoding),
+                content.Type);
+        }
+
+        NameValueCollection GetHeadersFromMessage(RestMSMessage messageSpecification)
+        {
+            var headers = new NameValueCollection();
+            messageSpecification.Headers.Each(header => headers.Add(header.Name, header.Value));
+            return headers;
         }
     }
 }

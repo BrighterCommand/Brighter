@@ -1,23 +1,22 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.restms.core
+Ôªø// ***********************************************************************
+// Assembly         : paramore.brighter.restms.server
 // Author           : ian
-// Created          : 11-05-2014
+// Created          : 11-06-2014
 //
 // Last Modified By : ian
-// Last Modified On : 11-05-2014
+// Last Modified On : 11-06-2014
 // ***********************************************************************
-// <copyright file="RestMSPipeNew.cs" company="">
+// <copyright file="JoinDoesNotExistExceptionFilter.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright ¬© 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the ìSoftwareî), to deal
+of this software and associated documentation files (the ‚ÄúSoftware‚Äù), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -26,7 +25,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED ìAS ISî, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED ‚ÄúAS IS‚Äù, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -35,30 +34,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Runtime.Serialization;
-using System.Xml.Serialization;
+using System.Net;
+using System.Net.Http;
+using System.Web.Http.Filters;
+using paramore.brighter.restms.core.Ports.Common;
 
-namespace paramore.brighter.restms.core.Ports.Resources
+namespace paramore.brighter.restms.server.Adapters.Filters
 {
     /// <summary>
-    /// Class RestMSPipeNew.
+    /// Class JoinDoesNotExistExceptionFilter.
     /// </summary>
-    [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe", Namespace = "http://www.restms.org/schema/restms")]
-    public class RestMSPipeNew
+    public class JoinDoesNotExistExceptionFilter : ExceptionFilterAttribute
     {
-
         /// <summary>
-        /// Gets or sets the type.
+        /// Raises the exception event.
         /// </summary>
-        /// <value>The type.</value>
-        [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
-        public string Type { get; set; }
+        /// <param name="actionExecutedContext">The context for the action.</param>
+        public override void OnException(HttpActionExecutedContext actionExecutedContext)
+        {
+            if (actionExecutedContext.Exception is JoinDoesNotExistException)
+            {
+                actionExecutedContext.Response = new HttpResponseMessage(HttpStatusCode.NotFound);
+            }
+        }
 
-        /// <summary>
-        /// Gets or sets the title.
-        /// </summary>
-        /// <value>The title.</value>
-        [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
-        public string Title { get; set; }
     }
 }
