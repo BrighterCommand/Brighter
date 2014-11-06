@@ -67,7 +67,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             joinRepository = new InMemoryJoinRepository(logger);
             joinRepository.Add(join);
 
-            joinRetriever = new JoinRetriever(joinRepository, logger);
+            joinRetriever = new JoinRetriever(joinRepository);
         };
 
         Because of = () => restMSJoin = joinRetriever.Retrieve(join.Name);
@@ -108,7 +108,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
             joinRepository = new InMemoryJoinRepository(logger);
 
-            joinRetriever = new JoinRetriever(joinRepository, logger);
+            joinRetriever = new JoinRetriever(joinRepository);
         };
 
         Because of = () => { try { joinRetriever.Retrieve(join.Name); } catch (JoinDoesNotExistException) { exceptionWasThrown = true; } };

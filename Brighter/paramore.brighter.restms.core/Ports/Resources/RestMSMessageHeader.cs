@@ -44,7 +44,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
     /// <summary>
     /// Class RestMSMessageHeader.
     /// </summary>
-    [DataContract(Name = "header"), XmlRoot(ElementName = "header")]
+    [DataContract(Name = "header"), XmlRoot(ElementName = "header", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSMessageHeader
     {
         /// <summary>

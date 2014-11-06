@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.server
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="FeedDoesNotExistExceptionFilterAttribute.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,6 +41,9 @@ using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.server.Adapters.Filters
 {
+    /// <summary>
+    /// Class FeedDoesNotExistExceptionFilterAttribute.
+    /// </summary>
     public class FeedDoesNotExistExceptionFilterAttribute : ExceptionFilterAttribute
     {
 

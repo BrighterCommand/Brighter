@@ -43,9 +43,9 @@ using paramore.brighter.restms.core.Model;
 namespace paramore.brighter.restms.core.Ports.Resources
 {
     /// <summary>
-    /// Class RestMSPipe.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class RestMSPipe.
     /// </summary>
-    [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe")]
+    [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSPipe
     {
 

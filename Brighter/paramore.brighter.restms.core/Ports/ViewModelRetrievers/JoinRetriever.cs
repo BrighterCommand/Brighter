@@ -48,17 +48,15 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
     public class JoinRetriever
     {
         readonly IAmARepository<Join> joinRepository;
-        readonly ILog logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JoinRetriever"/> class.
         /// </summary>
         /// <param name="joinRepository">The join repository.</param>
         /// <param name="logger">The logger.</param>
-        public JoinRetriever(IAmARepository<Join> joinRepository, ILog logger)
+        public JoinRetriever(IAmARepository<Join> joinRepository)
         {
             this.joinRepository = joinRepository;
-            this.logger = logger;
         }
 
         /// <summary>

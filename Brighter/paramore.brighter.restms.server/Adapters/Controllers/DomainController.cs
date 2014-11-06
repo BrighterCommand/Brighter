@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.server
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-06-2014
+// ***********************************************************************
+// <copyright file="DomainController.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,6 +34,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -35,6 +49,9 @@ using paramore.brighter.restms.server.Adapters.Filters;
 
 namespace paramore.brighter.restms.server.Adapters.Controllers
 {
+    /// <summary>
+    /// Class DomainController.
+    /// </summary>
     public class DomainController : ApiController
     {
         readonly IAmACommandProcessor commandProcessor;
@@ -42,6 +59,13 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         readonly IAmARepository<Feed> feedRepository;
         readonly IAmARepository<Pipe> pipeRepository;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DomainController"/> class.
+        /// </summary>
+        /// <param name="commandProcessor">The command processor.</param>
+        /// <param name="domainRepository">The domain repository.</param>
+        /// <param name="feedRepository">The feed repository.</param>
+        /// <param name="pipeRepository">The pipe repository.</param>
         public DomainController(
             IAmACommandProcessor commandProcessor, 
             IAmARepository<Domain> domainRepository, 
@@ -54,6 +78,11 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             this.pipeRepository = pipeRepository;
         }
 
+        /// <summary>
+        /// Gets the specified domain name.
+        /// </summary>
+        /// <param name="domainName">Name of the domain.</param>
+        /// <returns>RestMSDomain.</returns>
         [Route("restms/domain/{domainName}")]
         [HttpGet]
         [DomainNotFoundExceptionFilter]
@@ -64,42 +93,54 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             return domainRetriever.Retrieve(new Name(domainName));
         }
 
+        /// <summary>
+        /// Add a feed.
+        /// </summary>
+        /// <param name="domainName">Name of the domain.</param>
+        /// <param name="feed">The feed.</param>
+        /// <returns>HttpResponseMessage.</returns>
         [Route("restms/domain/{domainName}")]
         [HttpPost]
         [DomainNotFoundExceptionFilter]
         [FeedAlreadyExistsExceptionFilter]
-        public HttpResponseMessage Post(RestMSDomain domain)
+        public HttpResponseMessage PostFeed(string domainName, RestMSFeed feed)
         {
-            //we only want to one of feed or pipe, make sure request does not include more
-            //TODO: Wehen we return 201 we should also return a Location header for the new resource
-            var anyFeeds = domain.Feeds.Any();
-            var morethanOneFeed = domain.Feeds.Length > 1;
+     
+            var addFeedCommand = new AddFeedCommand(
+                domainName: domainName,
+                name: feed.Name,
+                type: feed.Type,
+                title: feed.Title);
+            commandProcessor.Send(addFeedCommand);
 
-            if (anyFeeds && morethanOneFeed)
-            {
-                return Request.CreateErrorResponse(
-                    HttpStatusCode.BadRequest, 
-                    string.Format("You tried to create {0} feeds, please just create one at a time", domain.Feeds.Length));
+            return BuildDomainItemCreatedReponse(domainName);
+        }
 
-            }
-            
-            if (anyFeeds) 
-            {
-                var feed = domain.Feeds.First();
-                var newFeedCommand = new NewFeedCommand(
-                    domainName: domain.Name,
-                    name: feed.Name,
-                    type: feed.Type,
-                    title: feed.Title);
-                commandProcessor.Send(newFeedCommand);
+        /// <summary>
+        /// Add a new pipe.
+        /// </summary>
+        /// <param name="domainName">Name of the domain.</param>
+        /// <param name="pipe">The pipe.</param>
+        /// <returns>HttpResponseMessage.</returns>
+        [Route("restms/domain/{domainName}")]
+        [HttpPost]
+        [DomainNotFoundExceptionFilter]
+        [PipeDoesNotExistExceptionFilter]
+        public HttpResponseMessage PostPipe(string domainName, RestMSPipeNew pipe)
+        {
+            var newPipeCommand = new AddPipeCommand(domainName, pipe.Type, pipe.Title);
+            commandProcessor.Send(newPipeCommand);
 
-                return Request.CreateResponse(HttpStatusCode.Accepted);
-            }
+            return BuildDomainItemCreatedReponse(domainName);
+        }
 
-
-            //Do we have any pipes create them
-
-            return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Unknown content in POST");
+        HttpResponseMessage BuildDomainItemCreatedReponse(string domainName)
+        {
+            var domainRetriever = new DomainRetriever(domainRepository, feedRepository, pipeRepository);
+            var item = domainRetriever.Retrieve(new Name(domainName));
+            var response = Request.CreateResponse<RestMSDomain>(HttpStatusCode.Created, item);
+            response.Headers.Location = new Uri(item.Href);
+            return response;
         }
     }
 }

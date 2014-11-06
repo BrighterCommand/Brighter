@@ -44,7 +44,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
     /// <summary>
     /// Class RestMSJoin.
     /// </summary>
-    [DataContract(Name = "join"), XmlRoot(ElementName = "join")]
+    [DataContract(Name = "join"), XmlRoot(ElementName = "join", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSJoin
     {
         /// <summary>
