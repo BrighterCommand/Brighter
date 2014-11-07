@@ -25,7 +25,6 @@ namespace Tasklist.Adapters
             {
                 disposable.Dispose();
             }
-            handler = null;
         }
     }
 }

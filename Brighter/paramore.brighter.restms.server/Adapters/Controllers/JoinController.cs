@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Net;
+using System.Net.Http;
 using System.Web.Http;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
@@ -46,6 +48,16 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         {
             var retriever = new JoinRetriever(joinRepository);
             return retriever.Retrieve(new Name(joinName));
+        }
+
+        [Route("restms/join/{joinName}")]
+        [HttpDelete]
+        [JoinDoesNotExistExceptionFilter]
+        public void Delete(string joinName)
+        {
+            //TODO: Implement deleting a join
+
+            Request.CreateResponse(HttpStatusCode.InternalServerError);
         }
     }
 }

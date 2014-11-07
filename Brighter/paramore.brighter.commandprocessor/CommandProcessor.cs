@@ -51,9 +51,9 @@ namespace paramore.brighter.commandprocessor
     {
         readonly IAmAMessageMapperRegistry mapperRegistry;
         readonly IAmASubscriberRegistry subscriberRegistry;
-        private readonly IAmAHandlerFactory handlerFactory;
+        readonly IAmAHandlerFactory handlerFactory;
         readonly IAmARequestContextFactory requestContextFactory;
-        private readonly IAmAPolicyRegistry policyRegistry;
+        readonly IAmAPolicyRegistry policyRegistry;
         readonly ILog logger;
         readonly IAmAMessageStore<Message> messageStore;
         readonly IAmAClientRequestHandler messagingGateway;
@@ -255,17 +255,17 @@ namespace paramore.brighter.commandprocessor
                 });
         }
 
-        private void RetryAndBreakCircuit(Action send)
+        void RetryAndBreakCircuit(Action send)
         {
             CheckCircuit(() => Retry(send));
         }
 
-        private void CheckCircuit(Action send)
+        void CheckCircuit(Action send)
         {
             policyRegistry.Get(CIRCUITBREAKER).Execute(send);
         }
 
-        private void Retry(Action send)
+        void Retry(Action send)
         {
             policyRegistry.Get(RETRYPOLICY).Execute(send);
         }
