@@ -57,7 +57,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="registry">The registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
-        public Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory)
+        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory)
         {
             this.registry = registry ;
             this.handlerFactory = handlerFactory;
@@ -68,7 +68,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="requestType">Type of the request.</param>
         /// <returns>IEnumerable&lt;RequestHandler&lt;TRequest&gt;&gt;.</returns>
-        public IEnumerable<RequestHandler<TRequest>> GetHandlers(Type requestType)
+        internal IEnumerable<RequestHandler<TRequest>> GetHandlers(Type requestType)
         {
             return new RequestHandlers<TRequest>(registry.Get<TRequest>().Select(handlerType => handlerFactory.Create(handlerType)).Cast<IHandleRequests<TRequest>>());
         }

@@ -21,10 +21,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using Common.Logging;
 using Microsoft.Practices.Unity;
+using paramore.brighter.commandprocessor;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Repositories;
+using paramore.brighter.restms.server.Adapters.Configuration;
+using Polly;
 
 namespace paramore.brighter.restms.server.Adapters.Service
 {
@@ -34,6 +39,49 @@ namespace paramore.brighter.restms.server.Adapters.Service
         {
             container.RegisterType<IAmARepository<Domain>, InMemoryDomainRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmARepository<Feed>, InMemoryFeedRepository>(new ContainerControlledLifetimeManager());
+            container.RegisterType<IAmARepository<Pipe>, InMemoryPipeRepository>(new ContainerControlledLifetimeManager());
+            container.RegisterType<IAmARepository<Join>, InMemoryJoinRepository>(new ContainerControlledLifetimeManager());
+            container.RegisterInstance(typeof (ILog), LogManager.GetCurrentClassLogger(), new ContainerControlledLifetimeManager());
+
+            var handlerFactory = new UnityHandlerFactory(container);
+            var messageMapperFactory = new UnityMessageMapperFactory(container);
+
+            var subscriberRegistry = new SubscriberRegistry();
+
+            //create policies
+            var retryPolicy = Policy
+                .Handle<Exception>()
+                .WaitAndRetry(new[]
+                    {
+                        TimeSpan.FromMilliseconds(50),
+                        TimeSpan.FromMilliseconds(100),
+                        TimeSpan.FromMilliseconds(150)
+                    });
+
+            var circuitBreakerPolicy = Policy
+                .Handle<Exception>()
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+
+            var policyRegistry = new PolicyRegistry()
+            {
+                {CommandProcessor.RETRYPOLICY, retryPolicy},
+                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+            };
+
+            //create message mappers
+            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory);
+
+            //create the gateway
+
+            var commandProcessor = CommandProcessorBuilder.With()
+                    .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+                    .Policies(policyRegistry)
+                    .Logger(container.Resolve<ILog>())
+                    .NoTaskQueues()
+                    .RequestContextFactory(new InMemoryRequestContextFactory())
+                    .Build();
+
+
         }
     }
 }

@@ -50,7 +50,7 @@ namespace paramore.brighter.commandprocessor
         private readonly Interpreter<TRequest> interpreter;
         private readonly IAmALifetime instanceScope;
 
-        public PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory, ILog logger)
+        internal PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory, ILog logger)
         {
             this.handlerFactory = handlerFactory;
             this.logger = logger;
@@ -70,7 +70,12 @@ namespace paramore.brighter.commandprocessor
             return pipelines;
         }
 
-        private IHandleRequests<TRequest> BuildPipeline(RequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
+        public void Dispose()
+        {
+            instanceScope.Dispose();
+        }
+
+        IHandleRequests<TRequest> BuildPipeline(RequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
         {
             implicitHandler.Context = requestContext;
 
@@ -93,7 +98,7 @@ namespace paramore.brighter.commandprocessor
             return firstInPipeline;
         }
 
-        private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
+        void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
         {
             IHandleRequests<TRequest> lastInPipeline = implicitHandler;
             attributes.Each((attribute) =>
@@ -104,7 +109,7 @@ namespace paramore.brighter.commandprocessor
             });
         }
 
-        private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
+        IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
         {
             attributes.Each((attribute) =>
             {
@@ -115,16 +120,12 @@ namespace paramore.brighter.commandprocessor
             return lastInPipeline;
         }
 
-        private PipelineTracer TracePipeline(IHandleRequests<TRequest> firstInPipeline)
+        PipelineTracer TracePipeline(IHandleRequests<TRequest> firstInPipeline)
         {
             var pipelineTracer = new PipelineTracer();
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
 
-        public void Dispose()
-        {
-            instanceScope.Dispose();
-        }
     }
 }
