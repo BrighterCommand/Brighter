@@ -70,7 +70,8 @@ namespace paramore.brighter.commandprocessor
         {
             Add(typeof(TRequest), typeof(TImplementation));
         }
-        private void Add(Type requestType, Type handlerType)
+
+        public void Add(Type requestType, Type handlerType)
         {
             var observed = observers.ContainsKey(requestType);
             if (!observed)

@@ -26,7 +26,9 @@ using Common.Logging;
 using Microsoft.Practices.Unity;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.restms.core.Model;
+using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Common;
+using paramore.brighter.restms.core.Ports.Handlers;
 using paramore.brighter.restms.core.Ports.Repositories;
 using paramore.brighter.restms.server.Adapters.Configuration;
 using Polly;
@@ -44,9 +46,22 @@ namespace paramore.brighter.restms.server.Adapters.Service
             container.RegisterInstance(typeof (ILog), LogManager.GetCurrentClassLogger(), new ContainerControlledLifetimeManager());
 
             var handlerFactory = new UnityHandlerFactory(container);
-            var messageMapperFactory = new UnityMessageMapperFactory(container);
 
-            var subscriberRegistry = new SubscriberRegistry();
+            var subscriberRegistry = new SubscriberRegistry
+            {
+                {typeof(AddFeedCommand), typeof(AddFeedCommandHandler)},
+                {typeof(AddFeedToDomainCommand), typeof(AddFeedToDomainCommandHandler)},
+                {typeof(AddJoinCommand), typeof(AddJoinCommandHandler)},
+                {typeof(AddJoinToFeedCommand), typeof(AddJoinToFeedCommandHandler)},
+                {typeof(AddJoinToPipeCommand), typeof(AddJoinToPipeCommandHandler)},
+                {typeof(AddMessageToFeedCommand), typeof(AddMessageToFeedCommandHandler)},
+                {typeof(AddPipeCommand), typeof(AddPipeCommandHandler)},
+                {typeof(AddPipeToDomainCommand), typeof(AddPipeToDomainCommandHandler)},
+                {typeof(DeleteFeedCommand), typeof(DeleteFeedCommandHandler)},
+                {typeof(DeleteMessageCommand), typeof(DeleteMessageCommandHandler)},
+                {typeof(DeletePipeCommand), typeof(DeletePipeCommandHandler)},
+                {typeof(RemoveFeedFromDomainCommand), typeof(RemoveFeedFromDomainCommandHandler)}
+            };
 
             //create policies
             var retryPolicy = Policy
@@ -68,10 +83,6 @@ namespace paramore.brighter.restms.server.Adapters.Service
                 {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
             };
 
-            //create message mappers
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory);
-
-            //create the gateway
 
             var commandProcessor = CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))

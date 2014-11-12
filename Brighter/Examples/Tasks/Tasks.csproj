@@ -60,8 +60,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Newtonsoft.Json.6.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor">
-      <HintPath>..\..\paramore.brighter.commandprocessor\bin\Debug\paramore.brighter.commandprocessor.dll</HintPath>
+    <Reference Include="paramore.brighter.commandprocessor, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.dll</HintPath>
     </Reference>
     <Reference Include="paramore.brighter.commandprocessor.exceptionpolicy">
       <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.ExceptionPolicy.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll</HintPath>
