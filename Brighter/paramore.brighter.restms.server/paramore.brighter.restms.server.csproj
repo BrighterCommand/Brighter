@@ -107,7 +107,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Adapters\Configuration\UnityHandlerFactory.cs" />
-    <Compile Include="Adapters\Configuration\UnityMessageMapperFactory.cs" />
     <Compile Include="Adapters\Controllers\DomainController.cs" />
     <Compile Include="Adapters\Controllers\FeedController.cs" />
     <Compile Include="Adapters\Controllers\JoinController.cs" />

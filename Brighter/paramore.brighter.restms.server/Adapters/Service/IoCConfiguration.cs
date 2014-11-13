@@ -31,6 +31,7 @@ using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Handlers;
 using paramore.brighter.restms.core.Ports.Repositories;
 using paramore.brighter.restms.server.Adapters.Configuration;
+using paramore.brighter.restms.server.Adapters.Controllers;
 using Polly;
 
 namespace paramore.brighter.restms.server.Adapters.Service
@@ -39,11 +40,28 @@ namespace paramore.brighter.restms.server.Adapters.Service
     {
         public static void Run(UnityContainer container)
         {
+            container.RegisterType<DomainController>();
+            container.RegisterType<FeedController>();
+            container.RegisterType<JoinController>();
+            container.RegisterType<MessageController>();
+            container.RegisterType<PipeController>();
             container.RegisterType<IAmARepository<Domain>, InMemoryDomainRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmARepository<Feed>, InMemoryFeedRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmARepository<Pipe>, InMemoryPipeRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmARepository<Join>, InMemoryJoinRepository>(new ContainerControlledLifetimeManager());
             container.RegisterInstance(typeof (ILog), LogManager.GetCurrentClassLogger(), new ContainerControlledLifetimeManager());
+            container.RegisterType<AddFeedCommandHandler>();
+            container.RegisterType<AddFeedToDomainCommandHandler>();
+            container.RegisterType<AddJoinCommandHandler>();
+            container.RegisterType<AddJoinToFeedCommandHandler>();
+            container.RegisterType<AddJoinToPipeCommandHandler>();
+            container.RegisterType<AddMessageToFeedCommandHandler>();
+            container.RegisterType<AddPipeCommandHandler>();
+            container.RegisterType<AddPipeToDomainCommandHandler>();
+            container.RegisterType<DeleteFeedCommandHandler>();
+            container.RegisterType<DeleteMessageCommandHandler>();
+            container.RegisterType<DeletePipeCommandHandler>();
+            container.RegisterType<RemoveFeedFromDomainCommandHandler>();
 
             var handlerFactory = new UnityHandlerFactory(container);
 
@@ -92,7 +110,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build();
 
-
+            container.RegisterInstance(typeof (IAmACommandProcessor), commandProcessor, new ContainerControlledLifetimeManager());
         }
     }
 }
