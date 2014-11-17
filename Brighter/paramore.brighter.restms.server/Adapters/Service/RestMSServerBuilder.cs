@@ -89,6 +89,8 @@ namespace paramore.brighter.restms.server.Adapters.Service
                 title: new Title("Default feed")
                 );
 
+            domain.AddFeed(feed.Id);
+
             using (var scope = new TransactionScope())
             {
                 domainRepository.Add(domain);
