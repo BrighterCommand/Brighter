@@ -113,6 +113,7 @@
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Data.SqlServerCe, Version=4.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="xunit">
@@ -164,6 +165,7 @@
     <Compile Include="MessageDispatch\TestDoubles\MyEventMessageMapper.cs" />
     <Compile Include="MessageDispatch\TestDoubles\SpyCommandProcessor.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
+    <Compile Include="MessageStore\MsSql\SqlMessageStoreTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessageChannelTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -173,6 +175,10 @@
     <Compile Include="TinyIoC.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
+      <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
+      <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
+    </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj">
       <Project>{224f828a-1abf-4d7b-8c48-66856bfd1ded}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.ravendb</Name>
