@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Configuration;
+using System.Linq;
+using RabbitMQ.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration
 {
@@ -66,11 +68,42 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
 
     public class Exchange : ConfigurationElement
     {
+        
         [ConfigurationProperty("name", DefaultValue = "", IsRequired = true)]
         public string Name
         {
             get { return this["name"] as string; }
             set { this["name"] = value; }
         }
+
+        [ConfigurationProperty("type", DefaultValue = ExchangeType.Direct)]
+        public string Type
+        {
+            get
+            {
+                var type = ExchangeType.All()
+                    .FirstOrDefault(t => t.Equals(this["type"] as string, StringComparison.InvariantCultureIgnoreCase));
+
+                return  type ?? ExchangeType.Direct;
+            }
+            set { this["type"] = value; }
+        }
+
+        [ConfigurationProperty("durable", DefaultValue = false)]
+        public bool Durable
+        {
+            get
+            {
+                bool val;
+                if(bool.TryParse(this["durable"] as string, out val))
+                    return val;
+                return false;
+            }
+
+            set { this["durable"] = value; }
+        }
     }
+
+    
+
 }
