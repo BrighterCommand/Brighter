@@ -52,6 +52,8 @@
     <Reference Include="System.Configuration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HeaderNames.cs" />
+    <Compile Include="MessageTypeReader.cs" />
     <Compile Include="MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RMQInputChannel.cs" />
