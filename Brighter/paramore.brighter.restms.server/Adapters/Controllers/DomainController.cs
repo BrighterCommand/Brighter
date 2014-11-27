@@ -11,6 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -46,6 +47,7 @@ using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Resources;
 using paramore.brighter.restms.core.Ports.ViewModelRetrievers;
 using paramore.brighter.restms.server.Adapters.Filters;
+using paramore.brighter.restms.server.Adapters.Formatters;
 
 namespace paramore.brighter.restms.server.Adapters.Controllers
 {
@@ -94,7 +96,11 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         }
 
         /// <summary>
-        /// Add a feed.
+        /// We can post to a domain to add either a pipe, or a feed.
+        /// This doesn't fit with WebApi which, unsuprisingly, can't overload on the type of resource sent to it.
+        /// This is not an overload on the content-type, but handling different types of resource requests posted to the endpoint.
+        /// As a result we have to manually read the body, and try to turn it into either a feed or pipe, to determine which is which.
+        /// WebApi makes this a little tricky, because it only allows the content to be read ONCE
         /// </summary>
         /// <param name="domainName">Name of the domain.</param>
         /// <param name="feed">The feed.</param>
@@ -103,7 +109,27 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [HttpPost]
         [DomainNotFoundExceptionFilter]
         [FeedAlreadyExistsExceptionFilter]
-        public HttpResponseMessage PostFeed(string domainName, RestMSFeed feed)
+        public HttpResponseMessage  Post(string domainName)
+        {
+            string content = Request.Content.ReadAsStringAsync().Result;
+            //What is accept type? Get conversion strategy from factory. Does XML or JSON conversion
+            var parser = ConversionStrategyFactory.CreateParser(Request.Content.Headers.ContentType);
+            //Try to convert to pipe or feed using strategy
+            var result = parser.Parse(content);
+            //Return call to AddFeed or AddPipe
+            if (result.Item1 == ParseResult.NewFeed)
+            {
+                return AddFeed(domainName, result.Item2);
+            }
+            else if (result.Item1 == ParseResult.NewPipe)
+            {
+                return AddPipe(domainName, result.Item3);
+            }
+
+            return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Could not parse new feed or pipe from the body content");
+        }
+
+        public HttpResponseMessage AddFeed(string domainName, RestMSFeed feed)
         {
      
             var addFeedCommand = new AddFeedCommand(
@@ -116,17 +142,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             return BuildDomainItemCreatedReponse(domainName);
         }
 
-        /// <summary>
-        /// Add a new pipe.
-        /// </summary>
-        /// <param name="domainName">Name of the domain.</param>
-        /// <param name="pipe">The pipe.</param>
-        /// <returns>HttpResponseMessage.</returns>
-        [Route("restms/domain/{domainName}")]
-        [HttpPost]
-        [DomainNotFoundExceptionFilter]
-        [PipeDoesNotExistExceptionFilter]
-        public HttpResponseMessage PostPipe(string domainName, RestMSPipeNew pipe)
+        public HttpResponseMessage AddPipe(string domainName, RestMSPipeNew pipe)
         {
             var newPipeCommand = new AddPipeCommand(domainName, pipe.Type, pipe.Title);
             commandProcessor.Send(newPipeCommand);
