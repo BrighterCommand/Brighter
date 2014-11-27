@@ -7,7 +7,7 @@ Paramore contributors (sorted alphabeticaly)
   * Various fixes
   * Project Lead
    
-**[Bob Gregory](https://github.com/BobFromHuddle)
+**[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
   
 * **[Eddie Li](https://github.com/xiaodili)**
