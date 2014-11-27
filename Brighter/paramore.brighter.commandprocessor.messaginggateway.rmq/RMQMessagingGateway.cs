@@ -189,6 +189,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             catch (BrokerUnreachableException e)
             {
                 connectionFailure = e;
+                logger.Error("Failed to connect to broker", e);
                 return false;
             }
 
@@ -232,8 +233,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
         {
-            //desired state configuration of the exchange
-            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, false);
+            var exchange = configuration.Exchange;
+            channel.ExchangeDeclare(exchange.Name, exchange.Type, exchange.Durable);
         }
 
         private IModel OpenChannel(IConnection connection)
