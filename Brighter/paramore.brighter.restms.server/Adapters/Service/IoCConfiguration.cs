@@ -40,11 +40,11 @@ namespace paramore.brighter.restms.server.Adapters.Service
     {
         public static void Run(UnityContainer container)
         {
-            container.RegisterType<DomainController>(new ContainerControlledLifetimeManager());
-            container.RegisterType<FeedController>(new ContainerControlledLifetimeManager());
-            container.RegisterType<JoinController>(new ContainerControlledLifetimeManager());
-            container.RegisterType<MessageController>(new ContainerControlledLifetimeManager());
-            container.RegisterType<PipeController>(new ContainerControlledLifetimeManager());
+            container.RegisterType<DomainController>();
+            container.RegisterType<FeedController>();
+            container.RegisterType<JoinController>();
+            container.RegisterType<MessageController>();
+            container.RegisterType<PipeController>();
             container.RegisterType<IAmARepository<Domain>, InMemoryDomainRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmARepository<Feed>, InMemoryFeedRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmARepository<Pipe>, InMemoryPipeRepository>(new ContainerControlledLifetimeManager());
@@ -110,7 +110,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build();
 
-            container.RegisterInstance(typeof (IAmACommandProcessor), commandProcessor, new ContainerControlledLifetimeManager());
+            container.RegisterInstance(typeof (IAmACommandProcessor), commandProcessor);
         }
     }
 }
