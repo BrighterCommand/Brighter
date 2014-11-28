@@ -38,6 +38,8 @@ namespace paramore.brighter.restms.server.Adapters.Service
             InitializeDomains.Run(container);
             configuration.DependencyResolver = new UnityResolver(container);
             configuration.MapHttpAttributeRoutes();
+            var xml = configuration.Formatters.XmlFormatter;
+            xml.UseXmlSerializer = true;
             builder.UseWebApi(configuration);
         }
     }
