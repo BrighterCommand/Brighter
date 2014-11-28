@@ -1,0 +1,72 @@
+The RestMS specification encloses all of its entity bodies within a RestMS element i.e.
+
+<?xml version="1.0"?>
+<restms xmlns="http://www.restms.org/schema/restms">
+  <feed
+      name="{feed name}"                    mandatory feed name
+    [ type="{feed type}" ]                  optional type
+    [ title="{short title}" ]               optional title
+    [ license="{license name}" ]            optional license name
+    />
+</restms>
+
+The implication here is that we have a RestMS schema defintiion that includes many optional elements under restms. Unfortunately, no such schema is documented, and the elements contained within the restms element are not consistent. For example, when used as a new pipe we have:
+
+<?xml version="1.0"?>
+<restms xmlns="http://www.restms.org/schema/restms">
+  <pipe
+    [ type="{pipe type}" ]                  optional type
+    [ title="{short title}" ]               optional title
+    />
+</restms>
+
+but for an existing pipe we have
+ 
+ <?xml version="1.0"?>
+<restms xmlns="http://www.restms.org/schema/restms">
+  <pipe
+      name="{pipe name}"                    server-generated hash
+      type="{pipe type}"                    actual pipe type
+    [ title="{short title}" ]               title, if specified
+    >
+    [ <join href="{join URI}"
+        type="{join type}"
+        address="{address pattern}"
+        feed="{feed URI}" /> ] ...
+    [ <message
+        href="{message URI}"
+        address="{address literal}"
+        message_id = "{identifier}" /> ] ...
+    [ <message href="{message URI}" async="1" /> ]
+  </pipe>
+</restms>
+
+which changes the optionality of name and type, for a specific operation type
+
+In addition, all of these elements are single node under restMS when sent to or retrieved from the server, making the restms element redundant.
+
+For this reason we drop use of the outer <restms/> element, assume a schemaless definition and thus avoid these problems. It also far simpler to implement the endpoints. So that above pipe defintion just becomes:
+ 
+<pipe>
+  [ type="{pipe type}" ]                  optional type
+  [ title="{short title}" ]               optional title
+/>
+
+for a new pipe and for an existing pipe
+ 
+  <pipe>
+      name="{pipe name}"                    server-generated hash
+      type="{pipe type}"                    actual pipe type
+    [ title="{short title}" ]               title, if specified
+    >
+    [ <join href="{join URI}"
+        type="{join type}"
+        address="{address pattern}"
+        feed="{feed URI}" /> ] ...
+    [ <message
+        href="{message URI}"
+        address="{address literal}"
+        message_id = "{identifier}" /> ] ...
+    [ <message href="{message URI}" async="1" /> ]
+  </pipe>
+
