@@ -107,6 +107,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Adapters\Configuration\UnityHandlerFactory.cs" />
+    <Compile Include="Adapters\Formatters\ConversionStrategyFactory.cs" />
     <Compile Include="Adapters\Controllers\DomainController.cs" />
     <Compile Include="Adapters\Controllers\FeedController.cs" />
     <Compile Include="Adapters\Controllers\JoinController.cs" />
@@ -117,7 +118,11 @@
     <Compile Include="Adapters\Filters\FeedDoesNotExistExceptionFilterAttribute.cs" />
     <Compile Include="Adapters\Filters\JoinDoesNotExistExceptionFilter.cs" />
     <Compile Include="Adapters\Filters\PipeDoesNotExistExceptionFilter.cs" />
+    <Compile Include="Adapters\Formatters\IParseDomainPosts.cs" />
+    <Compile Include="Adapters\Formatters\JsonDomainPostParser.cs" />
+    <Compile Include="Adapters\Formatters\ParseResult.cs" />
     <Compile Include="Adapters\Formatters\RestMSFormatter.cs" />
+    <Compile Include="Adapters\Formatters\XmlDomainPostParser.cs" />
     <Compile Include="Adapters\Program.cs" />
     <Compile Include="Adapters\Service\InitializeDomains.cs" />
     <Compile Include="Adapters\Service\IoCConfiguration.cs" />
