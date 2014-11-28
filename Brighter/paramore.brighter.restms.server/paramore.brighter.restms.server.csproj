@@ -104,6 +104,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Topshelf.3.1.4\lib\net40-full\Topshelf.dll</HintPath>
     </Reference>
+    <Reference Include="WebApiContrib.IoC.Unity">
+      <HintPath>..\packages\WebApiContrib.IoC.Unity.0.9.3.0\lib\net40\WebApiContrib.IoC.Unity.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Adapters\Configuration\UnityHandlerFactory.cs" />
@@ -128,7 +131,6 @@
     <Compile Include="Adapters\Service\IoCConfiguration.cs" />
     <Compile Include="Adapters\Service\RestMSServerBuilder.cs" />
     <Compile Include="Adapters\Service\RestMSService.cs" />
-    <Compile Include="Adapters\Service\UnityResolver.cs" />
     <Compile Include="Adapters\Service\WebPipeline.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

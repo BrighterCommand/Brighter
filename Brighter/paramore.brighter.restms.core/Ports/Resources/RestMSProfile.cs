@@ -44,7 +44,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
     /// <summary>
     /// Class RestMSProfile.
     /// </summary>
-    [DataContract(Name = "profile"), XmlRoot(ElementName = "profile", Namespace = "http://www.restms.org/schema/restms")]
+    [DataContract(Name = "profile", Namespace = "")]
     public class RestMSProfile
     {
 
@@ -59,7 +59,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// Gets or sets the href.
         /// </summary>
         /// <value>The href.</value>
-        [DataMember(Name="hrer"), XmlAttribute(AttributeName = "href")]
+        [DataMember(Name="hreF"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }
 
         /// <summary>
