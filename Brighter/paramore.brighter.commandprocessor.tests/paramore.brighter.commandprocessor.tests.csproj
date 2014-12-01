@@ -192,6 +192,7 @@
     <Compile Include="RestMSServer\JoinTests.cs" />
     <Compile Include="RestMSServer\MessageTests.cs" />
     <Compile Include="RestMSServer\PipeTests.cs" />
+    <Compile Include="RestMSServer\SerializationTests.cs" />
     <Compile Include="Timeout\Test Doubles\MyPassesTimeoutHandler.cs" />
     <Compile Include="Timeout\Test Doubles\MyFailsDueToTimeoutHandler.cs" />
     <Compile Include="Timeout\TimeoutDecoratorTests.cs" />

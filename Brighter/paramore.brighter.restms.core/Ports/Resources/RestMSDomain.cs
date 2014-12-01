@@ -45,7 +45,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
 {
     /// <summary>
     /// </summary>
-    [DataContract(Name = "domain", Namespace = "")]
+    [DataContract(Name = "domain", Namespace = ""), XmlRoot(ElementName = "domain", Namespace = "")]
     public class RestMSDomain
     {
 
@@ -65,7 +65,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// Gets or sets the profile.
         /// </summary>
         /// <value>The profile.</value>
-        [DataMember(Name = "profile"), XmlAttribute(AttributeName = "profile")]
+        [DataMember(Name = "profile"), XmlElement(ElementName = "profile")]
         public RestMSProfile Profile {get; set;}
 
         /// <summary>
