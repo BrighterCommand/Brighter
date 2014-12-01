@@ -40,6 +40,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
             configuration.MapHttpAttributeRoutes();
             var xml = configuration.Formatters.XmlFormatter;
             xml.UseXmlSerializer = true;
+            configuration.EnableSystemDiagnosticsTracing();
             builder.UseWebApi(configuration);
         }
     }
