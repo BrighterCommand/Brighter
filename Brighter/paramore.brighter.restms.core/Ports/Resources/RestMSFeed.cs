@@ -60,7 +60,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         {
             Type = feed.Type.ToString();
             Name = feed.Name.Value;
-            Title = feed.Title.Value;
+            Title = feed.Title != null ? feed.Title.Value : string.Empty;
             Href = feed.Href.AbsoluteUri;
         }
 
