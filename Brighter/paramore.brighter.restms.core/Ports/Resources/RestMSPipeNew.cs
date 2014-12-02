@@ -43,7 +43,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
     /// <summary>
     /// Class RestMSPipeNew.
     /// </summary>
-    [DataContract(Name = "pipe", Namespace = "")]
+    [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSPipeNew
     {
 

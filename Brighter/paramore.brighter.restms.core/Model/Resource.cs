@@ -48,11 +48,11 @@ namespace paramore.brighter.restms.core.Model
         /// Gets or sets the href.
         /// </summary>
         /// <value>The href.</value>
-        public Uri Href { get; protected set; }
+        public virtual Uri Href { get; protected set; }
         /// <summary>
         /// Gets or sets the name.
         /// </summary>
         /// <value>The name.</value>
-        public Name Name { get; protected set; }
+        public virtual Name Name { get; protected set; }
     }
 }

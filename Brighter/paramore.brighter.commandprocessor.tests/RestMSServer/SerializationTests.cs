@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Net.Mail;
 using System.Net.Mime;
 using System.Xml.Serialization;
@@ -108,7 +109,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         }
 
 
-        public class When_serializing_amessage_to_xml
+        public class When_serializing_a_message_to_xml
         {
             static RestMSMessage message;
             static RestMSMessage newMessage;
@@ -135,6 +136,150 @@ namespace paramore.commandprocessor.tests.RestMSServer
             It should_set_the_message_encoding = () => newMessage.Content.Encoding.ShouldEqual("QuotedPrintable");
             It should_set_the_message_content = () => newMessage.Content.Value.ShouldEqual("hello world");
         }
+
+        public class When_serializing_a_message_link_to_xml
+        {
+            static RestMSMessageLink message;
+            static RestMSMessageLink newMessage;
+            static Message internalMessage;
+
+            Establish context = () =>
+            {
+                Globals.HostName = "host.com";
+                internalMessage = new Message(
+                    new Address("*"),
+                    new Uri("http://host.com/restms/feed/bar"), 
+                    new NameValueCollection() { { "MyHeader", "MyValue" } },
+                    Attachment.CreateAttachmentFromString("hello world", MediaTypeNames.Text.Plain)
+                    );
+
+                internalMessage.PipeName = new Name("foobar");
+                message = new RestMSMessageLink(internalMessage);
+            };
+
+            Because of = () => newMessage = SerializeToXml(message);
+
+            It should_set_the_message_address = () => newMessage.Address.ShouldEqual("*");
+            It should_set_the_message_id = () => newMessage.MessageId.ShouldEqual(internalMessage.MessageId.ToString());
+            It should_set_the_header_name = () => newMessage.Href.ShouldEqual(string.Format("http://{0}/restms/pipe{1}/message/{2}", Globals.HostName, "foobar", internalMessage.MessageId));
+
+        }
+
+        public class When_serializing_a_message_posted_count
+        {
+            static RestMSMessagePosted messagePosted;
+            static RestMSMessagePosted newMessagePosted;
+
+            Establish context = () =>
+            {
+                messagePosted = new RestMSMessagePosted() {Count = 5};
+            };
+
+            Because of = () => newMessagePosted = SerializeToXml(messagePosted);
+
+            It should_have_a_matching_count = () => newMessagePosted.Count.ShouldEqual(5);
+
+        }
+
+        public class When_serializing_a_pipe
+        {
+            static RestMSPipe pipe;
+            static RestMSPipe newPipe;
+            static Pipe internalPipe;
+
+            Establish context = () =>
+            {
+                Globals.HostName = "host.com";
+                internalPipe = new Pipe(
+                    new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
+                    PipeType.Fifo,
+                    new Title("My Title")
+                    );
+                
+                var join = new Join(
+                    internalPipe,
+                    new Uri("http://host.com/restms/feed/myfeed"),
+                    new Address("*"));
+                internalPipe.AddJoin(join);
+
+                var message = new Message(
+                   new Address("*"),
+                   new Uri("http://host.com/restms/feed/bar"),
+                   new NameValueCollection(),
+                   Attachment.CreateAttachmentFromString("", MediaTypeNames.Text.Plain)
+                   );
+
+                internalPipe.AddMessage(message);
+                pipe = new RestMSPipe(internalPipe);
+            };
+
+            Because of = () => newPipe = SerializeToXml(pipe);
+
+            It should_have_the_pipe_name = () => newPipe.Name.ShouldEqual("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}");
+            It should_have_the_pipe_type = () => newPipe.Type.ShouldEqual("Fifo");
+            It should_have_the_pipe_title = () => newPipe.Title.ShouldEqual("My Title");
+            It should_have_the_pipe_href = () => newPipe.Href.ShouldEqual(internalPipe.Href.AbsoluteUri);
+            It should_have_one_join = () => newPipe.Joins.Count().ShouldEqual(1);
+            It should_have_one_message = () => newPipe.Messages.Count().ShouldEqual(1);
+        }
+
+        public class When_serializing_a_pipe_link
+        {
+            static RestMSPipeLink pipe;
+            static RestMSPipeLink newPipe;
+            static Pipe internalPipe;
+
+            Establish context = () =>
+            {
+                Globals.HostName = "host.com";
+                internalPipe = new Pipe(
+                    new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
+                    PipeType.Fifo,
+                    new Title("My Title")
+                    );
+                
+                var join = new Join(
+                    internalPipe,
+                    new Uri("http://host.com/restms/feed/myfeed"),
+                    new Address("*"));
+                internalPipe.AddJoin(join);
+
+                var message = new Message(
+                   new Address("*"),
+                   new Uri("http://host.com/restms/feed/bar"),
+                   new NameValueCollection(),
+                   Attachment.CreateAttachmentFromString("", MediaTypeNames.Text.Plain)
+                   );
+
+                internalPipe.AddMessage(message);
+                pipe = new RestMSPipeLink(internalPipe);
+            };
+
+            Because of = () => newPipe = SerializeToXml(pipe);
+
+            It should_have_the_pipe_name = () => newPipe.Name.ShouldEqual("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}");
+            It should_have_the_pipe_type = () => newPipe.Type.ShouldEqual("Fifo");
+            It should_have_the_pipe_title = () => newPipe.Title.ShouldEqual("My Title");
+            It should_have_the_pipe_href = () => newPipe.Href.ShouldEqual(internalPipe.Href.AbsoluteUri);
+            
+        }
+
+        public class When_serializing_a_new_pipe
+        {
+            static RestMSPipeNew pipe;
+            static RestMSPipeNew newPipe;
+
+            Establish context = () =>
+            {
+                pipe = new RestMSPipeNew(){ Title = "My Pipe", Type = "Fifo"};
+            };
+
+            Because of = () => newPipe = SerializeToXml(pipe);
+
+            It should_have_the_pipe_title = () => newPipe.Title.ShouldEqual("My Pipe");
+            It should_have_the_pipe_type = () => newPipe.Type.ShouldEqual("Fifo");
+        }
+
 
     }
 }

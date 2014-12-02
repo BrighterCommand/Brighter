@@ -23,20 +23,20 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
-using System.Runtime.Serialization;
+using System.Xml.Serialization;
 using paramore.brighter.restms.core.Ports.Resources;
 
 namespace paramore.brighter.restms.server.Adapters.Formatters
 {
     public class XmlDomainPostParser : IParseDomainPosts
     {
-        readonly DataContractSerializer feedDeserializer;
-        readonly DataContractSerializer pipeDeserializer;
+        readonly XmlSerializer feedDeserializer;
+        readonly XmlSerializer pipeDeserializer;
 
         public XmlDomainPostParser ()
         {
-            feedDeserializer = new DataContractSerializer(typeof(RestMSFeed));
-            pipeDeserializer = new DataContractSerializer(typeof (RestMSPipeNew));
+            feedDeserializer = new XmlSerializer(typeof(RestMSFeed));
+            pipeDeserializer = new XmlSerializer(typeof(RestMSPipeNew));
         }
 
         public Tuple<ParseResult, RestMSFeed, RestMSPipeNew> Parse(string body)
@@ -61,7 +61,7 @@ namespace paramore.brighter.restms.server.Adapters.Formatters
             try
             {
                 ms = new MemoryStream(System.Text.Encoding.ASCII.GetBytes(body));
-                feedNew = (RestMSFeed) feedDeserializer.ReadObject(ms);
+                feedNew = (RestMSFeed)feedDeserializer.Deserialize(ms);
                 return true;
             }
             catch (Exception e)
@@ -82,7 +82,7 @@ namespace paramore.brighter.restms.server.Adapters.Formatters
             try
             {
                 ms = new MemoryStream(System.Text.Encoding.ASCII.GetBytes(body));
-                newPipe = (RestMSPipeNew) pipeDeserializer.ReadObject(ms);
+                newPipe = (RestMSPipeNew) pipeDeserializer.Deserialize(ms);
                 return true;
             }
             catch (Exception e)

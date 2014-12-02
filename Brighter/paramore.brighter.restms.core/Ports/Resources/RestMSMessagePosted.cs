@@ -42,7 +42,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
     /// <summary>
     /// Class RestMSMessagePosted.
     /// </summary>
-    [DataContract(Name = "defaultProfileMessagePosted", Namespace = "")]
+    [DataContract(Name = "defaultProfileMessagePosted"), XmlRoot(ElementName = "defaultProfileMessagePosted", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSMessagePosted
     {
         /// <summary>

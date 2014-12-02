@@ -44,7 +44,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
     /// <summary>
     /// Class RestMSProfile.
     /// </summary>
-    [DataContract(Name = "profile", Namespace = "")]
+    [DataContract(Name = "profile"), XmlRoot(ElementName = "profile", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSProfile
     {
 
