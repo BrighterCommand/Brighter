@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net.Http.Headers;
 
 #region Licence
@@ -27,10 +28,16 @@ namespace paramore.brighter.restms.server.Adapters.Formatters
 {
     public static class ConversionStrategyFactory
     {
-        public static IParseDomainPosts CreateParser(MediaTypeHeaderValue mediaTypeHeaderValue)
+        public static IParseDomainPosts CreateParser(HttpHeaderValueCollection<MediaTypeWithQualityHeaderValue> mediaTypeHeaderValues)
         {
+            bool containsXml = false;
+
+            foreach (var mediaType in mediaTypeHeaderValues)
+                if (mediaType.MediaType.Contains("xml"))
+                    containsXml = true;
+
             //if its xml try reading using xml
-            if (mediaTypeHeaderValue != null && mediaTypeHeaderValue.MediaType.Contains("xml"))
+            if (containsXml)
             {
                 return new XmlDomainPostParser();
             }

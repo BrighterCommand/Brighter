@@ -108,7 +108,11 @@ namespace paramore.brighter.restms.core.Model
             Id = new Identity(identity);
             Title = new Title(title);
             Name = new Name(Id.Value);
-            Type = (PipeType) Enum.Parse(typeof (PipeType), pipeType);
+            if (!string.IsNullOrEmpty(pipeType))
+                Type = (PipeType) Enum.Parse(typeof (PipeType), pipeType);
+            else
+                Type = PipeType.Default;
+                
             Href = new Uri(string.Format(PIPE_URI_FORMAT, Globals.HostName, Name.Value));
         }
 

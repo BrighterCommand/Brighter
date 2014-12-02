@@ -113,7 +113,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         {
             string content = Request.Content.ReadAsStringAsync().Result;
             //What is accept type? Get conversion strategy from factory. Does XML or JSON conversion
-            var parser = ConversionStrategyFactory.CreateParser(Request.Content.Headers.ContentType);
+            var parser = ConversionStrategyFactory.CreateParser(Request.Headers.Accept);
             //Try to convert to pipe or feed using strategy
             var result = parser.Parse(content);
             //Return call to AddFeed or AddPipe

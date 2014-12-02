@@ -44,7 +44,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
     /// <summary>
     /// Class RestMSMessageLink.
     /// </summary>
-    [DataContract(Name = "message", Namespace = "")]
+    [DataContract(Name = "message"), XmlRoot(ElementName = "message", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSMessageLink
     {
         /// <summary>
