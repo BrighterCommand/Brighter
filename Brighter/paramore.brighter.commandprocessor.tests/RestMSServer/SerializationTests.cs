@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.IO;
+using System.Net.Mail;
+using System.Net.Mime;
 using System.Xml.Serialization;
 using Machine.Specifications;
 using paramore.brighter.restms.core;
@@ -80,7 +83,57 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         public class When_serializing_a_join_to_xml
         {
-            
+            static RestMSJoin join;
+            static RestMSJoin newJoin;
+
+            Establish context = () =>
+            {
+                Globals.HostName = "host.com";
+                join = new RestMSJoin()
+                {
+                    Name = "foo",
+                    Address = "http://host.com/restms/join/foo",
+                    Feed = "http://host.com/restms/feed/bar",
+                    Type = FeedType.Direct.ToString()
+                };
+            };
+
+
+            Because of = () => newJoin = SerializeToXml(join);
+
+            It should_set_the_feed_name = () => newJoin.Name.ShouldEqual("foo");
+            It should_set_the_address = () => newJoin.Address.ShouldEqual("http://host.com/restms/join/foo");
+            It should_set_the_feed = () => newJoin.Feed.ShouldEqual("http://host.com/restms/feed/bar");
+            It should_set_the_feed_type = () => newJoin.Type.ShouldEqual("Direct");
+        }
+
+
+        public class When_serializing_amessage_to_xml
+        {
+            static RestMSMessage message;
+            static RestMSMessage newMessage;
+
+            Establish context = () =>
+            {
+                message = new RestMSMessage(
+                    new Message(
+                        new Address("*"),
+                        new Uri("http://host.com/restms/feed/bar"), 
+                        new NameValueCollection() { { "MyHeader", "MyValue" } },
+                        Attachment.CreateAttachmentFromString("hello world", MediaTypeNames.Text.Plain)
+                        )
+                    );
+            };
+
+            Because of = () => newMessage = SerializeToXml(message);
+
+            It should_set_the_message_address = () => newMessage.Address.ShouldEqual("*");
+            It should_set_the_feed_uri = () => newMessage.Feed.ShouldEqual("http://host.com/restms/feed/bar");
+            It should_set_the_header_name = () => newMessage.Headers[0].Name.ShouldEqual("MyHeader");
+            It should_set_the_header_value = () => newMessage.Headers[0].Value.ShouldEqual("MyValue");
+            It should_set_the_message_content_type = () => newMessage.Content.Type.ShouldEqual("text/plain; name=\"text/plain\"; charset=us-ascii");
+            It should_set_the_message_encoding = () => newMessage.Content.Encoding.ShouldEqual("QuotedPrintable");
+            It should_set_the_message_content = () => newMessage.Content.Value.ShouldEqual("hello world");
         }
 
     }

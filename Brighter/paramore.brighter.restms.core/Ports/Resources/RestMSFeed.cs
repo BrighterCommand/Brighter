@@ -44,7 +44,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
     /// <summary>
     /// Class RestMSFeed.
     /// </summary>
-    [DataContract(Name = "feed", Namespace = "")]
+    [DataContract(Name = "feed"), XmlRoot(ElementName = "feed", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSFeed
     {
         /// <summary>

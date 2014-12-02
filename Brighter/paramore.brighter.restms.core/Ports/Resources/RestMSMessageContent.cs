@@ -44,7 +44,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
     /// <summary>
     /// Class RestMSMessageContent.
     /// </summary>
-    [DataContract(Name = "content", Namespace = "")]
+    [DataContract(Name = "content"), XmlRoot(ElementName = "content", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSMessageContent
     {
         public RestMSMessageContent() {/*required for serialization*/}
@@ -66,7 +66,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// Gets or sets the encoding.
         /// </summary>
         /// <value>The encoding.</value>
-        [DataMember(Name = "encoding"), XmlAttribute(AttributeName = "type")]
+        [DataMember(Name = "encoding"), XmlAttribute(AttributeName = "encoding")]
         public string Encoding { get; set; }
         /// <summary>
         /// Gets or sets the value.

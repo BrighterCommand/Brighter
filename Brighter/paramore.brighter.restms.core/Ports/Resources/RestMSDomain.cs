@@ -45,7 +45,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
 {
     /// <summary>
     /// </summary>
-    [DataContract(Name = "domain", Namespace = ""), XmlRoot(ElementName = "domain", Namespace = "")]
+    [DataContract(Name = "domain"), XmlRoot(ElementName = "domain", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSDomain
     {
 

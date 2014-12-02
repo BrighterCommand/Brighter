@@ -45,7 +45,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
     /// <summary>
     /// Class RestMSMessage.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
     /// </summary>
-    [DataContract(Name = "message", Namespace = "")]
+    [DataContract(Name = "message"), XmlRoot(ElementName = "message", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSMessage
     {
         /// <summary>
@@ -92,21 +92,21 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// Gets or sets the feed.
         /// </summary>
         /// <value>The feed.</value>
-        [DataMember(Name = "feed"), XmlAttribute(AttributeName = "feed")]
+        [DataMember(Name = "feed"), XmlElement(ElementName = "feed")]
         public string Feed { get; set; }
 
         /// <summary>
         /// Gets or sets the headers.
         /// </summary>
         /// <value>The headers.</value>
-        [DataMember(Name = "header"), XmlAttribute(AttributeName = "header")]
+        [DataMember(Name = "header"), XmlElement(ElementName = "header")]
         public RestMSMessageHeader[] Headers { get; set; }
 
         /// <summary>
         /// Gets or sets the content.
         /// </summary>
         /// <value>The content.</value>
-        [DataMember(Name = "content"), XmlAttribute(AttributeName = "content")]
+        [DataMember(Name = "content"), XmlElement(ElementName = "content")]
         public RestMSMessageContent Content { get; set; }
 
     }
