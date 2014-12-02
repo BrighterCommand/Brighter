@@ -85,7 +85,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                         feed.Href,
                         addMessageToFeedCommand.Headers,
                         addMessageToFeedCommand.Attachment, 
-                        new Uri(addMessageToFeedCommand.ReplyTo)));
+                        !string.IsNullOrEmpty(addMessageToFeedCommand.ReplyTo) ? new Uri(addMessageToFeedCommand.ReplyTo) : null));
 
                 scope.Complete();
             }

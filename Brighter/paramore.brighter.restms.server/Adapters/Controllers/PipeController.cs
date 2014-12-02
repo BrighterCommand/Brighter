@@ -88,7 +88,8 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [Route("restms/pipe/{pipeName}")]
         [PipeDoesNotExistExceptionFilter]
         [FeedDoesNotExistExceptionFilter]
-        public HttpResponseMessage Post(string pipeName, RestMSJoin join)
+        [HttpPost]
+        public HttpResponseMessage PostJoinBetweenPipeAndFeed(string pipeName, RestMSJoin join)
         {
             var addJoinCommand = new AddJoinToPipeCommand(pipeName, join.Feed, join.Address);
             commandProcessor.Send(addJoinCommand);

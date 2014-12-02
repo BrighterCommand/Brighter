@@ -85,7 +85,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             var addMessageToFeedCommand = new AddMessageToFeedCommand(
                 feedname,
                 messageSpecification.Address,
-                messageSpecification.ReplyTo,
+                messageSpecification.ReplyTo ?? "",
                 GetHeadersFromMessage(messageSpecification),
                 GetAttachmentFromMessage(messageSpecification.Content)
                 );
@@ -109,7 +109,8 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         NameValueCollection GetHeadersFromMessage(RestMSMessage messageSpecification)
         {
             var headers = new NameValueCollection();
-            messageSpecification.Headers.Each(header => headers.Add(header.Name, header.Value));
+            if (messageSpecification.Headers != null)
+                messageSpecification.Headers.Each(header => headers.Add(header.Name, header.Value));
             return headers;
         }
     }

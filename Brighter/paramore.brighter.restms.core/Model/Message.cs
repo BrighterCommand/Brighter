@@ -77,6 +77,7 @@ namespace paramore.brighter.restms.core.Model
             Content = new MessageContent(attachment.ContentType, attachment.TransferEncoding, attachment.ContentStream);
             FeedHref = feedHref;
             Name = new Name(MessageId.ToString());
+            ReplyTo = replyTo;
         }
 
         /// <summary>
@@ -103,7 +104,7 @@ namespace paramore.brighter.restms.core.Model
         public Message(Message message)
         {
             Address = new Address(message.Address.Value);
-            ReplyTo = new Uri(message.ReplyTo.AbsoluteUri);
+            ReplyTo = message.ReplyTo != null ? new Uri(message.ReplyTo.AbsoluteUri) : null;
             MessageId = new Guid(message.MessageId.ToString());
             Headers = message.Headers.Copy();
             FeedHref = new Uri(message.FeedHref.AbsoluteUri);
