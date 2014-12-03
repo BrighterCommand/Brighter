@@ -81,7 +81,9 @@ namespace paramore.brighter.restms.core.Ports.Handlers
 
             if (pipe.Type == PipeType.Default)
             {
-                commandProcessor.Send(new AddJoinToFeedCommand(pipe, GetDefaultFeedUri(), "*"));
+                //a default pipe always hasa join to the default feed.
+                //this allows a sender to address us directly, by name
+                commandProcessor.Send(new AddJoinToPipeCommand(pipe.Name.Value, GetDefaultFeedUri(), pipe.Name.Value));
             }
 
             commandProcessor.Send(new AddPipeToDomainCommand(command.DomainName, pipe.Name.Value));
