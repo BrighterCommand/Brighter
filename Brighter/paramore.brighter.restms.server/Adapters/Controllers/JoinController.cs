@@ -41,19 +41,17 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             this.joinRepository = joinRepository;
         }
 
-        [Route("restms/join/{joinName}")]
         [HttpGet]
         [JoinDoesNotExistExceptionFilter] 
-        public RestMSJoin Get(string joinName)
+        public RestMSJoin Get(string name)
         {
             var retriever = new JoinRetriever(joinRepository);
-            return retriever.Retrieve(new Name(joinName));
+            return retriever.Retrieve(new Name(name));
         }
 
-        [Route("restms/join/{joinName}")]
         [HttpDelete]
         [JoinDoesNotExistExceptionFilter]
-        public void Delete(string joinName)
+        public void Delete(string name)
         {
             //TODO: Implement deleting a join
 

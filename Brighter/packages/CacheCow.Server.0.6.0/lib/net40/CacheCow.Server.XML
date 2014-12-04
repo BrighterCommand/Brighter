@@ -1,0 +1,251 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>CacheCow.Server</name>
+    </assembly>
+    <members>
+        <member name="M:CacheCow.Server.CacheControlPolicy.HttpCacheControlPolicyAttribute.#ctor">
+            <summary>
+            default .ctor is no cache policy
+            </summary>
+        </member>
+        <member name="M:CacheCow.Server.CacheControlPolicy.HttpCacheControlPolicyAttribute.#ctor(System.Type)">
+            <summary>
+            Uses a factory type to provide the value.
+            This type can read from config, etc.
+            Must have a public parameterless method that return CacheControlHeaderValue
+            </summary>
+            <param name="cacheControlHeaderValueFactory">The type of the factory. 
+            Any public method that returns CacheControlHeaderValue will be used.
+            Type's constructor must be parameterless</param>
+        </member>
+        <member name="M:CacheCow.Server.CacheRefreshPolicy.HttpCacheRefreshPolicyAttribute.#ctor(System.Type)">
+            <summary>
+            Instantiates using a factory
+            </summary>
+            <param name="refreshTimeSpanFactory">Factory type. 
+            Must have a public parameterless method returning a TimeSpan
+            Type's constructor must be parameterless</param>
+        </member>
+        <member name="M:CacheCow.Server.CacheRefreshPolicy.HttpCacheRefreshPolicyAttribute.#ctor(System.String)">
+            <summary>
+            Allows to initialise the value from appSettings instead of hardcoding.
+            Value must be an integer - number of seconds for interval
+            </summary>
+            <param name="appSettingsKeyName">Name of the key in the appSettings</param>
+        </member>
+        <member name="T:CacheCow.Server.CachingHandler">
+            <summary>
+            Represents a message handler that implements caching and supports
+            (loosely based on Glenn Block's ETagHandler)
+            * Resource retrieval by ETag
+            * Resource retrieval by LastModified
+            * If-Match and If-None-Match for GET operations
+            * If-Modified-Since and If-Unmodified-Since for GET operations
+            * If-Unmodified-Since and If-Match for PUT operations
+            * Will add ETag, LastModified and Vary headers in the response
+            * Allows caching to be turned off based on individual message
+            * Currently does not support If-Range headers
+            </summary>
+        </member>
+        <member name="T:CacheCow.Server.ICachingHandler">
+            <summary>
+            This contains the only method server Caching has
+            </summary>
+        </member>
+        <member name="M:CacheCow.Server.ICachingHandler.InvalidateResource(System.Net.Http.HttpRequestMessage)">
+            <summary>
+            Invalidates the request. 
+            </summary>
+            <param name="request"></param>
+        </member>
+        <member name="M:CacheCow.Server.ICachingHandler.GenerateCacheKey(System.Net.Http.HttpRequestMessage)">
+            <summary>
+            Generates cacheKey. Sometimes can be useful
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:CacheCow.Server.CachingHandler.PostInvalidationRule(CacheCow.Common.CacheKey,System.Net.Http.HttpRequestMessage,System.Net.Http.HttpResponseMessage)">
+            <summary>
+            This is a scenario where we have a POST to a resource
+            and it needs to invalidate the cache to that resource
+            and all its linked URLs
+            
+            For example:
+            POST /api/cars => invalidate /api/cars
+            also it might invalidate /api/cars/fastest in which case
+            /api/cars/fastest must be one of the linked URLs
+            </summary>
+            <param name="cacheKey">cacheKey</param>
+            <param name="request">request</param>
+            <param name="response">response</param>
+            <returns>returns the function to execute</returns>
+        </member>
+        <member name="M:CacheCow.Server.CachingHandler.AddCaching(CacheCow.Common.CacheKey,System.Net.Http.HttpRequestMessage,System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Adds caching for GET and PUT if 
+            cache control provided is not null
+            With PUT, since cache has been alreay invalidated,
+            we provide the new ETag (old one has been cleared in invalidation phase)
+            </summary>
+            <param name="cacheKey"></param>
+            <param name="request"></param>
+            <param name="response"></param>
+            <param name="varyHeaders"></param>
+            <returns></returns>
+        </member>
+        <member name="M:CacheCow.Server.CachingHandler.InvalidateCache(CacheCow.Common.CacheKey,System.Net.Http.HttpRequestMessage,System.Net.Http.HttpResponseMessage)">
+            <summary>
+            This invalidates the resource based on routePattern
+            for methods POST, PUT and DELETE.
+            It also removes for all linked URLs
+            </summary>
+            <param name="cacheKey"></param>
+            <param name="request"></param>
+            <param name="response"></param>
+            <returns></returns>
+        </member>
+        <member name="P:CacheCow.Server.CachingHandler.RequestInterceptionRules">
+            <summary>
+            A Chain of responsibility of rules for handling various scenarios. 
+            List is ordered. First one to return a non-null task will break the chain and 
+            method will return
+            </summary>
+        </member>
+        <member name="P:CacheCow.Server.CachingHandler.ETagValueGenerator">
+            <summary>
+            A function which receives URL of the resource and generates a unique value for ETag
+            It also receives request headers.
+            Default value is a function that generates a guid and URL is ignored and
+            it generates a weak ETag if no varyByHeaders is passed in
+            </summary>
+        </member>
+        <member name="P:CacheCow.Server.CachingHandler.CacheControlHeaderProvider">
+            <summary>
+            This is a function that decides whether caching for a particular request
+            is supported.
+            Function can return null to negate any caching. In this case, responses will not be cached
+            and ETag header will not be sent.
+            Alternatively it can return a CacheControlHeaderValue which controls cache lifetime on the client.
+            By default value is set so that all requests are cachable with immediate expiry.
+            </summary>
+        </member>
+        <member name="P:CacheCow.Server.CachingHandler.CacheRefreshPolicyProvider">
+            <summary>
+            This is a function responsible for controlling server's cache expiry
+            By default, there is no expiry in the cache items as any change 
+            to the resource must be done via the HTTP API (using POST, PUT, DELETE).
+            But in some cases (usually adding Web API on top of legacy code), data is changed 
+            in the database (e.g. configuration data) but server would not know.
+            In these cases a cache expiry is useful. In this case, CachingHandler uses the 
+            LastModified to calculate whether cache key must be expired.
+            </summary>
+        </member>
+        <member name="P:CacheCow.Server.CachingHandler.LinkedRoutePatternProvider">
+            <summary>
+            This is a function to allow the clients to invalidate the cache
+            for related URLs.
+            Current request is passed and a list of URLs
+            is retrieved and cache is invalidated for those URLs.
+            </summary>
+        </member>
+        <member name="P:CacheCow.Server.CachingHandler.UriTrimmer">
+            <summary>
+            A function that gets the Uri (normally request) and extracts important bits
+            for keys. By default it will return Uri.PathAndQuery
+            </summary>
+        </member>
+        <member name="P:CacheCow.Server.CachingHandler.ExceptionHandler">
+            <summary>
+            Allowing clients to customise how to handle caching errors. Mainly designed for Cache Store temporary errors or persistent erros.
+            Throw in the action if you do not want to ignore. You can use for logging purposes.
+            A common usage is to use set it to IgnoreExceptionPolicy which basically would ignore exceptions as if the CachingHandler is not used
+            You can also use it to filter for some exceptions while throwing the rest.
+            </summary>
+        </member>
+        <member name="P:CacheCow.Server.CachingHandler.IgnoreExceptionPolicy">
+            <summary>
+            Ignores all exceptions. Set it to ExceptionHandler
+            </summary>
+        </member>
+        <member name="P:CacheCow.Server.CachingHandler.RoutePatternProvider">
+            <summary>
+            Provides route pattern and linked route pattern
+            </summary>
+        </member>
+        <member name="T:CacheCow.Server.ETagGeneration.ContentHashETagAttribute">
+            <summary>
+            Generates ETag based on MD5 hash of the content.
+            </summary>
+        </member>
+        <member name="T:CacheCow.Server.ETagGeneration.ContentHashETagGenerator">
+            <summary>
+            Generates ETag based where ContentHashETagAttribute has been defined on action 
+            </summary>
+        </member>
+        <member name="T:CacheCow.Server.ETagGeneration.DefaultETagGenerator">
+            <summary>
+            Default implementation of ETag generation. By default a weak ETag is generated
+            </summary>
+        </member>
+        <member name="T:CacheCow.Server.ETagGeneration.IETagGenerator">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="T:CacheCow.Server.RoutePatternPolicy.ConventionalRoutePatternProvider">
+            <summary>
+            This class provides routePatterns for flat and conventional collection/instance ASP.NET routes.
+            If you have hierarchies which get invalidated, you need to invalidate yourself.
+            Rules for hierarchical can get very complex and hairy and is not possible to get right with conventional routing.
+            </summary>
+        </member>
+        <member name="T:CacheCow.Server.RoutePatternPolicy.IRoutePatternProvider">
+            <summary>
+            Responsible for providing route pattern and linked route patterns
+            </summary>
+        </member>
+        <member name="M:CacheCow.Server.RoutePatternPolicy.IRoutePatternProvider.GetRoutePattern(System.Net.Http.HttpRequestMessage)">
+            <summary>
+            Gets route pattern for this request
+            Mainly callled at the time of Key generation
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:CacheCow.Server.RoutePatternPolicy.IRoutePatternProvider.GetLinkedRoutePatterns(System.Net.Http.HttpRequestMessage)">
+            <summary>
+            Gets all linked route patterns for this request.
+            Called at the time of invalidation
+            </summary>
+            <param name="request">request</param>
+            <returns>All linked route patterns for this request</returns>
+        </member>
+        <member name="M:CacheCow.Server.RoutePatternPolicy.ConventionalRoutePatternProvider.#ctor(System.Web.Http.HttpConfiguration)">
+            <summary>
+            
+            </summary>
+            <param name="configuration">configuration</param>
+        </member>
+        <member name="M:CacheCow.Server.RoutePatternPolicy.ConventionalRoutePatternProvider.GetRoutePattern(System.Net.Http.HttpRequestMessage)">
+            <summary>
+            This method must be used inside CacheKeyGenerator
+            </summary>
+            <param name="request"></param>
+            <returns></returns>
+        </member>
+        <member name="M:CacheCow.Server.RoutePatternPolicy.ConventionalRoutePatternProvider.GetLinkedRoutePatterns(System.Net.Http.HttpRequestMessage)">
+            <summary>
+            This method must be set to LinkedRoutePatternProvider of CachingHandler
+            </summary>
+            <param name="message"></param>
+            <returns>All linked route patterns</returns>
+        </member>
+        <member name="T:CacheCow.Server.RoutePatternPolicy.IHierarchyExplorer">
+            <summary>
+            Explores the controllers and finds the hierarchy and relationship and fills the dictionary
+            </summary>
+        </member>
+    </members>
+</doc>

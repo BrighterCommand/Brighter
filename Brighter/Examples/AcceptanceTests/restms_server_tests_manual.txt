@@ -34,7 +34,11 @@ Content-Length: 286
         encoding="us-ascii">Hello World</content>
   </message>
   
-  
+GET /restms/pipe/f00625d7-79d2-44b6-af14-62039f3e202e HTTP/1.1
+Accept: application/xml
+Host: localhost:3416
+
+
   ------
 <pipe xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="3f29f6ee-9abd-4339-a4f6-9e99d9d8e5ea" type="Fifo" title="title" href="http://localhost/restms/pipe/3f29f6ee-9abd-4339-a4f6-9e99d9d8e5ea" xmlns="http://www.restms.org/schema/restms">
 <join name="c9063295-b8c4-42e4-8dc8-d6e5afe22395" type="Default" address="*" feed="http://localhost/restms/feed/default" />

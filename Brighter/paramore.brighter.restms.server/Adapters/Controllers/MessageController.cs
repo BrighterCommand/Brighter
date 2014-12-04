@@ -73,7 +73,6 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         /// <param name="pipeName">Name of the pipe.</param>
         /// <param name="messageName">Name of the message.</param>
         /// <returns>RestMSMessage.</returns>
-        [Route("restms/pipe{pipeName}/message/{messageName}")]
         [HttpGet]
         [PipeDoesNotExistExceptionFilter]
         public RestMSMessage Get(string pipeName, string messageName)
@@ -82,7 +81,6 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             return retriever.Retrieve(new Name(pipeName), Guid.Parse(messageName));
         }
 
-        [Route("restms/pipe{pipeName}/message/{messageName}")]
         [HttpDelete]
         [PipeDoesNotExistExceptionFilter]
         public void Delete(string pipeName, string messageName)
