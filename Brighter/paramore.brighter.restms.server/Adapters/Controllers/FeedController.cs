@@ -54,36 +54,33 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             this.feedRepository = feedRepository;
         }
 
-        [Route("restms/feed/{feedName}")]
         [HttpGet]
         [FeedDoesNotExistExceptionFilter]
-        public RestMSFeed Get(string feedName)
+        public RestMSFeed Get(string name)
         {
             //TODO: Get needs Last Modified and ETag
             var feedRetriever = new FeedRetriever(feedRepository);
-            return feedRetriever.Retrieve(new Name(feedName));
+            return feedRetriever.Retrieve(new Name(name));
         }
 
        
-        [Route("restms/feed/{feedname}")]
         [HttpDelete]
         [FeedDoesNotExistExceptionFilter]
-        public HttpResponseMessage Delete(string feedName)
+        public HttpResponseMessage Delete(string name)
         {
             //TODO: Should support conditional DELETE based on ETag
-            var deleteFeedCommand = new DeleteFeedCommand(feedName: feedName);
+            var deleteFeedCommand = new DeleteFeedCommand(feedName: name);
             commandProcessor.Send(deleteFeedCommand);
 
             return Request.CreateResponse(HttpStatusCode.OK);
         }
 
-        [Route("restms/feed/{feedname}")]
         [HttpPost]
         [FeedDoesNotExistExceptionFilter]
-        public HttpResponseMessage PostMessageToFeed(string feedname, RestMSMessage messageSpecification)
+        public HttpResponseMessage PostMessageToFeed(string name, RestMSMessage messageSpecification)
         {
             var addMessageToFeedCommand = new AddMessageToFeedCommand(
-                feedname,
+                name,
                 messageSpecification.Address,
                 messageSpecification.ReplyTo ?? "",
                 GetHeadersFromMessage(messageSpecification),
