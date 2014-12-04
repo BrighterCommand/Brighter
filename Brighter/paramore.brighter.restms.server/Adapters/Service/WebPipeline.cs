@@ -75,7 +75,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
 
             configuration.Routes.MapHttpRoute(
                 name: "MessageAPI",
-                routeTemplate: "restms/pipe{pipeName}/{controller}/{messageName}",
+                routeTemplate: "restms/pipe/{pipeName}/{controller}/{messageName}",
                 defaults: new { pipeName = RouteParameter.Optional, messageName = RouteParameter.Optional}
                 );
 

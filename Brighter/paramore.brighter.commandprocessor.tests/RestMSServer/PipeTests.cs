@@ -75,7 +75,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_have_the_pipe_title = () => restMSpipe.Title.ShouldEqual(pipe.Title.Value);
         It should_have_the_pipe_href = () => restMSpipe.Href.ShouldEqual(pipe.Href.AbsoluteUri);
         It should_have_the_join_associated_with_the_pipe = () => restMSpipe.Joins.First().Name.ShouldEqual(join.Name.Value);
-        It should_have_a_link_for_the_message_associated_with_the_pipe = () => restMSpipe.Messages.First().Href.ShouldEqual(new Uri(string.Format("http://{0}/restms/pipe{1}/message/{2}", Globals.HostName, message.PipeName.Value, message.MessageId)).AbsoluteUri);
+        It should_have_a_link_for_the_message_associated_with_the_pipe = () => restMSpipe.Messages.First().Href.ShouldEqual(new Uri(string.Format("http://{0}/restms/pipe/{1}/message/{2}", Globals.HostName, message.PipeName.Value, message.MessageId)).AbsoluteUri);
     }
 
     public class When_retrieving_a_pipe_that_does_not_exist
@@ -186,7 +186,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
         Because of = () => addPipeCommandHandler.Handle(addPipeCommand);
 
-        It should_send_a_message_to_add_a_default_join_to_the_default_feed = () => A.CallTo(() => commandProcessor.Send(A<AddJoinToFeedCommand>.Ignored)).MustHaveHappened();
+        It should_send_a_message_to_add_a_default_join_to_the_default_feed = () => A.CallTo(() => commandProcessor.Send(A<AddJoinToPipeCommand>.Ignored)).MustHaveHappened();
     }
 
 
