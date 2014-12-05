@@ -1,4 +1,7 @@
-The RestMS specification encloses all of its entity bodies within a RestMS element i.e.
+Document Roots and Resource Roots, or why we dropped support for RestTL document roots when implementing RestMS
+---------------------------------------------------------------------------------------------------------------
+
+The RestMS specification is part of RestTL which encloses all of its entity bodies within a 'document root' element  i.e.
 
 <?xml version="1.0"?>
 <restms xmlns="http://www.restms.org/schema/restms">
@@ -10,7 +13,7 @@ The RestMS specification encloses all of its entity bodies within a RestMS eleme
     />
 </restms>
 
-The implication here is that we have a RestMS schema defintiion that includes many optional elements under restms. Unfortunately, no such schema is documented, and the elements contained within the restms element are not consistent. For example, when used as a new pipe we have:
+The implication here is that we have a RestMS schema definition that includes many optional elements under restms. Unfortunately, no such schema is documented, and the elements contained within the restms element are not consistent. For example, when used as a new pipe we have:
 
 <?xml version="1.0"?>
 <restms xmlns="http://www.restms.org/schema/restms">
@@ -43,30 +46,31 @@ but for an existing pipe we have
 
 which changes the optionality of name and type, for a specific operation type
 
-In addition, all of these elements are single node under restMS when sent to or retrieved from the server, making the restms element redundant.
+In addition, what we are interested in, is the 'resource root' which is under the document root. It is the resource root that we process, not  the document root. This makes the document root redundant as anything other than a namespace for the other elements. But we already have the ability to define a namespace on the root, using xmlns so this approach is redundant.o
+So instead of honoring the document root in RestTL when processing RestMS, we choose to omit the document root, and just use the resource root, with the namespace on the resource root instead
 
-For this reason we drop use of the outer <restms/> element, assume a schemaless definition and thus avoid these problems. It also far simpler to implement the endpoints. So that above pipe defintion just becomes:
+It also far simpler to implement the endpoints in most web frameworks, as we can marshal the resource root to a type, not query the document root to understand what resource roots it contains, and then marshal. So that above pipe definition just becomes:
  
-<pipe>
+<pipe xmlns="http://www.restms.org/schema/restms">
   [ type="{pipe type}" ]                  optional type
   [ title="{short title}" ]               optional title
 />
 
 for a new pipe and for an existing pipe
  
-  <pipe>
-      name="{pipe name}"                    server-generated hash
-      type="{pipe type}"                    actual pipe type
-    [ title="{short title}" ]               title, if specified
-    >
-    [ <join href="{join URI}"
-        type="{join type}"
-        address="{address pattern}"
-        feed="{feed URI}" /> ] ...
-    [ <message
-        href="{message URI}"
-        address="{address literal}"
-        message_id = "{identifier}" /> ] ...
-    [ <message href="{message URI}" async="1" /> ]
-  </pipe>
+<pipe xmlns="http://www.restms.org/schema/restms">
+  name="{pipe name}"                    server-generated hash
+  type="{pipe type}"                    actual pipe type
+[ title="{short title}" ]               title, if specified
+>
+[ <join href="{join URI}"
+    type="{join type}"
+    address="{address pattern}"
+    feed="{feed URI}" /> ] ...
+[ <message
+    href="{message URI}"
+    address="{address literal}"
+    message_id = "{identifier}" /> ] ...
+[ <message href="{message URI}" async="1" /> ]
+</pipe>
 
