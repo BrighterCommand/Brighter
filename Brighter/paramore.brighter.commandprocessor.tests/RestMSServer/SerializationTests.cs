@@ -161,7 +161,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
             It should_set_the_message_address = () => newMessage.Address.ShouldEqual("*");
             It should_set_the_message_id = () => newMessage.MessageId.ShouldEqual(internalMessage.MessageId.ToString());
-            It should_set_the_header_name = () => newMessage.Href.ShouldEqual(string.Format("http://{0}/restms/pipe{1}/message/{2}", Globals.HostName, "foobar", internalMessage.MessageId));
+            It should_set_the_header_name = () => newMessage.Href.ShouldEqual(string.Format("http://{0}/restms/pipe/{1}/message/{2}", Globals.HostName, "foobar", internalMessage.MessageId));
 
         }
 

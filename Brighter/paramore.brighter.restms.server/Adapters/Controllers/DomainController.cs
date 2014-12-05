@@ -85,7 +85,6 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         /// </summary>
         /// <param name="domainName">Name of the domain.</param>
         /// <returns>RestMSDomain.</returns>
-        [Route("restms/domain/{domainName}")]
         [HttpGet]
         [DomainNotFoundExceptionFilter]
         public RestMSDomain Get(string domainName)
@@ -102,14 +101,13 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         /// As a result we have to manually read the body, and try to turn it into either a feed or pipe, to determine which is which.
         /// WebApi makes this a little tricky, because it only allows the content to be read ONCE
         /// </summary>
-        /// <param name="domainName">Name of the domain.</param>
+        /// <param name="name">Name of the domain.</param>
         /// <param name="feed">The feed.</param>
         /// <returns>HttpResponseMessage.</returns>
-        [Route("restms/domain/{domainName}")]
         [HttpPost]
         [DomainNotFoundExceptionFilter]
         [FeedAlreadyExistsExceptionFilter]
-        public HttpResponseMessage  Post(string domainName)
+        public HttpResponseMessage  Post(string name)
         {
             string content = Request.Content.ReadAsStringAsync().Result;
             //What is accept type? Get conversion strategy from factory. Does XML or JSON conversion
@@ -119,35 +117,35 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             //Return call to AddFeed or AddPipe
             if (result.Item1 == ParseResult.NewFeed)
             {
-                return AddFeed(domainName, result.Item2);
+                return AddFeed(name, result.Item2);
             }
             else if (result.Item1 == ParseResult.NewPipe)
             {
-                return AddPipe(domainName, result.Item3);
+                return AddPipe(name, result.Item3);
             }
 
             return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Could not parse new feed or pipe from the body content");
         }
 
-        public HttpResponseMessage AddFeed(string domainName, RestMSFeed feed)
+        HttpResponseMessage AddFeed(string name, RestMSFeed feed)
         {
      
             var addFeedCommand = new AddFeedCommand(
-                domainName: domainName,
+                domainName: name,
                 name: feed.Name,
                 type: feed.Type,
                 title: feed.Title);
             commandProcessor.Send(addFeedCommand);
 
-            return BuildDomainItemCreatedReponse(domainName);
+            return BuildDomainItemCreatedReponse(name);
         }
 
-        public HttpResponseMessage AddPipe(string domainName, RestMSPipeNew pipe)
+        HttpResponseMessage AddPipe(string name, RestMSPipeNew pipe)
         {
-            var newPipeCommand = new AddPipeCommand(domainName, pipe.Type, pipe.Title);
+            var newPipeCommand = new AddPipeCommand(name, pipe.Type, pipe.Title);
             commandProcessor.Send(newPipeCommand);
 
-            return BuildDomainItemCreatedReponse(domainName);
+            return BuildDomainItemCreatedReponse(name);
         }
 
         HttpResponseMessage BuildDomainItemCreatedReponse(string domainName)
