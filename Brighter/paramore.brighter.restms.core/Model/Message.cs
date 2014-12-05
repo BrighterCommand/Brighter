@@ -57,7 +57,7 @@ namespace paramore.brighter.restms.core.Model
     public class Message: Resource 
     {
         Name pipeName;
-        const string MESSAGE_URI_FORMAT = "http://{0}/restms/pipe{1}/message/{2}";
+        const string MESSAGE_URI_FORMAT = "http://{0}/restms/pipe/{1}/message/{2}";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Message"/> class.

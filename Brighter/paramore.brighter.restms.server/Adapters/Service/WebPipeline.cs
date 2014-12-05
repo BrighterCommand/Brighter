@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Web.Http;
+using CacheCow.Server;
 using Microsoft.Practices.Unity;
 using Owin;
 using WebApiContrib.IoC.Unity;
@@ -33,15 +34,59 @@ namespace paramore.brighter.restms.server.Adapters.Service
         public void Configuration(IAppBuilder builder)
         {
             var configuration = new HttpConfiguration();
+            
+            ConfigureDependencyInjection(configuration);
+
+            MapRoutes(configuration);
+
+            ConfigureCaching(configuration);
+            
+            ConfigureFormatting(configuration);
+
+            ConfigureDiagnostics(configuration);
+            
+            builder.UseWebApi(configuration);
+        }
+
+        void ConfigureCaching(HttpConfiguration configuration)
+        {
+            var cachingServer = new CachingHandler(configuration);
+            configuration.MessageHandlers.Add(cachingServer);
+        }
+
+        static void ConfigureDiagnostics(HttpConfiguration configuration)
+        {
+            configuration.EnableSystemDiagnosticsTracing();
+        }
+
+        static void ConfigureFormatting(HttpConfiguration configuration)
+        {
+            var xml = configuration.Formatters.XmlFormatter;
+            xml.UseXmlSerializer = true;
+        }
+
+        static void MapRoutes(HttpConfiguration configuration)
+        {
+            configuration.MapHttpAttributeRoutes();
+            configuration.Routes.MapHttpRoute(
+                name: "DomainAPI",
+                routeTemplate: "restms/{controller}/{name}",
+                defaults: new {name = RouteParameter.Optional});
+
+            configuration.Routes.MapHttpRoute(
+                name: "MessageAPI",
+                routeTemplate: "restms/pipe/{pipeName}/{controller}/{messageName}",
+                defaults: new { pipeName = RouteParameter.Optional, messageName = RouteParameter.Optional}
+                );
+
+        }
+
+        static void ConfigureDependencyInjection(HttpConfiguration configuration)
+        {
             var container = new UnityContainer();
             IoCConfiguration.Run(container);
             InitializeDomains.Run(container);
             configuration.DependencyResolver = new UnityResolver(container);
-            configuration.MapHttpAttributeRoutes();
-            var xml = configuration.Formatters.XmlFormatter;
-            xml.UseXmlSerializer = true;
-            configuration.EnableSystemDiagnosticsTracing();
-            builder.UseWebApi(configuration);
         }
     }
 }

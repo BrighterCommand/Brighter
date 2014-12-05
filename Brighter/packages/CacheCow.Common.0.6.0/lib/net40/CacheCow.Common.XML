@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>CacheCow.Common</name>
+    </assembly>
+    <members>
+        <member name="M:CacheCow.Common.CacheKey.#ctor(System.String,System.Collections.Generic.IEnumerable{System.String},System.String)">
+            <summary>
+            constructor for CacheKey
+            </summary>
+            <param name="resourceUri">URI of the resource</param>
+            <param name="headerValues">value of the headers as in the request. Only those values whose named defined in VaryByHeader
+            must be passed
+            </param>
+            <param name="routePattern">route pattern for the URI. by default it is the same
+            but in some cases it could be different.
+            For example /api/cars/fastest and /api/cars/mostExpensive can share tha pattern /api/cars/*
+            This will be used at the time of cache invalidation. 
+            </param>
+        </member>
+        <member name="M:CacheCow.Common.Helpers.HttpHeadersExtensions.Parse(System.Net.Http.Headers.HttpHeaders,System.String)">
+            <summary>
+            
+            </summary>
+            <param name="httpHeaders">Headers</param>
+            <param name="headers">CR-LF separated headers as specified in HTTP spec</param>
+        </member>
+        <member name="M:CacheCow.Common.Helpers.HttpHeadersExtensions.ExtractHeadersValues(System.Net.Http.Headers.HttpRequestHeaders,System.String[])">
+            <summary>
+            Extracts all headers provided. Does a case-insensitive selection.
+            </summary>
+            <param name="headers">this parameter</param>
+            <param name="headerNames">Name of the headers</param>
+            <returns></returns>
+        </member>
+        <member name="T:CacheCow.Common.IEntityTagStore">
+            <summary>
+            This is an interface representing an ETag store acting similar to a dictionary. 
+            storing and retriving ETags.
+             
+            In a single-server scenario, this could be an in-memory disctionary implementation
+            while in a server farm, this will be a persistent store.
+            </summary>
+        </member>
+    </members>
+</doc>

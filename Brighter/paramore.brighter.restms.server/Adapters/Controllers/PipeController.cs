@@ -73,29 +73,27 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         /// <summary>
         /// Gets the specified pipe name.
         /// </summary>
-        /// <param name="pipeName">Name of the pipe.</param>
+        /// <param name="name">Name of the pipe.</param>
         /// <returns>RestMSPipe.</returns>
-        [Route("restms/pipe/{pipeName}")]
         [HttpGet]
         [PipeDoesNotExistExceptionFilter]
-        public RestMSPipe Get(string pipeName)
+        public RestMSPipe Get(string name)
         {
             var retriever = new PipeRetriever(pipeRepository);
-            return retriever.Retrieve(new Name(pipeName));
+            return retriever.Retrieve(new Name(name));
         }
 
 
-        [Route("restms/pipe/{pipeName}")]
         [PipeDoesNotExistExceptionFilter]
         [FeedDoesNotExistExceptionFilter]
         [HttpPost]
-        public HttpResponseMessage PostJoinBetweenPipeAndFeed(string pipeName, RestMSJoin join)
+        public HttpResponseMessage PostJoinBetweenPipeAndFeed(string name, RestMSJoin join)
         {
-            var addJoinCommand = new AddJoinToPipeCommand(pipeName, join.Feed, join.Address);
+            var addJoinCommand = new AddJoinToPipeCommand(name, join.Feed, join.Address);
             commandProcessor.Send(addJoinCommand);
 
             var retriever = new PipeRetriever(pipeRepository);
-            var item = retriever.Retrieve(new Name(pipeName));
+            var item = retriever.Retrieve(new Name(name));
             var response = Request.CreateResponse(HttpStatusCode.Created, item);
             response.Headers.Location = new Uri(item.Href);
             return response;
@@ -105,13 +103,12 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         /// <summary>
         /// Deletes the specified pipe name.
         /// </summary>
-        /// <param name="pipeName">Name of the pipe.</param>
-        [Route("restms/pipe/{pipeName}")]
+        /// <param name="name">Name of the pipe.</param>
         [HttpDelete]
         [PipeDoesNotExistExceptionFilter]
-        public HttpResponseMessage Delete(string pipeName)
+        public HttpResponseMessage Delete(string name)
         {
-            var deleteCommand = new DeletePipeCommand(pipeName);
+            var deleteCommand = new DeletePipeCommand(name);
             commandProcessor.Send(deleteCommand);
 
             return Request.CreateResponse(HttpStatusCode.OK);
