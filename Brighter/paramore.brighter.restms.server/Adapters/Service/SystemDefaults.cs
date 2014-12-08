@@ -21,21 +21,26 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System.Collections.Generic;
 using Microsoft.Practices.Unity;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
+using paramore.brighter.restms.server.Adapters.Security;
+using Thinktecture.IdentityModel.Hawk.Core;
 
 namespace paramore.brighter.restms.server.Adapters.Service
 {
-    internal class InitializeDomains
+    internal class SystemDefaults
     {
         public static void Run(UnityContainer container)
         {
             var domainRepository = container.Resolve<IAmARepository<Domain>>();
             var feedRepository = container.Resolve<IAmARepository<Feed>>();
+            var credentialsStorage = container.Resolve<IAmACredentialStore>();
             new RestMSServerBuilder()
                 .With()
                 .Repositories(domainRepository,feedRepository)
+                .Security(credentialsStorage)
                 .Do();
         }
     }

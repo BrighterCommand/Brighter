@@ -64,6 +64,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.Owin.Hosting.3.0.0\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Owin.Security">
+      <HintPath>..\packages\Microsoft.Owin.Security.3.0.0\lib\net45\Microsoft.Owin.Security.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Practices.Unity">
       <HintPath>..\packages\Unity.3.5.1404.0\lib\net45\Microsoft.Practices.Unity.dll</HintPath>
     </Reference>
@@ -147,11 +150,12 @@
     <Compile Include="Adapters\Formatters\RestMSFormatter.cs" />
     <Compile Include="Adapters\Formatters\XmlDomainPostParser.cs" />
     <Compile Include="Adapters\Program.cs" />
-    <Compile Include="Adapters\Service\InitializeDomains.cs" />
+    <Compile Include="Adapters\Security\CredentialStore.cs" />
+    <Compile Include="Adapters\Service\SystemDefaults.cs" />
     <Compile Include="Adapters\Service\IoCConfiguration.cs" />
     <Compile Include="Adapters\Service\RestMSServerBuilder.cs" />
     <Compile Include="Adapters\Service\RestMSService.cs" />
-    <Compile Include="Adapters\Service\WebPipeline.cs" />
+    <Compile Include="Adapters\Service\Startup.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

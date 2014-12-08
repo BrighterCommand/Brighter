@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using Common.Logging;
 using Microsoft.Practices.Unity;
 using paramore.brighter.commandprocessor;
@@ -32,7 +33,9 @@ using paramore.brighter.restms.core.Ports.Handlers;
 using paramore.brighter.restms.core.Ports.Repositories;
 using paramore.brighter.restms.server.Adapters.Configuration;
 using paramore.brighter.restms.server.Adapters.Controllers;
+using paramore.brighter.restms.server.Adapters.Security;
 using Polly;
+using Thinktecture.IdentityModel.Hawk.Core;
 
 namespace paramore.brighter.restms.server.Adapters.Service
 {
@@ -49,6 +52,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
             container.RegisterType<IAmARepository<Feed>, InMemoryFeedRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmARepository<Pipe>, InMemoryPipeRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmARepository<Join>, InMemoryJoinRepository>(new ContainerControlledLifetimeManager());
+            container.RegisterType<IAmACredentialStore, CredentialStore>(new ContainerControlledLifetimeManager());
             container.RegisterInstance(typeof (ILog), LogManager.GetCurrentClassLogger(), new ContainerControlledLifetimeManager());
             container.RegisterType<AddFeedCommandHandler>();
             container.RegisterType<AddFeedToDomainCommandHandler>();

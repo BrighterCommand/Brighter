@@ -35,9 +35,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Transactions;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
+using paramore.brighter.restms.server.Adapters.Security;
+using Thinktecture.IdentityModel.Hawk.Core;
+using Thinktecture.IdentityModel.Hawk.Core.Helpers;
 
 namespace paramore.brighter.restms.server.Adapters.Service
 {
@@ -53,7 +57,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
     //  The RestMS 3/Defaults profile implements both coupled Housecat (using the default feed and default join) and decoupled Housecat 
     //  (using a dynamic feed and arbitrary joins).
     /// </summary>
-    public class RestMSServerBuilder : IConfigureRestMSServers, IBuildARestMSService, IUseRepositories
+    public class RestMSServerBuilder : IConfigureRestMSServers, IBuildARestMSService, IUseRepositories, IUseCredentials
     {
         IAmARepository<Domain> domainRepository;
         IAmARepository<Feed> feedRepository;
@@ -106,12 +110,31 @@ namespace paramore.brighter.restms.server.Adapters.Service
         /// <param name="domainRepository">The domain repository.</param>
         /// <param name="feedRepository">The feed repository.</param>
         /// <returns>IBuildARestMSService.</returns>
-        public IBuildARestMSService Repositories(IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository)
+        public IUseCredentials  Repositories(IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository)
         {
             this.domainRepository = domainRepository;
             this.feedRepository = feedRepository;
             return this;
         }
+
+        /// <summary>
+        /// Securities the specified credentials storage.
+        /// </summary>
+        /// <param name="credentialsStorage">The credentials storage.</param>
+        /// <returns>IBuildARestMSService.</returns>
+        public IBuildARestMSService Security(IAmACredentialStore credentialsStorage)
+        {
+            credentialsStorage.Add(new Credential()
+            {
+                Id = "dh37fgj492je",
+                Algorithm = SupportedAlgorithms.SHA256,
+                User = "Guest",
+                Key = Convert.FromBase64String("wBgvhp1lZTr4Tb6K6+5OQa1bL9fxK7j8wBsepjqVNiQ=")
+            });
+        
+            return this;
+        }
+
     }
 
     /// <summary>
@@ -137,8 +160,23 @@ namespace paramore.brighter.restms.server.Adapters.Service
         /// <param name="domainRepository">The domain repository.</param>
         /// <param name="feedRepository">The feed repository.</param>
         /// <returns>IBuildARestMSService.</returns>
-        IBuildARestMSService Repositories(IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository);
+        IUseCredentials Repositories(IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository);
     }
+
+    /// <summary>
+    /// Interface IUseCredentials
+    /// </summary>
+    public interface IUseCredentials
+    {
+        /// <summary>
+        /// Securities the specified credentials storage.
+        /// </summary>
+        /// <param name="credentialsStorage">The credentials storage.</param>
+        /// <returns>IBuildARestMSService.</returns>
+        IBuildARestMSService Security(IAmACredentialStore credentialsStorage);
+        
+    }
+
     /// <summary>
     /// Interface IBuildARestMSService{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
     /// </summary>
@@ -148,5 +186,6 @@ namespace paramore.brighter.restms.server.Adapters.Service
         /// Does this instance.
         /// </summary>
         void Do();
+
     }
 }

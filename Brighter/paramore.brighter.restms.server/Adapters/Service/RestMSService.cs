@@ -34,7 +34,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
         public bool Start(HostControl hostControl)
         {
             Globals.HostName = "localhost";
-            app = WebApp.Start<WebPipeline>("http://localhost:3416"); 
+            app = WebApp.Start<Startup>("http://localhost:3416"); 
             return true;
         }
 
