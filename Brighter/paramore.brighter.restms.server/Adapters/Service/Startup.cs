@@ -21,16 +21,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using System.Linq;
 using System.Web.Http;
 using CacheCow.Server;
 using Microsoft.Practices.Unity;
 using Owin;
+using paramore.brighter.restms.server.Adapters.Security;
+using Thinktecture.IdentityModel.Hawk.Core;
+using Thinktecture.IdentityModel.Hawk.Owin;
+using Thinktecture.IdentityModel.Hawk.Owin.Extensions;
 using WebApiContrib.IoC.Unity;
 
 namespace paramore.brighter.restms.server.Adapters.Service
 {
-    internal class WebPipeline
+    internal class Startup
     {
+        static UnityContainer container;
+
         public void Configuration(IAppBuilder builder)
         {
             var configuration = new HttpConfiguration();
@@ -39,6 +47,8 @@ namespace paramore.brighter.restms.server.Adapters.Service
 
             MapRoutes(configuration);
 
+            ConfigureAuthentication(configuration, builder);
+
             ConfigureCaching(configuration);
             
             ConfigureFormatting(configuration);
@@ -46,6 +56,29 @@ namespace paramore.brighter.restms.server.Adapters.Service
             ConfigureDiagnostics(configuration);
             
             builder.UseWebApi(configuration);
+        }
+
+        void ConfigureAuthentication(HttpConfiguration configuration, IAppBuilder builder)
+        {
+            var credentialStorage = container.Resolve<IAmACredentialStore>();
+            
+            var options = new Options()
+            {
+                ClockSkewSeconds = 60,
+                LocalTimeOffsetMillis = 0,
+                CredentialsCallback = (id) => credentialStorage.Credentials.FirstOrDefault(c => c.Id == id),
+                ResponsePayloadHashabilityCallback = (r) => true,
+                VerificationCallback = (request, ext) =>
+                {
+                    if (String.IsNullOrEmpty(ext))
+                        return true;
+
+                    const string NAME = "X-Request-Header-To-Protect";
+                    return ext.Equals(NAME + ":" + request.Headers[NAME].First());
+                }
+            };
+
+            builder.UseHawkAuthentication(new HawkAuthenticationOptions(options));
         }
 
         void ConfigureCaching(HttpConfiguration configuration)
@@ -83,9 +116,9 @@ namespace paramore.brighter.restms.server.Adapters.Service
 
         static void ConfigureDependencyInjection(HttpConfiguration configuration)
         {
-            var container = new UnityContainer();
+            container = new UnityContainer();
             IoCConfiguration.Run(container);
-            InitializeDomains.Run(container);
+            SystemDefaults.Run(container);
             configuration.DependencyResolver = new UnityResolver(container);
         }
     }
