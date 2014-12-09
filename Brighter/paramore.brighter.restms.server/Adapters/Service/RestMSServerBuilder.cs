@@ -35,7 +35,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Transactions;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;

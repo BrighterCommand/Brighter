@@ -43,6 +43,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
     /// <summary>
     /// Class FeedController.
     /// </summary>
+    [Authorize]
     public class FeedController : ApiController
     {
         readonly IAmACommandProcessor commandProcessor;

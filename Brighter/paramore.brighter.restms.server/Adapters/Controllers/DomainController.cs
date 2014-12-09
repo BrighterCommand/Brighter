@@ -54,6 +54,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
     /// <summary>
     /// Class DomainController.
     /// </summary>
+    [Authorize]
     public class DomainController : ApiController
     {
         readonly IAmACommandProcessor commandProcessor;

@@ -121,8 +121,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var message = new Message();
             try
             {
-                var consumer = new QueueingBasicConsumer(Channel);
-                Channel.BasicConsume(queueName, AUTO_ACK, consumer);
                 BasicDeliverEventArgs fromQueue;
                 consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue);
                 if (fromQueue != null)
