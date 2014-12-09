@@ -1,36 +1,46 @@
-Paramore
+=================================
+ Paramore Brighter - Command Dispatch
+=================================
+
+|               |               |
+| ------------- | ------------- |
+|![canon] (https://openclipart.org/people/amilo/canon.svg)|Brighter is a command dispatcher, processor, and task queue|
+| Version  | 2.0.1  |
+| Web  |http://iancooper.github.io/Paramore/  |
+| Download  |https://www.nuget.org/packages/Paramore.Brighter.CommandProcessor/ |
+| Source  |https://github.com/iancooper/Paramore |
+| Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, c#, command, command dispatcher, command  processor, queue, distributed |
+
+Why a Command Dispatcher, Command Processor, and Task Queue?
 ========
+* When implementing a hexagaonal architecture, one question is how to implement a port.
+ * Paramore shows how to implement ports using a Command approach (with a Command Dispatcher & Processor called Brighter).
+* Brighter also provides a Task Queue implementation for handling those commands asynchronously. In this role it has design goals similar to [Celery](https://github.com/celery/celery)
+* More detailed documentation on the project can be found on the GitHub pages for the project here: [Paramore](http://iancooper.github.io/Paramore/)
 
-Explorations in Distributed .NET Architecture
-
-Paramore is a proving ground for approaches to distributed development in .NET. It's main purpose is to support personal exploration, learning and teaching. It is possible to harvest some parts of Paramore for re-use within applications, and we have some examples of that, however it is primarily intended to be exemplary not re-useable.  
-Where we do have reusable software it follows the libraries not frameworks philosophy of assuming that you already have a preferred framework and just want to use a library to help with a specific part of the solution.  
-
-More detailed information can be found here: [Paramore](http://iancooper.github.io/Paramore/)
-
-Reusable Software Libraries
+Brighter 
 ===
 * Brighter  
   * An implementation of the Command Dispatcher and Command Processor patterns, suitable for providing both dispatch and orthoganal concerns such as retry, circuit breaker, timeout, logging etc.  
   * [Brighter](http://iancooper.github.io/Paramore/Brighter.html)
 
-Exploration of Architectural Styles
+Rewind 
 ===  
-* Hierachical Systems  
-  * N-Tier inc. Hexagonal Architecture (Ports and Adapters) 
-  * CQRS
-* Data Centric Systems  
-  * OO Domain Model (see below..  )
-* Data Flow Systems  
-  * Piplines
-* Interacting Processess  
-  * Broker
-* Client-Server (REST, SPA)  
+* An example .NET project using Brighter
+* Provides an example of the following architectural styles:
+ * Hierachical Systems  
+   * N-Tier inc. Hexagonal Architecture (Ports and Adapters) 
+   * CQRS
+ * Data Centric Systems  
+   * OO Domain Model (see below..  )
+ * Data Flow Systems  
+   * Piplines
+ * Interacting Processess  
+   * Broker
+ * Client-Server (REST, SPA)  
 
 
-Exploration of Domain Modelling Techniques
-===  
-* Responsibility Driven Design  
-* Domain Driven Design  
-* Tell Don't Ask  
-
+<a href="https://scan.coverity.com/projects/2900">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/2900/badge.svg"/>
+</a>

@@ -32,6 +32,7 @@ using paramore.brighter.restms.server.Adapters.Filters;
 
 namespace paramore.brighter.restms.server.Adapters.Controllers
 {
+    [Authorize]
     public class JoinController : ApiController
     {
         readonly IAmARepository<Join> joinRepository;

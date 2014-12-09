@@ -38,7 +38,6 @@ THE SOFTWARE. */
 using System;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.Remoting.Messaging;
 using System.Web.Http;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.restms.core.Model;
@@ -53,6 +52,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
     /// <summary>
     /// Class PipeController.
     /// </summary>
+    [Authorize]
     public class PipeController : ApiController
     {
         readonly IAmACommandProcessor commandProcessor;

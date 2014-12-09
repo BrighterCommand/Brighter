@@ -51,6 +51,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
     /// <summary>
     /// Class MessageController.
     /// </summary>
+    [Authorize]
     public class MessageController : ApiController
     {
         readonly IAmACommandProcessor commandProcessor;
