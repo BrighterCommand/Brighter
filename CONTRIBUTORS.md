@@ -10,12 +10,12 @@ Paramore contributors (sorted alphabeticaly)
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
   
-* **[Eddie Li](https://github.com/xiaodili)**
+**[Eddie Li](https://github.com/xiaodili)**
 
   * Various fixes  
 
 
-* **[Francesco Pighi](https://github.com/fpighi)**
+**[Francesco Pighi](https://github.com/fpighi)**
 
   * SQL Message Store
   * Various fixes
