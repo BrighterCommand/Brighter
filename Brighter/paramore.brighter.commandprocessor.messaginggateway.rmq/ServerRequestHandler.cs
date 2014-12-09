@@ -55,6 +55,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         const bool AUTO_ACK = false;
 
         /// <summary>
+        /// The consumer
+        /// </summary>
+        QueueingBasicConsumer consumer;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
@@ -162,7 +167,31 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             CloseConnection();
         }
 
-        private Message CreateMessage(BasicDeliverEventArgs fromQueue)
+        #region Overrides of MessageGateway
+
+        /// <summary>
+        /// Connects the specified queue name.
+        /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        protected override bool Connect(string queueName)
+        {
+            if (base.Connect(queueName))
+            {
+                consumer = new QueueingBasicConsumer(Channel);
+                Channel.BasicConsume(queueName, AUTO_ACK, consumer);
+
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        #endregion
+
+        Message CreateMessage(BasicDeliverEventArgs fromQueue)
         {
             var messageId = fromQueue.BasicProperties.MessageId;
             var message = new Message(
@@ -180,7 +209,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         }
 
 
-        private MessageType GetMessageType(BasicDeliverEventArgs fromQueue)
+        MessageType GetMessageType(BasicDeliverEventArgs fromQueue)
         {
             return (MessageType)Enum.Parse(typeof(MessageType),  Encoding.UTF8.GetString((byte[])fromQueue.BasicProperties.Headers["MessageType"]));
         }

@@ -54,6 +54,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class MessageGateway
     {
+
         /// <summary>
         /// The logger
         /// </summary>
@@ -95,7 +96,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        protected bool Connect(string queueName)
+        protected virtual bool Connect(string queueName)
         {
             try
             {
@@ -114,7 +115,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     Logger.Debug(m =>m("RMQMessagingGateway: Declaring queue {0} on connection {1}", queueName, Configuration.AMPQUri.Uri.ToString()));
                     Channel.QueueDeclare(queueName, false, false, false, null);
                     Channel.QueueBind(queueName, Configuration.Exchange.Name, queueName);
-
                 }
             }
             catch (BrokerUnreachableException e)
