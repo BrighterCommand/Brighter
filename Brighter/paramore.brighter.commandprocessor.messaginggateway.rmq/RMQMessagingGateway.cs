@@ -25,13 +25,13 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Common.Logging;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using paramore.brighter.serviceactivator;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
@@ -41,28 +41,36 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     public class RMQMessagingGateway : IAmAMessagingGateway
     {
         const bool autoAck = false;
+        int messageCount = 0;
         readonly RMQMessagingGatewayConfigurationSection configuration;
         readonly ConnectionFactory connectionFactory;
         readonly ILog logger;
         IModel channel;
         IConnection connection;
+        QueueingBasicConsumer consumer;
         BrokerUnreachableException connectionFailure;
-        readonly MessageTypeReader _messageTypeReader;
+        readonly RmqMessageCreator _messageCreator;
 
         public RMQMessagingGateway(ILog logger)
         {
             this.logger = logger;
             configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
             connectionFactory = new ConnectionFactory {Uri = configuration.AMPQUri.Uri.ToString()};
-            _messageTypeReader = new MessageTypeReader(logger);
+            _messageCreator = new RmqMessageCreator(logger);
+        }
+
+        public RmqMessageCreator MessageCreator
+        {
+            get { return _messageCreator; }
         }
 
         public void Acknowledge(Message message)
         {
             if (channel != null)
             {
-                logger.Debug(m => m("RMQMessagingGateway: Acknowledging message {0} as completed", message.Id));
-                channel.BasicAck((ulong) message.Header.Bag["DeliveryTag"], false);
+                var deliveryTag = (ulong) message.Header.Bag["DeliveryTag"];
+                logger.Debug(m => m("RMQMessagingGateway: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag));
+                channel.BasicAck(deliveryTag, false);
             }
         }
 
@@ -102,19 +110,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var message = new Message();
             try
             {
-                var consumer = new QueueingBasicConsumer(channel);
-                channel.BasicConsume(queueName, autoAck, consumer);
                 BasicDeliverEventArgs fromQueue;
                 consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue);
                 if (fromQueue != null)
                 {
-                    message = CreateMessage(fromQueue);
+                    message = MessageCreator.CreateMessage(fromQueue);
                     logger.Debug(
                         m =>
                             m(
-                                "RMQMessagingGateway: Recieved message from exchange {0} on connection {1} with topic {2} and id {3} and body {4}",
+                                "RMQMessagingGateway: Recieved message # {5} from exchange {0} on connection {1} with topic {2} and id {3} and body {4}",
                                 configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic,
-                                message.Id, message.Body.Value));
+                                message.Id, message.Body.Value, messageCount++));
+                    logger.Debug(m => m("Delivery tag is {0}", message.Header.Bag["DeliveryTag"]));
                 }
                 else
                 {
@@ -227,6 +234,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                                 configuration.AMPQUri.Uri.ToString()));
                     channel.QueueDeclare(queueName, false, false, false, null);
                     channel.QueueBind(queueName, configuration.Exchange.Name, queueName);
+                    consumer = new QueueingBasicConsumer(channel);
+                    channel.BasicConsume(queueName, autoAck, consumer);
                 }
             }
             catch (BrokerUnreachableException e)
@@ -237,58 +246,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
 
             return true;
-        }
-
-        Message CreateMessage(BasicDeliverEventArgs fromQueue)
-        {
-            var headers = fromQueue.BasicProperties.Headers;
-            try
-            {
-                var topic = ReadTopic(fromQueue, headers);
-                var messageId = ReadMessageId(headers);
-
-                string body = Encoding.UTF8.GetString(fromQueue.Body);
-
-                var message = new Message(
-                    new MessageHeader(messageId, topic, _messageTypeReader.GetMessageType(fromQueue)),
-                    new MessageBody(body));
-
-                headers.Each(
-                    header => message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString((byte[]) header.Value)));
-
-                message.Header.Bag["DeliveryTag"] = fromQueue.DeliveryTag;
-                return message;
-            }
-            catch (Exception e)
-            {
-                var sb = new StringBuilder("Failed to create message from amqp message\n");
-                headers.Each(
-                    header =>
-                        sb.AppendFormat("\t* {0}: {1}\n", header.Key, Encoding.UTF8.GetString((byte[]) header.Value)));
-
-                logger.Warn(sb.ToString(), e);
-                throw;
-            }
-        }
-
-        string ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
-        {
-            string topic = fromQueue.RoutingKey;
-            if (headers.ContainsKey("Topic"))
-                topic = Encoding.UTF8.GetString((byte[]) headers["Topic"]);
-            else
-                logger.Debug("No topic found in message headers, defaulting to routing key " + fromQueue.RoutingKey);
-            return topic;
-        }
-
-        Guid ReadMessageId(IDictionary<string, object> headers)
-        {
-            Guid messageId = Guid.NewGuid();
-            if (headers.ContainsKey("MessageId"))
-                Guid.TryParse(headers["MessageId"] as string, out messageId);
-            else
-                logger.Debug("No message id found in message, new message id is " + messageId);
-            return messageId;
         }
 
 
@@ -302,7 +259,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             basicProperties.Headers = new Dictionary<string, object>
             {
                 {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
-                {"Topic", message.Header.Topic}
+                {HeaderNames.TOPIC, message.Header.Topic}
             };
             message.Header.Bag.Each(
                 header => basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value)));

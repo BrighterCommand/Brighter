@@ -53,11 +53,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HeaderNames.cs" />
+    <Compile Include="HeaderResult.cs" />
     <Compile Include="MessageTypeReader.cs" />
     <Compile Include="MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RMQInputChannel.cs" />
     <Compile Include="RMQInputChannelfactory.cs" />
+    <Compile Include="RmqMessageCreator.cs" />
     <Compile Include="RMQMessagingGateway.cs" />
   </ItemGroup>
   <ItemGroup>
