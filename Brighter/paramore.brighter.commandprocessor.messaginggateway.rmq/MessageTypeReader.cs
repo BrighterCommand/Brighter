@@ -25,25 +25,26 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 if (null == mtBytes)
                 {
                     _logger.Error("Failed to read message type as byte[] - header type is " + headers[HeaderNames.MESSAGE_TYPE].GetType());
-                    goto Failed;
+                    return MessageType.MT_UNACCEPTABLE;
                 }
 
                 try
                 {
-                    var type = MessageType.MT_EVENT;
+                    MessageType type;
                     var str = Encoding.UTF8.GetString(mtBytes);
-                    Enum.TryParse(str, true, out type);
-                    return type;
+                    if(Enum.TryParse(str, true, out type))
+                        return type;
+                    return MessageType.MT_UNACCEPTABLE;
                 }
                 catch (ArgumentException e)
                 {
                     var firstTwentyBytes = BitConverter.ToString(mtBytes.Take(20).ToArray());
                     _logger.Error("Failed to read message type bytes as string. First 20 bytes follow. \n "+firstTwentyBytes, e);
+                    return MessageType.MT_UNACCEPTABLE;
                 }
             }
-            Failed:
-                _logger.Warn("Falling back to MessageType event.");
-                return MessageType.MT_EVENT;
+            _logger.Debug("Falling back to MessageType event.");
+            return MessageType.MT_EVENT;
         }
     }
 }
