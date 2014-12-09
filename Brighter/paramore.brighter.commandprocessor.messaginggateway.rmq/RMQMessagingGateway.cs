@@ -31,7 +31,6 @@ using Common.Logging;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
-using paramore.brighter.serviceactivator;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
@@ -40,16 +39,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     public class RMQMessagingGateway : IAmAMessagingGateway
     {
-        const bool autoAck = false;
-        int messageCount = 0;
-        readonly RMQMessagingGatewayConfigurationSection configuration;
-        readonly ConnectionFactory connectionFactory;
-        readonly ILog logger;
-        IModel channel;
-        IConnection connection;
-        QueueingBasicConsumer consumer;
-        BrokerUnreachableException connectionFailure;
-        readonly RmqMessageCreator _messageCreator;
+        private const bool autoAck = false;
+        private readonly RmqMessageCreator _messageCreator;
+        private readonly RMQMessagingGatewayConfigurationSection configuration;
+        private readonly ConnectionFactory connectionFactory;
+        private readonly ILog logger;
+        private IModel channel;
+        private IConnection connection;
+        private BrokerUnreachableException connectionFailure;
+        private QueueingBasicConsumer consumer;
 
         public RMQMessagingGateway(ILog logger)
         {
@@ -69,7 +67,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             if (channel != null)
             {
                 var deliveryTag = (ulong) message.Header.Bag["DeliveryTag"];
-                logger.Debug(m => m("RMQMessagingGateway: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag));
+                logger.Debug(
+                    m =>
+                        m("RMQMessagingGateway: Acknowledging message {0} as completed with delivery tag {1}",
+                            message.Id, deliveryTag));
                 channel.BasicAck(deliveryTag, false);
             }
         }
@@ -118,10 +119,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     logger.Debug(
                         m =>
                             m(
-                                "RMQMessagingGateway: Recieved message # {5} from exchange {0} on connection {1} with topic {2} and id {3} and body {4}",
+                                "RMQMessagingGateway: Recieved message with delivery tag {5} from exchange {0} on connection {1} with topic {2} and id {3} and body {4}",
                                 configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic,
-                                message.Id, message.Body.Value, messageCount++));
-                    logger.Debug(m => m("Delivery tag is {0}", message.Header.Bag["DeliveryTag"]));
+                                message.Id, message.Body.Value, message.Header.Bag["DeliveryTag"]));
                 }
                 else
                 {
@@ -203,7 +203,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
         }
 
-        bool Connect(string queueName)
+        private bool Connect(string queueName)
         {
             try
             {
@@ -249,7 +249,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         }
 
 
-        IBasicProperties CreateMessageHeader(Message message, IModel channel)
+        private IBasicProperties CreateMessageHeader(Message message, IModel channel)
         {
             //create message header
             IBasicProperties basicProperties = channel.CreateBasicProperties();
@@ -266,27 +266,28 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return basicProperties;
         }
 
-        void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
+        private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
         {
             Exchange exchange = configuration.Exchange;
             channel.ExchangeDeclare(exchange.Name, exchange.Type, exchange.Durable);
         }
 
-        IModel OpenChannel(IConnection connection)
+        private IModel OpenChannel(IConnection connection)
         {
             //open a channel on the connection
             IModel channel = connection.CreateModel();
             return channel;
         }
 
-        IConnection Connect(ConnectionFactory connectionFactory)
+        private IConnection Connect(ConnectionFactory connectionFactory)
         {
             //create the connection
             IConnection connection = connectionFactory.CreateConnection();
             return connection;
         }
 
-        void PublishMessage(Message message, IModel channel, RMQMessagingGatewayConfigurationSection configuration,
+        private void PublishMessage(Message message, IModel channel,
+            RMQMessagingGatewayConfigurationSection configuration,
             IBasicProperties basicProperties)
         {
             //publish message
