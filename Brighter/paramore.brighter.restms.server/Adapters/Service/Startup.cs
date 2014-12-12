@@ -66,16 +66,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
             {
                 ClockSkewSeconds = 60,
                 LocalTimeOffsetMillis = 0,
-                CredentialsCallback = (id) => credentialStorage.Credentials.FirstOrDefault(c => c.Id == id),
-                ResponsePayloadHashabilityCallback = (r) => true,
-                VerificationCallback = (request, ext) =>
-                {
-                    if (String.IsNullOrEmpty(ext))
-                        return true;
-
-                    const string NAME = "X-Request-Header-To-Protect";
-                    return ext.Equals(NAME + ":" + request.Headers[NAME].First());
-                }
+                CredentialsCallback = (id) => credentialStorage.Credentials.FirstOrDefault(c => c.Id == id)
             };
 
             builder.UseHawkAuthentication(new HawkAuthenticationOptions(options));
