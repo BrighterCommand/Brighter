@@ -40,7 +40,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.restms.se
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.restms.core", "paramore.brighter.restms.core\paramore.brighter.restms.core.csproj", "{72E03A7F-A406-4364-9861-2A10A746AE3A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "restsms.hawkauthentication", "restsms.hawkauthentication\restsms.hawkauthentication.csproj", "{E24AFB93-8440-40A5-8507-B5B7DC6E30B8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "restsms.hawkauthentication", "Examples\restsms.hawkauthentication\restsms.hawkauthentication.csproj", "{E24AFB93-8440-40A5-8507-B5B7DC6E30B8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
