@@ -107,7 +107,7 @@ namespace Tasklist.Adapters.API.Contributors
                     .Policies(policyRegistry)
                     .Logger(logger)
                     .TaskQueues(new MessagingConfiguration(
-                        messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
+                        messageStore: new RavenMessageStore(new EmbeddableDocumentStore().Initialize(), logger),
                         messagingGateway: gateway,
                         messageMapperRegistry: messageMapperRegistry
                         ))

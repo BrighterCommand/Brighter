@@ -90,14 +90,14 @@ namespace TaskMailer.Adapters.ServiceHost
                             .Policies(policyRegistry)
                             .Logger(logger)
                             .TaskQueues(new MessagingConfiguration(
-                                messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
+                                messageStore: new RavenMessageStore(new EmbeddableDocumentStore().Initialize(), logger),
                                 messagingGateway: gateway,
                                 messageMapperRegistry: messageMapperRegistry
                                 ))
                             .RequestContextFactory(new InMemoryRequestContextFactory())
                             .Build()
                             )
-                            .WithMessageMappers(null)
+                            .WithMessageMappers(messageMapperRegistry)
                             .WithChannelFactory(new RMQInputChannelfactory(gateway)) 
                             .ConnectionsFromConfiguration();
 

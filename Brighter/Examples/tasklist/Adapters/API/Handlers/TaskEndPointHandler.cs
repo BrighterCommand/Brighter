@@ -72,8 +72,7 @@ namespace Tasklist.Adapters.API.Handlers
 
             return new OperationResult.Created
                 {
-                    ResponseResource = taskRetriever.Get(addTaskCommand.TaskId),
-                    CreatedResourceUrl = new Uri(string.Format("{0}/tasks/{1}", communicationContext.ApplicationBaseUri, addTaskCommand.TaskId))
+                    RedirectLocation = new Uri(string.Format("{0}/tasks/{1}", communicationContext.ApplicationBaseUri, addTaskCommand.TaskId))
                 };
         }
     }
