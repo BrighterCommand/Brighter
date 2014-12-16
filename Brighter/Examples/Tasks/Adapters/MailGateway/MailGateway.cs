@@ -44,7 +44,7 @@ namespace Tasks.Adapters.MailGateway
             var mail = translator.Translate(reminder);
             
             var credentials = new NetworkCredential(
-                ConfigurationManager.AppSettings["sendGridUserName"],
+                ConfigurationManager.AppSettings["sendGriggdUserName"],
                 ConfigurationManager.AppSettings["sendGridPassword"]
                 );
 

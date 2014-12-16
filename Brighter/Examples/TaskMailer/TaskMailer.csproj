@@ -93,6 +93,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\paramore.brighter.commandprocessor.timeoutpolicy.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.dll</HintPath>
     </Reference>
+    <Reference Include="paramore.brighter.serviceactivator, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\paramore.brighter.serviceactivator.2.0.1.0\lib\net45\paramore.brighter.serviceactivator.dll</HintPath>
+    </Reference>
     <Reference Include="Polly, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Polly.2.0.0\lib\net45\Polly.dll</HintPath>
@@ -141,7 +145,6 @@
     <Compile Include="Adapters\ServiceHost\TinyIoCMessageMapperFactory.cs" />
     <Compile Include="Ports\TaskReminderCommandMessageMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TestDoubles\MyEvent.cs" />
     <Compile Include="TinyIoC.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -152,10 +155,6 @@
     <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
       <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>
       <Name>paramore.brighter.commandprocessor.messaginggateway.rmq</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj">
-      <Project>{b9126b00-5a97-4c7d-b395-755456e5fa28}</Project>
-      <Name>paramore.brighter.serviceactivator</Name>
     </ProjectReference>
     <ProjectReference Include="..\Tasks\Tasks.csproj">
       <Project>{e7900a56-da88-46ca-8418-fb4c2bc2d326}</Project>
