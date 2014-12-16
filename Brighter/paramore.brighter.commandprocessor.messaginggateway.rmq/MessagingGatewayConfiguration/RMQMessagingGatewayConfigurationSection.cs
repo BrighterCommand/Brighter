@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,29 +20,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
 using System.Configuration;
+using System.Linq;
+using RabbitMQ.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration
 {
     public class RMQMessagingGatewayConfigurationSection : ConfigurationSection
     {
-        public static RMQMessagingGatewayConfigurationSection GetConfiguration()
-        {
-            var configuration = ConfigurationManager.GetSection("rmqMessagingGateway")as RMQMessagingGatewayConfigurationSection ;
-
-            if (configuration != null)
-                return configuration;
-
-            return new RMQMessagingGatewayConfigurationSection();
-        }
-
         [ConfigurationProperty("amqpUri")]
         public AMQPUriSpecification AMPQUri
         {
-            get { return this["amqpUri"] as AMQPUriSpecification ; }
+            get { return this["amqpUri"] as AMQPUriSpecification; }
             set { this["amqpUri"] = value; }
         }
 
@@ -51,6 +45,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
             get { return this["exchange"] as Exchange; }
             set { this["exchange"] = value; }
         }
+
+        public static RMQMessagingGatewayConfigurationSection GetConfiguration()
+        {
+            var configuration =
+                ConfigurationManager.GetSection("rmqMessagingGateway") as RMQMessagingGatewayConfigurationSection;
+
+            if (configuration != null)
+                return configuration;
+
+            return new RMQMessagingGatewayConfigurationSection();
+        }
     }
 
     public class AMQPUriSpecification : ConfigurationElement
@@ -58,10 +63,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         [ConfigurationProperty("uri", DefaultValue = "amqp://guest:guest@localhost:5672/%2f", IsRequired = true)]
         public Uri Uri
         {
-            get { return (Uri)this["uri"]; }
+            get { return (Uri) this["uri"]; }
             set { this["uri"] = value; }
         }
-        
     }
 
     public class Exchange : ConfigurationElement
@@ -71,6 +75,33 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         {
             get { return this["name"] as string; }
             set { this["name"] = value; }
+        }
+
+        [ConfigurationProperty("type", DefaultValue = ExchangeType.Direct)]
+        public string Type
+        {
+            get
+            {
+                string type = ExchangeType.All()
+                    .FirstOrDefault(t => t.Equals(this["type"] as string, StringComparison.InvariantCultureIgnoreCase));
+
+                return type ?? ExchangeType.Direct;
+            }
+            set { this["type"] = value; }
+        }
+
+        [ConfigurationProperty("durable", DefaultValue = false)]
+        public bool Durable
+        {
+            get
+            {
+                bool val;
+                if (bool.TryParse(this["durable"] as string, out val))
+                    return val;
+                return false;
+            }
+
+            set { this["durable"] = value; }
         }
     }
 }
