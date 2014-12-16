@@ -31,6 +31,7 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
 using Polly;
 using Raven.Client.Embedded;
+using Tasks.Adapters.MailGateway;
 using Tasks.Ports;
 using Tasks.Ports.Commands;
 using TinyIoC;
@@ -52,10 +53,16 @@ namespace TaskMailer.Adapters.ServiceHost
                 
             var container = new TinyIoCContainer();
             container.Register<IAmAMessageMapper<TaskReminderCommand>, TaskReminderCommandMessageMapper>();
+            container.Register<MailTaskReminderHander, MailTaskReminderHander>();
+            container.Register<IAmAMailGateway, MailGateway>();
+            container.Register<ILog>(logger);
+            container.Register<IAmAMailTranslator, MailTranslator>();
+
             var handlerFactory = new TinyIocHandlerFactory(container);
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
 
             var subscriberRegistry = new SubscriberRegistry();
+            subscriberRegistry.Register<TaskReminderCommand, MailTaskReminderHander>();
 
             //create policies
             var retryPolicy = Policy
@@ -78,7 +85,10 @@ namespace TaskMailer.Adapters.ServiceHost
             };
 
             //create message mappers
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory);
+            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
+            {
+                {typeof (TaskReminderCommand), typeof(TaskReminderCommandMessageMapper)}
+            };
 
             //create the gateway
             var gateway = new RMQMessagingGateway(logger);

@@ -3,7 +3,7 @@ using Tasks.Model;
 
 namespace Tasks.Ports
 {
-    internal class MailTranslator : IAmAMailTranslator
+    public class MailTranslator : IAmAMailTranslator
     {
         public Mail Translate(TaskReminder taskReminder)
         {
