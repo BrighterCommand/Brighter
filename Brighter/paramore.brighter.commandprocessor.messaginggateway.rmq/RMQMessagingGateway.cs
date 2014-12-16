@@ -42,6 +42,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         private readonly ConnectionFactory connectionFactory;
         private IConnection connection;
         private IModel channel;
+        private QueueingBasicConsumer consumer;
         private BrokerUnreachableException connectionFailure;
         const bool autoAck = false;
 
@@ -94,8 +95,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var message = new Message();
             try
             {
-                var consumer = new QueueingBasicConsumer(channel);
-                channel.BasicConsume(queueName, autoAck, consumer);
                 BasicDeliverEventArgs fromQueue;
                 consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue);
                 if (fromQueue != null)
@@ -184,11 +183,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     channel.QueueDeclare(queueName, false, false, false, null);
                     channel.QueueBind(queueName, configuration.Exchange.Name, queueName);
 
+                    consumer = new QueueingBasicConsumer(channel);
+                    channel.BasicConsume(queueName, autoAck, consumer);
+
                 }
             }
             catch (BrokerUnreachableException e)
             {
                 connectionFailure = e;
+                logger.Error("Failed to connect to broker", e);
                 return false;
             }
 
@@ -232,8 +235,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
         {
-            //desired state configuration of the exchange
-            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, false);
+            var exchange = configuration.Exchange;
+            channel.ExchangeDeclare(exchange.Name, exchange.Type, exchange.Durable);
         }
 
         private IModel OpenChannel(IConnection connection)
