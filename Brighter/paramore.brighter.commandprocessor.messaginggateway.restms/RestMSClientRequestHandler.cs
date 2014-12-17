@@ -124,7 +124,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 Type = "Default",
                 Title = name
             };
-            var response = client.PostAsXmlAsync(configuration.RestMS.Uri.AbsoluteUri, feed);
+            var response = client.PostAsXmlAsync(configuration.RestMS.Uri.AbsoluteUri, feed).Result;
+            response.EnsureSuccessStatusCode();
         }
 
         HttpClient CreateClient(ClientOptions options)
