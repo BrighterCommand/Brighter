@@ -32,6 +32,7 @@ using Polly;
 using Raven.Client.Embedded;
 using Tasklist.Ports.ViewModelRetrievers;
 using Tasks.Adapters.DataAccess;
+using Tasks.Ports;
 using Tasks.Ports.Commands;
 using Tasks.Ports.Handlers;
 using TinyIoC;
@@ -96,6 +97,7 @@ namespace Tasklist.Adapters.API.Contributors
 
             //create message mappers
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory);
+            messageMapperRegistry.Add(typeof (TaskReminderCommand), typeof (TaskReminderCommandMessageMapper));
 
             //create the gateway
             var gateway = new RMQMessagingGateway(logger);
@@ -105,7 +107,7 @@ namespace Tasklist.Adapters.API.Contributors
                     .Policies(policyRegistry)
                     .Logger(logger)
                     .TaskQueues(new MessagingConfiguration(
-                        messageStore: new RavenMessageStore(new EmbeddableDocumentStore(), logger),
+                        messageStore: new RavenMessageStore(new EmbeddableDocumentStore().Initialize(), logger),
                         messagingGateway: gateway,
                         messageMapperRegistry: messageMapperRegistry
                         ))

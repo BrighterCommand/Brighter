@@ -39,7 +39,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
 
         public IEnumerable<Connection> Create(ConnectionElements connectionElements)
         {
-            return 
+            var connections = 
             (
                from ConnectionElement connectionElement in connectionElements 
                select new Connection(
@@ -49,11 +49,15 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
                    noOfPerformers: connectionElement.NoOfPerformers, 
                    timeoutInMilliseconds: connectionElement.TimeoutInMiliseconds)
              ).ToList();
+
+
+            return connections;
         }
 
         public static Type GetType(string typeName)
         {
-            return AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(typeName)).FirstOrDefault(type => type != null);
+            var dataType = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(typeName)).FirstOrDefault(type => type != null);
+            return dataType;
         }
     }
 }
