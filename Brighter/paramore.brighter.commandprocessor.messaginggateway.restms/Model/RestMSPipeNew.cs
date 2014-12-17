@@ -1,16 +1,17 @@
 // ***********************************************************************
-// Assembly         : paramore.brighter.serviceactivator
+// Assembly         : paramore.brighter.restms.core
 // Author           : ian
-// Created          : 07-29-2014
+// Created          : 11-05-2014
 //
 // Last Modified By : ian
-// Last Modified On : 07-29-2014
+// Last Modified On : 11-05-2014
 // ***********************************************************************
-// <copyright file="IAmAServerRequestHandler.cs" company="">
+// <copyright file="RestMSPipeNew.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -34,41 +35,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using paramore.brighter.commandprocessor;
+using System.Runtime.Serialization;
+using System.Xml.Serialization;
 
-/// <summary>
-/// The serviceactivator namespace.
-/// </summary>
-namespace paramore.brighter.serviceactivator
+namespace paramore.brighter.commandprocessor.messaginggateway.restms.Model
 {
-    /// <summary>
-    /// Interface IAmAReceiveMessageGateway
-    /// </summary>
-    public interface IAmAServerRequestHandler: IDisposable 
+    [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe", Namespace = "http://www.restms.org/schema/restms")]
+    internal class RestMSPipeNew
     {
-        /// <summary>
-        /// Receives the specified queue name.
-        /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <returns>Message.</returns>
-        Message Receive(string queueName, int timeoutInMilliseconds);
-        /// <summary>
-        /// Acknowledges the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        void Acknowledge(Message message);
-        /// <summary>
-        /// Rejects the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-        void Reject(Message message, bool requeue);
-        /// <summary>
-        /// Purges the specified queue name.
-        /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
-        void Purge(string queueName);
+
+        [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
+        public string Type { get; set; }
+
+        [DataMember(Name = "title"), XmlAttribute(AttributeName = "title")]
+        public string Title { get; set; }
     }
 }

@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("restsms.hawkauthentication")]
+[assembly: AssemblyTitle("paramore.brighter.commandprocessor.messaginggateway.restms")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("restsms.hawkauthentication")]
+[assembly: AssemblyProduct("paramore.brighter.commandprocessor.messaginggateway.restms")]
 [assembly: AssemblyCopyright("Copyright ©  2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("fd84a06f-6c2e-4329-a8b2-7532bc16cb7e")]
+[assembly: Guid("088de311-b779-4a34-8788-f1c7d8436e46")]
 
 // Version information for an assembly consists of the following four values:
 //

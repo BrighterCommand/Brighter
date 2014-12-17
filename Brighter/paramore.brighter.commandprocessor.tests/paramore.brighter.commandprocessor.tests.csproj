@@ -189,7 +189,8 @@
     <Compile Include="MessageDispatch\TestDoubles\SpyCommandProcessor.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
     <Compile Include="MessageStore\MsSql\SqlMessageStoreTests.cs" />
-    <Compile Include="MessagingGateway\rmq\RMQMessageChannelTests.cs" />
+    <Compile Include="MessagingGateway\MessageChannelTests.cs" />
+    <Compile Include="MessagingGateway\restms\RestMSMessageGatewayTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RestMSServer\DomainTests.cs" />
@@ -211,6 +212,10 @@
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj">
       <Project>{224f828a-1abf-4d7b-8c48-66856bfd1ded}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.ravendb</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj">
+      <Project>{c8bc2471-9d5c-4e94-81c8-036506f4ec34}</Project>
+      <Name>paramore.brighter.commandprocessor.messaginggateway.restms</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
       <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>

@@ -147,7 +147,6 @@
     <Compile Include="Adapters\Formatters\IParseDomainPosts.cs" />
     <Compile Include="Adapters\Formatters\JsonDomainPostParser.cs" />
     <Compile Include="Adapters\Formatters\ParseResult.cs" />
-    <Compile Include="Adapters\Formatters\RestMSFormatter.cs" />
     <Compile Include="Adapters\Formatters\XmlDomainPostParser.cs" />
     <Compile Include="Adapters\Program.cs" />
     <Compile Include="Adapters\Security\CredentialStore.cs" />

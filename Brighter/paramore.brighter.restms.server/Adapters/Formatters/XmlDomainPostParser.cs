@@ -28,7 +28,7 @@ using paramore.brighter.restms.core.Ports.Resources;
 
 namespace paramore.brighter.restms.server.Adapters.Formatters
 {
-    public class XmlDomainPostParser : IParseDomainPosts
+    internal class XmlDomainPostParser : IParseDomainPosts
     {
         readonly XmlSerializer feedDeserializer;
         readonly XmlSerializer pipeDeserializer;

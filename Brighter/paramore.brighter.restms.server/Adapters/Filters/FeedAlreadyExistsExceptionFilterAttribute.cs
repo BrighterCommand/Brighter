@@ -28,7 +28,7 @@ using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.server.Adapters.Filters
 {
-    public class FeedAlreadyExistsExceptionFilterAttribute : ExceptionFilterAttribute
+    internal class FeedAlreadyExistsExceptionFilterAttribute : ExceptionFilterAttribute
     {
 
         /// <summary>

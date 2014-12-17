@@ -28,7 +28,7 @@ using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.server.Adapters.Filters
 {
-    public class DomainNotFoundExceptionFilterAttribute : ExceptionFilterAttribute
+    internal class DomainNotFoundExceptionFilterAttribute : ExceptionFilterAttribute
     {
 
         /// <summary>

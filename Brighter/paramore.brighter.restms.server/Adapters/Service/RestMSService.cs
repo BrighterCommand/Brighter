@@ -28,7 +28,7 @@ using Topshelf;
 
 namespace paramore.brighter.restms.server.Adapters.Service
 {
-    public class RestMSService : ServiceControl
+    internal class RestMSService : ServiceControl
     {
         IDisposable app;
         public bool Start(HostControl hostControl)

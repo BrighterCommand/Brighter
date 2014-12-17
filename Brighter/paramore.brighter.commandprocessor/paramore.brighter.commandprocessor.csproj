@@ -69,6 +69,8 @@
     <Compile Include="IAmAnOutputChannel.cs" />
     <Compile Include="IAmAPolicyRegistry.cs" />
     <Compile Include="IAmAClientRequestHandler.cs" />
+    <Compile Include="IAmAServerRequestHandler.cs" />
+    <Compile Include="InputChannel.cs" />
     <Compile Include="LifetimeScope.cs" />
     <Compile Include="MessageFactory.cs" />
     <Compile Include="MessageMapperRegistry.cs" />
