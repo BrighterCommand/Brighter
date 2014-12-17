@@ -89,10 +89,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\paramore.brighter.commandprocessor.messagestore.ravendb.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.messagestore.ravendb.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.messaginggateway.rmq, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\paramore.brighter.commandprocessor.messaginggateway.rmq.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll</HintPath>
-    </Reference>
     <Reference Include="paramore.brighter.commandprocessor.timeoutpolicy, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\paramore.brighter.commandprocessor.timeoutpolicy.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.dll</HintPath>
@@ -156,6 +152,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
+      <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>
+      <Name>paramore.brighter.commandprocessor.messaginggateway.rmq</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Tasks\Tasks.csproj">
       <Project>{e7900a56-da88-46ca-8418-fb4c2bc2d326}</Project>
       <Name>Tasks</Name>
