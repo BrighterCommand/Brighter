@@ -22,7 +22,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using Common.Logging;
 using Microsoft.Practices.Unity;
 using paramore.brighter.commandprocessor;
@@ -35,7 +34,6 @@ using paramore.brighter.restms.server.Adapters.Configuration;
 using paramore.brighter.restms.server.Adapters.Controllers;
 using paramore.brighter.restms.server.Adapters.Security;
 using Polly;
-using Thinktecture.IdentityModel.Hawk.Core;
 
 namespace paramore.brighter.restms.server.Adapters.Service
 {

@@ -62,11 +62,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// The configuration
         /// </summary>
-        protected RMQMessagingGatewayConfigurationSection Configuration;
+        protected readonly RMQMessagingGatewayConfigurationSection Configuration;
         /// <summary>
         /// The connection factory
         /// </summary>
-        protected ConnectionFactory ConnectionFactory;
+        readonly ConnectionFactory connectionFactory;
         /// <summary>
         /// The connection
         /// </summary>
@@ -88,7 +88,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             this.Logger = logger;
             Configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
-            ConnectionFactory = new ConnectionFactory{Uri = Configuration.AMPQUri.Uri.ToString()};
+            connectionFactory = new ConnectionFactory{Uri = Configuration.AMPQUri.Uri.ToString()};
         }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 if (Connection == null || !Connection.IsOpen)
                 {
                     Logger.Debug(m => m("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.Uri.ToString()));
-                    Connection = Connect(ConnectionFactory);
+                    Connection = Connect(connectionFactory);
 
                     Logger.Debug(m => m("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.Uri.ToString()));
                     Channel = OpenChannel(Connection);

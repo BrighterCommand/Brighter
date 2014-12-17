@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.server
+// Author           : ian
+// Created          : 11-06-2014
+//
+// Last Modified By : ian
+// Last Modified On : 12-08-2014
+// ***********************************************************************
+// <copyright file="JoinController.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -32,16 +45,28 @@ using paramore.brighter.restms.server.Adapters.Filters;
 
 namespace paramore.brighter.restms.server.Adapters.Controllers
 {
+    /// <summary>
+    /// Class JoinController.
+    /// </summary>
     [Authorize]
     public class JoinController : ApiController
     {
         readonly IAmARepository<Join> joinRepository;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JoinController"/> class.
+        /// </summary>
+        /// <param name="joinRepository">The join repository.</param>
         public JoinController(IAmARepository<Join> joinRepository)
         {
             this.joinRepository = joinRepository;
         }
 
+        /// <summary>
+        /// Gets the specified name.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <returns>RestMSJoin.</returns>
         [HttpGet]
         [JoinDoesNotExistExceptionFilter] 
         public RestMSJoin Get(string name)
@@ -50,6 +75,10 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             return retriever.Retrieve(new Name(name));
         }
 
+        /// <summary>
+        /// Deletes the specified name.
+        /// </summary>
+        /// <param name="name">The name.</param>
         [HttpDelete]
         [JoinDoesNotExistExceptionFilter]
         public void Delete(string name)

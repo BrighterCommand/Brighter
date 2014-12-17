@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-06-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-06-2014
+// ***********************************************************************
+// <copyright file="RestMSMessagePosted.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,22 +34,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Net;
-using System.Net.Http;
-using System.Web.Http.Filters;
-using paramore.brighter.restms.core.Ports.Common;
+using System.Runtime.Serialization;
+using System.Xml.Serialization;
 
-namespace paramore.brighter.restms.server.Adapters.Filters
+namespace paramore.brighter.commandprocessor.messaginggateway.restms.Model
 {
-    internal class PipeDoesNotExistExceptionFilter : ExceptionFilterAttribute
+    [DataContract(Name = "defaultProfileMessagePosted"), XmlRoot(ElementName = "defaultProfileMessagePosted", Namespace = "http://www.restms.org/schema/restms")]
+    internal class RestMSMessagePosted
     {
-        public override void OnException(HttpActionExecutedContext actionExecutedContext)
-        {
-            if (actionExecutedContext.Exception is PipeDoesNotExistException)
-            {
-                actionExecutedContext.Response = new HttpResponseMessage(HttpStatusCode.NotFound);
-            }
-        }
-
+        [DataMember(Name = "count"), XmlAttribute(AttributeName = "count")]
+        public int Count { get; set; }
     }
 }

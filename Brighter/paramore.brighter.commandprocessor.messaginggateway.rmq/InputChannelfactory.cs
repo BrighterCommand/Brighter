@@ -34,7 +34,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using paramore.brighter.serviceactivator;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
@@ -44,13 +43,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class InputChannelfactory : IAmAChannelFactory 
     {
-        private readonly ServerRequestHandler gateway;
+        private readonly RMQServerRequestHandler gateway;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannelfactory"/> class.
         /// </summary>
         /// <param name="gateway">The gateway.</param>
-        public InputChannelfactory(ServerRequestHandler gateway)
+        public InputChannelfactory(RMQServerRequestHandler gateway)
         {
             this.gateway = gateway;
         }

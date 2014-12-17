@@ -27,7 +27,6 @@ using Common.Logging;
 using Common.Logging.Configuration;
 using Common.Logging.Simple;
 using Machine.Specifications;
-using paramore.brighter.serviceactivator;
 using RabbitMQ.Client;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
@@ -49,9 +48,9 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 var properties = new NameValueCollection();
                 properties["showDateTime"] = "true";
                 LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-                var logger = LogManager.GetLogger(typeof(ServerRequestHandler));  
-                clientRequestHandler = new ClientRequestHandler(logger);
-                serverRequestHandler = new ServerRequestHandler(logger);
+                var logger = LogManager.GetLogger(typeof(RMQServerRequestHandler));  
+                clientRequestHandler = new RMQClientRequestHandler(logger);
+                serverRequestHandler = new RMQServerRequestHandler(logger);
                 message = new Message(
                     header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")
@@ -128,10 +127,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 var properties = new NameValueCollection();
                 properties["showDateTime"] = "true";
                 LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-                var logger = LogManager.GetLogger(typeof(ServerRequestHandler));  
+                var logger = LogManager.GetLogger(typeof(RMQServerRequestHandler));  
              
-                sender = new ClientRequestHandler(logger);
-                receiver = new ServerRequestHandler(logger);
+                sender = new RMQClientRequestHandler(logger);
+                receiver = new RMQServerRequestHandler(logger);
                 sentMessage= new Message(
                     header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")

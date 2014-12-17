@@ -35,9 +35,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using Common.Logging;
-using paramore.brighter.commandprocessor;
-
 namespace paramore.brighter.serviceactivator
 {
     /// <summary>

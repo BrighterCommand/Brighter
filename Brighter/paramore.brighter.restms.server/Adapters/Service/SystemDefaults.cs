@@ -21,12 +21,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Collections.Generic;
 using Microsoft.Practices.Unity;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.server.Adapters.Security;
-using Thinktecture.IdentityModel.Hawk.Core;
 
 namespace paramore.brighter.restms.server.Adapters.Service
 {

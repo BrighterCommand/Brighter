@@ -1,3 +1,17 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.restms.core
+// Author           : ian
+// Created          : 11-05-2014
+//
+// Last Modified By : ian
+// Last Modified On : 11-05-2014
+// ***********************************************************************
+// <copyright file="RestMSProfile.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,13 +35,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using paramore.brighter.restms.core.Ports.Resources;
+using System.Runtime.Serialization;
+using System.Xml.Serialization;
 
-namespace paramore.brighter.restms.server.Adapters.Formatters
+namespace paramore.brighter.commandprocessor.messaginggateway.restms.Model
 {
-    internal interface IParseDomainPosts
+    [DataContract(Name = "profile"), XmlRoot(ElementName = "profile", Namespace = "http://www.restms.org/schema/restms")]
+    internal class RestMSProfile
     {
-        Tuple<ParseResult, RestMSFeed, RestMSPipeNew> Parse(string body);
+
+        [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
+        public string Name { get; set; }
+
+        [DataMember(Name="hreF"), XmlAttribute(AttributeName = "href")]
+        public string Href { get; set; }
     }
 }

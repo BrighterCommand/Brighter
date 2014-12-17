@@ -155,14 +155,12 @@ namespace paramore.commandprocessor.tests.RestMSServer
         static Message newerMessage;
         static DeleteMessageCommandHandler deleteMessageCommandHandler;
         static DeleteMessageCommand deleteMessageCommand;
-        static IAmACommandProcessor commandProcessor;
         static IAmARepository<Pipe> pipeRepository;
         
         Establish context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
-            commandProcessor = A.Fake<IAmACommandProcessor>();
 
             pipeRepository = new InMemoryPipeRepository(logger);
 
