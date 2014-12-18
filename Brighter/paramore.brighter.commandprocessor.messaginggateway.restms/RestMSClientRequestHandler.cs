@@ -37,6 +37,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
             try
             {
+                logger.DebugFormat("Getting the default domain from the RestMS server: {0}",configuration.RestMS.Uri.AbsoluteUri);
                 RestMSDomain domain= GetDefaultDomain(options);
                 bool isFeedDeclared = domain.Feeds.Any(feed => feed.Name == configuration.Feed.Name);
                 if (!isFeedDeclared)
@@ -52,9 +53,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
             catch (HttpRequestException he)
             {
-                 logger.ErrorFormat("Error getting the default domain from the RestMS server: {0}", he.ToString());
+                logger.ErrorFormat("Error sending to the RestMS server: {0}", he.ToString());
                 tcs.SetException(he);
-                 throw;
+                throw;
             }
 
             tcs.SetResult(new object());
