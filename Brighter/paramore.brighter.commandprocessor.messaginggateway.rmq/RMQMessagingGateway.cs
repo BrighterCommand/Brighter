@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,6 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
@@ -27,40 +29,52 @@ using System.Text;
 using System.Threading.Tasks;
 using Common.Logging;
 using Newtonsoft.Json;
-using RabbitMQ.Client;
-using RabbitMQ.Client.Exceptions;
-using RabbitMQ.Client.Events;
 using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using RabbitMQ.Client.Exceptions;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
-    public class RMQMessagingGateway : IAmAMessagingGateway 
+    public class RMQMessagingGateway : IAmAMessagingGateway
     {
-        private readonly ILog logger;
+        private const bool autoAck = false;
+        private readonly RmqMessageCreator _messageCreator;
         private readonly RMQMessagingGatewayConfigurationSection configuration;
         private readonly ConnectionFactory connectionFactory;
-        private IConnection connection;
+        private readonly ILog logger;
         private IModel channel;
+        private IConnection connection;
         private QueueingBasicConsumer consumer;
         private BrokerUnreachableException connectionFailure;
-        const bool autoAck = false;
+        private QueueingBasicConsumer consumer;
 
         public RMQMessagingGateway(ILog logger)
         {
             this.logger = logger;
             configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
-            connectionFactory = new ConnectionFactory{Uri = configuration.AMPQUri.Uri.ToString()};
+            connectionFactory = new ConnectionFactory {Uri = configuration.AMPQUri.Uri.ToString()};
+            _messageCreator = new RmqMessageCreator(logger);
+        }
+
+        public RmqMessageCreator MessageCreator
+        {
+            get { return _messageCreator; }
         }
 
         public void Acknowledge(Message message)
-         {
+        {
             if (channel != null)
             {
-                logger.Debug(m => m("RMQMessagingGateway: Acknowledging message {0} as completed", message.Id));
-                channel.BasicAck((ulong)message.Header.Bag["DeliveryTag"], false);
+                var deliveryTag = (ulong) message.Header.Bag["DeliveryTag"];
+                logger.Debug(
+                    m =>
+                        m("RMQMessagingGateway: Acknowledging message {0} as completed with delivery tag {1}",
+                            message.Id, deliveryTag));
+                channel.BasicAck(deliveryTag, false);
             }
-         }
+        }
 
         public void Purge(string queueName)
         {
@@ -70,25 +84,28 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 channel.QueuePurge(queueName);
             }
         }
-        
+
         public void Reject(Message message, bool requeue)
         {
             if (channel != null)
             {
                 logger.Debug(m => m("RMQMessagingGateway: NoAck message {0}", message.Id));
-                channel.BasicNack((ulong)message.Header.Bag["DeliveryTag"], false, requeue);
+                channel.BasicNack((ulong) message.Header.Bag["DeliveryTag"], false, requeue);
             }
         }
 
 
         public Message Receive(string queueName, int timeoutInMilliseconds)
         {
-
-            logger.Debug(m => m("RMQMessagingGateway: Preparing  to retrieve next message via exchange {0}", configuration.Exchange.Name));
+            logger.Debug(
+                m =>
+                    m("RMQMessagingGateway: Preparing  to retrieve next message via exchange {0}",
+                        configuration.Exchange.Name));
 
             if (!Connect(queueName))
             {
-                logger.Debug(m => m("RMQMessagingGateway: Unable to connect to the exchange {0}", configuration.Exchange.Name));
+                logger.Debug(
+                    m => m("RMQMessagingGateway: Unable to connect to the exchange {0}", configuration.Exchange.Name));
                 throw connectionFailure;
             }
 
@@ -99,22 +116,33 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue);
                 if (fromQueue != null)
                 {
-                    message = CreateMessage(fromQueue);
-                    logger.Debug(m => m("RMQMessagingGateway: Recieved message from exchange {0} on connection {1} with topic {2} and id {3} and body {4}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value));
+                    message = MessageCreator.CreateMessage(fromQueue);
+                    logger.Debug(
+                        m =>
+                            m(
+                                "RMQMessagingGateway: Recieved message with delivery tag {5} from exchange {0} on connection {1} with topic {2} and id {3} and body {4}",
+                                configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic,
+                                message.Id, message.Body.Value, message.Header.Bag["DeliveryTag"]));
                 }
                 else
                 {
-                    logger.Debug(m => m("RMQMessagingGateway: Time out without recieving message from exchange {0} on connection {1} with topic {2}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), queueName));
+                    logger.Debug(
+                        m =>
+                            m(
+                                "RMQMessagingGateway: Time out without recieving message from exchange {0} on connection {1} with topic {2}",
+                                configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), queueName));
                 }
             }
             catch (Exception e)
             {
-                logger.Error(m => m("RMQMessagingGateway: There was an error listening to channel {0} of {1}", queueName, e.ToString()));
+                logger.Error(
+                    m =>
+                        m("RMQMessagingGateway: There was an error listening to channel {0} of {1}", queueName,
+                            e.ToString()));
                 throw;
             }
 
             return message;
-
         }
 
 
@@ -123,7 +151,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             //RabbitMQ .NET Client does not have an async publish, so fake this for now as we want to support messaging frameworks that do have this option
             var tcs = new TaskCompletionSource<object>();
 
-            logger.Debug(m=> m("RMQMessagingGateway: Preparing  to sending message {0} via exchange {1}", configuration.Exchange.Name, JsonConvert.SerializeObject(message)));
+            logger.Debug(
+                m =>
+                    m("RMQMessagingGateway: Preparing  to sending message {0} via exchange {1}",
+                        configuration.Exchange.Name, JsonConvert.SerializeObject(message)));
 
             if (!Connect(message.Header.Topic))
             {
@@ -133,14 +164,24 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             try
             {
-                logger.Debug(m => m("RMQMessagingGateway: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value));
+                logger.Debug(
+                    m =>
+                        m(
+                            "RMQMessagingGateway: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4}",
+                            configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic,
+                            message.Id, message.Body.Value));
                 PublishMessage(message, channel, configuration, CreateMessageHeader(message, channel));
-                logger.Debug(m => m("RMQMessagingGateway: Published message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4} at {5}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value, DateTime.UtcNow));
+                logger.Debug(
+                    m =>
+                        m(
+                            "RMQMessagingGateway: Published message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4} at {5}",
+                            configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString(), message.Header.Topic,
+                            message.Id, message.Body.Value, DateTime.UtcNow));
             }
             catch (Exception e)
             {
                 if (channel != null)
-                tcs.SetException(e);
+                    tcs.SetException(e);
                 throw;
             }
 
@@ -169,20 +210,33 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             {
                 if (connection == null || !connection.IsOpen)
                 {
-                    logger.Debug(m => m("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", configuration.AMPQUri.Uri.ToString()));
+                    logger.Debug(
+                        m =>
+                            m("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}",
+                                configuration.AMPQUri.Uri.ToString()));
                     connection = Connect(connectionFactory);
 
-                    logger.Debug(m => m("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", configuration.AMPQUri.Uri.ToString()));
+                    logger.Debug(
+                        m =>
+                            m("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}",
+                                configuration.AMPQUri.Uri.ToString()));
                     channel = OpenChannel(connection);
                     channel.BasicQos(0, 1, false);
 
-                    logger.Debug(m =>m("RMQMessagingGateway: Declaring exchange {0} on connection {1}", configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString()));
+                    logger.Debug(
+                        m =>
+                            m("RMQMessagingGateway: Declaring exchange {0} on connection {1}",
+                                configuration.Exchange.Name, configuration.AMPQUri.Uri.ToString()));
                     DeclareExchange(channel, configuration);
 
-                    logger.Debug(m =>m("RMQMessagingGateway: Declaring queue {0} on connection {1}", queueName, configuration.AMPQUri.Uri.ToString()));
+                    logger.Debug(
+                        m =>
+                            m("RMQMessagingGateway: Declaring queue {0} on connection {1}", queueName,
+                                configuration.AMPQUri.Uri.ToString()));
                     channel.QueueDeclare(queueName, false, false, false, null);
                     channel.QueueBind(queueName, configuration.Exchange.Name, queueName);
-
+                    consumer = new QueueingBasicConsumer(channel);
+                    channel.BasicConsume(queueName, autoAck, consumer);
                     consumer = new QueueingBasicConsumer(channel);
                     channel.BasicConsume(queueName, autoAck, consumer);
 
@@ -196,72 +250,53 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
 
             return true;
-
-        }
-
-        private Message CreateMessage(BasicDeliverEventArgs fromQueue)
-        {
-            var messageId = fromQueue.BasicProperties.MessageId;
-            var message = new Message(
-                new MessageHeader(Guid.Parse(messageId), 
-                    Encoding.UTF8.GetString((byte[])fromQueue.BasicProperties.Headers["Topic"]), 
-                    GetMessageType(fromQueue)),
-                new MessageBody(Encoding.UTF8.GetString(fromQueue.Body))
-                );
-
-
-            fromQueue.BasicProperties.Headers.Each((header) => message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString((byte[])header.Value)));
-
-            message.Header.Bag["DeliveryTag"] = fromQueue.DeliveryTag;
-            return message;
         }
 
 
         private IBasicProperties CreateMessageHeader(Message message, IModel channel)
         {
             //create message header
-            var basicProperties = channel.CreateBasicProperties();
+            IBasicProperties basicProperties = channel.CreateBasicProperties();
             basicProperties.DeliveryMode = 1;
             basicProperties.ContentType = "text/plain";
             basicProperties.MessageId = message.Id.ToString();
             basicProperties.Headers = new Dictionary<string, object>
-                {
-                    {"MessageType", message.Header.MessageType.ToString()},
-                    {"Topic", message.Header.Topic}
-                };
-            message.Header.Bag.Each((header) => basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value)));
+            {
+                {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
+                {HeaderNames.TOPIC, message.Header.Topic}
+            };
+            message.Header.Bag.Each(
+                header => basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value)));
             return basicProperties;
         }
 
         private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
         {
-            var exchange = configuration.Exchange;
+            Exchange exchange = configuration.Exchange;
             channel.ExchangeDeclare(exchange.Name, exchange.Type, exchange.Durable);
         }
 
         private IModel OpenChannel(IConnection connection)
         {
             //open a channel on the connection
-            var channel = connection.CreateModel();
+            IModel channel = connection.CreateModel();
             return channel;
         }
 
         private IConnection Connect(ConnectionFactory connectionFactory)
         {
             //create the connection
-            var connection = connectionFactory.CreateConnection();
+            IConnection connection = connectionFactory.CreateConnection();
             return connection;
         }
 
-        private MessageType GetMessageType(BasicDeliverEventArgs fromQueue)
-        {
-            return (MessageType)Enum.Parse(typeof(MessageType),  Encoding.UTF8.GetString((byte[])fromQueue.BasicProperties.Headers["MessageType"]));
-        }
-
-        private void PublishMessage(Message message, IModel channel, RMQMessagingGatewayConfigurationSection configuration, IBasicProperties basicProperties)
+        private void PublishMessage(Message message, IModel channel,
+            RMQMessagingGatewayConfigurationSection configuration,
+            IBasicProperties basicProperties)
         {
             //publish message
-            channel.BasicPublish(configuration.Exchange.Name, message.Header.Topic, false, false, basicProperties, Encoding.UTF8.GetBytes(message.Body.Value));
+            channel.BasicPublish(configuration.Exchange.Name, message.Header.Topic, false, false, basicProperties,
+                Encoding.UTF8.GetBytes(message.Body.Value));
         }
     }
 }
