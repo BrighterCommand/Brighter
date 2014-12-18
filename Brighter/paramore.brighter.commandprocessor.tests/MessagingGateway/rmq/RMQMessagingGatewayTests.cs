@@ -132,16 +132,16 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 sender = new RMQClientRequestHandler(logger);
                 receiver = new RMQServerRequestHandler(logger);
                 sentMessage= new Message(
-                    header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
+                    header: new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")
                     );
             };
 
         Because of = () =>
         {
-            sender.Send(sentMessage);
-            recievedMessage = receiver.Receive(sentMessage.Header.Topic, 2000);
-            receiver.Acknowledge(recievedMessage);
+            messagingGateway.Send(sentMessage);
+            recievedMessage = client.Receive("test", sentMessage.Header.Topic, 2000);
+            client.Acknowledge(recievedMessage);
         };
 
         It should_send_a_message_via_rmq_with_the_matching_body = () => recievedMessage.ShouldEqual(sentMessage);
