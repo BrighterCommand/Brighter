@@ -48,7 +48,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         private IConnection connection;
         private QueueingBasicConsumer consumer;
         private BrokerUnreachableException connectionFailure;
-        private QueueingBasicConsumer consumer;
 
         public RMQMessagingGateway(ILog logger)
         {
