@@ -52,13 +52,16 @@ namespace paramore.brighter.commandprocessor
         /// Creates the input channel.
         /// </summary>
         /// <param name="channelName">Name of the channel.</param>
+        /// <param name="routingKey"></param>
         /// <returns>IAmAnInputChannel.</returns>
-        IAmAnInputChannel CreateInputChannel(string channelName);
+        IAmAnInputChannel CreateInputChannel(string channelName, string routingKey);
+
         /// <summary>
         /// Creates the output channel.
         /// </summary>
         /// <param name="channelName">Name of the channel.</param>
+        /// <param name="routingKey"></param>
         /// <returns>IAmAnInputChannel.</returns>
-        IAmAnInputChannel CreateOutputChannel(string channelName);
+        IAmAnInputChannel CreateOutputChannel(string channelName, string routingKey);
     }
 }

@@ -40,7 +40,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             gateway = A.Fake<IAmAServerRequestHandler>();
 
-            channel = new RMQInputChannel("test", "key", gateway);
+            channel = new InputChannel("test", "key", gateway);
 
             sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),

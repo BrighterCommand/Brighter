@@ -139,9 +139,9 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Because of = () =>
         {
-            messagingGateway.Send(sentMessage);
-            recievedMessage = client.Receive("test", sentMessage.Header.Topic, 2000);
-            client.Acknowledge(recievedMessage);
+            sender.Send(sentMessage);
+            recievedMessage = receiver.Receive("test", sentMessage.Header.Topic, 2000);
+            receiver.Acknowledge(recievedMessage);
         };
 
         It should_send_a_message_via_rmq_with_the_matching_body = () => recievedMessage.ShouldEqual(sentMessage);

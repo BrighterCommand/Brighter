@@ -71,7 +71,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             Logger.Debug(m=> m("RMQMessagingGateway: Preparing  to sending message {0} via exchange {1}", Configuration.Exchange.Name, JsonConvert.SerializeObject(message)));
 
-            if (!Connect(message.Header.Topic))
+            if (!Connect())
             {
                 tcs.SetException(ConnectionFailure);
                 throw ConnectionFailure;

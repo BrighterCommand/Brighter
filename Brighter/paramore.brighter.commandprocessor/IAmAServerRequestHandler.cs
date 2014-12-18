@@ -49,7 +49,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        Message Receive(string queueName, int timeoutInMilliseconds);
+        Message Receive(string queueName, string routingKey, int timeoutInMilliseconds);
         /// <summary>
         /// Acknowledges the specified message.
         /// </summary>

@@ -32,7 +32,7 @@ namespace paramore.brighter.serviceactivator.TestHelpers
         private readonly ConcurrentQueue<Message> messageQueue = new ConcurrentQueue<Message>();
         private readonly ChannelName channelName;
 
-        public InMemoryChannel(string channelName = "", string routingKey = "")
+        public FakeChannel(string channelName = "", string routingKey = "")
         {
             this.channelName = new ChannelName(channelName);
         }
