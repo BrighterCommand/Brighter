@@ -56,12 +56,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// The consumer
         /// </summary>
         QueueingBasicConsumer consumer;
+        private readonly RmqMessageCreator messageCreator;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RMQServerRequestHandler(ILog logger):base(logger) {}
+        public RMQServerRequestHandler(ILog logger) : base(logger)
+        {
+            messageCreator = new RmqMessageCreator(logger);
+        }
 
         /// <summary>
         /// Acknowledges the specified message.
@@ -129,7 +133,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue);
                 if (fromQueue != null)
                 {
-                    message = CreateMessage(fromQueue);
+                    message = messageCreator.CreateMessage(fromQueue);
                     var deliveryTag = (ulong)message.Header.Bag["DeliveryTag"];
                     Logger.Debug(m => m("RMQMessagingGateway: Recieved message with delivery tag {5} from exchange {0} on connection {1} with topic {2} and id {3} and body {4}", 
                         Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value, deliveryTag));
