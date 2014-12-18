@@ -63,20 +63,38 @@ namespace paramore.brighter.serviceactivator
                 var message = Channel.Receive(TimeoutInMilliseconds);
                 
                 if (message == null) throw new Exception("Could not recieve message. Note that should return an MT_NONE from an empty queue on timeout");
-
+                
+                // empty queue
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
                     Task.Delay(500).Wait();
                     continue;
                 }
 
+                // failed to parse a message from the incoming data
+                if(message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
+                {
+                    AcknowledgeMessage(message);
+                    continue;
+                }
+
+                // QUIT command
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                 {
                     if (Logger != null) Logger.Debug(m => m("MessagePump: Quit receiving messages on thread # {0}", Thread.CurrentThread.ManagedThreadId));
                     break;
                 }
 
-                DispatchRequest(message.Header.MessageType, TranslateMessage(message));
+                // Serviceable message
+                try
+                {
+                    DispatchRequest(message.Header.MessageType, TranslateMessage(message));
+                }
+                catch (Exception e)
+                {
+                    Logger.Error("Failed to dispatch message "+ message, e);
+                }
+                
                 AcknowledgeMessage(message);
 
             } while (true);

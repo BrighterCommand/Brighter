@@ -28,6 +28,7 @@ namespace paramore.brighter.commandprocessor
 {
     public enum MessageType
     {
+        MT_UNACCEPTABLE = -1,
         MT_NONE = 0,
         MT_COMMAND = 1,
         MT_EVENT = 2,
