@@ -42,18 +42,18 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         {
             gateway = A.Fake<IAmAMessagingGateway>();
 
-            channel = new RMQInputChannel("test", gateway);
+            channel = new RMQInputChannel("test", "key", gateway);
 
             sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
                 
-            A.CallTo(() => gateway.Receive("test", 1000)).Returns(sentMessage);
+            A.CallTo(() => gateway.Receive("test", "key", 1000)).Returns(sentMessage);
         };
 
         Because of = () => receivedMessage = channel.Receive(1000);
 
-        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive("test", 1000)).MustHaveHappened();
+        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive("test", "key", 1000)).MustHaveHappened();
         It should_return_the_next_message_from_the_gateway = () => receivedMessage.ShouldEqual(sentMessage);
     }
 
@@ -69,10 +69,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         {
             gateway = A.Fake<IAmAMessagingGateway>();
 
-            channel = new RMQInputChannel("test", gateway);
+            channel = new RMQInputChannel("test", "key", gateway);
 
             sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
             quitMessage = new Message(
@@ -81,12 +81,12 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
             channel.Send(quitMessage);
                 
-            A.CallTo(() => gateway.Receive("test", 1000)).Returns(sentMessage);
+            A.CallTo(() => gateway.Receive("test", "key", 1000)).Returns(sentMessage);
         };
 
         Because of = () => receivedMessage = channel.Receive(1000);
 
-        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive("test", 1000)).MustNotHaveHappened();
+        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive("test", "key", 1000)).MustNotHaveHappened();
         It should_return_the_next_message_from_the_gateway = () => receivedMessage.ShouldEqual(quitMessage);
     }
 
@@ -100,10 +100,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         {
             gateway = A.Fake<IAmAMessagingGateway>();
 
-            channel = new RMQInputChannel("test", gateway);
+            channel = new RMQInputChannel("test", "key", gateway);
 
             receivedMessage = new Message(
-                new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
             receivedMessage.Header.Bag["DeliveryTag"] = 12345UL;
@@ -126,10 +126,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         {
             gateway = A.Fake<IAmAMessagingGateway>();
 
-            channel = new RMQInputChannel("test", gateway);
+            channel = new RMQInputChannel("test", "key", gateway);
 
             receivedMessage = new Message(
-                new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
             receivedMessage.Header.Bag["DeliveryTag"] = 12345UL;

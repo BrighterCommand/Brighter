@@ -31,12 +31,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     public class RMQInputChannel : IAmAnInputChannel
     {
         private readonly string queueName;
+        private readonly string routingKey;
         private readonly IAmAMessagingGateway gateway;
         private readonly ConcurrentQueue<Message> queue = new ConcurrentQueue<Message>();
 
-        public RMQInputChannel(string queueName, IAmAMessagingGateway gateway)
+        public RMQInputChannel(string queueName, string routingKey, IAmAMessagingGateway gateway)
         {
             this.queueName = queueName;
+            this.routingKey = routingKey;
             this.gateway = gateway;
         }
 
@@ -47,7 +49,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             Message message;
             if (!queue.TryDequeue(out message))
             {
-                message = gateway.Receive(queueName, timeoutinMilliseconds);
+                message = gateway.Receive(queueName, routingKey, timeoutinMilliseconds);
             }
             return message;
         }
