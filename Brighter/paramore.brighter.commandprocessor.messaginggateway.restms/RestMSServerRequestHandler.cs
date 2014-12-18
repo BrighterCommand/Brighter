@@ -23,7 +23,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        public Message Receive(string queueName, int timeoutInMilliseconds)
+        public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds)
         {
             throw new NotImplementedException();
         }

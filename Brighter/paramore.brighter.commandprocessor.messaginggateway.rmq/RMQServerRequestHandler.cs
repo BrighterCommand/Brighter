@@ -111,12 +111,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        public Message Receive(string queueName, int timeoutInMilliseconds)
+        public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds)
         {
 
             Logger.Debug(m => m("RMQMessagingGateway: Preparing  to retrieve next message via exchange {0}", Configuration.Exchange.Name));
 
-            if (!Connect(queueName))
+            if (!Connect(queueName, routingKey, true))
             {
                 Logger.Debug(m => m("RMQMessagingGateway: Unable to connect to the exchange {0}", Configuration.Exchange.Name));
                 throw ConnectionFailure;
@@ -172,10 +172,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Connects the specified queue name.
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
+        /// <param name="routingKey"></param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        protected override bool Connect(string queueName)
+        protected override bool Connect(string queueName = "", string routingKey = "", bool createQueues = false)
         {
-            if (base.Connect(queueName))
+            if (base.Connect(queueName, routingKey, createQueues))
             {
                 consumer = new QueueingBasicConsumer(Channel);
                 Channel.BasicConsume(queueName, AUTO_ACK, consumer);

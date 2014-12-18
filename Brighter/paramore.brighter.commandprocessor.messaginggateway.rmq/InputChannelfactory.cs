@@ -59,9 +59,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="channelName">Name of the channel.</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAnInputChannel CreateInputChannel(string channelName)
+        public IAmAnInputChannel CreateInputChannel(string channelName, string routingKey)
         {
-            return new InputChannel(channelName, gateway);
+            return new InputChannel(channelName, routingKey, gateway);
         }
 
         /// <summary>
@@ -69,9 +69,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="channelName">Name of the channel.</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAnInputChannel CreateOutputChannel(string channelName)
+        public IAmAnInputChannel CreateOutputChannel(string channelName, string routingKey)
         {
-            return new InputChannel(channelName, gateway);
+            return new InputChannel(channelName, routingKey, gateway);
         }
     }
 }
