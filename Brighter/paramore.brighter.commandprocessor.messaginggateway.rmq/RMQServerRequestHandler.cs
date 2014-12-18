@@ -52,7 +52,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     public class RMQServerRequestHandler : MessageGateway, IAmAServerRequestHandler 
     {
         const bool AUTO_ACK = false;
-
         /// <summary>
         /// The consumer
         /// </summary>
@@ -72,7 +71,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
          {
             if (Channel != null)
             {
-                Logger.Debug(m => m("RMQMessagingGateway: Acknowledging message {0} as completed", message.Id));
+                var deliveryTag = (ulong)message.Header.Bag["DeliveryTag"];
+                Logger.Debug(m =>m("RMQMessagingGateway: Acknowledging message {0} as completed with delivery tag {1}",message.Id, deliveryTag));
                 Channel.BasicAck((ulong)message.Header.Bag["DeliveryTag"], false);
             }
          }
@@ -130,7 +130,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 if (fromQueue != null)
                 {
                     message = CreateMessage(fromQueue);
-                    Logger.Debug(m => m("RMQMessagingGateway: Recieved message from exchange {0} on connection {1} with topic {2} and id {3} and body {4}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value));
+                    var deliveryTag = (ulong)message.Header.Bag["DeliveryTag"];
+                    Logger.Debug(m => m("RMQMessagingGateway: Recieved message with delivery tag {5} from exchange {0} on connection {1} with topic {2} and id {3} and body {4}", 
+                        Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value, deliveryTag));
                 }
                 else
                 {
@@ -166,8 +168,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             CloseConnection();
         }
 
-        #region Overrides of MessageGateway
-
         /// <summary>
         /// Connects the specified queue name.
         /// </summary>
@@ -187,8 +187,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 return false;
             }
         }
-
-        #endregion
 
         Message CreateMessage(BasicDeliverEventArgs fromQueue)
         {
