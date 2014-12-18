@@ -45,9 +45,7 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public enum MessageType
     {
-        /// <summary>
-        /// The m t_ none{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-        /// </summary>
+        MT_UNACCEPTABLE = -1,
         MT_NONE = 0,
         /// <summary>
         /// The m t_ command{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}

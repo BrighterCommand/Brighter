@@ -40,18 +40,18 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             gateway = A.Fake<IAmAServerRequestHandler>();
 
-            channel = new InputChannel("test", gateway);
+            channel = new RMQInputChannel("test", "key", gateway);
 
             sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
                 
-            A.CallTo(() => gateway.Receive("test", 1000)).Returns(sentMessage);
+            A.CallTo(() => gateway.Receive("test", "key", 1000)).Returns(sentMessage);
         };
 
         Because of = () => receivedMessage = channel.Receive(1000);
 
-        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive("test", 1000)).MustHaveHappened();
+        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive("test", "key", 1000)).MustHaveHappened();
         It should_return_the_next_message_from_the_gateway = () => receivedMessage.ShouldEqual(sentMessage);
     }
 
@@ -66,20 +66,20 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             gateway = A.Fake<IAmAServerRequestHandler>();
 
-            channel = new InputChannel("test", gateway);
+            channel = new InputChannel("test", "key", gateway);
 
             sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
             channel.Stop();
                 
-            A.CallTo(() => gateway.Receive("test", 1000)).Returns(sentMessage);
+            A.CallTo(() => gateway.Receive("test", "key", 1000)).Returns(sentMessage);
         };
 
         Because of = () => receivedMessage = channel.Receive(1000);
 
-        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive("test", 1000)).MustNotHaveHappened();
+        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive("test", "key", 1000)).MustNotHaveHappened();
     }
 
     public class When_acknowledge_is_called_on_a_channel
@@ -92,10 +92,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             gateway = A.Fake<IAmAServerRequestHandler>();
 
-            channel = new InputChannel("test", gateway);
+            channel = new InputChannel("test", "key", gateway);
 
             receivedMessage = new Message(
-                new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
             receivedMessage.Header.Bag["DeliveryTag"] = 12345UL;
@@ -118,10 +118,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             gateway = A.Fake<IAmAServerRequestHandler>();
 
-            channel = new InputChannel("test", gateway);
+            channel = new InputChannel("test", "key", gateway);
 
             receivedMessage = new Message(
-                new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
             receivedMessage.Header.Bag["DeliveryTag"] = 12345UL;

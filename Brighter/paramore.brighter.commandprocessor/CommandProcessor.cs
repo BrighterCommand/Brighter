@@ -167,7 +167,7 @@ namespace paramore.brighter.commandprocessor
 
                 var handlerCount = handlerChain.Count();
 
-                logger.Info(m => m("Found {0} pipelines for command: {1}", handlerCount, command.Id));
+                logger.Info(m => m("Found {0} pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id));
                 if (handlerCount > 1)
                     throw new ArgumentException(string.Format("More than one handler was found for the typeof command {0} - a command should only have one handler.", typeof (T)));
                 if (handlerCount == 0)
