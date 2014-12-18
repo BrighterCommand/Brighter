@@ -22,11 +22,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging.Simple;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
-using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 using Polly;
 using Polly.CircuitBreaker;
 using TinyIoC;
@@ -189,14 +187,14 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static readonly MyCommand myCommand = new MyCommand();
         static Message message;
         static IAmAMessageStore<Message> commandRepository;
-        static IAmAMessagingGateway messagingGateway ;
+        static IAmAClientRequestHandler messagingGateway ;
         
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
-            messagingGateway = A.Fake<IAmAMessagingGateway>();
+            messagingGateway = A.Fake<IAmAClientRequestHandler>();
             message = new Message(
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
                 body: new MessageBody(JsonConvert.SerializeObject(myCommand))
@@ -236,14 +234,14 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static readonly MyCommand myCommand = new MyCommand();
         static Message message;
         static IAmAMessageStore<Message> commandRepository;
-        static IAmAMessagingGateway messagingGateway ;
+        static IAmAClientRequestHandler messagingGateway ;
         
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
-            messagingGateway = A.Fake<IAmAMessagingGateway>();
+            messagingGateway = A.Fake<IAmAClientRequestHandler>();
             message = new Message(
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand",messageType: MessageType.MT_COMMAND),
                 body: new MessageBody(JsonConvert.SerializeObject(myCommand))
@@ -334,7 +332,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static readonly MyCommand myCommand = new MyCommand();
         static Message message;
         static IAmAMessageStore<Message> commandRepository;
-        static IAmAMessagingGateway messagingGateway ;
+        static IAmAClientRequestHandler messagingGateway ;
         static Exception failedException;
         static BrokenCircuitException circuitBrokenException;
         
@@ -343,7 +341,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
             commandRepository = A.Fake<IAmAMessageStore<Message>>();
-            messagingGateway = A.Fake<IAmAMessagingGateway>();
+            messagingGateway = A.Fake<IAmAClientRequestHandler>();
             message = new Message(
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand",messageType: MessageType.MT_COMMAND),
                 body: new MessageBody(JsonConvert.SerializeObject(myCommand))

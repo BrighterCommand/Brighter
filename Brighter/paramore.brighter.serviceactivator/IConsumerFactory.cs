@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-02-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="IConsumerFactory.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,13 +35,17 @@ THE SOFTWARE. */
 
 #endregion
 
-using Common.Logging;
-using paramore.brighter.commandprocessor;
-
 namespace paramore.brighter.serviceactivator
 {
-    public interface IConsumerFactory
+    /// <summary>
+    /// Interface IConsumerFactory
+    /// </summary>
+    internal interface IConsumerFactory
     {
+        /// <summary>
+        /// Creates this instance.
+        /// </summary>
+        /// <returns>Consumer.</returns>
         Consumer Create();
     }
 }

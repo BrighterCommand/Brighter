@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-02-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="HandlerConfiguration.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,11 +36,30 @@ THE SOFTWARE. */
 
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Class HandlerConfiguration
+    /// </summary>
     public class HandlerConfiguration
     {
+        /// <summary>
+        /// Gets the subscriber registry.
+        /// </summary>
+        /// <value>The subscriber registry.</value>
         public IAmASubscriberRegistry SubscriberRegistry { get; private set; }
+        /// <summary>
+        /// Gets the handler factory.
+        /// </summary>
+        /// <value>The handler factory.</value>
         public IAmAHandlerFactory HandlerFactory { get; private set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HandlerConfiguration"/> class.
+        /// We use the <see cref="IAmASubscriberRegistry"/> instance to look up subscribers for messages when dispatching. Use <see cref="SubscriberRegistry"/> unless
+        /// you have some reason to override. We expect a <see cref="CommandProcessor.Send{T}(T)"/> to have one registered handler
+        /// We use the 
+        /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry.</param>
+        /// <param name="handlerFactory">The handler factory.</param>
         public HandlerConfiguration(IAmASubscriberRegistry subscriberRegistry, IAmAHandlerFactory handlerFactory)
         {
             SubscriberRegistry = subscriberRegistry;

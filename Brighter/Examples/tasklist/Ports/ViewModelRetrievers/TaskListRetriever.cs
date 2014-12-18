@@ -31,7 +31,7 @@ namespace Tasklist.Ports.ViewModelRetrievers
 {
     public class TaskListRetriever : SimpleDataRetriever, ITaskListRetriever
     {
-        private string hostName;
+        private readonly string hostName;
 
         public TaskListRetriever(ICommunicationContext context)
         {

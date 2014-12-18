@@ -37,7 +37,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     [Subject("Messaging Gateway")]
     public class When_posting_a_message_via_the_messaging_gateway
     {
-        static IAmAMessagingGateway messagingGateway;
+        static IAmAClientRequestHandler clientRequestHandler;
+        static IAmAServerRequestHandler serverRequestHandler;
         static Message message;
         static TestRMQListener client;
         static string messageBody;
@@ -47,8 +48,9 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 var properties = new NameValueCollection();
                 properties["showDateTime"] = "true";
                 LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-                var logger = LogManager.GetLogger(typeof(RMQMessagingGateway));  
-                messagingGateway = new RMQMessagingGateway(logger);
+                var logger = LogManager.GetLogger(typeof(RMQServerRequestHandler));  
+                clientRequestHandler = new RMQClientRequestHandler(logger);
+                serverRequestHandler = new RMQServerRequestHandler(logger);
                 message = new Message(
                     header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")
@@ -59,7 +61,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Because of = () =>
             {
-                messagingGateway.Send(message);
+                clientRequestHandler.Send(message);
                 messageBody = client.Listen();
             };
 
@@ -67,8 +69,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Cleanup tearDown = () =>
         {
-            messagingGateway.Purge("test");
-            messagingGateway.Dispose();
+            serverRequestHandler.Purge("test");
+            clientRequestHandler.Dispose();
         };
     }
 
@@ -115,8 +117,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
       [Subject("Messaging Gateway")]
     public class When_reading_a_message_via_the_messaging_gateway
     {
-        static IAmAMessagingGateway messagingGateway;
-        static IAmAMessagingGateway client;
+        static IAmAClientRequestHandler sender;
+        static IAmAServerRequestHandler receiver;
         static Message sentMessage;
         static Message recievedMessage;
 
@@ -125,31 +127,30 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 var properties = new NameValueCollection();
                 properties["showDateTime"] = "true";
                 LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-                var logger = LogManager.GetLogger(typeof(RMQMessagingGateway));  
+                var logger = LogManager.GetLogger(typeof(RMQServerRequestHandler));  
              
-                messagingGateway = new RMQMessagingGateway(logger);
+                sender = new RMQClientRequestHandler(logger);
+                receiver = new RMQServerRequestHandler(logger);
                 sentMessage= new Message(
                     header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")
                     );
-
-                client = new RMQMessagingGateway(logger);
             };
 
         Because of = () =>
         {
-            messagingGateway.Send(sentMessage);
-            recievedMessage = client.Receive(sentMessage.Header.Topic, 2000);
-            client.Acknowledge(recievedMessage);
+            sender.Send(sentMessage);
+            recievedMessage = receiver.Receive(sentMessage.Header.Topic, 2000);
+            receiver.Acknowledge(recievedMessage);
         };
 
         It should_send_a_message_via_rmq_with_the_matching_body = () => recievedMessage.ShouldEqual(sentMessage);
 
       Cleanup teardown = () =>
       {
-          messagingGateway.Purge("test");
-          messagingGateway.Dispose();
-          client.Dispose();
+          receiver.Purge("test");
+          sender.Dispose();
+          receiver.Dispose();
       };
     }
 }

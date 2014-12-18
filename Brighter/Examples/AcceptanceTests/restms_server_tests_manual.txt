@@ -1,0 +1,54 @@
+POST http://localhost:3416/restms/domain/default HTTP/1.1
+Accept: application/xml
+Host: localhost:3416
+
+<pipe xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" title="title" xmlns="http://www.restms.org/schema/restms">
+</pipe>
+
+------
+<domain xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="default" title="title" href="http://localhost/restms/domain/default" xmlns="http://www.restms.org/schema/restms">
+<feed type="Default" name="default" title="Default feed" href="http://localhost/restms/feed/default" />
+<pipe name="6e903d90-92bc-442d-bf4a-f485e93618eb" type="Fifo" title="title" href="http://localhost/restms/pipe/6e903d90-92bc-442d-bf4a-f485e93618eb" />
+<profile name="3/Defaults" href="href://www.restms.org/spec:3/Defaults" />
+</domain>
+------
+
+POST http://localhost:3416/restms/pipe/6e903d90-92bc-442d-bf4a-f485e93618eb HTTP/1.1
+Accept: application/xml
+Content-Type: application/xml
+Host: localhost:3416
+
+<join xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" type="Default" feed="http://localhost/restms/feed/default" address="*" xmlns="http://www.restms.org/schema/restms">
+</join>
+
+
+POST http://localhost:3416/restms/feed/default HTTP/1.1
+Accept: application/xml
+Content-Type: application/xml
+Host: localhost:3416
+Content-Length: 286
+
+<message address="*"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"  xmlns="http://www.restms.org/schema/restms" >   
+     <content
+        type="text/plain"
+        encoding="us-ascii">Hello World</content>
+  </message>
+  
+GET /restms/pipe/f00625d7-79d2-44b6-af14-62039f3e202e HTTP/1.1
+Accept: application/xml
+Host: localhost:3416
+
+
+  ------
+<pipe xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="3f29f6ee-9abd-4339-a4f6-9e99d9d8e5ea" type="Fifo" title="title" href="http://localhost/restms/pipe/3f29f6ee-9abd-4339-a4f6-9e99d9d8e5ea" xmlns="http://www.restms.org/schema/restms">
+<join name="c9063295-b8c4-42e4-8dc8-d6e5afe22395" type="Default" address="*" feed="http://localhost/restms/feed/default" />
+<messages href="http://localhost/restms/pipe3f29f6ee-9abd-4339-a4f6-9e99d9d8e5ea/message/7013f684-9a63-47c3-8baf-2f5b4209ca5b" address="*" message_id="7013f684-9a63-47c3-8baf-2f5b4209ca5b" />
+<messages href="http://localhost/restms/pipe3f29f6ee-9abd-4339-a4f6-9e99d9d8e5ea/message/7013f684-9a63-47c3-8baf-2f5b4209ca5b" address="*" message_id="7013f684-9a63-47c3-8baf-2f5b4209ca5b" />
+</pipe>
+  ------
+
+
+
+
+
+

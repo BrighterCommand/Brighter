@@ -38,7 +38,7 @@ namespace paramore.commandprocessor.tests.Timeout.TestDoubles
 
         public static bool CommandRecieved { get; set; }
 
-        [TimeoutPolicy(milliseconds: 10000, step: 1)]
+        [TimeoutPolicy(milliseconds: 10000, step: 0, timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
             var ct = (CancellationToken) Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];

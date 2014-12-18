@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="ICommand.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -25,6 +38,10 @@ using System;
 
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Interface ICommand
+    /// A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
+    /// </summary>
     public interface ICommand : IRequest
     {
     }

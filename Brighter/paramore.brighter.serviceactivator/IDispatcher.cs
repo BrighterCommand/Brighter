@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="IDispatcher.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,11 +39,32 @@ using System.Threading.Tasks;
 
 namespace paramore.brighter.serviceactivator
 {
+    /// <summary>
+    /// Interface IDispatcher
+    /// The 'core' Service Activator class, the Dispatcher controls and co-ordinates the creation of readers from channels, and dispatching the commands and
+    /// events translated from those messages to handlers. It controls the lifetime of the application through <see cref="Receive"/> and <see cref="End"/> and allows
+    /// the stop and start of individual connections through <see cref="Open"/> and <see cref="Shut"/>
+    /// </summary>
     public interface IDispatcher
     {
+        /// <summary>
+        /// Ends this instance.
+        /// </summary>
+        /// <returns>Task.</returns>
         Task End();
+        /// <summary>
+        /// Opens the specified connection.
+        /// </summary>
+        /// <param name="connection">The connection.</param>
         void Open(Connection connection);
-        void Recieve();
+        /// <summary>
+        /// Begins listening for messages on channels, and dispatching them to request handlers.
+        /// </summary>
+        void Receive();
+        /// <summary>
+        /// Shuts the specified connection.
+        /// </summary>
+        /// <param name="connection">The connection.</param>
         void Shut(Connection connection);
     }
 }

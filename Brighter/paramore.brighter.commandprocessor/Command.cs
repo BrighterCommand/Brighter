@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="Command.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -25,11 +38,23 @@ using System;
 
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Class Command. 
+    /// A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
+    /// </summary>
     [Serializable]
     public class Command : ICommand
     {
+        /// <summary>
+        /// Gets or sets the identifier.
+        /// </summary>
+        /// <value>The identifier.</value>
         public Guid Id { get; set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Command"/> class.
+        /// </summary>
+        /// <param name="id">The identifier.</param>
         public Command(Guid id)
         {
             Id = id;

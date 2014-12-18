@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="IAmAPipelineBuilder.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -25,8 +38,20 @@ using System;
 
 namespace paramore.brighter.commandprocessor
 {
-    public interface IAmAPipelineBuilder<TRequest> : IDisposable where TRequest : class, IRequest 
+    /// <summary>
+    /// Interface IAmAPipelineBuilder
+    /// Builds the pipeline that handles an <see cref="IRequest"/>, with a target <see cref="IHandleRequests"/> and any orthogonal <see cref="IHandleRequests"/> for
+    /// Quality of Service (qos)
+    /// The default implementation is <see cref="PipelineBuilder{T}"/>
+    /// </summary>
+    /// <typeparam name="TRequest">The type of the t request.</typeparam>
+    internal interface IAmAPipelineBuilder<TRequest> : IDisposable where TRequest : class, IRequest 
     {
+        /// <summary>
+        /// Builds the specified request context.
+        /// </summary>
+        /// <param name="requestContext">The request context.</param>
+        /// <returns>Pipelines&lt;TRequest&gt;.</returns>
         Pipelines<TRequest> Build(IRequestContext requestContext);
     }
 }
