@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="DispatchBuilder.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -32,6 +45,12 @@ namespace paramore.brighter.serviceactivator
     //one option could be to use types not instances here, and do more assembly in build
     //currently configuration is a weak spot and has an early NH configuration mess feel to it
 
+    /// <summary>
+    /// Class DispatchBuilder.
+    /// A fluent builder used to simplify construction of instances of the Dispatcher. Begin by calling With() and the syntax will then provide you with 
+    /// progressive interfaces to manage the requirements for a complete Dispatcher via Intellisense in the IDE. The intent is to make it easier to
+    /// recognize those dependencies that you need to configure
+    /// </summary>
     public class DispatchBuilder : INeedALogger, INeedACommandProcessor, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfConnections, IAmADispatchBuilder
     {
         private IAmAChannelFactory channelFactory;
@@ -42,42 +61,77 @@ namespace paramore.brighter.serviceactivator
         private DispatchBuilder() {}
 
 
+        /// <summary>
+        /// Begins the fluent interface 
+        /// </summary>
+        /// <returns>INeedALogger.</returns>
         public static INeedALogger With()
         {
             return new DispatchBuilder();
         }
 
 
-        public INeedACommandProcessor WithLogger(ILog logger)
+        /// <summary>
+        /// The logger to use to report from the Dispatcher.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        /// <returns>INeedACommandProcessor.</returns>
+        public INeedACommandProcessor Logger(ILog logger)
         {
             this.logger = logger;
             return this;
         }
 
-        public INeedAMessageMapper WithCommandProcessor(CommandProcessor theCommandProcessor)
+        /// <summary>
+        /// The command processor used to send and publish messages to handlers by the service activator.
+        /// </summary>
+        /// <param name="theCommandProcessor">The command processor.</param>
+        /// <returns>INeedAMessageMapper.</returns>
+        public INeedAMessageMapper CommandProcessor(CommandProcessor theCommandProcessor)
         {
             this.commandProcessor = theCommandProcessor;
             return this;
         }
 
-        public INeedAChannelFactory WithMessageMappers(IAmAMessageMapperRegistry theMessageMapperRegistry)
+        /// <summary>
+        /// The message mappers used to map between commands, events, and on-the-wire handlers.
+        /// </summary>
+        /// <param name="theMessageMapperRegistry">The message mapper registry.</param>
+        /// <returns>INeedAChannelFactory.</returns>
+        public INeedAChannelFactory MessageMappers(IAmAMessageMapperRegistry theMessageMapperRegistry)
         {
             this.messageMapperRegistry = theMessageMapperRegistry;
             return this;
         }
 
-        public INeedAListOfConnections WithChannelFactory(IAmAChannelFactory channelFactory)
+        /// <summary>
+        /// The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP 
+        /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
+        /// layer. We provide an implementation for RabbitMQ for example.
+        /// </summary>
+        /// <param name="channelFactory">The channel factory.</param>
+        /// <returns>INeedAListOfConnections.</returns>
+        public INeedAListOfConnections ChannelFactory(IAmAChannelFactory channelFactory)
         {
             this.channelFactory = channelFactory;
             return this;
         }
 
+        /// <summary>
+        /// A list of connections i.e. mappings of channels to commands or events
+        /// </summary>
+        /// <param name="connections">The connections.</param>
+        /// <returns>IAmADispatchBuilder.</returns>
         public IAmADispatchBuilder Connections(IEnumerable<Connection> connections)
         {
             this.connections = connections;
             return this;
         }
 
+        /// <summary>
+        /// Obtains a list of connections i.e. mappings of channels to commands or events via the configuration file for the application
+        /// </summary>
+        /// <returns>IAmADispatchBuilder.</returns>
         public IAmADispatchBuilder  ConnectionsFromConfiguration()
         {
             var configuration = ServiceActivatorConfigurationSection.GetConfiguration();
@@ -87,6 +141,10 @@ namespace paramore.brighter.serviceactivator
         }
 
 
+        /// <summary>
+        /// Builds this instance.
+        /// </summary>
+        /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
             return new Dispatcher(commandProcessor, messageMapperRegistry, connections, logger);
@@ -95,33 +153,86 @@ namespace paramore.brighter.serviceactivator
     }
 
     #region Progressive Interfaces
+    /// <summary>
+    /// Interface INeedALogger
+    /// </summary>
     public interface INeedALogger
     {
-        INeedACommandProcessor WithLogger(ILog logger);
+        /// <summary>
+        /// The logger to use to report from the Dispatcher.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        /// <returns>INeedACommandProcessor.</returns>
+        INeedACommandProcessor Logger(ILog logger);
     }
 
+    /// <summary>
+    /// Interface INeedACommandProcessor
+    /// </summary>
     public interface INeedACommandProcessor
     {
-        INeedAMessageMapper WithCommandProcessor(CommandProcessor commandProcessor);
+        /// <summary>
+        /// The command processor used to send and publish messages to handlers by the service activator.
+        /// </summary>
+        /// <param name="commandProcessor">The command processor.</param>
+        /// <returns>INeedAMessageMapper.</returns>
+        INeedAMessageMapper CommandProcessor(CommandProcessor commandProcessor);
     }
 
+    /// <summary>
+    /// Interface INeedAMessageMapper
+    /// </summary>
     public interface INeedAMessageMapper
     {
-        INeedAChannelFactory WithMessageMappers(IAmAMessageMapperRegistry messageMapperRegistry);
+        /// <summary>
+        /// The message mappers used to map between commands, events, and on-the-wire handlers.
+        /// </summary>
+        /// <param name="messageMapperRegistry">The message mapper registry.</param>
+        /// <returns>INeedAChannelFactory.</returns>
+        INeedAChannelFactory MessageMappers(IAmAMessageMapperRegistry messageMapperRegistry);
     }
+    /// <summary>
+    /// Interface INeedAChannelFactory
+    /// </summary>
     public interface INeedAChannelFactory
     {
-        INeedAListOfConnections WithChannelFactory(IAmAChannelFactory channelFactory);
+        /// <summary>
+        /// The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP 
+        /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
+        /// layer. We provide an implementation for RabbitMQ for example.
+        /// </summary>
+        /// <param name="channelFactory">The channel factory.</param>
+        /// <returns>INeedAListOfConnections.</returns>
+        INeedAListOfConnections ChannelFactory(IAmAChannelFactory channelFactory);
     }
 
+    /// <summary>
+    /// Interface INeedAListOfConnections
+    /// </summary>
     public interface INeedAListOfConnections
     {
+        /// <summary>
+        /// A list of connections i.e. mappings of channels to commands or events
+        /// </summary>
+        /// <returns>IAmADispatchBuilder.</returns>
        IAmADispatchBuilder ConnectionsFromConfiguration();
+       /// <summary>
+       /// Obtains a list of connections i.e. mappings of channels to commands or events via the configuration file for the application
+       /// </summary>
+       /// <param name="connections">The connections.</param>
+       /// <returns>IAmADispatchBuilder.</returns>
        IAmADispatchBuilder Connections(IEnumerable<Connection> connections);
     }
 
+    /// <summary>
+    /// Interface IAmADispatchBuilder
+    /// </summary>
     public interface IAmADispatchBuilder
     {
+        /// <summary>
+        /// Builds this instance.
+        /// </summary>
+        /// <returns>Dispatcher.</returns>
         Dispatcher Build();
     }
     #endregion

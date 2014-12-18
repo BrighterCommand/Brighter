@@ -32,10 +32,8 @@ using Common.Logging.Simple;
 using FakeItEasy;
 using Machine.Specifications;
 using Polly;
-using Raven.Client.Embedded;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.TestHelpers;
@@ -47,12 +45,12 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler
     {
         static Dispatcher dispatcher;
-        static IAmAnInputChannel channel;
+        static FakeChannel channel;
         static IAmACommandProcessor commandProcessor;
 
         Establish context = () =>
             {
-                channel = new InMemoryChannel();
+                channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
                 var properties = new NameValueCollection();
@@ -72,7 +70,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 channel.Send(message);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-                dispatcher.Recieve();
+                dispatcher.Receive();
             };
 
 
@@ -89,12 +87,12 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_a_message_dispatcher_starts_multiple_performers
     {
         private static Dispatcher dispatcher;
-        private static IAmAnInputChannel channel;
+        private static FakeChannel channel;
         private static IAmACommandProcessor commandProcessor;
 
         Establish context = () =>
             {
-                channel = new InMemoryChannel();
+                channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
                 var properties = new NameValueCollection();
@@ -115,7 +113,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                     channel.Send(message);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-                dispatcher.Recieve();
+                dispatcher.Receive();
             };
 
 
@@ -132,14 +130,14 @@ namespace paramore.commandprocessor.tests.MessageDispatch
      public class When_a_message_dispatcher_starts_different_types_of_performers
     {
         private static Dispatcher dispatcher;
-        private static IAmAnInputChannel eventChannel;
-        private static IAmAnInputChannel commandChannel;
+        private static FakeChannel eventChannel;
+        private static FakeChannel commandChannel;
         private static IAmACommandProcessor commandProcessor;
 
         Establish context = () =>
             {
-                eventChannel = new InMemoryChannel();
-                commandChannel = new InMemoryChannel();
+                eventChannel = new FakeChannel();
+                commandChannel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
                 var properties = new NameValueCollection();
@@ -169,7 +167,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 commandChannel.Send(commandMessage);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-                dispatcher.Recieve();
+                dispatcher.Receive();
             };
 
 
@@ -187,13 +185,13 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_a_message_dispatcher_shuts_a_connection
     {
         private static Dispatcher dispatcher;
-        private static IAmAnInputChannel channel;
+        private static FakeChannel channel;
         private static IAmACommandProcessor commandProcessor;
         private static Connection connection;
 
         Establish context = () =>
             {
-                channel = new InMemoryChannel();
+                channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
                 var properties = new NameValueCollection();
@@ -214,7 +212,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                     channel.Send(message);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-                dispatcher.Recieve();
+                dispatcher.Receive();
             };
 
 
@@ -232,13 +230,13 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     public class When_a_message_dispatcher_restarts_a_connection
     {
         private static Dispatcher dispatcher;
-        private static IAmAnInputChannel channel;
+        private static FakeChannel channel;
         private static IAmACommandProcessor commandProcessor;
         private static Connection connection;
 
         Establish context = () =>
             {
-                channel = new InMemoryChannel();
+                channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
                 var properties = new NameValueCollection();
@@ -258,7 +256,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 channel.Send(message);
 
                 dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-                dispatcher.Recieve();
+                dispatcher.Receive();
                 Task.Delay(1000).Wait();
                 dispatcher.Shut(connection);
             };
@@ -303,11 +301,11 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                     .Handle<Exception>()
                     .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-                var gateway = new RMQMessagingGateway(logger);
+                var gateway = new RMQServerRequestHandler(logger);
 
                 builder = DispatchBuilder.With()
-                             .WithLogger(logger)
-                             .WithCommandProcessor(CommandProcessorBuilder.With()
+                             .Logger(logger)
+                             .CommandProcessor(CommandProcessorBuilder.With()
                                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer())))
                                 .Policies(new PolicyRegistry() {{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}})
                                 .Logger(logger)
@@ -315,8 +313,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                                  .RequestContextFactory(new InMemoryRequestContextFactory())
                                 .Build()
                                 )
-                             .WithMessageMappers(messageMapperRegistry)
-                             .WithChannelFactory(new RMQInputChannelfactory(gateway)) 
+                             .MessageMappers(messageMapperRegistry)
+                             .ChannelFactory(new InputChannelfactory(gateway)) 
                              .ConnectionsFromConfiguration();
 
             };

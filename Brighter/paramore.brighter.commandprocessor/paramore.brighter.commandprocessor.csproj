@@ -23,6 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -46,7 +47,7 @@
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.6.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Polly">
       <HintPath>..\packages\Polly.2.0.0\lib\net45\Polly.dll</HintPath>
@@ -56,11 +57,22 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChannelName.cs" />
     <Compile Include="CommandProcessorBuilder.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="HandlerConfiguration.cs" />
+    <Compile Include="IAmAChannel.cs" />
+    <Compile Include="IAmAChannelFactory.cs" />
     <Compile Include="IAmAMessageMapperFactory.cs" />
+    <Compile Include="IAmAnInputChannel.cs" />
+    <Compile Include="IAmAnOutputChannel.cs" />
     <Compile Include="IAmAPolicyRegistry.cs" />
+    <Compile Include="IAmAClientRequestHandler.cs" />
+    <Compile Include="IAmAServerRequestHandler.cs" />
+    <Compile Include="InputChannel.cs" />
+    <Compile Include="LifetimeScope.cs" />
+    <Compile Include="MessageFactory.cs" />
     <Compile Include="MessageMapperRegistry.cs" />
     <Compile Include="PolicyRegistry.cs" />
     <Compile Include="SubscriberRegistry.cs" />
@@ -70,7 +82,6 @@
     <Compile Include="IAmAMessageMapperRegistry.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="IAmAMessageMapper.cs" />
-    <Compile Include="IAmAMessagingGateway.cs" />
     <Compile Include="IAmAMessageStore.cs" />
     <Compile Include="Interpreter.cs" />
     <Compile Include="MessageBody.cs" />
@@ -102,7 +113,6 @@
     <Compile Include="RequestLoggingAttribute.cs" />
     <Compile Include="RequestHandlers.cs" />
     <Compile Include="RequestLoggingHandler.cs" />
-    <Compile Include="LifetimeManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

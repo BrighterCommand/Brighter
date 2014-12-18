@@ -21,13 +21,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using paramore.brighter.commandprocessor;
+
 namespace paramore.brighter.serviceactivator.TestHelpers
 {
     public class InMemoryChannelFactory : IAmAChannelFactory
     {
-        public IAmAnInputChannel Create(string channelName)
+        public IAmAnInputChannel CreateInputChannel(string channelName)
         {
-           return new InMemoryChannel(channelName); 
+           return new FakeChannel(channelName); 
+        }
+
+        public IAmAnInputChannel CreateOutputChannel(string channelName)
+        {
+            return new FakeChannel(channelName);
         }
     }
 }

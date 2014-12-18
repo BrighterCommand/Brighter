@@ -20,6 +20,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -50,14 +51,11 @@
     <Reference Include="System.ServiceModel" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ChannelName.cs" />
     <Compile Include="ConnectionName.cs" />
     <Compile Include="DispatchBuilder.cs" />
     <Compile Include="Dispatcher.cs" />
     <Compile Include="DispatcherState.cs" />
-    <Compile Include="IAmAChannelFactory.cs" />
     <Compile Include="IAmAMessagePump.cs" />
-    <Compile Include="IAmAnInputChannel.cs" />
     <Compile Include="IAmAPerformer.cs" />
     <Compile Include="Consumer.cs" />
     <Compile Include="ConsumerFactory.cs" />
@@ -69,7 +67,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServiceActivatorConfiguraton\ConnectionFactory.cs" />
     <Compile Include="ServiceActivatorConfiguraton\ServiceActivatorConfigurationSection.cs" />
-    <Compile Include="TestHelpers\InMemoryChannel.cs" />
+    <Compile Include="TestHelpers\FakeChannel.cs" />
     <Compile Include="TestHelpers\InMemoryChannelFactory.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="IAmAPipelineTracer.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -23,9 +36,22 @@ THE SOFTWARE. */
 
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Interface IAmAPipelineTracer
+    /// It can be useful to understand what <see cref="IHandleRequests"/> will be called to satisfy a request and their order
+    /// The default implementation of <see cref="PipelineTracer"/> can be used in most instances
+    /// </summary>
     public interface IAmAPipelineTracer
     {
+        /// <summary>
+        /// Adds to path.
+        /// </summary>
+        /// <param name="handlerName">Name of the handler.</param>
         void AddToPath(HandlerName handlerName);
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
+        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         string ToString();
     }
 }

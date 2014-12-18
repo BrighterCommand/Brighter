@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-02-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="IAmAHandlerFactory.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,9 +38,25 @@ using System;
 
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Interface IAmAHandlerFactory
+    /// We do not know how to create instances of <see cref="IHandleRequests"/> implemented by your application, but need to create instances to instantiate a pipeline.
+    /// To achieve this we require clients of the Paramore.Brighter.CommandProcessor library need to implement <see cref="IAmAHandlerFactory"/> to provide 
+    /// instances of their <see cref="IHandleRequests"/> types. You need to provide a Handler Factory to support all <see cref="IHandleRequests"/> registered 
+    /// with <see cref="IAmASubscriberRegistry"/>. Typically you would use an IoC container to implement the Handler Factory.
+    /// </summary>
     public interface IAmAHandlerFactory
     {
+        /// <summary>
+        /// Creates the specified handler type.
+        /// </summary>
+        /// <param name="handlerType">Type of the handler.</param>
+        /// <returns>IHandleRequests.</returns>
         IHandleRequests Create(Type handlerType);
+        /// <summary>
+        /// Releases the specified handler.
+        /// </summary>
+        /// <param name="handler">The handler.</param>
         void Release(IHandleRequests handler);
     }
 }

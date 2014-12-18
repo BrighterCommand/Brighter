@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messagestore.ravendb
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-10-2014
+// ***********************************************************************
+// <copyright file="MessageStoreFactory.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -27,6 +40,11 @@ using Raven.Client.Document;
 
 namespace paramore.brighter.commandprocessor.messagestore.ravendb
 {
+    /// <summary>
+    /// Class MessageStoreFactory.
+    /// The MessageStoreFactory creates a RavenDB message store. It is a singleton, and will always return the same message store after the first call, within a given process.
+    /// This is by design, there is no support for multiple message stores, nor envisaged need.
+    /// </summary>
     public class MessageStoreFactory
     {
 
@@ -42,6 +60,10 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
             return ds;
         });
 
+        /// <summary>
+        /// Gets the document store.
+        /// </summary>
+        /// <value>The document store.</value>
         public static IDocumentStore DocumentStore
         {
             get { return DOCUMENT_STORE.Value; }

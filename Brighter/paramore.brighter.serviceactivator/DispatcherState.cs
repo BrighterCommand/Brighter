@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-01-2014
+// ***********************************************************************
+// <copyright file="DispatcherState.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,11 +37,27 @@ THE SOFTWARE. */
 
 namespace paramore.brighter.serviceactivator
 {
+    /// <summary>
+    /// Enum DispatcherState
+    /// Identifies the various states of the dispatcher
+    /// </summary>
     public enum DispatcherState
     {
+        /// <summary>
+        /// Initializing, not ready to receive requests yet 
+        /// </summary>
         DS_NOTREADY = 0,
+        /// <summary>
+        /// Initialized, ready to receive messages on channels
+        /// </summary>
         DS_AWAITING = 1,
+        /// <summary>
+        /// Running, waiting for messages on channels and dispatcing to handlers
+        /// </summary>
         DS_RUNNING = 2,
+        /// <summary>
+        /// Stopped, will not dispatch messages unless restarted. Can be closed safely.
+        /// </summary>
         DS_STOPPED = 3
     }
 }

@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 07-01-2014
+//
+// Last Modified By : ian
+// Last Modified On : 07-29-2014
+// ***********************************************************************
+// <copyright file="MessagingConfiguration.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,17 +36,41 @@ THE SOFTWARE. */
 
 using Polly;
 
+/// <summary>
+/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+/// </summary>
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Class MessagingConfiguration.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
     public class MessagingConfiguration
     {
+        /// <summary>
+        /// Gets the message store.
+        /// </summary>
+        /// <value>The message store.</value>
         public IAmAMessageStore<Message> MessageStore { get; private set; }
-        public IAmAMessagingGateway MessagingGateway { get; private set; }
+        /// <summary>
+        /// Gets the messaging gateway.
+        /// </summary>
+        /// <value>The messaging gateway.</value>
+        public IAmAClientRequestHandler MessagingGateway { get; private set; }
+        /// <summary>
+        /// Gets the message mapper registry.
+        /// </summary>
+        /// <value>The message mapper registry.</value>
         public IAmAMessageMapperRegistry MessageMapperRegistry { get; private set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessagingConfiguration"/> class.
+        /// </summary>
+        /// <param name="messageStore">The message store.</param>
+        /// <param name="messagingGateway">The messaging gateway.</param>
+        /// <param name="messageMapperRegistry">The message mapper registry.</param>
         public MessagingConfiguration(
             IAmAMessageStore<Message> messageStore, 
-            IAmAMessagingGateway messagingGateway, 
+            IAmAClientRequestHandler messagingGateway, 
             IAmAMessageMapperRegistry messageMapperRegistry
             )
         {
