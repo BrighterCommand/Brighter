@@ -25,9 +25,9 @@ namespace paramore.brighter.serviceactivator.TestHelpers
 {
     public class InMemoryChannelFactory : IAmAChannelFactory
     {
-        public IAmAnInputChannel Create(string channelName)
+        public IAmAnInputChannel Create(string channelName, string routingKey)
         {
-           return new InMemoryChannel(channelName); 
+           return new InMemoryChannel(channelName, routingKey); 
         }
     }
 }

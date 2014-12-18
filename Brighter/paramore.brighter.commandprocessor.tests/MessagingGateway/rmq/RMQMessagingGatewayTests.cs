@@ -129,7 +129,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
              
                 messagingGateway = new RMQMessagingGateway(logger);
                 sentMessage= new Message(
-                    header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
+                    header: new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")
                     );
 
@@ -139,7 +139,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         Because of = () =>
         {
             messagingGateway.Send(sentMessage);
-            recievedMessage = client.Receive(sentMessage.Header.Topic, 2000);
+            recievedMessage = client.Receive("test", sentMessage.Header.Topic, 2000);
             client.Acknowledge(recievedMessage);
         };
 

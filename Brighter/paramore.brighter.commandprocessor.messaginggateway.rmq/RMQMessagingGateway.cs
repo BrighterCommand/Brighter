@@ -94,14 +94,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         }
 
 
-        public Message Receive(string queueName, int timeoutInMilliseconds)
+        public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds)
         {
             logger.Debug(
                 m =>
                     m("RMQMessagingGateway: Preparing  to retrieve next message via exchange {0}",
                         configuration.Exchange.Name));
 
-            if (!Connect(queueName))
+            if (!Connect(queueName, routingKey, true))
             {
                 logger.Debug(
                     m => m("RMQMessagingGateway: Unable to connect to the exchange {0}", configuration.Exchange.Name));
@@ -203,7 +203,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
         }
 
-        private bool Connect(string queueName)
+        bool Connect(string queueName, string routingKey = "", bool createQueues = false)
         {
             try
             {
@@ -232,13 +232,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                         m =>
                             m("RMQMessagingGateway: Declaring queue {0} on connection {1}", queueName,
                                 configuration.AMPQUri.Uri.ToString()));
-                    channel.QueueDeclare(queueName, false, false, false, null);
-                    channel.QueueBind(queueName, configuration.Exchange.Name, queueName);
-                    consumer = new QueueingBasicConsumer(channel);
-                    channel.BasicConsume(queueName, autoAck, consumer);
-                    consumer = new QueueingBasicConsumer(channel);
-                    channel.BasicConsume(queueName, autoAck, consumer);
-
+                    if (createQueues)
+                    {
+                        channel.QueueDeclare(queueName, false, false, false, null);
+                        channel.QueueBind(queueName, configuration.Exchange.Name, routingKey);
+                        consumer = new QueueingBasicConsumer(channel);
+                        channel.BasicConsume(queueName, autoAck, consumer);
+                    }
                 }
             }
             catch (BrokerUnreachableException e)
@@ -252,7 +252,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         }
 
 
-        private IBasicProperties CreateMessageHeader(Message message, IModel channel)
+        IBasicProperties CreateMessageHeader(Message message, IModel channel)
         {
             //create message header
             IBasicProperties basicProperties = channel.CreateBasicProperties();
@@ -269,27 +269,27 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return basicProperties;
         }
 
-        private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
+        void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
         {
             Exchange exchange = configuration.Exchange;
             channel.ExchangeDeclare(exchange.Name, exchange.Type, exchange.Durable);
         }
 
-        private IModel OpenChannel(IConnection connection)
+        IModel OpenChannel(IConnection connection)
         {
             //open a channel on the connection
             IModel channel = connection.CreateModel();
             return channel;
         }
 
-        private IConnection Connect(ConnectionFactory connectionFactory)
+        IConnection Connect(ConnectionFactory connectionFactory)
         {
             //create the connection
             IConnection connection = connectionFactory.CreateConnection();
             return connection;
         }
 
-        private void PublishMessage(Message message, IModel channel,
+        void PublishMessage(Message message, IModel channel,
             RMQMessagingGatewayConfigurationSection configuration,
             IBasicProperties basicProperties)
         {

@@ -26,6 +26,6 @@ namespace paramore.brighter.serviceactivator
 {
     public interface IAmAChannelFactory
     {
-        IAmAnInputChannel Create(string channelName);
+        IAmAnInputChannel Create(string channelName, string routingKey);
     }
 }

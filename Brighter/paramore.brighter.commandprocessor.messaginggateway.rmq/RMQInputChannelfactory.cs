@@ -34,9 +34,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             this.gateway = gateway;
         }
 
-        public IAmAnInputChannel Create(string channelName)
+        public IAmAnInputChannel Create(string channelName, string routingKey)
         {
-            return new RMQInputChannel(channelName, gateway);
+            return new RMQInputChannel(channelName, routingKey, gateway);
         }
     }
 }
