@@ -20,8 +20,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandpr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor", "paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj", "{2ACB382A-38FA-49A6-A9CD-212881D3CD37}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.policy", "paramore.brighter.commandprocessor.exceptionpolicy\paramore.brighter.commandprocessor.policy.csproj", "{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.tests", "paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj", "{65BADB63-5F98-4F24-84D7-8C99263F88C6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.serviceactivator", "paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj", "{B9126B00-5A97-4C7D-B395-755456E5FA28}"
@@ -43,6 +41,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.messaginggateway.restms", "paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj", "{C8BC2471-9D5C-4E94-81C8-036506F4EC34}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.restms.core", "paramore.brighter.restms.core\paramore.brighter.restms.core.csproj", "{72E03A7F-A406-4364-9861-2A10A746AE3A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.policy", "paramore.brighter.commandprocessor.policy\paramore.brighter.commandprocessor.policy.csproj", "{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -94,16 +94,6 @@ Global
 		{2ACB382A-38FA-49A6-A9CD-212881D3CD37}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{2ACB382A-38FA-49A6-A9CD-212881D3CD37}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{2ACB382A-38FA-49A6-A9CD-212881D3CD37}.Release|x86.ActiveCfg = Release|Any CPU
-		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Any CPU.Build.0 = Release|Any CPU
-		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|x86.ActiveCfg = Release|Any CPU
 		{65BADB63-5F98-4F24-84D7-8C99263F88C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{65BADB63-5F98-4F24-84D7-8C99263F88C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{65BADB63-5F98-4F24-84D7-8C99263F88C6}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -204,6 +194,16 @@ Global
 		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{72E03A7F-A406-4364-9861-2A10A746AE3A}.Release|x86.ActiveCfg = Release|Any CPU
+		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

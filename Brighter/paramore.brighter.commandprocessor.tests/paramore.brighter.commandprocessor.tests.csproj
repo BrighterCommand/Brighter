@@ -221,7 +221,7 @@
       <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>
       <Name>paramore.brighter.commandprocessor.messaginggateway.rmq</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.exceptionpolicy\paramore.brighter.commandprocessor.policy.csproj">
+    <ProjectReference Include="..\paramore.brighter.commandprocessor.policy\paramore.brighter.commandprocessor.policy.csproj">
       <Project>{09bba2df-aab0-4801-b646-a1b13d0e7d38}</Project>
       <Name>paramore.brighter.commandprocessor.policy</Name>
     </ProjectReference>
