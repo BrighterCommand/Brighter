@@ -130,9 +130,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.exceptionpolicy\paramore.brighter.commandprocessor.exceptionpolicy.csproj">
+    <ProjectReference Include="..\paramore.brighter.commandprocessor.exceptionpolicy\paramore.brighter.commandprocessor.policy.csproj">
       <Project>{09bba2df-aab0-4801-b646-a1b13d0e7d38}</Project>
-      <Name>paramore.brighter.commandprocessor.exceptionpolicy</Name>
+      <Name>paramore.brighter.commandprocessor.policy</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
       <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>

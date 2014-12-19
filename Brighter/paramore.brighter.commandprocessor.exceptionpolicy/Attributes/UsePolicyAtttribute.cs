@@ -35,9 +35,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor.exceptionpolicy.Handlers;
+using paramore.brighter.commandprocessor.policy.Handlers;
 
-namespace paramore.brighter.commandprocessor.exceptionpolicy.Attributes
+namespace paramore.brighter.commandprocessor.policy.Attributes
 {
     /// <summary>
     /// Class UsePolicyAttribute.

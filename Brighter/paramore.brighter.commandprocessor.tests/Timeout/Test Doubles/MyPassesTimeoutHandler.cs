@@ -25,8 +25,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.timeoutpolicy.Attributes;
-using paramore.brighter.commandprocessor.timeoutpolicy.Handlers;
+using paramore.brighter.commandprocessor.policy.Attributes;
+using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.Timeout.TestDoubles

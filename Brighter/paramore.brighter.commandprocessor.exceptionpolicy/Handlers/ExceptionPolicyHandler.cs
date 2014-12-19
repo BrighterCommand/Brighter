@@ -36,10 +36,10 @@ THE SOFTWARE. */
 
 using System;
 using Common.Logging;
-using paramore.brighter.commandprocessor.exceptionpolicy.Attributes;
+using paramore.brighter.commandprocessor.policy.Attributes;
 using Polly;
 
-namespace paramore.brighter.commandprocessor.exceptionpolicy.Handlers
+namespace paramore.brighter.commandprocessor.policy.Handlers
 {
     /// <summary>
     /// Class ExceptionPolicyHandler.

@@ -60,9 +60,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Newtonsoft.Json.6.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.dll</HintPath>
+    <Reference Include="paramore.brighter.commandprocessor">
+      <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.dll</HintPath>
     </Reference>
     <Reference Include="paramore.brighter.commandprocessor.exceptionpolicy">
       <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.ExceptionPolicy.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.exceptionpolicy.dll</HintPath>
@@ -70,6 +69,9 @@
     <Reference Include="paramore.brighter.commandprocessor.ioccontainers.tinyioc">
       <HintPath>..\..\packages\paramore.brighter.commandprocessor.ioccontainers.tinyioc.1.0.2.0\lib\net45\paramore.brighter.commandprocessor.ioccontainers.tinyioc.dll</HintPath>
       <Private>True</Private>
+    </Reference>
+    <Reference Include="paramore.brighter.commandprocessor.timeoutpolicy">
+      <HintPath>..\..\packages\paramore.brighter.commandprocessor.timeoutpolicy.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.timeoutpolicy.dll</HintPath>
     </Reference>
     <Reference Include="Polly, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -142,12 +144,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor.timeoutpolicy\paramore.brighter.commandprocessor.timeoutpolicy.csproj">
-      <Project>{8879C4FA-1395-4B6B-93A5-0BC705EA169D}</Project>
-      <Name>paramore.brighter.commandprocessor.timeoutpolicy</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="App_Data\Tasks.sdf">

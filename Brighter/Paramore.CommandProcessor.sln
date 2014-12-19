@@ -20,9 +20,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandpr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor", "paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj", "{2ACB382A-38FA-49A6-A9CD-212881D3CD37}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.exceptionpolicy", "paramore.brighter.commandprocessor.exceptionpolicy\paramore.brighter.commandprocessor.exceptionpolicy.csproj", "{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.timeoutpolicy", "paramore.brighter.commandprocessor.timeoutpolicy\paramore.brighter.commandprocessor.timeoutpolicy.csproj", "{8879C4FA-1395-4B6B-93A5-0BC705EA169D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.policy", "paramore.brighter.commandprocessor.exceptionpolicy\paramore.brighter.commandprocessor.policy.csproj", "{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.tests", "paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj", "{65BADB63-5F98-4F24-84D7-8C99263F88C6}"
 EndProject
@@ -106,16 +104,6 @@ Global
 		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|x86.ActiveCfg = Release|Any CPU
-		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{8879C4FA-1395-4B6B-93A5-0BC705EA169D}.Release|x86.ActiveCfg = Release|Any CPU
 		{65BADB63-5F98-4F24-84D7-8C99263F88C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{65BADB63-5F98-4F24-84D7-8C99263F88C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{65BADB63-5F98-4F24-84D7-8C99263F88C6}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
