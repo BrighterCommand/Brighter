@@ -26,7 +26,7 @@ using Common.Logging;
 using FakeItEasy;
 using FluentAssertions;
 using Machine.Specifications;
-using paramore.brighter.commandprocessor.exceptionpolicy.Handlers;
+using paramore.brighter.commandprocessor.policy.Handlers;
 using Polly;
 using Polly.CircuitBreaker;
 using TinyIoC;

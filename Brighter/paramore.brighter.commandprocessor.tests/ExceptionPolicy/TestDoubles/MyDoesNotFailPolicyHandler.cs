@@ -23,7 +23,7 @@ THE SOFTWARE. */
 
 using Common.Logging;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.exceptionpolicy.Attributes;
+using paramore.brighter.commandprocessor.policy.Attributes;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles
