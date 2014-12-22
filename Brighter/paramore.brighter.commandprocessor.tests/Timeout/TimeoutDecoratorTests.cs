@@ -27,8 +27,12 @@ using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
+using paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles;
 using paramore.commandprocessor.tests.Timeout.TestDoubles;
+
+using TinyIoC;
 
 namespace paramore.commandprocessor.tests.Timeout
 {
@@ -45,7 +49,13 @@ namespace paramore.commandprocessor.tests.Timeout
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsDueToTimeoutHandler>();
-            var handlerFactory = new TestHandlerFactory<MyCommand, MyFailsDueToTimeoutHandler>(() => new MyFailsDueToTimeoutHandler(logger));
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyFailsDueToTimeoutHandler>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, TimeoutPolicyHandler<MyCommand>>().AsSingleton();
+            container.Register<ILog>(logger);
+
             commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
 
             MyFailsDueToTimeoutHandler.WasCancelled = false;
@@ -73,7 +83,13 @@ namespace paramore.commandprocessor.tests.Timeout
             var registry = new SubscriberRegistry();
             //Handler is decorated with UsePolicy 
             registry.Register<MyCommand, MyPassesTimeoutHandler>();
-            var handlerFactory = new TestHandlerFactory<MyCommand, MyPassesTimeoutHandler>(() => new MyPassesTimeoutHandler(logger));
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyPassesTimeoutHandler>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, TimeoutPolicyHandler<MyCommand>>().AsSingleton();
+            container.Register<ILog>(logger);
+
             commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
         };
 

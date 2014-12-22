@@ -24,6 +24,9 @@ THE SOFTWARE. */
 using System.Threading;
 using System.Threading.Tasks;
 using Common.Logging;
+
+using Machine.Specifications.Runner;
+
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using paramore.brighter.commandprocessor.policy.Handlers;
@@ -40,7 +43,7 @@ namespace paramore.commandprocessor.tests.Timeout.TestDoubles
         public static bool TaskCompleted { get; set; }
 
 
-        [TimeoutPolicy(milliseconds: 1000, step: 1)]
+        [TimeoutPolicy(milliseconds: 1000, step: 1, timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
             var ct = (CancellationToken)Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];
