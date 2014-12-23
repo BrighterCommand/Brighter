@@ -31,7 +31,7 @@ namespace Tasks.Adapters.DataAccess
 {
     public class TasksDAO : ITasksDAO
     {
-        private dynamic db;
+        private readonly dynamic db;
 
         public TasksDAO()
         {

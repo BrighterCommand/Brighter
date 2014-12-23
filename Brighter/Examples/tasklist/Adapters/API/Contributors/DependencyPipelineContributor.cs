@@ -67,7 +67,7 @@ namespace Tasklist.Adapters.API.Contributors
             container.Register<ILog, ILog>(logger);
             container.Register<IAmARequestContextFactory, InMemoryRequestContextFactory>().AsMultiInstance();
             container.Register<IAmAMessageStore<Message>, RavenMessageStore>().AsSingleton();
-            container.Register<IAmAMessagingGateway, RMQMessagingGateway>().AsSingleton();
+            container.Register<IAmAClientRequestHandler, RMQClientRequestHandler>().AsSingleton();
 
             var handlerFactory = new TinyIocHandlerFactory(container);
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
@@ -100,7 +100,7 @@ namespace Tasklist.Adapters.API.Contributors
             messageMapperRegistry.Add(typeof (TaskReminderCommand), typeof (TaskReminderCommandMessageMapper));
 
             //create the gateway
-            var gateway = new RMQMessagingGateway(logger);
+            var gateway = new RMQClientRequestHandler(logger);
 
             var commandProcessor = CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))

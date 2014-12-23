@@ -56,6 +56,8 @@ namespace HelloWorld
             var commandProcessor = builder.Build();
 
             commandProcessor.Send(new GreetingCommand("Ian"));
+
+            Console.ReadLine();
         }
 
         internal class SimpleHandlerFactory : IAmAHandlerFactory

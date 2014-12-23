@@ -25,7 +25,9 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Machine.Specifications;
+
 using Newtonsoft.Json;
+
 using paramore.brighter.commandprocessor;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.TestHelpers;
