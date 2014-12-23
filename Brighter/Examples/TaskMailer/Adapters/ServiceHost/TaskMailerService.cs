@@ -22,14 +22,17 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Specialized;
+
 using Common.Logging;
+using Common.Logging.Configuration;
 using Common.Logging.Simple;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
+
 using Polly;
+
 using Raven.Client.Embedded;
 using Tasks.Adapters.MailGateway;
 using Tasks.Ports;
@@ -91,11 +94,11 @@ namespace TaskMailer.Adapters.ServiceHost
             };
 
             //create the gateway
-            var gateway = new RMQMessagingGateway(logger);
+            var gateway = new RMQClientRequestHandler(logger);
 
             var builder = DispatchBuilder.With()
-                        .WithLogger(logger)
-                        .WithCommandProcessor(CommandProcessorBuilder.With()
+                        .Logger(logger)
+                        .CommandProcessor(CommandProcessorBuilder.With()
                             .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                             .Policies(policyRegistry)
                             .Logger(logger)
@@ -107,8 +110,8 @@ namespace TaskMailer.Adapters.ServiceHost
                             .RequestContextFactory(new InMemoryRequestContextFactory())
                             .Build()
                             )
-                            .WithMessageMappers(messageMapperRegistry)
-                            .WithChannelFactory(new RMQInputChannelfactory(gateway)) 
+                            .MessageMappers(messageMapperRegistry)
+                            .ChannelFactory(new InputChannelfactory(new RMQServerRequestHandler(logger))) 
                             .ConnectionsFromConfiguration();
 
             dispatcher = builder.Build();
@@ -117,7 +120,7 @@ namespace TaskMailer.Adapters.ServiceHost
 
         public bool Start(HostControl hostControl)
         {
-            dispatcher.Recieve();
+            dispatcher.Receive();
             return true;
         }
 
