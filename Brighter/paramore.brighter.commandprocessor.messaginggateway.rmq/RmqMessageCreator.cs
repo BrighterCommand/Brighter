@@ -53,7 +53,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             try
             {
                 topic = ReadTopic(fromQueue, headers);
-                messageId = ReadMessageId(headers);
+                messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
                 var messageType = ReadMessageType(headers);
 
                 if(false == (topic.Success && messageId.Success && messageType.Success))
@@ -115,21 +115,25 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 
         }
 
-        HeaderResult<Guid> ReadMessageId(IDictionary<string, object> headers)
+        private HeaderResult<Guid> ReadMessageId(string messageId)
         {
-            return ReadHeader(headers, HeaderNames.MESSAGE_ID)
-                .Map(s => {
-                              Guid messageId = Guid.NewGuid();
-                              if(string.IsNullOrEmpty(s)) {
-                                  _logger.Debug("No message id found in message, new message id is " + messageId);
-                                  return new HeaderResult<Guid>(messageId, true); 
-                              }
+            Guid newMessageId = Guid.NewGuid();
 
-                              if(false == Guid.TryParse(s, out messageId)) {
-                                  return new HeaderResult<Guid>(Guid.Empty, false);
-                              }
-                              return new HeaderResult<Guid>(messageId, true);
-                });
+            if (string.IsNullOrEmpty(messageId))
+            {
+                _logger.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
+                return new HeaderResult<Guid>(newMessageId, true);
+            }
+
+            if (Guid.TryParse(messageId, out newMessageId))
+            {
+                return new HeaderResult<Guid>(newMessageId, true);
+            }
+
+            _logger.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
+            return new HeaderResult<Guid>(Guid.Empty, false);
+
+            
         }
     }
 }
