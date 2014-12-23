@@ -174,9 +174,6 @@ UpgradeLog*.htm
 # SQL Server files
 *.mdf
 *.ldf
-**/App_Data/*.mdf
-**/App_Data/*.ldf
-**/App_Data/*.sdf
 
 # Business Intelligence projects
 *.rdl.data
@@ -195,3 +192,6 @@ Paramore.CommandProcessor.sln.GhostDoc.xml
 # Allow all files in a lib folder
 !**/lib/**
 !**/libs/**
+
+# Allow .sdf files in app_data
+!**/App_Data/*.sdf
