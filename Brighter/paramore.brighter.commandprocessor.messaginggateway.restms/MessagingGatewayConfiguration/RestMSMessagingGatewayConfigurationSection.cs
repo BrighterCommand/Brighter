@@ -65,18 +65,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGa
             set { this["uri"] = value; }
         }
 
+        [ConfigurationProperty("id", DefaultValue = "Default", IsRequired = true)]
         public string Id
         {
             get { return this["id"] as string; }
             set { this["id"] = value; }
         }
 
+        [ConfigurationProperty("user", DefaultValue = "Default", IsRequired = true)]
         public string User
         {
             get { return this["user"] as string; }
             set { this["user"] = value; }
         }
 
+        [ConfigurationProperty("key", DefaultValue = "Default", IsRequired = true)]
         public string Key
         {
             get { return this["key"] as string; }
