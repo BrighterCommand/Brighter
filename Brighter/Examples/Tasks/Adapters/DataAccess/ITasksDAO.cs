@@ -33,5 +33,6 @@ namespace Tasks.Adapters.DataAccess
         void Update(Task task);
 
         void Clear();
+        dynamic BeginTransaction();
     }
 }
