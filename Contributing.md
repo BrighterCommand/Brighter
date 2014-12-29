@@ -1,5 +1,5 @@
 # **Contributors Wanted: Inquire Within** #
-it isn't wise to build something that can be a part of someone's ecosystem without help, and we are always open to contributions to help us fix issues or work on features
+It isn't wise to build something that can be a part of someone's ecosystem without help, and we are always open to contributions to help us fix issues or work on features
 
 ## Getting Started ##
 
