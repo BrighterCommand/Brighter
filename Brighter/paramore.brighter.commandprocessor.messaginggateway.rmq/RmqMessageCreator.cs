@@ -46,7 +46,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         public Message CreateMessage(BasicDeliverEventArgs fromQueue)
         {
-            var headers = fromQueue.BasicProperties.Headers;
+            var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
             var topic = HeaderResult<string>.Empty();
             var messageId = HeaderResult<Guid>.Empty();
             Message message;
