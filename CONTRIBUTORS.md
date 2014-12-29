@@ -6,14 +6,18 @@ Paramore contributors (sorted alphabeticaly)
   * Wrote first version of Command Processor, *Policy, RavenDb Message Store, RMQ gateway, and ServiceActivator
   * Various fixes
   * Project Lead
+  * Committer
    
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
-  
+
+**[Toby Henderson](https://github.com/holytshirt)**
+  * Various fixes
+  * Committer
+
 **[Eddie Li](https://github.com/xiaodili)**
 
   * Various fixes  
-
 
 **[Francesco Pighi](https://github.com/fpighi)**
 
