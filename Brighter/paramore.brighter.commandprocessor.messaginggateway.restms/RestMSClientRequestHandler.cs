@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Common.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Parsers;
@@ -37,8 +38,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
             try
             {
-                logger.DebugFormat("Getting the default domain from the RestMS server: {0}",configuration.RestMS.Uri.AbsoluteUri);
-                RestMSDomain domain= GetDefaultDomain(options);
+                logger.DebugFormat("Getting the default domain from the RestMS server: {0}", configuration.RestMS.Uri.AbsoluteUri);
+                RestMSDomain domain = GetDefaultDomain(options);
                 bool isFeedDeclared = domain.Feeds.Any(feed => feed.Name == configuration.Feed.Name);
                 if (!isFeedDeclared)
                 {
@@ -51,9 +52,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 //declare our feed
                 //Send a message to it
             }
+            catch (RestMSClientException rmse)
+            {
+                logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                tcs.SetException(rmse);
+                throw;
+            }
             catch (HttpRequestException he)
             {
-                logger.ErrorFormat("Error sending to the RestMS server: {0}", he.ToString());
+                logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
                 tcs.SetException(he);
                 throw;
             }
@@ -103,17 +110,29 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
          {
             var client = CreateClient(options);
 
-            var response = client.GetAsync(configuration.RestMS.Uri).Result;
-            response.EnsureSuccessStatusCode();
-            var entityBody = response.Content.ReadAsStringAsync().Result;
-            RestMSDomain domainObject;
-            if (!ResultParser.TryParse(entityBody, out domainObject))
-            {
-                var errorString = string.Format("Could not parse entity body as a domain => {0}", entityBody);
-                logger.ErrorFormat(errorString);
-                throw new ResultParserException(errorString);
-            }
-            return domainObject;
+             try
+             {
+                 var response = client.GetAsync(configuration.RestMS.Uri).Result;
+                 response.EnsureSuccessStatusCode();
+                 var entityBody = response.Content.ReadAsStringAsync().Result;
+                 RestMSDomain domainObject;
+                 if (!ResultParser.TryParse(entityBody, out domainObject))
+                 {
+                     var errorString = string.Format("Could not parse entity body as a domain => {0}", entityBody);
+                     logger.ErrorFormat(errorString);
+                     throw new ResultParserException(errorString);
+                 }
+                 return domainObject;
+             }
+             catch (AggregateException ae)
+             {
+                 foreach (var exception in ae.Flatten().InnerExceptions)
+                 {
+                     logger.ErrorFormat("Threw exception getting Domain from RestMS Server {0}", exception.Message);
+                 }
+
+                 throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
+             }
          }
 
         void CreateFeed(string name, ClientOptions options)
@@ -133,7 +152,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         {
             var handler = new HawkValidationHandler(options);
             var client = HttpClientFactory.Create(handler);
-            client.Timeout = new TimeSpan(500);
+            client.Timeout = TimeSpan.FromMilliseconds(300);
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/xml"));
             return client;
         }

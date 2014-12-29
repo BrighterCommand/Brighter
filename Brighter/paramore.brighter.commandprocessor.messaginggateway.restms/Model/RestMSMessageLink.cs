@@ -41,7 +41,7 @@ using System.Xml.Serialization;
 namespace paramore.brighter.commandprocessor.messaginggateway.restms.Model
 {
     [DataContract(Name = "message"), XmlRoot(ElementName = "message", Namespace = "http://www.restms.org/schema/restms")]
-    internal class RestMSMessageLink
+    public class RestMSMessageLink
     {
         [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }

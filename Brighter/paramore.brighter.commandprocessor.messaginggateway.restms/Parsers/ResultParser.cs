@@ -5,12 +5,12 @@ using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
 {
-    static class ResultParser
+    public static class ResultParser
     {
         public static bool TryParse<T>(string body, out T domainObject)
         {
             MemoryStream ms = null;
-            var deserializer = new XmlSerializer(typeof(RestMSFeed));
+            var deserializer = new XmlSerializer(typeof(T));
             try
             {
                 ms = new MemoryStream(System.Text.Encoding.ASCII.GetBytes(body));

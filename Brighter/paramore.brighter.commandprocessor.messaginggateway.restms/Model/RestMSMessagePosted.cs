@@ -40,7 +40,7 @@ using System.Xml.Serialization;
 namespace paramore.brighter.commandprocessor.messaginggateway.restms.Model
 {
     [DataContract(Name = "defaultProfileMessagePosted"), XmlRoot(ElementName = "defaultProfileMessagePosted", Namespace = "http://www.restms.org/schema/restms")]
-    internal class RestMSMessagePosted
+    public class RestMSMessagePosted
     {
         [DataMember(Name = "count"), XmlAttribute(AttributeName = "count")]
         public int Count { get; set; }
