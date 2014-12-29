@@ -1,0 +1,111 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Common.Logging</name>
+    </assembly>
+    <members>
+        <member name="T:CoverageExcludeAttribute">
+            <summary>
+            Indicates classes or members to be ignored by NCover
+            </summary>
+            <remarks>
+            Note, the name is chosen, because TestDriven.NET uses it as //ea argument to "Test With... Coverage"
+            </remarks>
+            <author>Erich Eichinger</author>
+        </member>
+        <member name="T:Common.Logging.Simple.ConsoleOutLogger">
+            <summary>
+            Sends log messages to <see cref="P:System.Console.Out"/>.
+            </summary>
+            <author>Gilles Bayon</author>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLogger.#ctor(System.String,Common.Logging.LogLevel,System.Boolean,System.Boolean,System.Boolean,System.String)">
+            <summary>
+            Creates and initializes a logger that writes messages to <see cref="P:System.Console.Out"/>.
+            </summary>
+            <param name="logName">The name, usually type name of the calling class, of the logger.</param>
+            <param name="logLevel">The current logging threshold. Messages recieved that are beneath this threshold will not be logged.</param>
+            <param name="showLevel">Include the current log level in the log message.</param>
+            <param name="showDateTime">Include the current time in the log message.</param>
+            <param name="showLogName">Include the instance name in the log message.</param>
+            <param name="dateTimeFormat">The date and time format to use in the log message.</param>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLogger.WriteInternal(Common.Logging.LogLevel,System.Object,System.Exception)">
+            <summary>
+            Do the actual logging by constructing the log message using a <see cref="T:System.Text.StringBuilder"/> then
+            sending the output to <see cref="P:System.Console.Out"/>.
+            </summary>
+            <param name="level">The <see cref="T:Common.Logging.LogLevel"/> of the message.</param>
+            <param name="message">The log message.</param>
+            <param name="e">An optional <see cref="T:System.Exception"/> associated with the message.</param>
+        </member>
+        <member name="T:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter">
+            <summary>
+            Factory for creating <see cref="T:Common.Logging.ILog"/> instances that write data to <see cref="P:System.Console.Out"/>.
+            </summary>
+            <remarks>
+            <example>
+            Below is an example how to configure this adapter:
+            <code>
+            &lt;configuration&gt;
+            
+              &lt;configSections&gt;
+                &lt;sectionGroup name="common"&gt;
+                  &lt;section name="logging"
+                           type="Common.Logging.ConfigurationSectionHandler, Common.Logging"
+                           requirePermission="false" /&gt;
+                &lt;/sectionGroup&gt;
+              &lt;/configSections&gt;
+            
+              &lt;common&gt;
+                &lt;logging&gt;
+                  &lt;factoryAdapter type="Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter, Common.Logging"&gt;
+                    &lt;arg key="level" value="ALL" /&gt;
+                  &lt;/factoryAdapter&gt;
+                &lt;/logging&gt;
+              &lt;/common&gt;
+            
+            &lt;/configuration&gt;
+            </code>
+            </example>
+            </remarks>
+            <seealso cref="T:Common.Logging.Simple.AbstractSimpleLoggerFactoryAdapter"/>
+            <seealso cref="P:Common.Logging.LogManager.Adapter"/>
+            <seealso cref="!:ConfigurationSectionHandler"/>
+            <author>Gilles Bayon</author>
+            <author>Mark Pollack</author>
+            <author>Erich Eichinger</author>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter"/> class using default 
+            settings.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter.#ctor(Common.Logging.Configuration.NameValueCollection)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter"/> class.
+            </summary>
+            <remarks>
+            Looks for level, showDateTime, showLogName, dateTimeFormat items from 
+            <paramref name="properties"/> for use when the GetLogger methods are called.
+            <see cref="!:ConfigurationSectionHandler"/> for more information on how to use the 
+            standard .NET application configuraiton file (App.config/Web.config) 
+            to configure this adapter.
+            </remarks>
+            <param name="properties">The name value collection, typically specified by the user in 
+            a configuration section named common/logging.</param>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter.#ctor(Common.Logging.LogLevel,System.Boolean,System.Boolean,System.Boolean,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Common.Logging.Simple.AbstractSimpleLoggerFactoryAdapter"/> class with 
+            default settings for the loggers created by this factory.
+            </summary>
+        </member>
+        <member name="M:Common.Logging.Simple.ConsoleOutLoggerFactoryAdapter.CreateLogger(System.String,Common.Logging.LogLevel,System.Boolean,System.Boolean,System.Boolean,System.String)">
+            <summary>
+            Creates a new <see cref="T:Common.Logging.Simple.ConsoleOutLogger"/> instance.
+            </summary>
+        </member>
+    </members>
+</doc>
