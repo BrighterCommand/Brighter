@@ -34,6 +34,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+
 using Common.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
@@ -111,12 +113,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     Channel = OpenChannel(Connection);
                     Channel.BasicQos(0, 1, false);
 
-                    Logger.Debug(m =>m("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()));
+                    Logger.Debug(m => m("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()));
                     DeclareExchange(Channel, Configuration);
 
                     if (createQueues)
                     {
-                        Logger.Debug(m => m("RMQMessagingGateway: Declaring queue {0} on connection {1}", queueName, Configuration.AMPQUri.Uri.ToString()));
+                        Logger.Debug(m => m("RMQMessagingGateway: Creating queue {0} on connection {1}", queueName, Configuration.AMPQUri.Uri.ToString()));
                         Channel.QueueDeclare(queueName, false, false, false, null);
                         Channel.QueueBind(queueName, Configuration.Exchange.Name, routingKey);
                     }
@@ -124,8 +126,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
             catch (BrokerUnreachableException e)
             {
+                Logger.Debug(m => m("RMQMessagingGateway: BrokerUnreachableException on connection to queue {0} via exchange {1} on connection {2}", queueName, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()), e);
                 ConnectionFailure = e;
                 return false;
+            }
+            catch (Exception e)
+            {
+                Logger.Debug(m => m("RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2}", queueName, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()), e);
+                throw;
             }
 
             return true;
@@ -135,7 +143,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
         {
             //desired state configuration of the exchange
-            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, false);
+            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, true);
         }
 
         private IModel OpenChannel(IConnection connection)
