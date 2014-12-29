@@ -124,6 +124,11 @@ namespace paramore.brighter.serviceactivator
 
         private TRequest TranslateMessage(Message message)
         {
+            if (messageMapper == null)
+            {
+                throw new ApplicationException(string.Format("No message mapper found for type {0} for message {1} on thread # {2}", typeof(TRequest).FullName, message.Id, Thread.CurrentThread.ManagedThreadId));
+            }
+
             if (Logger != null) Logger.Debug(m => m("MessagePump: Translate message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId));
             return messageMapper.MapToRequest(message);
         }
