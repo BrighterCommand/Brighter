@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Transactions;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.timeoutpolicy.Attributes;
@@ -46,7 +45,7 @@ namespace Tasks.Ports.Handlers
         [TimeoutPolicy(step: 3, milliseconds: 300)]
         public override EditTaskCommand Handle(EditTaskCommand editTaskCommand)
         {
-            using (var scope = new TransactionScope())
+            using (var scope = tasksDAO.BeginTransaction())
             {
                 Task task = tasksDAO.FindById(editTaskCommand.TaskId);
 
@@ -55,7 +54,7 @@ namespace Tasks.Ports.Handlers
                 task.DueDate = editTaskCommand.TaskDueDate;
 
                 tasksDAO.Update(task);
-                scope.Complete();
+                scope.Commit();
             }
 
             return editTaskCommand;

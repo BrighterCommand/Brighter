@@ -54,6 +54,11 @@ namespace Tasks.Adapters.DataAccess
             return db.Tasks.Insert(newTask);
         }
 
+        public dynamic BeginTransaction()
+        {
+            return db.BeginTransaction();
+        }
+
         public void Update(Task task)
         {
             db.Tasks.UpdateById(task);

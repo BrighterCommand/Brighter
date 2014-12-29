@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Transactions;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.timeoutpolicy.Attributes;
@@ -47,14 +46,14 @@ namespace Tasks.Ports.Handlers
         [TimeoutPolicy(step: 3, milliseconds: 300)]
         public override CompleteTaskCommand Handle(CompleteTaskCommand completeTaskCommand)
         {
-            using (var scope = new TransactionScope())
+            using (var scope = tasksDAO.BeginTransaction()) 
             {
                 Task task = tasksDAO.FindById(completeTaskCommand.TaskId);
                 if (task != null)
                 {
                     task.CompletionDate = completeTaskCommand.CompletionDate;
                     tasksDAO.Update(task);
-                    scope.Complete();
+                    scope.Commit();
                 }
                 else
                 {
