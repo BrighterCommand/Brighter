@@ -28,11 +28,12 @@ namespace Tasks.Adapters.DataAccess
 {
     public interface ITasksDAO
     {
+        dynamic BeginTransaction();
+
         Task Add(Task newTask);
         Task FindById(int id);
         void Update(Task task);
 
         void Clear();
-        dynamic BeginTransaction();
     }
 }

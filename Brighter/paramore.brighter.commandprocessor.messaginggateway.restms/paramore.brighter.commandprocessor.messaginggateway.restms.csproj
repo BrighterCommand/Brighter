@@ -59,6 +59,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Exceptions\RestMSClientException.cs" />
     <Compile Include="MessagingGatewayConfiguration\RestMSMessagingGatewayConfigurationSection.cs" />
     <Compile Include="Model\RestMSDomain.cs" />
     <Compile Include="Model\RestMSFeed.cs" />

@@ -164,7 +164,8 @@
     <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
     <Compile Include="MessageStore\MsSql\SqlMessageStoreTests.cs" />
     <Compile Include="MessagingGateway\MessageChannelTests.cs" />
-    <Compile Include="MessagingGateway\restms\RestMSMessageGatewayTests.cs" />
+    <Compile Include="MessagingGateway\restms\RestMSClientTests.cs" />
+    <Compile Include="MessagingGateway\restms\RestMSParserTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RavenTests\CanCallLastOnArray.cs" />

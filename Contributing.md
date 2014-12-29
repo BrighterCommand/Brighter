@@ -44,3 +44,8 @@ The process of signing works through GitHub.
 
 To get started, <a href="https://www.clahub.com/agreements/iancooper/Paramore">sign the Contributor License Agreement</a>. 
 
+### Contributor Code of Conduct ###
+Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by its terms.
+
+The code of conduct is from [Contributor Covenant](http://contributor-covenant.org/)
+

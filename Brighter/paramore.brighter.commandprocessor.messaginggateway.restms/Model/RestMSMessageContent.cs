@@ -41,7 +41,7 @@ using System.Xml.Serialization;
 namespace paramore.brighter.commandprocessor.messaginggateway.restms.Model
 {
     [DataContract(Name = "content"), XmlRoot(ElementName = "content", Namespace = "http://www.restms.org/schema/restms")]
-    internal class RestMSMessageContent
+    public class RestMSMessageContent
     {
         [DataMember(Name = "type"), XmlAttribute(AttributeName = "type")]
         public string Type { get; set; }

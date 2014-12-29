@@ -39,7 +39,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
             messageBody = client.Listen();
         };
 
-        It should_send_a_message_via_rmq_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
+        It should_send_a_message_via_restms_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
 
         Cleanup tearDown = () =>
         {
