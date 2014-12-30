@@ -28,6 +28,8 @@ using System.Threading.Tasks;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
 
+using ConfigurationException = paramore.brighter.commandprocessor.ConfigurationException;
+
 namespace paramore.brighter.serviceactivator
 {
     // The message pump is a classic event loop and is intended to be run on a single-thread
@@ -87,6 +89,11 @@ namespace paramore.brighter.serviceactivator
                 {
                     DispatchRequest(message.Header.MessageType, TranslateMessage(message));
                 }
+                catch (ConfigurationException configurationException)
+                {
+                    if (Logger != null) Logger.Debug(m => m("MessagePump: {0} Stopping receiving of messages on thread # {1}", configurationException.Message, Thread.CurrentThread.ManagedThreadId), configurationException);
+                    break;
+                }
                 catch (Exception e)
                 {
                     Logger.Error("Failed to dispatch message "+ message, e);
@@ -126,7 +133,7 @@ namespace paramore.brighter.serviceactivator
         {
             if (messageMapper == null)
             {
-                throw new ApplicationException(string.Format("No message mapper found for type {0} for message {1} on thread # {2}", typeof(TRequest).FullName, message.Id, Thread.CurrentThread.ManagedThreadId));
+                throw new ConfigurationException(string.Format("No message mapper found for type {0} for message {1}.", typeof(TRequest).FullName, message.Id));
             }
 
             if (Logger != null) Logger.Debug(m => m("MessagePump: Translate message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId));
