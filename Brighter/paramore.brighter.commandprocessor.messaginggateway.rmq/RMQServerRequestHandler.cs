@@ -117,7 +117,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>Message.</returns>
         public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds)
         {
-
             Logger.Debug(m => m("RMQMessagingGateway: Preparing  to retrieve next message via exchange {0}", Configuration.Exchange.Name));
 
             if (!Connect(queueName, routingKey, true))
@@ -130,9 +129,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             try
             {
                 BasicDeliverEventArgs fromQueue;
-                consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue);
-                if (fromQueue != null)
+                Logger.Debug(m => m("RMQMessagingGateway: Trying to DEQUEUE message from exchange {0} on connection {1} with topic {2}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), queueName));
+                if (consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue))
                 {
+                    Logger.Debug(m => m("RMQMessagingGateway: DEQUEUED message", Configuration.Exchange.Name));
                     message = messageCreator.CreateMessage(fromQueue);
                     var deliveryTag = (ulong)message.Header.Bag["DeliveryTag"];
                     Logger.Debug(m => m("RMQMessagingGateway: Recieved message with delivery tag {5} from exchange {0} on connection {1} with topic {2} and id {3} and body {4}", 
@@ -180,17 +180,20 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         protected override bool Connect(string queueName = "", string routingKey = "", bool createQueues = false)
         {
-            if (base.Connect(queueName, routingKey, createQueues))
+            if (NotConnected())
             {
-                consumer = new QueueingBasicConsumer(Channel);
-                Channel.BasicConsume(queueName, AUTO_ACK, consumer);
+                if (base.Connect(queueName, routingKey, createQueues))
+                {
+                    consumer = new QueueingBasicConsumer(Channel);
+                    Channel.BasicConsume(queueName, AUTO_ACK, consumer);
 
-                return true;
-            }
-            else
-            {
+                    return true;
+                }
+
                 return false;
             }
+
+            return true;
         }
 
         Message CreateMessage(BasicDeliverEventArgs fromQueue)

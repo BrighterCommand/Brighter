@@ -104,7 +104,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             try
             {
-                if (Connection == null || !Connection.IsOpen)
+                if (NotConnected())
                 {
                     Logger.Debug(m => m("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.Uri.ToString()));
                     Connection = Connect(connectionFactory);
@@ -181,6 +181,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             {
                 Channel.Dispose();
             }
+        }
+
+        protected bool NotConnected()
+        {
+            return Connection == null || !Connection.IsOpen;
         }
     }
 }
