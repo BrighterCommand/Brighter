@@ -143,7 +143,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
         {
             //desired state configuration of the exchange
-            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, true);
+            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, configuration.Exchange.Durable);
         }
 
         private IModel OpenChannel(IConnection connection)
