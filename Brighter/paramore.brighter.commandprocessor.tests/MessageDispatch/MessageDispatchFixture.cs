@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Common.Logging;
@@ -174,12 +175,17 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         Because of = () =>
             {
                 Task.Delay(1000).Wait();
+                numberOfConsumers = dispatcher.Consumers.Count();
                 dispatcher.End().Wait();
             };
 
         It should_have_consumed_the_messages_in_the_event_channel = () => eventChannel.Length.ShouldEqual(0);
         It should_have_consumed_the_messages_in_the_command_channel = () => commandChannel.Length.ShouldEqual(0);
         It should_have_a_stopped_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+        It should_have_no_consumers = () => dispatcher.Consumers.ShouldBeEmpty();
+        It should_of_had_2_consumers_when_running = () => numberOfConsumers.ShouldEqual(2);
+       
+         private static int numberOfConsumers;
     }
 
     public class When_a_message_dispatcher_shuts_a_connection
@@ -225,6 +231,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         It should_have_consumed_the_messages_in_the_channel = () => dispatcher.Consumers.Any(consumer => (consumer.Name == connection.Name) && (consumer.State == ConsumerState.Open)).ShouldBeFalse(); 
         It should_have_a_stopped_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+        It should_have_no_consumers = () => dispatcher.Consumers.ShouldBeEmpty();
     }
 
     public class When_a_message_dispatcher_restarts_a_connection

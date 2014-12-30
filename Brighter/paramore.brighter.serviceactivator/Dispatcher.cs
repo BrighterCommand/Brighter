@@ -116,6 +116,16 @@ namespace paramore.brighter.serviceactivator
                             var index = Task.WaitAny(tasks.ToArray());
                             //TODO: This doesn't really identify the connection that we closed - which is what we want diagnostically
                             logger.Debug(m => m("Dispatcher: Performer stopped with state {0}", tasks[index].Status));
+
+                            var consumer = Consumers.SingleOrDefault(c => c.JobId == tasks[index].Id);
+                            if (consumer != null)
+                            {
+                                logger.Debug(m => m("Dispatcher: Removing a consumer with connection name {0}", consumer.Name));
+                                consumer.Dispose();
+                                Consumers.Remove(consumer);
+                            }
+
+                            tasks[index].Dispose();
                             tasks.RemoveAt(index);
                         }
                         catch (AggregateException ae)
