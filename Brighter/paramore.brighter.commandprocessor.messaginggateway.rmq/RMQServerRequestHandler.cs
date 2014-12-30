@@ -76,7 +76,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             if (Channel != null)
             {
                 var deliveryTag = (ulong)message.Header.Bag["DeliveryTag"];
-                Logger.Debug(m =>m("RMQMessagingGateway: Acknowledging message {0} as completed with delivery tag {1}",message.Id, deliveryTag));
+                Logger.Debug(m =>m("RMQServerRequestHandler: Acknowledging message {0} as completed with delivery tag {1}",message.Id, deliveryTag));
                 Channel.BasicAck((ulong)message.Header.Bag["DeliveryTag"], false);
             }
          }
@@ -89,7 +89,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             if (Channel != null)
             {
-                Logger.Debug(m => m("RMQMessagingGateway: Purging channel"));
+                Logger.Debug(m => m("RMQServerRequestHandler: Purging channel"));
                 Channel.QueuePurge(queueName);
             }
         }
@@ -103,7 +103,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             if (Channel != null)
             {
-                Logger.Debug(m => m("RMQMessagingGateway: NoAck message {0}", message.Id));
+                Logger.Debug(m => m("RMQServerRequestHandler: NoAck message {0}", message.Id));
                 Channel.BasicNack((ulong)message.Header.Bag["DeliveryTag"], false, requeue);
             }
         }
@@ -117,11 +117,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>Message.</returns>
         public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds)
         {
-            Logger.Debug(m => m("RMQMessagingGateway: Preparing  to retrieve next message via exchange {0}", Configuration.Exchange.Name));
+            Logger.Debug(m => m("RMQServerRequestHandler: Preparing  to retrieve next message via exchange {0}", Configuration.Exchange.Name));
 
             if (!Connect(queueName, routingKey, true))
             {
-                Logger.Debug(m => m("RMQMessagingGateway: Unable to connect to the exchange {0}", Configuration.Exchange.Name));
+                Logger.Debug(m => m("RMQServerRequestHandler: Unable to connect to the exchange {0}", Configuration.Exchange.Name));
                 throw ConnectionFailure;
             }
 
@@ -129,23 +129,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             try
             {
                 BasicDeliverEventArgs fromQueue;
-                Logger.Debug(m => m("RMQMessagingGateway: Trying to DEQUEUE message from exchange {0} on connection {1} with topic {2}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), queueName));
                 if (consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue))
                 {
-                    Logger.Debug(m => m("RMQMessagingGateway: DEQUEUED message", Configuration.Exchange.Name));
                     message = messageCreator.CreateMessage(fromQueue);
                     var deliveryTag = (ulong)message.Header.Bag["DeliveryTag"];
-                    Logger.Debug(m => m("RMQMessagingGateway: Recieved message with delivery tag {5} from exchange {0} on connection {1} with topic {2} and id {3} and body {4}", 
+                    Logger.Debug(m => m("RMQServerRequestHandler: Recieved message with delivery tag {5} from exchange {0} on connection {1} with topic {2} and id {3} and body {4}", 
                         Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value, deliveryTag));
                 }
                 else
                 {
-                    Logger.Debug(m => m("RMQMessagingGateway: Time out without recieving message from exchange {0} on connection {1} with topic {2}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), queueName));
+                    Logger.Debug(m => m("RMQServerRequestHandler: Time out without recieving message from exchange {0} on connection {1} with topic {2}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), queueName));
                 }
             }
             catch (Exception e)
             {
-                Logger.Error(m => m("RMQMessagingGateway: There was an error listening to channel {0} of {1}", queueName, e.ToString()));
+                Logger.Error(m => m("RMQServerRequestHandler: There was an error listening to channel {0} of {1}", queueName, e.ToString()));
                 throw;
             }
 
