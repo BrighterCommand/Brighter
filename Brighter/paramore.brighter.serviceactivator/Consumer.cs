@@ -36,6 +36,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 
@@ -88,6 +89,8 @@ namespace paramore.brighter.serviceactivator
         /// <value>The job.</value>
         public Task Job { get; set; }
 
+        public int JobId { get; set; }
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Consumer"/> class.
@@ -109,6 +112,7 @@ namespace paramore.brighter.serviceactivator
         {
             State = ConsumerState.Open;
             Job = Performer.Run();
+            JobId = Job.Id;
         }
 
         /// <summary>
@@ -134,6 +138,52 @@ namespace paramore.brighter.serviceactivator
             if (disposing)
             {
                 Shut();
+            }
+        }
+
+        private sealed class ConsumerEqualityComparer : IEqualityComparer<Consumer>
+        {
+            public bool Equals(Consumer x, Consumer y)
+            {
+                if (ReferenceEquals(x, y))
+                {
+                    return true;
+                }
+                if (ReferenceEquals(x, null))
+                {
+                    return false;
+                }
+                if (ReferenceEquals(y, null))
+                {
+                    return false;
+                }
+                if (x.GetType() != y.GetType())
+                {
+                    return false;
+                }
+                return Equals(x.Name, y.Name) && x.State == y.State && x.JobId == y.JobId && Equals(x.Performer, y.Performer) && Equals(x.Job, y.Job);
+            }
+
+            public int GetHashCode(Consumer obj)
+            {
+                unchecked
+                {
+                    var hashCode = (obj.Name != null ? obj.Name.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (int)obj.State;
+                    hashCode = (hashCode * 397) ^ obj.JobId;
+                    hashCode = (hashCode * 397) ^ (obj.Performer != null ? obj.Performer.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (obj.Job != null ? obj.Job.GetHashCode() : 0);
+                    return hashCode;
+                }
+            }
+        }
+
+        private static readonly IEqualityComparer<Consumer> ConsumerComparerInstance = new ConsumerEqualityComparer();
+        public static IEqualityComparer<Consumer> ConsumerComparer
+        {
+            get
+            {
+                return ConsumerComparerInstance;
             }
         }
     }
