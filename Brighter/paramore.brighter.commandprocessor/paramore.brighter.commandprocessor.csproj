@@ -58,6 +58,7 @@
   <ItemGroup>
     <Compile Include="ChannelName.cs" />
     <Compile Include="CommandProcessorBuilder.cs" />
+    <Compile Include="ConfigurationException.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="HandlerConfiguration.cs" />
