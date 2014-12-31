@@ -10,7 +10,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
         static RestMSDomain domain;
         static bool couldParse;
 
-        Because of = () => couldParse = ResultParser.TryParse(BODY, out domain);
+        Because of = () => couldParse = XmlResultParser.TryParse(BODY, out domain);
 
         It should_be_able_to_parse_the_result = () => couldParse.ShouldBeTrue();
         It should_have_a_domain_object = () => domain.ShouldNotBeNull();

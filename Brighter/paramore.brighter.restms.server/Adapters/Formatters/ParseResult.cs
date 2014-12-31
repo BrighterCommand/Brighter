@@ -23,7 +23,7 @@ THE SOFTWARE. */
 
 namespace paramore.brighter.restms.server.Adapters.Formatters
 {
-    internal enum ParseResult
+    public enum ParseResult
     {
         Failed = 0,
         NewFeed = 1,

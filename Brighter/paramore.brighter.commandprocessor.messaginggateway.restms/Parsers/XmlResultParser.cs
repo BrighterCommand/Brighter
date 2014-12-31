@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Xml.Serialization;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
 {
-    public static class ResultParser
+    public static class XmlResultParser
     {
         public static bool TryParse<T>(string body, out T domainObject)
         {
@@ -19,6 +19,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
             }
             catch (Exception e)
             {
+                Trace.WriteLine(e.Message);
                 domainObject = default(T);
                 return false;
             }

@@ -308,7 +308,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                     .Handle<Exception>()
                     .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-                var gateway = new RMQServerRequestHandler(logger);
+                var gateway = new RmqMessageConsumer(logger);
 
                 builder = DispatchBuilder.With()
                              .Logger(logger)

@@ -69,7 +69,7 @@ namespace paramore.brighter.commandprocessor
     ///     <item>
     ///         <description>
     ///             A <see cref="MessagingConfiguration"/> describing how you want to configure Task Queues for the <see cref="CommandProcessor"/>. We store messages in a <see cref="IAmAMessageStore"/>
-    ///             for later replay (in case we need to compensate by trying a message again). We send messages to a Task Queue via a <see cref="IAmAClientRequestHandler"/> and we  want to know how
+    ///             for later replay (in case we need to compensate by trying a message again). We send messages to a Task Queue via a <see cref="IAmAMessageProducer"/> and we  want to know how
     ///             to map the <see cref="IRequest"/> (<see cref="Command"/> or <see cref="Event"/>) to a <see cref="Message"/> using a <see cref="IAmAMessageMapper"/> using 
     ///             an <see cref="IAmAMessageMapperRegistry"/>. You can use the default <see cref="MessageMapperRegistry"/> to register the association. You need to 
     ///             provide a <see cref="IAmAMessageMapperFactory"/> so that we can create instances of your  <see cref="IAmAMessageMapper"/>. You need to provide a <see cref="IAmAMessageMapperFactory"/>
@@ -90,7 +90,7 @@ namespace paramore.brighter.commandprocessor
     {
         private ILog logger;
         private IAmAMessageStore<Message> messageStore;
-        private IAmAClientRequestHandler messagingGateway;
+        private IAmAMessageProducer messagingGateway;
         private IAmAMessageMapperRegistry messageMapperRegistry;
         private IAmARequestContextFactory requestContextFactory;
         private IAmASubscriberRegistry registry;

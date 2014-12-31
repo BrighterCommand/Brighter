@@ -37,8 +37,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     [Subject("Messaging Gateway")]
     public class When_posting_a_message_via_the_messaging_gateway
     {
-        static IAmAClientRequestHandler clientRequestHandler;
-        static IAmAServerRequestHandler serverRequestHandler;
+        static IAmAMessageProducer messageProducer;
+        static IAmAMessageConsumer messageConsumer;
         static Message message;
         static TestRMQListener client;
         static string messageBody;
@@ -48,9 +48,9 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 var properties = new NameValueCollection();
                 properties["showDateTime"] = "true";
                 LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-                var logger = LogManager.GetLogger(typeof(RMQServerRequestHandler));  
-                clientRequestHandler = new RMQClientRequestHandler(logger);
-                serverRequestHandler = new RMQServerRequestHandler(logger);
+                var logger = LogManager.GetLogger(typeof(RmqMessageConsumer));  
+                messageProducer = new RmqMessageProducer(logger);
+                messageConsumer = new RmqMessageConsumer(logger);
                 message = new Message(
                     header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")
@@ -61,7 +61,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Because of = () =>
             {
-                clientRequestHandler.Send(message);
+                messageProducer.Send(message);
                 messageBody = client.Listen();
             };
 
@@ -69,8 +69,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Cleanup tearDown = () =>
         {
-            serverRequestHandler.Purge("test");
-            clientRequestHandler.Dispose();
+            messageConsumer.Purge("test");
+            messageProducer.Dispose();
         };
     }
 
@@ -117,8 +117,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
       [Subject("Messaging Gateway")]
     public class When_reading_a_message_via_the_messaging_gateway
     {
-        static IAmAClientRequestHandler sender;
-        static IAmAServerRequestHandler receiver;
+        static IAmAMessageProducer sender;
+        static IAmAMessageConsumer receiver;
         static Message sentMessage;
         static Message recievedMessage;
 
@@ -127,10 +127,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 var properties = new NameValueCollection();
                 properties["showDateTime"] = "true";
                 LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-                var logger = LogManager.GetLogger(typeof(RMQServerRequestHandler));  
+                var logger = LogManager.GetLogger(typeof(RmqMessageConsumer));  
              
-                sender = new RMQClientRequestHandler(logger);
-                receiver = new RMQServerRequestHandler(logger);
+                sender = new RmqMessageProducer(logger);
+                receiver = new RmqMessageConsumer(logger);
                 sentMessage= new Message(
                     header: new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")

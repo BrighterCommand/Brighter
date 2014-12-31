@@ -10,6 +10,7 @@ using paramore.brighter.restms.core;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Resources;
+using paramore.brighter.restms.server.Adapters.Formatters;
 
 namespace paramore.commandprocessor.tests.RestMSServer
 {
@@ -107,7 +108,6 @@ namespace paramore.commandprocessor.tests.RestMSServer
             It should_set_the_feed = () => newJoin.Feed.ShouldEqual("http://host.com/restms/feed/bar");
             It should_set_the_feed_type = () => newJoin.Type.ShouldEqual("Direct");
         }
-
 
         public class When_serializing_a_message_to_xml
         {
@@ -278,6 +278,30 @@ namespace paramore.commandprocessor.tests.RestMSServer
 
             It should_have_the_pipe_title = () => newPipe.Title.ShouldEqual("My Pipe");
             It should_have_the_pipe_type = () => newPipe.Type.ShouldEqual("Fifo");
+        }
+
+        public class When_parsing_a_new_feed
+        {
+            const string BODY = "<?xml version=\"1.0\" ?><feed xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" type=\"Direct\" name=\"default\" title=\"\" xmlns=\"http://www.restms.org/schema/restms\" />";
+            static RestMSFeed newFeed;
+            static readonly XmlDomainPostParser parser = new XmlDomainPostParser();
+
+            Establish context = () =>
+            {
+                Globals.HostName = "host.com";
+                newFeed = null;
+            };
+
+            Because of = () =>
+                         {
+                             var result = parser.Parse(BODY);
+                             if (result.Item1 == ParseResult.NewFeed)
+                             {
+                                 newFeed = result.Item2;
+                             }
+                         };
+
+            It should_return_a_restms_feed = () => newFeed.ShouldNotBeNull();
         }
 
 

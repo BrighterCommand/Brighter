@@ -11,6 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -41,7 +42,7 @@ namespace paramore.brighter.commandprocessor
     /// <summary>
     /// Interface IAmAReceiveMessageGateway
     /// </summary>
-    public interface IAmAServerRequestHandler: IDisposable 
+    public interface IAmAMessageConsumer: IDisposable 
     {
         /// <summary>
         /// Receives the specified queue name.

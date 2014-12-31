@@ -1,4 +1,18 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.restms.server
+// Author           : ian
+// Created          : 12-18-2014
+//
+// Last Modified By : ian
+// Last Modified On : 12-31-2014
+// ***********************************************************************
+// <copyright file="FeedController.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,7 +37,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Specialized;
-using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http;
 using System.Net.Mail;
@@ -49,33 +62,52 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         readonly IAmACommandProcessor commandProcessor;
         readonly IAmARepository<Feed> feedRepository;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FeedController"/> class.
+        /// </summary>
+        /// <param name="commandProcessor">The command processor.</param>
+        /// <param name="feedRepository">The feed repository.</param>
         public FeedController(IAmACommandProcessor commandProcessor, IAmARepository<Feed> feedRepository)
         {
             this.commandProcessor = commandProcessor;
             this.feedRepository = feedRepository;
         }
 
+        /// <summary>
+        /// Gets the specified name.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <returns>RestMSFeed.</returns>
         [HttpGet]
         [FeedDoesNotExistExceptionFilter]
         public RestMSFeed Get(string name)
         {
-            //TODO: Get needs Last Modified and ETag
             var feedRetriever = new FeedRetriever(feedRepository);
             return feedRetriever.Retrieve(new Name(name));
         }
 
-       
+
+        /// <summary>
+        /// Deletes the specified name.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <returns>HttpResponseMessage.</returns>
         [HttpDelete]
         [FeedDoesNotExistExceptionFilter]
         public HttpResponseMessage Delete(string name)
         {
-            //TODO: Should support conditional DELETE based on ETag
             var deleteFeedCommand = new DeleteFeedCommand(feedName: name);
             commandProcessor.Send(deleteFeedCommand);
 
             return Request.CreateResponse(HttpStatusCode.OK);
         }
 
+        /// <summary>
+        /// Posts the message to feed.
+        /// </summary>
+        /// <param name="name">The name.</param>
+        /// <param name="messageSpecification">The message specification.</param>
+        /// <returns>HttpResponseMessage.</returns>
         [HttpPost]
         [FeedDoesNotExistExceptionFilter]
         public HttpResponseMessage PostMessageToFeed(string name, RestMSMessage messageSpecification)
@@ -91,8 +123,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             commandProcessor.Send(addMessageToFeedCommand);
 
             var item =new RestMSMessagePosted() {Count = addMessageToFeedCommand.MatchingJoins};
-            var response = Request.CreateResponse<RestMSMessagePosted>(HttpStatusCode.OK, item);
-            return response;
+            return Request.CreateResponse<RestMSMessagePosted>(HttpStatusCode.OK, item);
         }
 
         Attachment GetAttachmentFromMessage(RestMSMessageContent content)
