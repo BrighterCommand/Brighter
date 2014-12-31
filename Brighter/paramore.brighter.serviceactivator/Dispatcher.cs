@@ -55,6 +55,7 @@ namespace paramore.brighter.serviceactivator
     {
         private readonly IAmACommandProcessor commandProcessor;
         private readonly IAmAMessageMapperRegistry messageMapperRegistry;
+        private readonly IEnumerable<Connection> _connections;
         private readonly ILog logger;
         private Task controlTask;
         private readonly IList<Task> tasks = new SynchronizedCollection<Task>();
@@ -81,11 +82,12 @@ namespace paramore.brighter.serviceactivator
         {
             this.commandProcessor = commandProcessor;
             this.messageMapperRegistry = messageMapperRegistry;
+            _connections = connections;
             this.logger = logger;
             State = DispatcherState.DS_NOTREADY;
 
             Consumers = new SynchronizedCollection<Consumer>();
-            CreateConsumers(connections).Each(consumer => Consumers.Add(consumer));
+            CreateConsumers(_connections).Each(consumer => Consumers.Add(consumer));
             
             State = DispatcherState.DS_AWAITING;
             logger.Debug(m => m("Dispatcher is ready to recieve"));
@@ -160,6 +162,11 @@ namespace paramore.brighter.serviceactivator
             return controlTask;
         }
 
+        public void Shut(string connectionName)
+        {
+            Shut(_connections.SingleOrDefault(c => c.Name == connectionName));
+        }
+
         /// <summary>
         /// Shuts the specified connection.
         /// </summary>
@@ -171,6 +178,13 @@ namespace paramore.brighter.serviceactivator
                 logger.Debug(m => m("Dispatcher: Stopping connection {0}", connection.Name));
                 Consumers.Where(consumer => consumer.Name == connection.Name).Each((consumer) => consumer.Shut());
             }
+        }
+
+
+
+        public void Open(string connectionName)
+        {
+            Open(_connections.SingleOrDefault(c => c.Name == connectionName));
         }
 
         /// <summary>
