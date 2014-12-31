@@ -87,7 +87,6 @@ namespace paramore.brighter.serviceactivator
             State = DispatcherState.DS_NOTREADY;
 
             Consumers = new SynchronizedCollection<Consumer>();
-            CreateConsumers(_connections).Each(consumer => Consumers.Add(consumer));
             
             State = DispatcherState.DS_AWAITING;
             logger.Debug(m => m("Dispatcher is ready to recieve"));
@@ -98,53 +97,61 @@ namespace paramore.brighter.serviceactivator
         /// </summary>
         public void Receive()
         {
-            controlTask = Task.Factory.StartNew(() =>
-            {
-                if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
+            CreateConsumers(_connections).Each(consumer => Consumers.Add(consumer));
+            Start();
+        }
+
+        private void Start()
+        {
+            controlTask = Task.Factory.StartNew(
+                () =>
                 {
-                    State = DispatcherState.DS_RUNNING;
-                    logger.Debug(m => m("Dispatcher: Dispatcher starting"));
-
-                    Consumers.Each((consumer) => consumer.Open());
-
-                    Consumers.Select(consumer => consumer.Job).Each(job => tasks.Add(job));
-
-                    logger.Debug(m => m("Dispatcher: Dispatcher starting {0} performers", tasks.Count));
-
-                    while (tasks.Any())
+                    if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
                     {
-                        try
-                        {
-                            var index = Task.WaitAny(tasks.ToArray());
-                            //TODO: This doesn't really identify the connection that we closed - which is what we want diagnostically
-                            logger.Debug(m => m("Dispatcher: Performer stopped with state {0}", tasks[index].Status));
+                        State = DispatcherState.DS_RUNNING;
+                        logger.Debug(m => m("Dispatcher: Dispatcher starting"));
 
-                            var consumer = Consumers.SingleOrDefault(c => c.JobId == tasks[index].Id);
-                            if (consumer != null)
+                        Consumers.Each((consumer) => consumer.Open());
+
+                        Consumers.Select(consumer => consumer.Job).Each(job => tasks.Add(job));
+
+                        logger.Debug(m => m("Dispatcher: Dispatcher starting {0} performers", tasks.Count));
+
+                        while (tasks.Any())
+                        {
+                            try
                             {
-                                logger.Debug(m => m("Dispatcher: Removing a consumer with connection name {0}", consumer.Name));
-                                consumer.Dispose();
-                                Consumers.Remove(consumer);
-                            }
+                                var index = Task.WaitAny(tasks.ToArray());
+                                //TODO: This doesn't really identify the connection that we closed - which is what we want diagnostically
+                                logger.Debug(m => m("Dispatcher: Performer stopped with state {0}", tasks[index].Status));
 
-                            tasks[index].Dispose();
-                            tasks.RemoveAt(index);
-                        }
-                        catch (AggregateException ae)
-                        {
-                            ae.Handle((ex) =>
+                                var consumer = Consumers.SingleOrDefault(c => c.JobId == tasks[index].Id);
+                                if (consumer != null)
                                 {
-                                    logger.Error(m => m("Dispatcher: Error on consumer; consumer shut down"));
-                                    return true;
-                                });
-                        }
-                    }
+                                    logger.Debug(m => m("Dispatcher: Removing a consumer with connection name {0}", consumer.Name));
+                                    consumer.Dispose();
+                                    Consumers.Remove(consumer);
+                                }
 
-                    State = DispatcherState.DS_STOPPED;
-                    logger.Debug(m => m("Dispatcher: Dispatcher stopped"));
-                }
-            },
-            TaskCreationOptions.LongRunning);
+                                tasks[index].Dispose();
+                                tasks.RemoveAt(index);
+                            }
+                            catch (AggregateException ae)
+                            {
+                                ae.Handle(
+                                    (ex) =>
+                                    {
+                                        logger.Error(m => m("Dispatcher: Error on consumer; consumer shut down"));
+                                        return true;
+                                    });
+                            }
+                        }
+
+                        State = DispatcherState.DS_STOPPED;
+                        logger.Debug(m => m("Dispatcher: Dispatcher stopped"));
+                    }
+                },
+                TaskCreationOptions.LongRunning);
         }
 
         /// <summary>
@@ -162,6 +169,10 @@ namespace paramore.brighter.serviceactivator
             return controlTask;
         }
 
+        /// <summary>
+        /// Shuts the specified connection by name
+        /// </summary>
+        /// <param name="connectionName">The name of the connection</param>
         public void Shut(string connectionName)
         {
             Shut(_connections.SingleOrDefault(c => c.Name == connectionName));
@@ -180,8 +191,10 @@ namespace paramore.brighter.serviceactivator
             }
         }
 
-
-
+        /// <summary>
+        /// Opens the specified connection by name 
+        /// </summary>
+        /// <param name="connectionName">The name of the connection</param>
         public void Open(string connectionName)
         {
             Open(_connections.SingleOrDefault(c => c.Name == connectionName));
@@ -191,23 +204,30 @@ namespace paramore.brighter.serviceactivator
         /// Opens the specified connection.
         /// </summary>
         /// <param name="connection">The connection.</param>
-        /// <exception cref="System.InvalidOperationException">Use Recieve to start the dispatcher; use Open to start a shut or added connection</exception>
         public void Open(Connection connection)
         {
-            if (State == DispatcherState.DS_RUNNING)
+            logger.Debug(m => m("Dispatcher: Opening connection {0}", connection.Name));
+            var addedConsumers = CreateConsumers(new List<Connection>() { connection });
+
+            switch (State)
             {
-                logger.Debug(m => m("Dispatcher: Opening connection {0}", connection.Name));
-                var addedConsumers = CreateConsumers(new List<Connection>() {connection});
-                addedConsumers.Each((consumer) =>
-                {
-                    Consumers.Add(consumer);
-                    consumer.Open();
-                    tasks.Add(consumer.Job);
-                } );
-            }
-            else
-            {
-                throw new InvalidOperationException("Use Recieve to start the dispatcher; use Open to start a shut or added connection");
+                case DispatcherState.DS_RUNNING:
+                    addedConsumers.Each(
+                        (consumer) =>
+                        {
+                            Consumers.Add(consumer);
+                            consumer.Open();
+                            tasks.Add(consumer.Job);
+                        });
+                    break;
+                case DispatcherState.DS_STOPPED:
+                case DispatcherState.DS_AWAITING:
+                    addedConsumers.Each((consumer) => Consumers.Add(consumer));
+                    Start();
+                    break;
+                default:
+                    throw new InvalidOperationException("The dispatcher is not ready");
+
             }
         }
 
