@@ -52,11 +52,13 @@ namespace paramore.brighter.serviceactivator
         /// </summary>
         /// <returns>Task.</returns>
         Task End();
+
         /// <summary>
         /// Opens the specified connection.
         /// </summary>
         /// <param name="connection">The connection.</param>
         void Open(Connection connection);
+        void Open(string connectionName);
         /// <summary>
         /// Begins listening for messages on channels, and dispatching them to request handlers.
         /// </summary>
@@ -66,5 +68,6 @@ namespace paramore.brighter.serviceactivator
         /// </summary>
         /// <param name="connection">The connection.</param>
         void Shut(Connection connection);
+        void Shut(string connectionName);
     }
 }
