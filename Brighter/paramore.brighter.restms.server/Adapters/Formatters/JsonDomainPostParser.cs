@@ -1,3 +1,16 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.restms.server
+// Author           : ian
+// Created          : 12-18-2014
+//
+// Last Modified By : ian
+// Last Modified On : 12-30-2014
+// ***********************************************************************
+// <copyright file="JsonDomainPostParser.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -28,17 +41,28 @@ using paramore.brighter.restms.core.Ports.Resources;
 
 namespace paramore.brighter.restms.server.Adapters.Formatters
 {
-    internal class JsonDomainPostParser : IParseDomainPosts
+    /// <summary>
+    /// Class JsonDomainPostParser.
+    /// </summary>
+    public class JsonDomainPostParser : IParseDomainPosts
     {
         readonly DataContractJsonSerializer feedDeserializer;
         readonly DataContractJsonSerializer pipeDeserializer;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JsonDomainPostParser"/> class.
+        /// </summary>
         public JsonDomainPostParser()
         {
             feedDeserializer = new DataContractJsonSerializer(typeof(RestMSFeed));
             pipeDeserializer = new DataContractJsonSerializer(typeof (RestMSPipeNew));
         }
 
+        /// <summary>
+        /// Parses the specified body.
+        /// </summary>
+        /// <param name="body">The body.</param>
+        /// <returns>Tuple&lt;ParseResult, RestMSFeed, RestMSPipeNew&gt;.</returns>
         public Tuple<ParseResult, RestMSFeed, RestMSPipeNew> Parse(string body)
         {
             RestMSPipeNew pipeNew = null;

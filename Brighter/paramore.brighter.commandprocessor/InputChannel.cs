@@ -50,7 +50,7 @@ namespace paramore.brighter.commandprocessor
     {
         private readonly string queueName;
         private readonly string routingKey;
-        private readonly IAmAServerRequestHandler gateway;
+        private readonly IAmAMessageConsumer gateway;
         private readonly ConcurrentQueue<Message> queue = new ConcurrentQueue<Message>();
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="gateway">The gateway.</param>
-        public InputChannel(string queueName, string routingKey, IAmAServerRequestHandler gateway)
+        public InputChannel(string queueName, string routingKey, IAmAMessageConsumer gateway)
         {
             this.queueName = queueName;
             this.routingKey = routingKey;

@@ -73,11 +73,12 @@
     <Compile Include="Model\RestMSPipeLink.cs" />
     <Compile Include="Model\RestMSPipeNew.cs" />
     <Compile Include="Model\RestMSProfile.cs" />
-    <Compile Include="Parsers\ResultParser.cs" />
+    <Compile Include="Parsers\XmlRequestBuilder.cs" />
+    <Compile Include="Parsers\XmlResultParser.cs" />
     <Compile Include="Parsers\ResultParserException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RestMSClientRequestHandler.cs" />
-    <Compile Include="RestMSServerRequestHandler.cs" />
+    <Compile Include="RestMsMessageProducer.cs" />
+    <Compile Include="RestMsMessageConsumer.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">

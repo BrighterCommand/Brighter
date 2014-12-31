@@ -38,6 +38,7 @@ namespace paramore.brighter.serviceactivator
             this.channel = channel;
             this.messagePump = messagePump;
         }
+
         public void Stop()
         {
             channel.Stop();

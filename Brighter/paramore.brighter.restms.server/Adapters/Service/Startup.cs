@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System.Linq;
 using System.Web.Http;
 using CacheCow.Server;
+using Microsoft.Owin.Diagnostics;
 using Microsoft.Practices.Unity;
 using Owin;
 using paramore.brighter.restms.server.Adapters.Security;
@@ -52,9 +53,33 @@ namespace paramore.brighter.restms.server.Adapters.Service
             
             ConfigureFormatting(configuration);
 
+            ConfigureWelcomePage(builder);
+
             ConfigureDiagnostics(configuration);
+
+            ConfigureErrorPage(builder);
             
             builder.UseWebApi(configuration);
+        }
+
+        void ConfigureErrorPage(IAppBuilder builder)
+        {
+            builder.UseErrorPage(
+                new ErrorPageOptions()
+                {
+                    ShowEnvironment = true,
+                    ShowSourceCode = true,
+                    ShowExceptionDetails = true,
+                    ShowHeaders = true,
+                    ShowCookies = true,
+                    ShowQuery = true
+                }
+            );
+        }
+
+        void ConfigureWelcomePage(IAppBuilder builder)
+        {
+            builder.UseWelcomePage("/status");
         }
 
         void ConfigureAuthentication(HttpConfiguration configuration, IAppBuilder builder)

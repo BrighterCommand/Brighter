@@ -25,6 +25,7 @@ using System;
 using System.Transactions;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
+using paramore.brighter.restms.server.Adapters.Configuration;
 using paramore.brighter.restms.server.Adapters.Security;
 using Thinktecture.IdentityModel.Hawk.Core;
 using Thinktecture.IdentityModel.Hawk.Core.Helpers;
@@ -40,9 +41,11 @@ namespace paramore.brighter.restms.server.Adapters.Service
     {
         IAmARepository<Domain> domainRepository;
         IAmARepository<Feed> feedRepository;
+        RestMSServerConfiguration configuration;
 
         public IUseRepositories With()
         {
+            configuration = RestMSServerConfiguration.GetConfiguration();
             return this;
         }
 
@@ -92,10 +95,10 @@ namespace paramore.brighter.restms.server.Adapters.Service
         {
             credentialsStorage.Add(new Credential()
             {
-                Id = "dh37fgj492je",
+                Id = configuration.Admin.Id,
                 Algorithm = SupportedAlgorithms.SHA256,
-                User = "Guest",
-                Key = Convert.FromBase64String("wBgvhp1lZTr4Tb6K6+5OQa1bL9fxK7j8wBsepjqVNiQ=")
+                User = configuration.Admin.User,
+                Key = Convert.FromBase64String(configuration.Admin.Key)
             });
         
             return this;

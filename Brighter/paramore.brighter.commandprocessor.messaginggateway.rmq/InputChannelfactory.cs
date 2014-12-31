@@ -43,13 +43,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class InputChannelfactory : IAmAChannelFactory 
     {
-        private readonly RMQServerRequestHandler gateway;
+        private readonly RmqMessageConsumer gateway;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannelfactory"/> class.
         /// </summary>
         /// <param name="gateway">The gateway.</param>
-        public InputChannelfactory(RMQServerRequestHandler gateway)
+        public InputChannelfactory(RmqMessageConsumer gateway)
         {
             this.gateway = gateway;
         }

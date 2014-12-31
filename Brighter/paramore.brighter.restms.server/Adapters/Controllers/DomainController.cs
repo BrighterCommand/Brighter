@@ -36,7 +36,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
@@ -90,7 +89,6 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [DomainNotFoundExceptionFilter]
         public RestMSDomain Get(string name)
         {
-            //TODO: Get needs Last Modified and ETag.
             var domainRetriever = new DomainRetriever(domainRepository, feedRepository, pipeRepository);
             return domainRetriever.Retrieve(new Name(name));
         }

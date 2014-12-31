@@ -11,6 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -48,16 +49,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
     /// Class ClientRequestHandler .
-    /// The <see cref="RMQClientRequestHandler"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
+    /// The <see cref="RmqMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles connection establishment, request sending and error handling
     /// </summary>
-    public class RMQClientRequestHandler : MessageGateway, IAmAClientRequestHandler
+    public class RmqMessageProducer : MessageGateway, IAmAMessageProducer
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RMQClientRequestHandler(ILog logger) : base(logger){}
+        public RmqMessageProducer(ILog logger) : base(logger){}
 
         /// <summary>
         /// Sends the specified message.
@@ -125,7 +126,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             GC.SuppressFinalize(this);
         }
 
-        ~RMQClientRequestHandler()
+        ~RmqMessageProducer()
         {
             Dispose(false);
         }

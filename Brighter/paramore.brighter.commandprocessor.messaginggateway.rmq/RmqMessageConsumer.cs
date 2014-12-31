@@ -45,11 +45,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
     /// Class ServerRequestHandler .
-    /// The <see cref="RMQServerRequestHandler"/> is used on the server to receive messages from the broker. It abstracts away the details of 
+    /// The <see cref="RmqMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of 
     /// inter-process communication tasks from the server. It handles connection establishment, request reception and dispatching, 
     /// result sending, and error handling.
     /// </summary>
-    public class RMQServerRequestHandler : MessageGateway, IAmAServerRequestHandler 
+    public class RmqMessageConsumer : MessageGateway, IAmAMessageConsumer 
     {
         const bool AUTO_ACK = false;
         /// <summary>
@@ -62,7 +62,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RMQServerRequestHandler(ILog logger) : base(logger)
+        public RmqMessageConsumer(ILog logger) : base(logger)
         {
             messageCreator = new RmqMessageCreator(logger);
         }
@@ -160,7 +160,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             GC.SuppressFinalize(this);
         }
 
-        ~RMQServerRequestHandler()
+        ~RmqMessageConsumer()
         {
             Dispose(false);
         }

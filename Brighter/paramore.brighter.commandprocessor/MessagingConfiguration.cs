@@ -55,7 +55,7 @@ namespace paramore.brighter.commandprocessor
         /// Gets the messaging gateway.
         /// </summary>
         /// <value>The messaging gateway.</value>
-        public IAmAClientRequestHandler MessagingGateway { get; private set; }
+        public IAmAMessageProducer MessagingGateway { get; private set; }
         /// <summary>
         /// Gets the message mapper registry.
         /// </summary>
@@ -70,7 +70,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         public MessagingConfiguration(
             IAmAMessageStore<Message> messageStore, 
-            IAmAClientRequestHandler messagingGateway, 
+            IAmAMessageProducer messagingGateway, 
             IAmAMessageMapperRegistry messageMapperRegistry
             )
         {

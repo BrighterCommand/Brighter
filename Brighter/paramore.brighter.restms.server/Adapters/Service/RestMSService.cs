@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Owin.Hosting;
 using paramore.brighter.restms.core;
+using paramore.brighter.restms.server.Adapters.Configuration;
 using Topshelf;
 
 namespace paramore.brighter.restms.server.Adapters.Service
@@ -33,8 +34,9 @@ namespace paramore.brighter.restms.server.Adapters.Service
         IDisposable app;
         public bool Start(HostControl hostControl)
         {
-            Globals.HostName = "localhost";
-            app = WebApp.Start<Startup>("http://localhost:3416"); 
+            var configuration = RestMSServerConfiguration.GetConfiguration();
+            Globals.HostName = configuration.Address.Uri.Host;
+            app = WebApp.Start<Startup>(configuration.Address.Uri.AbsoluteUri); 
             return true;
         }
 
