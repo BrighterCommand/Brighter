@@ -284,6 +284,63 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         It should_have_a_stopped_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
     }
 
+    public class When_a_message_dispatcher_restarts_a_connection_after_all_connections_have_stopped
+    {
+        private static Dispatcher dispatcher;
+        private static FakeChannel channel;
+        private static IAmACommandProcessor commandProcessor;
+        private static Connection connection;
+        private static Connection newConnection;
+
+        Establish context = () =>
+        {
+            channel = new FakeChannel();
+            commandProcessor = new SpyCommandProcessor();
+
+            var properties = new NameValueCollection();
+            properties["showDateTime"] = "true";
+            LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+
+            var logger = LogManager.GetLogger(typeof(Dispatcher));
+
+            var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
+            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+
+            connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof(MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000);
+            newConnection = new Connection(name: new ConnectionName("newTest"), channel: channel, dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
+            dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection> { connection, newConnection }, logger);
+
+            var @event = new MyEvent();
+            var message = new MyEventMessageMapper().MapToMessage(@event);
+            channel.Send(message);
+
+            dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+            dispatcher.Receive();
+            Task.Delay(1000).Wait();
+            dispatcher.Shut("test");
+            Task.Delay(1000).Wait();
+        };
+
+
+        Because of = () =>
+        {
+            dispatcher.Open("newTest");
+            var @event = new MyEvent();
+            var message = new MyEventMessageMapper().MapToMessage(@event);
+            channel.Send(message);
+            Task.Delay(1000).Wait();
+        };
+
+        private Cleanup stop_dispatcher = () => dispatcher.End().Wait();
+
+        It should_have_consumed_the_messages_in_the_event_channel = () => channel.Length.ShouldEqual(0);
+        It should_have_a_running_state = () => dispatcher.State.ShouldEqual(DispatcherState.DS_RUNNING);
+        It should_have_only_one_consumer = () => dispatcher.Consumers.Count.ShouldEqual(1);
+    }
+
+
+
+
     public class When_building_a_dispatcher
     {
         static IAmADispatchBuilder builder;
@@ -329,6 +386,9 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         Because of = () => dispatcher = builder.Build(); 
 
         It should_build_a_dispatcher = () => dispatcher.ShouldNotBeNull();
-
     }
+
+
+
+
 }
