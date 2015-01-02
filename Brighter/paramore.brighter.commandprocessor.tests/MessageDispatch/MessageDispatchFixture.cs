@@ -379,7 +379,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                                 .Build()
                                 )
                              .MessageMappers(messageMapperRegistry)
-                             .ChannelFactory(new InputChannelfactory(rmqMessageConsumerFactory)) 
+                             .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory)) 
                              .ConnectionsFromConfiguration();
 
             };
