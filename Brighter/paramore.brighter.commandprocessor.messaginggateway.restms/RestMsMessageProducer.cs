@@ -40,7 +40,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Mime;
-using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 using Common.Logging;
@@ -262,6 +261,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 if (!XmlRequestBuilder.TryBuild(messageToSend, out messageContent)) return null;
                 var content = new StringContent(messageContent);
                 var request = new HttpRequestMessage(HttpMethod.Post, feedHref) {Content = content};
+                request.Content.Headers.ContentType = new MediaTypeHeaderValue(MediaTypeNames.Text.Xml);
                 var response = client.SendAsync(request).Result;
                 response.EnsureSuccessStatusCode();
                 return ParseResponse<RestMSMessagePosted>(response);
