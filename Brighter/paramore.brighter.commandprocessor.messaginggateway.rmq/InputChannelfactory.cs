@@ -37,18 +37,18 @@ THE SOFTWARE. */
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
-    /// Class RMQInputChannelfactory.
+    /// Class RMQInputChannelFactory.
     /// Creates instances of <see cref="IAmAChannel"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
     /// </summary>
-    public class InputChannelfactory : IAmAChannelFactory 
+    public class InputChannelFactory : IAmAChannelFactory 
     {
         private readonly RmqMessageConsumerFactory _messageConsumerFactory;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InputChannelfactory"/> class.
+        /// Initializes a new instance of the <see cref="InputChannelFactory"/> class.
         /// </summary>
         /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>
-        public InputChannelfactory(RmqMessageConsumerFactory messageConsumerFactory)
+        public InputChannelFactory(RmqMessageConsumerFactory messageConsumerFactory)
         {
             _messageConsumerFactory = messageConsumerFactory;
         }

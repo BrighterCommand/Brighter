@@ -11,6 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -192,29 +193,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
 
             return true;
-        }
-
-        Message CreateMessage(BasicDeliverEventArgs fromQueue)
-        {
-            var messageId = fromQueue.BasicProperties.MessageId;
-            var message = new Message(
-                new MessageHeader(Guid.Parse(messageId), 
-                    Encoding.UTF8.GetString((byte[])fromQueue.BasicProperties.Headers["Topic"]), 
-                    GetMessageType(fromQueue)),
-                new MessageBody(Encoding.UTF8.GetString(fromQueue.Body))
-                );
-
-
-            fromQueue.BasicProperties.Headers.Each((header) => message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString((byte[])header.Value)));
-
-            message.Header.Bag["DeliveryTag"] = fromQueue.DeliveryTag;
-            return message;
-        }
-
-
-        MessageType GetMessageType(BasicDeliverEventArgs fromQueue)
-        {
-            return (MessageType)Enum.Parse(typeof(MessageType),  Encoding.UTF8.GetString((byte[])fromQueue.BasicProperties.Headers["MessageType"]));
         }
     }
 }

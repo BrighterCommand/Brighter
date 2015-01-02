@@ -1,4 +1,18 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
+// Author           : ian
+// Created          : 12-18-2014
+//
+// Last Modified By : ian
+// Last Modified On : 01-02-2015
+// ***********************************************************************
+// <copyright file="RMQMessagingGatewayConfigurationSection.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -30,8 +44,15 @@ using RabbitMQ.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration
 {
+    /// <summary>
+    /// Class RMQMessagingGatewayConfigurationSection.
+    /// </summary>
     public class RMQMessagingGatewayConfigurationSection : ConfigurationSection
     {
+        /// <summary>
+        /// Gets or sets the ampq URI.
+        /// </summary>
+        /// <value>The ampq URI.</value>
         [ConfigurationProperty("amqpUri")]
         public AMQPUriSpecification AMPQUri
         {
@@ -39,6 +60,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
             set { this["amqpUri"] = value; }
         }
 
+        /// <summary>
+        /// Gets or sets the exchange.
+        /// </summary>
+        /// <value>The exchange.</value>
         [ConfigurationProperty("exchange", IsRequired = true)]
         public Exchange Exchange
         {
@@ -46,6 +71,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
             set { this["exchange"] = value; }
         }
 
+        /// <summary>
+        /// Gets the configuration.
+        /// </summary>
+        /// <returns>RMQMessagingGatewayConfigurationSection.</returns>
         public static RMQMessagingGatewayConfigurationSection GetConfiguration()
         {
             var configuration =
@@ -58,8 +87,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         }
     }
 
+    /// <summary>
+    /// Class AMQPUriSpecification.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// </summary>
     public class AMQPUriSpecification : ConfigurationElement
     {
+        /// <summary>
+        /// Gets or sets the URI.
+        /// </summary>
+        /// <value>The URI.</value>
         [ConfigurationProperty("uri", DefaultValue = "amqp://guest:guest@localhost:5672/%2f", IsRequired = true)]
         public Uri Uri
         {
@@ -68,8 +104,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         }
     }
 
+    /// <summary>
+    /// Class Exchange.
+    /// </summary>
     public class Exchange : ConfigurationElement
     {
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
         [ConfigurationProperty("name", DefaultValue = "", IsRequired = true)]
         public string Name
         {
@@ -77,6 +120,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
             set { this["name"] = value; }
         }
 
+        /// <summary>
+        /// Gets or sets the type.
+        /// </summary>
+        /// <value>The type.</value>
         [ConfigurationProperty("type", DefaultValue = ExchangeType.Direct)]
         public string Type
         {
@@ -90,6 +137,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
             set { this["type"] = value; }
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether this <see cref="Exchange"/> is durable.
+        /// </summary>
+        /// <value><c>true</c> if durable; otherwise, <c>false</c>.</value>
         [ConfigurationProperty("durable", DefaultValue = false)]
         public bool Durable
         {
