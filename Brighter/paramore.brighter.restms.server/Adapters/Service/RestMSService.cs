@@ -35,7 +35,8 @@ namespace paramore.brighter.restms.server.Adapters.Service
         public bool Start(HostControl hostControl)
         {
             var configuration = RestMSServerConfiguration.GetConfiguration();
-            Globals.HostName = configuration.Address.Uri.Host;
+            var uri = configuration.Address.Uri;
+            Globals.HostName = uri.Host + ":" + uri.Port;
             app = WebApp.Start<Startup>(configuration.Address.Uri.AbsoluteUri); 
             return true;
         }
