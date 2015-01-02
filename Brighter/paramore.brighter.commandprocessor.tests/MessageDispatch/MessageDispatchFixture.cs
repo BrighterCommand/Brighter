@@ -365,7 +365,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                     .Handle<Exception>()
                     .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-                var gateway = new RmqMessageConsumer(logger);
+                //var gateway = new RmqMessageConsumer(logger);
+                var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
 
                 builder = DispatchBuilder.With()
                              .Logger(logger)
@@ -378,7 +379,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                                 .Build()
                                 )
                              .MessageMappers(messageMapperRegistry)
-                             .ChannelFactory(new InputChannelfactory(gateway)) 
+                             .ChannelFactory(new InputChannelfactory(rmqMessageConsumerFactory)) 
                              .ConnectionsFromConfiguration();
 
             };
@@ -387,8 +388,4 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         It should_build_a_dispatcher = () => dispatcher.ShouldNotBeNull();
     }
-
-
-
-
 }

@@ -34,7 +34,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
@@ -43,15 +42,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class InputChannelfactory : IAmAChannelFactory 
     {
-        private readonly RmqMessageConsumer gateway;
+        private readonly RmqMessageConsumerFactory _messageConsumerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannelfactory"/> class.
         /// </summary>
-        /// <param name="gateway">The gateway.</param>
-        public InputChannelfactory(RmqMessageConsumer gateway)
+        /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>
+        public InputChannelfactory(RmqMessageConsumerFactory messageConsumerFactory)
         {
-            this.gateway = gateway;
+            _messageConsumerFactory = messageConsumerFactory;
         }
 
         /// <summary>
@@ -61,7 +60,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAnInputChannel CreateInputChannel(string channelName, string routingKey)
         {
-            return new InputChannel(channelName, routingKey, gateway);
+            return new InputChannel(channelName, routingKey, _messageConsumerFactory.Create());
         }
 
         /// <summary>
@@ -71,7 +70,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAnInputChannel CreateOutputChannel(string channelName, string routingKey)
         {
-            return new InputChannel(channelName, routingKey, gateway);
+            return new InputChannel(channelName, routingKey, _messageConsumerFactory.Create());
         }
     }
 }
