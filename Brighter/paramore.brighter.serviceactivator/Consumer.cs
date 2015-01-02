@@ -66,7 +66,7 @@ namespace paramore.brighter.serviceactivator
     /// Watied on by callers. Shut closes the message pump.
     /// 
     /// </summary>
-    public class Consumer: IDisposable
+    public class Consumer: IDisposable, IEquatable<Consumer>
     {
         /// <summary>
         /// Gets or sets the name.
@@ -141,50 +141,38 @@ namespace paramore.brighter.serviceactivator
             }
         }
 
-        private sealed class ConsumerEqualityComparer : IEqualityComparer<Consumer>
+        public bool Equals(Consumer other)
         {
-            public bool Equals(Consumer x, Consumer y)
-            {
-                if (ReferenceEquals(x, y))
-                {
-                    return true;
-                }
-                if (ReferenceEquals(x, null))
-                {
-                    return false;
-                }
-                if (ReferenceEquals(y, null))
-                {
-                    return false;
-                }
-                if (x.GetType() != y.GetType())
-                {
-                    return false;
-                }
-                return Equals(x.Name, y.Name) && x.State == y.State && x.JobId == y.JobId && Equals(x.Performer, y.Performer) && Equals(x.Job, y.Job);
-            }
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(Name, other.Name) && Equals(Job, other.Job);
+        }
 
-            public int GetHashCode(Consumer obj)
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((Consumer) obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
             {
-                unchecked
-                {
-                    var hashCode = (obj.Name != null ? obj.Name.GetHashCode() : 0);
-                    hashCode = (hashCode * 397) ^ (int)obj.State;
-                    hashCode = (hashCode * 397) ^ obj.JobId;
-                    hashCode = (hashCode * 397) ^ (obj.Performer != null ? obj.Performer.GetHashCode() : 0);
-                    hashCode = (hashCode * 397) ^ (obj.Job != null ? obj.Job.GetHashCode() : 0);
-                    return hashCode;
-                }
+                return ((Name != null ? Name.GetHashCode() : 0)*397) ^ (Job != null ? Job.GetHashCode() : 0);
             }
         }
 
-        private static readonly IEqualityComparer<Consumer> ConsumerComparerInstance = new ConsumerEqualityComparer();
-        public static IEqualityComparer<Consumer> ConsumerComparer
+        public static bool operator ==(Consumer left, Consumer right)
         {
-            get
-            {
-                return ConsumerComparerInstance;
-            }
+            return Equals(left, right);
         }
+
+        public static bool operator !=(Consumer left, Consumer right)
+        {
+            return !Equals(left, right);
+        }
+
     }
 }

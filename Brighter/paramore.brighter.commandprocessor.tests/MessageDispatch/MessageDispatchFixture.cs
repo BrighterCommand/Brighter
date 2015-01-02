@@ -306,7 +306,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof(MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000);
+            connection = new Connection(name: new ConnectionName("test"), channel: channel, dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
             newConnection = new Connection(name: new ConnectionName("newTest"), channel: channel, dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
             dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection> { connection, newConnection }, logger);
 
@@ -318,7 +318,9 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             dispatcher.Receive();
             Task.Delay(1000).Wait();
             dispatcher.Shut("test");
-            Task.Delay(1000).Wait();
+            dispatcher.Shut("newTest");
+            Task.Delay(3000).Wait();
+            dispatcher.Consumers.Count.ShouldEqual(0); //sanity check
         };
 
 
