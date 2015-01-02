@@ -50,19 +50,19 @@ namespace paramore.brighter.commandprocessor
     {
         private readonly string queueName;
         private readonly string routingKey;
-        private readonly IAmAMessageConsumer gateway;
+        private readonly IAmAMessageConsumer _messageConsumer;
         private readonly ConcurrentQueue<Message> queue = new ConcurrentQueue<Message>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannel"/> class.
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
-        /// <param name="gateway">The gateway.</param>
-        public InputChannel(string queueName, string routingKey, IAmAMessageConsumer gateway)
+        /// <param name="messageConsumer">The messageConsumer.</param>
+        public InputChannel(string queueName, string routingKey, IAmAMessageConsumer messageConsumer)
         {
             this.queueName = queueName;
             this.routingKey = routingKey;
-            this.gateway = gateway;
+            this._messageConsumer = messageConsumer;
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace paramore.brighter.commandprocessor
             Message message;
             if (!queue.TryDequeue(out message))
             {
-                message = gateway.Receive(queueName, routingKey, timeoutinMilliseconds);
+                message = _messageConsumer.Receive(queueName, routingKey, timeoutinMilliseconds);
             }
             return message;
         }
@@ -92,7 +92,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
-            gateway.Acknowledge(message);
+            _messageConsumer.Acknowledge(message);
         }
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="message">The message.</param>
         public void Reject(Message message)
         {
-            gateway.Reject(message, false);
+            _messageConsumer.Reject(message, false);
         }
 
         /// <summary>

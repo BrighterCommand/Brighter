@@ -93,14 +93,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         [ConfigurationProperty("durable", DefaultValue = false)]
         public bool Durable
         {
-            get
-            {
-                bool val;
-                if (bool.TryParse(this["durable"] as string, out val))
-                    return val;
-                return false;
-            }
-
+            get{return (bool) this["durable"]; }
             set { this["durable"] = value; }
         }
     }
