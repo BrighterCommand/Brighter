@@ -83,7 +83,7 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
             en.CreateDatabase();
 
             var sql = string.Format("CREATE TABLE {0} (" +
-                                        "Id uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
+                                        "MessageId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
                                         "Topic nvarchar(255)," +
                                         "MessageType nvarchar(32)," +
                                         "Body ntext" +
