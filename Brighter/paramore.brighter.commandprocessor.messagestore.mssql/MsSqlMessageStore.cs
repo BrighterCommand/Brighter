@@ -114,7 +114,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                 return new Message(header, body);
             }
 
-            return new Message(MessageType.MT_EMPTY);
+            return new Message();
         }
 
         private async Task<T> ExecuteCommand<T>(Func<DbCommand, Task<T>> execute, string sql, params DbParameter[] parameters)

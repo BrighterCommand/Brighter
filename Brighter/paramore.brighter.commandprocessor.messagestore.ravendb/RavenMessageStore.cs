@@ -90,7 +90,7 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
             using (var session = documentStore.OpenAsyncSession())
             {
                 logger.Debug(m => m("Retrieving message with Id {0} from RavenDb", messageId));
-                return session.LoadAsync<Message>(messageId);
+                return session.LoadAsync<Message>(messageId).ContinueWith(task => task.Result ?? new Message());
             }
         }
     }

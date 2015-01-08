@@ -253,7 +253,7 @@ namespace paramore.brighter.commandprocessor
 
                     var message = task.Result;
 
-                    if (message.Header.MessageType == MessageType.MT_EMPTY)
+                    if (message.Header.MessageType == MessageType.MT_NONE)
                     {
                         logger.Warn((m => m("Message {0} not found", requestedMessageid)));
                         return;
