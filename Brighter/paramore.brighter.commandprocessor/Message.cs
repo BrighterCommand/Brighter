@@ -86,6 +86,12 @@ namespace paramore.brighter.commandprocessor
             Body = body;
         }
 
+        public Message(MessageType messageType)
+        {
+            Header = new MessageHeader(messageId: Guid.Empty, topic: string.Empty, messageType: messageType);
+            Body = new MessageBody(string.Empty);
+        }
+
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>

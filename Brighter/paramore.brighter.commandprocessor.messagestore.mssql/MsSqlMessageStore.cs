@@ -102,15 +102,19 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 
         private static Message MapFunction(IDataReader dr)
         {
-            dr.Read();
-            var id = dr.GetGuid(dr.GetOrdinal("Id"));
-            var messageType = (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
-            var topic = dr.GetString(dr.GetOrdinal("Topic"));
+            if (dr.Read())
+            {
+                var id = dr.GetGuid(dr.GetOrdinal("Id"));
+                var messageType = (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+                var topic = dr.GetString(dr.GetOrdinal("Topic"));
 
-            var header = new MessageHeader(id, topic, messageType);
-            var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
-            
-            return new Message(header, body);
+                var header = new MessageHeader(id, topic, messageType);
+                var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
+
+                return new Message(header, body);
+            }
+
+            return new Message(MessageType.MT_EMPTY);
         }
 
         private async Task<T> ExecuteCommand<T>(Func<DbCommand, Task<T>> execute, string sql, params DbParameter[] parameters)
