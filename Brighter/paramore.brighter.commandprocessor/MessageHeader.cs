@@ -62,11 +62,7 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// The m t_ quit{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
         /// </summary>
-        MT_QUIT = 4,
-        /// <summary>
-        /// The m t_empty{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C} 
-        /// </summary>
-        MT_EMPTY = 5
+        MT_QUIT = 4
     }
 
     /// <summary>
