@@ -47,7 +47,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
 
             MapRoutes(configuration);
 
-            ConfigureAuthentication(configuration, builder);
+            ConfigureAuthentication(builder);
 
             ConfigureCaching(configuration);
             
@@ -82,11 +82,11 @@ namespace paramore.brighter.restms.server.Adapters.Service
             builder.UseWelcomePage("/status");
         }
 
-        void ConfigureAuthentication(HttpConfiguration configuration, IAppBuilder builder)
+        void ConfigureAuthentication( IAppBuilder builder)
         {
             var credentialStorage = container.Resolve<IAmACredentialStore>();
             
-            var options = new Options()
+            var options = new Options
             {
                 ClockSkewSeconds = 60,
                 LocalTimeOffsetMillis = 0,

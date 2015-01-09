@@ -31,9 +31,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGa
     public class RestMSMessagingGatewayConfigurationSection : ConfigurationSection
     {
         [ConfigurationProperty("restMS")]
-        public RestMSUriSpecification RestMS
+        public RestMSSpecification RestMS
         {
-            get { return this["restMS"] as RestMSUriSpecification; }
+            get { return this["restMS"] as RestMSSpecification; }
             set { this["restMS"] = value; }
         }
 
@@ -56,7 +56,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGa
         }
     }
 
-    public class RestMSUriSpecification : ConfigurationElement
+    public class RestMSSpecification : ConfigurationElement
     {
         [ConfigurationProperty("uri", DefaultValue = "http://localhost:3416/restms/domain/default", IsRequired = true)]
         public Uri Uri
