@@ -240,7 +240,7 @@ namespace paramore.brighter.commandprocessor
         public void Repost(Guid messageId)
         {
             var requestedMessageid = messageId; //avoid closure on this
-            logger.Info(m => m("Resend of request: {0}", requestedMessageid));
+            logger.Info(m => m("Resend of message: {0}", requestedMessageid));
 
             /* 
              * NOTE: Don't rewrite with await, compiles but Policy does not call await on the lambda so becomes fire and forget, 
@@ -250,7 +250,15 @@ namespace paramore.brighter.commandprocessor
                 { 
                     var task = messageStore.Get(messageId);
                     task.Wait();
+
                     var message = task.Result;
+
+                    if (message.Header.MessageType == MessageType.MT_NONE)
+                    {
+                        logger.Warn((m => m("Message {0} not found", requestedMessageid)));
+                        return;
+                    }
+
                     messagingGateway.Send(message);
                 });
         }

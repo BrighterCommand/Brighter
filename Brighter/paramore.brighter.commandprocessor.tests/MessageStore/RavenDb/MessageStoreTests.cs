@@ -24,7 +24,10 @@ THE SOFTWARE. */
 using System;
 using Common.Logging;
 using FakeItEasy;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+using Machine.Specifications;
+
+using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Tests.Helpers;
 using paramore.brighter.commandprocessor;
@@ -32,25 +35,41 @@ using paramore.brighter.commandprocessor.messagestore.ravendb;
 
 namespace paramore.commandprocessor.tests.MessageStore.RavenDb
 {
-    [TestClass]
+
     public class MessageStoreTests : RavenTestBase
     {
-        [TestMethod]
-        public void Writing_and_reading_a_message_from_the_store()
+        Establish context = () =>
         {
-            //arrange
-            using (var store = new EmbeddableDocumentStore().Initialize())
+            documentStore = new EmbeddableDocumentStore().Initialize();
+            var logger = A.Fake<ILog>();
+            messageStore = new RavenMessageStore(documentStore, logger);
+        };
+        public class when_writing_a_message_to_the_raven_message_store
+        {
+            Establish context = () =>
             {
-                var logger = A.Fake<ILog>();
-                var messageStore = new RavenMessageStore(store, logger);
-                //act
-                var message = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));               
+                message = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
                 messageStore.Add(message).Wait();
-                var retrievedMessage = messageStore.Get(message.Id).Result;
+            };
 
-                //assert
-               Assert.IsTrue(message == retrievedMessage); 
-            }
+            Because of = () => { retrievedMessage = messageStore.Get(message.Id).Result; };
+
+            It should_read_the_message_from_the__raven_message_store = () => retrievedMessage.ShouldEqual(message);
         }
+
+        public class when_there_is_no_message_in_the_raven_message_store
+        {
+            Establish context = () => { message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body")); };
+            Because of = () => { retrievedMessage = messageStore.Get(message.Id).Result; };
+            It should_return_a_empty_message = () => retrievedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+        }
+
+        Cleanup cleanup = () => documentStore.Dispose();
+
+        private static RavenMessageStore messageStore;
+        private static Message message;
+        private static Message retrievedMessage;
+        private static IDocumentStore documentStore;
+        
     }
 }

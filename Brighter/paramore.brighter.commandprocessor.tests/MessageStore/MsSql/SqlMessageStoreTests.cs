@@ -25,32 +25,56 @@ using System;
 using System.Data.SqlServerCe;
 using System.IO;
 using Common.Logging.Simple;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.commandprocessor.tests.MessageStore.MsSql
 {
-    [TestClass]
     public class SqlMessageStoreTests
     {
         private const string TestDbPath = "test.sdf";
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
         private const string TableName = "test_messages";
-        
-        [TestMethod]
-        public void Writing_and_reading_a_message_from_the_store()
+
+        Establish context = () =>
         {
-            CleanupDb();
+            CleanUpDb();
             CreateTestDb();
 
-            var sqlMessageStore = new MsSqlMessageStore(new MsSqlMessageStoreConfiguration(ConnectionString, TableName, MsSqlMessageStoreConfiguration.DatabaseType.SqlCe), new NoOpLogger());
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            
-            sqlMessageStore.Add(message).Wait();
-            var storedMessage = sqlMessageStore.Get(message.Id).Result;
+            sqlMessageStore = new MsSqlMessageStore(
+                    new MsSqlMessageStoreConfiguration(ConnectionString, TableName, MsSqlMessageStoreConfiguration.DatabaseType.SqlCe),
+                    new NoOpLogger());
+        };
 
-            Assert.AreEqual(message.Body.Value, storedMessage.Body.Value);
+        public class when_writing_a_message_to_the_message_store
+        {
+            Establish context = () =>
+            {
+                message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+                sqlMessageStore.Add(message).Wait();
+            };
+
+            Because of = () => { storedMessage = sqlMessageStore.Get(message.Id).Result; };
+
+            It should_read_the_message_from_the__sql_message_store = () => storedMessage.Body.Value.ShouldEqual(message.Body.Value);
+        }
+
+        public class when_there_is_no_message_in_the_sql_message_store
+        {
+            Establish context = () => { message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body")); };
+            Because of = () => { storedMessage = sqlMessageStore.Get(message.Id).Result; };
+            It should_return_a_empty_message = () => storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+        }
+
+        private Cleanup cleanup = () => CleanUpDb();
+        private static MsSqlMessageStore sqlMessageStore;
+        private static Message message;
+        private static Message storedMessage;
+
+        private static void CleanUpDb()
+        {
+            File.Delete(TestDbPath);
         }
 
         private static void CreateTestDb()
@@ -59,7 +83,7 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
             en.CreateDatabase();
 
             var sql = string.Format("CREATE TABLE {0} (" +
-                                        "Id uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
+                                        "MessageId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
                                         "Topic nvarchar(255)," +
                                         "MessageType nvarchar(32)," +
                                         "Body ntext" +
@@ -74,10 +98,5 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
             }
         }
 
-        [TestCleanup]
-        public void CleanupDb()
-        {
-            File.Delete(TestDbPath);
-        }
     }
 }
