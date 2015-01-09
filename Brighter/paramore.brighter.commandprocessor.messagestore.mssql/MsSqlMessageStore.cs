@@ -44,10 +44,10 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 
         public async Task Add(Message message)
         {
-            var sql = string.Format("INSERT INTO {0} (Id, MessageType, Topic, Body) VALUES (@Id, @MessageType, @Topic, @Body)", _configuration.MessageStoreTableName);
+            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Body) VALUES (@MessageId, @MessageType, @Topic, @Body)", _configuration.MessageStoreTableName);
             var parameters = new[]
             {
-                CreateSqlParameter("Id", message.Id), 
+                CreateSqlParameter("MessageId", message.Id), 
                 CreateSqlParameter("MessageType", message.Header.MessageType.ToString()), 
                 CreateSqlParameter("Topic", message.Header.Topic), 
                 CreateSqlParameter("Body", message.Body.Value),
@@ -90,10 +90,10 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 
         public async Task<Message> Get(Guid messageId)
         {
-            var sql = string.Format("SELECT Id, MessageType, Topic, Body FROM {0} WHERE Id = @Id", _configuration.MessageStoreTableName);
+            var sql = string.Format("SELECT MessageId, MessageType, Topic, Body FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
             var parameters = new[]
             {
-                CreateSqlParameter("Id", messageId)
+                CreateSqlParameter("MessageId", messageId)
             };
 
             var result = await ExecuteCommand(async command => MapFunction(await command.ExecuteReaderAsync()), sql, parameters);
@@ -102,15 +102,19 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 
         private static Message MapFunction(IDataReader dr)
         {
-            dr.Read();
-            var id = dr.GetGuid(dr.GetOrdinal("Id"));
-            var messageType = (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
-            var topic = dr.GetString(dr.GetOrdinal("Topic"));
+            if (dr.Read())
+            {
+                var id = dr.GetGuid(dr.GetOrdinal("MessageId"));
+                var messageType = (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+                var topic = dr.GetString(dr.GetOrdinal("Topic"));
 
-            var header = new MessageHeader(id, topic, messageType);
-            var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
-            
-            return new Message(header, body);
+                var header = new MessageHeader(id, topic, messageType);
+                var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
+
+                return new Message(header, body);
+            }
+
+            return new Message();
         }
 
         private async Task<T> ExecuteCommand<T>(Func<DbCommand, Task<T>> execute, string sql, params DbParameter[] parameters)
