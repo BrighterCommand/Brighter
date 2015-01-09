@@ -72,9 +72,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             try
             {
                 var clientOptions = BuildClientOptions();
-                /*TODO: Optimize this by using a repository approach with the repository checking for modification 
-                through etag and serving existing version if not modified and grabbing new version if changed*/
-                EnsureFeedExists(GetDefaultDomain(clientOptions), clientOptions);
+                EnsureFeedExists(GetDomain(clientOptions), clientOptions);
                 SendMessage(Configuration.Feed.Name, message, clientOptions);
             }
             catch (RestMSClientException rmse)
@@ -124,7 +122,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         {
             try
             {
-                if (FeedHref == null)
+                if (FeedUri == null)
                 {
                     throw new RestMSClientException(string.Format("The feed href for feed {0} has not been initialized", feedName));
                 }
@@ -132,6 +130,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 var client = CreateClient(options);
                 var response = client.SendAsync(
                     CreateRequest(
+                        FeedUri,
                         CreateMessageEntityBody(
                             new RestMSMessage
                             {
@@ -162,5 +161,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
 
         }
+
     }
 }

@@ -66,9 +66,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         protected readonly RestMSMessagingGatewayConfigurationSection Configuration;
 
         /// <summary>
-        /// The feed href{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+        /// The feed href
         /// </summary>
-        protected string FeedHref = null;
+        protected string FeedUri = null;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:System.Object" /> class.
@@ -115,7 +115,20 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             return client;
         }
 
-        RestMSDomain CreateFeed(string name, ClientOptions options)
+        /// <summary>
+        /// Creates the entity body.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="feed">The feed.</param>
+        /// <returns>StringContent.</returns>
+        protected StringContent CreateEntityBody<T>(T feed) where T : class, new()
+        {
+            string feedRequest;
+            if (!XmlRequestBuilder.TryBuild(feed, out feedRequest)) return null;
+            return new StringContent(feedRequest);
+        }
+
+        RestMSDomain CreateFeed(string domainUri, string name, ClientOptions options)
         {
             Logger.DebugFormat("Creating the feed {0} on the RestMS server: {1}", name, Configuration.RestMS.Uri.AbsoluteUri);
             var client = CreateClient(options);
@@ -123,7 +136,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 var response = client.SendAsync(
                     CreateRequest(
-                        CreateFeedEntityBody(
+                        domainUri, 
+                        CreateEntityBody(
                             new RestMSFeed
                             {
                                 Name = name,
@@ -148,21 +162,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
         }
 
-        StringContent CreateFeedEntityBody(RestMSFeed feed)
-        {
-            string feedRequest;
-            if (!XmlRequestBuilder.TryBuild(feed, out feedRequest)) return null;
-            return new StringContent(feedRequest);
-        }
-
         /// <summary>
         /// Creates the request.
         /// </summary>
         /// <param name="content">The content.</param>
         /// <returns>HttpRequestMessage.</returns>
-        protected HttpRequestMessage CreateRequest(StringContent content)
+        protected HttpRequestMessage CreateRequest(string uri, StringContent content)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, FeedHref) {Content = content};
+            var request = new HttpRequestMessage(HttpMethod.Post, uri) {Content = content};
             request.Content.Headers.ContentType = new MediaTypeHeaderValue(MediaTypeNames.Text.Xml);
             return request;
         }
@@ -175,18 +182,20 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <exception cref="RestMSClientException"></exception>
         protected void EnsureFeedExists(RestMSDomain domain, ClientOptions options)
         {
+            /*TODO: Optimize this by using a repository approach with the repository checking for modification 
+            through etag and serving existing version if not modified and grabbing new version if changed*/
             var feedName = Configuration.Feed.Name;
             Logger.DebugFormat("Checking for existence of the feed {0} on the RestMS server: {1}", feedName, Configuration.RestMS.Uri.AbsoluteUri);
             var isFeedDeclared = domain.Feeds.Any(feed => feed.Name == feedName);
             if (!isFeedDeclared)
             {
-                domain = CreateFeed(Configuration.Feed.Name, options);
+                domain = CreateFeed(domain.Href, feedName, options);
                 if (domain == null || !domain.Feeds.Any(feed => feed.Name == feedName))
                 {
                     throw new RestMSClientException(string.Format("Unable to create feed {0} on the default domain; see log for errors", feedName));
                 }
             }
-            FeedHref = domain.Feeds.First(feed => feed.Name == feedName).Href;
+            FeedUri = domain.Feeds.First(feed => feed.Name == feedName).Href;
         }
 
         /// <summary>
@@ -195,9 +204,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="options">The options.</param>
         /// <returns>RestMSDomain.</returns>
         /// <exception cref="RestMSClientException"></exception>
-        protected RestMSDomain GetDefaultDomain(ClientOptions options)
+        protected RestMSDomain GetDomain(ClientOptions options)
         {
-
+            /*TODO: Optimize this by using a repository approach with the repository checking for modification 
+            through etag and serving existing version if not modified and grabbing new version if changed*/
+            
             Logger.DebugFormat("Getting the default domain from the RestMS server: {0}", Configuration.RestMS.Uri.AbsoluteUri);
             var client = CreateClient(options);
 
