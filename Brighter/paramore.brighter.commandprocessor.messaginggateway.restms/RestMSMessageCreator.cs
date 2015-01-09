@@ -31,7 +31,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 return FailureMessageHeader(messageId, restMSMessage.Address);
 
             var messageType = MessageType.MT_NONE;
-            if (!restMSMessage.Headers.Any())
+            if (restMSMessage.Headers == null || !restMSMessage.Headers.Any())
                 return FailureMessageHeader(messageId, restMSMessage.Address);
 
             var messageTypeString = restMSMessage.Headers.First(header => header.Name == "MessageType").Value;

@@ -186,7 +186,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             through etag and serving existing version if not modified and grabbing new version if changed*/
             var feedName = Configuration.Feed.Name;
             Logger.DebugFormat("Checking for existence of the feed {0} on the RestMS server: {1}", feedName, Configuration.RestMS.Uri.AbsoluteUri);
-            var isFeedDeclared = domain.Feeds.Any(feed => feed.Name == feedName);
+            var isFeedDeclared = IsFeedDeclared(domain, feedName);
             if (!isFeedDeclared)
             {
                 domain = CreateFeed(domain.Href, feedName, options);
@@ -197,6 +197,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
             FeedUri = domain.Feeds.First(feed => feed.Name == feedName).Href;
         }
+
 
         /// <summary>
         /// Gets the default domain.
@@ -227,6 +228,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
                 throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
             }
+        }
+
+        bool IsFeedDeclared(RestMSDomain domain, string feedName)
+        {
+            return domain != null && domain.Feeds !=null && domain.Feeds.Any(feed => feed.Name == feedName);
         }
 
         /// <summary>

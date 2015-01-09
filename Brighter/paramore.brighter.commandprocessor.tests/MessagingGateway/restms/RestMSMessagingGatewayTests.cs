@@ -39,7 +39,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
         static IAmAMessageConsumer messageConsumer;
         static Message message;
         static string messageBody;
-        static string queueName;
+        const string QUEUE_NAME = "test";
 
         Establish context = () =>
         {
@@ -59,7 +59,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
         Because of = () =>
         {
             messageProducer.Send(message);
-            messageBody = messageConsumer.Receive(queueName, TOPIC, 30000).Body.ToString();
+            messageBody = messageConsumer.Receive(QUEUE_NAME, TOPIC, 30000).Body.ToString();
         };
 
         It should_send_a_message_via_restms_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
