@@ -36,6 +36,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Mime;
@@ -111,8 +112,25 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         }
 
-        StringContent CreateMessageEntityBody(RestMSMessage messageToSend)
+        StringContent CreateMessageEntityBody(Message message)
         {
+            var messageToSend = new RestMSMessage
+            {
+                Address = message.Header.Topic,
+                MessageId = message.Header.Id.ToString(),
+                Content = new RestMSMessageContent
+                {
+                    Value = message.Body.Value,
+                    Type = MediaTypeNames.Text.Plain,
+                    Encoding = Encoding.ASCII.WebName
+                }
+            };
+
+            var messageHeaders = new List<RestMSMessageHeader> {new RestMSMessageHeader {Name = "MessageType", Value = message.Header.MessageType.ToString()}};
+            messageHeaders.AddRange(message.Header.Bag.Select(customHeader => new RestMSMessageHeader {Name = customHeader.Key, Value = Encoding.ASCII.GetString((byte[]) customHeader.Value)}));
+
+            messageToSend.Headers = messageHeaders.ToArray();
+
             string messageContent;
             if (!XmlRequestBuilder.TryBuild(messageToSend, out messageContent)) return null;
             return new StringContent(messageContent);
@@ -131,19 +149,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 var response = client.SendAsync(
                     CreateRequest(
                         FeedUri,
-                        CreateMessageEntityBody(
-                            new RestMSMessage
-                            {
-                                Address = message.Header.Topic,
-                                MessageId = message.Header.Id.ToString(),
-                                Content = new RestMSMessageContent
-                                {
-                                    Value = message.Body.Value,
-                                    Type = MediaTypeNames.Text.Plain,
-                                    Encoding = Encoding.ASCII.WebName
-                                }
-                            }
-                        )
+                        CreateMessageEntityBody(message)
                      )
                  ).Result;
 

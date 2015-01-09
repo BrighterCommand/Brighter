@@ -130,7 +130,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <exception cref="System.NotImplementedException"></exception>
         public void Purge(string queueName)
         {
-            throw new NotImplementedException();
         }
 
         RestMSJoin CreateJoin(string pipeUri, string routingKey, ClientOptions options)
@@ -205,7 +204,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         void EnsurePipeExists(string pipeTitle, string routingKey, RestMSDomain domain, ClientOptions options)
         {
             Logger.DebugFormat("Checking for existence of the pipe {0} on the RestMS server: {1}", pipeTitle, Configuration.RestMS.Uri.AbsoluteUri);
-            var pipeExists = domain.Pipes.Any(p => p.Title == pipeTitle);
+            var pipeExists = PipeExists(pipeTitle, domain);
             if (!pipeExists)
             {
                 domain = CreatePipe(domain.Href, pipeTitle, options);
@@ -219,7 +218,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
             pipeUri = domain.Pipes.First(dp => dp.Title == pipeTitle).Href;
         }
-
 
         RestMSPipe GetPipe(ClientOptions options)
         {
@@ -279,6 +277,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
                 throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
             }
+        }
+
+        bool PipeExists(string pipeTitle, RestMSDomain domain)
+        {
+            return domain != null && domain.Pipes != null && domain.Pipes.Any(p => p.Title == pipeTitle);
         }
     }
 
