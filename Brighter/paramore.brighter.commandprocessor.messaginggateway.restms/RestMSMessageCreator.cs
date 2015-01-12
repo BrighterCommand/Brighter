@@ -18,7 +18,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         static MessageBody ReadMessageBody(RestMSMessage restMSMessage)
         {
-            var encoding = Encoding.GetEncoding(restMSMessage.Content.Encoding);
+            Encoding encoding = Encoding.Default;
+            if (restMSMessage.Content.Encoding == "QuotedPrintable")
+            {
+                encoding = Encoding.ASCII;
+            }
+  
             return new MessageBody(encoding.GetString(GetBytes(restMSMessage.Content.Value)));
         }
 
