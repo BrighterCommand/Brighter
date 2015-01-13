@@ -197,3 +197,4 @@ Paramore.CommandProcessor.sln.GhostDoc.xml
 
 # Allow .sdf files in app_data
 !**/App_Data/*.sdf
+Brighter/Examples/tasklist/Data
