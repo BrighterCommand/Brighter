@@ -59,7 +59,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
         Because of = () =>
         {
             messageProducer.Send(message);
-            messageBody = messageConsumer.Receive(QUEUE_NAME, TOPIC, 30000).Body.ToString();
+            messageBody = messageConsumer.Receive(QUEUE_NAME, TOPIC, 30000).Body.Value;
         };
 
         It should_send_a_message_via_restms_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
