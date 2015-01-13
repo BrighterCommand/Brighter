@@ -62,6 +62,7 @@
     <Compile Include="RmqMessageProducer.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="paramore.brighter.commandprocessor.messaginggateway.rmq.nuspec" />
     <None Include="web.config.uninstall.xdt" />
     <None Include="packages.config" />
     <None Include="web.config.install.xdt" />

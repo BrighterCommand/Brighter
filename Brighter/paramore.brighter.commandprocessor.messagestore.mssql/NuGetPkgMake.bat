@@ -1,1 +1,0 @@
-C:\Users\ian\NuGet\NuGet.exe Pack paramore.brighter.commandprocessor.messagestore.mssql.1.0.0.0.nuspec -Version 2.0.1.0 -Symbols
