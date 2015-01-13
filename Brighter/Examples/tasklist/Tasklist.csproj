@@ -109,6 +109,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\paramore.brighter.commandprocessor.messaginggateway.rmq.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll</HintPath>
     </Reference>
+    <Reference Include="paramore.brighter.serviceactivator">
+      <HintPath>..\..\packages\paramore.brighter.serviceactivator.2.0.1.0\lib\net45\paramore.brighter.serviceactivator.dll</HintPath>
+    </Reference>
     <Reference Include="Polly, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\packages\Polly.2.0.0\lib\net45\Polly.dll</HintPath>
