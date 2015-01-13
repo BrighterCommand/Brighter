@@ -77,6 +77,7 @@
     <None Include="app.config.install.xdt" />
     <None Include="app.config.uninstall.xdt" />
     <None Include="packages.config" />
+    <None Include="paramore.brighter.serviceactivator.nuspec" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

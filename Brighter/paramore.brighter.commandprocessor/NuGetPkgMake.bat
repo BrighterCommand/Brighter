@@ -1,1 +1,0 @@
-C:\Users\ian\NuGet\NuGet.exe Pack "Paramore.Brighter.CommandProcessor.1.0.0.0.nuspec" -Version 2.0.1.0 -Symbols
