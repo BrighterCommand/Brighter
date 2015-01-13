@@ -18,13 +18,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         static MessageBody ReadMessageBody(RestMSMessage restMSMessage)
         {
-            Encoding encoding = Encoding.Default;
-            if (restMSMessage.Content.Encoding == "QuotedPrintable")
+            var srcEncoding = Encoding.Default;
+            if (restMSMessage.Content.Encoding == "QuotedPrintable" || restMSMessage.Content.Encoding == "Plain")
             {
-                encoding = Encoding.ASCII;
+                srcEncoding = Encoding.ASCII;
             }
-  
-            return new MessageBody(encoding.GetString(GetBytes(restMSMessage.Content.Value)));
+            //TODO: Handle base64 messages which are allowed by specification
+
+            var bytes = srcEncoding.GetBytes(restMSMessage.Content.Value);
+            var body = Encoding.Convert(srcEncoding, Encoding.Unicode, bytes);
+            return new MessageBody(Encoding.Unicode.GetString(body));
         }
 
         static MessageHeader ReadMessageHeaders(RestMSMessage restMSMessage)
@@ -56,11 +59,5 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             return new MessageHeader(messageId, topic, MessageType.MT_UNACCEPTABLE);
         }
 
-        static byte[] GetBytes(string str)
-        {
-            byte[] bytes = new byte[str.Length * sizeof(char)];
-            System.Buffer.BlockCopy(str.ToCharArray(), 0, bytes, 0, bytes.Length);
-            return bytes;
-        }
-    }
+     }
 }

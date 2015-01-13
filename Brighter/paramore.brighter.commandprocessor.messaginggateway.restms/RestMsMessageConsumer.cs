@@ -79,7 +79,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <exception cref="System.NotImplementedException"></exception>
         public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds)
         {
-            Message message = null;
             try
             {
                 var clientOptions = BuildClientOptions();
@@ -248,7 +247,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         Message ReadMessage(ClientOptions options)
         {
             var pipe = GetPipe(options);
-            return GetMessage(pipe.Messages.FirstOrDefault(), options);
+            return GetMessage(pipe.Messages != null ? pipe.Messages.FirstOrDefault() : null, options);
         }
 
         Message GetMessage(RestMSMessageLink messageUri, ClientOptions options)
