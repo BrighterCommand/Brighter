@@ -91,9 +91,9 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Handles the specified command.
         /// </summary>
-        /// <param name="command">The command.</param>
+        /// <param name="request">The request.</param>
         /// <returns>TRequest.</returns>
-        TRequest Handle(TRequest command);
+        TRequest Handle(TRequest request);
         /// <summary>
         /// Sets the successor.
         /// </summary>
