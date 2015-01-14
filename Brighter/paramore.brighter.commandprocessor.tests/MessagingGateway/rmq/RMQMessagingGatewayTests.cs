@@ -35,6 +35,7 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayCo
 namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 {
     [Subject("Messaging Gateway")]
+    [Tags("RequiresRabbitMQ")]
     public class When_posting_a_message_via_the_messaging_gateway
     {
         static IAmAMessageProducer messageProducer;
@@ -114,7 +115,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         }
     }
 
-      [Subject("Messaging Gateway")]
+    [Subject("Messaging Gateway")]
+    [Tags("RequiresRabbitMQ")]
     public class When_reading_a_message_via_the_messaging_gateway
     {
         static IAmAMessageProducer sender;
