@@ -172,7 +172,8 @@ namespace paramore.brighter.restms.core.Model
 
                 var partitionKey = DeleteRequestedMessage(matchingKey, messageId);
 
-                DeleteOlderMessages(partitionKey);
+                if(messages.Any())
+                    DeleteOlderMessages(partitionKey);
             }
         }
 

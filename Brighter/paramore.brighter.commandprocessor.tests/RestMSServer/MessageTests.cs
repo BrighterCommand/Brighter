@@ -29,7 +29,6 @@ using Common.Logging;
 using FakeItEasy;
 using FluentAssertions;
 using Machine.Specifications;
-using paramore.brighter.commandprocessor;
 using paramore.brighter.restms.core;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;
@@ -221,5 +220,62 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_delete_the_message = () => pipe.Messages.Any(msg => msg.MessageId == message.MessageId).ShouldBeFalse();
         It should_delete_the_older_message = () => pipe.Messages.Any(msg => msg.MessageId == olderMessage.MessageId).ShouldBeFalse();
         It should_not_delete_the_newer_message = () => pipe.Messages.Any(msg => msg.MessageId == newerMessage.MessageId).ShouldBeTrue();
+    }
+
+    public class When_deleting_the_only_message
+    {
+        //deletes the message and all older messages from the pipe.
+        //When the server deletes a message it also deletes any contents that message contains.
+
+        const string ADDRESS_PATTERN = "*";
+        const string MESSAGE_CONTENT = "I am some message content";
+        static Pipe pipe;
+        static Message message;
+        static DeleteMessageCommandHandler deleteMessageCommandHandler;
+        static DeleteMessageCommand deleteMessageCommand;
+        static IAmARepository<Pipe> pipeRepository;
+        
+        Establish context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+
+            pipeRepository = new InMemoryPipeRepository(logger);
+
+            var feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed")
+                );
+
+            pipe = new Pipe(
+                new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
+                PipeType.Fifo,
+                new Title("My Title"));
+
+            pipeRepository.Add(pipe);
+
+            var join = new Join(
+                pipe,
+                feed.Href,
+                new Address(ADDRESS_PATTERN));
+            pipe.AddJoin(join);
+
+            message = new Message(
+                ADDRESS_PATTERN,
+                feed.Href.AbsoluteUri,
+                new NameValueCollection() {{"MyHeader", "MyValue"}},
+                Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain),
+                "http://host.com/");
+            pipe.AddMessage(message);
+
+            deleteMessageCommand = new DeleteMessageCommand(pipe.Name.Value, message.MessageId);
+            deleteMessageCommandHandler = new DeleteMessageCommandHandler(pipeRepository, logger);
+
+        };
+
+        Because of = () => deleteMessageCommandHandler.Handle(deleteMessageCommand);
+
+        It should_delete_the_message = () => pipe.Messages.Any(msg => msg.MessageId == message.MessageId).ShouldBeFalse();
     }
 }

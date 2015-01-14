@@ -108,8 +108,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <exception cref="System.NotImplementedException"></exception>
         public void Acknowledge(Message message)
         {
-            throw new NotImplementedException();
+            var clientOptions = BuildClientOptions();
+            //EnsurePipeExists(queueName, routingKey, GetDomain(clientOptions), clientOptions);
+            var pipe = GetPipe(clientOptions);
+            DeleteMessage(pipe, message, clientOptions);
         }
+
 
         /// <summary>
         /// Rejects the specified message.
@@ -117,9 +121,27 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         /// <exception cref="System.NotImplementedException"></exception>
-        public void Reject(Message message, bool requeue)
+
+
+        public int NoOfOutstandingMessages(string queueName, string routingKey, int timeoutInMilliseconds)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var clientOptions = BuildClientOptions();
+                EnsurePipeExists(queueName, routingKey, GetDomain(clientOptions), clientOptions);
+                var pipe = GetPipe(clientOptions);
+                return pipe.Messages != null ? pipe.Messages.Count(): 0;
+            }
+            catch (RestMSClientException rmse)
+            {
+                Logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                throw;
+            }
+            catch (HttpRequestException he)
+            {
+                Logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                throw;
+            }
         }
 
         /// <summary>
@@ -129,6 +151,39 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <exception cref="System.NotImplementedException"></exception>
         public void Purge(string queueName)
         {
+            try
+            {
+
+                var clientOptions = BuildClientOptions();
+                var pipe = GetPipe(clientOptions);
+                if (pipe != null && pipe.Messages != null)
+                {
+                    var message = pipe.Messages.FirstOrDefault();
+                    do
+                    {
+                        if (message != null)
+                        {
+                            SendDeleteMessage(clientOptions, message);
+                        }
+                         pipe = GetPipe(clientOptions);   
+                    } while (pipe.Messages != null && pipe.Messages.Any());
+                }
+            }
+            catch (RestMSClientException rmse)
+            {
+                Logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                throw;
+            }
+            catch (HttpRequestException he)
+            {
+                Logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                throw;
+            }
+        }
+
+        public void Reject(Message message, bool requeue)
+        {
+            throw new NotImplementedException();
         }
 
         RestMSJoin CreateJoin(string pipeUri, string routingKey, ClientOptions options)
@@ -218,6 +273,51 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             pipeUri = domain.Pipes.First(dp => dp.Title == pipeTitle).Href;
         }
 
+        void DeleteMessage(RestMSPipe pipe, Message message, ClientOptions options)
+        {
+            if (pipe.Messages == null || !pipe.Messages.Any())
+            {
+                return;
+            }
+
+            var matchingMessage = pipe.Messages.FirstOrDefault(msg => msg.MessageId == message.Id.ToString());
+            if (matchingMessage == null)
+            {
+                return;
+            }
+
+            Logger.DebugFormat("Deleting the message {0} from the pipe: {0}", message.Id, pipeUri);
+            SendDeleteMessage(options, matchingMessage);
+        }
+
+        Message GetMessage(RestMSMessageLink messageUri, ClientOptions options)
+        {
+            if (messageUri == null)
+            {
+                return new Message();
+            }
+
+            Logger.DebugFormat("Getting the message from the RestMS server: {0}", messageUri);
+            var client = CreateClient(options);
+
+            try
+            {
+                var response = client.GetAsync(messageUri.Href).Result;
+                response.EnsureSuccessStatusCode();
+                var pipeMessage = ParseResponse<RestMSMessage>(response);
+                return RestMSMessageCreator.CreateMessage(pipeMessage);
+            }
+            catch (AggregateException ae)
+            {
+                foreach (var exception in ae.Flatten().InnerExceptions)
+                {
+                    Logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", pipeUri, exception.Message);
+                }
+
+                throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
+            }
+        }
+
         RestMSPipe GetPipe(ClientOptions options)
         {
             /*TODO: Optimize this by using a repository approach with the repository checking for modification 
@@ -250,38 +350,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             return GetMessage(pipe.Messages != null ? pipe.Messages.FirstOrDefault() : null, options);
         }
 
-        Message GetMessage(RestMSMessageLink messageUri, ClientOptions options)
+        void SendDeleteMessage(ClientOptions options, RestMSMessageLink matchingMessage)
         {
-            if (messageUri == null)
-            {
-                return new Message();
-            }
-
-            Logger.DebugFormat("Getting the message from the RestMS server: {0}", messageUri);
             var client = CreateClient(options);
-
-            try
-            {
-                var response = client.GetAsync(messageUri.Href).Result;
-                response.EnsureSuccessStatusCode();
-                var pipeMessage = ParseResponse<RestMSMessage>(response);
-                return RestMSMessageCreator.CreateMessage(pipeMessage);
-            }
-            catch (AggregateException ae)
-            {
-                foreach (var exception in ae.Flatten().InnerExceptions)
-                {
-                    Logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", pipeUri, exception.Message);
-                }
-
-                throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
-            }
+            var response = client.DeleteAsync(matchingMessage.Href).Result;
+            response.EnsureSuccessStatusCode();
         }
 
         bool PipeExists(string pipeTitle, RestMSDomain domain)
         {
             return domain != null && domain.Pipes != null && domain.Pipes.Any(p => p.Title == pipeTitle);
         }
+
     }
 
 }
