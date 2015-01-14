@@ -39,6 +39,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
         static IAmAMessageProducer messageProducer;
         static IAmAMessageConsumer messageConsumer;
         static Message message;
+        static Message sentMessage;
         static string messageBody;
         const string QUEUE_NAME = "test";
 
@@ -61,15 +62,18 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
         {
             messageConsumer.Receive(QUEUE_NAME, TOPIC, 30000); //Need to recieve to subscribe to feed, before we send a message. This returns an empty message we discard
             messageProducer.Send(message);
-            messageBody = messageConsumer.Receive(QUEUE_NAME, TOPIC, 30000).Body.Value;
+            sentMessage = messageConsumer.Receive(QUEUE_NAME, TOPIC, 30000);
+            messageBody = sentMessage.Body.Value;
+            messageConsumer.Acknowledge(sentMessage);
         };
 
         It should_send_a_message_via_restms_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
+        It should_have_an_empty_pipe_after_acknowledging_the_message = () => ((RestMsMessageConsumer)messageConsumer).NoOfOutstandingMessages(QUEUE_NAME, TOPIC, 30000).ShouldEqual(0);
 
         Cleanup tearDown = () =>
         {
-           messageConsumer.Purge(TOPIC);
-           messageProducer.Dispose();
+            messageConsumer.Purge(TOPIC);
+            messageProducer.Dispose();
         };
 
     }
