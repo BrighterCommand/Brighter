@@ -59,6 +59,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
 
         Because of = () =>
         {
+            messageConsumer.Receive(QUEUE_NAME, TOPIC, 30000); //Need to recieve to subscribe to feed, before we send a message. This returns an empty message we discard
             messageProducer.Send(message);
             messageBody = messageConsumer.Receive(QUEUE_NAME, TOPIC, 30000).Body.Value;
         };
