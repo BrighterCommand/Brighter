@@ -21,11 +21,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Common.Logging;
-
-using Machine.Specifications.Runner;
 
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.policy.Attributes;
@@ -46,6 +46,7 @@ namespace paramore.commandprocessor.tests.Timeout.TestDoubles
         [TimeoutPolicy(milliseconds: 1000, step: 1, timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
+            WasCancelled = false;
             var ct = (CancellationToken)Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];
             if (ct.IsCancellationRequested)
             {
@@ -53,16 +54,26 @@ namespace paramore.commandprocessor.tests.Timeout.TestDoubles
                 WasCancelled = true;
                 return base.Handle(command);
             }
-            else
+            try
             {
-                Task.Delay(2000, ct).ContinueWith((antecedent) =>
-                {
-                    if (ct.IsCancellationRequested)
-                        WasCancelled = true;
-                    else
-                        TaskCompleted = !WasCancelled;
-                }).Wait();
+                var delay = Task.Delay(2000, ct).ContinueWith(
+                    x =>
+                    {
+                        // done something I should not do, because I should of been cancel
+                        WasCancelled = false;
+                    },
+                    ct);
+
+                Task.WaitAll(new[] { delay });
             }
+            catch (AggregateException e)
+            {
+                foreach (var tce in e.InnerExceptions.OfType<TaskCanceledException>())
+                {
+                    WasCancelled = true;
+                }
+            }
+
             return base.Handle(command);
         }
     }
