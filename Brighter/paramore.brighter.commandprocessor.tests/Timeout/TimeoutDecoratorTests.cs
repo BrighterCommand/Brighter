@@ -29,7 +29,6 @@ using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
-using paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles;
 using paramore.commandprocessor.tests.Timeout.TestDoubles;
 
 using TinyIoC;
