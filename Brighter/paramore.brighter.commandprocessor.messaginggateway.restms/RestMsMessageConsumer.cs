@@ -55,7 +55,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         string pipeUri;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMsMessageConsumer"/> class.
+        /// Initializes a new instance of the <see cref="RestMsMessageConsumer" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
         public RestMsMessageConsumer(ILog logger) : base(logger) {}
@@ -77,15 +77,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds)
+        public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds = -1)
         {
+            double timeout = timeoutInMilliseconds == -1 ? Timeout : timeoutInMilliseconds;
+
             try
             {
                 var clientOptions = BuildClientOptions();
-                EnsureFeedExists(GetDomain(clientOptions), clientOptions);
-                EnsurePipeExists(queueName, routingKey, GetDomain(clientOptions), clientOptions);
+                EnsureFeedExists(GetDomain(clientOptions, timeout), clientOptions, timeout);
+                EnsurePipeExists(queueName, routingKey, GetDomain(clientOptions, timeout), clientOptions, timeout);
 
-                return ReadMessage(clientOptions);
+                return ReadMessage(clientOptions, timeout);
             }
             catch (RestMSClientException rmse)
             {
@@ -109,27 +111,26 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         public void Acknowledge(Message message)
         {
             var clientOptions = BuildClientOptions();
-            //EnsurePipeExists(queueName, routingKey, GetDomain(clientOptions), clientOptions);
-            var pipe = GetPipe(clientOptions);
-            DeleteMessage(pipe, message, clientOptions);
+            var pipe = GetPipe(clientOptions, Timeout);
+            DeleteMessage(pipe, message, clientOptions, Timeout);
         }
 
-
         /// <summary>
-        /// Rejects the specified message.
+        /// Noes the of outstanding messages.
         /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-        /// <exception cref="System.NotImplementedException"></exception>
-
-
-        public int NoOfOutstandingMessages(string queueName, string routingKey, int timeoutInMilliseconds)
+        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="routingKey">The routing key.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <returns>System.Int32.</returns>
+        public int NoOfOutstandingMessages(string queueName, string routingKey, int timeoutInMilliseconds = -1)
         {
+            double timeout = timeoutInMilliseconds == -1 ? Timeout : timeoutInMilliseconds;
+
             try
             {
                 var clientOptions = BuildClientOptions();
-                EnsurePipeExists(queueName, routingKey, GetDomain(clientOptions), clientOptions);
-                var pipe = GetPipe(clientOptions);
+                EnsurePipeExists(queueName, routingKey, GetDomain(clientOptions, timeout), clientOptions, timeout);
+                var pipe = GetPipe(clientOptions, timeout);
                 return pipe.Messages != null ? pipe.Messages.Count(): 0;
             }
             catch (RestMSClientException rmse)
@@ -155,7 +156,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
 
                 var clientOptions = BuildClientOptions();
-                var pipe = GetPipe(clientOptions);
+                var pipe = GetPipe(clientOptions, Timeout);
                 if (pipe != null && pipe.Messages != null)
                 {
                     var message = pipe.Messages.FirstOrDefault();
@@ -163,9 +164,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                     {
                         if (message != null)
                         {
-                            SendDeleteMessage(clientOptions, message);
+                            SendDeleteMessage(clientOptions, message, Timeout);
                         }
-                         pipe = GetPipe(clientOptions);   
+                         pipe = GetPipe(clientOptions, Timeout);   
                     } while (pipe.Messages != null && pipe.Messages.Any());
                 }
             }
@@ -181,15 +182,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
         }
 
+        /// <summary>
+        /// Rejects the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
+        /// <exception cref="System.NotImplementedException"></exception>
         public void Reject(Message message, bool requeue)
         {
             throw new NotImplementedException();
         }
 
-        RestMSJoin CreateJoin(string pipeUri, string routingKey, ClientOptions options)
+        RestMSJoin CreateJoin(string pipeUri, string routingKey, ClientOptions options, double timeout)
         {
             Logger.DebugFormat("Creating the join with key {0} for pipe {1} on the RestMS server: {2}", routingKey, pipeUri, Configuration.RestMS.Uri.AbsoluteUri);
-            var client = CreateClient(options);
+            var client = CreateClient(options, timeout);
             try
             {
                 var response = client.SendAsync(
@@ -222,10 +229,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
         }
 
-        RestMSDomain CreatePipe(string domainUri, string title, ClientOptions options)
+        RestMSDomain CreatePipe(string domainUri, string title, ClientOptions options, double timeout)
         {
             Logger.DebugFormat("Creating the pipe {0} on the RestMS server: {1}", title, Configuration.RestMS.Uri.AbsoluteUri);
-            var client = CreateClient(options);
+            var client = CreateClient(options, timeout);
             try
             {
                 var response = client.SendAsync(
@@ -255,25 +262,25 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
         }
 
-        void EnsurePipeExists(string pipeTitle, string routingKey, RestMSDomain domain, ClientOptions options)
+        void EnsurePipeExists(string pipeTitle, string routingKey, RestMSDomain domain, ClientOptions options, double timeout)
         {
             Logger.DebugFormat("Checking for existence of the pipe {0} on the RestMS server: {1}", pipeTitle, Configuration.RestMS.Uri.AbsoluteUri);
             var pipeExists = PipeExists(pipeTitle, domain);
             if (!pipeExists)
             {
-                domain = CreatePipe(domain.Href, pipeTitle, options);
+                domain = CreatePipe(domain.Href, pipeTitle, options, timeout);
                 if (domain == null || !domain.Pipes.Any(dp => dp.Title == pipeTitle))
                 {
                     throw new RestMSClientException(string.Format("Unable to create pipe {0} on the default domain; see log for errors", pipeTitle));
                 }
                 
-                CreateJoin(domain.Pipes.First(p => p.Title == pipeTitle).Href, routingKey, options);
+                CreateJoin(domain.Pipes.First(p => p.Title == pipeTitle).Href, routingKey, options, timeout);
             }
 
             pipeUri = domain.Pipes.First(dp => dp.Title == pipeTitle).Href;
         }
 
-        void DeleteMessage(RestMSPipe pipe, Message message, ClientOptions options)
+        void DeleteMessage(RestMSPipe pipe, Message message, ClientOptions options, double timeout)
         {
             if (pipe.Messages == null || !pipe.Messages.Any())
             {
@@ -287,10 +294,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
 
             Logger.DebugFormat("Deleting the message {0} from the pipe: {0}", message.Id, pipeUri);
-            SendDeleteMessage(options, matchingMessage);
+            SendDeleteMessage(options, matchingMessage, timeout);
         }
 
-        Message GetMessage(RestMSMessageLink messageUri, ClientOptions options)
+        Message GetMessage(RestMSMessageLink messageUri, ClientOptions options, double timeout)
         {
             if (messageUri == null)
             {
@@ -298,7 +305,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
 
             Logger.DebugFormat("Getting the message from the RestMS server: {0}", messageUri);
-            var client = CreateClient(options);
+            var client = CreateClient(options, timeout);
 
             try
             {
@@ -318,13 +325,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
         }
 
-        RestMSPipe GetPipe(ClientOptions options)
+        RestMSPipe GetPipe(ClientOptions options, double timeout)
         {
             /*TODO: Optimize this by using a repository approach with the repository checking for modification 
             through etag and serving existing version if not modified and grabbing new version if changed*/
 
             Logger.DebugFormat("Getting the pipe from the RestMS server: {0}", pipeUri);
-            var client = CreateClient(options);
+            var client = CreateClient(options, timeout);
 
             try
             {
@@ -344,15 +351,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         }
 
-        Message ReadMessage(ClientOptions options)
+        Message ReadMessage(ClientOptions options, double timeout)
         {
-            var pipe = GetPipe(options);
-            return GetMessage(pipe.Messages != null ? pipe.Messages.FirstOrDefault() : null, options);
+            var pipe = GetPipe(options, timeout);
+            return GetMessage(pipe.Messages != null ? pipe.Messages.FirstOrDefault() : null, options, timeout);
         }
 
-        void SendDeleteMessage(ClientOptions options, RestMSMessageLink matchingMessage)
+        void SendDeleteMessage(ClientOptions options, RestMSMessageLink matchingMessage, double timeout)
         {
-            var client = CreateClient(options);
+            var client = CreateClient(options, timeout);
             var response = client.DeleteAsync(matchingMessage.Href).Result;
             response.EnsureSuccessStatusCode();
         }

@@ -73,8 +73,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             try
             {
                 var clientOptions = BuildClientOptions();
-                EnsureFeedExists(GetDomain(clientOptions), clientOptions);
-                SendMessage(Configuration.Feed.Name, message, clientOptions);
+                var timeout = Timeout;
+                EnsureFeedExists(GetDomain(clientOptions, timeout), clientOptions, timeout);
+                SendMessage(Configuration.Feed.Name, message, clientOptions, timeout);
             }
             catch (RestMSClientException rmse)
             {
@@ -92,6 +93,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             tcs.SetResult(new object());
             return tcs.Task;
         }
+
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -136,7 +138,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             return new StringContent(messageContent);
         }
 
-        RestMSMessagePosted SendMessage(string feedName, Message message, ClientOptions options)
+        RestMSMessagePosted SendMessage(string feedName, Message message, ClientOptions options, double timeout)
         {
             try
             {
@@ -145,7 +147,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                     throw new RestMSClientException(string.Format("The feed href for feed {0} has not been initialized", feedName));
                 }
 
-                var client = CreateClient(options);
+                var client = CreateClient(options, timeout);
                 var response = client.SendAsync(
                     CreateRequest(
                         FeedUri,

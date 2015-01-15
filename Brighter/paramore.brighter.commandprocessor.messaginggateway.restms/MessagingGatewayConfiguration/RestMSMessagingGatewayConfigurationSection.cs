@@ -85,6 +85,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGa
             get { return this["key"] as string; }
             set { this["key"] = value; }
         }
+
+        [ConfigurationProperty("timeout", DefaultValue = "500", IsRequired = true)]
+        public string Timeout
+        {
+            get { return this["timeout"] as string; }
+            set { this["timeout"] = value; }
+        }
     }
 
     public class Feed : ConfigurationElement
