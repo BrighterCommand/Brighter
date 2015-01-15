@@ -32,7 +32,7 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
 namespace paramore.commandprocessor.tests.MessagingGateway.restms
 {
-    [Tags("RequiresRestMS")]
+    [Tags("Requires", new[] { "RestMS" })]
     public class When_posting_a_message_via_the_messaging_gateway
     {
         const string TOPIC = "test";

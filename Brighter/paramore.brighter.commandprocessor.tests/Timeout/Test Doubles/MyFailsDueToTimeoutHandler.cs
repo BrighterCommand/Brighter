@@ -25,6 +25,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Common.Logging;
 
 using paramore.brighter.commandprocessor;
@@ -32,7 +33,7 @@ using paramore.brighter.commandprocessor.policy.Attributes;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.Timeout.TestDoubles
+namespace paramore.commandprocessor.tests.Timeout
 {
     internal class MyFailsDueToTimeoutHandler: RequestHandler<MyCommand>
     {
