@@ -80,6 +80,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             Logger = logger;
         }
 
+        protected double Timeout
+        {
+            get
+            {
+                return Convert.ToDouble(Configuration.RestMS.Timeout);
+            }
+        }
+
         /// <summary>
         /// Builds the client options.
         /// </summary>
@@ -105,12 +113,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// Creates the client.
         /// </summary>
         /// <param name="options">The options.</param>
+        /// <param name="timeout">The timeout value for this call</param>
         /// <returns>HttpClient.</returns>
-        protected HttpClient CreateClient(ClientOptions options)
+        protected HttpClient CreateClient(ClientOptions options, double timeout)
         {
             var handler = new HawkValidationHandler(options);
             var client = HttpClientFactory.Create(handler);
-            client.Timeout = TimeSpan.FromMilliseconds(30000);
+            client.Timeout = TimeSpan.FromMilliseconds(timeout);
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/xml"));
             return client;
         }
@@ -128,10 +137,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             return new StringContent(feedRequest);
         }
 
-        RestMSDomain CreateFeed(string domainUri, string name, ClientOptions options)
+        RestMSDomain CreateFeed(string domainUri, string name, ClientOptions options, double timeout)
         {
             Logger.DebugFormat("Creating the feed {0} on the RestMS server: {1}", name, Configuration.RestMS.Uri.AbsoluteUri);
-            var client = CreateClient(options);
+            var client = CreateClient(options, timeout);
             try
             {
                 var response = client.SendAsync(
@@ -180,7 +189,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="domain">The domain.</param>
         /// <param name="options">The options.</param>
         /// <exception cref="RestMSClientException"></exception>
-        protected void EnsureFeedExists(RestMSDomain domain, ClientOptions options)
+        protected void EnsureFeedExists(RestMSDomain domain, ClientOptions options, double timeout)
         {
             /*TODO: Optimize this by using a repository approach with the repository checking for modification 
             through etag and serving existing version if not modified and grabbing new version if changed*/
@@ -189,7 +198,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             var isFeedDeclared = IsFeedDeclared(domain, feedName);
             if (!isFeedDeclared)
             {
-                domain = CreateFeed(domain.Href, feedName, options);
+                domain = CreateFeed(domain.Href, feedName, options, timeout);
                 if (domain == null || !domain.Feeds.Any(feed => feed.Name == feedName))
                 {
                     throw new RestMSClientException(string.Format("Unable to create feed {0} on the default domain; see log for errors", feedName));
@@ -205,13 +214,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="options">The options.</param>
         /// <returns>RestMSDomain.</returns>
         /// <exception cref="RestMSClientException"></exception>
-        protected RestMSDomain GetDomain(ClientOptions options)
+        protected RestMSDomain GetDomain(ClientOptions options, double timeout)
         {
             /*TODO: Optimize this by using a repository approach with the repository checking for modification 
             through etag and serving existing version if not modified and grabbing new version if changed*/
             
             Logger.DebugFormat("Getting the default domain from the RestMS server: {0}", Configuration.RestMS.Uri.AbsoluteUri);
-            var client = CreateClient(options);
+            var client = CreateClient(options, timeout);
 
             try
             {
