@@ -56,10 +56,12 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="InputChannelfactory.cs" />
     <Compile Include="MessageGateway.cs" />
+    <Compile Include="RmqMessagePublisher.cs" />
     <Compile Include="RmqMessageConsumerFactory.cs" />
     <Compile Include="RmqMessageCreator.cs" />
     <Compile Include="RmqMessageConsumer.cs" />
     <Compile Include="RmqMessageProducer.cs" />
+    <Compile Include="UnixTimestamp.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="paramore.brighter.commandprocessor.messaginggateway.rmq.nuspec" />

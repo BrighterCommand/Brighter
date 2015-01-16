@@ -64,5 +64,10 @@ namespace paramore.brighter.commandprocessor
         /// Stops this instance.
         /// </summary>
         void Stop();
+        /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message"></param>
+        void Requeue(Message message);
     }
 }

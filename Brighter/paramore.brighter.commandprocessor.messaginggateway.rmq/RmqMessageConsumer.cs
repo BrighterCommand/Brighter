@@ -36,11 +36,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Text;
+
 using Common.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using paramore.brighter.commandprocessor.extensions;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
@@ -95,6 +94,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
         }
 
+        public void Requeue(Message message)
+        {
+            if (Channel != null)
+            {
+                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
+                Logger.Debug(m => m("RmqMessageConsumer: Re-queueing message"));
+                rmqMessagePublisher.PublishMessage(message);
+                Reject(message, false);
+            }
+        }
+
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
@@ -108,7 +118,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 Channel.BasicNack((ulong)message.Header.Bag["DeliveryTag"], false, requeue);
             }
         }
-
 
         /// <summary>
         /// Receives the specified queue name.

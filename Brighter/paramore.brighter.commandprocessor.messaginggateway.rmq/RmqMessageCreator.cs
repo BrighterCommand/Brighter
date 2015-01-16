@@ -28,6 +28,8 @@ using System.Linq;
 using System.Text;
 using Common.Logging;
 using paramore.brighter.commandprocessor.extensions;
+
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
@@ -73,11 +75,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
             var topic = HeaderResult<string>.Empty();
             var messageId = HeaderResult<Guid>.Empty();
+            var timeStamp = HeaderResult<DateTime>.Empty();
+            
             Message message;
             try
             {
                 topic = ReadTopic(fromQueue, headers);
                 messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
+                timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
                 var messageType = ReadMessageType(headers);
 
                 if(false == (topic.Success && messageId.Success && messageType.Success))
@@ -89,7 +94,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     string body = Encoding.UTF8.GetString(fromQueue.Body);
 
                     message = new Message(
-                        new MessageHeader(messageId.Result, topic.Result, messageType.Result),
+                        timeStamp.Success ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result) : new MessageHeader(messageId.Result, topic.Result, messageType.Result),
                         new MessageBody(body));
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString((byte[]) header.Value)));
@@ -105,14 +110,24 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return message;
         }
 
+
+        private HeaderResult<DateTime> ReadTimeStamp(IBasicProperties basicProperties)
+        {
+            if (basicProperties.IsTimestampPresent())
+            {
+                return new HeaderResult<DateTime>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(basicProperties.Timestamp.UnixTime), true);
+            }
+
+            return new HeaderResult<DateTime>(DateTime.UtcNow, false);
+        }
+
         static Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
         {
-            Message message;
             var header = new MessageHeader(
                 messageId.Success ? messageId.Result : Guid.Empty,
                 topic.Success ? topic.Result : string.Empty,
                 MessageType.MT_UNACCEPTABLE);
-            message = new Message(header, new MessageBody(string.Empty));
+            var message = new Message(header, new MessageBody(string.Empty));
             return message;
         }
 

@@ -67,6 +67,11 @@ namespace paramore.brighter.serviceactivator.TestHelpers
             messageQueue.Enqueue(MessageFactory.CreateQuitMessage());
         }
 
+        public void Requeue(Message message)
+        {
+            messageQueue.Enqueue(message);
+        }
+
         public void Send(Message message)
         {
             messageQueue.Enqueue(message);

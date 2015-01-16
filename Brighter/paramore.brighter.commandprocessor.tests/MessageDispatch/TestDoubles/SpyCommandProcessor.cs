@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.serviceactivator;
 
 namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
 {
@@ -35,13 +36,13 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         public bool PostHappened { get; set; }
         public bool RepostHappened { get; set; }
 
-        public void Send<T>(T command) where T : class, IRequest
+        public virtual void Send<T>(T command) where T : class, IRequest
         {
             SendHappened = true;
             Request = command;
         }
 
-        public void Publish<T>(T @event) where T : class, IRequest
+        public virtual void Publish<T>(T @event) where T : class, IRequest
         {
             PublishHappened = true;
             Request = @event;
@@ -60,5 +61,20 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
             RepostHappened = true;
         }
 
+    }
+
+    internal class SpyRequeueCommandProcessor : SpyCommandProcessor
+    {
+        public override void Send<T>(T command)
+        {
+            base.Send(command);
+            throw new RequeueException();
+        }
+
+        public override void Publish<T>(T @event)
+        {
+            base.Publish(@event);
+            throw new RequeueException();
+        }
     }
 }

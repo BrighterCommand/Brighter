@@ -113,6 +113,15 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message"></param>
+        public void Requeue(Message message)
+        {
+            _messageConsumer.Requeue(message);
+        }
+
+        /// <summary>
         /// Gets the length.
         /// </summary>
         /// <value>The length.</value>

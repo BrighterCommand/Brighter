@@ -36,14 +36,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using Common.Logging;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.extensions;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
-using RabbitMQ.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
@@ -58,7 +53,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RmqMessageProducer(ILog logger) : base(logger){}
+        public RmqMessageProducer(ILog logger) : base(logger)
+        {
+        }
 
         /// <summary>
         /// Sends the specified message.
@@ -80,8 +77,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             try
             {
+                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
                 Logger.Debug(m => m("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value));
-                PublishMessage(message, Channel, Configuration, CreateMessageHeader(message, Channel));
+                rmqMessagePublisher.PublishMessage(message);
                 Logger.Debug(m => m("RmqMessageProducer: Published message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value, DateTime.UtcNow));
             }
             catch (Exception e)
@@ -95,27 +93,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return tcs.Task;
         }
 
-        private IBasicProperties CreateMessageHeader(Message message, IModel channel)
-        {
-            //create message header
-            var basicProperties = channel.CreateBasicProperties();
-            basicProperties.DeliveryMode = 1;
-            basicProperties.ContentType = "text/plain";
-            basicProperties.MessageId = message.Id.ToString();
-            basicProperties.Headers = new Dictionary<string, object>
-            {
-                {"MessageType", message.Header.MessageType.ToString()},
-                {"Topic", message.Header.Topic}
-            };
-            message.Header.Bag.Each((header) => basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value)));
-            return basicProperties;
-        }
-
-        private void PublishMessage(Message message, IModel channel, RMQMessagingGatewayConfigurationSection configuration, IBasicProperties basicProperties)
-        {
-            //publish message
-            channel.BasicPublish(configuration.Exchange.Name, message.Header.Topic, false, false, basicProperties, Encoding.UTF8.GetBytes(message.Body.Value));
-        }
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
