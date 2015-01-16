@@ -57,7 +57,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         readonly Domain domain; 
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RestMsMessageConsumer" /> class.
+        /// Initializes a new instance of the <see cref="RestMsMessageConsumer"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
         public RestMsMessageConsumer(ILog logger) : base(logger)
@@ -190,6 +190,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
         }
 
+		public void Requeue(Message message)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
@@ -203,7 +208,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
 
         void DeleteMessage(RestMSPipe pipe, Message message, ClientOptions options, double timeout)
-        {
+            {
             if (pipe.Messages == null || !pipe.Messages.Any())
             {
                 return;
@@ -251,7 +256,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         {
             var pipe = this.pipe.GetPipe(options, timeout);
             return GetMessage(pipe.Messages != null ? pipe.Messages.FirstOrDefault() : null, options, timeout);
-        }
+            }
 
         void SendDeleteMessage(ClientOptions options, RestMSMessageLink matchingMessage, double timeout)
         {

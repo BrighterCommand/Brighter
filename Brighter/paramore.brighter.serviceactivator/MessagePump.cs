@@ -91,8 +91,15 @@ namespace paramore.brighter.serviceactivator
                 }
                 catch (ConfigurationException configurationException)
                 {
-                    if (Logger != null) Logger.Debug(m => m("MessagePump: {0} Stopping receiving of messages on thread # {1}", configurationException.Message, Thread.CurrentThread.ManagedThreadId), configurationException);
+                    if (Logger != null)
+                        Logger.Debug(
+                            m => m("MessagePump: {0} Stopping receiving of messages on thread # {1}", configurationException.Message, Thread.CurrentThread.ManagedThreadId),
+                            configurationException);
                     break;
+                }
+                catch (RequeueException requeueException)
+                {
+                    RequeueMessage(message);
                 }
                 catch (Exception e)
                 {
@@ -102,6 +109,12 @@ namespace paramore.brighter.serviceactivator
                 AcknowledgeMessage(message);
 
             } while (true);
+        }
+
+        private void RequeueMessage(Message message)
+        {
+            if (Logger != null) Logger.Debug(m => m("MessagePump: Re-queueing message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId));
+            Channel.Requeue(message);
         }
 
         private void AcknowledgeMessage(Message message)

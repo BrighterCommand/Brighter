@@ -67,5 +67,10 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         void Purge(string queueName);
+        /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message"></param>
+        void Requeue(Message message);
     }
 }

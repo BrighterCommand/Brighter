@@ -60,4 +60,37 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         It should_send_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
         It should_convert_the_message_into_an_event = () => ((MyEvent) commandProcessor.Request).ShouldEqual(@event);
     }
+
+    public class When_a_requeue_exception_is_throwen
+    {
+        static IAmAMessagePump messagePump;
+        private static FakeChannel channel;
+        static SpyCommandProcessor commandProcessor;
+        static MyEvent @event;
+
+        Establish context = () =>
+        {
+            commandProcessor = new SpyRequeueCommandProcessor();
+            channel = new FakeChannel();
+            var mapper = new MyEventMessageMapper();
+            messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000 };
+
+            @event = new MyEvent();
+
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(@event)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
+            channel.Send(message1);
+            channel.Send(message2);
+            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            channel.Send(quitMessage);
+        };
+
+        Because of = () => messagePump.Run();
+
+        It should_send_the_message_via_the_command_processor = () => commandProcessor.SendHappened.ShouldBeTrue();
+        It should_publish_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
+        It should_requeue_the_messages = () => channel.Length.ShouldEqual(2);
+    }
+
+
 }

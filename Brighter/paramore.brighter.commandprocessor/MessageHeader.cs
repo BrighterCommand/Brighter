@@ -71,6 +71,7 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class MessageHeader : IEquatable<MessageHeader>
     {
+        public DateTime TimeStamp { get; private set; }
         /// <summary>
         /// Gets the identifier.
         /// </summary>
@@ -92,6 +93,10 @@ namespace paramore.brighter.commandprocessor
         /// <value>The bag.</value>
         public Dictionary<string, object> Bag { get; private set; } //intended for extended headers
 
+        public MessageHeader()
+        {
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageHeader"/> class.
         /// </summary>
@@ -104,6 +109,12 @@ namespace paramore.brighter.commandprocessor
             Topic = topic;
             MessageType = messageType;
             Bag = new Dictionary<string, object>();
+            TimeStamp = DateTime.UtcNow;
+        }
+
+        public MessageHeader(Guid messageId, string result, MessageType messageType, DateTime timeStamp) : this(messageId, result, messageType)
+        {
+            TimeStamp = timeStamp;
         }
 
         /// <summary>
