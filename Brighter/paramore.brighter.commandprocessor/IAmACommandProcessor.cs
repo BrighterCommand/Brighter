@@ -56,7 +56,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="command">The command.</param>
         void Send<T>(T command) where T : class, IRequest;
         /// <summary>
-        /// Publishes the specified event.
+        /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
