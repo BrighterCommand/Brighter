@@ -59,7 +59,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Domain.cs" />
     <Compile Include="Exceptions\RestMSClientException.cs" />
+    <Compile Include="Feed.cs" />
+    <Compile Include="Join.cs" />
     <Compile Include="MessagingGatewayConfiguration\RestMSMessagingGatewayConfigurationSection.cs" />
     <Compile Include="Model\RestMSDomain.cs" />
     <Compile Include="Model\RestMSFeed.cs" />
@@ -76,6 +79,7 @@
     <Compile Include="Parsers\XmlRequestBuilder.cs" />
     <Compile Include="Parsers\XmlResultParser.cs" />
     <Compile Include="Parsers\ResultParserException.cs" />
+    <Compile Include="Pipe.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RestMSMessageCreator.cs" />
     <Compile Include="RestMSMessageGateway.cs" />

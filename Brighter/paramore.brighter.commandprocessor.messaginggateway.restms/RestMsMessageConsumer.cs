@@ -52,13 +52,20 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMsMessageConsumer : RestMSMessageGateway, IAmAMessageConsumer
     {
-        string pipeUri;
+        Pipe pipe;
+        readonly Feed feed;
+        readonly Domain domain; 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMsMessageConsumer" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RestMsMessageConsumer(ILog logger) : base(logger) {}
+        public RestMsMessageConsumer(ILog logger) : base(logger)
+        {
+            feed = new Feed(this);
+            domain = new Domain(this); 
+        }
+
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -84,8 +91,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             try
             {
                 var clientOptions = BuildClientOptions();
-                EnsureFeedExists(GetDomain(clientOptions, timeout), clientOptions, timeout);
-                EnsurePipeExists(queueName, routingKey, GetDomain(clientOptions, timeout), clientOptions, timeout);
+                feed.EnsureFeedExists(domain.GetDomain(clientOptions, timeout), clientOptions, timeout);
+                pipe = new Pipe(this, feed);
+                pipe.EnsurePipeExists(queueName, routingKey, domain.GetDomain(clientOptions, timeout), clientOptions, timeout);
 
                 return ReadMessage(clientOptions, timeout);
             }
@@ -111,7 +119,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         public void Acknowledge(Message message)
         {
             var clientOptions = BuildClientOptions();
-            var pipe = GetPipe(clientOptions, Timeout);
+            var pipe = this.pipe.GetPipe(clientOptions, Timeout);
             DeleteMessage(pipe, message, clientOptions, Timeout);
         }
 
@@ -129,8 +137,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             try
             {
                 var clientOptions = BuildClientOptions();
-                EnsurePipeExists(queueName, routingKey, GetDomain(clientOptions, timeout), clientOptions, timeout);
-                var pipe = GetPipe(clientOptions, timeout);
+                this.pipe.EnsurePipeExists(queueName, routingKey, domain.GetDomain(clientOptions, timeout), clientOptions, timeout);
+                var pipe = this.pipe.GetPipe(clientOptions, timeout);
                 return pipe.Messages != null ? pipe.Messages.Count(): 0;
             }
             catch (RestMSClientException rmse)
@@ -156,7 +164,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
 
                 var clientOptions = BuildClientOptions();
-                var pipe = GetPipe(clientOptions, Timeout);
+                var pipe = this.pipe.GetPipe(clientOptions, Timeout);
                 if (pipe != null && pipe.Messages != null)
                 {
                     var message = pipe.Messages.FirstOrDefault();
@@ -166,7 +174,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                         {
                             SendDeleteMessage(clientOptions, message, Timeout);
                         }
-                         pipe = GetPipe(clientOptions, Timeout);   
+                         pipe = this.pipe.GetPipe(clientOptions, Timeout);   
                     } while (pipe.Messages != null && pipe.Messages.Any());
                 }
             }
@@ -193,92 +201,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             throw new NotImplementedException();
         }
 
-        RestMSJoin CreateJoin(string pipeUri, string routingKey, ClientOptions options, double timeout)
-        {
-            Logger.DebugFormat("Creating the join with key {0} for pipe {1} on the RestMS server: {2}", routingKey, pipeUri, Configuration.RestMS.Uri.AbsoluteUri);
-            var client = CreateClient(options, timeout);
-            try
-            {
-                var response = client.SendAsync(
-                    CreateRequest(
-                        pipeUri,
-                        CreateEntityBody(
-                            new RestMSJoin
-                            {
-                                Address = routingKey,
-                                Feed = FeedUri,
-                                Type = "Default"
-                            }
-                            )
-                        )
-                    )
-                                     .Result;
-
-                response.EnsureSuccessStatusCode();
-                var pipe = ParseResponse<RestMSPipe>(response);
-                return pipe.Joins.FirstOrDefault();
-            }
-            catch (AggregateException ae)
-            {
-                foreach (var exception in ae.Flatten().InnerExceptions)
-                {
-                    Logger.ErrorFormat("Threw exception adding join with routingKey {0} to Pipe {1} on RestMS Server {2}", routingKey, pipeUri, exception.Message);
-                }
-
-                throw new RestMSClientException(string.Format("Error adding the join with routingKey {0} to Pipe {1} to the RestMS server, see log for details", routingKey, pipeUri));
-            }
-        }
-
-        RestMSDomain CreatePipe(string domainUri, string title, ClientOptions options, double timeout)
-        {
-            Logger.DebugFormat("Creating the pipe {0} on the RestMS server: {1}", title, Configuration.RestMS.Uri.AbsoluteUri);
-            var client = CreateClient(options, timeout);
-            try
-            {
-                var response = client.SendAsync(
-                    CreateRequest(
-                        domainUri,
-                        CreateEntityBody(
-                            new RestMSPipeNew
-                            {
-                                Type = "Default",
-                                Title = title
-                            })
-                        )
-                    )
-                                     .Result;
-
-                response.EnsureSuccessStatusCode();
-                return ParseResponse<RestMSDomain>(response);
-            }
-            catch (AggregateException ae)
-            {
-                foreach (var exception in ae.Flatten().InnerExceptions)
-                {
-                    Logger.ErrorFormat("Threw exception adding Pipe {0} to RestMS Server {1}", title, exception.Message);
-                }
-
-                throw new RestMSClientException(string.Format("Error adding the Feed {0} to the RestMS server, see log for details", title));
-            }
-        }
-
-        void EnsurePipeExists(string pipeTitle, string routingKey, RestMSDomain domain, ClientOptions options, double timeout)
-        {
-            Logger.DebugFormat("Checking for existence of the pipe {0} on the RestMS server: {1}", pipeTitle, Configuration.RestMS.Uri.AbsoluteUri);
-            var pipeExists = PipeExists(pipeTitle, domain);
-            if (!pipeExists)
-            {
-                domain = CreatePipe(domain.Href, pipeTitle, options, timeout);
-                if (domain == null || !domain.Pipes.Any(dp => dp.Title == pipeTitle))
-                {
-                    throw new RestMSClientException(string.Format("Unable to create pipe {0} on the default domain; see log for errors", pipeTitle));
-                }
-                
-                CreateJoin(domain.Pipes.First(p => p.Title == pipeTitle).Href, routingKey, options, timeout);
-            }
-
-            pipeUri = domain.Pipes.First(dp => dp.Title == pipeTitle).Href;
-        }
 
         void DeleteMessage(RestMSPipe pipe, Message message, ClientOptions options, double timeout)
         {
@@ -293,7 +215,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 return;
             }
 
-            Logger.DebugFormat("Deleting the message {0} from the pipe: {0}", message.Id, pipeUri);
+            Logger.DebugFormat("Deleting the message {0} from the pipe: {0}", message.Id, pipe.Href);
             SendDeleteMessage(options, matchingMessage, timeout);
         }
 
@@ -318,42 +240,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    Logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", pipeUri, exception.Message);
+                    Logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", pipe.PipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
             }
-        }
-
-        RestMSPipe GetPipe(ClientOptions options, double timeout)
-        {
-            /*TODO: Optimize this by using a repository approach with the repository checking for modification 
-            through etag and serving existing version if not modified and grabbing new version if changed*/
-
-            Logger.DebugFormat("Getting the pipe from the RestMS server: {0}", pipeUri);
-            var client = CreateClient(options, timeout);
-
-            try
-            {
-                var response = client.GetAsync(pipeUri).Result;
-                response.EnsureSuccessStatusCode();
-                return ParseResponse<RestMSPipe>(response);
-            }
-            catch (AggregateException ae)
-            {
-                foreach (var exception in ae.Flatten().InnerExceptions)
-                {
-                    Logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", pipeUri, exception.Message);
-                }
-
-                throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
-            }
-
         }
 
         Message ReadMessage(ClientOptions options, double timeout)
         {
-            var pipe = GetPipe(options, timeout);
+            var pipe = this.pipe.GetPipe(options, timeout);
             return GetMessage(pipe.Messages != null ? pipe.Messages.FirstOrDefault() : null, options, timeout);
         }
 
@@ -363,12 +259,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             var response = client.DeleteAsync(matchingMessage.Href).Result;
             response.EnsureSuccessStatusCode();
         }
-
-        bool PipeExists(string pipeTitle, RestMSDomain domain)
-        {
-            return domain != null && domain.Pipes != null && domain.Pipes.Any(p => p.Title == pipeTitle);
-        }
-
     }
 
 }
