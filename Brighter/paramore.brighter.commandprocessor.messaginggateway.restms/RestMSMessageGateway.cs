@@ -59,16 +59,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// The logger
         /// </summary>
-        protected readonly ILog Logger;
+        public readonly ILog Logger;
         /// <summary>
         /// The configuration
         /// </summary>
-        protected readonly RestMSMessagingGatewayConfigurationSection Configuration;
-
-        /// <summary>
-        /// The feed href
-        /// </summary>
-        protected string FeedUri = null;
+        public readonly RestMSMessagingGatewayConfigurationSection Configuration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:System.Object" /> class.
@@ -115,7 +110,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="options">The options.</param>
         /// <param name="timeout">The timeout value for this call</param>
         /// <returns>HttpClient.</returns>
-        protected HttpClient CreateClient(ClientOptions options, double timeout)
+        public HttpClient CreateClient(ClientOptions options, double timeout)
         {
             var handler = new HawkValidationHandler(options);
             var client = HttpClientFactory.Create(handler);
@@ -130,45 +125,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <typeparam name="T"></typeparam>
         /// <param name="feed">The feed.</param>
         /// <returns>StringContent.</returns>
-        protected StringContent CreateEntityBody<T>(T feed) where T : class, new()
+        public StringContent CreateEntityBody<T>(T feed) where T : class, new()
         {
             string feedRequest;
             if (!XmlRequestBuilder.TryBuild(feed, out feedRequest)) return null;
             return new StringContent(feedRequest);
-        }
-
-        RestMSDomain CreateFeed(string domainUri, string name, ClientOptions options, double timeout)
-        {
-            Logger.DebugFormat("Creating the feed {0} on the RestMS server: {1}", name, Configuration.RestMS.Uri.AbsoluteUri);
-            var client = CreateClient(options, timeout);
-            try
-            {
-                var response = client.SendAsync(
-                    CreateRequest(
-                        domainUri, 
-                        CreateEntityBody(
-                            new RestMSFeed
-                            {
-                                Name = name,
-                                Type = "Default",
-                                Title = name
-                            })
-                        )
-                    )
-                                     .Result;
-
-                response.EnsureSuccessStatusCode();
-                return ParseResponse<RestMSDomain>(response);
-            }
-            catch (AggregateException ae)
-            {
-                foreach (var exception in ae.Flatten().InnerExceptions)
-                {
-                    Logger.ErrorFormat("Threw exception adding Feed {0} to RestMS Server {1}", name, exception.Message);
-                }
-
-                throw new RestMSClientException(string.Format("Error adding the Feed {0} to the RestMS server, see log for details", name));
-            }
         }
 
         /// <summary>
@@ -176,72 +137,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// </summary>
         /// <param name="content">The content.</param>
         /// <returns>HttpRequestMessage.</returns>
-        protected HttpRequestMessage CreateRequest(string uri, StringContent content)
+        public HttpRequestMessage CreateRequest(string uri, StringContent content)
         {
             var request = new HttpRequestMessage(HttpMethod.Post, uri) {Content = content};
             request.Content.Headers.ContentType = new MediaTypeHeaderValue(MediaTypeNames.Text.Xml);
             return request;
-        }
-
-        /// <summary>
-        /// Ensures the feed exists.
-        /// </summary>
-        /// <param name="domain">The domain.</param>
-        /// <param name="options">The options.</param>
-        /// <exception cref="RestMSClientException"></exception>
-        protected void EnsureFeedExists(RestMSDomain domain, ClientOptions options, double timeout)
-        {
-            /*TODO: Optimize this by using a repository approach with the repository checking for modification 
-            through etag and serving existing version if not modified and grabbing new version if changed*/
-            var feedName = Configuration.Feed.Name;
-            Logger.DebugFormat("Checking for existence of the feed {0} on the RestMS server: {1}", feedName, Configuration.RestMS.Uri.AbsoluteUri);
-            var isFeedDeclared = IsFeedDeclared(domain, feedName);
-            if (!isFeedDeclared)
-            {
-                domain = CreateFeed(domain.Href, feedName, options, timeout);
-                if (domain == null || !domain.Feeds.Any(feed => feed.Name == feedName))
-                {
-                    throw new RestMSClientException(string.Format("Unable to create feed {0} on the default domain; see log for errors", feedName));
-                }
-            }
-            FeedUri = domain.Feeds.First(feed => feed.Name == feedName).Href;
-        }
-
-
-        /// <summary>
-        /// Gets the default domain.
-        /// </summary>
-        /// <param name="options">The options.</param>
-        /// <returns>RestMSDomain.</returns>
-        /// <exception cref="RestMSClientException"></exception>
-        protected RestMSDomain GetDomain(ClientOptions options, double timeout)
-        {
-            /*TODO: Optimize this by using a repository approach with the repository checking for modification 
-            through etag and serving existing version if not modified and grabbing new version if changed*/
-            
-            Logger.DebugFormat("Getting the default domain from the RestMS server: {0}", Configuration.RestMS.Uri.AbsoluteUri);
-            var client = CreateClient(options, timeout);
-
-            try
-            {
-                var response = client.GetAsync(Configuration.RestMS.Uri).Result;
-                response.EnsureSuccessStatusCode();
-                return ParseResponse<RestMSDomain>(response);
-            }
-            catch (AggregateException ae)
-            {
-                foreach (var exception in ae.Flatten().InnerExceptions)
-                {
-                    Logger.ErrorFormat("Threw exception getting Domain from RestMS Server {0}", exception.Message);
-                }
-
-                throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
-            }
-        }
-
-        bool IsFeedDeclared(RestMSDomain domain, string feedName)
-        {
-            return domain != null && domain.Feeds !=null && domain.Feeds.Any(feed => feed.Name == feedName);
         }
 
         /// <summary>
@@ -251,7 +151,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="response">The response.</param>
         /// <returns>T.</returns>
         /// <exception cref="ResultParserException"></exception>
-        protected T ParseResponse<T>(HttpResponseMessage response) where T : class, new()
+        public T ParseResponse<T>(HttpResponseMessage response) where T : class, new()
         {
             var entityBody = response.Content.ReadAsStringAsync().Result;
             T domainObject;

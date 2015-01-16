@@ -55,11 +55,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMsMessageProducer : RestMSMessageGateway, IAmAMessageProducer
     {
+        readonly Feed feed;
+        readonly Domain domain; 
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMsMessageProducer"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RestMsMessageProducer(ILog logger) : base(logger){}
+        public RestMsMessageProducer(ILog logger) : base(logger)
+        {
+            feed = new Feed(this);
+            domain = new Domain(this); 
+        }
 
         /// <summary>
         /// Sends the specified message.
@@ -74,7 +81,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 var clientOptions = BuildClientOptions();
                 var timeout = Timeout;
-                EnsureFeedExists(GetDomain(clientOptions, timeout), clientOptions, timeout);
+                feed.EnsureFeedExists(domain.GetDomain(clientOptions, timeout), clientOptions, timeout);
                 SendMessage(Configuration.Feed.Name, message, clientOptions, timeout);
             }
             catch (RestMSClientException rmse)
@@ -142,7 +149,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         {
             try
             {
-                if (FeedUri == null)
+                if (feed.FeedUri == null)
                 {
                     throw new RestMSClientException(string.Format("The feed href for feed {0} has not been initialized", feedName));
                 }
@@ -150,7 +157,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 var client = CreateClient(options, timeout);
                 var response = client.SendAsync(
                     CreateRequest(
-                        FeedUri,
+                        feed.FeedUri,
                         CreateMessageEntityBody(message)
                      )
                  ).Result;
