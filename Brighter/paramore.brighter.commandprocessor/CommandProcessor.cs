@@ -35,6 +35,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Common.Logging;
 using Polly;
@@ -179,6 +180,10 @@ namespace paramore.brighter.commandprocessor
 
         /// <summary>
         /// Publishes the specified event. We expect zero or more handlers. The events are handled synchronously, in turn
+        /// Because any pipeline might throw, yet we want to execute the remaining handler chains,  we catch exceptions on any publisher
+        /// instead of stopping at the first failure and then we throw an AggregateException if any of the handlers failed, 
+        /// with the InnerExceptions property containing the failures.
+        /// It is up the implementer of the handler that throws to take steps to make it easy to identify the handler that threw.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
@@ -196,7 +201,20 @@ namespace paramore.brighter.commandprocessor
 
                 logger.Info(m => m("Found {0} pipelines for command: {0}", handlerCount, @event.Id));
 
-                handlerChain.Each(chain => chain.Handle(@event));
+                var exceptions = new List<Exception>();
+                try
+                {
+                    handlerChain.Each(chain => chain.Handle(@event));
+                }
+                catch (Exception e)
+                {
+                   exceptions.Add(e);
+                }
+
+                if (exceptions.Any())
+                {
+                    throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
+                }
             }
         }
 
