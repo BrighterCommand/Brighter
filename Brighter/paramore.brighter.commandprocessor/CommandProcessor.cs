@@ -194,12 +194,12 @@ namespace paramore.brighter.commandprocessor
                 var requestContext = requestContextFactory.Create();
                 requestContext.Policies = policyRegistry;
 
-                logger.Info(m => m("Building send pipeline for command: {0}", @event.Id));
+                logger.Info(m => m("Building send pipeline for event: {0}", @event.Id));
                 var handlerChain = builder.Build(requestContext);
 
                 var handlerCount = handlerChain.Count();
 
-                logger.Info(m => m("Found {0} pipelines for command: {0}", handlerCount, @event.Id));
+                logger.Info(m => m("Found {0} pipelines for event: {0}", handlerCount, @event.Id));
 
                 var exceptions = new List<Exception>();
                 try
