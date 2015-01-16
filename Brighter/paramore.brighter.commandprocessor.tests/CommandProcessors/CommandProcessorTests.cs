@@ -180,6 +180,40 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();
     }
 
+    [Subject("An event with multiple subscribers")]
+    public class When_publishing_to_multiple_subscribers_should_aggregate_exceptions
+    {
+        static CommandProcessor commandProcessor;
+        static readonly MyEvent myEvent = new MyEvent();
+        static Exception exception;
+
+        Establish context = () =>
+        {
+            var logger = A.Fake<ILog>();
+
+            var registry = new SubscriberRegistry();
+            registry.Register<MyEvent, MyEventHandler>();
+            registry.Register<MyEvent, MyOtherEventHandler>();
+            registry.Register<MyEvent, MyThrowingEventHandler>();
+            
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyEvent>, MyEventHandler>("MyEventHandler");
+            container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("MyOtherHandler");
+            container.Register<IHandleRequests<MyEvent>, MyThrowingEventHandler>("MyThrowingHandler");
+            container.Register<ILog>(logger);
+
+            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
+        };
+
+        Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
+
+        It should_throw_an_aggregate_exception = () => exception.ShouldBeOfExactType(typeof(AggregateException));
+        It should_have_an_inner_exception_from_the_handler = () => ((AggregateException) exception).InnerException.ShouldBeOfExactType(typeof (InvalidOperationException));
+        It should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.ShouldRecieve(myEvent).ShouldBeTrue(); 
+        It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();
+    }
+
 
     public class When_using_decoupled_invocation_to_send_a_message_asynchronously
     {
