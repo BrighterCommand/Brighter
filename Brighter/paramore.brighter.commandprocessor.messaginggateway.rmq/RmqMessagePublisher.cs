@@ -45,7 +45,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             basicProperties.DeliveryMode = 1;
             basicProperties.ContentType = "text/plain";
             basicProperties.MessageId = message.Id.ToString();
-            basicProperties.Timestamp = new AmqpTimestamp(UnixTimestamp.GetCurrentUnixTimestampSeconds());
+            basicProperties.Timestamp = new AmqpTimestamp(UnixTimestamp.GetUnixTimestampSeconds(message.Header.TimeStamp));
             basicProperties.Headers = new Dictionary<string, object>
                                       {
                                           {"MessageType", message.Header.MessageType.ToString()},
