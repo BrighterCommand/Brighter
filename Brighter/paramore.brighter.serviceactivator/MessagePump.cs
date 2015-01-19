@@ -97,15 +97,39 @@ namespace paramore.brighter.serviceactivator
                             configurationException);
                     break;
                 }
-                catch (RequeueException requeueException)
+                catch (RequeueException)
                 {
                     RequeueMessage(message);
                 }
+                catch (AggregateException aggregateException)
+                {
+                    bool stop = false;
+                    foreach (var exception in aggregateException.InnerExceptions)
+                    {
+                        if (exception is RequeueException)
+                        {
+                            RequeueMessage(message);
+                            continue;
+                        }
+
+                        if (exception is ConfigurationException)
+                        {
+                            if (Logger != null)
+                                Logger.Debug(
+                                    m => m("MessagePump: {0} Stopping receiving of messages on thread # {1}", exception.Message, Thread.CurrentThread.ManagedThreadId),
+                                    exception);
+                            stop = true;
+                            break;
+                        }
+                    }
+
+                    if (stop) break;
+                }
                 catch (Exception e)
                 {
-                    Logger.Error("Failed to dispatch message "+ message, e);
+                    Logger.Error("Failed to dispatch message " + message, e);
                 }
-                
+
                 AcknowledgeMessage(message);
 
             } while (true);
