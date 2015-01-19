@@ -38,6 +38,9 @@ THE SOFTWARE. */
 using System;
 
 using Common.Logging;
+
+using Newtonsoft.Json;
+
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -143,8 +146,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 {
                     message = messageCreator.CreateMessage(fromQueue);
                     var deliveryTag = (ulong)message.Header.Bag["DeliveryTag"];
-                    Logger.Debug(m => m("RmqMessageConsumer: Recieved message with delivery tag {5} from exchange {0} on connection {1} with topic {2} and id {3} and body {4}", 
-                        Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value, deliveryTag));
+                    Logger.Debug(m => m("RmqMessageConsumer: Recieved message with delivery tag {3} from exchange {0} on connection {1} with topic {2} message {4}",
+                        Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, deliveryTag, JsonConvert.SerializeObject(message)));
                 }
                 else
                 {
