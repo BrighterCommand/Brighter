@@ -15,5 +15,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             return (long)(DateTime.UtcNow - UnixEpoch).TotalSeconds;
         }
+
+        public static long GetUnixTimestampSeconds(DateTime dateTime)
+        {
+            return (long)(dateTime - UnixEpoch).TotalSeconds;
+        }
+
     }
 }

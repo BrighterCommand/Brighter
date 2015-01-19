@@ -109,12 +109,23 @@ namespace paramore.brighter.commandprocessor
             Topic = topic;
             MessageType = messageType;
             Bag = new Dictionary<string, object>();
-            TimeStamp = DateTime.UtcNow;
+            TimeStamp = RoundToSeconds(DateTime.UtcNow);
         }
+
 
         public MessageHeader(Guid messageId, string result, MessageType messageType, DateTime timeStamp) : this(messageId, result, messageType)
         {
-            TimeStamp = timeStamp;
+            TimeStamp = RoundToSeconds(timeStamp);
+        }
+
+        //AMQP spec says:
+        // 4.2.5.4 Timestamps
+        // Time stamps are held in the 64-bit POSIX time_t format with an
+        // accuracy of one second. By using 64 bits we avoid future wraparound
+        // issues associated with 31-bit and 32-bit time_t values.
+        private DateTime RoundToSeconds(DateTime dateTime)
+        {
+            return new DateTime(dateTime.Ticks - (dateTime.Ticks % TimeSpan.TicksPerSecond), dateTime.Kind);
         }
 
         /// <summary>
@@ -124,7 +135,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(MessageHeader other)
         {
-            return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType;
+            return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType && TimeStamp == other.TimeStamp;
         }
 
         /// <summary>
@@ -151,6 +162,7 @@ namespace paramore.brighter.commandprocessor
                 var hashCode = Id.GetHashCode();
                 hashCode = (hashCode*397) ^ (Topic != null ? Topic.GetHashCode() : 0);
                 hashCode = (hashCode*397) ^ (int) MessageType;
+                hashCode = (hashCode*397) ^ TimeStamp.GetHashCode();
                 return hashCode;
             }
         }
