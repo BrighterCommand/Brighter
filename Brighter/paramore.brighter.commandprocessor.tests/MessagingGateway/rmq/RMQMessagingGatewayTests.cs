@@ -53,11 +53,12 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 messageProducer = new RmqMessageProducer(logger);
                 messageConsumer = new RmqMessageConsumer(logger);
                 message = new Message(
-                    header: new MessageHeader(Guid.NewGuid(), "test", MessageType.MT_COMMAND), 
+                    header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")
                     );
 
                 client = new TestRMQListener(message.Header.Topic);
+                messageConsumer.Purge(message.Header.Topic);
             };
 
         Because of = () =>
@@ -70,7 +71,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Cleanup tearDown = () =>
         {
-            messageConsumer.Purge("test");
+            messageConsumer.Purge(message.Header.Topic);
             messageProducer.Dispose();
         };
     }
@@ -125,7 +126,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         static Message recievedMessage;
 
         Establish context = () =>
-            {
+        {
+            var testGuid = Guid.NewGuid();
                 var properties = new NameValueCollection();
                 properties["showDateTime"] = "true";
                 LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
@@ -134,15 +136,16 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 sender = new RmqMessageProducer(logger);
                 receiver = new RmqMessageConsumer(logger);
                 sentMessage= new Message(
-                    header: new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_COMMAND), 
+                    header: new MessageHeader(Guid.NewGuid(), "test2" , MessageType.MT_COMMAND), 
                     body:new MessageBody("test content")
                     );
+                receiver.Purge(sentMessage.Header.Topic);
             };
 
         Because of = () =>
         {
             sender.Send(sentMessage);
-            recievedMessage = receiver.Receive("test", sentMessage.Header.Topic, 2000);
+            recievedMessage = receiver.Receive(sentMessage.Header.Topic, sentMessage.Header.Topic, 2000);
             receiver.Acknowledge(recievedMessage);
         };
 
@@ -150,7 +153,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
       Cleanup teardown = () =>
       {
-          receiver.Purge("test");
+          receiver.Purge(sentMessage.Header.Topic);
           sender.Dispose();
           receiver.Dispose();
       };
