@@ -202,13 +202,16 @@ namespace paramore.brighter.commandprocessor
                 logger.Info(m => m("Found {0} pipelines for event: {0}", handlerCount, @event.Id));
 
                 var exceptions = new List<Exception>();
-                try
+                foreach (var handleRequests in handlerChain)
                 {
-                    handlerChain.Each(chain => chain.Handle(@event));
-                }
-                catch (Exception e)
-                {
-                   exceptions.Add(e);
+                    try
+                    {
+                        handleRequests.Handle(@event);
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                    }
                 }
 
                 if (exceptions.Any())
