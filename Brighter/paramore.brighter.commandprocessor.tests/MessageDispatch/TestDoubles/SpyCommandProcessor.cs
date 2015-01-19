@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+
 using paramore.brighter.commandprocessor;
 using paramore.brighter.serviceactivator;
 
@@ -74,6 +76,12 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         public override void Publish<T>(T @event)
         {
             base.Publish(@event);
+
+            var exceptions = new List<Exception>();
+            exceptions.Add(new RequeueException() );
+            throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
+
+
             throw new RequeueException();
         }
     }
