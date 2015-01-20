@@ -1,12 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <configuration  xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
-  <configSections  xdt:Transform="InsertIfMissing">
-    <section name="serviceActivatorConnections" type="paramore.brighter.serviceactivator.ServiceActivatorConfiguraton.ServiceActivatorConfigurationSection, paramore.brighter.serviceactivator" allowLocation="true" allowDefinition="Everywhere" xdt:Transform="RemoveAll"/>
+  <configSections>
+    <add name="serviceActivatorConnections" xdt:Transform="Remove" xdt:Locator="Match(name)" />
   </configSections>
-  <serviceActivatorConnections xdt:Transform="Remove">
-    <connections>
-      <add connectionName="foo" channelName="mary" routingKey ="bob" dataType="paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
-      <add connectionName="bar" channelName="alice" routingKey = "simon" dataType="paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent" noOfPerformers="2" timeOutInMilliseconds="100" />
-    </connections>
-  </serviceActivatorConnections>
 </configuration>
