@@ -5,5 +5,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         public const string MESSAGE_TYPE = "MessageType";
         public const string MESSAGE_ID = "MessageId";
         public const string TOPIC = "Topic";
+        public const string HANDLED_COUNT = "HandledCount";
     }
 }

@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Text;
+using System.Threading.Tasks;
+
 using Common.Logging;
 using Common.Logging.Configuration;
 using Common.Logging.Simple;
@@ -107,10 +109,13 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                     return message;
                 }
             }
-            finally 
+            finally
             {
-                channel.Close();
-                connection.Close();
+                //Added wait as rabbit needs some time to sort it self out and the close and dispose was happening to quickly
+                Task.Delay(200).Wait();
+                channel.Dispose();
+                if (connection.IsOpen)
+                    connection.Dispose();
             }
             return null;
         }
@@ -135,8 +140,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
              
                 sender = new RmqMessageProducer(logger);
                 receiver = new RmqMessageConsumer(logger);
-                sentMessage= new Message(
-                    header: new MessageHeader(Guid.NewGuid(), "test2" , MessageType.MT_COMMAND), 
+            var messageHeader = new MessageHeader(Guid.NewGuid(), "test2" , MessageType.MT_COMMAND);
+            messageHeader.UpdateHandledCount();
+            sentMessage= new Message(
+                    header: messageHeader, 
                     body:new MessageBody("test content")
                     );
                 receiver.Purge(sentMessage.Header.Topic);

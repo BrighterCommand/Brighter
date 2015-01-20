@@ -45,6 +45,7 @@ namespace paramore.brighter.serviceactivator
         private readonly IAmACommandProcessor commandProcessor;
         private readonly IAmAMessageMapper<TRequest> messageMapper;
         public int TimeoutInMilliseconds { get; set; }
+        public int RequeueCount { get; set; }
         public IAmAnInputChannel Channel { get; set; }
         public ILog Logger { get; set; }
 
@@ -62,7 +63,7 @@ namespace paramore.brighter.serviceactivator
                 var message = Channel.Receive(TimeoutInMilliseconds);
                 
                 if (message == null) throw new Exception("Could not recieve message. Note that should return an MT_NONE from an empty queue on timeout");
-                
+
                 // empty queue
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
@@ -137,8 +138,26 @@ namespace paramore.brighter.serviceactivator
 
         private void RequeueMessage(Message message)
         {
+            message.UpdateHandledCount();
+
+            if (DiscardRequeuedMessagesEnabled())
+            {
+                if (message.HandledCountReached(RequeueCount))
+                {
+                    if (Logger != null) Logger.Warn(m => m("MessagePump: Have tried {2} times to handle this message {0} on thread # {1}, dropping message", message.Id, Thread.CurrentThread.ManagedThreadId, RequeueCount));
+                    
+                    AcknowledgeMessage(message);
+                    return;
+                }
+            }
+            
             if (Logger != null) Logger.Debug(m => m("MessagePump: Re-queueing message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId));
             Channel.Requeue(message);
+        }
+
+        private bool DiscardRequeuedMessagesEnabled()
+        {
+            return RequeueCount != -1;
         }
 
         private void AcknowledgeMessage(Message message)

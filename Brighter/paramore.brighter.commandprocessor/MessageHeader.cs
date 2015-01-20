@@ -91,7 +91,12 @@ namespace paramore.brighter.commandprocessor
         /// Gets the bag.
         /// </summary>
         /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; private set; } //intended for extended headers
+        public Dictionary<string, object> Bag { get; private set; }
+        /// <summary>
+        /// Gets the number of times this message has been seen 
+        /// </summary>
+        public int HandledCount { get; private set; }
+        //intended for extended headers
 
         public MessageHeader()
         {
@@ -110,12 +115,18 @@ namespace paramore.brighter.commandprocessor
             MessageType = messageType;
             Bag = new Dictionary<string, object>();
             TimeStamp = RoundToSeconds(DateTime.UtcNow);
+            HandledCount = 0;
         }
 
 
         public MessageHeader(Guid messageId, string result, MessageType messageType, DateTime timeStamp) : this(messageId, result, messageType)
         {
             TimeStamp = RoundToSeconds(timeStamp);
+        }
+
+        public MessageHeader(Guid messageId, string result, MessageType messageType, DateTime timeStamp, int handledCount):this(messageId, result, messageType,timeStamp)
+        {
+            HandledCount = handledCount;
         }
 
         //AMQP spec says:
@@ -135,7 +146,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(MessageHeader other)
         {
-            return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType && TimeStamp == other.TimeStamp;
+            return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType && TimeStamp == other.TimeStamp && HandledCount ==other.HandledCount;
         }
 
         /// <summary>
@@ -163,6 +174,7 @@ namespace paramore.brighter.commandprocessor
                 hashCode = (hashCode*397) ^ (Topic != null ? Topic.GetHashCode() : 0);
                 hashCode = (hashCode*397) ^ (int) MessageType;
                 hashCode = (hashCode*397) ^ TimeStamp.GetHashCode();
+                hashCode = (hashCode * 397) ^ HandledCount.GetHashCode();
                 return hashCode;
             }
         }
@@ -187,6 +199,11 @@ namespace paramore.brighter.commandprocessor
         public static bool operator !=(MessageHeader left, MessageHeader right)
         {
             return !Equals(left, right);
+        }
+
+        public void UpdateHandledCount()
+        {
+            HandledCount++;
         }
     }
 }
