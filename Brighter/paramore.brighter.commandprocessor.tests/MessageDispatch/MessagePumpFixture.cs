@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
+
 using Machine.Specifications;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
@@ -73,7 +75,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             commandProcessor = new SpyRequeueCommandProcessor();
             channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000 };
+            messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = -1};
 
             @event = new MyEvent();
 
@@ -91,6 +93,49 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         It should_publish_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
         It should_requeue_the_messages = () => channel.Length.ShouldEqual(2);
     }
+
+
+    public class When_a_requeue_count_threshold_has_been_reached
+    {
+        static IAmAMessagePump messagePump;
+        private static FakeChannel channel;
+        static SpyRequeueCommandProcessor commandProcessor;
+        static MyEvent @event;
+
+        Establish context = () =>
+        {
+            commandProcessor = new SpyRequeueCommandProcessor();
+            channel = new FakeChannel();
+            var mapper = new MyEventMessageMapper();
+            messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
+
+            @event = new MyEvent();
+
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(@event)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
+            channel.Send(message1);
+            channel.Send(message2);
+        };
+
+        Because of = () =>
+        {
+            var task = Task.Factory.StartNew(() => messagePump.Run(), TaskCreationOptions.LongRunning);
+            Task.Delay(1000).Wait();
+
+            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            channel.Send(quitMessage);
+
+            Task.WaitAll(new[] { task });
+        };
+
+        It should_send_the_message_via_the_command_processor = () => commandProcessor.SendHappened.ShouldBeTrue();
+        It should_have_been_handled_3_times_via_send = () => commandProcessor.SendCount.ShouldEqual(3);
+        It should_publish_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
+        It should_have_been_handled_3_times_via_publish = () => commandProcessor.PublishCount.ShouldEqual(3);
+        It should_requeue_the_messages = () => channel.Length.ShouldEqual(0);
+    }
+
+
 
 
 }

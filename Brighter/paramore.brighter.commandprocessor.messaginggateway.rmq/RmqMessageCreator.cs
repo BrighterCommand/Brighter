@@ -76,6 +76,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var topic = HeaderResult<string>.Empty();
             var messageId = HeaderResult<Guid>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
+            var handledCount = HeaderResult<int>.Empty();
             
             Message message;
             try
@@ -83,9 +84,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 topic = ReadTopic(fromQueue, headers);
                 messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
                 timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
+                handledCount = ReadHandledCount(headers);
                 var messageType = ReadMessageType(headers);
 
-                if(false == (topic.Success && messageId.Success && messageType.Success))
+                if(false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
                 {
                     message = FailureMessage(topic, messageId);
                 }
@@ -94,7 +96,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     string body = Encoding.UTF8.GetString(fromQueue.Body);
 
                     message = new Message(
-                        timeStamp.Success ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result) : new MessageHeader(messageId.Result, topic.Result, messageType.Result),
+                        timeStamp.Success ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result) : new MessageHeader(messageId.Result, topic.Result, messageType.Result),
                         new MessageBody(body));
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString((byte[]) header.Value)));
@@ -143,6 +145,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                               var success = Enum.TryParse(s, true, out result);
                               return new HeaderResult<MessageType>(result, success);
                 });
+        }
+
+        HeaderResult<int> ReadHandledCount(IDictionary<string, object> headers)
+        {
+            return ReadHeader(headers, HeaderNames.HANDLED_COUNT).Map(s =>
+            {
+                if (string.IsNullOrEmpty(s))
+                {
+                    return new HeaderResult<int>(0, true);
+                }
+                int handledCount;
+                var val = int.TryParse(s, out handledCount) ? handledCount : 0;
+                return new HeaderResult<int>(val, true);
+            });
+            
         }
 
         HeaderResult<string> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)

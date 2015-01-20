@@ -82,7 +82,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
             set { this["dataType"] = value; }
         }
 
-        [ConfigurationProperty("noOfPerformers", DefaultValue = "1", IsRequired = true)]
+        [ConfigurationProperty("noOfPerformers", DefaultValue = "1", IsRequired = false)]
         public int NoOfPerformers
         {
             get { return Convert.ToInt32(this["noOfPerformers"]); }
@@ -94,6 +94,12 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
         {
             get { return Convert.ToInt32(this["timeOutInMilliseconds"]); }
             set { this["timeOutInMilliseconds"] = value; }
+        }
+        [ConfigurationProperty("requeueCount", DefaultValue = "-1", IsRequired = false)]
+        public int RequeueCount
+        {
+            get { return Convert.ToInt32(this["requeueCount"]); }
+            set { this["requeueCount"] = value; }
         }
     }
 

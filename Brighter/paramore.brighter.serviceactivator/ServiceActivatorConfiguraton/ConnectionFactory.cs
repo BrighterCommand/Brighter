@@ -48,7 +48,8 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
                    channel: channelFactory.CreateInputChannel(connectionElement.ChannelName, connectionElement.RoutingKey), 
                    dataType: GetType(connectionElement.DataType), 
                    noOfPerformers: connectionElement.NoOfPerformers, 
-                   timeoutInMilliseconds: connectionElement.TimeoutInMiliseconds)
+                   timeoutInMilliseconds: connectionElement.TimeoutInMiliseconds,
+                   requeueCount: connectionElement.RequeueCount)
              ).ToList();
 
 

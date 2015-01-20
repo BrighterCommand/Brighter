@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 using paramore.brighter.commandprocessor.extensions;
@@ -48,8 +49,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             basicProperties.Timestamp = new AmqpTimestamp(UnixTimestamp.GetUnixTimestampSeconds(message.Header.TimeStamp));
             basicProperties.Headers = new Dictionary<string, object>
                                       {
-                                          {"MessageType", message.Header.MessageType.ToString()},
-                                          {"Topic", message.Header.Topic}
+                                          {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
+                                          {HeaderNames.TOPIC, message.Header.Topic},
+                                          {HeaderNames.HANDLED_COUNT , message.Header.HandledCount.ToString(CultureInfo.InvariantCulture)}
                                       };
 
             message.Header.Bag.Each((header) => basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value)));

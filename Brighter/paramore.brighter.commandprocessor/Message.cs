@@ -144,5 +144,14 @@ namespace paramore.brighter.commandprocessor
         {
             return !Equals(left, right);
         }
+
+        public void UpdateHandledCount()
+        {
+            Header.UpdateHandledCount();
+        }
+        public bool HandledCountReached(int requeueCount)
+        {
+            return Header.HandledCount >= requeueCount;
+        }
     }
 }

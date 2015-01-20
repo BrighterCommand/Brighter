@@ -48,6 +48,7 @@ namespace paramore.brighter.serviceactivator
             {
                 Channel = connection.Channel,
                 TimeoutInMilliseconds = connection.TimeoutInMiliseconds,
+                RequeueCount = connection.RequeueCount,
                 Logger = logger
             };
             var consumer = new Consumer(connection.Name, connection.Channel, messagePump);

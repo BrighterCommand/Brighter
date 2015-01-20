@@ -28,6 +28,8 @@ using System.Collections.Generic;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.serviceactivator;
 
+using Raven.Database.Indexing;
+
 namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
 {
     internal class SpyCommandProcessor : IAmACommandProcessor
@@ -67,15 +69,26 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
 
     internal class SpyRequeueCommandProcessor : SpyCommandProcessor
     {
+        public int SendCount { get; set; }
+        public int PublishCount { get; set; }
+
+        public SpyRequeueCommandProcessor()
+        {
+            SendCount = 0;
+            PublishCount = 0;
+        }
+
         public override void Send<T>(T command)
         {
             base.Send(command);
+            SendCount ++;
             throw new RequeueException();
         }
 
         public override void Publish<T>(T @event)
         {
             base.Publish(@event);
+            PublishCount++;
 
             var exceptions = new List<Exception>();
             exceptions.Add(new RequeueException() );
