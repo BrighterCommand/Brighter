@@ -10,6 +10,7 @@ Paramore contributors (sorted alphabeticaly)
    
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
+  * Work on POSTEL messaging approach
 
 **[Toby Henderson](https://github.com/holytshirt)**
   * Various fixes
