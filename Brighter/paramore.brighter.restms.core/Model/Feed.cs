@@ -35,6 +35,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using paramore.brighter.restms.core.Extensions;
 using paramore.brighter.restms.core.Ports.Common;
@@ -132,22 +134,23 @@ namespace paramore.brighter.restms.core.Model
             Joins[join.Address] = new Join[] {join};
         }
 
-        public int AddMessage(Message message)
+        public IEnumerable<Pipe> AddMessage(Message message)
         {
+            var updatedPipes = new List<Pipe>();
             var matchingJoins = Joins[message.Address];
             if (matchingJoins.Any())
             {
-                int joinCount = 0;
                 matchingJoins.Each(join =>
                                    {
                                        var pipe = join.Pipe;
                                        pipe.AddMessage(new Message(message));
-                                       joinCount ++;
+                                       updatedPipes.Add(pipe);
+                                       
                                    });
                 message.Content.Dispose();
-                return joinCount;
             }
-            return 0;
+
+            return updatedPipes;
         }
     }
 }

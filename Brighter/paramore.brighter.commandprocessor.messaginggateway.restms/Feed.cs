@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Net.Http;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 using Thinktecture.IdentityModel.Hawk.Client;
@@ -52,16 +53,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="domain">The domain.</param>
         /// <param name="options">The options.</param>
         /// <exception cref="RestMSClientException"></exception>
-        public void EnsureFeedExists(RestMSDomain domain, ClientOptions options, double timeout)
+        public void EnsureFeedExists(RestMSDomain domain)
         {
-            /*TODO: Optimize this by using a repository approach with the repository checking for modification 
-            through etag and serving existing version if not modified and grabbing new version if changed*/
             var feedName = gateway.Configuration.Feed.Name;
             gateway.Logger.DebugFormat("Checking for existence of the feed {0} on the RestMS server: {1}", feedName, gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var isFeedDeclared = IsFeedDeclared(domain, feedName);
             if (!isFeedDeclared)
             {
-                domain = CreateFeed(domain.Href, feedName, options, timeout);
+                domain = CreateFeed(domain.Href, feedName);
                 if (domain == null || !domain.Feeds.Any(feed => feed.Name == feedName))
                 {
                     throw new RestMSClientException(string.Format("Unable to create feed {0} on the default domain; see log for errors", feedName));
@@ -70,10 +69,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             FeedUri = domain.Feeds.First(feed => feed.Name == feedName).Href;
         }
 
-        RestMSDomain CreateFeed(string domainUri, string name, ClientOptions options, double timeout)
+        RestMSDomain CreateFeed(string domainUri, string name)
         {
             gateway.Logger.DebugFormat("Creating the feed {0} on the RestMS server: {1}", name, gateway.Configuration.RestMS.Uri.AbsoluteUri);
-            var client = gateway.CreateClient(options, timeout);
+            var client = gateway.Client();
             try
             {
                 var response = client.SendAsync(gateway.CreateRequest(

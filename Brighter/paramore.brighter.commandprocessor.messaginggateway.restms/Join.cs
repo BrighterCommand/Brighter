@@ -43,10 +43,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             this.feed = feed;
         }
 
-        public RestMSJoin CreateJoin(string pipeUri, string routingKey, ClientOptions options, double timeout)
+        public RestMSJoin CreateJoin(string pipeUri, string routingKey)
         {
             gateway.Logger.DebugFormat("Creating the join with key {0} for pipe {1}", routingKey, pipeUri);
-            var client = gateway.CreateClient(options, timeout);
+            var client = gateway.Client();
             try
             {
                 var response = client.SendAsync(

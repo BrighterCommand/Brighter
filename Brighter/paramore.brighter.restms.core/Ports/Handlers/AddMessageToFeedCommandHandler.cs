@@ -36,9 +36,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Transactions;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.restms.core.Extensions;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Common;
@@ -51,15 +54,17 @@ namespace paramore.brighter.restms.core.Ports.Handlers
     public class AddMessageToFeedCommandHandler : RequestHandler<AddMessageToFeedCommand>
     {
         readonly IAmARepository<Feed> feedRepository;
+        readonly IAmACommandProcessor commandProcessor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
         /// <param name="feedRepository"></param>
         /// <param name="logger">The logger.</param>
-        public AddMessageToFeedCommandHandler(IAmARepository<Feed> feedRepository, ILog logger) : base(logger)
+        public AddMessageToFeedCommandHandler(IAmARepository<Feed> feedRepository, IAmACommandProcessor commandProcessor, ILog logger) : base(logger)
         {
             this.feedRepository = feedRepository;
+            this.commandProcessor = commandProcessor;
         }
 
         #region Overrides of RequestHandler<AddMessageToFeedCommand>
@@ -71,6 +76,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <returns>TRequest.</returns>
         public override AddMessageToFeedCommand Handle(AddMessageToFeedCommand addMessageToFeedCommand)
         {
+            IEnumerable<Pipe> pipes;
             using (var scope = new TransactionScope())
             {
                 var feed = feedRepository[new Identity(addMessageToFeedCommand.FeedName)];
@@ -79,7 +85,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                     throw new FeedDoesNotExistException();
                 }
 
-                addMessageToFeedCommand.MatchingJoins = feed.AddMessage(
+                pipes = feed.AddMessage(
                     new Model.Message(
                         new Address(addMessageToFeedCommand.Address),
                         feed.Href,
@@ -87,8 +93,12 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                         addMessageToFeedCommand.Attachment, 
                         !string.IsNullOrEmpty(addMessageToFeedCommand.ReplyTo) ? new Uri(addMessageToFeedCommand.ReplyTo) : null));
 
+                addMessageToFeedCommand.MatchingJoins = pipes.Count();
+
                 scope.Complete();
             }
+
+            pipes.Each(pipe => commandProcessor.Publish(new InvalidateCacheCommand(pipe.Href)));
 
             return base.Handle(addMessageToFeedCommand);
         }

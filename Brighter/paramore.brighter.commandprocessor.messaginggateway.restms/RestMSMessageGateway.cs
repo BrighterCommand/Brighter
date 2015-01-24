@@ -37,9 +37,11 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Net.Cache;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Mime;
+using System.Threading;
 using Common.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
@@ -56,6 +58,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMSMessageGateway
     {
+        ThreadLocal<HttpClient> client;
+        readonly double timeout; 
+
         /// <summary>
         /// The logger
         /// </summary>
@@ -73,51 +78,20 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         {
             Configuration = RestMSMessagingGatewayConfigurationSection.GetConfiguration();
             Logger = logger;
+            timeout = Convert.ToDouble(Configuration.RestMS.Timeout);
         }
 
-        protected double Timeout
+        public HttpClient Client()
         {
-            get
-            {
-                return Convert.ToDouble(Configuration.RestMS.Timeout);
-            }
+            client = new ThreadLocal<HttpClient>(() => CreateClient(BuildClientOptions(), timeout));
+            return client.Value;
         }
 
         /// <summary>
-        /// Builds the client options.
+        /// Gets the timeout.
         /// </summary>
-        /// <returns>ClientOptions.</returns>
-        protected ClientOptions BuildClientOptions()
-        {
-            var credential = new Credential()
-            {
-                Id = Configuration.RestMS.Id,
-                Algorithm = SupportedAlgorithms.SHA256,
-                User = Configuration.RestMS.User,
-                Key = Convert.FromBase64String(Configuration.RestMS.Key)
-            };
+        /// <value>The timeout.</value>
 
-            var options = new ClientOptions()
-            {
-                CredentialsCallback = () => credential
-            };
-            return options;
-        }
-
-        /// <summary>
-        /// Creates the client.
-        /// </summary>
-        /// <param name="options">The options.</param>
-        /// <param name="timeout">The timeout value for this call</param>
-        /// <returns>HttpClient.</returns>
-        public HttpClient CreateClient(ClientOptions options, double timeout)
-        {
-            var handler = new HawkValidationHandler(options);
-            var client = HttpClientFactory.Create(handler);
-            client.Timeout = TimeSpan.FromMilliseconds(timeout);
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/xml"));
-            return client;
-        }
 
         /// <summary>
         /// Creates the entity body.
@@ -163,5 +137,43 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
             return domainObject;
         }
+        
+        /// <summary>
+        /// Builds the client options.
+        /// </summary>
+        /// <returns>ClientOptions.</returns>
+        ClientOptions BuildClientOptions()
+        {
+            var credential = new Credential()
+            {
+                Id = Configuration.RestMS.Id,
+                Algorithm = SupportedAlgorithms.SHA256,
+                User = Configuration.RestMS.User,
+                Key = Convert.FromBase64String(Configuration.RestMS.Key)
+            };
+
+            var options = new ClientOptions()
+            {
+                CredentialsCallback = () => credential
+            };
+            return options;
+        }
+
+
+        HttpClient CreateClient(ClientOptions options, double timeout)
+        {
+            var handler = new HawkValidationHandler(options);
+            var requestHandler = new WebRequestHandler
+            {
+                AllowPipelining = true,
+                AllowAutoRedirect = true,
+                CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.CacheIfAvailable)
+            };
+            var client = HttpClientFactory.Create(requestHandler, handler);
+            client.Timeout = TimeSpan.FromMilliseconds(timeout);
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/xml"));
+            return client;
+        }
+
     }
 }

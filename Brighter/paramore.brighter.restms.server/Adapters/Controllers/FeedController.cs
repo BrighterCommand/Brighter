@@ -42,6 +42,7 @@ using System.Net.Http;
 using System.Net.Mail;
 using System.Text;
 using System.Web.Http;
+using CacheCow.Server;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.restms.core.Extensions;
 using paramore.brighter.restms.core.Model;
@@ -61,16 +62,19 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
     {
         readonly IAmACommandProcessor commandProcessor;
         readonly IAmARepository<Feed> feedRepository;
+        readonly ICachingHandler cachingHandler;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FeedController"/> class.
         /// </summary>
         /// <param name="commandProcessor">The command processor.</param>
         /// <param name="feedRepository">The feed repository.</param>
-        public FeedController(IAmACommandProcessor commandProcessor, IAmARepository<Feed> feedRepository)
+        /// <param name="cachingHandler">The caching handler, used to invalidate related resources</param>
+        public FeedController(IAmACommandProcessor commandProcessor, IAmARepository<Feed> feedRepository, ICachingHandler cachingHandler)
         {
             this.commandProcessor = commandProcessor;
             this.feedRepository = feedRepository;
+            this.cachingHandler = cachingHandler;
         }
 
         /// <summary>
@@ -105,7 +109,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         /// <summary>
         /// Posts the message to feed.
         /// </summary>
-        /// <param name="name">The name.</param>
+        /// <param name="name">The feed name.</param>
         /// <param name="messageSpecification">The message specification.</param>
         /// <returns>HttpResponseMessage.</returns>
         [HttpPost]

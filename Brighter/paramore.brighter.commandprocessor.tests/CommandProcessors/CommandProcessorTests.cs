@@ -415,7 +415,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 circuitBrokenException = (BrokenCircuitException) Catch.Exception(() => commandProcessor.Post(myCommand));
             };
 
-        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.Send(message)).MustHaveHappened(Repeated.Exactly.Times(4));
+        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.Send(A<Message>.Ignored)).MustHaveHappened(Repeated.Exactly.Times(4));
         It should_throw_a_exception_out_once_all_retries_exhausted = () => failedException.ShouldBeOfExactType(typeof(Exception));
         It should_throw_a_circuit_broken_exception_once_circuit_broken = () => circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
 
