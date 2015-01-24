@@ -13,9 +13,12 @@
 
 Why a Command Dispatcher, Command Processor, and Task Queue?
 ========
-* When implementing a hexagaonal architecture, one question is how to implement a port.
- * Paramore shows how to implement ports using a Command approach (with a Command Dispatcher & Processor called Brighter).
-* Brighter also provides a Task Queue implementation for handling those commands asynchronously. In this role it has design goals similar to [Celery](https://github.com/celery/celery)
+* When implementing a hexagonal architecture, one question is how to implement a port.
+** Brighter shows how to implement ports using a Command approach (with a Command Dispatcher)
+* A command processor let's you add orthogonal concerns seperately to the processing of commands such as logging, undo, validation, retry, and circuit breaker
+** Brighter provides a Command Processor, using a 'Russian Doll' model to allow a pipeline of handlers to operate on a command.
+* A task queue allows a one process to send work to be handled asynchronously to another process, using a message queue as the channel, for processing. A common use case is to help a web server scale by handing off a request to another process for back-end processing. This allows both a faster ack and throttling of the request arrival rate to that which can be handled by a back end processing component. For another project with this goal, see [Celery](https://github.com/celery/celery)
+** Brighter provides a Task Queue implementation for handling commands asynchronously via a work queue. 
 * More detailed documentation on the project can be found on the GitHub pages for the project here: [Paramore](http://iancooper.github.io/Paramore/)
 
 Brighter 
