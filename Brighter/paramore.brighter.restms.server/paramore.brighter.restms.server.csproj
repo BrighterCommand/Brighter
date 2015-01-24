@@ -135,6 +135,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Adapters\Cache\CacheHandler.cs" />
     <Compile Include="Adapters\Configuration\RestMSServerConfiguration.cs" />
     <Compile Include="Adapters\Configuration\UnityHandlerFactory.cs" />
     <Compile Include="Adapters\Formatters\ConversionStrategyFactory.cs" />

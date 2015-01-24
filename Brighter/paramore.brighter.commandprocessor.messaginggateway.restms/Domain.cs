@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
-using Thinktecture.IdentityModel.Hawk.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {
@@ -42,20 +41,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// Gets the default domain.
         /// </summary>
-        /// <param name="options">The options.</param>
+        /// <param name="client"></param>
         /// <returns>RestMSDomain.</returns>
         /// <exception cref="RestMSClientException"></exception>
-        public RestMSDomain GetDomain(ClientOptions options, double timeout)
+        public RestMSDomain GetDomain()
         {
-            /*TODO: Optimize this by using a repository approach with the repository checking for modification 
-            through etag and serving existing version if not modified and grabbing new version if changed*/
-
             gateway.Logger.DebugFormat("Getting the default domain from the RestMS server: {0}", gateway.Configuration.RestMS.Uri.AbsoluteUri);
-            var client = gateway.CreateClient(options, timeout);
 
             try
             {
-                var response = client.GetAsync(gateway.Configuration.RestMS.Uri).Result;
+                var response = gateway.Client().GetAsync(gateway.Configuration.RestMS.Uri).Result;
                 response.EnsureSuccessStatusCode();
                 return gateway.ParseResponse<RestMSDomain>(response);
             }

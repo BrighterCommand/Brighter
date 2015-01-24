@@ -38,12 +38,9 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Mime;
-using System.Text;
 using Common.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
-using Thinktecture.IdentityModel.Hawk.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {
@@ -86,16 +83,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <exception cref="System.NotImplementedException"></exception>
         public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds = -1)
         {
-            double timeout = timeoutInMilliseconds == -1 ? Timeout : timeoutInMilliseconds;
-
             try
             {
-                var clientOptions = BuildClientOptions();
-                feed.EnsureFeedExists(domain.GetDomain(clientOptions, timeout), clientOptions, timeout);
+                feed.EnsureFeedExists(domain.GetDomain());
                 pipe = new Pipe(this, feed);
-                pipe.EnsurePipeExists(queueName, routingKey, domain.GetDomain(clientOptions, timeout), clientOptions, timeout);
+                pipe.EnsurePipeExists(queueName, routingKey, domain.GetDomain());
 
-                return ReadMessage(clientOptions, timeout);
+                return ReadMessage();
             }
             catch (RestMSClientException rmse)
             {
@@ -118,9 +112,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <exception cref="System.NotImplementedException"></exception>
         public void Acknowledge(Message message)
         {
-            var clientOptions = BuildClientOptions();
-            var pipe = this.pipe.GetPipe(clientOptions, Timeout);
-            DeleteMessage(pipe, message, clientOptions, Timeout);
+            var pipe = this.pipe.GetPipe();
+            DeleteMessage(pipe, message);
         }
 
         /// <summary>
@@ -132,13 +125,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <returns>System.Int32.</returns>
         public int NoOfOutstandingMessages(string queueName, string routingKey, int timeoutInMilliseconds = -1)
         {
-            double timeout = timeoutInMilliseconds == -1 ? Timeout : timeoutInMilliseconds;
-
             try
             {
-                var clientOptions = BuildClientOptions();
-                this.pipe.EnsurePipeExists(queueName, routingKey, domain.GetDomain(clientOptions, timeout), clientOptions, timeout);
-                var pipe = this.pipe.GetPipe(clientOptions, timeout);
+                this.pipe.EnsurePipeExists(queueName, routingKey, domain.GetDomain());
+                var pipe = this.pipe.GetPipe();
                 return pipe.Messages != null ? pipe.Messages.Count(): 0;
             }
             catch (RestMSClientException rmse)
@@ -162,9 +152,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         {
             try
             {
-
-                var clientOptions = BuildClientOptions();
-                var pipe = this.pipe.GetPipe(clientOptions, Timeout);
+                var pipe = this.pipe.GetPipe();
                 if (pipe != null && pipe.Messages != null)
                 {
                     var message = pipe.Messages.FirstOrDefault();
@@ -172,9 +160,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                     {
                         if (message != null)
                         {
-                            SendDeleteMessage(clientOptions, message, Timeout);
+                            SendDeleteMessage(message);
                         }
-                         pipe = this.pipe.GetPipe(clientOptions, Timeout);   
+                         pipe = this.pipe.GetPipe();   
                     } while (pipe.Messages != null && pipe.Messages.Any());
                 }
             }
@@ -207,7 +195,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         }
 
 
-        void DeleteMessage(RestMSPipe pipe, Message message, ClientOptions options, double timeout)
+        void DeleteMessage(RestMSPipe pipe, Message message)
             {
             if (pipe.Messages == null || !pipe.Messages.Any())
             {
@@ -221,10 +209,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
 
             Logger.DebugFormat("Deleting the message {0} from the pipe: {0}", message.Id, pipe.Href);
-            SendDeleteMessage(options, matchingMessage, timeout);
+            SendDeleteMessage(matchingMessage);
         }
 
-        Message GetMessage(RestMSMessageLink messageUri, ClientOptions options, double timeout)
+        Message GetMessage(RestMSMessageLink messageUri)
         {
             if (messageUri == null)
             {
@@ -232,7 +220,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
 
             Logger.DebugFormat("Getting the message from the RestMS server: {0}", messageUri);
-            var client = CreateClient(options, timeout);
+            var client = Client();
 
             try
             {
@@ -252,15 +240,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
         }
 
-        Message ReadMessage(ClientOptions options, double timeout)
+        Message ReadMessage()
         {
-            var pipe = this.pipe.GetPipe(options, timeout);
-            return GetMessage(pipe.Messages != null ? pipe.Messages.FirstOrDefault() : null, options, timeout);
-            }
+            var pipe = this.pipe.GetPipe();
+            return GetMessage(pipe.Messages != null ? pipe.Messages.FirstOrDefault() : null);
+        }
 
-        void SendDeleteMessage(ClientOptions options, RestMSMessageLink matchingMessage, double timeout)
+        void SendDeleteMessage(RestMSMessageLink matchingMessage)
         {
-            var client = CreateClient(options, timeout);
+            var client = Client();
             var response = client.DeleteAsync(matchingMessage.Href).Result;
             response.EnsureSuccessStatusCode();
         }

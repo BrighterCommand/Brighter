@@ -307,6 +307,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
     {
         static AddMessageToFeedCommand addMessageToFeedCommand;
         static AddMessageToFeedCommandHandler addmessageToFeedCommandHandler;
+        static IAmACommandProcessor commandProcessor;
         const string DOMAIN_NAME = "default";
         const string FEED_NAME = "Default";
         const string REPLY_TO = "http://host.com/mywebhook/messagereceipt";
@@ -325,6 +326,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
+            commandProcessor = A.Fake<IAmACommandProcessor>();
 
             domain = new Domain(
                 name: new Name(DOMAIN_NAME),
@@ -335,7 +337,6 @@ namespace paramore.commandprocessor.tests.RestMSServer
                     ),
                 version: new AggregateVersion(0)
                 );
-
 
             feed = new Feed(
                 feedType: FeedType.Direct,
@@ -364,7 +365,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             headers = new NameValueCollection {{MY_CUSTOM_HEADER, MY_HEADER_VALUE}};
             content = Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain);
             addMessageToFeedCommand = new AddMessageToFeedCommand(feed.Name.Value, MESSAGE_ADDRESS, REPLY_TO, headers, content);
-            addmessageToFeedCommandHandler = new AddMessageToFeedCommandHandler(feedRepository, logger);
+            addmessageToFeedCommandHandler = new AddMessageToFeedCommandHandler(feedRepository, commandProcessor, logger);
             
         };
 
@@ -379,6 +380,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_have_content_with_a_matching_content_type = () => pipe.Messages.First().Content.ContentType.MediaType.ShouldEqual(content.ContentType.MediaType);
         It should_have_content_with_a_matching_encoding = () => pipe.Messages.First().Content.Encoding.ShouldEqual(content.TransferEncoding);
         It should_have_matching_content = () => pipe.Messages.First().Content.AsString().ShouldEqual(MESSAGE_CONTENT);
+        It should_publish_cache_invalidation_to_all_changed_pipes = () => A.CallTo(() => commandProcessor.Publish(A<InvalidateCacheCommand>.Ignored)).MustHaveHappened();
 
     }
 

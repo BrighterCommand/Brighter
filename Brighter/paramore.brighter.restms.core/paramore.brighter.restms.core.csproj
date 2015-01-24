@@ -65,6 +65,7 @@
     <Compile Include="Model\Resource.cs" />
     <Compile Include="Model\RoutingTable.cs" />
     <Compile Include="Model\Title.cs" />
+    <Compile Include="Ports\Cache\IAmACache.cs" />
     <Compile Include="Ports\Commands\AddFeedToDomainCommand.cs" />
     <Compile Include="Ports\Commands\AddJoinCommand.cs" />
     <Compile Include="Ports\Commands\AddJoinToPipeCommand.cs" />
@@ -76,6 +77,7 @@
     <Compile Include="Ports\Commands\DeleteMessageCommand.cs" />
     <Compile Include="Ports\Commands\DeletePipeCommand.cs" />
     <Compile Include="Ports\Commands\AddFeedCommand.cs" />
+    <Compile Include="Ports\Commands\InvalidateCacheCommand.cs" />
     <Compile Include="Ports\Commands\RemoveFeedFromDomainCommand.cs" />
     <Compile Include="Ports\Common\AggregateVersion.cs" />
     <Compile Include="Ports\Common\DomainDoesNotExistException.cs" />
@@ -94,6 +96,7 @@
     <Compile Include="Ports\Handlers\AddMessageToFeedCommandHandler.cs" />
     <Compile Include="Ports\Handlers\AddPipeCommandHandler.cs" />
     <Compile Include="Ports\Handlers\AddPipeToDomainCommandHandler.cs" />
+    <Compile Include="Ports\Handlers\CacheCleaningHandler.cs" />
     <Compile Include="Ports\Handlers\DeleteFeedCommandHandler.cs" />
     <Compile Include="Ports\Handlers\DeleteMessageCommandHandler.cs" />
     <Compile Include="Ports\Handlers\DeletePipeCommandHandler.cs" />

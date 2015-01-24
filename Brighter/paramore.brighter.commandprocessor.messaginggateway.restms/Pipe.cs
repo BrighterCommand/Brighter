@@ -45,31 +45,31 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         }
 
 
-        public void EnsurePipeExists(string pipeTitle, string routingKey, RestMSDomain domain, ClientOptions options, double timeout)
+        public void EnsurePipeExists(string pipeTitle, string routingKey, RestMSDomain domain)
         {
             gateway.Logger.DebugFormat("Checking for existence of the pipe {0} on the RestMS server: {1}", pipeTitle, gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var pipeExists = PipeExists(pipeTitle, domain);
             if (!pipeExists)
             {
-                domain = CreatePipe(domain.Href, pipeTitle, options, timeout);
+                domain = CreatePipe(domain.Href, pipeTitle);
                 if (domain == null || !domain.Pipes.Any(dp => dp.Title == pipeTitle))
                 {
                     throw new RestMSClientException(string.Format("Unable to create pipe {0} on the default domain; see log for errors", pipeTitle));
                 }
 
-                join.CreateJoin(domain.Pipes.First(p => p.Title == pipeTitle).Href, routingKey, options, timeout);
+                join.CreateJoin(domain.Pipes.First(p => p.Title == pipeTitle).Href, routingKey);
             }
 
             PipeUri = domain.Pipes.First(dp => dp.Title == pipeTitle).Href;
         }
 
-        public RestMSPipe GetPipe(ClientOptions options, double timeout)
+        public RestMSPipe GetPipe()
         {
             /*TODO: Optimize this by using a repository approach with the repository checking for modification 
             through etag and serving existing version if not modified and grabbing new version if changed*/
 
             gateway.Logger.DebugFormat("Getting the pipe from the RestMS server: {0}", PipeUri);
-            var client = gateway.CreateClient(options, timeout);
+            var client = gateway.Client();
 
             try
             {
@@ -89,10 +89,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         }
 
-        RestMSDomain CreatePipe(string domainUri, string title, ClientOptions options, double timeout)
+        RestMSDomain CreatePipe(string domainUri, string title)
         {
             gateway.Logger.DebugFormat("Creating the pipe {0} on the RestMS server: {1}", title, gateway.Configuration.RestMS.Uri.AbsoluteUri);
-            var client = gateway.CreateClient(options, timeout);
+            var client = gateway.Client();
             try
             {
                 var response = client.SendAsync(gateway.CreateRequest(

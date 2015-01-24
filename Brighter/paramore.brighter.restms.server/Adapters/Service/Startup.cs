@@ -27,6 +27,8 @@ using CacheCow.Server;
 using Microsoft.Owin.Diagnostics;
 using Microsoft.Practices.Unity;
 using Owin;
+using paramore.brighter.restms.core.Ports.Cache;
+using paramore.brighter.restms.server.Adapters.Cache;
 using paramore.brighter.restms.server.Adapters.Security;
 using Thinktecture.IdentityModel.Hawk.Core;
 using Thinktecture.IdentityModel.Hawk.Owin;
@@ -98,8 +100,11 @@ namespace paramore.brighter.restms.server.Adapters.Service
 
         void ConfigureCaching(HttpConfiguration configuration)
         {
-            var cachingServer = new CachingHandler(configuration);
-            configuration.MessageHandlers.Add(cachingServer);
+            var cachingHandler = new CachingHandler(configuration);
+            configuration.MessageHandlers.Add(cachingHandler);
+            container.RegisterInstance<ICachingHandler>(cachingHandler);
+            var cache = new CacheHandler(cachingHandler);
+            container.RegisterInstance<IAmACache>(cache);
         }
 
         static void ConfigureDiagnostics(HttpConfiguration configuration)
