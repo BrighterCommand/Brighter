@@ -13,6 +13,7 @@ Paramore contributors (sorted alphabeticaly)
 
 **[Toby Henderson](https://github.com/holytshirt)**
   * Various fixes
+  * Significant work on RabbitMQ Gateway and Service Activator reliability
   * Build and Packaging
   * Committer
 
