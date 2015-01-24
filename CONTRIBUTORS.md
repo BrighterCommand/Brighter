@@ -13,6 +13,7 @@ Paramore contributors (sorted alphabeticaly)
 
 **[Toby Henderson](https://github.com/holytshirt)**
   * Various fixes
+  * Build and Packaging
   * Committer
 
 **[Eddie Li](https://github.com/xiaodili)**
