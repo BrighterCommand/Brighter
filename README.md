@@ -4,8 +4,7 @@ Projects
   	- An implementation of the Command Dispatcher and Command Processor patterns, suitable for providing both dispatch and orthoganal concerns such as retry, circuit breaker, timeout, logging etc. 
 * Rewind
 	- A full example of using Brighter in a hexagonal architecture 	
-  
-=================================
+ =================================
  Brighter
 =================================
 
@@ -41,8 +40,9 @@ What is the current NuGet package version?
 ====
 2.0.1
 
+=================================
 Rewind 
-===  
+=================================
 * An example .NET project using Brighter
 * Provides an example of the following architectural styles:
  * Hierachical Systems  
