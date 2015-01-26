@@ -4,6 +4,7 @@ Projects
   	- An implementation of the Command Dispatcher and Command Processor patterns, suitable for providing both dispatch and orthoganal concerns such as retry, circuit breaker, timeout, logging etc. 
 * Rewind
 	- A full example of using Brighter in a hexagonal architecture 	
+
  =================================
  Brighter
 =================================
