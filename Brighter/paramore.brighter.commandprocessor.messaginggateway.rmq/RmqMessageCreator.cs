@@ -120,7 +120,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 return new HeaderResult<DateTime>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(basicProperties.Timestamp.UnixTime), true);
             }
 
-            return new HeaderResult<DateTime>(DateTime.UtcNow, false);
+            return new HeaderResult<DateTime>(DateTime.UtcNow, true);
         }
 
         static Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
