@@ -44,6 +44,7 @@ What is the current NuGet package version?
 =================================
 Rewind 
 =================================
+![replay] https://openclipart.org/people/pydubreucq/replay-sign.svg)
 * An example .NET project using Brighter
 * Provides an example of the following architectural styles:
  * Hierachical Systems  
