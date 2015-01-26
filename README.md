@@ -11,6 +11,12 @@
 | Source  |https://github.com/iancooper/Paramore |
 | Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, c#, command, command dispatcher, command  processor, queue, distributed |
 
+Brighter 
+===
+* [Brighter](http://iancooper.github.io/Paramore/Brighter.html)
+  	- An implementation of the Command Dispatcher and Command Processor patterns, suitable for providing both dispatch and orthoganal concerns such as retry, circuit breaker, timeout, logging etc.  
+  
+
 Why a Command Dispatcher, Command Processor, and Task Queue?
 ========
 * When implementing a hexagonal architecture, one question is how to implement a port.
@@ -21,11 +27,6 @@ Why a Command Dispatcher, Command Processor, and Task Queue?
  	- Brighter provides a Task Queue implementation for handling commands asynchronously via a work queue. 
 * More detailed documentation on the project can be found on the GitHub pages for the project here: [Paramore](http://iancooper.github.io/Paramore/)
 
-Brighter 
-===
-* Brighter  
-  * An implementation of the Command Dispatcher and Command Processor patterns, suitable for providing both dispatch and orthoganal concerns such as retry, circuit breaker, timeout, logging etc.  
-  * [Brighter](http://iancooper.github.io/Paramore/Brighter.html)
 
 What are the different branches?
 ====
