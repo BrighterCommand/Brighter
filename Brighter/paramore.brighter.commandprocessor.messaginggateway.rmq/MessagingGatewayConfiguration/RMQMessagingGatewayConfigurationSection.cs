@@ -71,6 +71,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
             set { this["exchange"] = value; }
         }
 
+        [ConfigurationProperty("queues", IsRequired = false)]
+        public Queues Queues
+        {
+            get { return this["queues"] as Queues; }
+            set { this["queues"] = value; }
+        }
+
         /// <summary>
         /// Gets the configuration.
         /// </summary>
@@ -84,6 +91,31 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
                 return configuration;
 
             return new RMQMessagingGatewayConfigurationSection();
+        }
+    }
+
+    /// <summary>
+    /// Gets or Sets the general settings for queues
+    /// </summary>
+    public class Queues : ConfigurationElement
+    {
+        /// <summary>
+        /// When true, default false, all queues are mirrored across all nodes in the cluster. When a new node is added to the cluster, the queue will be mirrored to that node.
+        /// </summary>
+        [ConfigurationProperty("highAvailability", DefaultValue = false, IsRequired = false)]
+        public bool HighAvailability
+        {
+            get { return (bool)this["highAvailability"]; }
+            set { this["highAvailability"] = value; }
+        }
+        /// <summary>
+        /// Allow you to limit the number of unacknowledged messages on a channel (or connection) when consuming (aka "prefetch count"). Applied separately to each new consumer on the channel
+        /// </summary>
+        [ConfigurationProperty("qosPrefetchSize", DefaultValue = (ushort)1, IsRequired = false)]
+        public ushort QosPrefetchSize
+        {
+            get { return (ushort)this["qosPrefetchSize"]; }
+            set { this["qosPrefetchSize"] = value; }
         }
     }
 
