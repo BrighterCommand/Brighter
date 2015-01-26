@@ -44,7 +44,7 @@ namespace paramore.commandprocessor.tests.Timeout
         public static bool TaskCompleted { get; set; }
 
 
-        [TimeoutPolicy(milliseconds: 1000, step: 1, timing: HandlerTiming.Before)]
+        [TimeoutPolicy(milliseconds: 300, step: 1, timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
             WasCancelled = false;
@@ -57,7 +57,7 @@ namespace paramore.commandprocessor.tests.Timeout
             }
             try
             {
-                var delay = Task.Delay(2000, ct).ContinueWith(
+                var delay = Task.Delay(500, ct).ContinueWith(
                     x =>
                     {
                         // done something I should not do, because I should of been cancel
