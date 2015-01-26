@@ -5,8 +5,8 @@ Projects
 * Rewind
 	- A full example of using Brighter in a hexagonal architecture 	
 
- =================================
- Brighter
+=================================
+Brighter
 =================================
 
 |               |               |
