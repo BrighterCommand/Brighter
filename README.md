@@ -37,10 +37,6 @@ What are the different branches?
 | Master | The tip of active development. Anything in master should ship at the next release. Code here should conform to CI basics: compile, pass tests etc.  |
 | Other  | A branch for any work that is not ready to go into master (for example would break CI) or is experimental i.e. we don't know if we intend to ever ship, we are just trying out ideas  |
 
-What is the current NuGet package version?
-====
-2.0.1
-
 =================================
 Rewind 
 =================================
