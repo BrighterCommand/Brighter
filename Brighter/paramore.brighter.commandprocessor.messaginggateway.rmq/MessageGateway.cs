@@ -36,6 +36,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 
 using Common.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
@@ -112,7 +113,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
                     Logger.Debug(m => m("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.Uri.ToString()));
                     Channel = OpenChannel(Connection);
-                    Channel.BasicQos(0, 1, false);
+                    
+                    // Configure the Quality of service for the model.
+                    // BasicQos(0="Don't send me a new message until I’ve finished",  1= "Send me one message at a time", false ="Applied separately to each new consumer on the channel")
+                    Channel.BasicQos(0, Configuration.Queues.QosPrefetchSize, false);
 
                     Logger.Debug(m => m("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()));
                     DeclareExchange(Channel, Configuration);
@@ -120,7 +124,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     if (createQueues)
                     {
                         Logger.Debug(m => m("RMQMessagingGateway: Creating queue {0} on connection {1}", queueName, Configuration.AMPQUri.Uri.ToString()));
-                        Channel.QueueDeclare(queueName, false, false, false, null);
+                        
+                        Channel.QueueDeclare(queueName, false, false, false, SetQueueArguments());
                         Channel.QueueBind(queueName, Configuration.Exchange.Name, routingKey);
                     }
                 }
@@ -139,6 +144,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             return true;
 
+        }
+
+        private Dictionary<string, object> SetQueueArguments()
+        {
+            var arguments = new Dictionary<string, object>();
+            QueueIsMirroredAcrossAllNodesInTheCluster(arguments);
+            return arguments;
+        }
+
+        private void QueueIsMirroredAcrossAllNodesInTheCluster(Dictionary<string, object> arguments)
+        {
+            if (Configuration.Queues.HighAvailability) { arguments.Add("x-ha-policy", "all"); }
         }
 
         private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
