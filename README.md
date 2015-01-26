@@ -12,7 +12,8 @@ Brighter
 |               |               |
 | ------------- | ------------- |
 |![canon] (https://openclipart.org/people/amilo/canon.svg)|Brighter is a command dispatcher, processor, and task queue|
-| Version  | 2.0.1  |
+| Version  | [![NuGet Version](http://img.shields.io/nuget/v/paramore.brighter.commandprocessor.svg)](https://www.nuget.org/packages/ paramore.brighter.commandprocessor/)  |
+| Downloads | [![NuGet Downloads](http://img.shields.io/nuget/dt/ paramore.brighter.commandprocessor.svg)](https://www.nuget.org/packages/ paramore.brighter.commandprocessor/) |
 | Web  |http://iancooper.github.io/Paramore/  |
 | Download  |https://www.nuget.org/packages/Paramore.Brighter.CommandProcessor/ |
 | Source  |https://github.com/iancooper/Paramore |
