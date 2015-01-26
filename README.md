@@ -44,9 +44,13 @@ What is the current NuGet package version?
 =================================
 Rewind 
 =================================
-![replay] (https://openclipart.org/people/pydubreucq/replay-sign.svg)
+|               |               |
+| ------------- | ------------- |
+|![replay] (https://openclipart.org/people/pydubreucq/replay-sign.svg))|Rewind is an example of a microservices architectural style implemented using Brighter|
+| Version  | 1.0.0.pre-  |
 * An example .NET project using Brighter
 * Provides an example of the following architectural styles:
+ * Microservices
  * Hierachical Systems  
    * N-Tier inc. Hexagonal Architecture (Ports and Adapters) 
    * CQRS
