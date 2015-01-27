@@ -49,15 +49,17 @@ namespace paramore.brighter.restms.core.Ports.Handlers
     public class DeleteMessageCommandHandler : RequestHandler<DeleteMessageCommand>
     {
         readonly IAmARepository<Pipe> pipeRepository;
+        readonly IAmACommandProcessor commandProcessor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}" /> class.
         /// </summary>
         /// <param name="pipeRepository">The pipe repository.</param>
         /// <param name="logger">The logger.</param>
-        public DeleteMessageCommandHandler(IAmARepository<Pipe> pipeRepository, ILog logger) : base(logger)
+        public DeleteMessageCommandHandler(IAmARepository<Pipe> pipeRepository, IAmACommandProcessor commandProcessor, ILog logger) : base(logger)
         {
             this.pipeRepository = pipeRepository;
+            this.commandProcessor = commandProcessor;
         }
 
         #region Overrides of RequestHandler<DeleteMessageCommand>
@@ -77,6 +79,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
             }
 
             pipe.DeleteMessage(deleteMessageCommand.MessageId);
+
+            commandProcessor.Send(new InvalidateCacheCommand(pipe.Href));
 
             return base.Handle(deleteMessageCommand);
         }

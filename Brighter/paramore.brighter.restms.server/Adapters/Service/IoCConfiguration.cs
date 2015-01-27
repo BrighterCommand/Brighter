@@ -64,6 +64,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
             container.RegisterType<DeleteMessageCommandHandler>();
             container.RegisterType<DeletePipeCommandHandler>();
             container.RegisterType<RemoveFeedFromDomainCommandHandler>();
+            container.RegisterType<CacheCleaningHandler>();
 
             var handlerFactory = new UnityHandlerFactory(container);
 
@@ -80,7 +81,8 @@ namespace paramore.brighter.restms.server.Adapters.Service
                 {typeof(DeleteFeedCommand), typeof(DeleteFeedCommandHandler)},
                 {typeof(DeleteMessageCommand), typeof(DeleteMessageCommandHandler)},
                 {typeof(DeletePipeCommand), typeof(DeletePipeCommandHandler)},
-                {typeof(RemoveFeedFromDomainCommand), typeof(RemoveFeedFromDomainCommandHandler)}
+                {typeof(RemoveFeedFromDomainCommand), typeof(RemoveFeedFromDomainCommandHandler)},
+                {typeof(InvalidateCacheCommand), typeof(CacheCleaningHandler)}
             };
 
             //create policies

@@ -380,7 +380,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_have_content_with_a_matching_content_type = () => pipe.Messages.First().Content.ContentType.MediaType.ShouldEqual(content.ContentType.MediaType);
         It should_have_content_with_a_matching_encoding = () => pipe.Messages.First().Content.Encoding.ShouldEqual(content.TransferEncoding);
         It should_have_matching_content = () => pipe.Messages.First().Content.AsString().ShouldEqual(MESSAGE_CONTENT);
-        It should_publish_cache_invalidation_to_all_changed_pipes = () => A.CallTo(() => commandProcessor.Publish(A<InvalidateCacheCommand>.Ignored)).MustHaveHappened();
+        It should_publish_cache_invalidation_to_all_changed_pipes = () => A.CallTo(() => commandProcessor.Send(A<InvalidateCacheCommand>.Ignored)).MustHaveHappened();
 
     }
 
