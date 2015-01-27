@@ -167,7 +167,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 AllowPipelining = true,
                 AllowAutoRedirect = true,
-                CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.CacheIfAvailable)
+                CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.Revalidate)
             };
             var client = HttpClientFactory.Create(requestHandler, handler);
             client.Timeout = TimeSpan.FromMilliseconds(timeout);

@@ -98,7 +98,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                 scope.Complete();
             }
 
-            pipes.Each(pipe => commandProcessor.Publish(new InvalidateCacheCommand(pipe.Href)));
+            pipes.Each(pipe => commandProcessor.Send(new InvalidateCacheCommand(pipe.Href)));
 
             return base.Handle(addMessageToFeedCommand);
         }

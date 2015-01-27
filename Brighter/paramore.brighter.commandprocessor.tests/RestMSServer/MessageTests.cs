@@ -29,6 +29,7 @@ using Common.Logging;
 using FakeItEasy;
 using FluentAssertions;
 using Machine.Specifications;
+using paramore.brighter.commandprocessor;
 using paramore.brighter.restms.core;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;
@@ -155,11 +156,13 @@ namespace paramore.commandprocessor.tests.RestMSServer
         static DeleteMessageCommandHandler deleteMessageCommandHandler;
         static DeleteMessageCommand deleteMessageCommand;
         static IAmARepository<Pipe> pipeRepository;
+        static IAmACommandProcessor commandProcessor;
         
         Establish context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
+            commandProcessor = A.Fake<IAmACommandProcessor>();
 
             pipeRepository = new InMemoryPipeRepository(logger);
 
@@ -211,7 +214,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
             pipe.AddMessage(newerMessage);
 
             deleteMessageCommand = new DeleteMessageCommand(pipe.Name.Value, message.MessageId);
-            deleteMessageCommandHandler = new DeleteMessageCommandHandler(pipeRepository, logger);
+            deleteMessageCommandHandler = new DeleteMessageCommandHandler(pipeRepository, commandProcessor, logger);
 
         };
 
@@ -220,6 +223,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         It should_delete_the_message = () => pipe.Messages.Any(msg => msg.MessageId == message.MessageId).ShouldBeFalse();
         It should_delete_the_older_message = () => pipe.Messages.Any(msg => msg.MessageId == olderMessage.MessageId).ShouldBeFalse();
         It should_not_delete_the_newer_message = () => pipe.Messages.Any(msg => msg.MessageId == newerMessage.MessageId).ShouldBeTrue();
+        It should_invalidate_the_pipe_in_the_cache = () => A.CallTo(() => commandProcessor.Send(A<InvalidateCacheCommand>.Ignored)).MustHaveHappened();
     }
 
     public class When_deleting_the_only_message
@@ -234,11 +238,13 @@ namespace paramore.commandprocessor.tests.RestMSServer
         static DeleteMessageCommandHandler deleteMessageCommandHandler;
         static DeleteMessageCommand deleteMessageCommand;
         static IAmARepository<Pipe> pipeRepository;
+        static IAmACommandProcessor commandProcessor;
         
         Establish context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
+            commandProcessor = A.Fake<IAmACommandProcessor>();
 
             pipeRepository = new InMemoryPipeRepository(logger);
 
@@ -270,12 +276,13 @@ namespace paramore.commandprocessor.tests.RestMSServer
             pipe.AddMessage(message);
 
             deleteMessageCommand = new DeleteMessageCommand(pipe.Name.Value, message.MessageId);
-            deleteMessageCommandHandler = new DeleteMessageCommandHandler(pipeRepository, logger);
+            deleteMessageCommandHandler = new DeleteMessageCommandHandler(pipeRepository, commandProcessor, logger);
 
         };
 
         Because of = () => deleteMessageCommandHandler.Handle(deleteMessageCommand);
 
         It should_delete_the_message = () => pipe.Messages.Any(msg => msg.MessageId == message.MessageId).ShouldBeFalse();
+        It should_invalidate_the_pipe_in_the_cache = () => A.CallTo(() => commandProcessor.Send(A<InvalidateCacheCommand>.Ignored)).MustHaveHappened();
     }
 }
