@@ -12,7 +12,6 @@
 | Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, c#, command, command dispatcher, command  processor, queue, distributed |
 
 ## Why a Command Dispatcher, Command Processor, and Task Queue?
- ##
 * When implementing a hexagonal architecture, one question is how to implement a port.
 	- Brighter shows how to implement ports using a Command approach (with a Command Dispatcher)
 * A command processor let's you add orthogonal concerns seperately to the processing of commands such as logging, undo, validation, retry, and circuit breaker
@@ -23,7 +22,7 @@
 
 
 ## What are the different branches?
- ##
+
 | Branch        | Description   |
 | ------------- | ------------- |
 | Release | The source for the current NuGet package (or the release candidate that is being verified)|
