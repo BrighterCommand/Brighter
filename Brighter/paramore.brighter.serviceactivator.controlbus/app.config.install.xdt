@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<configuration  xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <configSections  xdt:Transform="InsertIfMissing">
+  </configSections>
+
+  <configSections>
+    <add name="controlBus" xdt:Transform="Remove" xdt:Locator="Match(name)" />
+    <section name="controlBus" type="paramore.brighter.serviceactivator.controlbus.ControlBusConfiguration.ControlBusConfigurationSection, paramore.brighter.serviceactivator.controlbus" allowLocation="true" allowDefinition="Everywhere" xdt:Transform="Insert"/>
+  </configSections>
+
+  <controlBus xdt:Transform="InsertIfMissing">
+  </controlBus>
+
+  <controlBus>
+    <connections xdt:Transform="InsertIfMissing">
+    </connections>
+  </controlBus>
+  
+  <controlBus>
+    <connections>
+      <!--<add connectionName="Configuration" channelName="Configuration" routingKey="paramore.brighter.controlbus.myServiceName" dataType="ControlMessage" timeOutInMilliseconds="200"/>-->
+    </connections>
+  </controlBus>
+</configuration>

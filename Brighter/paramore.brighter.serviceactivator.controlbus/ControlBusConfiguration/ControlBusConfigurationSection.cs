@@ -23,20 +23,20 @@ THE SOFTWARE. */
 #endregion
 
 using System.Configuration;
-using System.Linq;
+using paramore.brighter.serviceactivator.ServiceActivatorConfiguraton;
 
-namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
+namespace paramore.brighter.serviceactivator.controlbus.ControlBusConfiguration
 {
-    public class ServiceActivatorConfigurationSection : ConfigurationSection
+    public class ControlBusConfigurationSection : ConfigurationSection
     {
-        public static ServiceActivatorConfigurationSection GetConfiguration()
+        public static ControlBusConfigurationSection GetConfiguration()
         {
-            var configuration = ConfigurationManager.GetSection("serviceActivatorConnections")as ServiceActivatorConfigurationSection;
+            var configuration = ConfigurationManager.GetSection("controlBus")as ControlBusConfigurationSection ;
 
             if (configuration != null)
                 return configuration;
 
-            return new ServiceActivatorConfigurationSection();
+            return new ControlBusConfigurationSection ();
         }
 
         [ConfigurationProperty("connections", Options = ConfigurationPropertyOptions.IsDefaultCollection)]
