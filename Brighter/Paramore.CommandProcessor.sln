@@ -40,6 +40,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.restms.co
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.policy", "paramore.brighter.commandprocessor.policy\paramore.brighter.commandprocessor.policy.csproj", "{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.serviceactivator.controlbus", "paramore.brighter.serviceactivator.controlbus\paramore.brighter.serviceactivator.controlbus.csproj", "{F6C7AA25-268D-4D25-B4A6-41D5821042F8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -190,6 +192,16 @@ Global
 		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{09BBA2DF-AAB0-4801-B646-A1B13D0E7D38}.Release|x86.ActiveCfg = Release|Any CPU
+		{F6C7AA25-268D-4D25-B4A6-41D5821042F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6C7AA25-268D-4D25-B4A6-41D5821042F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6C7AA25-268D-4D25-B4A6-41D5821042F8}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{F6C7AA25-268D-4D25-B4A6-41D5821042F8}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{F6C7AA25-268D-4D25-B4A6-41D5821042F8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F6C7AA25-268D-4D25-B4A6-41D5821042F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6C7AA25-268D-4D25-B4A6-41D5821042F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6C7AA25-268D-4D25-B4A6-41D5821042F8}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{F6C7AA25-268D-4D25-B4A6-41D5821042F8}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{F6C7AA25-268D-4D25-B4A6-41D5821042F8}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

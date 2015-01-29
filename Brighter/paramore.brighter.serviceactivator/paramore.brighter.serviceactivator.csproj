@@ -63,6 +63,8 @@
     <Compile Include="Connection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RequeueException.cs" />
+    <Compile Include="ServiceActivatorConfiguraton\ConnectionElement.cs" />
+    <Compile Include="ServiceActivatorConfiguraton\ConnectionElements.cs" />
     <Compile Include="ServiceActivatorConfiguraton\ConnectionFactory.cs" />
     <Compile Include="ServiceActivatorConfiguraton\ServiceActivatorConfigurationSection.cs" />
     <Compile Include="TestHelpers\FakeChannel.cs" />
