@@ -1,4 +1,18 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : ian
+// Created          : 01-26-2015
+//
+// Last Modified By : ian
+// Last Modified On : 01-26-2015
+// ***********************************************************************
+// <copyright file="MessagePump.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -40,21 +54,50 @@ namespace paramore.brighter.serviceactivator
     // It is also why throughput on a queue needs multiple performers, each with their own message pump
     // Retry and circuit breaker should be provided by exception policy using an attribute on the handler
     // Timeout on the handler should be provided by timeout policy using an attribute on the handler
+    /// <summary>
+    /// Class MessagePump.
+    /// </summary>
+    /// <typeparam name="TRequest">The type of the t request.</typeparam>
     internal class MessagePump<TRequest> : IAmAMessagePump where TRequest : class, IRequest
     {
         private readonly IAmACommandProcessor commandProcessor;
         private readonly IAmAMessageMapper<TRequest> messageMapper;
+        /// <summary>
+        /// Gets or sets the timeout in milliseconds, that the pump waits for a message on the queue before it yields control for an interval, prior to resuming.
+        /// </summary>
+        /// <value>The timeout in milliseconds.</value>
         public int TimeoutInMilliseconds { get; set; }
+        /// <summary>
+        /// Gets or sets the requeue count.
+        /// </summary>
+        /// <value>The requeue count.</value>
         public int RequeueCount { get; set; }
+        /// <summary>
+        /// Gets or sets the channel to read messages from.
+        /// </summary>
+        /// <value>The channel.</value>
         public IAmAnInputChannel Channel { get; set; }
+        /// <summary>
+        /// Gets or sets the logger.
+        /// </summary>
+        /// <value>The logger.</value>
         public ILog Logger { get; set; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessagePump{TRequest}"/> class.
+        /// </summary>
+        /// <param name="commandProcessor">The command processor.</param>
+        /// <param name="messageMapper">The message mapper.</param>
         public MessagePump(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
         {
             this.commandProcessor = commandProcessor;
             this.messageMapper = messageMapper;
         }
 
+        /// <summary>
+        /// Runs the message loop
+        /// </summary>
+        /// <exception cref="System.Exception">Could not recieve message. Note that should return an MT_NONE from an empty queue on timeout</exception>
         public void Run()
         {
             do
