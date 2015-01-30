@@ -41,10 +41,6 @@ using paramore.brighter.serviceactivator.ServiceActivatorConfiguraton;
 
 namespace paramore.brighter.serviceactivator
 {
-    //TODO: The repeated use of the gateway and logger between this and the command processor is fugly
-    //one option could be to use types not instances here, and do more assembly in build
-    //currently configuration is a weak spot and has an early NH configuration mess feel to it
-
     /// <summary>
     /// Class DispatchBuilder.
     /// A fluent builder used to simplify construction of instances of the Dispatcher. Begin by calling With() and the syntax will then provide you with 
