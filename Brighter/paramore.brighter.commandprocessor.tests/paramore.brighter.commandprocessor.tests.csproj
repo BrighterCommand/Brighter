@@ -151,6 +151,7 @@
     <Compile Include="CommandProcessors\TestDoubles\TestMessageMapperFactory.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TinyIocHandlerFactory.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TinyIoCMessageMapperFactory.cs" />
+    <Compile Include="ControlBus\ConfigurationCommandFixture.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyDoesNotFailPolicyHandler.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithDivideByZeroHandler.cs" />
     <Compile Include="ExceptionPolicy\PolicyDecoratorTests.cs" />
@@ -213,6 +214,10 @@
     <ProjectReference Include="..\paramore.brighter.restms.server\paramore.brighter.restms.server.csproj">
       <Project>{0D2FBF93-0555-45EB-A92F-5A7C822F9AE0}</Project>
       <Name>paramore.brighter.restms.server</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.brighter.serviceactivator.controlbus\paramore.brighter.serviceactivator.controlbus.csproj">
+      <Project>{feab93c1-3232-42fb-89b0-3387dee4ced9}</Project>
+      <Name>paramore.brighter.serviceactivator.controlbus</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj">
       <Project>{b9126b00-5a97-4c7d-b395-755456e5fa28}</Project>
