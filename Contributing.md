@@ -29,6 +29,8 @@ It isn't wise to build something that can be a part of someone's ecosystem witho
 	0. This project uses [MSpec](https://github.com/machine/machine.specifications) and [FakeItEasy](https://github.com/FakeItEasy/FakeItEasy). So should you to contribute. 
 0.  We separate the core library from add-ons. Consider if your change is really core, or could be shipped as an add-on. Let the user 'buy-in' to your feature over making them take it.
 0. Make your tests pass
+0. Try to follow the [Microsoft .NET Framework Design Guidelines] (https://github.com/dotnet/corefx/wiki/Framework-Design-Guidelines-Digest) when writing your code
+	0. Providing [BDD] (http://dannorth.net/introducing-bdd/) style tests should provide for the need to use scenarios to test the design of your API
 0. Commit
 	0. Try to write a [good commit message](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html).    
 0. Merge back into your fork
