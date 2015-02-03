@@ -35,6 +35,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
@@ -42,7 +44,7 @@ namespace paramore.brighter.commandprocessor
     /// An <see cref="IAmAChannel"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     /// and acknowledging receipt of those messages
     /// </summary>
-    public interface IAmAnInputChannel : IAmAChannel
+    public interface IAmAnInputChannel : IAmAChannel, IDisposable
     {
         /// <summary>
         /// Receives the specified timeout in milliseconds.
