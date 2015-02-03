@@ -61,6 +61,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         It should_send_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
         It should_convert_the_message_into_an_event = () => ((MyEvent) commandProcessor.Request).ShouldEqual(@event);
+        It should_dispose_the_input_channel = () => channel.DisposeHappened.ShouldBeTrue();
     }
 
     public class When_a_requeue_exception_is_throwen
@@ -92,6 +93,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         It should_send_the_message_via_the_command_processor = () => commandProcessor.SendHappened.ShouldBeTrue();
         It should_publish_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
         It should_requeue_the_messages = () => channel.Length.ShouldEqual(2);
+        It should_dispose_the_input_channel = () => channel.DisposeHappened.ShouldBeTrue();
     }
 
 
@@ -133,9 +135,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         It should_publish_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
         It should_have_been_handled_3_times_via_publish = () => commandProcessor.PublishCount.ShouldEqual(3);
         It should_requeue_the_messages = () => channel.Length.ShouldEqual(0);
+        It should_dispose_the_input_channel = () => channel.DisposeHappened.ShouldBeTrue();
     }
-
-
-
-
 }
