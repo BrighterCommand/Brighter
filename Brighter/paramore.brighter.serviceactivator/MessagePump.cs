@@ -125,6 +125,7 @@ namespace paramore.brighter.serviceactivator
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                 {
                     if (Logger != null) Logger.Debug(m => m("MessagePump: Quit receiving messages on thread # {0}", Thread.CurrentThread.ManagedThreadId));
+                    Channel.Dispose();
                     break;
                 }
 

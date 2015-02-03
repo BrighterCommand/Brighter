@@ -67,10 +67,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
-        /// <exception cref="System.NotImplementedException"></exception>
         public void Dispose()
         {
-            throw new NotImplementedException();
         }
 
         /// <summary>

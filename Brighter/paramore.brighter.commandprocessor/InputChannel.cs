@@ -131,6 +131,23 @@ namespace paramore.brighter.commandprocessor
             set { throw new NotImplementedException(); } 
         }
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
+        ~InputChannel()
+        {
+            Dispose(false);
+        }
+
+        void Dispose(bool disposing)
+        {
+            _messageConsumer.Dispose();
+        }
     }
 }
