@@ -117,6 +117,7 @@ namespace paramore.brighter.serviceactivator
                 // failed to parse a message from the incoming data
                 if(message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
                 {
+                    if (Logger != null) Logger.Warn(m => m("MessagePump: Failed to parse a message from the incoming message with id {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, message.Id));
                     AcknowledgeMessage(message);
                     continue;
                 }
