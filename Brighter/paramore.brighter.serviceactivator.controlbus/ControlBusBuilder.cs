@@ -52,20 +52,20 @@ namespace paramore.brighter.serviceactivator.controlbus
             return this;
         }
 
-        public Dispatcher Build(string hostName)
-        {
-            var connections = new List<Connection>();
+        //public Dispatcher Build(string hostName)
+        //{
+        //    var connections = new List<Connection>();
 
-            //TODO: Add the control bus channels.
+        //    //TODO: Add the control bus channels.
             
-            return DispatchBuilder
-                .With()
-                .Logger(logger)
-                .CommandProcessor(commandProcessor)
-                .MessageMappers(new MessageMapperRegistry())
-                .ChannelFactory(channelFactory)
-                .Connections(connections)
-                .Build();
-        }
+        //    return DispatchBuilder
+        //        .With()
+        //        .Logger(logger)
+        //        .CommandProcessor(commandProcessor)
+        //        .MessageMappers(new MessageMapperRegistry())
+        //        .ChannelFactory(channelFactory)
+        //        .Connections(connections)
+        //        .Build();
+        //}
     }
 }
