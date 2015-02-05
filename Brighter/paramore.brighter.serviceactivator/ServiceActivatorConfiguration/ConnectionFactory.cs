@@ -27,7 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
+namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
 {
     internal class ConnectionFactory
     {
@@ -38,7 +38,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
             this.channelFactory = channelFactory;
         }
 
-        public IEnumerable<Connection> Create(ConnectionElements connectionElements)
+        public IEnumerable<Connection> Create(IEnumerable<ConnectionElement> connectionElements)
         {
             var connections = 
             (

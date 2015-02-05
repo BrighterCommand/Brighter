@@ -35,9 +35,10 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Linq;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator.ServiceActivatorConfiguraton;
+using paramore.brighter.serviceactivator.ServiceActivatorConfiguration;
 
 namespace paramore.brighter.serviceactivator
 {
@@ -131,7 +132,17 @@ namespace paramore.brighter.serviceactivator
         public IAmADispatchBuilder  ConnectionsFromConfiguration()
         {
             var configuration = ServiceActivatorConfigurationSection.GetConfiguration();
-            var connectionElements = configuration.Connections;
+            var connectionElements = from ConnectionElement connection in configuration.Connections select connection;
+            return ConnectionsFromElements(connectionElements);
+        }
+
+        /// <summary>
+        /// Create connections from configuration elements.
+        /// </summary>
+        /// <param name="connectionElements">The connection elements.</param>
+        /// <returns>IAmADispatchBuilder.</returns>
+        public IAmADispatchBuilder ConnectionsFromElements(IEnumerable<ConnectionElement> connectionElements)
+        {
             var connectionFactory = new ConnectionFactory(channelFactory);
             return Connections(connectionFactory.Create(connectionElements));
         }
@@ -218,6 +229,12 @@ namespace paramore.brighter.serviceactivator
        /// <param name="connections">The connections.</param>
        /// <returns>IAmADispatchBuilder.</returns>
        IAmADispatchBuilder Connections(IEnumerable<Connection> connections);
+       /// <summary>
+       /// Connectionses from elements.
+       /// </summary>
+       /// <param name="connectionElements">The connection elements.</param>
+       /// <returns>IAmADispatchBuilder.</returns>
+        IAmADispatchBuilder ConnectionsFromElements(IEnumerable<ConnectionElement> connectionElements);
     }
 
     /// <summary>
