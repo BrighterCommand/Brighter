@@ -4,7 +4,7 @@ using paramore.brighter.serviceactivator.controlbus.Ports.Handlers;
 
 namespace paramore.commandprocessor.tests.ControlBus
 {
-    public class When_recieving_an_all_stop_message
+    public class When_receiving_an_all_stop_message
     {
         static ConfigurationMessageHandler configurationMessageHandler;
         static ConfigurationMessage configurationMessage;

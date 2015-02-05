@@ -150,7 +150,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 }
                 else
                 {
-                    Logger.Debug(m => m("RmqMessageConsumer: Time out without recieving message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()));
+                    Logger.Debug(m => m("RmqMessageConsumer: Time out without receiving message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()));
                 }
             }
             catch (Exception exception)
