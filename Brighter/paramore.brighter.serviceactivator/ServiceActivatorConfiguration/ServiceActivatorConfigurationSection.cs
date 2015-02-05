@@ -23,9 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Configuration;
-using System.Linq;
 
-namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
+namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
 {
     public class ServiceActivatorConfigurationSection : ConfigurationSection
     {

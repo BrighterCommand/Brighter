@@ -178,7 +178,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
 		public void Requeue(Message message)
         {
-            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -189,7 +188,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <exception cref="System.NotImplementedException"></exception>
         public void Reject(Message message, bool requeue)
         {
-            throw new NotImplementedException();
         }
 
 

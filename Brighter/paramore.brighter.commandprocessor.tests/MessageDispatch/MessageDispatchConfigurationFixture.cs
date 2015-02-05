@@ -26,7 +26,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Machine.Specifications;
 using paramore.brighter.serviceactivator;
-using paramore.brighter.serviceactivator.ServiceActivatorConfiguraton;
+using paramore.brighter.serviceactivator.ServiceActivatorConfiguration;
 using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
@@ -40,14 +40,14 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
     public class When_configuring_a_message_dispatcher
     {
-        static ConnectionElements connectionElements;
+        static IEnumerable<ConnectionElement> connectionElements;
         static IEnumerable<Connection> connections;
         static ConnectionFactory connectionFactory;
 
         Establish configuration = () =>
         {
             var configuration = ServiceActivatorConfigurationSection.GetConfiguration();
-            connectionElements = configuration.Connections;
+            connectionElements = from ConnectionElement connectionElement in configuration.Connections select connectionElement;
             connectionFactory = new ConnectionFactory(new InMemoryChannelFactory());
         };
 

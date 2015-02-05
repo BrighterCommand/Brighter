@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 
-namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguraton
+namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
 {
     public class ConnectionElements: ConfigurationElementCollection
     {

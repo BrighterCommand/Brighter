@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using Common.Logging;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.serviceactivator.ServiceActivatorConfiguration;
 
 namespace paramore.brighter.serviceactivator.controlbus
 {
@@ -54,17 +55,37 @@ namespace paramore.brighter.serviceactivator.controlbus
 
         public Dispatcher Build(string hostName)
         {
-            var connections = new List<Connection>();
+            var connections = new List<ConnectionElement>();
+            //These are the control bus channels, we hardcode them because we want to know they exist, but we use
+            //a base naming scheme to allow centralized management.
+            const string CONFIGURATION = "configuration";
+            var configurationElement = new ConnectionElement
+            {
+                ChannelName = CONFIGURATION, 
+                ConnectionName = CONFIGURATION, 
+                RoutingKey = hostName + "." + CONFIGURATION,
 
-            //TODO: Add the control bus channels.
+            };
+            connections.Add(configurationElement);
+
+            const string HEARTBEAT = "heartbeat";
+            var heartbeatElement = new ConnectionElement
+            {
+                ChannelName = CONFIGURATION, 
+                ConnectionName = CONFIGURATION, 
+                RoutingKey = hostName + "." + CONFIGURATION,
+
+            };
+            connections.Add(heartbeatElement );
+
             
             return DispatchBuilder
                 .With()
                 .Logger(logger)
                 .CommandProcessor(commandProcessor)
-                .MessageMappers(new MessageMapperRegistry())
+                .MessageMappers(new MessageMapperRegistry(new ControlBusMessageMapperFactory()))
                 .ChannelFactory(channelFactory)
-                .Connections(connections)
+                .ConnectionsFromElements(connections)
                 .Build();
         }
     }

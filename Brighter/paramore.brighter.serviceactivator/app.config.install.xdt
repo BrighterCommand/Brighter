@@ -5,7 +5,7 @@
 
   <configSections>
     <add name="serviceActivatorConnections" xdt:Transform="Remove" xdt:Locator="Match(name)" />
-    <section name="serviceActivatorConnections" type="paramore.brighter.serviceactivator.ServiceActivatorConfiguraton.ServiceActivatorConfigurationSection, paramore.brighter.serviceactivator" allowLocation="true" allowDefinition="Everywhere" xdt:Transform="Insert"/>
+    <section name="serviceActivatorConnections" type="paramore.brighter.serviceactivator.ServiceActivatorConfiguration.ServiceActivatorConfigurationSection, paramore.brighter.serviceactivator" allowLocation="true" allowDefinition="Everywhere" xdt:Transform="Insert"/>
   </configSections>
 
   <serviceActivatorConnections xdt:Transform="InsertIfMissing">
