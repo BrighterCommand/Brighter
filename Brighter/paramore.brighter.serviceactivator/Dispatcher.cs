@@ -89,7 +89,7 @@ namespace paramore.brighter.serviceactivator
             Consumers = new SynchronizedCollection<Consumer>();
             
             State = DispatcherState.DS_AWAITING;
-            logger.Debug(m => m("Dispatcher is ready to recieve"));
+            logger.Debug(m => m("Dispatcher is ready to receive"));
         }
 
         /// <summary>

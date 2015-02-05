@@ -128,7 +128,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         static IAmAMessageProducer sender;
         static IAmAMessageConsumer receiver;
         static Message sentMessage;
-        static Message recievedMessage;
+        static Message receivedMessage;
 
         Establish context = () =>
         {
@@ -152,11 +152,11 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         Because of = () =>
         {
             sender.Send(sentMessage);
-            recievedMessage = receiver.Receive(sentMessage.Header.Topic, sentMessage.Header.Topic, 2000);
-            receiver.Acknowledge(recievedMessage);
+            receivedMessage = receiver.Receive(sentMessage.Header.Topic, sentMessage.Header.Topic, 2000);
+            receiver.Acknowledge(receivedMessage);
         };
 
-        It should_send_a_message_via_rmq_with_the_matching_body = () => recievedMessage.ShouldEqual(sentMessage);
+        It should_send_a_message_via_rmq_with_the_matching_body = () => receivedMessage.ShouldEqual(sentMessage);
 
       Cleanup teardown = () =>
       {
