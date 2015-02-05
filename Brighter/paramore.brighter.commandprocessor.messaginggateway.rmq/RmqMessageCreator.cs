@@ -108,7 +108,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 message = FailureMessage(topic, messageId);
             }
 
-            message.Header.Bag["DeliveryTag"] = fromQueue.DeliveryTag;
+            message.SetDeliveryTag(fromQueue.DeliveryTag);
+
             return message;
         }
 

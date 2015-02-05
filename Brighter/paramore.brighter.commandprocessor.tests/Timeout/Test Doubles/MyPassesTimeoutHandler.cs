@@ -36,7 +36,7 @@ namespace paramore.commandprocessor.tests.Timeout.TestDoubles
         public MyPassesTimeoutHandler(ILog logger) : base(logger)
         {}
 
-        public static bool CommandRecieved { get; set; }
+        public static bool Commandreceived { get; set; }
 
         [TimeoutPolicy(milliseconds: 10000, step: 0, timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
@@ -44,15 +44,15 @@ namespace paramore.commandprocessor.tests.Timeout.TestDoubles
             var ct = (CancellationToken) Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];
             Task.Delay(100, ct).ContinueWith((antecedent) =>
             {
-                CommandRecieved = true;
+                Commandreceived = true;
             }).Wait();
             return base.Handle(command);
 
         }
 
-        public static bool ShouldRecieve(MyCommand command)
+        public static bool Shouldreceive(MyCommand command)
         {
-            return CommandRecieved;
+            return Commandreceived;
         }
     }
 }
