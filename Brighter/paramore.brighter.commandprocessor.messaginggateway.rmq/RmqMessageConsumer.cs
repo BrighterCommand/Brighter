@@ -190,24 +190,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         protected override bool Connect(string queueName = "", string routingKey = "", bool createQueues = false)
         {
-            try
+            if (NotConnected())
             {
-                if (NotConnected())
+                if (base.Connect(queueName, routingKey, createQueues))
                 {
-                    if (base.Connect(queueName, routingKey, createQueues))
-                    {
-                        consumer = new QueueingBasicConsumer(Channel);
-                        Channel.BasicConsume(queueName, AUTO_ACK, consumer);
+                    consumer = new QueueingBasicConsumer(Channel);
+                    Channel.BasicConsume(queueName, AUTO_ACK, consumer);
 
-                        return true;
-                    }
-
-                    return false;
+                    return true;
                 }
-            }
-            catch (Exception exception)
-            {
-                Logger.Error(m => m("RmqMessageConsumer: There was an error connecting to the queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()), exception);
+
                 return false;
             }
 

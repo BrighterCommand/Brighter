@@ -110,7 +110,7 @@ namespace paramore.brighter.serviceactivator
                 }
                 catch (Exception exception)
                 {
-                    if (Logger != null) Logger.Debug(m => m("MessagePump: Exception receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()), exception);
+                    if (Logger != null) Logger.Error(m => m("MessagePump: Exception receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()), exception);
                 }
 
                 if (message == null) throw new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
