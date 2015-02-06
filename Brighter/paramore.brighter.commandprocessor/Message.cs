@@ -153,5 +153,15 @@ namespace paramore.brighter.commandprocessor
         {
             return Header.HandledCount >= requeueCount;
         }
+
+        public ulong GetDeliveryTag()
+        {
+            return (ulong)Header.Bag["DeliveryTag"];
+        }
+
+        public void SetDeliveryTag(ulong deliveryTag)
+        {
+            Header.Bag["DeliveryTag"] = deliveryTag;
+        }
     }
 }

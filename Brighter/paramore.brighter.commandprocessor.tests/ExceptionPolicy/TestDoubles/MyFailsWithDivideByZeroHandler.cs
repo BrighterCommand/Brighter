@@ -48,7 +48,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles
             throw new DivideByZeroException();
         }
 
-       public static bool ShouldRecieve(MyCommand myCommand)
+       public static bool Shouldreceive(MyCommand myCommand)
        {
            return ReceivedCommand;
        }

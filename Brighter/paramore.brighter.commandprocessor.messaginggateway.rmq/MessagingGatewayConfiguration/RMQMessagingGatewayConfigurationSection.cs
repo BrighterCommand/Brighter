@@ -129,10 +129,24 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         /// </summary>
         /// <value>The URI.</value>
         [ConfigurationProperty("uri", DefaultValue = "amqp://guest:guest@localhost:5672/%2f", IsRequired = true)]
-        public Uri Uri
+        public Uri Uri { get { return (Uri)this["uri"]; } set { this["uri"] = value; } }
+        /// <summary>
+        /// Gets or sets the retry count for when a connection fails
+        /// </summary>
+        [ConfigurationProperty("connectionRetryCount", DefaultValue = "3", IsRequired = false)]
+        public int ConnectionRetryCount
         {
-            get { return (Uri) this["uri"]; }
-            set { this["uri"] = value; }
+            get { return (int)this["connectionRetryCount"]; } 
+            set { this["connectionRetryCount"] = value; } 
+        }
+        /// <summary>
+        /// The time in milliseconds to wait before retrying to connect again
+        /// </summary>
+        [ConfigurationProperty("retryWaitInMilliseconds", DefaultValue = "500", IsRequired = false)]
+        public int RetryWaitInMilliseconds
+        {
+            get { return (int)this["retryWaitInMilliseconds"]; }
+            set { this["retryWaitInMilliseconds"] = value; } 
         }
     }
 

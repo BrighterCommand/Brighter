@@ -98,7 +98,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
-            receivedMessage.Header.Bag["DeliveryTag"] = 12345UL;
+            receivedMessage.SetDeliveryTag(12345UL);
 
         };
 
@@ -124,7 +124,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
-            receivedMessage.Header.Bag["DeliveryTag"] = 12345UL;
+            receivedMessage.SetDeliveryTag(12345UL);
 
         };
 

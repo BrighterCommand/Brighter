@@ -97,15 +97,23 @@ namespace paramore.brighter.serviceactivator
         /// <summary>
         /// Runs the message loop
         /// </summary>
-        /// <exception cref="System.Exception">Could not recieve message. Note that should return an MT_NONE from an empty queue on timeout</exception>
+        /// <exception cref="System.Exception">Could not receive message. Note that should return an MT_NONE from an empty queue on timeout</exception>
         public void Run()
         {
             do
             {
-                if (Logger != null) Logger.Debug(m => m("MessagePump: Receiving messages on thread # {0}", Thread.CurrentThread.ManagedThreadId));
-                var message = Channel.Receive(TimeoutInMilliseconds);
-                
-                if (message == null) throw new Exception("Could not recieve message. Note that should return an MT_NONE from an empty queue on timeout");
+                if (Logger != null) Logger.Debug(m => m("MessagePump: Receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()));
+                Message message = null;
+                try
+                {
+                    message = Channel.Receive(TimeoutInMilliseconds);
+                }
+                catch (Exception exception)
+                {
+                    if (Logger != null) Logger.Error(m => m("MessagePump: Exception receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()), exception);
+                }
+
+                if (message == null) throw new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
 
                 // empty queue
                 if (message.Header.MessageType == MessageType.MT_NONE)
@@ -117,6 +125,7 @@ namespace paramore.brighter.serviceactivator
                 // failed to parse a message from the incoming data
                 if(message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
                 {
+                    if (Logger != null) Logger.Warn(m => m("MessagePump: Failed to parse a message from the incoming message with id {1} for {2} on thread # {0}", Thread.CurrentThread.ManagedThreadId, message.Id, messageMapper.GetType().ToString()));
                     AcknowledgeMessage(message);
                     continue;
                 }
@@ -124,7 +133,7 @@ namespace paramore.brighter.serviceactivator
                 // QUIT command
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                 {
-                    if (Logger != null) Logger.Debug(m => m("MessagePump: Quit receiving messages on thread # {0}", Thread.CurrentThread.ManagedThreadId));
+                    if (Logger != null) Logger.Debug(m => m("MessagePump: Quit receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()));
                     Channel.Dispose();
                     break;
                 }
@@ -138,7 +147,7 @@ namespace paramore.brighter.serviceactivator
                 {
                     if (Logger != null)
                         Logger.Debug(
-                            m => m("MessagePump: {0} Stopping receiving of messages on thread # {1}", configurationException.Message, Thread.CurrentThread.ManagedThreadId),
+                            m => m("MessagePump: {0} Stopping receiving of messages for {2} on thread # {1}", configurationException.Message, Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()),
                             configurationException);
                     break;
                 }
@@ -161,7 +170,7 @@ namespace paramore.brighter.serviceactivator
                         {
                             if (Logger != null)
                                 Logger.Debug(
-                                    m => m("MessagePump: {0} Stopping receiving of messages on thread # {1}", exception.Message, Thread.CurrentThread.ManagedThreadId),
+                                    m => m("MessagePump: {0} Stopping receiving of messages for {2} on thread # {1}", exception.Message, Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()),
                                     exception);
                             stop = true;
                             break;
@@ -172,12 +181,14 @@ namespace paramore.brighter.serviceactivator
                 }
                 catch (Exception e)
                 {
-                    Logger.Error("Failed to dispatch message " + message, e);
+                    if (Logger != null) Logger.Error(m => m("MessagePump: Failed to dispatch message for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()), e);
                 }
 
                 AcknowledgeMessage(message);
 
             } while (true);
+            
+            if (Logger != null) Logger.Debug(m => m("MessagePump: Finished running message loop, no longer receiving messages for {0} on thread # {1}", messageMapper.GetType().ToString(), Thread.CurrentThread.ManagedThreadId));
         }
 
         private void RequeueMessage(Message message)
