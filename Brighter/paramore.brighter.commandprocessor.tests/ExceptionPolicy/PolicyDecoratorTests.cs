@@ -80,7 +80,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
        //We have to catch the final exception that bubbles out after retry
         Because of = () => Catch.Exception(() => commandProcessor.Send(myCommand));
 
-       It should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.ShouldRecieve(myCommand).ShouldBeTrue();
+       It should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.Shouldreceive(myCommand).ShouldBeTrue();
        It should_retry_three_times = () => retryCount.ShouldEqual(3);
     }
 
@@ -128,7 +128,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
        //We have to catch the final exception that bubbles out after retry
         Because of = () => commandProcessor.Send(myCommand);
 
-       It should_send_the_command_to_the_command_handler = () => MyDoesNotFailPolicyHandler .ShouldRecieve(myCommand).ShouldBeTrue();
+       It should_send_the_command_to_the_command_handler = () => MyDoesNotFailPolicyHandler .Shouldreceive(myCommand).ShouldBeTrue();
        It should_not_retry = () => retryCount.ShouldEqual(0);
     }
 
@@ -178,7 +178,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
                 thirdException = Catch.Exception(() => commandProcessor.Send(myCommand));
             };
 
-       It should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.ShouldRecieve(myCommand).ShouldBeTrue();
+       It should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.Shouldreceive(myCommand).ShouldBeTrue();
        It should_bubble_up_the_first_exception = () => firstException.ShouldBeOfExactType<DivideByZeroException>();
        It should_bubble_up_the_second_exception = () => secondException.ShouldBeOfExactType<DivideByZeroException>(); 
        It should_break_the_circuit_after_two_fails = () => thirdException.ShouldBeOfExactType<BrokenCircuitException>();

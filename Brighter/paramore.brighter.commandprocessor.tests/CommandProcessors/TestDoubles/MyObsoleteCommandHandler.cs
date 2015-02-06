@@ -23,7 +23,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
             return base.Handle(command);
         }
 
-        public static bool ShouldRecieve(MyCommand expectedCommand)
+        public static bool Shouldreceive(MyCommand expectedCommand)
         {
             return (command != null) && (expectedCommand.Id == command.Id);
         }

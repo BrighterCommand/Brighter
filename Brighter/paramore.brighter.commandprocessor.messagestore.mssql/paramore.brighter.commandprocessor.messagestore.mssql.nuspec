@@ -16,7 +16,6 @@
       <frameworkAssembly assemblyName="System" targetFramework="" />
       <frameworkAssembly assemblyName="System.Core" targetFramework="" />
       <frameworkAssembly assemblyName="System.Data" targetFramework="" />
-      <frameworkAssembly assemblyName="System.Data.SqlServerCe" targetFramework="" />
     </frameworkAssemblies>
     <dependencies>
       <dependency id="Paramore.Brighter.CommandProcessor" version="$version$" />

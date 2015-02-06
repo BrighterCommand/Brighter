@@ -95,7 +95,7 @@ namespace paramore.commandprocessor.tests.Timeout
         //We have to catch the final exception that bubbles out after retry
         Because of = () =>  commandProcessor.Send(myCommand);
 
-        It should_complete_the_command_before_an_exception = () => MyPassesTimeoutHandler.ShouldRecieve(myCommand);
+        It should_complete_the_command_before_an_exception = () => MyPassesTimeoutHandler.Shouldreceive(myCommand);
     }
 
 

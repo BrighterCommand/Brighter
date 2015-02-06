@@ -53,7 +53,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () => commandProcessor.Send(myCommand);
 
-        It should_send_the_command_to_the_command_handler = () => MyCommandHandler.ShouldRecieve(myCommand).ShouldBeTrue();
+        It should_send_the_command_to_the_command_handler = () => MyCommandHandler.Shouldreceive(myCommand).ShouldBeTrue();
     }
 
     [Subject("Commands should only have one handler")]
@@ -83,7 +83,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () =>  exception = Catch.Exception(() => commandProcessor.Send(myCommand));
 
-        It should_fail_because_multiple_recievers_found = () => exception.ShouldBeAssignableTo(typeof (ArgumentException));
+        It should_fail_because_multiple_receivers_found = () => exception.ShouldBeAssignableTo(typeof (ArgumentException));
         It should_have_an_error_message_that_tells_you_why = () => exception.ShouldContainErrorMessage("More than one handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.");
     }
 
@@ -103,7 +103,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () =>  exception = Catch.Exception(() => commandProcessor.Send(myCommand));
 
-        It should_fail_because_multiple_recievers_found = () => exception.ShouldBeAssignableTo(typeof (ArgumentException));
+        It should_fail_because_multiple_receivers_found = () => exception.ShouldBeAssignableTo(typeof (ArgumentException));
         It should_have_an_error_message_that_tells_you_why = () => exception.ShouldContainErrorMessage("No command handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should have only one handler."); 
     }
 
@@ -125,7 +125,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         };
 
         Because of = () => commandProcessor.Publish(myEvent);
-        It should_publish_the_command_to_the_event_handlers = () => MyEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();
+        It should_publish_the_command_to_the_event_handlers = () => MyEventHandler.Shouldreceive(myEvent).ShouldBeTrue();
     }
 
     [Subject("An event may have no subscribers")]
@@ -176,8 +176,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
 
         It should_not_throw_an_exception = () => exception.ShouldBeNull();
-        It should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.ShouldRecieve(myEvent).ShouldBeTrue(); 
-        It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();
+        It should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.Shouldreceive(myEvent).ShouldBeTrue(); 
+        It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.Shouldreceive(myEvent).ShouldBeTrue();
     }
 
     [Subject("An event with multiple subscribers")]
@@ -210,8 +210,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         It should_throw_an_aggregate_exception = () => exception.ShouldBeOfExactType(typeof(AggregateException));
         It should_have_an_inner_exception_from_the_handler = () => ((AggregateException) exception).InnerException.ShouldBeOfExactType(typeof (InvalidOperationException));
-        It should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.ShouldRecieve(myEvent).ShouldBeTrue(); 
-        It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.ShouldRecieve(myEvent).ShouldBeTrue();
+        It should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.Shouldreceive(myEvent).ShouldBeTrue(); 
+        It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.Shouldreceive(myEvent).ShouldBeTrue();
     }
 
 
@@ -328,7 +328,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         Because of = () => exception = Catch.Exception(() => commandProcessor.Send(myCommand));
 
         It should_throw_an_exception = () => exception.ShouldNotBeNull();
-        It should_fail_the_pipeline_not_execute_it = () => MyUnusedCommandHandler.ShouldRecieve(myCommand).ShouldBeFalse();
+        It should_fail_the_pipeline_not_execute_it = () => MyUnusedCommandHandler.Shouldreceive(myCommand).ShouldBeFalse();
     }
 
     public class When_there_are_no_failures_execute_all_the_steps_in_the_pipeline
@@ -354,9 +354,9 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () => commandProcessor.Send(myCommand);
 
-        It should_call_the_pre_validation_handler = () => MyValidationHandler<MyCommand>.ShouldRecieve(myCommand).ShouldBeTrue();
-        It should_send_the_command_to_the_command_handler = () => MyPreAndPostDecoratedHandler.ShouldRecieve(myCommand).ShouldBeTrue();
-        It should_call_the_post_validation_handler = () => MyLoggingHandler<MyCommand>.ShouldRecieve(myCommand).ShouldBeTrue();
+        It should_call_the_pre_validation_handler = () => MyValidationHandler<MyCommand>.Shouldreceive(myCommand).ShouldBeTrue();
+        It should_send_the_command_to_the_command_handler = () => MyPreAndPostDecoratedHandler.Shouldreceive(myCommand).ShouldBeTrue();
+        It should_call_the_post_validation_handler = () => MyLoggingHandler<MyCommand>.Shouldreceive(myCommand).ShouldBeTrue();
     }
 
 

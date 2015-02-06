@@ -47,7 +47,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles
             return base.Handle(command);
         }
 
-       public static bool ShouldRecieve(MyCommand myCommand)
+       public static bool Shouldreceive(MyCommand myCommand)
        {
            return ReceivedCommand;
        }
