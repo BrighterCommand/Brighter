@@ -89,7 +89,7 @@ namespace paramore.brighter.restms.server.Adapters.Formatters
                 feedNew = (RestMSFeed)feedDeserializer.Deserialize(ms);
                 return true;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 feedNew = null;
                 return false;
@@ -110,7 +110,7 @@ namespace paramore.brighter.restms.server.Adapters.Formatters
                 newPipe = (RestMSPipeNew) pipeDeserializer.Deserialize(ms);
                 return true;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 newPipe = null;
                 return false;

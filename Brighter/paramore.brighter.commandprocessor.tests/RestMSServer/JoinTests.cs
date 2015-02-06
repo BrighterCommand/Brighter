@@ -94,7 +94,7 @@ namespace paramore.commandprocessor.tests.RestMSServer
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
-            bool exceptionWasThrown = false;
+            exceptionWasThrown = false;
 
             feed = new Feed(
                 feedType: FeedType.Direct,
