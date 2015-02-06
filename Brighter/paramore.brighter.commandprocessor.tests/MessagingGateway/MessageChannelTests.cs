@@ -137,19 +137,17 @@ namespace paramore.commandprocessor.tests.MessagingGateway
     public class When_disposing_input_channel
     {
         private static IAmAnInputChannel channel;
-        private static IAmAMessageConsumer gateway;
-        private static Message receivedMessage;
-        private static Message sentMessage;
+        private static IAmAMessageConsumer messageConsumer;
 
         Establish context = () =>
         {
-            gateway = A.Fake<IAmAMessageConsumer>();
+            messageConsumer = A.Fake<IAmAMessageConsumer>();
 
-            channel = new InputChannel("test", "key", gateway);
+            channel = new InputChannel("test", "key", messageConsumer);
         };
 
         Because of = () => channel.Dispose();
 
-        It should_call_dipose_on_messaging_gateway = () => A.CallTo(() => gateway.Dispose()).MustHaveHappened();
+        It should_call_dipose_on_messaging_gateway = () => A.CallTo(() => messageConsumer.Dispose()).MustHaveHappened();
     }
 }
