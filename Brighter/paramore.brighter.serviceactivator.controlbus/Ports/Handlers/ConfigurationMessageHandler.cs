@@ -36,8 +36,8 @@ THE SOFTWARE. */
 
 #endregion
 
-using Common.Logging;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator.controlbus.Ports.Commands;
 
 namespace paramore.brighter.serviceactivator.controlbus.Ports.Handlers

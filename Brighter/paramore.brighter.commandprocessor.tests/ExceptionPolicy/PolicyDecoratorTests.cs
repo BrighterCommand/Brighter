@@ -22,10 +22,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
 using FakeItEasy;
 using FluentAssertions;
 using Machine.Specifications;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using Polly;
 using Polly.CircuitBreaker;

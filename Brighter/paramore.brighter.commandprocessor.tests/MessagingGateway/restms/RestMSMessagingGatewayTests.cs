@@ -22,11 +22,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
-using Common.Logging.Configuration;
-using Common.Logging.Simple;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
@@ -45,10 +43,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
 
         Establish context = () =>
         {
-            var properties = new NameValueCollection();
-            properties["showDateTime"] = "true";
-            LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-            var logger = LogManager.GetLogger(typeof (RmqMessageConsumer));
+            var logger = LogProvider.For<RmqMessageConsumer>();
             messageProducer = new RestMsMessageProducer(logger);
             messageConsumer = new RestMsMessageConsumer(logger);
             message = new Message(

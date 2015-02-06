@@ -36,8 +36,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using Common.Logging;
 using Newtonsoft.Json;
+using paramore.brighter.commandprocessor.Logging;
 using Raven.Client;
 
 namespace paramore.brighter.commandprocessor.messagestore.ravendb
@@ -71,12 +71,12 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
         /// <returns>Task.</returns>
         public async Task Add(Message message)
         {
-            logger.Debug(m => m("Adding message to RavenDb Message Store: {0}", JsonConvert.SerializeObject(message)));
+            logger.DebugFormat("Adding message to RavenDb Message Store: {0}", JsonConvert.SerializeObject(message));
             using (var session = documentStore.OpenAsyncSession())
             {
                 await session.StoreAsync(message);
                 await session.SaveChangesAsync();
-                logger.Debug(m => m("Added message to RavenDb"));
+                logger.DebugFormat("Added message to RavenDb");
             }
         }
 
@@ -89,7 +89,7 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
         {
             using (var session = documentStore.OpenAsyncSession())
             {
-                logger.Debug(m => m("Retrieving message with Id {0} from RavenDb", messageId));
+                logger.DebugFormat("Retrieving message with Id {0} from RavenDb", messageId);
                 return session.LoadAsync<Message>(messageId).ContinueWith(task => task.Result ?? new Message());
             }
         }

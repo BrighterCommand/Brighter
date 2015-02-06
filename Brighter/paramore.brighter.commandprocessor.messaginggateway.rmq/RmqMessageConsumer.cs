@@ -37,10 +37,8 @@ THE SOFTWARE. */
 
 using System;
 
-using Common.Logging;
-
 using Newtonsoft.Json;
-
+using paramore.brighter.commandprocessor.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -79,7 +77,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             if (Channel != null)
             {
                 var deliveryTag = message.GetDeliveryTag();
-                Logger.Debug(m => m("RmqMessageConsumer: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag));
+                Logger.DebugFormat("RmqMessageConsumer: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag);
                 Channel.BasicAck(deliveryTag, false);
             }
          }
@@ -92,7 +90,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             if (Channel != null)
             {
-                Logger.Debug(m => m("RmqMessageConsumer: Purging channel"));
+                Logger.DebugFormat("RmqMessageConsumer: Purging channel");
                 Channel.QueuePurge(queueName);
             }
         }
@@ -102,7 +100,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             if (Channel != null)
             {
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
-                Logger.Debug(m => m("RmqMessageConsumer: Re-queueing message"));
+                Logger.DebugFormat("RmqMessageConsumer: Re-queueing message");
                 rmqMessagePublisher.PublishMessage(message);
                 Reject(message, false);
             }
@@ -117,7 +115,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             if (Channel != null)
             {
-                Logger.Debug(m => m("RmqMessageConsumer: NoAck message {0}", message.Id));
+                Logger.DebugFormat("RmqMessageConsumer: NoAck message {0}", message.Id);
                 Channel.BasicNack(message.GetDeliveryTag(), false, requeue);
             }
         }
@@ -130,11 +128,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>Message.</returns>
         public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds)
         {
-            Logger.Debug(m => m("RmqMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()));
+            Logger.DebugFormat("RmqMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString());
 
             if (!Connect(queueName, routingKey, true))
             {
-                Logger.Debug(m => m("RmqMessageConsumer: Unable to connect to the queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()));
+                Logger.DebugFormat("RmqMessageConsumer: Unable to connect to the queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString());
                 throw ConnectionFailure;
             }
 
@@ -145,17 +143,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 if (consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue))
                 {
                     message = messageCreator.CreateMessage(fromQueue);
-                    Logger.Debug(m => m("RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {5}{4}",
-                        queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), JsonConvert.SerializeObject(message), Environment.NewLine));
+                    Logger.DebugFormat("RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {5}{4}",
+                        queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), JsonConvert.SerializeObject(message), Environment.NewLine);
                 }
                 else
                 {
-                    Logger.Debug(m => m("RmqMessageConsumer: Time out without receiving message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()));
+                    Logger.DebugFormat("RmqMessageConsumer: Time out without receiving message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString());
                 }
             }
             catch (Exception exception)
             {
-                Logger.Error(m => m("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()), exception);
+                Logger.ErrorFormat("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3} because of {4}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), exception);
                 throw;
             }
 

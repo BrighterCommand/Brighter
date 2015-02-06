@@ -22,8 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {

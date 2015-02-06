@@ -27,7 +27,7 @@ using System.Data.Common;
 using System.Data.SqlClient;
 using System.Data.SqlServerCe;
 using System.Threading.Tasks;
-using Common.Logging;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messagestore.mssql
 {

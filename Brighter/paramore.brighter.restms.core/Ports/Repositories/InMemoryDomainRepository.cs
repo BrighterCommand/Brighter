@@ -34,7 +34,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Common.Logging;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.restms.core.Model;
 
 namespace paramore.brighter.restms.core.Ports.Repositories

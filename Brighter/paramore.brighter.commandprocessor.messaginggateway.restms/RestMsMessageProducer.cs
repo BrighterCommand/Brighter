@@ -42,11 +42,10 @@ using System.Net.Http;
 using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
-using Common.Logging;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Parsers;
-using Thinktecture.IdentityModel.Hawk.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {

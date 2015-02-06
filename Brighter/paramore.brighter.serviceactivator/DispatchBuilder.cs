@@ -36,8 +36,8 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Linq;
-using Common.Logging;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator.ServiceActivatorConfiguration;
 
 namespace paramore.brighter.serviceactivator

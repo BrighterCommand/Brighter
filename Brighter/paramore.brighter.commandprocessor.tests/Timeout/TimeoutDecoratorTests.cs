@@ -23,10 +23,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using paramore.commandprocessor.tests.Timeout.TestDoubles;

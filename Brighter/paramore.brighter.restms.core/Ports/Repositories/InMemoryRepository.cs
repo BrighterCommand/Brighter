@@ -40,7 +40,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Transactions;
-using Common.Logging;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.restms.core.Ports.Common;
 
 namespace paramore.brighter.restms.core.Ports.Repositories

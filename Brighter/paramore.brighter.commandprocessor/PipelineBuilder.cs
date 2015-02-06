@@ -35,11 +35,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using Common.Logging;
 using paramore.brighter.commandprocessor.extensions;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -94,7 +93,7 @@ namespace paramore.brighter.commandprocessor
                 .OrderByDescending(attribute => attribute.Step);
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext);
-            logger.Debug(m => m("New handler pipeline created: {0}", TracePipeline(firstInPipeline)));
+            logger.DebugFormat("New handler pipeline created: {0}", TracePipeline(firstInPipeline));
             return firstInPipeline;
         }
 

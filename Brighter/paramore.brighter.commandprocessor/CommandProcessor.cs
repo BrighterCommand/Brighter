@@ -37,9 +37,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Common.Logging;
+using paramore.brighter.commandprocessor.Logging;
 using Polly;
-using paramore.brighter.commandprocessor.extensions;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -163,12 +162,12 @@ namespace paramore.brighter.commandprocessor
                 var requestContext = requestContextFactory.Create();
                 requestContext.Policies = policyRegistry;
 
-                logger.Info(m => m("Building send pipeline for command: {0}", command.Id));
+                logger.InfoFormat("Building send pipeline for command: {0}", command.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 var handlerCount = handlerChain.Count();
 
-                logger.Info(m => m("Found {0} pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id));
+                logger.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id);
                 if (handlerCount > 1)
                     throw new ArgumentException(string.Format("More than one handler was found for the typeof command {0} - a command should only have one handler.", typeof (T)));
                 if (handlerCount == 0)
@@ -194,12 +193,12 @@ namespace paramore.brighter.commandprocessor
                 var requestContext = requestContextFactory.Create();
                 requestContext.Policies = policyRegistry;
 
-                logger.Info(m => m("Building send pipeline for event: {0}", @event.Id));
+                logger.InfoFormat("Building send pipeline for event: {0}", @event.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 var handlerCount = handlerChain.Count();
 
-                logger.Info(m => m("Found {0} pipelines for event: {0}", handlerCount, @event.Id));
+                logger.InfoFormat("Found {0} pipelines for event: {0}", handlerCount, @event.Id);
 
                 var exceptions = new List<Exception>();
                 foreach (var handleRequests in handlerChain)
@@ -235,7 +234,7 @@ namespace paramore.brighter.commandprocessor
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(T request) where T : class, IRequest
         {
-            logger.Info(m => m("Decoupled invocation of request: {0}", request.Id));
+            logger.InfoFormat("Decoupled invocation of request: {0}", request.Id);
 
             var messageMapper = mapperRegistry.Get<T>();
             if (messageMapper == null)
@@ -261,7 +260,7 @@ namespace paramore.brighter.commandprocessor
         public void Repost(Guid messageId)
         {
             var requestedMessageid = messageId; //avoid closure on this
-            logger.Info(m => m("Resend of message: {0}", requestedMessageid));
+            logger.InfoFormat("Resend of message: {0}", requestedMessageid);
 
             /* 
              * NOTE: Don't rewrite with await, compiles but Policy does not call await on the lambda so becomes fire and forget, 
@@ -276,7 +275,7 @@ namespace paramore.brighter.commandprocessor
 
                     if (message.Header.MessageType == MessageType.MT_NONE)
                     {
-                        logger.Warn((m => m("Message {0} not found", requestedMessageid)));
+                        logger.WarnFormat("Message {0} not found", requestedMessageid);
                         return;
                     }
 

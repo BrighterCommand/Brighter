@@ -24,14 +24,11 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using Common.Logging;
-using Common.Logging.Configuration;
-using Common.Logging.Simple;
 using FakeItEasy;
 using Machine.Specifications;
+using paramore.brighter.commandprocessor.Logging;
 using Polly;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
@@ -54,11 +51,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
-                var properties = new NameValueCollection();
-                properties["showDateTime"] = "true";
-                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-
-                var logger = LogManager.GetLogger(typeof (Dispatcher));
+                var logger = LogProvider.For<Dispatcher>();  
 
                 var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
                 messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -96,11 +89,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
-                var properties = new NameValueCollection();
-                properties["showDateTime"] = "true";
-                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-
-                var logger = LogManager.GetLogger(typeof (Dispatcher));
+                var logger = LogProvider.For<Dispatcher>();  
 
                 var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
                 messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -141,11 +130,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 commandChannel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
-                var properties = new NameValueCollection();
-                properties["showDateTime"] = "true";
-                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-
-                var logger = LogManager.GetLogger(typeof (Dispatcher));
+                var logger = LogProvider.For<Dispatcher>();  
                 var container = new TinyIoCContainer();
                 container.Register<MyEventMessageMapper>();
                 container.Register<MyCommandMessageMapper>();
@@ -200,11 +185,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
-                var properties = new NameValueCollection();
-                properties["showDateTime"] = "true";
-                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-
-                var logger = LogManager.GetLogger(typeof (Dispatcher));
+                var logger = LogProvider.For<Dispatcher>();  
 
                 var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
                 messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -246,11 +227,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 channel = new FakeChannel();
                 commandProcessor = new SpyCommandProcessor();
 
-                var properties = new NameValueCollection();
-                properties["showDateTime"] = "true";
-                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-
-                var logger = LogManager.GetLogger(typeof (Dispatcher));
+                var logger = LogProvider.For<Dispatcher>();  
 
                 var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
                 messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -297,11 +274,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             channel = new FakeChannel();
             commandProcessor = new SpyCommandProcessor();
 
-            var properties = new NameValueCollection();
-            properties["showDateTime"] = "true";
-            LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-
-            var logger = LogManager.GetLogger(typeof(Dispatcher));
+            var logger = LogProvider.For<Dispatcher>();  
 
             var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();

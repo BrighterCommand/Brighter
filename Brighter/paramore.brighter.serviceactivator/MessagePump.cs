@@ -39,9 +39,8 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Common.Logging;
 using paramore.brighter.commandprocessor;
-
+using paramore.brighter.commandprocessor.Logging;
 using ConfigurationException = paramore.brighter.commandprocessor.ConfigurationException;
 
 namespace paramore.brighter.serviceactivator
@@ -102,7 +101,7 @@ namespace paramore.brighter.serviceactivator
         {
             do
             {
-                if (Logger != null) Logger.Debug(m => m("MessagePump: Receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()));
+                if (Logger != null) Logger.DebugFormat("MessagePump: Receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString());
                 Message message = null;
                 try
                 {
@@ -110,7 +109,7 @@ namespace paramore.brighter.serviceactivator
                 }
                 catch (Exception exception)
                 {
-                    if (Logger != null) Logger.Error(m => m("MessagePump: Exception receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()), exception);
+                    if (Logger != null) Logger.ErrorFormat("MessagePump: Exception receiving messages for {1} on thread # {0} because of {2}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString(), exception);
                 }
 
                 if (message == null) throw new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
@@ -125,7 +124,7 @@ namespace paramore.brighter.serviceactivator
                 // failed to parse a message from the incoming data
                 if(message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
                 {
-                    if (Logger != null) Logger.Warn(m => m("MessagePump: Failed to parse a message from the incoming message with id {1} for {2} on thread # {0}", Thread.CurrentThread.ManagedThreadId, message.Id, messageMapper.GetType().ToString()));
+                    if (Logger != null) Logger.WarnFormat("MessagePump: Failed to parse a message from the incoming message with id {1} for {2} on thread # {0}", Thread.CurrentThread.ManagedThreadId, message.Id, messageMapper.GetType().ToString());
                     AcknowledgeMessage(message);
                     continue;
                 }
@@ -133,7 +132,7 @@ namespace paramore.brighter.serviceactivator
                 // QUIT command
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                 {
-                    if (Logger != null) Logger.Debug(m => m("MessagePump: Quit receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()));
+                    if (Logger != null) Logger.DebugFormat("MessagePump: Quit receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString());
                     Channel.Dispose();
                     break;
                 }
@@ -146,9 +145,7 @@ namespace paramore.brighter.serviceactivator
                 catch (ConfigurationException configurationException)
                 {
                     if (Logger != null)
-                        Logger.Debug(
-                            m => m("MessagePump: {0} Stopping receiving of messages for {2} on thread # {1}", configurationException.Message, Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()),
-                            configurationException);
+                        Logger.DebugFormat("MessagePump: {0} Stopping receiving of messages for {2} on thread # {1} because of {3}", configurationException.Message, Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString(), configurationException);
                     break;
                 }
                 catch (RequeueException)
@@ -169,9 +166,7 @@ namespace paramore.brighter.serviceactivator
                         if (exception is ConfigurationException)
                         {
                             if (Logger != null)
-                                Logger.Debug(
-                                    m => m("MessagePump: {0} Stopping receiving of messages for {2} on thread # {1}", exception.Message, Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()),
-                                    exception);
+                                Logger.DebugFormat("MessagePump: {0} Stopping receiving of messages for {2} on thread # {1} because of {3}", exception.Message, Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString(), exception);
                             stop = true;
                             break;
                         }
@@ -181,14 +176,16 @@ namespace paramore.brighter.serviceactivator
                 }
                 catch (Exception e)
                 {
-                    if (Logger != null) Logger.Error(m => m("MessagePump: Failed to dispatch message for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString()), e);
+                    if (Logger != null) 
+                        Logger.ErrorFormat("MessagePump: Failed to dispatch message for {1} on thread # {0} because of {3}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString(), e);
                 }
 
                 AcknowledgeMessage(message);
 
             } while (true);
             
-            if (Logger != null) Logger.Debug(m => m("MessagePump: Finished running message loop, no longer receiving messages for {0} on thread # {1}", messageMapper.GetType().ToString(), Thread.CurrentThread.ManagedThreadId));
+            if (Logger != null) 
+                Logger.DebugFormat("MessagePump: Finished running message loop, no longer receiving messages for {0} on thread # {1}", messageMapper.GetType().ToString(), Thread.CurrentThread.ManagedThreadId);
         }
 
         private void RequeueMessage(Message message)
@@ -199,14 +196,16 @@ namespace paramore.brighter.serviceactivator
             {
                 if (message.HandledCountReached(RequeueCount))
                 {
-                    if (Logger != null) Logger.Warn(m => m("MessagePump: Have tried {2} times to handle this message {0} on thread # {1}, dropping message", message.Id, Thread.CurrentThread.ManagedThreadId, RequeueCount));
+                    if (Logger != null) 
+                        Logger.WarnFormat("MessagePump: Have tried {2} times to handle this message {0} on thread # {1}, dropping message", message.Id, Thread.CurrentThread.ManagedThreadId, RequeueCount);
                     
                     AcknowledgeMessage(message);
                     return;
                 }
             }
             
-            if (Logger != null) Logger.Debug(m => m("MessagePump: Re-queueing message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId));
+            if (Logger != null) 
+                Logger.DebugFormat("MessagePump: Re-queueing message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId);
             Channel.Requeue(message);
         }
 
@@ -217,13 +216,15 @@ namespace paramore.brighter.serviceactivator
 
         private void AcknowledgeMessage(Message message)
         {
-            if (Logger != null) Logger.Debug(m => m("MessagePump: Acknowledge message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId));
+            if (Logger != null) 
+                Logger.DebugFormat("MessagePump: Acknowledge message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId);
             Channel.Acknowledge(message);
         }
 
         private void DispatchRequest(MessageType messageType, TRequest request)
         {
-            if (Logger != null) Logger.Debug(m => m("MessagePump: Dispatching message {0} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId));
+            if (Logger != null) 
+                Logger.DebugFormat("MessagePump: Dispatching message {0} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId);
             switch (messageType)
             {
                 case MessageType.MT_COMMAND:
@@ -247,7 +248,8 @@ namespace paramore.brighter.serviceactivator
                 throw new ConfigurationException(string.Format("No message mapper found for type {0} for message {1}.", typeof(TRequest).FullName, message.Id));
             }
 
-            if (Logger != null) Logger.Debug(m => m("MessagePump: Translate message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId));
+            if (Logger != null) 
+                Logger.DebugFormat("MessagePump: Translate message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId);
             return messageMapper.MapToRequest(message);
         }
     }

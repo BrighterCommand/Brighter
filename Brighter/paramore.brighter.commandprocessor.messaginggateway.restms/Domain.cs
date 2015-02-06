@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 
