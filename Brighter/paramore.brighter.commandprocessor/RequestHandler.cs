@@ -11,6 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -37,7 +38,7 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Reflection;
-using Common.Logging;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -130,7 +131,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.Debug(m => m("Passing request from {0} to {1}", Name, _successor.Name));
+                logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
                 return _successor.Handle(command);
             }
 

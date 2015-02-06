@@ -11,6 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* 
 ------------------------------------------------------------------------------------------------  
@@ -74,7 +75,8 @@ THE SOFTWARE.
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Common.Logging;
+using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.policy.Attributes;
 
 namespace paramore.brighter.commandprocessor.policy.Handlers
 {

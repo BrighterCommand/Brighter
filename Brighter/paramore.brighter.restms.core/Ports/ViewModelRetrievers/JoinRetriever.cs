@@ -35,7 +35,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Common.Logging;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Resources;

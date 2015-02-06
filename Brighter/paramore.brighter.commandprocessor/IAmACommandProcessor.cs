@@ -35,7 +35,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
 {

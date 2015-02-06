@@ -37,8 +37,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Transactions;
-using Common.Logging;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Common;

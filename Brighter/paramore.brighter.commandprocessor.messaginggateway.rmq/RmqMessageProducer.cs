@@ -37,8 +37,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using Common.Logging;
 using Newtonsoft.Json;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
@@ -67,7 +67,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             //RabbitMQ .NET Client does not have an async publish, so fake this for now as we want to support messaging frameworks that do have this option
             var tcs = new TaskCompletionSource<object>();
 
-            Logger.Debug(m => m("RmqMessageProducer: Preparing  to sending message {0} via exchange {1}", Configuration.Exchange.Name, JsonConvert.SerializeObject(message)));
+            Logger.DebugFormat("RmqMessageProducer: Preparing  to sending message {0} via exchange {1}", Configuration.Exchange.Name, JsonConvert.SerializeObject(message));
 
             if (!Connect())
             {
@@ -78,9 +78,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             try
             {
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
-                Logger.Debug(m => m("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value));
+                Logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value);
                 rmqMessagePublisher.PublishMessage(message);
-                Logger.Debug(m => m("RmqMessageProducer: Published message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value, DateTime.UtcNow));
+                Logger.DebugFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value, DateTime.UtcNow);
             }
             catch (Exception e)
             {

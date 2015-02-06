@@ -22,9 +22,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
 using Microsoft.Practices.Unity;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Common;
@@ -51,7 +51,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
             container.RegisterType<IAmARepository<Pipe>, InMemoryPipeRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmARepository<Join>, InMemoryJoinRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmACredentialStore, CredentialStore>(new ContainerControlledLifetimeManager());
-            container.RegisterInstance(typeof (ILog), LogManager.GetCurrentClassLogger(), new ContainerControlledLifetimeManager());
+            container.RegisterInstance(typeof (ILog), LogProvider.For<RestMSService>(), new ContainerControlledLifetimeManager());
             container.RegisterType<AddFeedCommandHandler>();
             container.RegisterType<AddFeedToDomainCommandHandler>();
             container.RegisterType<AddJoinCommandHandler>();

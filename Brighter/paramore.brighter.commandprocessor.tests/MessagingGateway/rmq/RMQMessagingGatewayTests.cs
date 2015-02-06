@@ -24,11 +24,8 @@ THE SOFTWARE. */
 using System;
 using System.Text;
 using System.Threading.Tasks;
-
-using Common.Logging;
-using Common.Logging.Configuration;
-using Common.Logging.Simple;
 using Machine.Specifications;
+using paramore.brighter.commandprocessor.Logging;
 using RabbitMQ.Client;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
@@ -48,10 +45,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Establish context = () =>
             {
-                var properties = new NameValueCollection();
-                properties["showDateTime"] = "true";
-                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-                var logger = LogManager.GetLogger(typeof(RmqMessageConsumer));  
+                var logger = LogProvider.For<RmqMessageConsumer>();  
                 messageProducer = new RmqMessageProducer(logger);
                 messageConsumer = new RmqMessageConsumer(logger);
                 message = new Message(
@@ -133,13 +127,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         Establish context = () =>
         {
             var testGuid = Guid.NewGuid();
-                var properties = new NameValueCollection();
-                properties["showDateTime"] = "true";
-                LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-                var logger = LogManager.GetLogger(typeof(RmqMessageConsumer));  
+            var logger = LogProvider.For<RmqMessageConsumer>();  
              
-                sender = new RmqMessageProducer(logger);
-                receiver = new RmqMessageConsumer(logger);
+            sender = new RmqMessageProducer(logger);
+            receiver = new RmqMessageConsumer(logger);
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test2" , MessageType.MT_COMMAND);
             messageHeader.UpdateHandledCount();
             sentMessage= new Message(

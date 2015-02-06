@@ -35,7 +35,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using Polly;
 

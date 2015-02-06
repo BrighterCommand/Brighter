@@ -1,8 +1,8 @@
 ﻿using System;
-using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.restms.core.Ports.Cache;
 using paramore.brighter.restms.core.Ports.Commands;
 using paramore.brighter.restms.core.Ports.Handlers;

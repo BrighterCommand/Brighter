@@ -1,5 +1,5 @@
-﻿using Common.Logging;
-using paramore.brighter.commandprocessor;
+﻿using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.restms.core.Ports.Cache;
 using paramore.brighter.restms.core.Ports.Commands;
 

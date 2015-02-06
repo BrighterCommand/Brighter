@@ -26,9 +26,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Common.Logging;
 using paramore.brighter.commandprocessor.extensions;
-
+using paramore.brighter.commandprocessor.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -36,11 +35,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     internal class RmqMessageCreator
     {
-        readonly ILog _logger;
+        readonly ILog logger;
 
         public RmqMessageCreator(ILog logger)
         {
-            _logger = logger;
+            this.logger = logger;
         }
 
         HeaderResult<string> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
@@ -53,7 +52,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var bytes = dict[key] as byte[];
             if (null == bytes)
             {
-                _logger.Warn("The value of header" + key + " could not be cast to a byte array");
+                logger.WarnFormat("The value of header" + key + " could not be cast to a byte array");
                 return new HeaderResult<string>(null, false);
             }
 
@@ -65,7 +64,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             catch(Exception e)
             {
                 var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
-                _logger.Warn("Failed to read the value of header " + key + " as UTF-8, first 20 byes follow: \n\t" + firstTwentyBytes, e);
+                logger.WarnFormat("Failed to read the value of header " + key + " as UTF-8, first 20 byes follow: \n\t" + firstTwentyBytes, e);
                 return new HeaderResult<string>(null, false);
             }
         }
@@ -104,7 +103,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
             catch (Exception e)
             {
-                _logger.Warn("Failed to create message from amqp message", e);
+                logger.WarnFormat("Failed to create message from amqp message", e);
                 message = FailureMessage(topic, messageId);
             }
 
@@ -178,7 +177,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             if (string.IsNullOrEmpty(messageId))
             {
-                _logger.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
+                logger.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
@@ -187,7 +186,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
-            _logger.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
+            logger.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
             return new HeaderResult<Guid>(Guid.Empty, false);
 
             

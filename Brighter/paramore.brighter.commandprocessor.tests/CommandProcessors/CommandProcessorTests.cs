@@ -25,12 +25,12 @@ using System;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
+using paramore.brighter.commandprocessor.Logging;
 using Polly;
 using Polly.CircuitBreaker;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
-using Common.Logging;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
 {

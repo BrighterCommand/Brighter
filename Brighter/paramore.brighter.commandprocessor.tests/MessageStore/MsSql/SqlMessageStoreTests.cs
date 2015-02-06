@@ -24,9 +24,9 @@ THE SOFTWARE. */
 using System;
 using System.Data.SqlServerCe;
 using System.IO;
-using Common.Logging.Simple;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.commandprocessor.tests.MessageStore.MsSql
@@ -44,7 +44,7 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
 
             sqlMessageStore = new MsSqlMessageStore(
                     new MsSqlMessageStoreConfiguration(ConnectionString, TableName, MsSqlMessageStoreConfiguration.DatabaseType.SqlCe),
-                    new NoOpLogger());
+                    new LogProvider.NoOpLogger());
         };
 
         public class when_writing_a_message_to_the_message_store

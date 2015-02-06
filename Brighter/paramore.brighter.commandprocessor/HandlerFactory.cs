@@ -35,7 +35,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 
 namespace paramore.brighter.commandprocessor
 {

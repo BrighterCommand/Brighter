@@ -23,9 +23,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.restms.core;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Commands;

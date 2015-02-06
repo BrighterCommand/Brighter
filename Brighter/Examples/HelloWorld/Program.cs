@@ -22,10 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
-using Common.Logging.Configuration;
-using Common.Logging.Simple;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace HelloWorld
 {
@@ -34,10 +32,7 @@ namespace HelloWorld
 
         static void Main(string[] args)
         {
-            var properties = new NameValueCollection();
-            properties["showDateTime"] = "true";
-            LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-            var logger = LogManager.GetLogger(typeof (Program));
+            var logger = LogProvider.For<Program>(); 
 
             var registry = new SubscriberRegistry(); 
             registry.Register<GreetingCommand, GreetingCommandHandler>();

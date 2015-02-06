@@ -22,11 +22,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
 using FakeItEasy;
 
 using Machine.Specifications;
-
+using paramore.brighter.commandprocessor.Logging;
 using Raven.Client;
 using Raven.Client.Embedded;
 using Raven.Tests.Helpers;

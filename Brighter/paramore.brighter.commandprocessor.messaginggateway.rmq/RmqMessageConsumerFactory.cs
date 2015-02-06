@@ -35,7 +35,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Common.Logging;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
@@ -44,7 +44,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
-        private readonly ILog _logger;
+        private readonly ILog logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="logger">The logger.</param>
         public RmqMessageConsumerFactory(ILog logger)
         {
-            _logger = logger;
+            this.logger = logger;
         }
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create()
         {
-            return new RmqMessageConsumer(_logger);
+            return new RmqMessageConsumer(logger);
         }
     }
 }

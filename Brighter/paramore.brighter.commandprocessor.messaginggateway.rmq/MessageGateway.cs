@@ -38,8 +38,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
-using Common.Logging;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
@@ -113,22 +112,22 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 {
                     if (NotConnected())
                     {
-                        Logger.Debug(m => m("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.Uri.ToString()));
+                        Logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.Uri.ToString());
                         Connection = Connect(connectionFactory);
 
-                        Logger.Debug(m => m("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.Uri.ToString()));
+                        Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.Uri.ToString());
                         Channel = OpenChannel(Connection);
 
                         // Configure the Quality of service for the model.
                         // BasicQos(0="Don't send me a new message until I’ve finished",  1= "Send me one message at a time", false ="Applied separately to each new consumer on the channel")
                         Channel.BasicQos(0, Configuration.Queues.QosPrefetchSize, false);
 
-                        Logger.Debug(m => m("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString()));
+                        Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString());
                         DeclareExchange(Channel, Configuration);
 
                         if (createQueues)
                         {
-                            Logger.Debug(m => m("RMQMessagingGateway: Creating queue {0} on connection {1}", queueName, Configuration.AMPQUri.Uri.ToString()));
+                            Logger.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", queueName, Configuration.AMPQUri.Uri.ToString());
 
                             Channel.QueueDeclare(queueName, false, false, false, SetQueueArguments());
                             Channel.QueueBind(queueName, Configuration.Exchange.Name, routingKey);
@@ -138,16 +137,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 }
                 catch (BrokerUnreachableException e)
                 {
-                    Logger.Warn(
-                        m =>
-                            m(
-                                "RMQMessagingGateway: BrokerUnreachableException on connection to queue {0} via exchange {1} on connection {2}. Will retry {3} times, this {4} attempt",
+                    Logger.WarnFormat("RMQMessagingGateway: BrokerUnreachableException on connection to queue {0} via exchange {1} on connection {2}. Will retry {3} times, this {4} attempt: {5}",
                                 queueName,
                                 Configuration.Exchange.Name,
                                 Configuration.AMPQUri.Uri.ToString(),
                                 Configuration.AMPQUri.ConnectionRetryCount,
-                                Configuration.AMPQUri.ConnectionRetryCount - retries + 1),
-                        e);
+                                Configuration.AMPQUri.ConnectionRetryCount - retries + 1,
+                                e);
 
                     if (--retries == 0)
                     {
@@ -159,14 +155,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 }
                 catch (Exception e)
                 {
-                    Logger.Warn(
-                        m =>
-                            m(
-                                "RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2}",
+                    Logger.WarnFormat("RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2} because of [3}",
                                 queueName,
                                 Configuration.Exchange.Name,
-                                Configuration.AMPQUri.Uri.ToString()),
-                        e);
+                                Configuration.AMPQUri.Uri.ToString(),
+                                e);
                     throw;
                 }
             }

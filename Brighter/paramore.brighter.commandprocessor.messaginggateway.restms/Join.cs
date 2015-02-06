@@ -24,11 +24,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Configuration;
 using System.Linq;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
-using Thinktecture.IdentityModel.Hawk.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {

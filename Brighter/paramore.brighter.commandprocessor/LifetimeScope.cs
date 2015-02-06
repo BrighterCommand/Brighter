@@ -34,10 +34,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Collections.Generic;
-using Common.Logging;
 using paramore.brighter.commandprocessor.extensions;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -62,19 +61,17 @@ namespace paramore.brighter.commandprocessor
         {
             trackedObjects.Add(instance);
             if (logger != null)
-                logger.Debug(m => m("Tracking instance {0} of type {1}", instance.GetHashCode(), instance.GetType()));
+                logger.DebugFormat("Tracking instance {0} of type {1}", instance.GetHashCode(), instance.GetType());
         }
 
         public void Dispose()
         {
             trackedObjects.Each((trackedItem) =>
             {
-                //free disposableitems
+                //free disposable items
                 handlerFactory.Release(trackedItem);
                 if (logger != null)
-                    logger.Debug(
-                        m =>
-                            m("Releasing handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType()));
+                    logger.DebugFormat("Releasing handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             //clear our tracking

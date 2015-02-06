@@ -36,16 +36,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using System.Net.Cache;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Threading;
-using Common.Logging;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Parsers;
 using Thinktecture.IdentityModel.Hawk.Client;
 using Thinktecture.IdentityModel.Hawk.Core;

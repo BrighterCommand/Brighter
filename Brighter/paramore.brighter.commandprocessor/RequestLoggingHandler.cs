@@ -35,8 +35,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
 using Newtonsoft.Json;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -80,7 +80,7 @@ namespace paramore.brighter.commandprocessor
         
         private void LogCommand(TRequest request)
         {
-            logger.Info(m => m("Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}", timing.ToString(), typeof (TRequest), JsonConvert.SerializeObject(request),DateTime.UtcNow));
+            logger.InfoFormat("Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}", timing.ToString(), typeof (TRequest), JsonConvert.SerializeObject(request),DateTime.UtcNow);
         }
     }
 }
