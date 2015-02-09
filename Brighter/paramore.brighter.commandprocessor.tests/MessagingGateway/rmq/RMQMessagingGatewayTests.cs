@@ -128,17 +128,13 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         {
             var testGuid = Guid.NewGuid();
             var logger = LogProvider.For<RmqMessageConsumer>();  
-             
             sender = new RmqMessageProducer(logger);
             receiver = new RmqMessageConsumer(logger);
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "test2" , MessageType.MT_COMMAND);
+            var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
             messageHeader.UpdateHandledCount();
-            sentMessage= new Message(
-                    header: messageHeader, 
-                    body:new MessageBody("test content")
-                    );
-                receiver.Purge(sentMessage.Header.Topic);
-            };
+            sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+            receiver.Purge(sentMessage.Header.Topic);
+        };
 
         Because of = () =>
         {
