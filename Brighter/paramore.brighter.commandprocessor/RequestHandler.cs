@@ -103,8 +103,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="instanceScope">The instance scope.</param>
         public void AddToLifetime(IAmALifetime instanceScope)
         {
-            if (this is IDisposable)
-                instanceScope.Add(this);
+            instanceScope.Add(this);
 
             if (_successor != null)
                 _successor.AddToLifetime(instanceScope);
