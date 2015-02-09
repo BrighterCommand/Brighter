@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
@@ -235,29 +236,61 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     public class When_we_have_exercised_the_pipeline_cleanup_its_handlers
     {
         private static PipelineBuilder<MyCommand> Pipeline_Builder;
+        static string released;
 
         Establish context = () =>
         {
+            released = string.Empty;
             var logger = A.Fake<ILog>();
+
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
             registry.Register<MyCommand, MyLoggingHandler<MyCommand>>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>();
-            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
-            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
-            container.Register<ILog>(logger);
+            var handlerFactory = new CheapHandlerFactory();
 
             Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
             Pipeline_Builder.Build(new RequestContext()).Any();
         };
 
+        internal class CheapHandlerFactory : IAmAHandlerFactory
+        {
+            public IHandleRequests Create(Type handlerType)
+            {
+                var logger = A.Fake<ILog>();
+                if (handlerType == typeof (MyPreAndPostDecoratedHandler))
+                {
+                    return new MyPreAndPostDecoratedHandler(logger);
+                }
+                if (handlerType == typeof (MyLoggingHandler<MyCommand>))
+                {
+                    return new MyLoggingHandler<MyCommand>(logger);
+                }
+                if (handlerType == typeof (MyValidationHandler<MyCommand>))
+                {
+                    return new MyValidationHandler<MyCommand>(logger);
+                }
+                return null;
+            }
+
+            public void Release(IHandleRequests handler)
+            {
+                var disposable = handler as IDisposable;
+                if (disposable != null)
+                    disposable.Dispose();
+
+                released += "|" + handler.Name;
+            }
+
+        }
+
+
         Because of = () => Pipeline_Builder.Dispose(); 
 
         It should_have_called_dispose_on_instances_from_ioc = () => MyPreAndPostDecoratedHandler.DisposeWasCalled.ShouldBeTrue();
         It should_have_called_dispose_on_instances_from_pipeline_builder = () => MyLoggingHandler<MyCommand>.DisposeWasCalled.ShouldBeTrue();
+        It should_have_called_release_on_all_handlers = () => released.ShouldEqual("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1");
     }
+
 }
