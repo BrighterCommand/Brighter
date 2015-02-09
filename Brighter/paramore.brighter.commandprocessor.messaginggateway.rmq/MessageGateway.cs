@@ -56,13 +56,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// The <see cref="MessagePump"/> then uses the <see cref="IAmAMessageMapper"/> associated with the configured request type in <see cref="IAmAMessageMapperRegistry"/> to translate between the 
     /// on-the-wire message and the <see cref="Command"/> or <see cref="Event"/>
     /// </summary>
-    public class MessageGateway
+    public class MessageGateway : IDisposable
     {
 
         /// <summary>
         /// The logger
         /// </summary>
-        protected ILog Logger;
+        protected readonly ILog Logger;
         /// <summary>
         /// The configuration
         /// </summary>
@@ -70,7 +70,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// The connection factory
         /// </summary>
-        readonly ConnectionFactory connectionFactory;
+        private readonly ConnectionFactory connectionFactory;
         /// <summary>
         /// The connection
         /// </summary>
@@ -92,7 +92,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             this.Logger = logger;
             Configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
-            connectionFactory = new ConnectionFactory{Uri = Configuration.AMPQUri.Uri.ToString(), AutomaticRecoveryEnabled = true};
+            connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), AutomaticRecoveryEnabled = true };
         }
 
         /// <summary>
@@ -110,13 +110,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             {
                 try
                 {
-                    if (NotConnected())
+                    if (Channel == null || Channel.IsClosed)
                     {
-                        Logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.Uri.ToString());
-                        Connection = Connect(connectionFactory);
+                        if (Channel != null) { Channel.Dispose(); }
+
+                        GetConnection();
 
                         Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.Uri.ToString());
-                        Channel = OpenChannel(Connection);
+
+                        Channel = Connection.CreateModel();
 
                         // Configure the Quality of service for the model.
                         // BasicQos(0="Don't send me a new message until I’ve finished",  1= "Send me one message at a time", false ="Applied separately to each new consumer on the channel")
@@ -133,6 +135,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                             Channel.QueueBind(queueName, Configuration.Exchange.Name, routingKey);
                         }
                     }
+
                     break;
                 }
                 catch (BrokerUnreachableException e)
@@ -168,6 +171,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         }
 
+        private void GetConnection()
+        {
+            if (Connection == null || !Connection.IsOpen)
+            {
+                if (Connection != null) { Connection.Dispose(); }
+
+                Logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.Uri.ToString());
+                Connection = connectionFactory.CreateConnection();
+                ;
+            }
+        }
+
         private Dictionary<string, object> SetQueueArguments()
         {
             var arguments = new Dictionary<string, object>();
@@ -186,46 +201,33 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, configuration.Exchange.Durable);
         }
 
-        private IModel OpenChannel(IConnection connection)
-        {
-            //open a channel on the connection
-            var channel = connection.CreateModel();
-            return channel;
-        }
-
         /// <summary>
-        /// Connects the specified connection factory.
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
-        /// <param name="connectionFactory">The connection factory.</param>
-        /// <returns>IConnection.</returns>
-        protected IConnection Connect(ConnectionFactory connectionFactory)
+        public void Dispose()
         {
-            //create the connection
-            var connection = connectionFactory.CreateConnection();
-            return connection;
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
-        /// <summary>
-        /// Closes the connection.
-        /// </summary>
-        protected void CloseConnection()
+        protected virtual void Dispose(bool disposing)
         {
-            if (Connection != null)
+            if (disposing)
             {
-                if (Connection.IsOpen)
-                    Connection.Close();
-                Connection.Dispose();
-            }
+                if (Channel != null)
+                {
+                    if (Channel.IsOpen) Channel.Close();
 
-            if (Channel != null)
-            {
-                Channel.Dispose();
-            }
-        }
+                    Channel.Dispose();
+                }
 
-        protected bool NotConnected()
-        {
-            return Connection == null || !Connection.IsOpen;
+                if (Connection != null)
+                {
+                    if (Connection.IsOpen) Connection.Close();
+
+                    Connection.Dispose();
+                }
+            }
         }
     }
 }
