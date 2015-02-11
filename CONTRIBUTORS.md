@@ -23,7 +23,7 @@ Paramore contributors (sorted alphabeticaly)
   * Various fixes  
   * 
  
-** [Anthonoy Peyron] (https://github.com/MrHypnos)**
+**[Anthonoy Peyron] (https://github.com/MrHypnos)**
 
  * Stability fixes for Service Activator
 
