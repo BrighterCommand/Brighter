@@ -47,12 +47,31 @@ namespace paramore.brighter.serviceactivator.controlbus.Ports.Handlers
     /// </summary>
     public class ConfigurationMessageHandler : RequestHandler<ConfigurationCommand>
     {
+        readonly IDispatcher dispatcher;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationMessageHandler" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public ConfigurationMessageHandler(ILog logger) : base(logger)
+        /// <param name="dispatcher"></param>
+        public ConfigurationMessageHandler(ILog logger, IDispatcher dispatcher) : base(logger)
         {
+            this.dispatcher = dispatcher;
         }
+
+        #region Overrides of RequestHandler<ConfigurationCommand>
+
+        /// <summary>
+        /// Handles the specified command.
+        /// </summary>
+        /// <param name="command">The command.</param>
+        /// <returns>TRequest.</returns>
+        public override ConfigurationCommand Handle(ConfigurationCommand command)
+        {
+            dispatcher.End();
+            return base.Handle(command);
+        }
+
+        #endregion
     }
 }
