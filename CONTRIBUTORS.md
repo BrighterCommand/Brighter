@@ -21,6 +21,11 @@ Paramore contributors (sorted alphabeticaly)
 **[Eddie Li](https://github.com/xiaodili)**
 
   * Various fixes  
+  * 
+ 
+** [Anthonoy Peyron] (https://github.com/MrHypnos)**
+
+ * Stability fixes for Service Activator
 
 **[Francesco Pighi](https://github.com/fpighi)**
 
