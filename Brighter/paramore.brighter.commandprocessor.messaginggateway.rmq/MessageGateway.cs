@@ -92,7 +92,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             this.Logger = logger;
             Configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
-            connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), AutomaticRecoveryEnabled = true };
+            connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), AutomaticRecoveryEnabled = true, RequestedHeartbeat = 30};
         }
 
         /// <summary>
@@ -112,7 +112,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 {
                     if (Channel == null || Channel.IsClosed)
                     {
-                        if (Channel != null) { Channel.Dispose(); }
+                        if (Channel != null)
+                        {
+                            try { Channel.Dispose(); }
+                            catch (Exception) {}
+                            finally { Channel = null; }
+                        }
 
                         GetConnection();
 
@@ -138,31 +143,34 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
                     break;
                 }
-                catch (BrokerUnreachableException e)
+                catch (BrokerUnreachableException brokerUnreachableException)
                 {
-                    Logger.WarnFormat("RMQMessagingGateway: BrokerUnreachableException on connection to queue {0} via exchange {1} on connection {2}. Will retry {3} times, this {4} attempt: {5}",
-                                queueName,
-                                Configuration.Exchange.Name,
-                                Configuration.AMPQUri.Uri.ToString(),
-                                Configuration.AMPQUri.ConnectionRetryCount,
-                                Configuration.AMPQUri.ConnectionRetryCount - retries + 1,
-                                e);
+                    Logger.WarnException(
+                        "RMQMessagingGateway: BrokerUnreachableException on connection to queue {0} via exchange {1} on connection {2}. Will retry {3} times, this is the {4} attempt",
+                        brokerUnreachableException,
+                        queueName,
+                        Configuration.Exchange.Name,
+                        Configuration.AMPQUri.Uri.ToString(),
+                        Configuration.AMPQUri.ConnectionRetryCount,
+                        Configuration.AMPQUri.ConnectionRetryCount - retries + 1
+                        );
 
                     if (--retries == 0)
                     {
-                        ConnectionFailure = e;
+                        ConnectionFailure = brokerUnreachableException;
                         return false;
                     }
 
                     Task.Delay(Configuration.AMPQUri.RetryWaitInMilliseconds).Wait();
                 }
-                catch (Exception e)
+                catch (Exception exception)
                 {
-                    Logger.WarnFormat("RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2} because of [3}",
+                    Logger.WarnException("RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2}",
+                                exception,
                                 queueName,
                                 Configuration.Exchange.Name,
-                                Configuration.AMPQUri.Uri.ToString(),
-                                e);
+                                Configuration.AMPQUri.Uri.ToString()
+                                );
                     throw;
                 }
             }
@@ -175,11 +183,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             if (Connection == null || !Connection.IsOpen)
             {
-                if (Connection != null) { Connection.Dispose(); }
+                if (Connection != null)
+                {
+                    try { Connection.Dispose(); }
+                    catch (Exception) {}
+                    finally { Connection = null; }
+                }
 
                 Logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.Uri.ToString());
                 Connection = connectionFactory.CreateConnection();
-                ;
             }
         }
 
