@@ -154,14 +154,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
             catch (EndOfStreamException endOfStreamException)
             {
-                Logger.WarnException("RmqMessageConsumer: The consumer {4} was cancelled, the model closed, or the connection went away. Listening to queue {0} via exchange {1} via exchange {2} on connection {3}", endOfStreamException,
+                Logger.DebugException("RmqMessageConsumer: The consumer {4} was cancelled, the model closed, or the connection went away. Listening to queue {0} via exchange {1} via exchange {2} on connection {3}", endOfStreamException,
                             queueName,
                             routingKey,
                             Configuration.Exchange.Name,
                             Configuration.AMPQUri.Uri.ToString(),
                             consumer.ConsumerTag);
-
-                CancelConsumer();
+                consumer = null;
             }
             catch (Exception exception)
             {
@@ -197,8 +196,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             if (consumer == null || !consumer.IsRunning)
             {
-                CancelConsumer();
-
                 if (base.Connect(queueName, routingKey, createQueues))
                 {
                     try
@@ -236,11 +233,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         private void CancelConsumer()
         {
-            if (consumer != null)
+            if (consumer != null )
             {
-                consumer.OnCancel();
-                Channel.BasicCancel(consumer.ConsumerTag);
-                Logger.InfoFormat("RmqMessageConsumer: Canceled consumer with ConsumerTag {0}", consumer.ConsumerTag);
+                if (consumer.IsRunning)
+                {
+                    consumer.OnCancel();
+                    Channel.BasicCancel(consumer.ConsumerTag);
+                }
+
+                Logger.InfoFormat("RmqMessageConsumer: Cancelled consumer with ConsumerTag {0}", consumer.ConsumerTag);
+                consumer = null;
             }
         }
     }
