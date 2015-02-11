@@ -42,7 +42,8 @@
   <ItemGroup>
     <Compile Include="ControlBusBuilder.cs" />
     <Compile Include="ControlBusMessageMapperFactory.cs" />
-    <Compile Include="Ports\Commands\ConfigurationMessage.cs" />
+    <Compile Include="Ports\Commands\ConfigurationCommand.cs" />
+    <Compile Include="Ports\Commands\HeartBeatCommand.cs" />
     <Compile Include="Ports\Handlers\ConfigurationMessageHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

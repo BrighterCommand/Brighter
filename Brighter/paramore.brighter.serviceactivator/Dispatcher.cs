@@ -56,16 +56,22 @@ namespace paramore.brighter.serviceactivator
     {
         private readonly IAmACommandProcessor commandProcessor;
         private readonly IAmAMessageMapperRegistry messageMapperRegistry;
-        private readonly IEnumerable<Connection> _connections;
         private readonly ILog logger;
         private Task controlTask;
         private readonly IList<Task> tasks = new SynchronizedCollection<Task>();
+
+        /// <summary>
+        /// Gets the connections.
+        /// </summary>
+        /// <value>The connections.</value>
+        public IEnumerable<Connection> Connections { get; private set; }
 
         /// <summary>
         /// Gets the <see cref="Consumer"/>s
         /// </summary>
         /// <value>The consumers.</value>
         public IList<Consumer> Consumers { get; private set; }
+
         /// <summary>
         /// Gets the state of the <see cref="Dispatcher"/>
         /// </summary>
@@ -83,7 +89,7 @@ namespace paramore.brighter.serviceactivator
         {
             this.commandProcessor = commandProcessor;
             this.messageMapperRegistry = messageMapperRegistry;
-            _connections = connections;
+            this.Connections = connections;
             this.logger = logger;
             State = DispatcherState.DS_NOTREADY;
 
@@ -94,12 +100,94 @@ namespace paramore.brighter.serviceactivator
         }
 
         /// <summary>
+        /// Stop listening to messages
+        /// </summary>
+        /// <returns>Task.</returns>
+        public Task End()
+        {
+            if (State == DispatcherState.DS_RUNNING)
+            {
+                logger.Debug("Dispatcher: Stopping dispatcher");
+                Consumers.Each((consumer) => consumer.Shut());
+            }
+
+            return controlTask;
+        }
+
+        /// <summary>
+        /// Opens the specified connection by name 
+        /// </summary>
+        /// <param name="connectionName">The name of the connection</param>
+        public void Open(string connectionName)
+        {
+            Open(Connections.SingleOrDefault(c => c.Name == connectionName));
+        }
+
+        /// <summary>
+        /// Opens the specified connection.
+        /// </summary>
+        /// <param name="connection">The connection.</param>
+        public void Open(Connection connection)
+        {
+            logger.DebugFormat("Dispatcher: Opening connection {0}", connection.Name);
+            var addedConsumers = CreateConsumers(new List<Connection>() { connection });
+
+            switch (State)
+            {
+                case DispatcherState.DS_RUNNING:
+                    addedConsumers.Each(
+                        (consumer) =>
+                        {
+                            Consumers.Add(consumer);
+                            consumer.Open();
+                            tasks.Add(consumer.Job);
+                        });
+                    break;
+                case DispatcherState.DS_STOPPED:
+                case DispatcherState.DS_AWAITING:
+                    addedConsumers.Each((consumer) => Consumers.Add(consumer));
+                    Start();
+                    break;
+                default:
+                    throw new InvalidOperationException("The dispatcher is not ready");
+
+            }
+        }
+
+        /// <summary>
         /// Begins listening for messages on channels, and dispatching them to request handlers.
         /// </summary>
         public void Receive()
         {
-            CreateConsumers(_connections).Each(consumer => Consumers.Add(consumer));
+            CreateConsumers(Connections).Each(consumer => Consumers.Add(consumer));
             Start();
+        }
+
+        /// <summary>
+        /// Shuts the specified connection by name
+        /// </summary>
+        /// <param name="connectionName">The name of the connection</param>
+        public void Shut(string connectionName)
+        {
+            Shut(Connections.SingleOrDefault(c => c.Name == connectionName));
+        }
+
+        /// <summary>
+        /// Shuts the specified connection.
+        /// </summary>
+        /// <param name="connection">The connection.</param>
+        public void Shut(Connection connection)
+        {
+            if (State == DispatcherState.DS_RUNNING)
+            {
+                logger.DebugFormat("Dispatcher: Stopping connection {0}", connection.Name);
+                var consumersForConnection = Consumers.Where(consumer => consumer.Name == connection.Name).ToArray();
+                var noOfConsumers = consumersForConnection.Length;
+                for (int i = 0; i < noOfConsumers; ++i)
+                {
+                    consumersForConnection[i].Shut();
+                }
+            }
         }
 
         private void Start()
@@ -152,88 +240,6 @@ namespace paramore.brighter.serviceactivator
                     }
                 },
                 TaskCreationOptions.LongRunning);
-        }
-
-        /// <summary>
-        /// Stop listening to messages
-        /// </summary>
-        /// <returns>Task.</returns>
-        public Task End()
-        {
-            if (State == DispatcherState.DS_RUNNING)
-            {
-                logger.Debug("Dispatcher: Stopping dispatcher");
-                Consumers.Each((consumer) => consumer.Shut());
-            }
-
-            return controlTask;
-        }
-
-        /// <summary>
-        /// Shuts the specified connection by name
-        /// </summary>
-        /// <param name="connectionName">The name of the connection</param>
-        public void Shut(string connectionName)
-        {
-            Shut(_connections.SingleOrDefault(c => c.Name == connectionName));
-        }
-
-        /// <summary>
-        /// Shuts the specified connection.
-        /// </summary>
-        /// <param name="connection">The connection.</param>
-        public void Shut(Connection connection)
-        {
-            if (State == DispatcherState.DS_RUNNING)
-            {
-                logger.DebugFormat("Dispatcher: Stopping connection {0}", connection.Name);
-                var consumersForConnection = Consumers.Where(consumer => consumer.Name == connection.Name).ToArray();
-                var noOfConsumers = consumersForConnection.Length;
-                for (int i = 0; i < noOfConsumers; ++i)
-                {
-                    consumersForConnection[i].Shut();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Opens the specified connection by name 
-        /// </summary>
-        /// <param name="connectionName">The name of the connection</param>
-        public void Open(string connectionName)
-        {
-            Open(_connections.SingleOrDefault(c => c.Name == connectionName));
-        }
-
-        /// <summary>
-        /// Opens the specified connection.
-        /// </summary>
-        /// <param name="connection">The connection.</param>
-        public void Open(Connection connection)
-        {
-            logger.DebugFormat("Dispatcher: Opening connection {0}", connection.Name);
-            var addedConsumers = CreateConsumers(new List<Connection>() { connection });
-
-            switch (State)
-            {
-                case DispatcherState.DS_RUNNING:
-                    addedConsumers.Each(
-                        (consumer) =>
-                        {
-                            Consumers.Add(consumer);
-                            consumer.Open();
-                            tasks.Add(consumer.Job);
-                        });
-                    break;
-                case DispatcherState.DS_STOPPED:
-                case DispatcherState.DS_AWAITING:
-                    addedConsumers.Each((consumer) => Consumers.Add(consumer));
-                    Start();
-                    break;
-                default:
-                    throw new InvalidOperationException("The dispatcher is not ready");
-
-            }
         }
 
         private IEnumerable<Consumer> CreateConsumers(IEnumerable<Connection> connections)
