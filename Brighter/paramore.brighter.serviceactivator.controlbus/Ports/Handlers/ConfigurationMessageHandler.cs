@@ -45,7 +45,7 @@ namespace paramore.brighter.serviceactivator.controlbus.Ports.Handlers
     /// <summary>
     /// Class ConfigurationMessageHandler.
     /// </summary>
-    public class ConfigurationMessageHandler : RequestHandler<ConfigurationMessage>
+    public class ConfigurationMessageHandler : RequestHandler<ConfigurationCommand>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationMessageHandler" /> class.
