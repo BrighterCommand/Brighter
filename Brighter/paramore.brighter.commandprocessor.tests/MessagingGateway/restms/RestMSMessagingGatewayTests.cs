@@ -45,7 +45,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
         {
             var logger = LogProvider.For<RmqMessageConsumer>();
             messageProducer = new RestMsMessageProducer(logger);
-            messageConsumer = new RestMsMessageConsumer(logger);
+            messageConsumer = new RestMsMessageConsumer(QUEUE_NAME, TOPIC, logger);
             message = new Message(
                 header: new MessageHeader(Guid.NewGuid(), TOPIC, MessageType.MT_COMMAND),
                 body: new MessageBody("test content")
@@ -55,19 +55,19 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
 
         Because of = () =>
         {
-            messageConsumer.Receive(QUEUE_NAME, TOPIC, 30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
+            messageConsumer.Receive(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
             messageProducer.Send(message);
-            sentMessage = messageConsumer.Receive(QUEUE_NAME, TOPIC, 30000);
+            sentMessage = messageConsumer.Receive(30000);
             messageBody = sentMessage.Body.Value;
             messageConsumer.Acknowledge(sentMessage);
         };
 
         It should_send_a_message_via_restms_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
-        It should_have_an_empty_pipe_after_acknowledging_the_message = () => ((RestMsMessageConsumer)messageConsumer).NoOfOutstandingMessages(QUEUE_NAME, TOPIC, 30000).ShouldEqual(0);
+        It should_have_an_empty_pipe_after_acknowledging_the_message = () => ((RestMsMessageConsumer)messageConsumer).NoOfOutstandingMessages(30000).ShouldEqual(0);
 
         Cleanup tearDown = () =>
         {
-            messageConsumer.Purge(TOPIC);
+            messageConsumer.Purge();
             messageProducer.Dispose();
         };
 

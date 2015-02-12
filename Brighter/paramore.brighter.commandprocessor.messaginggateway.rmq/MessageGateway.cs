@@ -58,7 +58,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class MessageGateway : IDisposable
     {
-
         /// <summary>
         /// The logger
         /// </summary>
@@ -95,6 +94,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), AutomaticRecoveryEnabled = true, RequestedHeartbeat = 30};
         }
 
+  
+
         /// <summary>
         /// Connects the specified queue name.
         /// </summary>
@@ -102,7 +103,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="routingKey"></param>
         /// <param name="createQueues"></param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        protected virtual bool Connect(string queueName = "", string routingKey = "", bool createQueues = false)
+        protected bool EnsureChannel()
         {
             int retries = Configuration.AMPQUri.ConnectionRetryCount;
 
@@ -131,14 +132,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
                         Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
                         DeclareExchange(Channel, Configuration);
-
-                        if (createQueues)
-                        {
-                            Logger.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", queueName, Configuration.AMPQUri.GetSantizedUri());
-
-                            Channel.QueueDeclare(queueName, false, false, false, SetQueueArguments());
-                            Channel.QueueBind(queueName, Configuration.Exchange.Name, routingKey);
-                        }
                     }
 
                     break;
@@ -146,9 +139,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 catch (BrokerUnreachableException brokerUnreachableException)
                 {
                     Logger.WarnException(
-                        "RMQMessagingGateway: BrokerUnreachableException on connection to queue {0} via exchange {1} on connection {2}. Will retry {3} times, this is the {4} attempt",
+                        "RMQMessagingGateway: Error on connecting to exchange {0} on connection {1}. Will retry {2} times, this is the {3} attempt",
                         brokerUnreachableException,
-                        queueName,
                         Configuration.Exchange.Name,
                         Configuration.AMPQUri.GetSantizedUri(),
                         Configuration.AMPQUri.ConnectionRetryCount,
@@ -165,9 +157,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 }
                 catch (Exception exception)
                 {
-                    Logger.WarnException("RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2}",
+                    Logger.WarnException("RMQMessagingGateway: Exception on connecting to exchange {0} on connection {1}",
                                 exception,
-                                queueName,
                                 Configuration.Exchange.Name,
                                 Configuration.AMPQUri.GetSantizedUri()
                                 );
@@ -193,18 +184,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 Logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.GetSantizedUri());
                 Connection = connectionFactory.CreateConnection();
             }
-        }
-
-        private Dictionary<string, object> SetQueueArguments()
-        {
-            var arguments = new Dictionary<string, object>();
-            QueueIsMirroredAcrossAllNodesInTheCluster(arguments);
-            return arguments;
-        }
-
-        private void QueueIsMirroredAcrossAllNodesInTheCluster(Dictionary<string, object> arguments)
-        {
-            if (Configuration.Queues.HighAvailability) { arguments.Add("x-ha-policy", "all"); }
         }
 
         private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
