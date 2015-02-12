@@ -129,11 +129,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>Message.</returns>
         public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds)
         {
-            Logger.DebugFormat("RmqMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString());
+            Logger.DebugFormat("RmqMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
 
             if (!Connect(queueName, routingKey, true))
             {
-                Logger.DebugFormat("RmqMessageConsumer: Unable to connect to the queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString());
+                Logger.DebugFormat("RmqMessageConsumer: Unable to connect to the queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
                 throw ConnectionFailure;
             }
 
@@ -145,11 +145,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 {
                     message = messageCreator.CreateMessage(fromQueue);
                     Logger.InfoFormat("RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {5}{4}",
-                        queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), JsonConvert.SerializeObject(message), Environment.NewLine);
+                        queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri(), JsonConvert.SerializeObject(message), Environment.NewLine);
                 }
                 else
                 {
-                    Logger.DebugFormat("RmqMessageConsumer: Time out without receiving message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString());
+                    Logger.DebugFormat("RmqMessageConsumer: Time out without receiving message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
                 }
             }
             catch (EndOfStreamException endOfStreamException)
@@ -158,13 +158,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                             queueName,
                             routingKey,
                             Configuration.Exchange.Name,
-                            Configuration.AMPQUri.Uri.ToString(),
+                            Configuration.AMPQUri.GetSantizedUri(),
                             consumer.ConsumerTag);
                 consumer = null;
             }
             catch (Exception exception)
             {
-                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", exception, queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString());
+                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", exception, queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
                 throw;
             }
 
@@ -210,7 +210,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                                 queueName,
                                 routingKey,
                                 Configuration.Exchange.Name,
-                                Configuration.AMPQUri.Uri.ToString()
+                                Configuration.AMPQUri.GetSantizedUri()
                                 );
                         throw;
                     }
@@ -219,7 +219,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                                 queueName,
                                 routingKey,
                                 Configuration.Exchange.Name,
-                                Configuration.AMPQUri.Uri.ToString(),
+                                Configuration.AMPQUri.GetSantizedUri(),
                                 consumer.ConsumerTag);
 
                     return true;

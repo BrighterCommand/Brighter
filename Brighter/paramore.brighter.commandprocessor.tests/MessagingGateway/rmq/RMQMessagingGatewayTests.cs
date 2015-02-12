@@ -37,35 +37,32 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     [Tags("Requires", new[] { "RabbitMQ" })]
     public class When_posting_a_message_via_the_messaging_gateway
     {
-        static IAmAMessageProducer messageProducer;
-        static IAmAMessageConsumer messageConsumer;
-        static Message message;
-        static TestRMQListener client;
-        static string messageBody;
+        private static IAmAMessageProducer messageProducer;
+        private static IAmAMessageConsumer messageConsumer;
+        private static Message message;
+        private static TestRMQListener client;
+        private static string messageBody;
 
-        Establish context = () =>
-            {
-                var logger = LogProvider.For<RmqMessageConsumer>();  
-                messageProducer = new RmqMessageProducer(logger);
-                messageConsumer = new RmqMessageConsumer(logger);
-                message = new Message(
-                    header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), 
-                    body:new MessageBody("test content")
-                    );
+        private Establish context = () =>
+        {
+            var logger = LogProvider.For<RmqMessageConsumer>();
+            messageProducer = new RmqMessageProducer(logger);
+            messageConsumer = new RmqMessageConsumer(logger);
+            message = new Message(header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
-                client = new TestRMQListener(message.Header.Topic);
-                messageConsumer.Purge(message.Header.Topic);
-            };
+            client = new TestRMQListener(message.Header.Topic);
+            messageConsumer.Purge(message.Header.Topic);
+        };
 
-        Because of = () =>
-            {
-                messageProducer.Send(message);
-                messageBody = client.Listen();
-            };
+        private Because of = () =>
+        {
+            messageProducer.Send(message);
+            messageBody = client.Listen();
+        };
 
-        It should_send_a_message_via_rmq_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
+        private It should_send_a_message_via_rmq_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
 
-        Cleanup tearDown = () =>
+        private Cleanup tearDown = () =>
         {
             messageConsumer.Purge(message.Header.Topic);
             messageProducer.Dispose();
@@ -74,16 +71,16 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
     internal class TestRMQListener
     {
-        readonly string channelName;
-        readonly ConnectionFactory connectionFactory;
-        readonly IConnection connection;
-        readonly IModel channel;
+        private readonly string channelName;
+        private readonly ConnectionFactory connectionFactory;
+        private readonly IConnection connection;
+        private readonly IModel channel;
 
         public TestRMQListener(string channelName)
         {
             this.channelName = channelName;
-            var configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration(); 
-            connectionFactory = new ConnectionFactory{Uri = configuration.AMPQUri.Uri.ToString()};
+            var configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
+            connectionFactory = new ConnectionFactory { Uri = configuration.AMPQUri.Uri.ToString() };
             connection = connectionFactory.CreateConnection();
             channel = connection.CreateModel();
             channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, false);
@@ -108,8 +105,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 //Added wait as rabbit needs some time to sort it self out and the close and dispose was happening to quickly
                 Task.Delay(200).Wait();
                 channel.Dispose();
-                if (connection.IsOpen)
-                    connection.Dispose();
+                if (connection.IsOpen) connection.Dispose();
             }
             return null;
         }
@@ -119,15 +115,15 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     [Tags("Requires", new[] { "RabbitMQ" })]
     public class When_reading_a_message_via_the_messaging_gateway
     {
-        static IAmAMessageProducer sender;
-        static IAmAMessageConsumer receiver;
-        static Message sentMessage;
-        static Message receivedMessage;
+        private static IAmAMessageProducer sender;
+        private static IAmAMessageConsumer receiver;
+        private static Message sentMessage;
+        private static Message receivedMessage;
 
-        Establish context = () =>
+        private Establish context = () =>
         {
             var testGuid = Guid.NewGuid();
-            var logger = LogProvider.For<RmqMessageConsumer>();  
+            var logger = LogProvider.For<RmqMessageConsumer>();
             sender = new RmqMessageProducer(logger);
             receiver = new RmqMessageConsumer(logger);
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
@@ -136,20 +132,20 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             receiver.Purge(sentMessage.Header.Topic);
         };
 
-        Because of = () =>
+        private Because of = () =>
         {
             sender.Send(sentMessage);
             receivedMessage = receiver.Receive(sentMessage.Header.Topic, sentMessage.Header.Topic, 2000);
             receiver.Acknowledge(receivedMessage);
         };
 
-        It should_send_a_message_via_rmq_with_the_matching_body = () => receivedMessage.ShouldEqual(sentMessage);
+        private It should_send_a_message_via_rmq_with_the_matching_body = () => receivedMessage.ShouldEqual(sentMessage);
 
-      Cleanup teardown = () =>
-      {
-          receiver.Purge(sentMessage.Header.Topic);
-          sender.Dispose();
-          receiver.Dispose();
-      };
+        private Cleanup teardown = () =>
+        {
+            receiver.Purge(sentMessage.Header.Topic);
+            sender.Dispose();
+            receiver.Dispose();
+        };
     }
 }

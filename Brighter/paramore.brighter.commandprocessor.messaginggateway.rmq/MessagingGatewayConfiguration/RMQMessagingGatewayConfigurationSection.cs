@@ -124,12 +124,31 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
     /// </summary>
     public class AMQPUriSpecification : ConfigurationElement
     {
+        private string santizedUri = null;
         /// <summary>
         /// Gets or sets the URI.
         /// </summary>
         /// <value>The URI.</value>
         [ConfigurationProperty("uri", DefaultValue = "amqp://guest:guest@localhost:5672/%2f", IsRequired = true)]
-        public Uri Uri { get { return (Uri)this["uri"]; } set { this["uri"] = value; } }
+        public Uri Uri
+        {
+            get { return (Uri)this["uri"]; } 
+            set { this["uri"] = value; }
+        }
+
+        public string GetSantizedUri()
+        {
+            if (santizedUri == null)
+            {
+                var uri = Uri.ToString();
+                var positionOfSlashSlash = uri.IndexOf("//", StringComparison.InvariantCulture) + 2;
+                var usernameAndPassword = uri.Substring(positionOfSlashSlash, uri.IndexOf('@') - positionOfSlashSlash);
+                santizedUri = uri.Replace(usernameAndPassword, "*****");
+            }
+
+            return santizedUri;
+        }
+
         /// <summary>
         /// Gets or sets the retry count for when a connection fails
         /// </summary>

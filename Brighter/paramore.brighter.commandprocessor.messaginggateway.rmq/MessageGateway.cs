@@ -121,7 +121,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
                         GetConnection();
 
-                        Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.Uri.ToString());
+                        Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.GetSantizedUri());
 
                         Channel = Connection.CreateModel();
 
@@ -129,12 +129,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                         // BasicQos(0="Don't send me a new message until I’ve finished",  1= "Send me one message at a time", false ="Applied separately to each new consumer on the channel")
                         Channel.BasicQos(0, Configuration.Queues.QosPrefetchSize, false);
 
-                        Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString());
+                        Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
                         DeclareExchange(Channel, Configuration);
 
                         if (createQueues)
                         {
-                            Logger.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", queueName, Configuration.AMPQUri.Uri.ToString());
+                            Logger.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", queueName, Configuration.AMPQUri.GetSantizedUri());
 
                             Channel.QueueDeclare(queueName, false, false, false, SetQueueArguments());
                             Channel.QueueBind(queueName, Configuration.Exchange.Name, routingKey);
@@ -150,7 +150,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                         brokerUnreachableException,
                         queueName,
                         Configuration.Exchange.Name,
-                        Configuration.AMPQUri.Uri.ToString(),
+                        Configuration.AMPQUri.GetSantizedUri(),
                         Configuration.AMPQUri.ConnectionRetryCount,
                         Configuration.AMPQUri.ConnectionRetryCount - retries + 1
                         );
@@ -169,7 +169,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                                 exception,
                                 queueName,
                                 Configuration.Exchange.Name,
-                                Configuration.AMPQUri.Uri.ToString()
+                                Configuration.AMPQUri.GetSantizedUri()
                                 );
                     throw;
                 }
@@ -190,7 +190,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     finally { Connection = null; }
                 }
 
-                Logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.Uri.ToString());
+                Logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.GetSantizedUri());
                 Connection = connectionFactory.CreateConnection();
             }
         }
