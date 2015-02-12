@@ -49,6 +49,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMsMessageConsumer : RestMSMessageGateway, IAmAMessageConsumer
     {
+        private readonly string queueName;
+        private readonly string routingKey;
         Pipe pipe;
         readonly Feed feed;
         readonly Domain domain; 
@@ -57,8 +59,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// Initializes a new instance of the <see cref="RestMsMessageConsumer"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RestMsMessageConsumer(ILog logger) : base(logger)
+        public RestMsMessageConsumer(string queueName, string routingKey, ILog logger)
+            : base(logger)
         {
+            this.queueName = queueName;
+            this.routingKey = routingKey;
             feed = new Feed(this);
             domain = new Domain(this); 
         }
@@ -79,7 +84,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds = -1)
+        public Message Receive(int timeoutInMilliseconds = -1)
         {
             try
             {
@@ -121,7 +126,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="routingKey">The routing key.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>System.Int32.</returns>
-        public int NoOfOutstandingMessages(string queueName, string routingKey, int timeoutInMilliseconds = -1)
+        public int NoOfOutstandingMessages(int timeoutInMilliseconds = -1)
         {
             try
             {
@@ -146,7 +151,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         /// <exception cref="System.NotImplementedException"></exception>
-        public void Purge(string queueName)
+        public void Purge()
         {
             try
             {

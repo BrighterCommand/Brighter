@@ -161,7 +161,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         /// <summary>
         /// The time in milliseconds to wait before retrying to connect again
         /// </summary>
-        [ConfigurationProperty("retryWaitInMilliseconds", DefaultValue = "500", IsRequired = false)]
+        [ConfigurationProperty("retryWaitInMilliseconds", DefaultValue = "1000", IsRequired = false)]
         public int RetryWaitInMilliseconds
         {
             get { return (int)this["retryWaitInMilliseconds"]; }

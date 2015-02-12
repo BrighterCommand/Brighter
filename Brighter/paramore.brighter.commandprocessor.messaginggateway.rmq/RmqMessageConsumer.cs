@@ -36,12 +36,14 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using RabbitMQ.Client.Exceptions;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
@@ -53,6 +55,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessageConsumer : MessageGateway, IAmAMessageConsumer 
     {
+        private readonly string queueName;
+        private readonly string routingKey;
         const bool AUTO_ACK = false;
         /// <summary>
         /// The consumer
@@ -64,8 +68,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RmqMessageConsumer(ILog logger) : base(logger)
+        public RmqMessageConsumer(string queueName, string routingKey, ILog logger): base(logger)
         {
+            this.queueName = queueName;
+            this.routingKey = routingKey;
             messageCreator = new RmqMessageCreator(logger);
         }
 
@@ -74,37 +80,30 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
-         {
-            if (Channel != null)
-            {
-                var deliveryTag = message.GetDeliveryTag();
-                Logger.InfoFormat("RmqMessageConsumer: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag);
-                Channel.BasicAck(deliveryTag, false);
-            }
+        {
+            EnsureChannel();
+            var deliveryTag = message.GetDeliveryTag();
+            Logger.InfoFormat("RmqMessageConsumer: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag);
+            Channel.BasicAck(deliveryTag, false);
          }
 
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
-        public void Purge(string queueName)
+        public void Purge()
         {
-            if (Channel != null)
-            {
-                Logger.DebugFormat("RmqMessageConsumer: Purging channel");
-                Channel.QueuePurge(queueName);
-            }
+            EnsureChannel();
+            Logger.DebugFormat("RmqMessageConsumer: Purging channel");
+            Channel.QueuePurge(queueName);
         }
 
         public void Requeue(Message message)
         {
-            if (Channel != null)
-            {
-                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
-                Logger.DebugFormat("RmqMessageConsumer: Re-queueing message");
-                rmqMessagePublisher.PublishMessage(message);
-                Reject(message, false);
-            }
+            EnsureChannel();
+            var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
+            Logger.DebugFormat("RmqMessageConsumer: Re-queueing message");
+            rmqMessagePublisher.PublishMessage(message);
+            Reject(message, false);
         }
 
         /// <summary>
@@ -114,32 +113,24 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         public void Reject(Message message, bool requeue)
         {
-            if (Channel != null)
-            {
-                Logger.DebugFormat("RmqMessageConsumer: NoAck message {0}", message.Id);
-                Channel.BasicNack(message.GetDeliveryTag(), false, requeue);
-            }
+            EnsureChannel();
+            Logger.DebugFormat("RmqMessageConsumer: NoAck message {0}", message.Id);
+            Channel.BasicNack(message.GetDeliveryTag(), false, requeue);
         }
 
         /// <summary>
         /// Receives the specified queue name.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        public Message Receive(string queueName, string routingKey, int timeoutInMilliseconds)
+        public Message Receive(int timeoutInMilliseconds)
         {
             Logger.DebugFormat("RmqMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
-
-            if (!Connect(queueName, routingKey, true))
-            {
-                Logger.DebugFormat("RmqMessageConsumer: Unable to connect to the queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
-                throw ConnectionFailure;
-            }
 
             var message = new Message();
             try
             {
+                EnsureConsumer();
                 BasicDeliverEventArgs fromQueue;
                 if (consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue))
                 {
@@ -189,14 +180,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// Connects the specified queue name.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
-        /// <param name="routingKey"></param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        protected override bool Connect(string queueName = "", string routingKey = "", bool createQueues = false)
+        private bool EnsureConsumer()
         {
             if (consumer == null || !consumer.IsRunning)
             {
-                if (base.Connect(queueName, routingKey, createQueues))
+                if (EnsureChannelBind())
                 {
                     try
                     {
@@ -205,7 +194,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     }
                     catch (Exception exception) 
                     {
-                        Logger.WarnException("RmqMessageConsumer: Failed to created consumer queue {0} with routing key {1} via exchange {2} on connection {3}", 
+                        Logger.WarnException("RmqMessageConsumer: Failed to created consumer for queue {0} with routing key {1} via exchange {2} on connection {3}", 
                                 exception,
                                 queueName,
                                 routingKey,
@@ -229,6 +218,55 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
 
             return true;
+        }
+
+        private bool EnsureChannelBind()
+        {
+            if (EnsureChannel())
+            {
+                try
+                {
+                    Logger.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", queueName, Configuration.AMPQUri.GetSantizedUri());
+                    Channel.QueueDeclare(queueName, false, false, false, SetQueueArguments());
+                    Channel.QueueBind(queueName, Configuration.Exchange.Name, routingKey);
+                }
+                catch (BrokerUnreachableException brokerUnreachableException)
+                {
+                    Logger.WarnException(
+                        "RMQMessagingGateway: Error on binding to queue {0} via exchange {1} on connection {2}.",
+                        brokerUnreachableException,
+                        queueName,
+                        Configuration.Exchange.Name,
+                        Configuration.AMPQUri.GetSantizedUri()
+                        );
+
+                    return false;
+                }
+                catch (Exception exception)
+                {
+                    Logger.WarnException(
+                        "RMQMessagingGateway: Exception on binding to queue {0} via exchange {1} on connection {2}",
+                        exception,
+                        queueName,
+                        Configuration.Exchange.Name,
+                        Configuration.AMPQUri.GetSantizedUri());
+                    throw;
+                }
+            }
+
+            return true;
+        }
+
+        private Dictionary<string, object> SetQueueArguments()
+        {
+            var arguments = new Dictionary<string, object>();
+            QueueIsMirroredAcrossAllNodesInTheCluster(arguments);
+            return arguments;
+        }
+
+        private void QueueIsMirroredAcrossAllNodesInTheCluster(Dictionary<string, object> arguments)
+        {
+            if (Configuration.Queues.HighAvailability) { arguments.Add("x-ha-policy", "all"); }
         }
 
         private void CancelConsumer()

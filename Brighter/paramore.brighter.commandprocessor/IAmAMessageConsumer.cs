@@ -47,10 +47,9 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Receives the specified queue name.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        Message Receive(string queueName, string routingKey, int timeoutInMilliseconds);
+        Message Receive(int timeoutInMilliseconds);
         /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
@@ -65,8 +64,7 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
-        void Purge(string queueName);
+        void Purge();
         /// <summary>
         /// Requeues the specified message.
         /// </summary>
