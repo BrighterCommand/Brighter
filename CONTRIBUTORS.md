@@ -21,7 +21,9 @@ Paramore contributors (sorted alphabeticaly)
 **[Eddie Li](https://github.com/xiaodili)**
 
   * Various fixes  
-  * 
+   
+**[Solveig Oskarsdottir] (https://github.com/solveigo)**
+ * QA of Brighter
  
 **[Anthonoy Peyron] (https://github.com/MrHypnos)**
 
