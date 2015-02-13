@@ -78,10 +78,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// The channel
         /// </summary>
         protected IModel Channel;
-        /// <summary>
-        /// The connection failure
-        /// </summary>
-        protected BrokerUnreachableException ConnectionFailure;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway"/> class.
@@ -91,10 +87,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             this.Logger = logger;
             Configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
-            connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), AutomaticRecoveryEnabled = true, RequestedHeartbeat = 30};
+            connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), RequestedHeartbeat = 30};
         }
-
-  
 
         /// <summary>
         /// Connects the specified queue name.
@@ -165,7 +159,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
                     if (--retries == 0)
                     {
-                        ConnectionFailure = brokerUnreachableException;
                         return false;
                     }
 
