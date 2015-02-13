@@ -138,6 +138,22 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 }
                 catch (BrokerUnreachableException brokerUnreachableException)
                 {
+                    if (Configuration.AMPQUri.ConnectionRetryCount == -1)
+                    {
+                        Logger.ErrorException(
+                        "RMQMessagingGateway: Error on connecting to exchange {0} on connection {1}. Will retry {2} times, this is the {3} attempt",
+                        brokerUnreachableException,
+                        Configuration.Exchange.Name,
+                        Configuration.AMPQUri.GetSantizedUri(),
+                        Configuration.AMPQUri.ConnectionRetryCount,
+                        retries++
+                        );
+
+                        Task.Delay(Configuration.AMPQUri.RetryWaitInMilliseconds).Wait();
+
+                        continue;
+                    }
+                    
                     Logger.WarnException(
                         "RMQMessagingGateway: Error on connecting to exchange {0} on connection {1}. Will retry {2} times, this is the {3} attempt",
                         brokerUnreachableException,
