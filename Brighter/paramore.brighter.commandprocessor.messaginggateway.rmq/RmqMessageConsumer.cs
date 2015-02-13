@@ -81,29 +81,53 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
-            EnsureChannel();
             var deliveryTag = message.GetDeliveryTag();
-            Logger.InfoFormat("RmqMessageConsumer: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag);
-            Channel.BasicAck(deliveryTag, false);
-         }
+            try
+            {
+                EnsureChannel();
+                Logger.InfoFormat("RmqMessageConsumer: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag);
+                Channel.BasicAck(deliveryTag, false);
+            }
+            catch (Exception exception) 
+            {
+                Logger.ErrorException("RmqMessageConsumer: Error acknowledging message {0} as completed with delivery tag {1}", exception, message.Id, deliveryTag);
+                throw;
+            }
+        }
 
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
         public void Purge()
         {
-            EnsureChannel();
-            Logger.DebugFormat("RmqMessageConsumer: Purging channel");
-            Channel.QueuePurge(queueName);
+            try
+            {
+                EnsureChannel();
+                Logger.DebugFormat("RmqMessageConsumer: Purging channel {0}", queueName);
+                Channel.QueuePurge(queueName);
+            }
+            catch (Exception exception) 
+            {
+                Logger.ErrorException("RmqMessageConsumer: Error purging channel {0}", exception, queueName);
+                throw;
+            }
         }
 
         public void Requeue(Message message)
         {
-            EnsureChannel();
-            var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
-            Logger.DebugFormat("RmqMessageConsumer: Re-queueing message");
-            rmqMessagePublisher.PublishMessage(message);
-            Reject(message, false);
+            try
+            {
+                EnsureChannel();
+                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
+                Logger.DebugFormat("RmqMessageConsumer: Re-queueing message {0}", message.Id);
+                rmqMessagePublisher.PublishMessage(message);
+                Reject(message, false);
+            }
+            catch (Exception exception) 
+            {
+                Logger.ErrorException("RmqMessageConsumer: Error re-queueing message {0}", exception, message.Id);
+                throw;
+            }
         }
 
         /// <summary>
@@ -113,9 +137,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         public void Reject(Message message, bool requeue)
         {
-            EnsureChannel();
-            Logger.DebugFormat("RmqMessageConsumer: NoAck message {0}", message.Id);
-            Channel.BasicNack(message.GetDeliveryTag(), false, requeue);
+            try
+            {
+                EnsureChannel();
+                Logger.DebugFormat("RmqMessageConsumer: NoAck message {0}", message.Id);
+                Channel.BasicNack(message.GetDeliveryTag(), false, requeue);
+            }
+            catch (Exception exception) 
+            {
+                Logger.ErrorException("RmqMessageConsumer: Error try to NoAck message {0}", exception, message.Id);
+                throw;
+            }
         }
 
         /// <summary>
