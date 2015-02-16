@@ -53,9 +53,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RmqMessageProducer(ILog logger) : base(logger)
-        {
-        }
+        public RmqMessageProducer(ILog logger): base(logger){}
 
         /// <summary>
         /// Sends the specified message.
@@ -69,18 +67,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             Logger.DebugFormat("RmqMessageProducer: Preparing  to sending message via exchange {0}", Configuration.Exchange.Name);
 
-            if (!Connect())
-            {
-                tcs.SetException(ConnectionFailure);
-                throw ConnectionFailure;
-            }
-
             try
             {
+                EnsureChannel();
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
-                Logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, message.Body.Value);
+                Logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri(), message.Header.Topic, message.Id, message.Body.Value);
                 rmqMessagePublisher.PublishMessage(message);
-                Logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with topic {2} and id {3} and message: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow);
+                Logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with topic {2} and id {3} and message: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow);
             }
             catch (Exception e)
             {

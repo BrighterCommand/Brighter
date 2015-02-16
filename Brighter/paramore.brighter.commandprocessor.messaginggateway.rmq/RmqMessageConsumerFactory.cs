@@ -59,9 +59,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Creates this instance.
         /// </summary>
         /// <returns>IAmAMessageConsumer.</returns>
-        public IAmAMessageConsumer Create()
+        public IAmAMessageConsumer Create(string queueName, string routingKey)
         {
-            return new RmqMessageConsumer(logger);
+            return new RmqMessageConsumer(queueName, routingKey, logger);
         }
     }
 }
