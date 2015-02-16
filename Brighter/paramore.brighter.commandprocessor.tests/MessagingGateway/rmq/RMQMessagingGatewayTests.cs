@@ -26,10 +26,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.commandprocessor.tests.MessagingGateway.TestDoubles;
+using Polly.CircuitBreaker;
 using RabbitMQ.Client;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using RabbitMQ.Client.Exceptions;
 
 namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 {
@@ -37,11 +40,11 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     [Tags("Requires", new[] { "RabbitMQ" })]
     public class When_posting_a_message_via_the_messaging_gateway
     {
-        private static IAmAMessageProducer messageProducer;
-        private static IAmAMessageConsumer messageConsumer;
-        private static Message message;
-        private static TestRMQListener client;
-        private static string messageBody;
+        static IAmAMessageProducer messageProducer;
+        static IAmAMessageConsumer messageConsumer;
+        static Message message;
+        static TestRMQListener client;
+        static string messageBody;
 
         private Establish context = () =>
         {
@@ -56,15 +59,15 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             messageConsumer.Purge();
         };
 
-        private Because of = () =>
+        Because of = () =>
         {
             messageProducer.Send(message);
             messageBody = client.Listen();
         };
 
-        private It should_send_a_message_via_rmq_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
+        It should_send_a_message_via_rmq_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
 
-        private Cleanup tearDown = () =>
+        Cleanup tearDown = () =>
         {
             messageConsumer.Purge();
             messageProducer.Dispose();
@@ -73,10 +76,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
     internal class TestRMQListener
     {
-        private readonly string channelName;
-        private readonly ConnectionFactory connectionFactory;
-        private readonly IConnection connection;
-        private readonly IModel channel;
+        readonly string channelName;
+        readonly ConnectionFactory connectionFactory;
+        readonly IConnection connection;
+        readonly IModel channel;
 
         public TestRMQListener(string channelName)
         {
@@ -117,10 +120,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     [Tags("Requires", new[] { "RabbitMQ" })]
     public class When_reading_a_message_via_the_messaging_gateway
     {
-        private static IAmAMessageProducer sender;
-        private static IAmAMessageConsumer receiver;
-        private static Message sentMessage;
-        private static Message receivedMessage;
+        static IAmAMessageProducer sender;
+        static IAmAMessageConsumer receiver;
+        static Message sentMessage;
+        static Message receivedMessage;
 
         private Establish context = () =>
         {
@@ -138,20 +141,66 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             receiver.Purge();
         };
 
-        private Because of = () =>
+        Because of = () =>
         {
             sender.Send(sentMessage);
             receivedMessage = receiver.Receive(2000);
             receiver.Acknowledge(receivedMessage);
         };
 
-        private It should_send_a_message_via_rmq_with_the_matching_body = () => receivedMessage.ShouldEqual(sentMessage);
+        It should_send_a_message_via_rmq_with_the_matching_body = () => receivedMessage.ShouldEqual(sentMessage);
 
-        private Cleanup teardown = () =>
+        Cleanup teardown = () =>
         {
             receiver.Purge();
             sender.Dispose();
             receiver.Dispose();
         };
+    }
+
+    [Subject("Messaging Gateway")]
+    [Tags("Requires", new[] { "RabbitMQ" })]
+    public class When_a_message_consumer_throws_an_exception_when_connecting_should_retry_until_circuit_breaks
+    {
+        static IAmAMessageProducer sender;
+        static IAmAMessageConsumer receiver;
+        static IAmAMessageConsumer badReceiver;
+        static Message sentMessage;
+        static Exception expectedException;
+        static Exception firstException;
+
+        Establish context = () =>
+        {
+            var logger = LogProvider.For<TestRmqMessageConsumer>();
+
+            var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
+
+            messageHeader.UpdateHandledCount();
+            sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+
+            sender = new RmqMessageProducer(logger);
+            receiver = new RmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
+            badReceiver = new TestRmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
+
+            receiver.Purge();
+            sender.Send(sentMessage);
+        };
+
+        Because of = () =>
+                     {
+                         firstException = Catch.Exception(() => badReceiver.Receive(2000));
+                         expectedException = Catch.Exception(() => badReceiver.Receive(2000));
+                     };
+
+        It should_have_caught_an_unreachable_exception = () => firstException.ShouldBeOfExactType<BrokerUnreachableException>(); 
+        It should_have_caught_an_expected_exception = () => expectedException.ShouldBeOfExactType<BrokenCircuitException>(); 
+
+        Cleanup teardown = () =>
+        {
+            receiver.Purge();
+            sender.Dispose();
+            receiver.Dispose();
+        };
+
     }
 }

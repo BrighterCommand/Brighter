@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
@@ -220,14 +221,17 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static CommandProcessor commandProcessor;
         static readonly MyCommand myCommand = new MyCommand();
         static Message message;
-        static IAmAMessageStore<Message> commandRepository;
+        static IAmAMessageStore<Message> messageStore;
         static IAmAMessageProducer messagingGateway ;
         
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
-            commandRepository = A.Fake<IAmAMessageStore<Message>>();
+            messageStore = A.Fake<IAmAMessageStore<Message>>();
+            var tcs = new TaskCompletionSource<object>();
+            tcs.SetResult(new object());
+            A.CallTo(() => messageStore.Add(A<Message>.Ignored)).Returns(tcs.Task);
             messagingGateway = A.Fake<IAmAMessageProducer>();
             message = new Message(
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
@@ -249,7 +253,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
                 messageMapperRegistry, 
-                commandRepository, 
+                messageStore, 
                 messagingGateway, 
                 logger);
 
@@ -257,7 +261,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () => commandProcessor.Post(myCommand);
 
-        It should_store_the_message_in_the_sent_command_message_repository = () => commandRepository.Add(message);
+        It should_store_the_message_in_the_sent_command_message_repository = () => messageStore.Add(message);
         It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.Send(message)).MustHaveHappened();
     }
 
@@ -267,14 +271,18 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static CommandProcessor commandProcessor;
         static readonly MyCommand myCommand = new MyCommand();
         static Message message;
-        static IAmAMessageStore<Message> commandRepository;
+        static IAmAMessageStore<Message> messageStore;
         static IAmAMessageProducer messagingGateway ;
         
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
-            commandRepository = A.Fake<IAmAMessageStore<Message>>();
+            messageStore = A.Fake<IAmAMessageStore<Message>>();
+            var tcs = new TaskCompletionSource<object>();
+            tcs.SetResult(new object());
+            A.CallTo(() => messageStore.Add(A<Message>.Ignored)).Returns(tcs.Task);
+
             messagingGateway = A.Fake<IAmAMessageProducer>();
             message = new Message(
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand",messageType: MessageType.MT_COMMAND),
@@ -288,12 +296,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            A.CallTo(() => commandRepository.Get(message.Header.Id)).Returns(message);
+            A.CallTo(() => messageStore.Get(message.Header.Id)).Returns(message);
             commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
                 new MessageMapperRegistry(new TinyIoCMessageMapperFactory(new TinyIoCContainer())), 
-                commandRepository, 
+                messageStore, 
                 messagingGateway, 
                 logger);
         };
@@ -365,7 +373,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static CommandProcessor commandProcessor;
         static readonly MyCommand myCommand = new MyCommand();
         static Message message;
-        static IAmAMessageStore<Message> commandRepository;
+        static IAmAMessageStore<Message> messageStore;
         static IAmAMessageProducer messagingGateway ;
         static Exception failedException;
         static BrokenCircuitException circuitBrokenException;
@@ -374,7 +382,11 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
-            commandRepository = A.Fake<IAmAMessageStore<Message>>();
+            messageStore = A.Fake<IAmAMessageStore<Message>>();
+            var tcs = new TaskCompletionSource<object>();
+            tcs.SetResult(new object());
+            A.CallTo(() => messageStore.Add(A<Message>.Ignored)).Returns(tcs.Task);
+
             messagingGateway = A.Fake<IAmAMessageProducer>();
             message = new Message(
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand",messageType: MessageType.MT_COMMAND),
@@ -402,7 +414,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
                 messageMapperRegistry, 
-                commandRepository, 
+                messageStore, 
                 messagingGateway, 
                 logger);       
         };

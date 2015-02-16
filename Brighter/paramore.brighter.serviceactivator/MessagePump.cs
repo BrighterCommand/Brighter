@@ -145,12 +145,21 @@ namespace paramore.brighter.serviceactivator
                 catch (ConfigurationException configurationException)
                 {
                     if (Logger != null)
-                        Logger.DebugFormat("MessagePump: {0} Stopping receiving of messages for {2} on thread # {1} because of {3}", configurationException.Message, Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString(), configurationException);
+                        Logger.DebugFormat("MessagePump: {0} Stopping receiving of messages for {2} on thread # {1} because of {3}",
+                                           configurationException.Message, 
+                                           Thread.CurrentThread.ManagedThreadId, 
+                                           messageMapper.GetType().ToString(),
+                                           configurationException);
                     break;
                 }
                 catch (RequeueException)
                 {
                     RequeueMessage(message);
+                }
+                catch (ConnectionFailureException)
+                {
+                    RejectMessage(message);
+                    break;
                 }
                 catch (AggregateException aggregateException)
                 {
@@ -188,7 +197,47 @@ namespace paramore.brighter.serviceactivator
                 Logger.DebugFormat("MessagePump: Finished running message loop, no longer receiving messages for {0} on thread # {1}", messageMapper.GetType().ToString(), Thread.CurrentThread.ManagedThreadId);
         }
 
-        private void RequeueMessage(Message message)
+
+        void AcknowledgeMessage(Message message)
+        {
+            if (Logger != null) 
+                Logger.DebugFormat("MessagePump: Acknowledge message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId);
+            Channel.Acknowledge(message);
+        }
+
+        bool DiscardRequeuedMessagesEnabled()
+        {
+            return RequeueCount != -1;
+        }
+
+        void DispatchRequest(MessageType messageType, TRequest request)
+        {
+            if (Logger != null) 
+                Logger.DebugFormat("MessagePump: Dispatching message {0} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId);
+            switch (messageType)
+            {
+                case MessageType.MT_COMMAND:
+                    {
+                        commandProcessor.Send(request);
+                        break;
+                    }
+                case MessageType.MT_DOCUMENT:
+                case MessageType.MT_EVENT:
+                    {
+                        commandProcessor.Publish(request);
+                        break;
+                    }
+            }
+        }
+
+        void RejectMessage(Message message)
+        {
+            if (Logger != null)
+                Logger.DebugFormat("MessagePump: Rejecting message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId);
+            Channel.Reject(message);
+        }
+
+        void RequeueMessage(Message message)
         {
             message.UpdateHandledCount();
 
@@ -209,39 +258,7 @@ namespace paramore.brighter.serviceactivator
             Channel.Requeue(message);
         }
 
-        private bool DiscardRequeuedMessagesEnabled()
-        {
-            return RequeueCount != -1;
-        }
-
-        private void AcknowledgeMessage(Message message)
-        {
-            if (Logger != null) 
-                Logger.DebugFormat("MessagePump: Acknowledge message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId);
-            Channel.Acknowledge(message);
-        }
-
-        private void DispatchRequest(MessageType messageType, TRequest request)
-        {
-            if (Logger != null) 
-                Logger.DebugFormat("MessagePump: Dispatching message {0} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId);
-            switch (messageType)
-            {
-                case MessageType.MT_COMMAND:
-                    {
-                        commandProcessor.Send(request);
-                        break;
-                    }
-                case MessageType.MT_DOCUMENT:
-                case MessageType.MT_EVENT:
-                    {
-                        commandProcessor.Publish(request);
-                        break;
-                    }
-            }
-        }
-
-        private TRequest TranslateMessage(Message message)
+        TRequest TranslateMessage(Message message)
         {
             if (messageMapper == null)
             {
