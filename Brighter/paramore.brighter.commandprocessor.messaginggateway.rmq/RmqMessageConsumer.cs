@@ -41,6 +41,7 @@ using System.IO;
 
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
+using Polly.CircuitBreaker;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
@@ -167,23 +168,39 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 if (consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue))
                 {
                     message = messageCreator.CreateMessage(fromQueue);
-                    Logger.InfoFormat("RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {5}{4}",
-                        queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri(), JsonConvert.SerializeObject(message), Environment.NewLine);
+                    Logger.InfoFormat(
+                        "RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {5}{4}",
+                        queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri(), JsonConvert.SerializeObject(message),
+                        Environment.NewLine);
                 }
                 else
                 {
-                    Logger.DebugFormat("RmqMessageConsumer: Time out without receiving message from queue {0} with routing key {1} via exchange {2} on connection {3}", queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
+                    Logger.DebugFormat(
+                        "RmqMessageConsumer: Time out without receiving message from queue {0} with routing key {1} via exchange {2} on connection {3}",
+                        queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
                 }
             }
             catch (EndOfStreamException endOfStreamException)
             {
-                Logger.DebugException("RmqMessageConsumer: The consumer {4} was cancelled, the model closed, or the connection went away. Listening to queue {0} via exchange {1} via exchange {2} on connection {3}", endOfStreamException,
-                            queueName,
-                            routingKey,
-                            Configuration.Exchange.Name,
-                            Configuration.AMPQUri.GetSantizedUri(),
-                            consumer.ConsumerTag);
+                Logger.DebugException(
+                    "RmqMessageConsumer: The consumer {4} was canceled, the model closed, or the connection went away. Listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    endOfStreamException,
+                    queueName,
+                    routingKey,
+                    Configuration.Exchange.Name,
+                    Configuration.AMPQUri.GetSantizedUri(),
+                    consumer.ConsumerTag);
                 consumer = null;
+            }
+            catch (BrokerUnreachableException bue)
+            {
+                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", bue, queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
+                throw new ConnectionFailureException("Error connecting to RabbitMQ, see inner exception for details", bue);
+            }
+            catch (BrokenCircuitException bce)
+            {
+                Logger.ErrorException("CIRCUIT BROKEN: RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", bce, queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
+                throw new ConnectionFailureException("Error connecting to RabbitMQ, see inner exception for details", bce);
             }
             catch (Exception exception)
             {

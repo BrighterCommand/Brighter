@@ -57,8 +57,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         static MessageHeader ReadMessageHeaders(RestMSMessage restMSMessage)
         {
-            bool failure = false;
-
             var messageId = Guid.Empty;
             if (!Guid.TryParse(restMSMessage.MessageId, out messageId))
                 return FailureMessageHeader(messageId, restMSMessage.Address);

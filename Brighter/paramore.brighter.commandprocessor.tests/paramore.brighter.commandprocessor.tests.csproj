@@ -167,6 +167,7 @@
     <Compile Include="MessagingGateway\restms\RestMSMessagingGatewayTests.cs" />
     <Compile Include="MessagingGateway\restms\RestMSParserTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
+    <Compile Include="MessagingGateway\TestDoubles\TestRmqMessageConsumer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RavenTests\CanCallLastOnArray.cs" />
     <Compile Include="RestMSServer\CachingTests.cs" />

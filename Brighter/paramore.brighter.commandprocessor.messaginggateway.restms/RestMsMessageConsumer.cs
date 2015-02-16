@@ -104,8 +104,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 Logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
-
-            return null;
         }
 
         /// <summary>
