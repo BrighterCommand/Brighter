@@ -40,6 +40,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using Polly;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
@@ -84,6 +85,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         protected BrokerUnreachableException ConnectionFailure;
 
+        readonly ContextualPolicy retryPolicy;
+        readonly Policy circuitBreakerPolicy;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway"/> class.
         /// </summary>
@@ -93,6 +97,47 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             this.Logger = logger;
             Configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
             connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), AutomaticRecoveryEnabled = true, RequestedHeartbeat = 30};
+
+            int retries = Configuration.AMPQUri.ConnectionRetryCount;
+            int retryWait = Configuration.AMPQUri.RetryWaitInMilliseconds;
+
+            retryPolicy = Policy
+                .Handle<BrokerUnreachableException>()
+                .Or<Exception>()
+                .WaitAndRetry(
+                retries,
+                retryAttempt => TimeSpan.FromSeconds(retryWait ),
+                (exception, retryCount, context) =>
+                {
+                    if (exception is BrokerUnreachableException)
+                    {
+                        Logger.WarnException(
+                            "RMQMessagingGateway: BrokerUnreachableException on connection to queue {0} via exchange {1} on connection {2}. Will retry {3} times, this is the {4} attempt",
+                            exception,
+                            context["queueName"],
+                            Configuration.Exchange.Name,
+                            Configuration.AMPQUri.Uri.ToString(),
+                            Configuration.AMPQUri.ConnectionRetryCount,
+                            Configuration.AMPQUri.ConnectionRetryCount - retries + 1
+                            );
+                    } else 
+                    {
+                        Logger.WarnException("RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2}",
+                                exception,
+                                context["queueName"],
+                                Configuration.Exchange.Name,
+                                Configuration.AMPQUri.Uri.ToString()
+                                );
+                        throw exception;
+                    }
+
+                });
+
+            //TODO: Configure the break timespan
+            circuitBreakerPolicy = Policy
+                .Handle<BrokerUnreachableException>()
+                .CircuitBreaker(1, TimeSpan.FromMinutes(1));
+
         }
 
         /// <summary>
@@ -104,79 +149,88 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
         protected virtual bool Connect(string queueName = "", string routingKey = "", bool createQueues = false)
         {
-            int retries = Configuration.AMPQUri.ConnectionRetryCount;
 
-            while (true)
-            {
-                try
-                {
-                    if (Channel == null || Channel.IsClosed)
-                    {
-                        if (Channel != null)
-                        {
-                            try { Channel.Dispose(); }
-                            catch (Exception) {}
-                            finally { Channel = null; }
-                        }
+            circuitBreakerPolicy.Execute(() => ConnectWithRetry(queueName, routingKey, createQueues));
+            return true;
 
-                        GetConnection();
+        }
 
-                        Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.Uri.ToString());
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-                        Channel = Connection.CreateModel();
-
-                        // Configure the Quality of service for the model.
-                        // BasicQos(0="Don't send me a new message until I’ve finished",  1= "Send me one message at a time", false ="Applied separately to each new consumer on the channel")
-                        Channel.BasicQos(0, Configuration.Queues.QosPrefetchSize, false);
-
-                        Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString());
-                        DeclareExchange(Channel, Configuration);
-
-                        if (createQueues)
-                        {
-                            Logger.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", queueName, Configuration.AMPQUri.Uri.ToString());
-
-                            Channel.QueueDeclare(queueName, false, false, false, SetQueueArguments());
-                            Channel.QueueBind(queueName, Configuration.Exchange.Name, routingKey);
-                        }
-                    }
-
-                    break;
-                }
-                catch (BrokerUnreachableException brokerUnreachableException)
-                {
-                    Logger.WarnException(
-                        "RMQMessagingGateway: BrokerUnreachableException on connection to queue {0} via exchange {1} on connection {2}. Will retry {3} times, this is the {4} attempt",
-                        brokerUnreachableException,
-                        queueName,
-                        Configuration.Exchange.Name,
-                        Configuration.AMPQUri.Uri.ToString(),
-                        Configuration.AMPQUri.ConnectionRetryCount,
-                        Configuration.AMPQUri.ConnectionRetryCount - retries + 1
-                        );
-
-                    if (--retries == 0)
-                    {
-                        ConnectionFailure = brokerUnreachableException;
-                        return false;
-                    }
-
-                    Task.Delay(Configuration.AMPQUri.RetryWaitInMilliseconds).Wait();
-                }
-                catch (Exception exception)
-                {
-                    Logger.WarnException("RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2}",
-                                exception,
-                                queueName,
-                                Configuration.Exchange.Name,
-                                Configuration.AMPQUri.Uri.ToString()
-                                );
-                    throw;
-                }
-            }
+        bool ConnectWithRetry(string queueName, string routingKey, bool createQueues)
+        {
+            retryPolicy.Execute(() => 
+                ConnectToBroker(queueName, routingKey, createQueues),
+                new Dictionary<string, object>() {{"queueName", queueName}}
+                );
 
             return true;
 
+        }
+        
+        void ConnectToBroker(string queueName, string routingKey, bool createQueues)
+        {
+            if (Channel == null || Channel.IsClosed)
+            {
+                if (Channel != null)
+                {
+                    SafeChannelDispose();
+                }
+
+                GetConnection();
+
+                Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.Uri.ToString());
+
+                Channel = Connection.CreateModel();
+
+                // Configure the Quality of service for the model.
+                // BasicQos(0="Don't send me a new message until I’ve finished",  1= "Send me one message at a time", false ="Applied separately to each new consumer on the channel")
+                Channel.BasicQos(0, Configuration.Queues.QosPrefetchSize, false);
+
+                Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.Uri.ToString());
+                DeclareExchange(Channel, Configuration);
+
+                if (createQueues)
+                {
+                    Logger.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", queueName, Configuration.AMPQUri.Uri.ToString());
+
+                    Channel.QueueDeclare(queueName, false, false, false, SetQueueArguments());
+                    Channel.QueueBind(queueName, Configuration.Exchange.Name, routingKey);
+                }
+            }
+        }
+
+        private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
+        {
+            //desired state configuration of the exchange
+            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, configuration.Exchange.Durable);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (Channel != null)
+                {
+                    if (Channel.IsOpen) Channel.Close();
+
+                    Channel.Dispose();
+                }
+
+                if (Connection != null)
+                {
+                    if (Connection.IsOpen) Connection.Close();
+
+                    Connection.Dispose();
+                }
+            }
         }
 
         private void GetConnection()
@@ -207,39 +261,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             if (Configuration.Queues.HighAvailability) { arguments.Add("x-ha-policy", "all"); }
         }
 
-        private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
-        {
-            //desired state configuration of the exchange
-            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, configuration.Exchange.Durable);
-        }
 
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
-        public void Dispose()
+        void SafeChannelDispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
+            try
             {
-                if (Channel != null)
-                {
-                    if (Channel.IsOpen) Channel.Close();
-
-                    Channel.Dispose();
-                }
-
-                if (Connection != null)
-                {
-                    if (Connection.IsOpen) Connection.Close();
-
-                    Connection.Dispose();
-                }
+                Channel.Dispose();
+            }
+            catch (Exception)
+            {
+            }
+            finally
+            {
+                Channel = null;
             }
         }
+
     }
 }
