@@ -46,12 +46,12 @@ namespace paramore.commandprocessor.tests.MessagingGateway
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
                 
-            A.CallTo(() => gateway.Receive("test", "key", 1000)).Returns(sentMessage);
+            A.CallTo(() => gateway.Receive(1000)).Returns(sentMessage);
         };
 
         Because of = () => receivedMessage = channel.Receive(1000);
 
-        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive("test", "key", 1000)).MustHaveHappened();
+        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive(1000)).MustHaveHappened();
         It should_return_the_next_message_from_the_gateway = () => receivedMessage.ShouldEqual(sentMessage);
     }
 
@@ -74,12 +74,12 @@ namespace paramore.commandprocessor.tests.MessagingGateway
 
             channel.Stop();
                 
-            A.CallTo(() => gateway.Receive("test", "key", 1000)).Returns(sentMessage);
+            A.CallTo(() => gateway.Receive(1000)).Returns(sentMessage);
         };
 
         Because of = () => receivedMessage = channel.Receive(1000);
 
-        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive("test", "key", 1000)).MustNotHaveHappened();
+        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive(1000)).MustNotHaveHappened();
     }
 
     public class When_acknowledge_is_called_on_a_channel

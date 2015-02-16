@@ -81,7 +81,7 @@ namespace paramore.brighter.commandprocessor
             Message message;
             if (!queue.TryDequeue(out message))
             {
-                message = _messageConsumer.Receive(queueName, routingKey, timeoutinMilliseconds);
+                message = _messageConsumer.Receive(timeoutinMilliseconds);
             }
             return message;
         }

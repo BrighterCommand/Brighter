@@ -60,7 +60,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAnInputChannel CreateInputChannel(string channelName, string routingKey)
         {
-            return new InputChannel(channelName, routingKey, _messageConsumerFactory.Create());
+            return new InputChannel(channelName, routingKey, _messageConsumerFactory.Create(channelName, routingKey));
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAnInputChannel CreateOutputChannel(string channelName, string routingKey)
         {
-            return new InputChannel(channelName, routingKey, _messageConsumerFactory.Create());
+            return new InputChannel(channelName, routingKey, _messageConsumerFactory.Create(channelName, routingKey));
         }
     }
 }
