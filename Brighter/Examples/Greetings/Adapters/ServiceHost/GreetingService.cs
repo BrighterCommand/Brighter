@@ -82,7 +82,7 @@ namespace Greetings.Adapters.ServiceHost
 
             //create the gateway
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
-            IAmADispatchBuilder builder = DispatchBuilder
+            var builder = DispatchBuilder
                 .With()
                 .Logger(logger)
                 .CommandProcessor(CommandProcessorBuilder.With()
