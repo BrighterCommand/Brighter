@@ -109,7 +109,7 @@ namespace paramore.brighter.serviceactivator
                 }
                 catch (ChannelFailureException)
                 {
-                    RejectMessage(message);
+                    if (Logger != null) Logger.WarnFormat("MessagePump: ChannelFailureException messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString());
                     continue;
                 }
                 catch (Exception exception)
