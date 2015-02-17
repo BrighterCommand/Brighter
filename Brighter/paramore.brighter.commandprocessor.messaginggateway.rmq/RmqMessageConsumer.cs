@@ -235,8 +235,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
             catch (BrokenCircuitException bce)
             {
-                Logger.ErrorException("CIRCUIT BROKEN: RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", 
-                    bce, 
+                Logger.WarnFormat("CIRCUIT BROKEN: RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", 
                     queueName, 
                     routingKey, 
                     Configuration.Exchange.Name, 
