@@ -50,18 +50,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     .WaitAndRetry(
                         retries,
                         retryAttempt => TimeSpan.FromMilliseconds(retryWait),
-                        (exception, retryCount, context) =>
+                        (exception, timeSpan, context) =>
                         {
                             if (exception is BrokerUnreachableException)
                             {
                                 logger.WarnException(
-                                    "RMQMessagingGateway: Error on connecting to queue {0} exchange {1} on connection {2}. Will retry {3} times, this is the {4} attempt",
+                                    "RMQMessagingGateway: Error on connecting to queue {0} exchange {1} on connection {2}. Will retry {3} times",
                                     exception,
                                     context["queueName"],
                                     configuration.Exchange.Name,
                                     configuration.AMPQUri.GetSantizedUri(),
-                                    retries,
-                                    retryCount
+                                    retries
                                     );
                             }
                             else
@@ -78,11 +77,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
                         });
 
-            //TODO: Configure the break timespan
             CircuitBreakerPolicy = 
                 Policy
                 .Handle<BrokerUnreachableException>()
-                .CircuitBreaker(1, TimeSpan.FromMinutes(circuitBreakerTimeout));
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(circuitBreakerTimeout));
 
         }
 
