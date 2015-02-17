@@ -194,13 +194,54 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
             catch (BrokerUnreachableException bue)
             {
-                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", bue, queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
-                throw new ConnectionFailureException("Error connecting to RabbitMQ, see inner exception for details", bue);
+                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                                      bue,
+                                      queueName,
+                                      routingKey,
+                                      Configuration.Exchange.Name,
+                                      Configuration.AMPQUri.GetSantizedUri());
+                throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", bue);
+            }
+            catch (AlreadyClosedException ace)
+            {
+                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                                      ace,
+                                      queueName,
+                                      routingKey,
+                                      Configuration.Exchange.Name,
+                                      Configuration.AMPQUri.GetSantizedUri());
+                throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", ace);
+            }
+            catch (OperationInterruptedException oie)
+            {
+                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                                      oie,
+                                      queueName,
+                                      routingKey,
+                                      Configuration.Exchange.Name,
+                                      Configuration.AMPQUri.GetSantizedUri());
+                throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", oie);
+            }
+            catch (NotSupportedException nse)
+            {
+                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                                      nse,
+                                      queueName,
+                                      routingKey,
+                                      Configuration.Exchange.Name,
+                                      Configuration.AMPQUri.GetSantizedUri());
+                throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", nse);
+                
             }
             catch (BrokenCircuitException bce)
             {
-                Logger.ErrorException("CIRCUIT BROKEN: RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", bce, queueName, routingKey, Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
-                throw new ConnectionFailureException("Error connecting to RabbitMQ, see inner exception for details", bce);
+                Logger.ErrorException("CIRCUIT BROKEN: RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", 
+                    bce, 
+                    queueName, 
+                    routingKey, 
+                    Configuration.Exchange.Name, 
+                    Configuration.AMPQUri.GetSantizedUri());
+                throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", bce);
             }
             catch (Exception exception)
             {
@@ -226,7 +267,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             Dispose(false);
         }
 
-        void CreateConsumer()
+        protected virtual void CreateConsumer()
         {
             consumer = new QueueingBasicConsumer(Channel);
             Channel.BasicConsume(queueName, AUTO_ACK, consumer);
@@ -243,23 +284,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             if (consumer == null || !consumer.IsRunning)
             {
-                try
-                {
-                    EnsureChannelBind();
-                    CreateConsumer();
-                }
-                catch (BrokerUnreachableException brokerUnreachableException)
-                {
-                    Logger.WarnException(
-                        "RMQMessagingGateway: Error on creating queue {0} via exchange {1} on connection {2}.",
-                        brokerUnreachableException,
-                        queueName,
-                        Configuration.Exchange.Name,
-                        Configuration.AMPQUri.GetSantizedUri()
-                    );
-
-                    throw;
-                }
+                EnsureChannelBind();
+                CreateConsumer();
             }
         }
 

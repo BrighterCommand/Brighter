@@ -107,9 +107,15 @@ namespace paramore.brighter.serviceactivator
                 {
                     message = Channel.Receive(TimeoutInMilliseconds);
                 }
+                catch (ChannelFailureException)
+                {
+                    RejectMessage(message);
+                    continue;
+                }
                 catch (Exception exception)
                 {
-                    if (Logger != null) Logger.ErrorFormat("MessagePump: Exception receiving messages for {1} on thread # {0} because of {2}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString(), exception);
+                    if (Logger != null)
+                        Logger.ErrorFormat("MessagePump: Exception receiving messages for {1} on thread # {0} because of {2}", Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString(), exception);
                 }
 
                 if (message == null) throw new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
@@ -156,11 +162,6 @@ namespace paramore.brighter.serviceactivator
                 {
                     RequeueMessage(message);
                 }
-                catch (ConnectionFailureException)
-                {
-                    RejectMessage(message);
-                    break;
-                }
                 catch (AggregateException aggregateException)
                 {
                     bool stop = false;
@@ -170,9 +171,7 @@ namespace paramore.brighter.serviceactivator
                         {
                             RequeueMessage(message);
                             continue;
-                        }
-
-                        if (exception is ConfigurationException)
+                        } else if (exception is ConfigurationException)
                         {
                             if (Logger != null)
                                 Logger.DebugFormat("MessagePump: {0} Stopping receiving of messages for {2} on thread # {1} because of {3}", exception.Message, Thread.CurrentThread.ManagedThreadId, messageMapper.GetType().ToString(), exception);
