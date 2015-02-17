@@ -35,22 +35,16 @@ namespace paramore.commandprocessor.tests.Timeout
 {
     internal class MyFailsDueToTimeoutHandler: RequestHandler<MyCommand>
     {
-        public MyFailsDueToTimeoutHandler(ILog logger) : base(logger)
-        {}
-
-        public static bool WasCancelled { get; set; }
-        public static bool TaskCompleted { get; set; }
-
+        public MyFailsDueToTimeoutHandler(ILog logger) : base(logger){}
 
         [TimeoutPolicy(milliseconds: 300, step: 1, timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
-            WasCancelled = false;
             var ct = (CancellationToken)Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];
             if (ct.IsCancellationRequested)
             {
                 //already died
-                WasCancelled = true;
+                MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = true;
                 return base.Handle(command);
             }
             try
@@ -59,7 +53,7 @@ namespace paramore.commandprocessor.tests.Timeout
                     x =>
                     {
                         // done something I should not do, because I should of been cancel
-                        WasCancelled = false;
+                        MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = false;
                     },
                     ct);
 
@@ -69,11 +63,21 @@ namespace paramore.commandprocessor.tests.Timeout
             {
                 foreach (var tce in e.InnerExceptions.OfType<TaskCanceledException>())
                 {
-                    WasCancelled = true;
+                    MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = true;
+                    MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted = false;
+                    return base.Handle(command);
                 }
             }
 
+            MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted = true;
             return base.Handle(command);
         }
+    }
+
+
+    public static class MyFailsDueToTimeoutHandlerStateTracker
+    {
+        public static bool WasCancelled { get; set; }
+        public static bool TaskCompleted { get; set; }
     }
 }
