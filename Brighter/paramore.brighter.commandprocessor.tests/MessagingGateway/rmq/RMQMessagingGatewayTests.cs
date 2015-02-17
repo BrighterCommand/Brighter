@@ -160,7 +160,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
     [Subject("Messaging Gateway")]
     [Tags("Requires", new[] { "RabbitMQ" })]
-    public class When_a_message_consumer_throws_an_exception_when_connecting_should_retry_until_circuit_breaks
+    public class When_a_message_consumer_throws_an_already_closed_exception_when_connecting_should_retry_until_circuit_breaks
     {
         static IAmAMessageProducer sender;
         static IAmAMessageConsumer receiver;
@@ -171,7 +171,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         Establish context = () =>
         {
-            var logger = LogProvider.For<TestRmqMessageConsumer>();
+            var logger = LogProvider.For<BrokerUnreachableRmqMessageConsumer>();
 
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
 
@@ -180,7 +180,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
             sender = new RmqMessageProducer(logger);
             receiver = new RmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
-            badReceiver = new TestRmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
+            badReceiver = new AlreadyClosedRmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
 
             receiver.Purge();
             sender.Send(sentMessage);
@@ -189,11 +189,100 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         Because of = () =>
                      {
                          firstException = Catch.Exception(() => badReceiver.Receive(2000));
-                         expectedException = Catch.Exception(() => badReceiver.Receive(2000));
                      };
 
-        It should_have_caught_an_unreachable_exception = () => firstException.ShouldBeOfExactType<BrokerUnreachableException>(); 
-        It should_have_caught_an_expected_exception = () => expectedException.ShouldBeOfExactType<BrokenCircuitException>(); 
+        It should_return_a_channel_failure_exception = () => firstException.ShouldBeOfExactType<ChannelFailureException>(); 
+        It should_return_an_explainging_inner_exception = () => firstException.InnerException.ShouldBeOfExactType<AlreadyClosedException>(); 
+
+        Cleanup teardown = () =>
+        {
+            receiver.Purge();
+            sender.Dispose();
+            receiver.Dispose();
+        };
+
+    }
+
+    [Subject("Messaging Gateway")]
+    [Tags("Requires", new[] { "RabbitMQ" })]
+    public class When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting_should_retry_until_circuit_breaks
+    {
+        static IAmAMessageProducer sender;
+        static IAmAMessageConsumer receiver;
+        static IAmAMessageConsumer badReceiver;
+        static Message sentMessage;
+        static Exception expectedException;
+        static Exception firstException;
+
+        Establish context = () =>
+        {
+            var logger = LogProvider.For<BrokerUnreachableRmqMessageConsumer>();
+
+            var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
+
+            messageHeader.UpdateHandledCount();
+            sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+
+            sender = new RmqMessageProducer(logger);
+            receiver = new RmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
+            badReceiver = new OperationInterruptedRmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
+
+            receiver.Purge();
+            sender.Send(sentMessage);
+        };
+
+        Because of = () =>
+                     {
+                         firstException = Catch.Exception(() => badReceiver.Receive(2000));
+                     };
+
+        It should_return_a_channel_failure_exception = () => firstException.ShouldBeOfExactType<ChannelFailureException>(); 
+        It should_return_an_explainging_inner_exception = () => firstException.InnerException.ShouldBeOfExactType<OperationInterruptedException>(); 
+
+        Cleanup teardown = () =>
+        {
+            receiver.Purge();
+            sender.Dispose();
+            receiver.Dispose();
+        };
+
+    }
+
+    [Subject("Messaging Gateway")]
+    [Tags("Requires", new[] { "RabbitMQ" })]
+    public class When_a_message_consumer_throws_an_not_supported_exception_when_connecting_should_retry_until_circuit_breaks
+    {
+        static IAmAMessageProducer sender;
+        static IAmAMessageConsumer receiver;
+        static IAmAMessageConsumer badReceiver;
+        static Message sentMessage;
+        static Exception expectedException;
+        static Exception firstException;
+
+        Establish context = () =>
+        {
+            var logger = LogProvider.For<BrokerUnreachableRmqMessageConsumer>();
+
+            var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
+
+            messageHeader.UpdateHandledCount();
+            sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+
+            sender = new RmqMessageProducer(logger);
+            receiver = new RmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
+            badReceiver = new NotSupportedRmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
+
+            receiver.Purge();
+            sender.Send(sentMessage);
+        };
+
+        Because of = () =>
+                     {
+                         firstException = Catch.Exception(() => badReceiver.Receive(2000));
+                     };
+
+        It should_return_a_channel_failure_exception = () => firstException.ShouldBeOfExactType<ChannelFailureException>(); 
+        It should_return_an_explainging_inner_exception = () => firstException.InnerException.ShouldBeOfExactType<NotSupportedException>(); 
 
         Cleanup teardown = () =>
         {

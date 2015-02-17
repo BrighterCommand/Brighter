@@ -11,6 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -40,26 +41,26 @@ using System;
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class ConnectionFailureException.
+    /// We raise a ChannelFailureException when we are unable to communicate with the work queue channel.
     /// </summary>
-    public class ConnectionFailureException : Exception
+    public class ChannelFailureException : Exception
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ConnectionFailureException"/> class.
+        /// Initializes a new instance of the <see cref="ChannelFailureException"/> class.
         /// </summary>
-        public ConnectionFailureException() : base() {}
+        public ChannelFailureException() : base() {}
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ConnectionFailureException" /> class with a specified error message.
+        /// Initializes a new instance of the <see cref="ChannelFailureException" /> class with a specified error message.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ConnectionFailureException(string message) : base(message){}
+        public ChannelFailureException(string message) : base(message){}
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ConnectionFailureException" /> class with a specified error message and a reference to the inner exception that is the cause of this exception.
+        /// Initializes a new instance of the <see cref="ChannelFailureException" /> class with a specified error message and a reference to the inner exception that is the cause of this exception.
         /// </summary>
         /// <param name="message">The error message that explains the reason for the exception.</param>
         /// <param name="innerException">The exception that is the cause of the current exception, or a null reference (Nothing in Visual Basic) if no inner exception is specified.</param>
-        public ConnectionFailureException(string message, Exception innerException) : base(message, innerException){}
+        public ChannelFailureException(string message, Exception innerException) : base(message, innerException){}
     }
 }

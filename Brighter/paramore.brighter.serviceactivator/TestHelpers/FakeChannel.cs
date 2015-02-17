@@ -38,20 +38,20 @@ namespace paramore.brighter.serviceactivator.TestHelpers
             this.channelName = new ChannelName(channelName);
         }
 
-        public int Length
+        public virtual int Length
         {
             get { return messageQueue.Count; }
         }
 
-        public ChannelName Name
+        public virtual ChannelName Name
         {
             get { return channelName; }
         }
 
-        public void Acknowledge(Message message)
+        public virtual void Acknowledge(Message message)
         {}
 
-        public Message Receive(int timeoutinMilliseconds)
+        public virtual Message Receive(int timeoutinMilliseconds)
         {
             Message message;
             if (messageQueue.TryDequeue(out message))
@@ -60,25 +60,25 @@ namespace paramore.brighter.serviceactivator.TestHelpers
                 return new Message();
         }
 
-        public void Reject(Message message)
+        public virtual void Reject(Message message)
         {}
 
-        public void Stop()
+        public virtual void Stop()
         {
             messageQueue.Enqueue(MessageFactory.CreateQuitMessage());
         }
 
-        public void Requeue(Message message)
+        public virtual void Requeue(Message message)
         {
             messageQueue.Enqueue(message);
         }
 
-        public void Send(Message message)
+        public virtual void Send(Message message)
         {
             messageQueue.Enqueue(message);
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             DisposeHappened = true;
         }

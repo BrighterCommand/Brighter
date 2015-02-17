@@ -64,7 +64,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         It should_dispose_the_input_channel = () => channel.DisposeHappened.ShouldBeTrue();
     }
 
-    public class When_a_requeue_exception_is_throwen
+    public class When_a_requeue_exception_is_thrown
     {
         static IAmAMessagePump messagePump;
         private static FakeChannel channel;
@@ -96,6 +96,35 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         It should_dispose_the_input_channel = () => channel.DisposeHappened.ShouldBeTrue();
     }
 
+    public class When_a_channel_failure_exception_is_thrown_should_retry_until_connection_re_established
+    {
+        static IAmAMessagePump messagePump;
+        private static FailingChannel channel;
+        static SpyCommandProcessor commandProcessor;
+        static MyEvent @event;
+
+        Establish context = () =>
+        {
+            commandProcessor = new SpyCommandProcessor();
+            channel = new FailingChannel {NumberOfRetries = 4};
+            var mapper = new MyEventMessageMapper();
+            messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = -1};
+
+            @event = new MyEvent();
+
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(@event)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
+            channel.Send(message1);
+            channel.Send(message2);
+            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            channel.Send(quitMessage);
+        };
+
+        Because of = () => messagePump.Run();
+
+        It should_send_the_message_via_the_command_processor = () => commandProcessor.SendHappened.ShouldBeTrue();
+        It should_publish_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
+    }
 
     public class When_a_requeue_count_threshold_has_been_reached
     {
