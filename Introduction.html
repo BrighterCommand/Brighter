@@ -32,6 +32,11 @@
             such as an <a href="http://martinfowler.com/eaaCatalog/modelViewController.html">MVC Input Controller</a> from the domain logic that handles the request. The intent
             is to support the Open-Closed Principle - open to extension, closed for modification - by allowing handlers to be replaced or added, without modifying the calling code;
             or for the endpoint framework to be replaced without impacting the domain code.</p>
+        <p>One of the most common uses of Brighter, although not it's only use case is implementing the Command Invoker pattern within a service.
+            <a href="http://www.servicedesignpatterns.com/">Service Design Patterns</a>
+            describes a <a href = "http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker">Command Invoker</a> as:
+            <blockquote>Create command objects that fully encapsulate common request processing logic. Instantiate and invoke these commands from within the web service,
+        or forward them to an asynchronous background process. </blockquote></p>
         <p>Brighter is intended to be a library not a framework, so it is consciously lightweight and divided into packages that allow you to consume only those facilities that you need in your
             project.</p>
         <p>Brighter provides utility packages to help build quality of service into the handler pipeline, which can also serve as examples for your own pipelines.</p>
