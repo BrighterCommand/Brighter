@@ -14,6 +14,7 @@
 ## Why a Command Dispatcher, Command Processor, and Task Queue?
 * When implementing a hexagonal architecture, one question is how to implement a port.
 	- Brighter shows how to implement ports using a Command approach (with a Command Dispatcher)
+	- This is the strategy described for services in Service Design Patterns as  [Command Invoker] (http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker)
 * A command processor let's you add orthogonal concerns seperately to the processing of commands such as logging, undo, validation, retry, and circuit breaker
  	- Brighter provides a Command Processor, using a 'Russian Doll' model to allow a pipeline of handlers to operate on a command.
 * A task queue allows a one process to send work to be handled asynchronously to another process, using a message queue as the channel, for processing. A common use case is to help a web server scale by handing off a request to another process for back-end processing. This allows both a faster ack and throttling of the request arrival rate to that which can be handled by a back end processing component. For another project with this goal, see [Celery](https://github.com/celery/celery)
