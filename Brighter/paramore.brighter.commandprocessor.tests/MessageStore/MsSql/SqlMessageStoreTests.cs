@@ -24,6 +24,8 @@ THE SOFTWARE. */
 using System;
 using System.Data.SqlServerCe;
 using System.IO;
+using System.Runtime.InteropServices;
+
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -65,6 +67,23 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
             Establish context = () => { message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body")); };
             Because of = () => { storedMessage = sqlMessageStore.Get(message.Id).Result; };
             It should_return_a_empty_message = () => storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+        }
+
+
+        public class when_the_message_is_already_in_the_message_store
+        {
+            private static Exception exception;
+
+            Establish context = () =>
+            {
+                message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+                sqlMessageStore.Add(message).Wait();
+            };
+
+            Because of = () => { exception = Catch.Exception(() => sqlMessageStore.Add(message).Wait()); };
+
+            It should_ignore_the_duplcate_key_and_still_succeed = () => {exception.ShouldBeNull(); };
+
         }
 
         private Cleanup cleanup = () => CleanUpDb();
