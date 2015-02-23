@@ -139,6 +139,9 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             receiver = new RmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
 
             receiver.Purge();
+            
+            //create queue if missing
+            receiver.Receive(1);
         };
 
         Because of = () =>
