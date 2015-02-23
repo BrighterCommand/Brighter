@@ -35,6 +35,8 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
     {
         private readonly MsSqlMessageStoreConfiguration _configuration;
         private readonly ILog _log;
+        private const int MsSqlDuplicateKeyError = 2601;
+        private const int SqlCeDuplicateKeyError = 25016;
 
         public MsSqlMessageStore(MsSqlMessageStoreConfiguration configuration, ILog log)
         {
@@ -60,7 +62,30 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 
                 command.CommandText = sql;
                 command.Parameters.AddRange(parameters);
-                await command.ExecuteNonQueryAsync();
+                try
+                {
+                    await command.ExecuteNonQueryAsync();
+                }
+                catch (SqlException sqlException)
+                {
+                    if (sqlException.Number == MsSqlDuplicateKeyError)
+                    {
+                        _log.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing", message.Id);
+                        return;
+                    }
+
+                    throw;
+                }
+                catch (SqlCeException sqlCeException)
+                {
+                    if (sqlCeException.NativeError == SqlCeDuplicateKeyError)
+                    {
+                        _log.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing", message.Id);
+                        return;
+                    }
+                    
+                    throw;
+                }
             }
         }
 

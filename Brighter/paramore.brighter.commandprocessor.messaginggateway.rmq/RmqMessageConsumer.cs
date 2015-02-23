@@ -105,9 +105,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             {
                 EnsureChannel(queueName);
                 Logger.DebugFormat("RmqMessageConsumer: Purging channel {0}", queueName);
-                Channel.QueuePurge(queueName);
+
+                try { Channel.QueuePurge(queueName); }
+                catch (OperationInterruptedException operationInterruptedException) {
+                    if (operationInterruptedException.ShutdownReason.ReplyCode == 404) { return; }
+                    throw;
+                }
             }
-            catch (Exception exception) 
+            catch (Exception exception)
             {
                 Logger.ErrorException("RmqMessageConsumer: Error purging channel {0}", exception, queueName);
                 throw;
