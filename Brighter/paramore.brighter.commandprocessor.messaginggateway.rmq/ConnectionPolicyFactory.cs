@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using Polly;
@@ -30,9 +31,9 @@ using RabbitMQ.Client.Exceptions;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
-    class ConnectionPolicyFactory
+    public class ConnectionPolicyFactory
     {
-        readonly ILog logger;
+        private readonly ILog logger;
 
         public ConnectionPolicyFactory(ILog logger)
         {
@@ -40,52 +41,43 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             var configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
             int retries = configuration.AMPQUri.ConnectionRetryCount;
-            int retryWait = configuration.AMPQUri.RetryWaitInMilliseconds;
+            int retryWaitInMilliseconds = configuration.AMPQUri.RetryWaitInMilliseconds;
             int circuitBreakerTimeout = configuration.AMPQUri.CircuitBreakTimeInMilliseconds;
 
-            RetryPolicy =
-                Policy
-                    .Handle<BrokerUnreachableException>()
-                    .Or<Exception>()
-                    .WaitAndRetry(
-                        retries,
-                        retryAttempt => TimeSpan.FromMilliseconds(retryWait),
-                        (exception, timeSpan, context) =>
+            RetryPolicy = Policy.Handle<BrokerUnreachableException>()
+                .Or<Exception>()
+                .WaitAndRetry(
+                    retries,
+                    retryAttempt => TimeSpan.FromMilliseconds(retryWaitInMilliseconds * Math.Pow(2, retryAttempt)),
+                    (exception, timeSpan, context) =>
+                    {
+                        if (exception is BrokerUnreachableException)
                         {
-                            if (exception is BrokerUnreachableException)
-                            {
-                                logger.WarnException(
-                                    "RMQMessagingGateway: Error on connecting to queue {0} exchange {1} on connection {2}. Will retry {3} times",
-                                    exception,
-                                    context["queueName"],
-                                    configuration.Exchange.Name,
-                                    configuration.AMPQUri.GetSantizedUri(),
-                                    retries
-                                    );
-                            }
-                            else
-                            {
-                                logger.WarnException(
-                                    "RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2}",
-                                    exception,
-                                    context["queueName"],
-                                    configuration.Exchange.Name,
-                                    configuration.AMPQUri.GetSantizedUri()
-                                    );
-                                throw exception;
-                            }
+                            logger.WarnException(
+                                "RMQMessagingGateway: BrokerUnreachableException error on connecting to queue {0} exchange {1} on connection {2}. Will retry {3} times",
+                                exception,
+                                context["queueName"],
+                                configuration.Exchange.Name,
+                                configuration.AMPQUri.GetSantizedUri(),
+                                retries);
+                        }
+                        else
+                        {
+                            logger.WarnException(
+                                "RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2}",
+                                exception,
+                                context["queueName"],
+                                configuration.Exchange.Name,
+                                configuration.AMPQUri.GetSantizedUri());
+                            throw exception;
+                        }
 
-                        });
+                    });
 
-            CircuitBreakerPolicy = 
-                Policy
-                .Handle<BrokerUnreachableException>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(circuitBreakerTimeout));
-
+            CircuitBreakerPolicy = Policy.Handle<BrokerUnreachableException>().CircuitBreaker(1, TimeSpan.FromMilliseconds(circuitBreakerTimeout));
         }
 
         public ContextualPolicy RetryPolicy { get; private set; }
-
         public Policy CircuitBreakerPolicy { get; private set; }
     }
 }
