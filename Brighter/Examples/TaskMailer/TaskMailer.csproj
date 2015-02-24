@@ -39,49 +39,13 @@
     <StartupObject>TaskMailer.Adapters.ServiceHost.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Common.Logging, Version=2.2.0.0, Culture=neutral, PublicKeyToken=af08829b84f0328e, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Common.Logging.2.2.0\lib\net40\Common.Logging.dll</HintPath>
-    </Reference>
-    <Reference Include="Common.Logging.Core">
-      <HintPath>..\..\packages\Common.Logging.Core.2.2.1\lib\net40\Common.Logging.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Common.Logging.Log4Net1210, Version=2.2.0.0, Culture=neutral, PublicKeyToken=af08829b84f0328e, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Common.Logging.Log4Net1210.2.2.0\lib\net40\Common.Logging.Log4Net1210.dll</HintPath>
-    </Reference>
-    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Practices.ServiceLocation">
-      <HintPath>..\..\packages\CommonServiceLocator.1.3\lib\portable-net4+sl5+netcore45+wpa81+wp8\Microsoft.Practices.ServiceLocation.dll</HintPath>
-    </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Newtonsoft.Json.6.0.7\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="paramore.brighter.commandprocessor, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Polly, Version=2.2.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Paramore.Brighter.CommandProcessor.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.dll</HintPath>
-    </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.messagestore.ravendb, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\paramore.brighter.commandprocessor.messagestore.ravendb.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.messagestore.ravendb.dll</HintPath>
-    </Reference>
-    <Reference Include="paramore.brighter.commandprocessor.messaginggateway.rmq, Version=2.0.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\paramore.brighter.commandprocessor.messaginggateway.rmq.2.0.1.0\lib\net45\paramore.brighter.commandprocessor.messaginggateway.rmq.dll</HintPath>
-    </Reference>
-    <Reference Include="paramore.brighter.serviceactivator">
-      <HintPath>..\..\packages\paramore.brighter.serviceactivator.2.0.1.0\lib\net45\paramore.brighter.serviceactivator.dll</HintPath>
-    </Reference>
-    <Reference Include="Polly">
-      <HintPath>..\..\packages\Polly.2.1.0\lib\net45\Polly.dll</HintPath>
-    </Reference>
-    <Reference Include="RabbitMQ.Client, Version=3.3.0.0, Culture=neutral, PublicKeyToken=89e7d7c5feba84ce, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\RabbitMQ.Client.3.3.0\lib\net30\RabbitMQ.Client.dll</HintPath>
+      <HintPath>..\..\packages\Polly.2.2.1\lib\net45\Polly.dll</HintPath>
     </Reference>
     <Reference Include="Raven.Abstractions">
       <HintPath>..\..\packages\RavenDB.Database.3.0.3528\lib\net45\Raven.Abstractions.dll</HintPath>
@@ -128,6 +92,22 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj">
+      <Project>{224f828a-1abf-4d7b-8c48-66856bfd1ded}</Project>
+      <Name>paramore.brighter.commandprocessor.messagestore.ravendb</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
+      <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>
+      <Name>paramore.brighter.commandprocessor.messaginggateway.rmq</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
+      <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
+      <Name>paramore.brighter.commandprocessor</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj">
+      <Project>{b9126b00-5a97-4c7d-b395-755456e5fa28}</Project>
+      <Name>paramore.brighter.serviceactivator</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Tasks\Tasks.csproj">
       <Project>{e7900a56-da88-46ca-8418-fb4c2bc2d326}</Project>
       <Name>Tasks</Name>

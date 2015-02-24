@@ -35,9 +35,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\CommonServiceLocator.1.3\lib\portable-net4+sl5+netcore45+wpa81+wp8\Microsoft.Practices.ServiceLocation.dll</HintPath>
     </Reference>
-    <Reference Include="Polly, Version=2.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Polly, Version=2.2.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Polly.2.1.0\lib\net45\Polly.dll</HintPath>
+      <HintPath>..\packages\Polly.2.2.1\lib\net45\Polly.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
