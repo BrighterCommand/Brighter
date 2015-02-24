@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 using Tasks.Ports.Commands;
 
 namespace Tasks.Ports.Handlers

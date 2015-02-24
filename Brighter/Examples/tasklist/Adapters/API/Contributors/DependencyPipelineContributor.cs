@@ -23,11 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
 using FluentAssertions;
 using OpenRasta.DI;
 using OpenRasta.Pipeline;
 using OpenRasta.Web;
+using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using Polly;
 using Raven.Client.Embedded;
 using Tasklist.Ports.ViewModelRetrievers;
@@ -38,7 +39,6 @@ using Tasks.Ports.Handlers;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messagestore.ravendb;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
 namespace Tasklist.Adapters.API.Contributors
 {
@@ -63,11 +63,11 @@ namespace Tasklist.Adapters.API.Contributors
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>().AsMultiInstance();
             container.Register<ITaskListRetriever, TaskListRetriever>().AsMultiInstance();
             container.Register<ITasksDAO, TasksDAO>().AsMultiInstance();
-            var logger = LogManager.GetLogger("TaskList");
+            var logger = LogProvider.GetLogger("TaskList");
             container.Register<ILog, ILog>(logger);
             container.Register<IAmARequestContextFactory, InMemoryRequestContextFactory>().AsMultiInstance();
             container.Register<IAmAMessageStore<Message>, RavenMessageStore>().AsSingleton();
-            container.Register<IAmAMessagingGateway, RMQMessagingGateway>().AsSingleton();
+            container.Register<IAmAMessageProducer, RmqMessageProducer>().AsSingleton();
 
             var handlerFactory = new TinyIocHandlerFactory(container);
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
@@ -100,7 +100,7 @@ namespace Tasklist.Adapters.API.Contributors
             messageMapperRegistry.Add(typeof (TaskReminderCommand), typeof (TaskReminderCommandMessageMapper));
 
             //create the gateway
-            var gateway = new RMQMessagingGateway(logger);
+            var gateway = new RmqMessageProducer(logger);
 
             var commandProcessor = CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
@@ -140,8 +140,8 @@ namespace Tasklist.Adapters.API.Contributors
                     3.Seconds()
                 }, (exception, timeSpan) =>
                     {
-                        var logger = LogManager.GetLogger("RetryPolicy");
-                        logger.Error(m => m("Error during decoupled invocation attempt: {0}, retrying in {1)", exception, timeSpan));
+                        var logger = LogProvider.GetLogger("RetryPolicy");
+                        logger.ErrorFormat("Error during decoupled invocation attempt: {0}, retrying in {1)", exception, timeSpan);
                 });
         }
     }
