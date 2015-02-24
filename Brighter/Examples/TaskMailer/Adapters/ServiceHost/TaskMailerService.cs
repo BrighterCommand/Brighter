@@ -22,15 +22,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Specialized;
-using Common.Logging;
-using Common.Logging.Simple;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messagestore.ravendb;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
 using Polly;
-using Raven.Client.Embedded;
 using Tasks.Adapters.MailGateway;
 using Tasks.Ports;
 using Tasks.Ports.Commands;
@@ -45,11 +41,7 @@ namespace TaskMailer.Adapters.ServiceHost
 
         public TaskMailerService()
         {
-            //Create a logger
-            var properties = new NameValueCollection();
-            properties["showDateTime"] = "true";
-            LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-            var logger = LogManager.GetLogger(typeof (Dispatcher));
+            var logger = LogProvider.For<TaskMailerService>();
                 
             var container = new TinyIoCContainer();
             container.Register<IAmAMessageMapper<TaskReminderCommand>, TaskReminderCommandMessageMapper>();
@@ -91,25 +83,20 @@ namespace TaskMailer.Adapters.ServiceHost
             };
 
             //create the gateway
-            var gateway = new RMQMessagingGateway(logger);
-            IAmADispatchBuilder builder = DispatchBuilder.With()
-                .WithLogger(logger)
-                .WithCommandProcessor(CommandProcessorBuilder.With()
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
+            var builder = DispatchBuilder.With()
+                .Logger(logger)
+                .CommandProcessor(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry,
                                                         handlerFactory))
                     .Policies(policyRegistry)
                     .Logger(logger)
-                    .TaskQueues(
-                        new MessagingConfiguration(
-                            new RavenMessageStore(
-                                new EmbeddableDocumentStore().Initialize(),
-                                logger), gateway, messageMapperRegistry
-                            ))
+                    .NoTaskQueues()
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
                  )
-                 .WithMessageMappers(messageMapperRegistry)
-                 .WithChannelFactory(new RMQInputChannelfactory(gateway))
+                 .MessageMappers(messageMapperRegistry)
+                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
                  .ConnectionsFromConfiguration();
            dispatcher = builder.Build();
 
@@ -117,7 +104,7 @@ namespace TaskMailer.Adapters.ServiceHost
 
         public bool Start(HostControl hostControl)
         {
-            dispatcher.Recieve();
+            dispatcher.Receive();
             return true;
         }
 

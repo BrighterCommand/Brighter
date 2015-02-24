@@ -80,9 +80,9 @@
     <Reference Include="Owin">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
     </Reference>
-    <Reference Include="Polly, Version=2.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="Polly, Version=2.2.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Polly.2.1.0\lib\net45\Polly.dll</HintPath>
+      <HintPath>..\packages\Polly.2.2.1\lib\net45\Polly.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
