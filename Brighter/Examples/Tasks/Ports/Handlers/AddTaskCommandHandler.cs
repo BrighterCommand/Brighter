@@ -22,9 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
-using Common.Logging;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.timeoutpolicy.Attributes;
+using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.policy.Attributes;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
 using Tasks.Ports.Commands;
