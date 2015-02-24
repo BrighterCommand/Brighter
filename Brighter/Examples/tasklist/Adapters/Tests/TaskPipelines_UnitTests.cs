@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Common.Logging;
 using FakeItEasy;
 using Machine.Specifications;
+using paramore.brighter.commandprocessor.Logging;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
 using Tasks.Ports.Commands;
