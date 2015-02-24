@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Explorations of the Ports and Adapters and CQRS architectural styles for .NET, Intended as reusable libraries and supporting examples</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+    </header>
+    <section>
+        <h2>How to Implement a Request Handler</h2>
+        <p>Although it is possible to implement the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/IHandleRequests.cs">IHandleRequests</a>
+            interface directly, we recommend deriving your handler from <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/RequestHandler.cs">RequestHandler&gt;T&lt; directly</a>>
+            as it provides support for the <em>Russian Doll Model</em> of calling the handler pipeline, a context bag for the pipeline, and request path description out-of-the-box.</p>
+        <p>The <em>Russian Doll Model</em> is names for the <a href="http://en.wikipedia.org/wiki/Matryoshka_doll">Matryoshka</a> wooden dolls, in which dolls of decreasing sizes are nested one inside another.
+            The importance of this for a <a href="https://msdn.microsoft.com/en-us/library/dn589788.aspx">pipes and filters pattern</a> implementation is that each filter in the pipeline is called
+            within the scope of a previous filter in the pipeline. This is significant because you may desire to act before and after a subsequent filter step. One             particular use case is exception
+            handling: a try-catch block that wraps the call to a subsequent step can react to exceptions raised by subsequent steps. This allows us to create policy decisions around exceptions
+            using a library such as <a href="https://github.com/michael-wolfenden/Polly">Polly</a> and thus support <a href="https://msdn.microsoft.com/en-us/library/dn589788.aspx">Retry</a>
+            and <a href="https://msdn.microsoft.com/en-gb/library/dn589784.aspx?f=255&MSPPError=-2147217396">Circuit Breaker</a></p>
+        <p><em>Usage of the Russian Doll Model was inspired by <a href="http://codebetter.com/jeremymiller/2011/01/09/fubumvcs-internal-runtime-the-russian-doll-model-and-how-it-compares-to-asp-net-mvc-and-openrasta/">FubuMVC</a></em></p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>

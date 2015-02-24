@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Explorations of the Ports and Adapters and CQRS architectural styles for .NET, Intended as reusable libraries and supporting examples</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+    </header>
+    <section>
+       <p>Brighter provides support for a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">distributed task queue</a>. Instead of handling a command or event, synchronously
+           and in-process, work can be dispatched to a distributed task queue to be handled asynchronously and out-of-process. The trade-off here is between the cost of distribution
+           (see <a>The Fallacies of Distributed Computing</a>) against performance.
+           </p>
+        <p>For example you might have an HTTP API a rule that any given request to that API must execute in under 100ms. On measuring the performance of a key POST or PUT operation to your API you find that
+        you exceed this value. Upon realizing that much of your time is spent I/O you consider two options:</p>
+        <ul>
+            <li>Use the TPL to perform the work concurrently</li>
+            <li>Offload the work to a distributed task queue, ack the message, and allow the work to complete asynchronously</li>
+        </ul>
+        <p>A problem with the TPL approach is that your operation can only meet the 100ms threshold if your work can be parallelised such that no sub-task takes longer than 100ms. Your speed is always
+            constrained by the slowest operation that you need to parallelize.If you are I/O bound on a resource experiencing contention beyond 100ms, you will not meet your goal by introducing
+            more threads. Your minimum time is your minimum time.</p>
+        <p>You might try to fix this by acking the request, and completing the work asynchronously. Now you risk that the work will be lost if the server fails prior to completion of the work.</p>
+        <p>What you need is <a href="http://www.eaipatterns.com/GuaranteedMessaging.html">Guaranteed Delivery</a> to ensure that work you ack will eventually be handled.</p>
+        <p>A distributed task queue allows you offload work to another process, to be handled in asynchronously and in parallel.</p>
+        <p>In addition use of a distributed task queue allows you to throttle requests - you can hand work off from the web server to a queue that only needs to consume at the
+            rate you have resources to support. This allows you to scale to meet unexpected demand, at the price of <a href="http://en.wikipedia.org/wiki/Eventual_consistency">eventual consistency.</a> </p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>
