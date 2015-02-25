@@ -11,6 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -61,8 +62,8 @@ namespace paramore.brighter.commandprocessor
     ///      </item>
     ///     <item>
     ///         <description>
-    ///             A <see cref="ILog"/> that is the logger to use for diagnostic feedback. <see cref="ILog"/> is defined in 
-    ///             Common.Logging <see cref="!:https://github.com/net-commons/common-logging"/> as an abstraction over logging frameworks and allows us to support your
+    ///             A <see cref="ILog"/> that is the logger to use for diagnostic feedback. <see cref="ILog"/> is defined by 
+    ///             LibLog <see cref="!:hhttps://github.com/damianh/LibLog"/> as an abstraction over logging frameworks and allows us to support your
     ///             preferred logging framework
     ///         </description>
     ///     </item>

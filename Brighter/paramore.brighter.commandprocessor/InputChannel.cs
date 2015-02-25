@@ -41,10 +41,9 @@ using System.Collections.Concurrent;
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class RMQInputChannel.
+    /// Class InputChannel.
     /// An <see cref="IAmAChannel"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     /// and acknowledging receipt of those messages
-    /// The channel uses an AMQP application layer provided by RabbitMQ
     /// </summary>
     public class InputChannel : IAmAnInputChannel
     {
@@ -72,9 +71,9 @@ namespace paramore.brighter.commandprocessor
         public ChannelName Name {get { return new ChannelName(queueName); } }
 
         /// <summary>
-        /// Receives the specified timeoutin milliseconds.
+        /// Receives the specified timeout in milliseconds.
         /// </summary>
-        /// <param name="timeoutinMilliseconds">The timeoutin milliseconds.</param>
+        /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
         public Message Receive(int timeoutinMilliseconds)
         {

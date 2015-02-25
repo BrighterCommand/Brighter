@@ -11,6 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -37,7 +38,7 @@ THE SOFTWARE. */
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class ChannelName
+    /// The name of a channel used to wrap communication with a Broker
     /// </summary>
     public class ChannelName
     {
@@ -53,7 +54,7 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
-        /// Gets the value.
+        /// Gets the name of the channel as a string.
         /// </summary>
         /// <value>The value.</value>
         public string Value
@@ -81,7 +82,7 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
-        /// Equalses the specified other.
+        /// Do the channel name's match?
         /// </summary>
         /// <param name="other">The other.</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
@@ -93,7 +94,7 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
-        /// Determines whether the specified <see cref="System.Object" /> is equal to this instance.
+        /// Do the channel name's match?
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
@@ -115,7 +116,7 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
-        /// Implements the ==.
+        /// Implements the ==. Do the channel name's match?
         /// </summary>
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
@@ -126,7 +127,7 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
-        /// Implements the !=.
+        /// Implements the !=. Do the channel name's not match?
         /// </summary>
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>

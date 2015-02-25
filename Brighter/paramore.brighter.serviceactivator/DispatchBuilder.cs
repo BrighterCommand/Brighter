@@ -224,13 +224,13 @@ namespace paramore.brighter.serviceactivator
         /// <returns>IAmADispatchBuilder.</returns>
        IAmADispatchBuilder ConnectionsFromConfiguration();
        /// <summary>
-       /// Obtains a list of connections i.e. mappings of channels to commands or events via the configuration file for the application
+       /// Initialize the Dispatcher from a list of connection elements       
        /// </summary>
        /// <param name="connections">The connections.</param>
        /// <returns>IAmADispatchBuilder.</returns>
        IAmADispatchBuilder Connections(IEnumerable<Connection> connections);
        /// <summary>
-       /// Connectionses from elements.
+       /// Obtains a list of connections i.e. mappings of channels to commands or events via the configuration file for the application
        /// </summary>
        /// <param name="connectionElements">The connection elements.</param>
        /// <returns>IAmADispatchBuilder.</returns>

@@ -11,6 +11,7 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -37,7 +38,6 @@ THE SOFTWARE. */
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class HandlerName
     /// Strongly typed class for the name of a handler
     /// </summary>
     public class HandlerName
