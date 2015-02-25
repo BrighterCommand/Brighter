@@ -26,7 +26,7 @@
 
 | Branch        | Description   |
 | ------------- | ------------- |
-| Release | The source for the current NuGet package (or the release candidate that is being verified)|
+| Release | DEPRECATED: The source for the 2.0.1 NuGet package (we now use release tags)|
 | Master | The tip of active development. Anything in master should ship at the next release. Code here should conform to CI basics: compile, pass tests etc.  |
 | Other  | A branch for any work that is not ready to go into master (for example would break CI) or is experimental i.e. we don't know if we intend to ever ship, we are just trying out ideas  |
 
