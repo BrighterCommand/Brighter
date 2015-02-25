@@ -26,6 +26,60 @@
         <p><a href="Brighter.html">Brighter Home</a></p>
     </header>
     <section>
+        <h2>Tutorial</h2>
+        <p>This tutorial takes you building teh Greetings project, which is Hello World via a Task Queue. The walkthrough will build the example availabe in the Examples folder of Brighter
+            available in the public repo at <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples/Greetings">Greetings Example</a>
+            if you want to follow along there instead of typing in the code.</p>
+        <h3>Step One</h3>
+        <p>Create a C# Console Application, targeting .NET 4.5.</p>
+        <p>Note that you can use any kind of application with Brighter.ServiceActivator, it's purpose is to take messages of a task queue and route to a Request Handler seamlessly.
+            We use a console application as we intend to build a Windows Service which is one of the most common use cases for the
+            <a href="http://www.eaipatterns.com/MessagingAdapter.html">Service Activator pattern</a>.</p>
+        <img src="images/Greetings-Step1-ConsoleProject.png">
+        <h3>Step Two</h3>
+        <p>Install the <strong>Paramore.Brighter.ServiceActivator</strong> package from NuGet</p>
+        <ul>
+            <li>PM> Install-Package paramore.brighter.serviceactivator</li>
+        </ul>
+        <img src="images/Nuget-ServiceActivator.png">
+        <p>This will install <strong>Paramore.Brighter.Serviceactivator</strong> and it's dependencies <strong>Paramore.Brighter.CommandProcessor</strong>,
+            <strong>Polly</strong>, and <strong>Newtonsoft.Json</strong>.</p>
+        <p>Although the Service Activator provides support for a consumer reading messages of an Input Channel, we need to supply a concrete implementation of
+            IAmAMessageConsumer which abstracts the Message-Oriented-Middleware used by that Input Channel for the task queue implementation.</p>
+        <p>Note that your app.config file will be updated by this install. Although you have no channels as yet, the configuration section for you to add them
+        has been added.</p>
+        <pre><code>
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+    &lt;configuration&gt;
+        &lt;configSections&gt;
+            &lt;section name=&quot;serviceActivatorConnections&quot;
+type=&quot;paramore.brighter.serviceactivator.ServiceActivatorConfiguration.ServiceActivatorConfigurationSection, paramore.brighter.serviceactivator&quot;
+allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot;/&gt;
+        &lt;/configSections&gt;
+        &lt;serviceActivatorConnections&gt;
+            &lt;connections&gt;
+            &lt;/connections&gt;
+        &lt;/serviceActivatorConnections&gt;
+    &lt;/configuration&gt;
+        </code></pre>
+        <p>Install the <strong>Paramore.Brighter.CommandProcessor.MessagingGateway.RMQ</strong> package from NuGet</p>
+        <ul>
+            <li>PM> Install-Package paramore.brighter.commandprocessor.messaginggateway.rmq</li>
+        </ul>
+        <img src="images/Nuget-ServiceActivator.png">
+        <p>This will install <strong>RabbitMQ.Client</strong> as a dependency.</p>
+
+        <p>This will install the <stong>Paramore.Brighter.CommandProcessor.MessageingGateway.RMQ</stong> package which provides support for a Task Queue
+            implemented in <a href="http://www.rabbitmq.com/">Rabbit MQ</a></p>
+        <h3>Step Three</h3>
+        <p>Use Topshelf to run the console application as a service</p>
+        <p>Install the <a href="http://topshelf-project.com/">TopShelf</a> package from NuGet</p>
+        <ul>
+            <li>PM> Install-Package Topshelf</li>
+        </ul>
+        <img src="images/NuGet-Topshelf.png">
+        <p>You will need to accept the licence for Topshelf</p>
+        <img src="images/NuGet-Topshelf-Licence.png">
     </section>
     <footer>
         <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>

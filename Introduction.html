@@ -44,8 +44,9 @@
         <p> The intent of Brighter is to make the difference between synchronous and asynchronous handling as small as possible: both write the same handlers with the same steps in the sequence.
         On the producer side, sending asynchronously is just a different method on the dispatcher. On the consumer side a Service Activator library helps implement the endpoint code
             so that marshalling to an asynchronous handler is as friction-free a manner as possible.</p>
-        <p>The latter functionality has similar goals to <em>NServiceBus</em>, <em>Mass Transit</em>, <em>Fubu Bus</em>, <em>Rebus</em> or <em>Celery</em></p>
-        <p></p>
+        <p>The latter functionality has similar goals to <a href="http://particular.net/nservicebus">NServiceBus</a>, <a href="http://masstransit-project.com/">Mass Transit</a>,
+            <a href="https://github.com/DarthFubuMVC/FubuTransportation">Fubu Transportation</a>, <a href="https://github.com/rebus-org/Rebus">Rebus</a> or <a href="http://www.celeryproject.org/">Celery</a></p>
+        <p>However, internally our goals have far more to do with a .NET equivalent of <a href="https://github.com/Netflix/Hystrix">Hystrix</a> perhaps even <a href="http://vertx.io/">Vert.x</a></p>
         <h2>Bus, Processor or Dispatcher, what's in a name?</h2>
         <p>.NET projects that support task queues - pushing work onto a queue to be handled asynchronously by one or more consumers - tend to use the term BUS in their naming
         regardless of whether or not they are implemented using a Bus topology (i.e. publish subscribe, with no central message broker). Brighter tries to avoid this confusion by talking about

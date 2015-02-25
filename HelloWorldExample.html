@@ -26,14 +26,42 @@
         <p><a href="Brighter.html">Brighter Home</a></p>
     </header>
     <section>
+        <h2>Tutorial</h2>
+        <p>This tutorial takes you building a Hello World project. The walkthrough will build the example availabe in the Examples folder of Brighter
+            available in the public repo at <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples/HelloWorld">Hello World Example</a>
+            if you want to follow along there instead of typing in the code.</p>
         <h3>Step One</h3>
-        <p>Create a C# Console Application, targeting .NET 4.5. (Note that you can use any kind of host application, a console application is just the simplest way to get up and running in an example.</p>
+        <p>Create a C# Console Application, targeting .NET 4.5. (Note that you can use any kind of host application, a console application is just the
+            simplest way to get up and running in an example.</p>
+        <img src="images/HelloWorld-Step1-ConsoleProject.png">
         <h3>Step Two</h3>
         <p>Install the <strong>Paramore.Brighter.CommandProcessor</strong> package from NuGet</p>
         <ul>
             <li>PM> Install-Package Paramore.Brighter.CommandProcessor</li>
         </ul>
+        <img src="images/NuGet-Brighter.png">
         <h3>Step Three</h3>
+        <p>Add the following code to the Main class:</p>
+         <pre><code>
+ var properties = new NameValueCollection();
+ properties["showDateTime"] = "true";
+ LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
+ var logger = LogManager.GetLogger(typeof (Program));
+
+ var registry = new SubscriberRegistry();
+
+ var builder = CommandProcessorBuilder.With()
+     .Handlers(new HandlerConfiguration(
+        subscriberRegistry: registry,
+        handlerFactory: new SimpleHandlerFactory(logger)
+     ))
+    .NoPolicy()
+    .Logger(logger)
+    .NoTaskQueues()
+    .RequestContextFactory(new InMemoryRequestContextFactory());
+
+ var commandProcessor = builder.Build();
+         </code></pre>
         <h4>Requests and Request Handlers</h4>
         <p>A <em>Command Dispatcher</em> works by looking up registered handlers for the command or event and forwarding the request to them, i.e. publish-subscribe.</p>
         <p>For this you need: to publish a Command or Event derived from <strong>IRequest</strong> and
@@ -56,28 +84,7 @@
         <p>With this example creating an instance of the Command Processor is straightforward: as we provide a builder with a fluent interface to help you set up the builder. Because we ask
             you to provide factories where we need to create objects in your project, there are a number of items that you will need to configure. But you do this once, at the composition root,
             are then done with it.</p>
-        <h4>Show me the Code!</h4>
-        <p>Add the following code to the Main class:</p>
-         <pre><code>
- var properties = new NameValueCollection();
- properties["showDateTime"] = "true";
- LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
- var logger = LogManager.GetLogger(typeof (Program));
-
- var registry = new SubscriberRegistry();
-
- var builder = CommandProcessorBuilder.With()
-     .Handlers(new HandlerConfiguration(
-        subscriberRegistry: registry,
-        handlerFactory: new SimpleHandlerFactory(logger)
-     ))
-    .NoPolicy()
-    .Logger(logger)
-    .NoTaskQueues()
-    .RequestContextFactory(new InMemoryRequestContextFactory());
-
- var commandProcessor = builder.Build();
-         </code></pre>
+        <h4>Simple Handler Factory</h4>
         <p>In this case, the handler factory does not need to be implemented using an IoC container. We'll show that in a fuller example, but here it is trivial. For this simple program we just add
             this it the Program.cs file.</p>
         <pre><code>
