@@ -229,9 +229,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
             messageStore = A.Fake<IAmAMessageStore<Message>>();
-            var tcs = new TaskCompletionSource<object>();
-            tcs.SetResult(new object());
-            A.CallTo(() => messageStore.Add(A<Message>.Ignored)).Returns(tcs.Task);
             messagingGateway = A.Fake<IAmAMessageProducer>();
             message = new Message(
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
@@ -261,7 +258,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         Because of = () => commandProcessor.Post(myCommand);
 
-        It should_store_the_message_in_the_sent_command_message_repository = () => messageStore.Add(message);
+        It should_store_the_message_in_the_sent_command_message_repository = () => A.CallTo(() => messageStore.Add(message)).MustHaveHappened();
         It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.Send(message)).MustHaveHappened();
     }
 
