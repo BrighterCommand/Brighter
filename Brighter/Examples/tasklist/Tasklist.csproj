@@ -123,6 +123,7 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="api_http_call_examples.txt" />
     <Content Include="App_Data\Tasks.sdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
