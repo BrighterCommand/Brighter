@@ -5,8 +5,8 @@
 |               |               |
 | ------------- | ------------- |
 |![canon] (https://openclipart.org/people/amilo/canon.svg)|Brighter is a command dispatcher, processor, and task queue. It can be used to implement the [Command Invoker] (http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker) pattern |
-| Version  | [![NuGet Version](http://img.shields.io/nuget/v/paramore.brighter.commandprocessor.svg)](https://www.nuget.org/packages/ paramore.brighter.commandprocessor/)  |
-| Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/ paramore.brighter.commandprocessor.svg)](https://www.nuget.org/packages/Paramore.Brighter.CommandProcessor/) |
+| Version  | [![NuGet Version](http://img.shields.io/nuget/v/paramore.brighter.commandprocessor.svg)](https://www.nuget.org/packages/paramore.brighter.commandprocessor/)  |
+| Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.commandprocessor.svg)](https://www.nuget.org/packages/Paramore.Brighter.CommandProcessor/) |
 | Web  |http://iancooper.github.io/Paramore/  |
 | Source  |https://github.com/iancooper/Paramore |
 | Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, c#, command, command dispatcher, command  processor, queue, distributed |
@@ -26,7 +26,7 @@
 
 | Branch        | Description   |
 | ------------- | ------------- |
-| Release | The source for the current NuGet package (or the release candidate that is being verified)|
+| Release | DEPRECATED: The source for the 2.0.1 NuGet package (we now use release tags)|
 | Master | The tip of active development. Anything in master should ship at the next release. Code here should conform to CI basics: compile, pass tests etc.  |
 | Other  | A branch for any work that is not ready to go into master (for example would break CI) or is experimental i.e. we don't know if we intend to ever ship, we are just trying out ideas  |
 
