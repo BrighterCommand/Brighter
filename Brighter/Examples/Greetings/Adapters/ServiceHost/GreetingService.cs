@@ -41,6 +41,7 @@ namespace Greetings.Adapters.ServiceHost
 
         public GreetingService()
         {
+            log4net.Config.XmlConfigurator.Configure();
             //Create a logger
             var logger = LogProvider.For<GreetingService>();
                 

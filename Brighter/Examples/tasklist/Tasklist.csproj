@@ -129,7 +129,7 @@
     <Content Include="default.aspx" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Adapters\API\Contributors\DependencyPipelineContributor.cs" />
+    <Compile Include="Adapters\API\Configuration\DependencyRegistrar.cs" />
     <Compile Include="Adapters\API\Handlers\TaskReminderEndpointHandler.cs" />
     <Compile Include="Adapters\API\Resources\Link.cs" />
     <Compile Include="Adapters\API\Resources\TaskListModel.cs" />
@@ -138,7 +138,7 @@
     <Compile Include="Adapters\Tests\TaskRetrieverFixture.cs" />
     <Compile Include="Adapters\TinyIoCHandlerFactory.cs" />
     <Compile Include="Adapters\TinyIoCMessageMapperFactory.cs" />
-    <Compile Include="Configuration.cs" />
+    <Compile Include="Adapters\API\Configuration\OpenRastaConfiguration.cs" />
     <Compile Include="default.aspx.cs">
       <DependentUpon>default.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -186,10 +186,6 @@
     <ProjectReference Include="..\..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
       <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
       <Name>paramore.brighter.commandprocessor</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj">
-      <Project>{b9126b00-5a97-4c7d-b395-755456e5fa28}</Project>
-      <Name>paramore.brighter.serviceactivator</Name>
     </ProjectReference>
     <ProjectReference Include="..\Tasks\Tasks.csproj">
       <Project>{e7900a56-da88-46ca-8418-fb4c2bc2d326}</Project>
