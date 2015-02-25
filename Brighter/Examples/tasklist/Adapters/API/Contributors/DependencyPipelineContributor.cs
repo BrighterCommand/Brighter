@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
+
 using OpenRasta.DI;
 using OpenRasta.Pipeline;
 using OpenRasta.Web;
@@ -120,29 +120,6 @@ namespace Tasklist.Adapters.API.Contributors
 
 
             return PipelineContinuation.Continue;
-        }
-
-        private Policy GetCircuitBreakerPolicy()
-        {
-            return Policy
-                .Handle<Exception>()
-                .CircuitBreaker(2, TimeSpan.FromMilliseconds(500));
-        }
-
-        private Policy GetRetryPolicy()
-        {
-            return Policy
-                .Handle<Exception>()
-                .WaitAndRetry(new[]
-                {
-                    1.Seconds(),
-                    2.Seconds(),
-                    3.Seconds()
-                }, (exception, timeSpan) =>
-                    {
-                        var logger = LogProvider.GetLogger("RetryPolicy");
-                        logger.ErrorFormat("Error during decoupled invocation attempt: {0}, retrying in {1)", exception, timeSpan);
-                });
         }
     }
 }
