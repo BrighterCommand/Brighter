@@ -221,15 +221,17 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         static CommandProcessor commandProcessor;
         static readonly MyCommand myCommand = new MyCommand();
         static Message message;
-        static IAmAMessageStore<Message> messageStore;
-        static IAmAMessageProducer messagingGateway ;
+        static FakeMessageStore fakeMessageStore;
+        static FakeMessageProducer fakeMessageProducer;
         
         Establish context = () =>
         {
             var logger = A.Fake<ILog>();
             myCommand.Value = "Hello World";
-            messageStore = A.Fake<IAmAMessageStore<Message>>();
-            messagingGateway = A.Fake<IAmAMessageProducer>();
+
+            fakeMessageStore = new FakeMessageStore();
+            fakeMessageProducer = new FakeMessageProducer();
+            
             message = new Message(
                 header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
                 body: new MessageBody(JsonConvert.SerializeObject(myCommand))
@@ -250,16 +252,15 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
                 messageMapperRegistry, 
-                messageStore, 
-                messagingGateway, 
+                fakeMessageStore, 
+                fakeMessageProducer, 
                 logger);
-
         };
 
         Because of = () => commandProcessor.Post(myCommand);
 
-        It should_store_the_message_in_the_sent_command_message_repository = () => A.CallTo(() => messageStore.Add(message)).MustHaveHappened();
-        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.Send(message)).MustHaveHappened();
+        It should_store_the_message_in_the_sent_command_message_repository = () => fakeMessageStore.MessageWasAdded.ShouldBeTrue();
+        It should_send_a_message_via_the_messaging_gateway = () => fakeMessageProducer.MessageWasSent.ShouldBeTrue();
     }
 
     public class When_resending_a_message_asynchronously
