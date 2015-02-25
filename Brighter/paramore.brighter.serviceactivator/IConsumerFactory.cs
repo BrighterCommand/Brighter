@@ -43,7 +43,7 @@ namespace paramore.brighter.serviceactivator
     internal interface IConsumerFactory
     {
         /// <summary>
-        /// Creates this instance.
+        /// Creates a new consumer. Implemented by specific Message Oriented Middleware packages
         /// </summary>
         /// <returns>Consumer.</returns>
         Consumer Create();

@@ -46,22 +46,28 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public enum MessageType
     {
+        /// <summary>
+        /// The message could not be read
+        /// </summary>
         MT_UNACCEPTABLE = -1,
+        /// <summary>
+        /// The message type has not been configured
+        /// </summary>
         MT_NONE = 0,
         /// <summary>
-        /// The m t_ command{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+        /// There is no message type set, probably uninitialized
         /// </summary>
         MT_COMMAND = 1,
         /// <summary>
-        /// The m t_ event{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+        /// The message was sent as a command, and the producer intended it to be handled by a consumer
         /// </summary>
         MT_EVENT = 2,
         /// <summary>
-        /// The m t_ document{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+        /// The message was raised as an event and the producer does not care if anyone listens to it
         /// </summary>
         MT_DOCUMENT = 3,
         /// <summary>
-        /// The m t_ quit{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+        /// A quit message, used to end a dispatcher's message pump
         /// </summary>
         MT_QUIT = 4
     }
@@ -202,6 +208,9 @@ namespace paramore.brighter.commandprocessor
             return !Equals(left, right);
         }
 
+        /// <summary>
+        /// Updates the number of times the message has been seen by the dispatcher; used to determine if it is poisioned and should be discarded.
+        /// </summary>
         public void UpdateHandledCount()
         {
             HandledCount++;

@@ -52,7 +52,7 @@ namespace paramore.brighter.serviceactivator
         /// </summary>
         DS_AWAITING = 1,
         /// <summary>
-        /// Running, waiting for messages on channels and dispatcing to handlers
+        /// Running, waiting for messages on channels and dispatching to handlers
         /// </summary>
         DS_RUNNING = 2,
         /// <summary>

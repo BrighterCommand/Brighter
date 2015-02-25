@@ -35,15 +35,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using Polly;
-
-/// <summary>
-/// The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-/// </summary>
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class MessagingConfiguration.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class MessagingConfiguration.
+    /// Used to set the components of a work queue solution
     /// </summary>
     public class MessagingConfiguration
     {

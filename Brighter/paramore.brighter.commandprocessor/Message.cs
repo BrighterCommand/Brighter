@@ -39,7 +39,6 @@ using System;
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class Message
     /// A message sent over <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> for asynchronous processing of a <see cref="Command"/>
     /// or <see cref="Event"/>
     /// </summary>

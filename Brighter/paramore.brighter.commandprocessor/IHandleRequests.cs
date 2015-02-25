@@ -84,7 +84,7 @@ namespace paramore.brighter.commandprocessor
     /// code for calling the next handler in sequence in the pipeline and describing the path.
     /// It derives from <see cref="IHandleRequests"/> which provides functionality that is not dependant on <see cref="IRequest"/>. This simplifies some tasks that do not know
     /// the specific type of the <see cref="IRequest"/>
-    /// Impelementors should use on class to implement both <see cref="IHandleRequests{T}"/> and <see cref="IHandleRequests"/> as per <see cref="RequestHandler{T}"/>
+    /// Implementors should use on class to implement both <see cref="IHandleRequests{T}"/> and <see cref="IHandleRequests"/> as per <see cref="RequestHandler{T}"/>
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public interface IHandleRequests<TRequest> : IHandleRequests where TRequest : class, IRequest

@@ -50,11 +50,11 @@ namespace paramore.brighter.serviceactivator
     public enum ConsumerState
     {
         /// <summary>
-        /// The shut
+        /// The consumer is shut and won't read messages from the task queue
         /// </summary>
         Shut=0,
         /// <summary>
-        /// The open
+        /// The consumer is open and will receive messages from the task queue
         /// </summary>
         Open=1
     }
@@ -63,7 +63,7 @@ namespace paramore.brighter.serviceactivator
     /// Class Consumer.
     /// Manages the message pump used to read messages for a channel. Creation establishes the message pump for a given connection and channel. Open runs the
     /// message pump, which begins consuming messages from the channel; it return the TPL Task used to run the message pump thread so that it can be
-    /// Watied on by callers. Shut closes the message pump.
+    /// Waited on by callers. Shut closes the message pump.
     /// 
     /// </summary>
     public class Consumer: IDisposable, IEquatable<Consumer>
@@ -106,7 +106,7 @@ namespace paramore.brighter.serviceactivator
         }
 
         /// <summary>
-        /// Opens this instance.
+        /// Opens the task queue and begin receiving messages.
         /// </summary>
         public void Open()
         {
@@ -116,7 +116,7 @@ namespace paramore.brighter.serviceactivator
         }
 
         /// <summary>
-        /// Shuts this instance.
+        /// Shuts the task, which will not receive messages.
         /// </summary>
         public void Shut()
         {
@@ -127,6 +127,9 @@ namespace paramore.brighter.serviceactivator
             }
         }
 
+        /// <summary>
+        /// Shuts the consumer when the consumer is being released
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);
@@ -141,6 +144,11 @@ namespace paramore.brighter.serviceactivator
             }
         }
 
+        /// <summary>
+        /// Do the consumers match on name?
+        /// </summary>
+        /// <param name="other">An object to compare with this object.</param>
+        /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(Consumer other)
         {
             if (ReferenceEquals(null, other)) return false;
@@ -148,6 +156,11 @@ namespace paramore.brighter.serviceactivator
             return Equals(Name, other.Name) && Equals(Job, other.Job);
         }
 
+        /// <summary>
+        ///Do the consumers match on name?
+        /// </summary>
+        /// <param name="obj">The object to compare with the current object.</param>
+        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -156,6 +169,10 @@ namespace paramore.brighter.serviceactivator
             return Equals((Consumer) obj);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
         public override int GetHashCode()
         {
             unchecked
@@ -164,11 +181,23 @@ namespace paramore.brighter.serviceactivator
             }
         }
 
+        /// <summary>
+        /// Implements the ==. Do the consumers match on name?
+        /// </summary>
+        /// <param name="left">The left.</param>
+        /// <param name="right">The right.</param>
+        /// <returns>The result of the operator.</returns>
         public static bool operator ==(Consumer left, Consumer right)
         {
             return Equals(left, right);
         }
 
+        /// <summary>
+        /// Implements the !=. Do the consumers not match on name?
+        /// </summary>
+        /// <param name="left">The left.</param>
+        /// <param name="right">The right.</param>
+        /// <returns>The result of the operator.</returns>
         public static bool operator !=(Consumer left, Consumer right)
         {
             return !Equals(left, right);

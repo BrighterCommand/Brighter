@@ -40,7 +40,7 @@ namespace paramore.brighter.serviceactivator
 {
     /// <summary>
     /// Class ConnectionName.
-    /// value type that stores the name of a connection. Immutable.
+    /// Value type that stores the name of a connection. Immutable.
     /// </summary>
     public class ConnectionName : IEquatable<ConnectionName>
     {
@@ -56,7 +56,7 @@ namespace paramore.brighter.serviceactivator
         }
 
         /// <summary>
-        /// Gets the value.
+        /// Gets the connection name as a string.
         /// </summary>
         /// <value>The value.</value>
         public string Value
@@ -84,7 +84,7 @@ namespace paramore.brighter.serviceactivator
         }
 
         /// <summary>
-        /// Indicates whether the current object is equal to another object of the same type.
+        /// Does the connection name match?
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
@@ -96,7 +96,7 @@ namespace paramore.brighter.serviceactivator
         }
 
         /// <summary>
-        /// Determines whether the specified <see cref="System.Object" /> is equal to this instance.
+        /// Does the connection name match?
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
@@ -118,7 +118,7 @@ namespace paramore.brighter.serviceactivator
         }
 
         /// <summary>
-        /// Implements the ==.
+        /// Implements the ==. Does the connection name match?
         /// </summary>
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
@@ -129,7 +129,7 @@ namespace paramore.brighter.serviceactivator
         }
 
         /// <summary>
-        /// Implements the !=.
+        /// Implements the !=. Does the connection name not match?
         /// </summary>
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
