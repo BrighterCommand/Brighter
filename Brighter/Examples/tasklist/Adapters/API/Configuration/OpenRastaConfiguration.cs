@@ -24,19 +24,19 @@ THE SOFTWARE. */
 
 using OpenRasta.Codecs;
 using OpenRasta.Configuration;
-using Tasklist.Adapters.API.Contributors;
+using OpenRasta.DI;
+
 using Tasklist.Adapters.API.Handlers;
 using Tasklist.Adapters.API.Resources;
 
-namespace Tasklist
+namespace Tasklist.Adapters.API.Configuration
 {
-    public class Configuration : IConfigurationSource
+    public class OpenRastaConfiguration : IConfigurationSource, IDependencyResolverAccessor
     {
         public void Configure()
         {
-            using (OpenRastaConfiguration.Manual)
+            using (OpenRasta.Configuration.OpenRastaConfiguration.Manual)
             {
-                ResourceSpace.Uses.PipelineContributor<DependencyPipelineContributor>();
                 ResourceSpace.Has.ResourcesOfType<TaskModel>()
                         .AtUri("/tasks/{taskId}")
                         .HandledBy<TaskEndPointHandler>()
@@ -60,6 +60,17 @@ namespace Tasklist
                     .ForMediaType("application/json")
                     .ForExtension("js")
                     .ForExtension("json");
+            }
+        }
+
+        public IDependencyResolver Resolver
+        {
+            get
+            {
+                var dependencyRegistrar = new DependencyRegistrar();
+                dependencyRegistrar.Initialise();
+
+                return dependencyRegistrar.GetDependencyResolver();
             }
         }
     }
