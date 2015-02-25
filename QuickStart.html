@@ -37,24 +37,50 @@
         <p>Brighter uses a number of NuGet packages</p>
         <p>The core package <strong>Paramore.Brighter.CommandProcessor</strong> depends on:</p>
         <ul>
-            <li><a href="http://netcommon.sourceforge.net/">Common.Logging</a></li>
+            <li><a href="https://github.com/damianh/LibLog">LibLog</a></li>
             <li><a href="http://james.newtonking.com/json">Json.NET</a></li>
             <li><a href="https://github.com/michael-wolfenden/Polly">Polly</a></li>
         </ul>
-        <p>In addition a number of the packages depend on implementation specific NuGet packages. For example, the <strong>Brighter.CommandProcessor.MessageStore.RavenDB</strong> package depends on,
-            yep you guessed it, <a href="http://ravendb.net/">RavenDB</a> and the <strong>Brighter.CommandProcessor.MessagingGateway.RMQ</strong> depends
-            on <a href="http://www.rabbitmq.com/dotnet.html">RabbitMQ</a></p>
+        <p>The major pain point here is the Json.NET dependency as it is likely other projects you depend on will also pull in this project. If you have conflicts,
+            try using <a href="https://msdn.microsoft.com/en-us/library/7wd6ex19%28v=vs.110%29.aspx?f=255&MSPPError=-2147217396">Assembly Redirection</a> to resolve.
+            It is less likely that you will have conflicts with Polly, but again use the strategy above. In a worst case scenario, fork the code, rebuild with the
+            required version, fix any issues, and deploy as a lib not a package.</p>
+        <p>We support LibLog for logging by Brighter.* projects with the namespace <strong>paramore.brighter.commandprocessor.Logging</strong> and the
+            interface <strong>ILog</strong>.</p>
+        <p>The core package <strong>Paramore.Brighter.ServiceActivator</strong> depends on:</p>
+        <ul>
+             <li><a href="https://github.com/michael-wolfenden/Polly">Polly</a></li>
+        </ul>
+        <p>In addition a number of the packages implement interfaces provided by CommandProcessor and depend specific NuGet packages for those implementations.
+        <p> <strong>Brighter.CommandProcessor.MessageStore.RavenDB</strong> depends on</p>
+        <ul>
+            <li><a href="http://ravendb.net/">RavenDB Client</a></li>
+        </ul>
+        <p> <strong>Brighter.CommandProcessor.MessageStore.MSSql</strong> depends on</p>
+        <ul>
+            <li><a href="https://www.nuget.org/packages/Microsoft.SqlServer.Compact">Microsoft SQL Server Compact Edition</a></li>
+            <li><a href="http://james.newtonking.com/json">Json.NET</a></li>
+        </ul>
+        <p><strong>Brighter.CommandProcessor.MessagingGateway.RMQ</strong> depends on</p>
+        <ul>
+            <li><a href="http://www.rabbitmq.com/dotnet.html">RabbitMQ.Client</a></li>
+            <li><a href="http://james.newtonking.com/json">Json.NET</a></li>
+            <li><a href="https://github.com/michael-wolfenden/Polly">Polly</a></li>
+        </ul>
+        <p><strong>Brighter.CommandProcessor.MessagingGateway.RestMS</strong> depends on</p>
+        <ul>
+            <li><a href=https://github.com/thinktecture">Thinktecture.IdentityModel.Hawk</a></li>
+        </ul>
         <h2>Get the Library</h2>
         <p>The Brighter packages are available on <a href="http://www.nuget.org/packages?q=brighter">NuGet</a> by searching for Brighter</p>
         <p>The following packages are currently available:</p>
         <ul>
             <li><strong>Paramore.Brighter.CommandProcessor</strong> - the core library, provides a <a href="CommandsCommandDispatcherandProcessor.html">Command Dispatcher and Command Processor</a></li>
-            <li><strong>Paramore.Brighter.CommandProcessor.ExceptionPolicy</strong> - provides support for exception policy handlers in the pipeline, using Polly i.e. <a href="QualityOfServicePatterns.html">Retry or Circuit Breaker</a></li>
-            <li><strong>Paramore.Brighter.CommandProcessor.TimeoutPolicy</strong> - provides support for <a href="QualityOfServicePatterns.html">timeout</a> on handlers</li>
             <li><strong>Paramore.Brighter.ServiceActivator</strong> - provides consumer support for deferring long-running work to a <a href="https://www.rabbitmq.com/tutorials/tutorial-two-python.html">task/work queue</a>
                 The core library provides support for the producer</li>
             <li><strong>Paramore.Brighter.MessagingGateway.RMQ</strong> - provides support for using RabbitMQ as a broker</li>
             <li><strong>Paramore.Brighter.MessageStore.RavenDB</strong> - provides support for using RavenDB to replay messages sent to the broker</li>
+            <li><strong>Paramore.Brighter.MessageStore.MSSQL</strong> - provides support for using MSSql to replay messages sent to the broker</li>
         </ul>
         <h2>First Steps</h2>
         <p>First Steps provides a simple sample to handle a command message synchronously</p>
@@ -64,12 +90,13 @@
         <h2>Next Steps</h2>
         <p>Afterwards Next Steps looks at the examples provided and discusses event publishing, and asynchronous events via a Broker</p>
         <ul>
+            <li><a href="GreetingsExample.html">Greetings</a></li>
             <li><a href="TasksExample.html">Tasks</a></li>
         </ul>
         <h2>Configuration</h2>
         <p>As ever with this kind of library, configuration is one of the most painful parts. We try to ease the pain through a fluent interface</p>
         <ul>
-            <li><a href="Configuration.html">Configuration</a></li>
+            <li><a href="BasicConfiguration.html">Configuration</a></li>
         </ul>
      </section>
     <footer>
