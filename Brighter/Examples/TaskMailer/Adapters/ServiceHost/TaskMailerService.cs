@@ -41,6 +41,8 @@ namespace TaskMailer.Adapters.ServiceHost
 
         public TaskMailerService()
         {
+            log4net.Config.XmlConfigurator.Configure();
+
             var logger = LogProvider.For<TaskMailerService>();
                 
             var container = new TinyIoCContainer();
@@ -76,30 +78,29 @@ namespace TaskMailer.Adapters.ServiceHost
                 {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
             };
 
+            var commandProcessor = CommandProcessorBuilder.With()
+                .Handlers(new HandlerConfiguration(subscriberRegistry,handlerFactory))
+                .Policies(policyRegistry)
+                .Logger(logger)
+                .NoTaskQueues()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
+
             //create message mappers
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
             {
                 {typeof (TaskReminderCommand), typeof(TaskReminderCommandMessageMapper)}
             };
 
-            //create the gateway
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
-            var builder = DispatchBuilder.With()
-                .Logger(logger)
-                .CommandProcessor(CommandProcessorBuilder.With()
-                    .Handlers(new HandlerConfiguration(subscriberRegistry,
-                                                        handlerFactory))
-                    .Policies(policyRegistry)
-                    .Logger(logger)
-                    .NoTaskQueues()
-                    .RequestContextFactory(new InMemoryRequestContextFactory())
-                    .Build()
-                 )
-                 .MessageMappers(messageMapperRegistry)
-                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
-                 .ConnectionsFromConfiguration();
-           dispatcher = builder.Build();
 
+            dispatcher = DispatchBuilder.With()
+                .Logger(logger)
+                .CommandProcessor(commandProcessor)
+                .MessageMappers(messageMapperRegistry)
+                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
+                .ConnectionsFromConfiguration()
+                .Build();
         }
 
         public bool Start(HostControl hostControl)
@@ -110,16 +111,15 @@ namespace TaskMailer.Adapters.ServiceHost
 
         public bool Stop(HostControl hostControl)
         {
-            dispatcher.End();
+            dispatcher.End().Wait();
             dispatcher = null;
-            return false;
+            return true;
         }
 
         public void Shutdown(HostControl hostcontrol)
         {
             if (dispatcher != null)
-                dispatcher.End();
-            return;
+                dispatcher.End().Wait();
         }
     }
 }
