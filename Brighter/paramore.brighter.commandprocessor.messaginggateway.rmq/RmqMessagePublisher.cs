@@ -1,5 +1,26 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
 
 using System;
 using System.Collections.Generic;
@@ -12,11 +33,24 @@ using RabbitMQ.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
+    /// <summary>
+    /// Class RmqMessagePublisher.
+    /// </summary>
     public class RmqMessagePublisher
     {
         private readonly IModel _channel;
         private readonly string _exchangeName;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RmqMessagePublisher"/> class.
+        /// </summary>
+        /// <param name="channel">The channel.</param>
+        /// <param name="exchangeName">Name of the exchange.</param>
+        /// <exception cref="System.ArgumentNullException">
+        /// channel
+        /// or
+        /// exchangeName
+        /// </exception>
         public RmqMessagePublisher(IModel channel, string exchangeName)
         {
             if (channel == null)
@@ -32,6 +66,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             _exchangeName = exchangeName;
         }
 
+        /// <summary>
+        /// Publishes the message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void PublishMessage(Message message)
         {
             _channel.BasicPublish(

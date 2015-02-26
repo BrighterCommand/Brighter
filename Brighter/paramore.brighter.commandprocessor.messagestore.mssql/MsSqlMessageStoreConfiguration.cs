@@ -1,5 +1,16 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messagestore.mssql
+// Author           : ian
+// Created          : 01-26-2015
+//
+// Last Modified By : ian
+// Last Modified On : 02-26-2015
+// ***********************************************************************
+// <copyright file="MsSqlMessageStoreConfiguration.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 
 #region Licence
 /* The MIT License (MIT)
@@ -24,10 +35,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 namespace paramore.brighter.commandprocessor.messagestore.mssql
 {
+    /// <summary>
+    /// Class MsSqlMessageStoreConfiguration.
+    /// </summary>
     public class MsSqlMessageStoreConfiguration
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MsSqlMessageStoreConfiguration"/> class.
+        /// </summary>
+        /// <param name="connectionString">The connection string.</param>
+        /// <param name="messageStoreTableName">Name of the message store table.</param>
+        /// <param name="databaseType">Type of the database.</param>
         public MsSqlMessageStoreConfiguration(string connectionString, string messageStoreTableName, DatabaseType databaseType)
         {
             Type = databaseType;
@@ -35,13 +56,34 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             ConnectionString = connectionString;
         }
 
+        /// <summary>
+        /// Gets the connection string.
+        /// </summary>
+        /// <value>The connection string.</value>
         public string ConnectionString { get; private set; }
+        /// <summary>
+        /// Gets the name of the message store table.
+        /// </summary>
+        /// <value>The name of the message store table.</value>
         public string MessageStoreTableName { get; private set; }
+        /// <summary>
+        /// Gets the type.
+        /// </summary>
+        /// <value>The type.</value>
         public DatabaseType Type { get; private set; }
 
+        /// <summary>
+        /// Enum DatabaseType
+        /// </summary>
         public enum DatabaseType
         {
+            /// <summary>
+            /// The ms SQL server
+            /// </summary>
             MsSqlServer,
+            /// <summary>
+            /// The SQL ce
+            /// </summary>
             SqlCe
         }
     }

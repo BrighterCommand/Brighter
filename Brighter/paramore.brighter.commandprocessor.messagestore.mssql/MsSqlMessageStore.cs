@@ -1,5 +1,16 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messagestore.mssql
+// Author           : ian
+// Created          : 01-26-2015
+//
+// Last Modified By : ian
+// Last Modified On : 02-26-2015
+// ***********************************************************************
+// <copyright file="MsSqlMessageStore.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 
 #region Licence
 /* The MIT License (MIT)
@@ -24,6 +35,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using System;
 using System.Data;
 using System.Data.Common;
@@ -34,6 +46,9 @@ using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messagestore.mssql
 {
+    /// <summary>
+    /// Class MsSqlMessageStore.
+    /// </summary>
     public class MsSqlMessageStore : IAmAMessageStore<Message>
     {
         private readonly MsSqlMessageStoreConfiguration _configuration;
@@ -41,12 +56,22 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         private const int MsSqlDuplicateKeyError = 2601;
         private const int SqlCeDuplicateKeyError = 25016;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MsSqlMessageStore"/> class.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        /// <param name="log">The log.</param>
         public MsSqlMessageStore(MsSqlMessageStoreConfiguration configuration, ILog log)
         {
             _configuration = configuration;
             _log = log;
         }
 
+        /// <summary>
+        /// Adds the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <returns>Task.</returns>
         public async Task Add(Message message)
         {
             var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Body) VALUES (@MessageId, @MessageType, @Topic, @Body)", _configuration.MessageStoreTableName);
@@ -116,6 +141,11 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             return null;
         }
 
+        /// <summary>
+        /// Gets the specified message identifier.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
+        /// <returns>Task&lt;Message&gt;.</returns>
         public async Task<Message> Get(Guid messageId)
         {
             var sql = string.Format("SELECT MessageId, MessageType, Topic, Body FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);

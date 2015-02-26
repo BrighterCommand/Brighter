@@ -1,7 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
 // Author           : ian
 // Created          : 07-01-2014
@@ -38,6 +35,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -61,7 +59,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     {
         private readonly string _queueName;
         private readonly string _routingKey;
-        private const bool AUTO_ACK = false;
+        private const bool AutoAck = false;
         /// <summary>
         /// The consumer
         /// </summary>
@@ -71,7 +69,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
+        /// <param name="routingKey"></param>
         /// <param name="logger">The logger.</param>
+        /// <param name="queueName"></param>
         public RmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(logger)
         {
             _queueName = queueName;
@@ -277,7 +277,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         protected virtual void CreateConsumer()
         {
             _consumer = new QueueingBasicConsumer(Channel);
-            Channel.BasicConsume(_queueName, AUTO_ACK, _consumer);
+            Channel.BasicConsume(_queueName, AutoAck, _consumer);
 
             Logger.InfoFormat("RmqMessageConsumer: Created consumer with ConsumerTag {4} for queue {0} with routing key {1} via exchange {2} on connection {3}",
                               _queueName,
