@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Linq;
 using Machine.Specifications;
@@ -35,27 +37,27 @@ namespace Tasklist.Adapters.Tests
     [Subject(typeof(TasksDAO))]
     public class When_retrieving_a_list_of_tasks
     {
-        static TasksDAO dao;
-        private static TaskListRetriever retriever; 
-        static Task newTask;
-        private static int taskId;
-        private static TaskListModel taskList;
+        private static TasksDAO s_dao;
+        private static TaskListRetriever s_retriever;
+        private static Task s_newTask;
+        private static int s_taskId;
+        private static TaskListModel s_taskList;
         private const string hostName = "http://localhost:49743";
 
-        Establish context = () =>
+        private Establish _context = () =>
             {
-                dao = new TasksDAO();
-                dao.Clear();
-                newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
-                var addedTask = dao.Add(newTask);
-                taskId = addedTask.Id;
+                s_dao = new TasksDAO();
+                s_dao.Clear();
+                s_newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
+                var addedTask = s_dao.Add(s_newTask);
+                s_taskId = addedTask.Id;
 
-                retriever = new TaskListRetriever(hostName);
+                s_retriever = new TaskListRetriever(hostName);
             };
 
-        Because of = () => taskList = retriever.RetrieveTasks();
+        private Because _of = () => s_taskList = s_retriever.RetrieveTasks();
 
-        It should_have_a_self_link = () => taskList.Self.ToString().ShouldEqual(string.Format("<link rel=\"self\" href=\"http://{0}/tasks\" />", hostName));
-        It should_have_a_link_in_the_list_to_the_task = () => taskList.Links.Any(taskLink => taskLink.HRef == string.Format("<link rel=\"item\" href=\"http://{0}/task/{1}\" />", hostName, taskId));
+        private It _should_have_a_self_link = () => s_taskList.Self.ToString().ShouldEqual(string.Format("<link rel=\"self\" href=\"http://{0}/tasks\" />", hostName));
+        private It _should_have_a_link_in_the_list_to_the_task = () => s_taskList.Links.Any(taskLink => taskLink.HRef == string.Format("<link rel=\"item\" href=\"http://{0}/task/{1}\" />", hostName, s_taskId));
     }
 }

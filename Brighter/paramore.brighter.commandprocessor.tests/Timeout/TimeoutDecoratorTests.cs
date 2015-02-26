@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Linq;
 
@@ -39,11 +42,11 @@ namespace paramore.commandprocessor.tests.Timeout
     [Subject("Basic policy on a handler")]
     public class When_sending_a_command_to_the_processor_failing_a_timeout_policy_check
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
-        static AggregateException thrownException;
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        private static AggregateException s_thrownException;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
@@ -53,25 +56,24 @@ namespace paramore.commandprocessor.tests.Timeout
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<ILog>(logger);
-            container.Register<IHandleRequests<MyCommand>,MyFailsDueToTimeoutHandler>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyFailsDueToTimeoutHandler>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, TimeoutPolicyHandler<MyCommand>>().AsSingleton();
 
             MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = false;
             MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted = true;
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
         //We have to catch the final exception that bubbles out after retry
-        Because of = () =>
+        private Because _of = () =>
         {
-            thrownException = (AggregateException)Catch.Exception(() => commandProcessor.Send(myCommand));
+            s_thrownException = (AggregateException)Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
         };
 
-        It should_throw_a_timeout_exception = () => thrownException.Flatten().InnerExceptions.First().ShouldBeOfExactType<TimeoutException>() ;
-        It should_signal_that_a_timeout_occured_and_handler_should_be_cancelled = () => MyFailsDueToTimeoutHandlerStateTracker.WasCancelled.ShouldBeTrue();
-        It should_not_run_to_completion = () => MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted.ShouldBeFalse();
-
+        private It _should_throw_a_timeout_exception = () => s_thrownException.Flatten().InnerExceptions.First().ShouldBeOfExactType<TimeoutException>();
+        private It _should_signal_that_a_timeout_occured_and_handler_should_be_cancelled = () => MyFailsDueToTimeoutHandlerStateTracker.WasCancelled.ShouldBeTrue();
+        private It _should_not_run_to_completion = () => MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted.ShouldBeFalse();
     }
 
 
@@ -79,10 +81,10 @@ namespace paramore.commandprocessor.tests.Timeout
     [Subject("Basic policy on a handler")]
     public class When_sending_a_command_to_the_processor_passing_a_timeout_policy_check
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
@@ -96,12 +98,12 @@ namespace paramore.commandprocessor.tests.Timeout
             container.Register<IHandleRequests<MyCommand>, TimeoutPolicyHandler<MyCommand>>().AsSingleton();
             container.Register<ILog>(logger);
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
         //We have to catch the final exception that bubbles out after retry
-        Because of = () =>  commandProcessor.Send(myCommand);
+        private Because _of = () => s_commandProcessor.Send(s_myCommand);
 
-        It should_complete_the_command_before_an_exception = () => MyPassesTimeoutHandler.Shouldreceive(myCommand);
+        private It _should_complete_the_command_before_an_exception = () => MyPassesTimeoutHandler.Shouldreceive(s_myCommand);
     }
 }

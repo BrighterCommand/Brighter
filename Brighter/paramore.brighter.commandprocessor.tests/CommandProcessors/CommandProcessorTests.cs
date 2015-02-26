@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Threading.Tasks;
 using FakeItEasy;
@@ -38,40 +41,40 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     [Subject("Basic send of a command")]
     public class When_sending_a_command_to_the_processor
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            
+
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
-        Because of = () => commandProcessor.Send(myCommand);
+        private Because _of = () => s_commandProcessor.Send(s_myCommand);
 
-        It should_send_the_command_to_the_command_handler = () => MyCommandHandler.Shouldreceive(myCommand).ShouldBeTrue();
+        private It _should_send_the_command_to_the_command_handler = () => MyCommandHandler.Shouldreceive(s_myCommand).ShouldBeTrue();
     }
 
     [Subject("Commands should only have one handler")]
     public class When_there_are_multiple_possible_command_handlers
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
-        private static Exception exception;
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        private static Exception s_exception;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             registry.Register<MyCommand, MyImplicitHandler>();
-            
+
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>("DefaultHandler");
@@ -79,42 +82,41 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
             container.Register<ILog>(logger);
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
-        Because of = () =>  exception = Catch.Exception(() => commandProcessor.Send(myCommand));
+        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
 
-        It should_fail_because_multiple_receivers_found = () => exception.ShouldBeAssignableTo(typeof (ArgumentException));
-        It should_have_an_error_message_that_tells_you_why = () => exception.ShouldContainErrorMessage("More than one handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.");
+        private It _should_fail_because_multiple_receivers_found = () => s_exception.ShouldBeAssignableTo(typeof(ArgumentException));
+        private It _should_have_an_error_message_that_tells_you_why = () => s_exception.ShouldContainErrorMessage("More than one handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.");
     }
 
     [Subject("Commands should have at least one handler")]
     public class When_there_are_no_command_handlers
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
-        private static Exception exception;
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        private static Exception s_exception;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            commandProcessor = new CommandProcessor(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer()),  new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
-
+            s_commandProcessor = new CommandProcessor(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer()), new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
-        Because of = () =>  exception = Catch.Exception(() => commandProcessor.Send(myCommand));
+        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
 
-        It should_fail_because_multiple_receivers_found = () => exception.ShouldBeAssignableTo(typeof (ArgumentException));
-        It should_have_an_error_message_that_tells_you_why = () => exception.ShouldContainErrorMessage("No command handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should have only one handler."); 
+        private It _should_fail_because_multiple_receivers_found = () => s_exception.ShouldBeAssignableTo(typeof(ArgumentException));
+        private It _should_have_an_error_message_that_tells_you_why = () => s_exception.ShouldContainErrorMessage("No command handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should have only one handler.");
     }
 
     [Subject("Basic event publishing")]
     public class When_publishing_an_event_to_the_processor
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyEvent myEvent = new MyEvent();
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyEvent s_myEvent = new MyEvent();
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
@@ -122,73 +124,73 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             registry.Register<MyEvent, MyEventHandler>();
             var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler(logger));
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
-        Because of = () => commandProcessor.Publish(myEvent);
-        It should_publish_the_command_to_the_event_handlers = () => MyEventHandler.Shouldreceive(myEvent).ShouldBeTrue();
+        private Because _of = () => s_commandProcessor.Publish(s_myEvent);
+        private It _should_publish_the_command_to_the_event_handlers = () => MyEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
     }
 
     [Subject("An event may have no subscribers")]
     public class When_there_are_no_subscribers
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyEvent myEvent = new MyEvent();
-        static Exception exception;
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyEvent s_myEvent = new MyEvent();
+        private static Exception s_exception;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
             var registry = new SubscriberRegistry();
             var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler(logger));
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
-        Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
+        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Publish(s_myEvent));
 
-        It should_not_throw_an_exception = () => exception.ShouldBeNull();
+        private It _should_not_throw_an_exception = () => s_exception.ShouldBeNull();
     }
 
     [Subject("An event with multiple subscribers")]
     public class When_there_are_multiple_subscribers
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyEvent myEvent = new MyEvent();
-        static Exception exception;
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyEvent s_myEvent = new MyEvent();
+        private static Exception s_exception;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
             registry.Register<MyEvent, MyOtherEventHandler>();
-            
+
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyEvent>, MyEventHandler>("MyEventHandler");
             container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("MyOtherHandler");
             container.Register<ILog>(logger);
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
-        Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
+        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Publish(s_myEvent));
 
-        It should_not_throw_an_exception = () => exception.ShouldBeNull();
-        It should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.Shouldreceive(myEvent).ShouldBeTrue(); 
-        It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.Shouldreceive(myEvent).ShouldBeTrue();
+        private It _should_not_throw_an_exception = () => s_exception.ShouldBeNull();
+        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
+        private It _should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
     }
 
     [Subject("An event with multiple subscribers")]
     public class When_publishing_to_multiple_subscribers_should_aggregate_exceptions
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyEvent myEvent = new MyEvent();
-        static Exception exception;
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyEvent s_myEvent = new MyEvent();
+        private static Exception s_exception;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
@@ -196,7 +198,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             registry.Register<MyEvent, MyEventHandler>();
             registry.Register<MyEvent, MyOtherEventHandler>();
             registry.Register<MyEvent, MyThrowingEventHandler>();
-            
+
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyEvent>, MyEventHandler>("MyEventHandler");
@@ -204,37 +206,37 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             container.Register<IHandleRequests<MyEvent>, MyThrowingEventHandler>("MyThrowingHandler");
             container.Register<ILog>(logger);
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(),  logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
-        Because of = () => exception = Catch.Exception(() => commandProcessor.Publish(myEvent));
+        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Publish(s_myEvent));
 
-        It should_throw_an_aggregate_exception = () => exception.ShouldBeOfExactType(typeof(AggregateException));
-        It should_have_an_inner_exception_from_the_handler = () => ((AggregateException) exception).InnerException.ShouldBeOfExactType(typeof (InvalidOperationException));
-        It should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.Shouldreceive(myEvent).ShouldBeTrue(); 
-        It should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.Shouldreceive(myEvent).ShouldBeTrue();
+        private It _should_throw_an_aggregate_exception = () => s_exception.ShouldBeOfExactType(typeof(AggregateException));
+        private It _should_have_an_inner_exception_from_the_handler = () => ((AggregateException)s_exception).InnerException.ShouldBeOfExactType(typeof(InvalidOperationException));
+        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
+        private It _should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
     }
 
 
     public class When_using_decoupled_invocation_to_send_a_message_asynchronously
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
-        static Message message;
-        static FakeMessageStore fakeMessageStore;
-        static FakeMessageProducer fakeMessageProducer;
-        
-        Establish context = () =>
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        private static Message s_message;
+        private static FakeMessageStore s_fakeMessageStore;
+        private static FakeMessageProducer s_fakeMessageProducer;
+
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            myCommand.Value = "Hello World";
+            s_myCommand.Value = "Hello World";
 
-            fakeMessageStore = new FakeMessageStore();
-            fakeMessageProducer = new FakeMessageProducer();
-            
-            message = new Message(
-                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
-                body: new MessageBody(JsonConvert.SerializeObject(myCommand))
+            s_fakeMessageStore = new FakeMessageStore();
+            s_fakeMessageProducer = new FakeMessageProducer();
+
+            s_message = new Message(
+                header: new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
+                body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
                 );
 
             var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyCommandMessageMapper()));
@@ -248,43 +250,42 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
-                messageMapperRegistry, 
-                fakeMessageStore, 
-                fakeMessageProducer, 
+            s_commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
+                messageMapperRegistry,
+                s_fakeMessageStore,
+                s_fakeMessageProducer,
                 logger);
         };
 
-        Because of = () => commandProcessor.Post(myCommand);
+        private Because _of = () => s_commandProcessor.Post(s_myCommand);
 
-        It should_store_the_message_in_the_sent_command_message_repository = () => fakeMessageStore.MessageWasAdded.ShouldBeTrue();
-        It should_send_a_message_via_the_messaging_gateway = () => fakeMessageProducer.MessageWasSent.ShouldBeTrue();
+        private It _should_store_the_message_in_the_sent_command_message_repository = () => s_fakeMessageStore.MessageWasAdded.ShouldBeTrue();
+        private It _should_send_a_message_via_the_messaging_gateway = () => s_fakeMessageProducer.MessageWasSent.ShouldBeTrue();
     }
 
     public class When_resending_a_message_asynchronously
     {
-        
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
-        static Message message;
-        static IAmAMessageStore<Message> messageStore;
-        static IAmAMessageProducer messagingGateway ;
-        
-        Establish context = () =>
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        private static Message s_message;
+        private static IAmAMessageStore<Message> s_messageStore;
+        private static IAmAMessageProducer s_messagingGateway;
+
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            myCommand.Value = "Hello World";
-            messageStore = A.Fake<IAmAMessageStore<Message>>();
+            s_myCommand.Value = "Hello World";
+            s_messageStore = A.Fake<IAmAMessageStore<Message>>();
             var tcs = new TaskCompletionSource<object>();
             tcs.SetResult(new object());
-            A.CallTo(() => messageStore.Add(A<Message>.Ignored)).Returns(tcs.Task);
+            A.CallTo(() => s_messageStore.Add(A<Message>.Ignored)).Returns(tcs.Task);
 
-            messagingGateway = A.Fake<IAmAMessageProducer>();
-            message = new Message(
-                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand",messageType: MessageType.MT_COMMAND),
-                body: new MessageBody(JsonConvert.SerializeObject(myCommand))
+            s_messagingGateway = A.Fake<IAmAMessageProducer>();
+            s_message = new Message(
+                header: new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
+                body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
                 );
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -294,28 +295,28 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            A.CallTo(() => messageStore.Get(message.Header.Id)).Returns(message);
-            commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
-                new MessageMapperRegistry(new TinyIoCMessageMapperFactory(new TinyIoCContainer())), 
-                messageStore, 
-                messagingGateway, 
+            A.CallTo(() => s_messageStore.Get(s_message.Header.Id)).Returns(s_message);
+            s_commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
+                new MessageMapperRegistry(new TinyIoCMessageMapperFactory(new TinyIoCContainer())),
+                s_messageStore,
+                s_messagingGateway,
                 logger);
         };
 
-        Because of = () => commandProcessor.Repost(message.Header.Id);
+        private Because _of = () => s_commandProcessor.Repost(s_message.Header.Id);
 
-        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.Send(message)).MustHaveHappened();
+        private It _should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => s_messagingGateway.Send(s_message)).MustHaveHappened();
     }
 
     public class When_an_exception_is_thrown_terminate_the_pipeline
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
-        static Exception exception;
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        private static Exception s_exception;
 
-        private Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
@@ -327,22 +328,22 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyUnusedCommandHandler>();
             container.Register<IHandleRequests<MyCommand>, MyAbortingHandler<MyCommand>>();
             container.Register<ILog>(logger);
-        
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
-        Because of = () => exception = Catch.Exception(() => commandProcessor.Send(myCommand));
+        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
 
-        It should_throw_an_exception = () => exception.ShouldNotBeNull();
-        It should_fail_the_pipeline_not_execute_it = () => MyUnusedCommandHandler.Shouldreceive(myCommand).ShouldBeFalse();
+        private It _should_throw_an_exception = () => s_exception.ShouldNotBeNull();
+        private It _should_fail_the_pipeline_not_execute_it = () => MyUnusedCommandHandler.Shouldreceive(s_myCommand).ShouldBeFalse();
     }
 
     public class When_there_are_no_failures_execute_all_the_steps_in_the_pipeline
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
             var registry = new SubscriberRegistry();
@@ -354,45 +355,44 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
             container.Register<ILog>(logger);
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
-
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
-        Because of = () => commandProcessor.Send(myCommand);
+        private Because _of = () => s_commandProcessor.Send(s_myCommand);
 
-        It should_call_the_pre_validation_handler = () => MyValidationHandler<MyCommand>.Shouldreceive(myCommand).ShouldBeTrue();
-        It should_send_the_command_to_the_command_handler = () => MyPreAndPostDecoratedHandler.Shouldreceive(myCommand).ShouldBeTrue();
-        It should_call_the_post_validation_handler = () => MyLoggingHandler<MyCommand>.Shouldreceive(myCommand).ShouldBeTrue();
+        private It _should_call_the_pre_validation_handler = () => MyValidationHandler<MyCommand>.Shouldreceive(s_myCommand).ShouldBeTrue();
+        private It _should_send_the_command_to_the_command_handler = () => MyPreAndPostDecoratedHandler.Shouldreceive(s_myCommand).ShouldBeTrue();
+        private It _should_call_the_post_validation_handler = () => MyLoggingHandler<MyCommand>.Shouldreceive(s_myCommand).ShouldBeTrue();
     }
 
 
     public class When_using_decoupled_invocation_messaging_gateway_throws_an_error_retry_n_times_then_break_circuit
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
-        static Message message;
-        static IAmAMessageStore<Message> messageStore;
-        static IAmAMessageProducer messagingGateway ;
-        static Exception failedException;
-        static BrokenCircuitException circuitBrokenException;
-        
-        Establish context = () =>
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        private static Message s_message;
+        private static IAmAMessageStore<Message> s_messageStore;
+        private static IAmAMessageProducer s_messagingGateway;
+        private static Exception s_failedException;
+        private static BrokenCircuitException s_circuitBrokenException;
+
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            myCommand.Value = "Hello World";
-            messageStore = A.Fake<IAmAMessageStore<Message>>();
+            s_myCommand.Value = "Hello World";
+            s_messageStore = A.Fake<IAmAMessageStore<Message>>();
             var tcs = new TaskCompletionSource<object>();
             tcs.SetResult(new object());
-            A.CallTo(() => messageStore.Add(A<Message>.Ignored)).Returns(tcs.Task);
+            A.CallTo(() => s_messageStore.Add(A<Message>.Ignored)).Returns(tcs.Task);
 
-            messagingGateway = A.Fake<IAmAMessageProducer>();
-            message = new Message(
-                header: new MessageHeader(messageId: myCommand.Id, topic: "MyCommand",messageType: MessageType.MT_COMMAND),
-                body: new MessageBody(JsonConvert.SerializeObject(myCommand))
+            s_messagingGateway = A.Fake<IAmAMessageProducer>();
+            s_message = new Message(
+                header: new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
+                body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
                 );
             var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-            A.CallTo(() => messagingGateway.Send(message)).Throws<Exception>().NumberOfTimes(4);
+            A.CallTo(() => s_messagingGateway.Send(s_message)).Throws<Exception>().NumberOfTimes(4);
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -408,28 +408,27 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .CircuitBreaker(1, TimeSpan.FromMinutes(1));
 
 
-           commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(){{CommandProcessor.RETRYPOLICY, retryPolicy},{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
-                messageMapperRegistry, 
-                messageStore, 
-                messagingGateway, 
-                logger);       
+            s_commandProcessor = new CommandProcessor(
+                 new InMemoryRequestContextFactory(),
+                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
+                 messageMapperRegistry,
+                 s_messageStore,
+                 s_messagingGateway,
+                 logger);
         };
 
-        Because of = () =>
+        private Because _of = () =>
             {
                 //break circuit with retries
-                failedException = Catch.Exception(() => commandProcessor.Post(myCommand));
+                s_failedException = Catch.Exception(() => s_commandProcessor.Post(s_myCommand));
                 //now resond with broken ciruit
-                circuitBrokenException = (BrokenCircuitException) Catch.Exception(() => commandProcessor.Post(myCommand));
+                s_circuitBrokenException = (BrokenCircuitException)Catch.Exception(() => s_commandProcessor.Post(s_myCommand));
             };
 
-        It should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => messagingGateway.Send(A<Message>.Ignored)).MustHaveHappened(Repeated.Exactly.Times(4));
-        It should_throw_a_exception_out_once_all_retries_exhausted = () => failedException.ShouldBeOfExactType(typeof(Exception));
-        It should_throw_a_circuit_broken_exception_once_circuit_broken = () => circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
-
+        private It _should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => s_messagingGateway.Send(A<Message>.Ignored)).MustHaveHappened(Repeated.Exactly.Times(4));
+        private It _should_throw_a_exception_out_once_all_retries_exhausted = () => s_failedException.ShouldBeOfExactType(typeof(Exception));
+        private It _should_throw_a_circuit_broken_exception_once_circuit_broken = () => s_circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
     }
 }
 
-    
+

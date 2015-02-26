@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-02-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-10-2014
 // ***********************************************************************
-// <copyright file="SubscriberRegistry.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -48,7 +50,7 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class SubscriberRegistry : IAmASubscriberRegistry, IEnumerable<KeyValuePair<Type, List<Type>>>
     {
-        readonly Dictionary<Type, List<Type>> observers = new Dictionary<Type, List<Type>>();
+        private readonly Dictionary<Type, List<Type>> _observers = new Dictionary<Type, List<Type>>();
 
         /// <summary>
         /// Gets this instance.
@@ -57,8 +59,8 @@ namespace paramore.brighter.commandprocessor
         /// <returns>IEnumerable&lt;Type&gt;.</returns>
         public IEnumerable<Type> Get<TRequest>() where TRequest : class, IRequest
         {
-            var observed = observers.ContainsKey(typeof (TRequest));
-            return observed ? observers[typeof (TRequest)] : new List<Type>();
+            var observed = _observers.ContainsKey(typeof(TRequest));
+            return observed ? _observers[typeof(TRequest)] : new List<Type>();
         }
 
         /// <summary>
@@ -66,18 +68,18 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
         /// <typeparam name="TImplementation">The type of the t implementation.</typeparam>
-        public void Register<TRequest, TImplementation>() where TRequest: class, IRequest where TImplementation: class, IHandleRequests<TRequest>
+        public void Register<TRequest, TImplementation>() where TRequest : class, IRequest where TImplementation : class, IHandleRequests<TRequest>
         {
             Add(typeof(TRequest), typeof(TImplementation));
         }
 
         public void Add(Type requestType, Type handlerType)
         {
-            var observed = observers.ContainsKey(requestType);
+            var observed = _observers.ContainsKey(requestType);
             if (!observed)
-                observers.Add(requestType, new List<Type>{handlerType});
+                _observers.Add(requestType, new List<Type> { handlerType });
             else
-                observers[requestType].Add(handlerType);
+                _observers[requestType].Add(handlerType);
         }
 
         /// <summary>
@@ -86,7 +88,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
         public IEnumerator<KeyValuePair<Type, List<Type>>> GetEnumerator()
         {
-            return observers.GetEnumerator();
+            return _observers.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -94,5 +96,4 @@ namespace paramore.brighter.commandprocessor
             return GetEnumerator();
         }
     }
-
 }

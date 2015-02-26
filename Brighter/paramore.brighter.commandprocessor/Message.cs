@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-01-2014
 // ***********************************************************************
-// <copyright file="Message.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 
 namespace paramore.brighter.commandprocessor
@@ -44,7 +46,6 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class Message : IEquatable<Message>
     {
-
         /// <summary>
         /// Gets the header.
         /// </summary>
@@ -60,9 +61,9 @@ namespace paramore.brighter.commandprocessor
         /// Gets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
-        public Guid Id 
+        public Guid Id
         {
-            get { return Header.Id; }  
+            get { return Header.Id; }
         }
 
         /// <summary>
@@ -70,7 +71,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         public Message()
         {
-            Header = new MessageHeader(messageId: Guid.Empty, topic: string.Empty, messageType:MessageType.MT_NONE);
+            Header = new MessageHeader(messageId: Guid.Empty, topic: string.Empty, messageType: MessageType.MT_NONE);
             Body = new MessageBody(string.Empty);
         }
 
@@ -107,7 +108,7 @@ namespace paramore.brighter.commandprocessor
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((Message) obj);
+            return Equals((Message)obj);
         }
 
         /// <summary>
@@ -118,7 +119,7 @@ namespace paramore.brighter.commandprocessor
         {
             unchecked
             {
-                return ((Header != null ? Header.GetHashCode() : 0)*397) ^ (Body != null ? Body.GetHashCode() : 0);
+                return ((Header != null ? Header.GetHashCode() : 0) * 397) ^ (Body != null ? Body.GetHashCode() : 0);
             }
         }
 

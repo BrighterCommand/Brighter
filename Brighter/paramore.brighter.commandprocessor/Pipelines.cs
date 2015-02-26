@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-01-2014
 // ***********************************************************************
-// <copyright file="Pipelines.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections;
 using System.Collections.Generic;
 
@@ -42,11 +44,11 @@ namespace paramore.brighter.commandprocessor
 {
     internal class Pipelines<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest
     {
-        private readonly List<IHandleRequests<TRequest>> filters = new List<IHandleRequests<TRequest>>();
+        private readonly List<IHandleRequests<TRequest>> _filters = new List<IHandleRequests<TRequest>>();
 
         public IEnumerator<IHandleRequests<TRequest>> GetEnumerator()
         {
-            return filters.GetEnumerator();
+            return _filters.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -56,7 +58,7 @@ namespace paramore.brighter.commandprocessor
 
         public void Add(IHandleRequests<TRequest> handler)
         {
-            filters.Add(handler);
+            _filters.Add(handler);
         }
     }
 }

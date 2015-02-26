@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 11-05-2014
 // ***********************************************************************
-// <copyright file="RestMSPipe.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
@@ -48,11 +50,10 @@ namespace paramore.brighter.restms.core.Ports.Resources
     [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSPipe
     {
-
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMSPipe" /> class.
         /// </summary>
-        public RestMSPipe() {}
+        public RestMSPipe() { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMSPipe"/> class.

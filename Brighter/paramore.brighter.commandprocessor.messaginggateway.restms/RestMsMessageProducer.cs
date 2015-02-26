@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.restms
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 12-31-2014
 // ***********************************************************************
-// <copyright file="RestMsMessageProducer.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,8 +56,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMsMessageProducer : RestMSMessageGateway, IAmAMessageProducer
     {
-        readonly Feed feed;
-        readonly Domain domain; 
+        private readonly Feed _feed;
+        private readonly Domain _domain;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMsMessageProducer"/> class.
@@ -63,8 +65,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="logger">The logger.</param>
         public RestMsMessageProducer(ILog logger) : base(logger)
         {
-            feed = new Feed(this);
-            domain = new Domain(this); 
+            _feed = new Feed(this);
+            _domain = new Domain(this);
         }
 
         /// <summary>
@@ -78,7 +80,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
             try
             {
-                feed.EnsureFeedExists(domain.GetDomain());
+                _feed.EnsureFeedExists(_domain.GetDomain());
                 SendMessage(Configuration.Feed.Name, message);
             }
             catch (RestMSClientException rmse)
@@ -113,12 +115,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             Dispose(false);
         }
 
-        void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
-
         }
 
-        StringContent CreateMessageEntityBody(Message message)
+        private StringContent CreateMessageEntityBody(Message message)
         {
             var messageToSend = new RestMSMessage
             {
@@ -132,8 +133,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 }
             };
 
-            var messageHeaders = new List<RestMSMessageHeader> {new RestMSMessageHeader {Name = "MessageType", Value = message.Header.MessageType.ToString()}};
-            messageHeaders.AddRange(message.Header.Bag.Select(customHeader => new RestMSMessageHeader {Name = customHeader.Key, Value = Encoding.ASCII.GetString((byte[]) customHeader.Value)}));
+            var messageHeaders = new List<RestMSMessageHeader> { new RestMSMessageHeader { Name = "MessageType", Value = message.Header.MessageType.ToString() } };
+            messageHeaders.AddRange(message.Header.Bag.Select(customHeader => new RestMSMessageHeader { Name = customHeader.Key, Value = Encoding.ASCII.GetString((byte[])customHeader.Value) }));
 
             messageToSend.Headers = messageHeaders.ToArray();
 
@@ -142,11 +143,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             return new StringContent(messageContent);
         }
 
-        RestMSMessagePosted SendMessage(string feedName, Message message)
+        private RestMSMessagePosted SendMessage(string feedName, Message message)
         {
             try
             {
-                if (feed.FeedUri == null)
+                if (_feed.FeedUri == null)
                 {
                     throw new RestMSClientException(string.Format("The feed href for feed {0} has not been initialized", feedName));
                 }
@@ -154,7 +155,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 var client = Client();
                 var response = client.SendAsync(
                     CreateRequest(
-                        feed.FeedUri,
+                        _feed.FeedUri,
                         CreateMessageEntityBody(message)
                      )
                  ).Result;
@@ -171,8 +172,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
                 throw new RestMSClientException(string.Format("Error sending message to feed {0} with Id {1} , see log for details", feedName, message.Header.Id));
             }
-
         }
-
     }
 }

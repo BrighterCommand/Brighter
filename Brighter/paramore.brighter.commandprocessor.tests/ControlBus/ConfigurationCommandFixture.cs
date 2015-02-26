@@ -1,4 +1,7 @@
-﻿using FakeItEasy;
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
@@ -9,22 +12,22 @@ namespace paramore.commandprocessor.tests.ControlBus
 {
     public class When_receiving_an_all_stop_message
     {
-        static ConfigurationMessageHandler configurationMessageHandler;
-        static ConfigurationCommand configurationCommand;
-        static IDispatcher dispatcher;
+        private static ConfigurationMessageHandler s_configurationMessageHandler;
+        private static ConfigurationCommand s_configurationCommand;
+        private static IDispatcher s_dispatcher;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            dispatcher = A.Fake<IDispatcher>();
+            s_dispatcher = A.Fake<IDispatcher>();
 
-            configurationMessageHandler = new ConfigurationMessageHandler(logger, dispatcher);
+            s_configurationMessageHandler = new ConfigurationMessageHandler(logger, s_dispatcher);
 
-            configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPALL);
-        }; 
+            s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPALL);
+        };
 
-        Because of = () => configurationMessageHandler.Handle(configurationCommand);
+        private Because _of = () => s_configurationMessageHandler.Handle(s_configurationCommand);
 
-        It should_call_end_on_the_dispatcher = () => A.CallTo(() => dispatcher.End()).MustHaveHappened();
+        private It _should_call_end_on_the_dispatcher = () => A.CallTo(() => s_dispatcher.End()).MustHaveHappened();
     }
 }

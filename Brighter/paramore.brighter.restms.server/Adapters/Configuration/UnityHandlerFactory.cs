@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System;
 using System.ComponentModel;
 using Microsoft.Practices.Unity;
 using paramore.brighter.commandprocessor;
@@ -7,11 +10,11 @@ namespace paramore.brighter.restms.server.Adapters.Configuration
 {
     public class UnityHandlerFactory : IAmAHandlerFactory
     {
-        readonly UnityContainer container;
+        private readonly UnityContainer _container;
 
         public UnityHandlerFactory(UnityContainer container)
         {
-            this.container = container;
+            _container = container;
         }
 
         /// <summary>
@@ -21,7 +24,7 @@ namespace paramore.brighter.restms.server.Adapters.Configuration
         /// <returns>IHandleRequests.</returns>
         public IHandleRequests Create(Type handlerType)
         {
-            return (IHandleRequests)container.Resolve(handlerType);
+            return (IHandleRequests)_container.Resolve(handlerType);
         }
 
         /// <summary>

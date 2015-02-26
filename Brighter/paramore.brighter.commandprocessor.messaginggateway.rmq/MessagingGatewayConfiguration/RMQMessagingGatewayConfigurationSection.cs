@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
 // Author           : ian
 // Created          : 12-18-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 01-02-2015
 // ***********************************************************************
-// <copyright file="RMQMessagingGatewayConfigurationSection.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -36,7 +38,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Configuration;
 using System.Linq;
@@ -124,7 +125,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
     /// </summary>
     public class AMQPUriSpecification : ConfigurationElement
     {
-        private string santizedUri = null;
+        private string _santizedUri = null;
         /// <summary>
         /// Gets or sets the URI.
         /// </summary>
@@ -132,21 +133,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         [ConfigurationProperty("uri", DefaultValue = "amqp://guest:guest@localhost:5672/%2f", IsRequired = true)]
         public Uri Uri
         {
-            get { return (Uri)this["uri"]; } 
+            get { return (Uri)this["uri"]; }
             set { this["uri"] = value; }
         }
 
         public string GetSantizedUri()
         {
-            if (santizedUri == null)
+            if (_santizedUri == null)
             {
                 var uri = Uri.ToString();
                 var positionOfSlashSlash = uri.IndexOf("//", StringComparison.InvariantCulture) + 2;
                 var usernameAndPassword = uri.Substring(positionOfSlashSlash, uri.IndexOf('@') - positionOfSlashSlash);
-                santizedUri = uri.Replace(usernameAndPassword, "*****");
+                _santizedUri = uri.Replace(usernameAndPassword, "*****");
             }
 
-            return santizedUri;
+            return _santizedUri;
         }
 
         /// <summary>
@@ -155,8 +156,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         [ConfigurationProperty("connectionRetryCount", DefaultValue = "3", IsRequired = false)]
         public int ConnectionRetryCount
         {
-            get { return (int)this["connectionRetryCount"]; } 
-            set { this["connectionRetryCount"] = value; } 
+            get { return (int)this["connectionRetryCount"]; }
+            set { this["connectionRetryCount"] = value; }
         }
         /// <summary>
         /// The time in milliseconds to wait before retrying to connect again
@@ -165,7 +166,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         public int RetryWaitInMilliseconds
         {
             get { return (int)this["retryWaitInMilliseconds"]; }
-            set { this["retryWaitInMilliseconds"] = value; } 
+            set { this["retryWaitInMilliseconds"] = value; }
         }
 
         /// <summary>
@@ -174,7 +175,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         [ConfigurationProperty("circuitBreakTimeInMilliseconds", DefaultValue = "60000", IsRequired = false)]
         public int CircuitBreakTimeInMilliseconds
         {
-            get { return (int) this["circuitBreakTimeInMilliseconds"]; }
+            get { return (int)this["circuitBreakTimeInMilliseconds"]; }
             set { this["circuitBreakTimeInMilliseconds"] = value; }
         }
     }
@@ -219,7 +220,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         [ConfigurationProperty("durable", DefaultValue = false)]
         public bool Durable
         {
-            get{return (bool) this["durable"]; }
+            get { return (bool)this["durable"]; }
             set { this["durable"] = value; }
         }
     }

@@ -1,33 +1,36 @@
-﻿using System;
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System;
 
 namespace Tasks.Model
 {
     public class TaskName : IEquatable<TaskName>
     {
-        private readonly string taskName;
+        private readonly string _taskName;
 
-        public string Value { get { return taskName; } }
-        
+        public string Value { get { return _taskName; } }
+
         public TaskName(string taskName)
         {
-            this.taskName = taskName;
+            _taskName = taskName;
         }
 
-        public static implicit operator string(TaskName rhs)
+        public static implicit operator string (TaskName rhs)
         {
             return rhs.Value;
         }
 
         public override string ToString()
         {
-            return taskName;
+            return _taskName;
         }
 
         public bool Equals(TaskName other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return string.Equals(taskName, other.taskName);
+            return string.Equals(_taskName, other._taskName);
         }
 
         public override bool Equals(object obj)
@@ -35,12 +38,12 @@ namespace Tasks.Model
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((TaskName) obj);
+            return Equals((TaskName)obj);
         }
 
         public override int GetHashCode()
         {
-            return taskName.GetHashCode();
+            return _taskName.GetHashCode();
         }
 
         public static bool operator ==(TaskName left, TaskName right)

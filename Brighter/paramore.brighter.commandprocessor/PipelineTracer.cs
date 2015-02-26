@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -33,24 +36,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Text;
 
 namespace paramore.brighter.commandprocessor
 {
     internal class PipelineTracer : IAmAPipelineTracer
     {
-        private readonly StringBuilder buffer = new StringBuilder();
+        private readonly StringBuilder _buffer = new StringBuilder();
 
         public void AddToPath(HandlerName handlerName)
         {
-            buffer.AppendFormat("{0}|", handlerName);
+            _buffer.AppendFormat("{0}|", handlerName);
         }
 
         public override string ToString()
         {
-            return buffer.ToString();
+            return _buffer.ToString();
         }
     }
 }

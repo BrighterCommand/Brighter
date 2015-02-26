@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.serviceactivator
 // Author           : toby
 // Created          : 01-26-2015
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 01-30-2015
 // ***********************************************************************
-// <copyright file="RequeueException.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>

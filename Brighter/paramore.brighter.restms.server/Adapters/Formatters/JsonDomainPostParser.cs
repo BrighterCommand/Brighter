@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.restms.server
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 12-30-2014
 // ***********************************************************************
-// <copyright file="JsonDomainPostParser.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.IO;
 using System.Runtime.Serialization.Json;
@@ -46,16 +48,16 @@ namespace paramore.brighter.restms.server.Adapters.Formatters
     /// </summary>
     public class JsonDomainPostParser : IParseDomainPosts
     {
-        readonly DataContractJsonSerializer feedDeserializer;
-        readonly DataContractJsonSerializer pipeDeserializer;
+        private readonly DataContractJsonSerializer _feedDeserializer;
+        private readonly DataContractJsonSerializer _pipeDeserializer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JsonDomainPostParser"/> class.
         /// </summary>
         public JsonDomainPostParser()
         {
-            feedDeserializer = new DataContractJsonSerializer(typeof(RestMSFeed));
-            pipeDeserializer = new DataContractJsonSerializer(typeof (RestMSPipeNew));
+            _feedDeserializer = new DataContractJsonSerializer(typeof(RestMSFeed));
+            _pipeDeserializer = new DataContractJsonSerializer(typeof(RestMSPipeNew));
         }
 
         /// <summary>
@@ -79,13 +81,13 @@ namespace paramore.brighter.restms.server.Adapters.Formatters
             return new Tuple<ParseResult, RestMSFeed, RestMSPipeNew>(ParseResult.Failed, feedNew, pipeNew);
         }
 
-        bool TryParseNewFeed(string body, out RestMSFeed feedNew)
+        private bool TryParseNewFeed(string body, out RestMSFeed feedNew)
         {
             MemoryStream ms = null;
             try
             {
                 ms = new MemoryStream(System.Text.Encoding.ASCII.GetBytes(body));
-                feedNew = (RestMSFeed) feedDeserializer.ReadObject(ms);
+                feedNew = (RestMSFeed)_feedDeserializer.ReadObject(ms);
                 return true;
             }
             catch (Exception)
@@ -95,18 +97,18 @@ namespace paramore.brighter.restms.server.Adapters.Formatters
             }
             finally
             {
-                if (ms != null) 
+                if (ms != null)
                     ms.Dispose();
             }
         }
 
-        bool TryParseNewPipe(string body, out RestMSPipeNew newPipe)
+        private bool TryParseNewPipe(string body, out RestMSPipeNew newPipe)
         {
             MemoryStream ms = null;
             try
             {
                 ms = new MemoryStream(System.Text.Encoding.ASCII.GetBytes(body));
-                newPipe = (RestMSPipeNew) pipeDeserializer.ReadObject(ms);
+                newPipe = (RestMSPipeNew)_pipeDeserializer.ReadObject(ms);
                 return true;
             }
             catch (Exception)
@@ -116,10 +118,9 @@ namespace paramore.brighter.restms.server.Adapters.Formatters
             }
             finally
             {
-                if (ms != null) 
+                if (ms != null)
                     ms.Dispose();
             }
         }
-
     }
 }

@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -37,14 +40,14 @@ namespace TaskMailer.Adapters.ServiceHost
 {
     internal class TaskMailerService : ServiceControl
     {
-        private Dispatcher dispatcher;
+        private Dispatcher _dispatcher;
 
         public TaskMailerService()
         {
             log4net.Config.XmlConfigurator.Configure();
 
             var logger = LogProvider.For<TaskMailerService>();
-                
+
             var container = new TinyIoCContainer();
             container.Register<IAmAMessageMapper<TaskReminderCommand>, TaskReminderCommandMessageMapper>();
             container.Register<MailTaskReminderHander, MailTaskReminderHander>();
@@ -79,7 +82,7 @@ namespace TaskMailer.Adapters.ServiceHost
             };
 
             var commandProcessor = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(subscriberRegistry,handlerFactory))
+                .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                 .Policies(policyRegistry)
                 .Logger(logger)
                 .NoTaskQueues()
@@ -94,7 +97,7 @@ namespace TaskMailer.Adapters.ServiceHost
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
 
-            dispatcher = DispatchBuilder.With()
+            _dispatcher = DispatchBuilder.With()
                 .Logger(logger)
                 .CommandProcessor(commandProcessor)
                 .MessageMappers(messageMapperRegistry)
@@ -105,21 +108,21 @@ namespace TaskMailer.Adapters.ServiceHost
 
         public bool Start(HostControl hostControl)
         {
-            dispatcher.Receive();
+            _dispatcher.Receive();
             return true;
         }
 
         public bool Stop(HostControl hostControl)
         {
-            dispatcher.End().Wait();
-            dispatcher = null;
+            _dispatcher.End().Wait();
+            _dispatcher = null;
             return true;
         }
 
         public void Shutdown(HostControl hostcontrol)
         {
-            if (dispatcher != null)
-                dispatcher.End().Wait();
+            if (_dispatcher != null)
+                _dispatcher.End().Wait();
         }
     }
 }

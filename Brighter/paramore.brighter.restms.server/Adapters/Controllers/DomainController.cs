@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.server
 // Author           : ian
 // Created          : 11-05-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 11-06-2014
 // ***********************************************************************
-// <copyright file="DomainController.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Net;
 using System.Net.Http;
@@ -56,10 +58,10 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
     [Authorize]
     public class DomainController : ApiController
     {
-        readonly IAmACommandProcessor commandProcessor;
-        readonly IAmARepository<Domain> domainRepository;
-        readonly IAmARepository<Feed> feedRepository;
-        readonly IAmARepository<Pipe> pipeRepository;
+        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly IAmARepository<Domain> _domainRepository;
+        private readonly IAmARepository<Feed> _feedRepository;
+        private readonly IAmARepository<Pipe> _pipeRepository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DomainController"/> class.
@@ -69,15 +71,15 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         /// <param name="feedRepository">The feed repository.</param>
         /// <param name="pipeRepository">The pipe repository.</param>
         public DomainController(
-            IAmACommandProcessor commandProcessor, 
-            IAmARepository<Domain> domainRepository, 
-            IAmARepository<Feed> feedRepository, 
+            IAmACommandProcessor commandProcessor,
+            IAmARepository<Domain> domainRepository,
+            IAmARepository<Feed> feedRepository,
             IAmARepository<Pipe> pipeRepository)
         {
-            this.commandProcessor = commandProcessor;
-            this.domainRepository = domainRepository;
-            this.feedRepository = feedRepository;
-            this.pipeRepository = pipeRepository;
+            _commandProcessor = commandProcessor;
+            _domainRepository = domainRepository;
+            _feedRepository = feedRepository;
+            _pipeRepository = pipeRepository;
         }
 
         /// <summary>
@@ -89,7 +91,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [DomainNotFoundExceptionFilter]
         public RestMSDomain Get(string name)
         {
-            var domainRetriever = new DomainRetriever(domainRepository, feedRepository, pipeRepository);
+            var domainRetriever = new DomainRetriever(_domainRepository, _feedRepository, _pipeRepository);
             return domainRetriever.Retrieve(new Name(name));
         }
 
@@ -106,7 +108,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [HttpPost]
         [DomainNotFoundExceptionFilter]
         [FeedAlreadyExistsExceptionFilter]
-        public HttpResponseMessage  Post(string name)
+        public HttpResponseMessage Post(string name)
         {
             string content = Request.Content.ReadAsStringAsync().Result;
             //What is accept type? Get conversion strategy from factory. Does XML or JSON conversion
@@ -126,30 +128,29 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
             return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "Could not parse new feed or pipe from the body content");
         }
 
-        HttpResponseMessage AddFeed(string name, RestMSFeed feed)
+        private HttpResponseMessage AddFeed(string name, RestMSFeed feed)
         {
-     
             var addFeedCommand = new AddFeedCommand(
                 domainName: name,
                 name: feed.Name,
                 type: feed.Type,
                 title: feed.Title);
-            commandProcessor.Send(addFeedCommand);
+            _commandProcessor.Send(addFeedCommand);
 
             return BuildDomainItemCreatedReponse(name);
         }
 
-        HttpResponseMessage AddPipe(string name, RestMSPipeNew pipe)
+        private HttpResponseMessage AddPipe(string name, RestMSPipeNew pipe)
         {
             var newPipeCommand = new AddPipeCommand(name, pipe.Type, pipe.Title);
-            commandProcessor.Send(newPipeCommand);
+            _commandProcessor.Send(newPipeCommand);
 
             return BuildDomainItemCreatedReponse(name);
         }
 
-        HttpResponseMessage BuildDomainItemCreatedReponse(string domainName)
+        private HttpResponseMessage BuildDomainItemCreatedReponse(string domainName)
         {
-            var domainRetriever = new DomainRetriever(domainRepository, feedRepository, pipeRepository);
+            var domainRetriever = new DomainRetriever(_domainRepository, _feedRepository, _pipeRepository);
             var item = domainRetriever.Retrieve(new Name(domainName));
             var response = Request.CreateResponse<RestMSDomain>(HttpStatusCode.Created, item);
             response.Headers.Location = new Uri(item.Href);

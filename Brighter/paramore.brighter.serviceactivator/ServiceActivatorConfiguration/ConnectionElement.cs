@@ -1,21 +1,24 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using System;
 using System.Configuration;
 
 namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
 {
     public class ConnectionElement : ConfigurationElement
-    {   
+    {
         [ConfigurationProperty("connectionName", DefaultValue = "", IsRequired = true)]
-        public string ConnectionName 
+        public string ConnectionName
         {
-            get { return this["connectionName"] as string ; }
+            get { return this["connectionName"] as string; }
             set { this["connectionName"] = value; }
         }
 
         [ConfigurationProperty("channelName", DefaultValue = "", IsRequired = true)]
-        public string ChannelName 
+        public string ChannelName
         {
-            get { return this["channelName"] as string ; }
+            get { return this["channelName"] as string; }
             set { this["channelName"] = value; }
         }
 
@@ -29,7 +32,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
         [ConfigurationProperty("dataType", DefaultValue = "", IsRequired = true)]
         public string DataType
         {
-            get { return this["dataType"] as string ; }
+            get { return this["dataType"] as string; }
             set { this["dataType"] = value; }
         }
 
@@ -41,7 +44,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
         }
 
         [ConfigurationProperty("timeOutInMilliseconds", DefaultValue = "200", IsRequired = true)]
-        public int TimeoutInMiliseconds 
+        public int TimeoutInMiliseconds
         {
             get { return Convert.ToInt32(this["timeOutInMilliseconds"]); }
             set { this["timeOutInMilliseconds"] = value; }

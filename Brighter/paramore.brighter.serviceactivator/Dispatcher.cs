@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.serviceactivator
 // Author           : ian
 // Created          : 07-01-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-10-2014
 // ***********************************************************************
-// <copyright file="Dispatcher.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -35,7 +37,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -54,11 +55,11 @@ namespace paramore.brighter.serviceactivator
     /// </summary>
     public class Dispatcher : IDispatcher
     {
-        private readonly IAmACommandProcessor commandProcessor;
-        private readonly IAmAMessageMapperRegistry messageMapperRegistry;
-        private readonly ILog logger;
-        private Task controlTask;
-        private readonly IList<Task> tasks = new SynchronizedCollection<Task>();
+        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
+        private readonly ILog _logger;
+        private Task _controlTask;
+        private readonly IList<Task> _tasks = new SynchronizedCollection<Task>();
 
         /// <summary>
         /// Gets the connections.
@@ -87,14 +88,14 @@ namespace paramore.brighter.serviceactivator
         /// <param name="logger">The logger.</param>
         public Dispatcher(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, IEnumerable<Connection> connections, ILog logger)
         {
-            this.commandProcessor = commandProcessor;
-            this.messageMapperRegistry = messageMapperRegistry;
+            _commandProcessor = commandProcessor;
+            _messageMapperRegistry = messageMapperRegistry;
             this.Connections = connections;
-            this.logger = logger;
+            _logger = logger;
             State = DispatcherState.DS_NOTREADY;
 
             Consumers = new SynchronizedCollection<Consumer>();
-            
+
             State = DispatcherState.DS_AWAITING;
         }
 
@@ -106,11 +107,11 @@ namespace paramore.brighter.serviceactivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                logger.Info("Dispatcher: Stopping dispatcher");
+                _logger.Info("Dispatcher: Stopping dispatcher");
                 Consumers.Each((consumer) => consumer.Shut());
             }
 
-            return controlTask;
+            return _controlTask;
         }
 
         /// <summary>
@@ -128,7 +129,7 @@ namespace paramore.brighter.serviceactivator
         /// <param name="connection">The connection.</param>
         public void Open(Connection connection)
         {
-            logger.InfoFormat("Dispatcher: Opening connection {0}", connection.Name);
+            _logger.InfoFormat("Dispatcher: Opening connection {0}", connection.Name);
             var addedConsumers = CreateConsumers(new List<Connection>() { connection });
 
             switch (State)
@@ -139,7 +140,7 @@ namespace paramore.brighter.serviceactivator
                         {
                             Consumers.Add(consumer);
                             consumer.Open();
-                            tasks.Add(consumer.Job);
+                            _tasks.Add(consumer.Job);
                         });
                     break;
                 case DispatcherState.DS_STOPPED:
@@ -149,7 +150,6 @@ namespace paramore.brighter.serviceactivator
                     break;
                 default:
                     throw new InvalidOperationException("The dispatcher is not ready");
-
             }
         }
 
@@ -179,7 +179,7 @@ namespace paramore.brighter.serviceactivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                logger.InfoFormat("Dispatcher: Stopping connection {0}", connection.Name);
+                _logger.InfoFormat("Dispatcher: Stopping connection {0}", connection.Name);
                 var consumersForConnection = Consumers.Where(consumer => consumer.Name == connection.Name).ToArray();
                 var noOfConsumers = consumersForConnection.Length;
                 for (int i = 0; i < noOfConsumers; ++i)
@@ -191,51 +191,51 @@ namespace paramore.brighter.serviceactivator
 
         private void Start()
         {
-            controlTask = Task.Factory.StartNew(
+            _controlTask = Task.Factory.StartNew(
                 () =>
                 {
                     if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
                     {
                         State = DispatcherState.DS_RUNNING;
-                        logger.Info("Dispatcher: Dispatcher starting");
+                        _logger.Info("Dispatcher: Dispatcher starting");
 
                         Consumers.Each((consumer) => consumer.Open());
 
-                        Consumers.Select(consumer => consumer.Job).Each(job => tasks.Add(job));
+                        Consumers.Select(consumer => consumer.Job).Each(job => _tasks.Add(job));
 
-                        logger.InfoFormat("Dispatcher: Dispatcher starting {0} performers", tasks.Count);
+                        _logger.InfoFormat("Dispatcher: Dispatcher starting {0} performers", _tasks.Count);
 
-                        while (tasks.Any())
+                        while (_tasks.Any())
                         {
                             try
                             {
-                                var index = Task.WaitAny(tasks.ToArray());
-                                logger.DebugFormat("Dispatcher: Performer stopped with state {0}", tasks[index].Status);
+                                var index = Task.WaitAny(_tasks.ToArray());
+                                _logger.DebugFormat("Dispatcher: Performer stopped with state {0}", _tasks[index].Status);
 
-                                var consumer = Consumers.SingleOrDefault(c => c.JobId == tasks[index].Id);
+                                var consumer = Consumers.SingleOrDefault(c => c.JobId == _tasks[index].Id);
                                 if (consumer != null)
                                 {
-                                    logger.DebugFormat("Dispatcher: Removing a consumer with connection name {0}", consumer.Name);
+                                    _logger.DebugFormat("Dispatcher: Removing a consumer with connection name {0}", consumer.Name);
                                     consumer.Dispose();
                                     Consumers.Remove(consumer);
                                 }
 
-                                tasks[index].Dispose();
-                                tasks.RemoveAt(index);
+                                _tasks[index].Dispose();
+                                _tasks.RemoveAt(index);
                             }
                             catch (AggregateException ae)
                             {
                                 ae.Handle(
                                     (ex) =>
                                     {
-                                        logger.ErrorFormat("Dispatcher: Error on consumer; consumer shut down");
+                                        _logger.ErrorFormat("Dispatcher: Error on consumer; consumer shut down");
                                         return true;
                                     });
                             }
                         }
 
                         State = DispatcherState.DS_STOPPED;
-                        logger.Info("Dispatcher: Dispatcher stopped");
+                        _logger.Info("Dispatcher: Dispatcher stopped");
                     }
                 },
                 TaskCreationOptions.LongRunning);
@@ -249,10 +249,10 @@ namespace paramore.brighter.serviceactivator
                 for (var i = 0; i < connection.NoOfPeformers; i++)
                 {
                     int performer = i;
-                    logger.InfoFormat("Dispatcher: Creating consumer number {0} for connection: {1}", (performer + 1), connection.Name);
-                    var consumerFactoryType = typeof (ConsumerFactory<>).MakeGenericType(connection.DataType);
-                    var consumerFactory = (IConsumerFactory) Activator.CreateInstance(consumerFactoryType, new object[]{commandProcessor, messageMapperRegistry, connection, logger });
-  
+                    _logger.InfoFormat("Dispatcher: Creating consumer number {0} for connection: {1}", (performer + 1), connection.Name);
+                    var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(connection.DataType);
+                    var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, new object[] { _commandProcessor, _messageMapperRegistry, connection, _logger });
+
                     list.Add(consumerFactory.Create());
                 }
             });

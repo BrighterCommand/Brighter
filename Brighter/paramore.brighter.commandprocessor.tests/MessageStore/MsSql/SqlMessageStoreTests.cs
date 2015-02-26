@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Data.SqlServerCe;
 using System.IO;
@@ -39,57 +42,56 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
         private const string TableName = "test_messages";
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             CleanUpDb();
             CreateTestDb();
 
-            sqlMessageStore = new MsSqlMessageStore(
+            s_sqlMessageStore = new MsSqlMessageStore(
                     new MsSqlMessageStoreConfiguration(ConnectionString, TableName, MsSqlMessageStoreConfiguration.DatabaseType.SqlCe),
                     new LogProvider.NoOpLogger());
         };
 
         public class when_writing_a_message_to_the_message_store
         {
-            Establish context = () =>
+            private Establish _context = () =>
             {
-                message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-                sqlMessageStore.Add(message).Wait();
+                s_message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+                s_sqlMessageStore.Add(s_message).Wait();
             };
 
-            Because of = () => { storedMessage = sqlMessageStore.Get(message.Id).Result; };
+            private Because _of = () => { s_storedMessage = s_sqlMessageStore.Get(s_message.Id).Result; };
 
-            It should_read_the_message_from_the__sql_message_store = () => storedMessage.Body.Value.ShouldEqual(message.Body.Value);
+            private It _should_read_the_message_from_the__sql_message_store = () => s_storedMessage.Body.Value.ShouldEqual(s_message.Body.Value);
         }
 
         public class when_there_is_no_message_in_the_sql_message_store
         {
-            Establish context = () => { message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body")); };
-            Because of = () => { storedMessage = sqlMessageStore.Get(message.Id).Result; };
-            It should_return_a_empty_message = () => storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+            private Establish _context = () => { s_message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body")); };
+            private Because _of = () => { s_storedMessage = s_sqlMessageStore.Get(s_message.Id).Result; };
+            private It _should_return_a_empty_message = () => s_storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
         }
 
 
         public class when_the_message_is_already_in_the_message_store
         {
-            private static Exception exception;
+            private static Exception s_exception;
 
-            Establish context = () =>
+            private Establish _context = () =>
             {
-                message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-                sqlMessageStore.Add(message).Wait();
+                s_message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+                s_sqlMessageStore.Add(s_message).Wait();
             };
 
-            Because of = () => { exception = Catch.Exception(() => sqlMessageStore.Add(message).Wait()); };
+            private Because _of = () => { s_exception = Catch.Exception(() => s_sqlMessageStore.Add(s_message).Wait()); };
 
-            It should_ignore_the_duplcate_key_and_still_succeed = () => {exception.ShouldBeNull(); };
-
+            private It _should_ignore_the_duplcate_key_and_still_succeed = () => { s_exception.ShouldBeNull(); };
         }
 
-        private Cleanup cleanup = () => CleanUpDb();
-        private static MsSqlMessageStore sqlMessageStore;
-        private static Message message;
-        private static Message storedMessage;
+        private Cleanup _cleanup = () => CleanUpDb();
+        private static MsSqlMessageStore s_sqlMessageStore;
+        private static Message s_message;
+        private static Message s_storedMessage;
 
         private static void CleanUpDb()
         {
@@ -116,6 +118,5 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
                 cmd.ExecuteNonQuery();
             }
         }
-
     }
 }

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.restms
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 01-02-2015
 // ***********************************************************************
-// <copyright file="RestMSMessageGateway.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Net.Cache;
 using System.Net.Http;
@@ -55,8 +57,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMSMessageGateway
     {
-        ThreadLocal<HttpClient> client;
-        readonly double timeout; 
+        private ThreadLocal<HttpClient> _client;
+        private readonly double _timeout;
 
         /// <summary>
         /// The logger
@@ -75,13 +77,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         {
             Configuration = RestMSMessagingGatewayConfigurationSection.GetConfiguration();
             Logger = logger;
-            timeout = Convert.ToDouble(Configuration.RestMS.Timeout);
+            _timeout = Convert.ToDouble(Configuration.RestMS.Timeout);
         }
 
         public HttpClient Client()
         {
-            client = new ThreadLocal<HttpClient>(() => CreateClient(BuildClientOptions(), timeout));
-            return client.Value;
+            _client = new ThreadLocal<HttpClient>(() => CreateClient(BuildClientOptions(), _timeout));
+            return _client.Value;
         }
 
         /// <summary>
@@ -110,7 +112,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <returns>HttpRequestMessage.</returns>
         public HttpRequestMessage CreateRequest(string uri, StringContent content)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, uri) {Content = content};
+            var request = new HttpRequestMessage(HttpMethod.Post, uri) { Content = content };
             request.Content.Headers.ContentType = new MediaTypeHeaderValue(MediaTypeNames.Text.Xml);
             return request;
         }
@@ -134,12 +136,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
             return domainObject;
         }
-        
+
         /// <summary>
         /// Builds the client options.
         /// </summary>
         /// <returns>ClientOptions.</returns>
-        ClientOptions BuildClientOptions()
+        private ClientOptions BuildClientOptions()
         {
             var credential = new Credential()
             {
@@ -157,7 +159,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         }
 
 
-        HttpClient CreateClient(ClientOptions options, double timeout)
+        private HttpClient CreateClient(ClientOptions options, double timeout)
         {
             var handler = new HawkValidationHandler(options);
             var requestHandler = new WebRequestHandler
@@ -171,6 +173,5 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/xml"));
             return client;
         }
-
     }
 }

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-29-2014
 // ***********************************************************************
-// <copyright file="MessageGateway.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor.Logging;
@@ -57,9 +59,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class MessageGateway : IDisposable
     {
-        readonly ConnectionFactory connectionFactory;
-        readonly ContextualPolicy retryPolicy;
-        readonly Policy circuitBreakerPolicy;
+        private readonly ConnectionFactory _connectionFactory;
+        private readonly ContextualPolicy _retryPolicy;
+        private readonly Policy _circuitBreakerPolicy;
 
 
         public MessageGateway(ILog logger)
@@ -69,10 +71,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             var connectionPolicyFactory = new ConnectionPolicyFactory(logger);
 
-            retryPolicy = connectionPolicyFactory.RetryPolicy;
-            circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicy;
+            _retryPolicy = connectionPolicyFactory.RetryPolicy;
+            _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicy;
 
-            connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), RequestedHeartbeat = 30 };
+            _connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), RequestedHeartbeat = 30 };
         }
 
         /// <summary>
@@ -162,29 +164,29 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             ConnectWithCircuitBreaker(queueName);
         }
 
-        void ConnectWithCircuitBreaker(string queueName)
+        private void ConnectWithCircuitBreaker(string queueName)
         {
-            circuitBreakerPolicy.Execute(() =>
+            _circuitBreakerPolicy.Execute(() =>
                  ConnectWithRetry(queueName)
                 );
         }
 
-        void ConnectWithRetry(string queueName)
+        private void ConnectWithRetry(string queueName)
         {
-            retryPolicy.Execute(() =>
+            _retryPolicy.Execute(() =>
                 ConnectToBroker(),
                 new Dictionary<string, object>() { { "queueName", queueName } }
                 );
         }
 
 
-        void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
+        private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
         {
             //desired state configuration of the exchange
             channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, configuration.Exchange.Durable);
         }
 
-        void EnsureSafeDisposal()
+        private void EnsureSafeDisposal()
         {
             if (Channel != null)
             {
@@ -202,7 +204,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
         }
 
-        void GetConnection()
+        private void GetConnection()
         {
             if (Connection == null || !Connection.IsOpen)
             {
@@ -214,9 +216,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 }
 
                 Logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.GetSantizedUri());
-                Connection = connectionFactory.CreateConnection();
+                Connection = _connectionFactory.CreateConnection();
             }
         }
-
     }
 }

@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using Machine.Specifications;
 using Tasklist.Ports.ViewModelRetrievers;
@@ -33,20 +35,20 @@ namespace Tasklist.Adapters.Tests
     [Subject(typeof(TasksDAO))]
     public class When_retrieving_a_task
     {
-        static TasksDAO dao;
-        static readonly TaskRetriever retriever = new TaskRetriever();
-        static Task newTask;
-        static Task addedTask;
+        private static TasksDAO s_dao;
+        private static readonly TaskRetriever s_retriever = new TaskRetriever();
+        private static Task s_newTask;
+        private static Task s_addedTask;
 
-        Establish context = () =>
+        private Establish _context = () =>
             {
-                dao = new TasksDAO();
-                dao.Clear();
-                newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
+                s_dao = new TasksDAO();
+                s_dao.Clear();
+                s_newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
             };
 
-        Because of = () => addedTask = dao.Add(newTask);
+        private Because _of = () => s_addedTask = s_dao.Add(s_newTask);
 
-        It should_add_the_task_into_the_list = () => retriever.Get(addedTask.Id).ShouldNotBeNull();
+        private It _should_add_the_task_into_the_list = () => s_retriever.Get(s_addedTask.Id).ShouldNotBeNull();
     }
 }

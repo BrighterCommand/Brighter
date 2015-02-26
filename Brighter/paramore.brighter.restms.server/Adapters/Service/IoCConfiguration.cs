@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using Microsoft.Practices.Unity;
 using paramore.brighter.commandprocessor;
@@ -51,7 +54,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
             container.RegisterType<IAmARepository<Pipe>, InMemoryPipeRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmARepository<Join>, InMemoryJoinRepository>(new ContainerControlledLifetimeManager());
             container.RegisterType<IAmACredentialStore, CredentialStore>(new ContainerControlledLifetimeManager());
-            container.RegisterInstance(typeof (ILog), LogProvider.For<RestMSService>(), new ContainerControlledLifetimeManager());
+            container.RegisterInstance(typeof(ILog), LogProvider.For<RestMSService>(), new ContainerControlledLifetimeManager());
             container.RegisterType<AddFeedCommandHandler>();
             container.RegisterType<AddFeedToDomainCommandHandler>();
             container.RegisterType<AddJoinCommandHandler>();
@@ -114,7 +117,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build();
 
-            container.RegisterInstance(typeof (IAmACommandProcessor), commandProcessor);
+            container.RegisterInstance(typeof(IAmACommandProcessor), commandProcessor);
         }
     }
 }

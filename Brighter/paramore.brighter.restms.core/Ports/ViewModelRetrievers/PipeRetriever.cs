@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 11-05-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 11-05-2014
 // ***********************************************************************
-// <copyright file="PipeRetriever.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Resources;
@@ -46,7 +48,7 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
     /// </summary>
     public class PipeRetriever
     {
-        readonly IAmARepository<Pipe> pipeRepository;
+        private readonly IAmARepository<Pipe> _pipeRepository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PipeRetriever"/> class.
@@ -54,7 +56,7 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
         /// <param name="pipeRepository">The pipe repository.</param>
         public PipeRetriever(IAmARepository<Pipe> pipeRepository)
         {
-            this.pipeRepository = pipeRepository;
+            _pipeRepository = pipeRepository;
         }
 
         /// <summary>
@@ -65,7 +67,7 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
         /// <exception cref="paramore.brighter.restms.core.Ports.Common.PipeDoesNotExistException"></exception>
         public RestMSPipe Retrieve(Name name)
         {
-            var pipe = pipeRepository[new Identity(name.Value)];
+            var pipe = _pipeRepository[new Identity(name.Value)];
 
             if (pipe == null)
             {

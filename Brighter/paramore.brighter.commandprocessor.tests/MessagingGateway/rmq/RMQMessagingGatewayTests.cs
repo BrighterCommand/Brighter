@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Text;
 using System.Threading.Tasks;
@@ -40,67 +43,67 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     [Tags("Requires", new[] { "RabbitMQ" })]
     public class When_posting_a_message_via_the_messaging_gateway
     {
-        static IAmAMessageProducer messageProducer;
-        static IAmAMessageConsumer messageConsumer;
-        static Message message;
-        static TestRMQListener client;
-        static string messageBody;
+        private static IAmAMessageProducer s_messageProducer;
+        private static IAmAMessageConsumer s_messageConsumer;
+        private static Message s_message;
+        private static TestRMQListener s_client;
+        private static string s_messageBody;
 
-        private Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = LogProvider.For<RmqMessageConsumer>();
-            
-            message = new Message(header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
-            messageProducer = new RmqMessageProducer(logger);
-            messageConsumer = new RmqMessageConsumer(message.Header.Topic, message.Header.Topic, logger);
+            s_message = new Message(header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
-            client = new TestRMQListener(message.Header.Topic);
-            messageConsumer.Purge();
+            s_messageProducer = new RmqMessageProducer(logger);
+            s_messageConsumer = new RmqMessageConsumer(s_message.Header.Topic, s_message.Header.Topic, logger);
+
+            s_client = new TestRMQListener(s_message.Header.Topic);
+            s_messageConsumer.Purge();
         };
 
-        Because of = () =>
+        private Because _of = () =>
         {
-            messageProducer.Send(message);
-            messageBody = client.Listen();
+            s_messageProducer.Send(s_message);
+            s_messageBody = s_client.Listen();
         };
 
-        It should_send_a_message_via_rmq_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
+        private It _should_send_a_message_via_rmq_with_the_matching_body = () => s_messageBody.ShouldEqual(s_message.Body.Value);
 
-        Cleanup tearDown = () =>
+        private Cleanup _tearDown = () =>
         {
-            messageConsumer.Purge();
-            messageProducer.Dispose();
+            s_messageConsumer.Purge();
+            s_messageProducer.Dispose();
         };
     }
 
     internal class TestRMQListener
     {
-        readonly string channelName;
-        readonly ConnectionFactory connectionFactory;
-        readonly IConnection connection;
-        readonly IModel channel;
+        private readonly string _channelName;
+        private readonly ConnectionFactory _connectionFactory;
+        private readonly IConnection _connection;
+        private readonly IModel _channel;
 
         public TestRMQListener(string channelName)
         {
-            this.channelName = channelName;
+            _channelName = channelName;
             var configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
-            connectionFactory = new ConnectionFactory { Uri = configuration.AMPQUri.Uri.ToString() };
-            connection = connectionFactory.CreateConnection();
-            channel = connection.CreateModel();
-            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, false);
-            channel.QueueDeclare(this.channelName, false, false, false, null);
-            channel.QueueBind(this.channelName, configuration.Exchange.Name, this.channelName);
+            _connectionFactory = new ConnectionFactory { Uri = configuration.AMPQUri.Uri.ToString() };
+            _connection = _connectionFactory.CreateConnection();
+            _channel = _connection.CreateModel();
+            _channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, false);
+            _channel.QueueDeclare(_channelName, false, false, false, null);
+            _channel.QueueBind(_channelName, configuration.Exchange.Name, _channelName);
         }
 
         public string Listen()
         {
             try
             {
-                var result = channel.BasicGet(this.channelName, true);
+                var result = _channel.BasicGet(_channelName, true);
                 if (result != null)
                 {
-                    channel.BasicAck(result.DeliveryTag, false);
+                    _channel.BasicAck(result.DeliveryTag, false);
                     var message = Encoding.UTF8.GetString(result.Body);
                     return message;
                 }
@@ -109,8 +112,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             {
                 //Added wait as rabbit needs some time to sort it self out and the close and dispose was happening to quickly
                 Task.Delay(200).Wait();
-                channel.Dispose();
-                if (connection.IsOpen) connection.Dispose();
+                _channel.Dispose();
+                if (_connection.IsOpen) _connection.Dispose();
             }
             return null;
         }
@@ -120,44 +123,44 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     [Tags("Requires", new[] { "RabbitMQ" })]
     public class When_reading_a_message_via_the_messaging_gateway
     {
-        static IAmAMessageProducer sender;
-        static IAmAMessageConsumer receiver;
-        static Message sentMessage;
-        static Message receivedMessage;
+        private static IAmAMessageProducer s_sender;
+        private static IAmAMessageConsumer s_receiver;
+        private static Message s_sentMessage;
+        private static Message s_receivedMessage;
 
-        private Establish context = () =>
+        private Establish _context = () =>
         {
             var testGuid = Guid.NewGuid();
             var logger = LogProvider.For<RmqMessageConsumer>();
-            
+
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+            s_sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
-            sender = new RmqMessageProducer(logger);
-            receiver = new RmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
+            s_sender = new RmqMessageProducer(logger);
+            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
 
-            receiver.Purge();
-            
+            s_receiver.Purge();
+
             //create queue if missing
-            receiver.Receive(1);
+            s_receiver.Receive(1);
         };
 
-        Because of = () =>
+        private Because _of = () =>
         {
-            sender.Send(sentMessage);
-            receivedMessage = receiver.Receive(2000);
-            receiver.Acknowledge(receivedMessage);
+            s_sender.Send(s_sentMessage);
+            s_receivedMessage = s_receiver.Receive(2000);
+            s_receiver.Acknowledge(s_receivedMessage);
         };
 
-        It should_send_a_message_via_rmq_with_the_matching_body = () => receivedMessage.ShouldEqual(sentMessage);
+        private It _should_send_a_message_via_rmq_with_the_matching_body = () => s_receivedMessage.ShouldEqual(s_sentMessage);
 
-        Cleanup teardown = () =>
+        private Cleanup _teardown = () =>
         {
-            receiver.Purge();
-            sender.Dispose();
-            receiver.Dispose();
+            s_receiver.Purge();
+            s_sender.Dispose();
+            s_receiver.Dispose();
         };
     }
 
@@ -165,134 +168,131 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     [Tags("Requires", new[] { "RabbitMQ" })]
     public class When_a_message_consumer_throws_an_already_closed_exception_when_connecting_should_retry_until_circuit_breaks
     {
-        static IAmAMessageProducer sender;
-        static IAmAMessageConsumer receiver;
-        static IAmAMessageConsumer badReceiver;
-        static Message sentMessage;
-        static Exception expectedException;
-        static Exception firstException;
+        private static IAmAMessageProducer s_sender;
+        private static IAmAMessageConsumer s_receiver;
+        private static IAmAMessageConsumer s_badReceiver;
+        private static Message s_sentMessage;
+        private static Exception s_expectedException;
+        private static Exception s_firstException;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = LogProvider.For<BrokerUnreachableRmqMessageConsumer>();
 
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+            s_sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
-            sender = new RmqMessageProducer(logger);
-            receiver = new RmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
-            badReceiver = new AlreadyClosedRmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
+            s_sender = new RmqMessageProducer(logger);
+            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
+            s_badReceiver = new AlreadyClosedRmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
 
-            receiver.Purge();
-            sender.Send(sentMessage);
+            s_receiver.Purge();
+            s_sender.Send(s_sentMessage);
         };
 
-        Because of = () =>
+        private Because _of = () =>
                      {
-                         firstException = Catch.Exception(() => badReceiver.Receive(2000));
+                         s_firstException = Catch.Exception(() => s_badReceiver.Receive(2000));
                      };
 
-        It should_return_a_channel_failure_exception = () => firstException.ShouldBeOfExactType<ChannelFailureException>(); 
-        It should_return_an_explainging_inner_exception = () => firstException.InnerException.ShouldBeOfExactType<AlreadyClosedException>(); 
+        private It _should_return_a_channel_failure_exception = () => s_firstException.ShouldBeOfExactType<ChannelFailureException>();
+        private It _should_return_an_explainging_inner_exception = () => s_firstException.InnerException.ShouldBeOfExactType<AlreadyClosedException>();
 
-        Cleanup teardown = () =>
+        private Cleanup _teardown = () =>
         {
-            receiver.Purge();
-            sender.Dispose();
-            receiver.Dispose();
+            s_receiver.Purge();
+            s_sender.Dispose();
+            s_receiver.Dispose();
         };
-
     }
 
     [Subject("Messaging Gateway")]
     [Tags("Requires", new[] { "RabbitMQ" })]
     public class When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting_should_retry_until_circuit_breaks
     {
-        static IAmAMessageProducer sender;
-        static IAmAMessageConsumer receiver;
-        static IAmAMessageConsumer badReceiver;
-        static Message sentMessage;
-        static Exception expectedException;
-        static Exception firstException;
+        private static IAmAMessageProducer s_sender;
+        private static IAmAMessageConsumer s_receiver;
+        private static IAmAMessageConsumer s_badReceiver;
+        private static Message s_sentMessage;
+        private static Exception s_expectedException;
+        private static Exception s_firstException;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = LogProvider.For<BrokerUnreachableRmqMessageConsumer>();
 
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+            s_sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
-            sender = new RmqMessageProducer(logger);
-            receiver = new RmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
-            badReceiver = new OperationInterruptedRmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
+            s_sender = new RmqMessageProducer(logger);
+            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
+            s_badReceiver = new OperationInterruptedRmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
 
-            receiver.Purge();
-            sender.Send(sentMessage);
+            s_receiver.Purge();
+            s_sender.Send(s_sentMessage);
         };
 
-        Because of = () =>
+        private Because _of = () =>
                      {
-                         firstException = Catch.Exception(() => badReceiver.Receive(2000));
+                         s_firstException = Catch.Exception(() => s_badReceiver.Receive(2000));
                      };
 
-        It should_return_a_channel_failure_exception = () => firstException.ShouldBeOfExactType<ChannelFailureException>(); 
-        It should_return_an_explainging_inner_exception = () => firstException.InnerException.ShouldBeOfExactType<OperationInterruptedException>(); 
+        private It _should_return_a_channel_failure_exception = () => s_firstException.ShouldBeOfExactType<ChannelFailureException>();
+        private It _should_return_an_explainging_inner_exception = () => s_firstException.InnerException.ShouldBeOfExactType<OperationInterruptedException>();
 
-        Cleanup teardown = () =>
+        private Cleanup _teardown = () =>
         {
-            receiver.Purge();
-            sender.Dispose();
-            receiver.Dispose();
+            s_receiver.Purge();
+            s_sender.Dispose();
+            s_receiver.Dispose();
         };
-
     }
 
     [Subject("Messaging Gateway")]
     [Tags("Requires", new[] { "RabbitMQ" })]
     public class When_a_message_consumer_throws_an_not_supported_exception_when_connecting_should_retry_until_circuit_breaks
     {
-        static IAmAMessageProducer sender;
-        static IAmAMessageConsumer receiver;
-        static IAmAMessageConsumer badReceiver;
-        static Message sentMessage;
-        static Exception expectedException;
-        static Exception firstException;
+        private static IAmAMessageProducer s_sender;
+        private static IAmAMessageConsumer s_receiver;
+        private static IAmAMessageConsumer s_badReceiver;
+        private static Message s_sentMessage;
+        private static Exception s_expectedException;
+        private static Exception s_firstException;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = LogProvider.For<BrokerUnreachableRmqMessageConsumer>();
 
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+            s_sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
-            sender = new RmqMessageProducer(logger);
-            receiver = new RmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
-            badReceiver = new NotSupportedRmqMessageConsumer(sentMessage.Header.Topic, sentMessage.Header.Topic, logger);
+            s_sender = new RmqMessageProducer(logger);
+            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
+            s_badReceiver = new NotSupportedRmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
 
-            receiver.Purge();
-            sender.Send(sentMessage);
+            s_receiver.Purge();
+            s_sender.Send(s_sentMessage);
         };
 
-        Because of = () =>
+        private Because _of = () =>
                      {
-                         firstException = Catch.Exception(() => badReceiver.Receive(2000));
+                         s_firstException = Catch.Exception(() => s_badReceiver.Receive(2000));
                      };
 
-        It should_return_a_channel_failure_exception = () => firstException.ShouldBeOfExactType<ChannelFailureException>(); 
-        It should_return_an_explainging_inner_exception = () => firstException.InnerException.ShouldBeOfExactType<NotSupportedException>(); 
+        private It _should_return_a_channel_failure_exception = () => s_firstException.ShouldBeOfExactType<ChannelFailureException>();
+        private It _should_return_an_explainging_inner_exception = () => s_firstException.InnerException.ShouldBeOfExactType<NotSupportedException>();
 
-        Cleanup teardown = () =>
+        private Cleanup _teardown = () =>
         {
-            receiver.Purge();
-            sender.Dispose();
-            receiver.Dispose();
+            s_receiver.Purge();
+            s_sender.Dispose();
+            s_receiver.Dispose();
         };
-
     }
 }

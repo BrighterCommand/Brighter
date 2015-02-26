@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Linq;
 using System.Web.Http;
 using CacheCow.Server;
@@ -39,12 +42,12 @@ namespace paramore.brighter.restms.server.Adapters.Service
 {
     internal class Startup
     {
-        static UnityContainer container;
+        private static UnityContainer s_container;
 
         public void Configuration(IAppBuilder builder)
         {
             var configuration = new HttpConfiguration();
-            
+
             ConfigureDependencyInjection(configuration);
 
             MapRoutes(configuration);
@@ -52,7 +55,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
             ConfigureAuthentication(builder);
 
             ConfigureCaching(configuration);
-            
+
             ConfigureFormatting(configuration);
 
             ConfigureWelcomePage(builder);
@@ -60,11 +63,11 @@ namespace paramore.brighter.restms.server.Adapters.Service
             ConfigureDiagnostics(configuration);
 
             ConfigureErrorPage(builder);
-            
+
             builder.UseWebApi(configuration);
         }
 
-        void ConfigureErrorPage(IAppBuilder builder)
+        private void ConfigureErrorPage(IAppBuilder builder)
         {
             builder.UseErrorPage(
                 new ErrorPageOptions()
@@ -79,15 +82,15 @@ namespace paramore.brighter.restms.server.Adapters.Service
             );
         }
 
-        void ConfigureWelcomePage(IAppBuilder builder)
+        private void ConfigureWelcomePage(IAppBuilder builder)
         {
             builder.UseWelcomePage("/status");
         }
 
-        void ConfigureAuthentication( IAppBuilder builder)
+        private void ConfigureAuthentication(IAppBuilder builder)
         {
-            var credentialStorage = container.Resolve<IAmACredentialStore>();
-            
+            var credentialStorage = s_container.Resolve<IAmACredentialStore>();
+
             var options = new Options
             {
                 ClockSkewSeconds = 60,
@@ -98,48 +101,47 @@ namespace paramore.brighter.restms.server.Adapters.Service
             builder.UseHawkAuthentication(new HawkAuthenticationOptions(options));
         }
 
-        void ConfigureCaching(HttpConfiguration configuration)
+        private void ConfigureCaching(HttpConfiguration configuration)
         {
             var cachingHandler = new CachingHandler(configuration);
             configuration.MessageHandlers.Add(cachingHandler);
-            container.RegisterInstance<ICachingHandler>(cachingHandler);
+            s_container.RegisterInstance<ICachingHandler>(cachingHandler);
             var cache = new CacheHandler(cachingHandler);
-            container.RegisterInstance<IAmACache>(cache);
+            s_container.RegisterInstance<IAmACache>(cache);
         }
 
-        static void ConfigureDiagnostics(HttpConfiguration configuration)
+        private static void ConfigureDiagnostics(HttpConfiguration configuration)
         {
             configuration.EnableSystemDiagnosticsTracing();
         }
 
-        static void ConfigureFormatting(HttpConfiguration configuration)
+        private static void ConfigureFormatting(HttpConfiguration configuration)
         {
             var xml = configuration.Formatters.XmlFormatter;
             xml.UseXmlSerializer = true;
         }
 
-        static void MapRoutes(HttpConfiguration configuration)
+        private static void MapRoutes(HttpConfiguration configuration)
         {
             configuration.MapHttpAttributeRoutes();
             configuration.Routes.MapHttpRoute(
                 name: "DomainAPI",
                 routeTemplate: "restms/{controller}/{name}",
-                defaults: new {name = RouteParameter.Optional});
+                defaults: new { name = RouteParameter.Optional });
 
             configuration.Routes.MapHttpRoute(
                 name: "MessageAPI",
                 routeTemplate: "restms/pipe/{pipeName}/{controller}/{messageName}",
-                defaults: new { pipeName = RouteParameter.Optional, messageName = RouteParameter.Optional}
+                defaults: new { pipeName = RouteParameter.Optional, messageName = RouteParameter.Optional }
                 );
-
         }
 
-        static void ConfigureDependencyInjection(HttpConfiguration configuration)
+        private static void ConfigureDependencyInjection(HttpConfiguration configuration)
         {
-            container = new UnityContainer();
-            IoCConfiguration.Run(container);
-            SystemDefaults.Run(container);
-            configuration.DependencyResolver = new UnityResolver(container);
+            s_container = new UnityContainer();
+            IoCConfiguration.Run(s_container);
+            SystemDefaults.Run(s_container);
+            configuration.DependencyResolver = new UnityResolver(s_container);
         }
     }
 }

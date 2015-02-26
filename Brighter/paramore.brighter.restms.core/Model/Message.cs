@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 10-21-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="Message.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Specialized;
 using System.Net.Mail;
@@ -54,10 +56,10 @@ namespace paramore.brighter.restms.core.Model
     /// http://www.restms.org/spec:2
 
     /// </summary>
-    public class Message: Resource 
+    public class Message : Resource
     {
-        Name pipeName;
-        const string MESSAGE_URI_FORMAT = "http://{0}/restms/pipe/{1}/message/{2}";
+        private Name _pipeName;
+        private const string MESSAGE_URI_FORMAT = "http://{0}/restms/pipe/{1}/message/{2}";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Message"/> class.
@@ -151,11 +153,11 @@ namespace paramore.brighter.restms.core.Model
 
         public Name PipeName
         {
-            get { return pipeName; }
+            get { return _pipeName; }
             set
             {
-                pipeName = value;
-                Href = new Uri(string.Format(MESSAGE_URI_FORMAT, Globals.HostName,pipeName.Value, MessageId));
+                _pipeName = value;
+                Href = new Uri(string.Format(MESSAGE_URI_FORMAT, Globals.HostName, _pipeName.Value, MessageId));
             }
         }
     }

@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using OpenRasta.Web;
 using Simple.Data;
 using Tasklist.Adapters.API.Resources;
@@ -31,24 +33,24 @@ namespace Tasklist.Ports.ViewModelRetrievers
 {
     public class TaskListRetriever : SimpleDataRetriever, ITaskListRetriever
     {
-        private readonly string hostName;
+        private readonly string _hostName;
 
         public TaskListRetriever(ICommunicationContext context)
         {
-            hostName = context.ApplicationBaseUri.Host;
+            _hostName = context.ApplicationBaseUri.Host;
         }
 
         public TaskListRetriever(string hostName)
         {
-            this.hostName = hostName;
+            _hostName = hostName;
         }
 
         public dynamic RetrieveTasks()
         {
             var db = Database.Opener.OpenFile(DatabasePath);
             var tasks = db.Tasks.All().ToList<Task>();
-            var taskList = new TaskListModel(tasks, hostName);
-            return taskList ;
+            var taskList = new TaskListModel(tasks, _hostName);
+            return taskList;
         }
     }
 }

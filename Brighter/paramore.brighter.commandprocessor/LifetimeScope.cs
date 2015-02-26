@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-01-2014
@@ -33,8 +36,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.Logging;
@@ -43,40 +46,40 @@ namespace paramore.brighter.commandprocessor
 {
     internal class LifetimeScope : IAmALifetime
     {
-        private readonly IAmAHandlerFactory handlerFactory;
-        private readonly ILog logger;
-        private readonly List<IHandleRequests> trackedObjects = new List<IHandleRequests>();
+        private readonly IAmAHandlerFactory _handlerFactory;
+        private readonly ILog _logger;
+        private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
 
         public LifetimeScope(IAmAHandlerFactory handlerFactory, ILog logger = null)
         {
-            this.handlerFactory = handlerFactory;
-            this.logger = logger;
+            _handlerFactory = handlerFactory;
+            _logger = logger;
         }
 
         public int TrackedItemCount
         {
-            get { return trackedObjects.Count; }
+            get { return _trackedObjects.Count; }
         }
 
         public void Add(IHandleRequests instance)
         {
-            trackedObjects.Add(instance);
-            if (logger != null)
-                logger.DebugFormat("Tracking instance {0} of type {1}", instance.GetHashCode(), instance.GetType());
+            _trackedObjects.Add(instance);
+            if (_logger != null)
+                _logger.DebugFormat("Tracking instance {0} of type {1}", instance.GetHashCode(), instance.GetType());
         }
 
         public void Dispose()
         {
-            trackedObjects.Each((trackedItem) =>
+            _trackedObjects.Each((trackedItem) =>
             {
                 //free disposable items
-                handlerFactory.Release(trackedItem);
-                if (logger != null)
-                    logger.DebugFormat("Releasing handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType());
+                _handlerFactory.Release(trackedItem);
+                if (_logger != null)
+                    _logger.DebugFormat("Releasing handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             //clear our tracking
-            trackedObjects.Clear();
+            _trackedObjects.Clear();
         }
     }
 }

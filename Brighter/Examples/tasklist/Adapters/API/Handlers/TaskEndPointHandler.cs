@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using OpenRasta.Web;
 using Tasklist.Adapters.API.Resources;
@@ -33,30 +35,30 @@ namespace Tasklist.Adapters.API.Handlers
 {
     public class TaskEndPointHandler
     {
-        private readonly ITaskRetriever taskRetriever;
-        private readonly IAmACommandProcessor commandProcessor;
-        private readonly ICommunicationContext communicationContext;
-        private readonly ITaskListRetriever taskListRetriever;
+        private readonly ITaskRetriever _taskRetriever;
+        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly ICommunicationContext _communicationContext;
+        private readonly ITaskListRetriever _taskListRetriever;
 
         public TaskEndPointHandler(ITaskRetriever taskRetriever, ITaskListRetriever taskListRetriever, IAmACommandProcessor commandProcessor, ICommunicationContext communicationContext)
         {
-            this.taskRetriever = taskRetriever;
-            this.taskListRetriever = taskListRetriever;
-            this.commandProcessor = commandProcessor;
-            this.communicationContext = communicationContext;
+            _taskRetriever = taskRetriever;
+            _taskListRetriever = taskListRetriever;
+            _commandProcessor = commandProcessor;
+            _communicationContext = communicationContext;
         }
 
         [HttpOperation(HttpMethod.GET)]
         public OperationResult Get()
         {
-            TaskListModel responseResource = taskListRetriever.RetrieveTasks();
-            return new OperationResult.OK {ResponseResource = responseResource};
+            TaskListModel responseResource = _taskListRetriever.RetrieveTasks();
+            return new OperationResult.OK { ResponseResource = responseResource };
         }
 
         [HttpOperation(HttpMethod.GET)]
         public OperationResult Get(int taskId)
         {
-            return new OperationResult.OK {ResponseResource = taskRetriever.Get(taskId)};
+            return new OperationResult.OK { ResponseResource = _taskRetriever.Get(taskId) };
         }
 
         [HttpOperation(HttpMethod.POST)]
@@ -68,12 +70,12 @@ namespace Tasklist.Adapters.API.Handlers
                 dueDate: DateTime.Parse(newTask.DueDate)
                 );
 
-            commandProcessor.Send(addTaskCommand);
+            _commandProcessor.Send(addTaskCommand);
 
             return new OperationResult.Created
-                {
-                    RedirectLocation = new Uri(string.Format("{0}/tasks/{1}", communicationContext.ApplicationBaseUri, addTaskCommand.TaskId))
-                };
+            {
+                RedirectLocation = new Uri(string.Format("{0}/tasks/{1}", _communicationContext.ApplicationBaseUri, addTaskCommand.TaskId))
+            };
         }
     }
 }

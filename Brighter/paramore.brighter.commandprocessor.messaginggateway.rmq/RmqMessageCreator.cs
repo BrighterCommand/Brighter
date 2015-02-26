@@ -1,3 +1,5 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 #region Licence
 /* The MIT License (MIT)
@@ -20,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,24 +37,24 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     internal class RmqMessageCreator
     {
-        readonly ILog logger;
+        private readonly ILog _logger;
 
         public RmqMessageCreator(ILog logger)
         {
-            this.logger = logger;
+            _logger = logger;
         }
 
-        HeaderResult<string> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
+        private HeaderResult<string> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
         {
             if (false == dict.ContainsKey(key))
             {
-                return new HeaderResult<string>(string.Empty, ! dieOnMissing);
+                return new HeaderResult<string>(string.Empty, !dieOnMissing);
             }
 
             var bytes = dict[key] as byte[];
             if (null == bytes)
             {
-                logger.WarnFormat("The value of header" + key + " could not be cast to a byte array");
+                _logger.WarnFormat("The value of header" + key + " could not be cast to a byte array");
                 return new HeaderResult<string>(null, false);
             }
 
@@ -61,10 +63,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 var val = Encoding.UTF8.GetString(bytes);
                 return new HeaderResult<string>(val, true);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
-                logger.WarnFormat("Failed to read the value of header " + key + " as UTF-8, first 20 byes follow: \n\t" + firstTwentyBytes, e);
+                _logger.WarnFormat("Failed to read the value of header " + key + " as UTF-8, first 20 byes follow: \n\t" + firstTwentyBytes, e);
                 return new HeaderResult<string>(null, false);
             }
         }
@@ -76,7 +78,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var messageId = HeaderResult<Guid>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
             var handledCount = HeaderResult<int>.Empty();
-            
+
             Message message;
             try
             {
@@ -86,11 +88,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 handledCount = ReadHandledCount(headers);
                 var messageType = ReadMessageType(headers);
 
-                if(false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
+                if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
                 {
                     message = FailureMessage(topic, messageId);
                 }
-                else 
+                else
                 {
                     string body = Encoding.UTF8.GetString(fromQueue.Body);
 
@@ -98,12 +100,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                         timeStamp.Success ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result) : new MessageHeader(messageId.Result, topic.Result, messageType.Result),
                         new MessageBody(body));
 
-                    headers.Each(header => message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString((byte[]) header.Value)));
+                    headers.Each(header => message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString((byte[])header.Value)));
                 }
             }
             catch (Exception e)
             {
-                logger.WarnFormat("Failed to create message from amqp message", e);
+                _logger.WarnFormat("Failed to create message from amqp message", e);
                 message = FailureMessage(topic, messageId);
             }
 
@@ -123,7 +125,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return new HeaderResult<DateTime>(DateTime.UtcNow, true);
         }
 
-        static Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
+        private static Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
         {
             var header = new MessageHeader(
                 messageId.Success ? messageId.Result : Guid.Empty,
@@ -133,21 +135,22 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return message;
         }
 
-        HeaderResult<MessageType> ReadMessageType(IDictionary<string, object> headers)
+        private HeaderResult<MessageType> ReadMessageType(IDictionary<string, object> headers)
         {
             return ReadHeader(headers, HeaderNames.MESSAGE_TYPE)
-                .Map(s => {
-                              if (string.IsNullOrEmpty(s))
-                              {
-                                  return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
-                              }
-                              MessageType result;
-                              var success = Enum.TryParse(s, true, out result);
-                              return new HeaderResult<MessageType>(result, success);
+                .Map(s =>
+                {
+                    if (string.IsNullOrEmpty(s))
+                    {
+                        return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
+                    }
+                    MessageType result;
+                    var success = Enum.TryParse(s, true, out result);
+                    return new HeaderResult<MessageType>(result, success);
                 });
         }
 
-        HeaderResult<int> ReadHandledCount(IDictionary<string, object> headers)
+        private HeaderResult<int> ReadHandledCount(IDictionary<string, object> headers)
         {
             return ReadHeader(headers, HeaderNames.HANDLED_COUNT).Map(s =>
             {
@@ -159,16 +162,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 var val = int.TryParse(s, out handledCount) ? handledCount : 0;
                 return new HeaderResult<int>(val, true);
             });
-            
         }
 
-        HeaderResult<string> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
+        private HeaderResult<string> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
         {
-            return ReadHeader(headers, HeaderNames.TOPIC).Map(s => {
-                                                                       var val = string.IsNullOrEmpty(s) ? fromQueue.RoutingKey : s;
-                                                                       return new HeaderResult<string>(val, true);
+            return ReadHeader(headers, HeaderNames.TOPIC).Map(s =>
+            {
+                var val = string.IsNullOrEmpty(s) ? fromQueue.RoutingKey : s;
+                return new HeaderResult<string>(val, true);
             });
-                
         }
 
         private HeaderResult<Guid> ReadMessageId(string messageId)
@@ -177,7 +179,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             if (string.IsNullOrEmpty(messageId))
             {
-                logger.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
+                _logger.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
@@ -186,10 +188,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
-            logger.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
+            _logger.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
             return new HeaderResult<Guid>(Guid.Empty, false);
-
-            
         }
     }
 }

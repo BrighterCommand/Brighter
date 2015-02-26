@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.restms
 // Author           : ian
 // Created          : 12-30-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 12-31-2014
 // ***********************************************************************
-// <copyright file="XmlRequestBuilder.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -57,18 +59,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
         /// <returns><c>true</c> if serialized, <c>false</c> otherwise.</returns>
         public static bool TryBuild<T>(T domainObject, out string body)
         {
-            var ns = new XmlSerializerNamespaces(); 
+            var ns = new XmlSerializerNamespaces();
             ns.Add("", "");
             var serializer = new XmlSerializer(typeof(T));
             var textWriter = new StringWriter();
-            var writer = XmlWriter.Create(textWriter, new XmlWriterSettings{OmitXmlDeclaration = true});
+            var writer = XmlWriter.Create(textWriter, new XmlWriterSettings { OmitXmlDeclaration = true });
             try
             {
                 serializer.Serialize(writer, domainObject, ns);
                 body = textWriter.ToString();
                 return true;
-            } 
-            catch(Exception e)
+            }
+            catch (Exception e)
             {
                 Trace.WriteLine(e.Message);
                 body = null;

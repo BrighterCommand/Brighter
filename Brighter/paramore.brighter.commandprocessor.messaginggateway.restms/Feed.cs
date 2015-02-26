@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 
 /* The MIT License (MIT)
@@ -22,7 +25,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Linq;
 using paramore.brighter.commandprocessor.Logging;
@@ -33,7 +35,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {
     internal class Feed
     {
-        readonly RestMSMessageGateway gateway;
+        private readonly RestMSMessageGateway _gateway;
 
         /// <summary>
         /// The feed href
@@ -42,7 +44,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         public Feed(RestMSMessageGateway gateway)
         {
-            this.gateway = gateway;
+            _gateway = gateway;
             FeedUri = null;
         }
 
@@ -54,8 +56,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <exception cref="RestMSClientException"></exception>
         public void EnsureFeedExists(RestMSDomain domain)
         {
-            var feedName = gateway.Configuration.Feed.Name;
-            gateway.Logger.DebugFormat("Checking for existence of the feed {0} on the RestMS server: {1}", feedName, gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            var feedName = _gateway.Configuration.Feed.Name;
+            _gateway.Logger.DebugFormat("Checking for existence of the feed {0} on the RestMS server: {1}", feedName, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var isFeedDeclared = IsFeedDeclared(domain, feedName);
             if (!isFeedDeclared)
             {
@@ -68,14 +70,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             FeedUri = domain.Feeds.First(feed => feed.Name == feedName).Href;
         }
 
-        RestMSDomain CreateFeed(string domainUri, string name)
+        private RestMSDomain CreateFeed(string domainUri, string name)
         {
-            gateway.Logger.DebugFormat("Creating the feed {0} on the RestMS server: {1}", name, gateway.Configuration.RestMS.Uri.AbsoluteUri);
-            var client = gateway.Client();
+            _gateway.Logger.DebugFormat("Creating the feed {0} on the RestMS server: {1}", name, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            var client = _gateway.Client();
             try
             {
-                var response = client.SendAsync(gateway.CreateRequest(
-                    domainUri, gateway.CreateEntityBody(
+                var response = client.SendAsync(_gateway.CreateRequest(
+                    domainUri, _gateway.CreateEntityBody(
                         new RestMSFeed
                         {
                             Name = name,
@@ -87,22 +89,22 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                                      .Result;
 
                 response.EnsureSuccessStatusCode();
-                return gateway.ParseResponse<RestMSDomain>(response);
+                return _gateway.ParseResponse<RestMSDomain>(response);
             }
             catch (AggregateException ae)
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    gateway.Logger.ErrorFormat("Threw exception adding Feed {0} to RestMS Server {1}", name, exception.Message);
+                    _gateway.Logger.ErrorFormat("Threw exception adding Feed {0} to RestMS Server {1}", name, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error adding the Feed {0} to the RestMS server, see log for details", name));
             }
         }
 
-        bool IsFeedDeclared(RestMSDomain domain, string feedName)
+        private bool IsFeedDeclared(RestMSDomain domain, string feedName)
         {
-            return domain != null && domain.Feeds !=null && domain.Feeds.Any(feed => feed.Name == feedName);
+            return domain != null && domain.Feeds != null && domain.Feeds.Any(feed => feed.Name == feedName);
         }
     }
 }

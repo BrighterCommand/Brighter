@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using Greetings.Ports.Commands;
 using paramore.brighter.commandprocessor;
@@ -30,8 +33,7 @@ namespace Greetings.Ports.CommandHandlers
 {
     internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
     {
-
-        public GreetingCommandHandler(ILog logger) : base(logger) {}
+        public GreetingCommandHandler(ILog logger) : base(logger) { }
 
         public override GreetingCommand Handle(GreetingCommand command)
         {
@@ -42,6 +44,5 @@ namespace Greetings.Ports.CommandHandlers
             Console.WriteLine("Message Ends");
             return base.Handle(command);
         }
-
     }
 }

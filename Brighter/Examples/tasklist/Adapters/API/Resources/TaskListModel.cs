@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -33,27 +35,27 @@ namespace Tasklist.Adapters.API.Resources
     [DataContract, XmlRoot]
     public class TaskListModel
     {
-        private Link self;
-        private IEnumerable<Link> links; 
+        private Link _self;
+        private IEnumerable<Link> _links;
 
         public TaskListModel(IEnumerable<Task> tasks, string hostName)
         {
-            self = Link.Create(this, hostName);
-            links = tasks.Select(task => Link.Create((Task)task, hostName));
+            _self = Link.Create(this, hostName);
+            _links = tasks.Select(task => Link.Create((Task)task, hostName));
         }
 
         [DataMember(Name = "self"), XmlElement(ElementName = "self")]
         public Link Self
         {
-            get { return self; }
-            set { self = value; }
+            get { return _self; }
+            set { _self = value; }
         }
 
         [DataMember(Name = "links"), XmlElement(ElementName = "links")]
         public IEnumerable<Link> Links
         {
-            get { return links; }
-            set { links = value; }
+            get { return _links; }
+            set { _links = value; }
         }
     }
 }

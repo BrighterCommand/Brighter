@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 
 /* The MIT License (MIT)
@@ -22,7 +25,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
@@ -32,11 +34,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {
     internal class Domain
     {
-        readonly RestMSMessageGateway gateway;
+        private readonly RestMSMessageGateway _gateway;
 
         public Domain(RestMSMessageGateway gateway)
         {
-            this.gateway = gateway;
+            _gateway = gateway;
         }
 
         /// <summary>
@@ -47,19 +49,19 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <exception cref="RestMSClientException"></exception>
         public RestMSDomain GetDomain()
         {
-            gateway.Logger.DebugFormat("Getting the default domain from the RestMS server: {0}", gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            _gateway.Logger.DebugFormat("Getting the default domain from the RestMS server: {0}", _gateway.Configuration.RestMS.Uri.AbsoluteUri);
 
             try
             {
-                var response = gateway.Client().GetAsync(gateway.Configuration.RestMS.Uri).Result;
+                var response = _gateway.Client().GetAsync(_gateway.Configuration.RestMS.Uri).Result;
                 response.EnsureSuccessStatusCode();
-                return gateway.ParseResponse<RestMSDomain>(response);
+                return _gateway.ParseResponse<RestMSDomain>(response);
             }
             catch (AggregateException ae)
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    gateway.Logger.ErrorFormat("Threw exception getting Domain from RestMS Server {0}", exception.Message);
+                    _gateway.Logger.ErrorFormat("Threw exception getting Domain from RestMS Server {0}", exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));

@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
@@ -11,22 +14,22 @@ namespace paramore.commandprocessor.tests.RestMSServer
 {
     public class When_receiving_an_invalidate_cache_request
     {
-        const string RESOURCE_TO_INVALIDATE = "http://localhost:8080";
-        static IHandleRequests<InvalidateCacheCommand> cacheCleaner;
-        static InvalidateCacheCommand invalidateCacheCommand;
-        static IAmACache cache;
+        private const string RESOURCE_TO_INVALIDATE = "http://localhost:8080";
+        private static IHandleRequests<InvalidateCacheCommand> s_cacheCleaner;
+        private static InvalidateCacheCommand s_invalidateCacheCommand;
+        private static IAmACache s_cache;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            cache = A.Fake<IAmACache>();
+            s_cache = A.Fake<IAmACache>();
 
-            cacheCleaner = new CacheCleaningHandler(cache, logger);
-            invalidateCacheCommand = new InvalidateCacheCommand(new Uri(RESOURCE_TO_INVALIDATE));
+            s_cacheCleaner = new CacheCleaningHandler(s_cache, logger);
+            s_invalidateCacheCommand = new InvalidateCacheCommand(new Uri(RESOURCE_TO_INVALIDATE));
         };
 
-        Because of = () => cacheCleaner.Handle(invalidateCacheCommand);
+        private Because _of = () => s_cacheCleaner.Handle(s_invalidateCacheCommand);
 
-        It should_clear_the_cache = () => A.CallTo(() => cache.InvalidateResource(new Uri(RESOURCE_TO_INVALIDATE))).MustHaveHappened();
+        private It _should_clear_the_cache = () => A.CallTo(() => s_cache.InvalidateResource(new Uri(RESOURCE_TO_INVALIDATE))).MustHaveHappened();
     }
 }

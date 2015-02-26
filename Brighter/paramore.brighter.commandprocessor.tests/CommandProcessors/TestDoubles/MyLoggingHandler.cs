@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -29,12 +32,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     internal class MyLoggingHandler<TRequest> : RequestHandler<TRequest>, IDisposable where TRequest : class, IRequest
     {
-        private TRequest command;
+        private TRequest _command;
         public static bool DisposeWasCalled { get; set; }
 
-        public MyLoggingHandler(ILog logger) :base(logger)
+        public MyLoggingHandler(ILog logger) : base(logger)
         {
-            command = null;
+            _command = null;
             DisposeWasCalled = false;
         }
 
@@ -43,7 +46,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
             LogCommand(command);
             return base.Handle(command);
         }
-        
+
         public static bool Shouldreceive(TRequest expectedCommand)
         {
             return (expectedCommand != null);
@@ -51,7 +54,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 
         private void LogCommand(TRequest request)
         {
-            command = request;
+            _command = request;
         }
 
         public void Dispose()

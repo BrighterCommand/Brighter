@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 11-05-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 11-05-2014
 // ***********************************************************************
-// <copyright file="MessageContent.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.IO;
 using System.Net.Mime;
@@ -45,7 +47,7 @@ namespace paramore.brighter.restms.core.Model
     /// </summary>
     public class MessageContent : IDisposable
     {
-        readonly Stream content = new MemoryStream();
+        private readonly Stream _content = new MemoryStream();
         /// <summary>
         /// Initializes a new instance of the <see cref="T:System.Object" /> class.
         /// </summary>
@@ -57,8 +59,8 @@ namespace paramore.brighter.restms.core.Model
             ContentType = contentType;
             Encoding = encoding;
             source.Position = 0;
-            source.CopyTo(content);
-            content.Position = 0;
+            source.CopyTo(_content);
+            _content.Position = 0;
         }
 
         /// <summary>
@@ -78,8 +80,8 @@ namespace paramore.brighter.restms.core.Model
         /// <returns>System.String.</returns>
         public string AsString()
         {
-            content.Position = 0;
-            using (var sr = new StreamReader(content))
+            _content.Position = 0;
+            using (var sr = new StreamReader(_content))
             {
                 return sr.ReadToEnd();
             }
@@ -99,11 +101,11 @@ namespace paramore.brighter.restms.core.Model
             Dispose(false);
         }
 
-        void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (disposing)
             {
-                content.Dispose();
+                _content.Dispose();
             }
         }
 
@@ -113,7 +115,7 @@ namespace paramore.brighter.restms.core.Model
         /// <returns>MessageContent.</returns>
         public MessageContent Copy()
         {
-            return new MessageContent(ContentType, Encoding, content);    
+            return new MessageContent(ContentType, Encoding, _content);
         }
     }
 }

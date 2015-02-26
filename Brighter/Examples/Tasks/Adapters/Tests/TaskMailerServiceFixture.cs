@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using Machine.Specifications;
 using SendGrid;
@@ -31,33 +34,32 @@ namespace Tasks.Adapters.Tests
 {
     public class When_marshalling_a_task_reminder_to_a_sendgrid_mail
     {
-        static Mail mailMessage;
-        static TaskReminder taskReminder;
-        static EmailAddress recipient;
-        static EmailAddress copyTo;
-        static TaskName taskName;
-        static DateTime dueDate;
+        private static Mail s_mailMessage;
+        private static TaskReminder s_taskReminder;
+        private static EmailAddress s_recipient;
+        private static EmailAddress s_copyTo;
+        private static TaskName s_taskName;
+        private static DateTime s_dueDate;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            dueDate = DateTime.UtcNow.AddDays(1);
-            recipient= new EmailAddress("ian.hammond.cooper@gmail.com");
-            copyTo = new EmailAddress("ian@huddle.net");
-            taskName = new TaskName("My Task");
+            s_dueDate = DateTime.UtcNow.AddDays(1);
+            s_recipient = new EmailAddress("ian.hammond.cooper@gmail.com");
+            s_copyTo = new EmailAddress("ian@huddle.net");
+            s_taskName = new TaskName("My Task");
 
 
-            taskReminder = new TaskReminder(
-                taskName: new TaskName(taskName ),
-                dueDate: dueDate,
-                reminderTo: recipient,
-                copyReminderTo: copyTo);
-            
+            s_taskReminder = new TaskReminder(
+                taskName: new TaskName(s_taskName),
+                dueDate: s_dueDate,
+                reminderTo: s_recipient,
+                copyReminderTo: s_copyTo);
         };
 
-        Because of = () => mailMessage = new MailTranslator().Translate(taskReminder);
+        private Because _of = () => s_mailMessage = new MailTranslator().Translate(s_taskReminder);
 
-        It should_have_the_correct_subject = () => mailMessage.Subject.ShouldEqual(string.Format("Task Reminder! Task {0} is due on {1}", taskName, dueDate));
-        It should_have_the_correct_recipient_addressee = () => mailMessage.To[0].Address.ShouldEqual(recipient);
-        It should_have_the_correct_to_address = () => mailMessage.Cc[0].Address.ShouldEqual(copyTo);
+        private It _should_have_the_correct_subject = () => s_mailMessage.Subject.ShouldEqual(string.Format("Task Reminder! Task {0} is due on {1}", s_taskName, s_dueDate));
+        private It _should_have_the_correct_recipient_addressee = () => s_mailMessage.To[0].Address.ShouldEqual(s_recipient);
+        private It _should_have_the_correct_to_address = () => s_mailMessage.Cc[0].Address.ShouldEqual(s_copyTo);
     }
 }

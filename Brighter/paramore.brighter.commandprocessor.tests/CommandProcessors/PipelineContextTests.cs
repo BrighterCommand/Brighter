@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
@@ -33,60 +36,58 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     [Subject(typeof(PipelineBuilder<>))]
     public class When_Building_A_Handler_For_A_Command
     {
-        private static PipelineBuilder<MyCommand> Chain_Builder;
-        private static IHandleRequests<MyCommand> Chain_Of_Responsibility;
-        private static RequestContext request_context ;
+        private static PipelineBuilder<MyCommand> s_chain_Builder;
+        private static IHandleRequests<MyCommand> s_chain_Of_Responsibility;
+        private static RequestContext s_request_context;
 
-        private Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
-            request_context = new RequestContext();
+            s_request_context = new RequestContext();
 
-            Chain_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
+            s_chain_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        Because of = () => Chain_Of_Responsibility = Chain_Builder.Build(request_context).First();
+        private Because _of = () => s_chain_Of_Responsibility = s_chain_Builder.Build(s_request_context).First();
 
-        It should_have_set_the_context_on_the_handler = () => Chain_Of_Responsibility.Context.ShouldNotBeNull();
-        It should_use_the_context_that_we_passed_in = () => Chain_Of_Responsibility.Context.ShouldBeTheSameAs(request_context);
+        private It _should_have_set_the_context_on_the_handler = () => s_chain_Of_Responsibility.Context.ShouldNotBeNull();
+        private It _should_use_the_context_that_we_passed_in = () => s_chain_Of_Responsibility.Context.ShouldBeTheSameAs(s_request_context);
     }
 
     [Subject(typeof(PipelineBuilder<>))]
     public class When_putting_a_variable_into_the_bag_should_be_accessible_in_the_handler
     {
         private const string I_AM_A_TEST_OF_THE_CONTEXT_BAG = "I am a test of the context bag";
-        private static RequestContext request_context;
-        private static CommandProcessor commandProcessor;
-        private static MyCommand myCommand;
+        private static RequestContext s_request_context;
+        private static CommandProcessor s_commandProcessor;
+        private static MyCommand s_myCommand;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyContextAwareCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyContextAwareCommandHandler>(() => new MyContextAwareCommandHandler(logger));
-            request_context = new RequestContext();
-            myCommand = new MyCommand();
+            s_request_context = new RequestContext();
+            s_myCommand = new MyCommand();
             MyContextAwareCommandHandler.TestString = null;
 
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
-            A.CallTo(() => requestContextFactory.Create()).Returns(request_context);
+            A.CallTo(() => requestContextFactory.Create()).Returns(s_request_context);
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, requestContextFactory, new PolicyRegistry(),  logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, requestContextFactory, new PolicyRegistry(), logger);
 
-            request_context.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
+            s_request_context.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
         };
 
 
-        Because of = () => commandProcessor.Send(myCommand);
+        private Because _of = () => s_commandProcessor.Send(s_myCommand);
 
-        It should_have_seen_the_data_we_pushed_into_the_bag = () => MyContextAwareCommandHandler.TestString.ShouldEqual(I_AM_A_TEST_OF_THE_CONTEXT_BAG);
-        It should_have_been_filled_by_the_handler = () => ((string)request_context.Bag["MyContextAwareCommandHandler"]).ShouldEqual("I was called and set the context");
+        private It _should_have_seen_the_data_we_pushed_into_the_bag = () => MyContextAwareCommandHandler.TestString.ShouldEqual(I_AM_A_TEST_OF_THE_CONTEXT_BAG);
+        private It _should_have_been_filled_by_the_handler = () => ((string)s_request_context.Bag["MyContextAwareCommandHandler"]).ShouldEqual("I was called and set the context");
     }
-
-
 }

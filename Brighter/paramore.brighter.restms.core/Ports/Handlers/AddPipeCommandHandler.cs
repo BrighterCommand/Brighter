@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 10-21-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="AddPipeCommandHandler.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Transactions;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -48,8 +50,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
     /// </summary>
     public class AddPipeCommandHandler : RequestHandler<AddPipeCommand>
     {
-        readonly IAmARepository<Pipe> pipeRepository;
-        readonly IAmACommandProcessor commandProcessor;
+        private readonly IAmARepository<Pipe> _pipeRepository;
+        private readonly IAmACommandProcessor _commandProcessor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AddPipeCommandHandler"/> class.
@@ -59,8 +61,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <param name="logger">The logger.</param>
         public AddPipeCommandHandler(IAmARepository<Pipe> pipeRepository, IAmACommandProcessor commandProcessor, ILog logger) : base(logger)
         {
-            this.pipeRepository = pipeRepository;
-            this.commandProcessor = commandProcessor;
+            _pipeRepository = pipeRepository;
+            _commandProcessor = commandProcessor;
         }
 
         #region Overrides of RequestHandler<AddPipeCommand>
@@ -75,7 +77,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
             var pipe = new Pipe(command.Id.ToString(), command.Type, command.Title);
             using (var scope = new TransactionScope())
             {
-                pipeRepository.Add(pipe);
+                _pipeRepository.Add(pipe);
                 scope.Complete();
             }
 
@@ -83,15 +85,15 @@ namespace paramore.brighter.restms.core.Ports.Handlers
             {
                 //a default pipe always hasa join to the default feed.
                 //this allows a sender to address us directly, by name
-                commandProcessor.Send(new AddJoinToPipeCommand(pipe.Name.Value, GetDefaultFeedUri(), pipe.Name.Value));
+                _commandProcessor.Send(new AddJoinToPipeCommand(pipe.Name.Value, GetDefaultFeedUri(), pipe.Name.Value));
             }
 
-            commandProcessor.Send(new AddPipeToDomainCommand(command.DomainName, pipe.Name.Value));
+            _commandProcessor.Send(new AddPipeToDomainCommand(command.DomainName, pipe.Name.Value));
 
             return base.Handle(command);
         }
 
-        string GetDefaultFeedUri()
+        private string GetDefaultFeedUri()
         {
             return new Feed(
                 feedType: FeedType.Default,

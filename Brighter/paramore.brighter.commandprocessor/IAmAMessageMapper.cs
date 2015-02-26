@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-15-2014
 // ***********************************************************************
-// <copyright file="IAmAMessageMapper.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
@@ -41,7 +43,7 @@ namespace paramore.brighter.commandprocessor
     /// Map between a <see cref="Command"/> or an <see cref="Event"/> and a <see cref="Message"/>. You must implement this for each Command or Message you intend to send over
     /// a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> 
     /// </summary>
-    public interface IAmAMessageMapper{}
+    public interface IAmAMessageMapper { }
 
     /// <summary>
     /// Interface IAmAMessageMapper
@@ -49,7 +51,7 @@ namespace paramore.brighter.commandprocessor
     /// a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> 
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
-    public interface IAmAMessageMapper<TRequest>: IAmAMessageMapper where TRequest : class, IRequest
+    public interface IAmAMessageMapper<TRequest> : IAmAMessageMapper where TRequest : class, IRequest
     {
         /// <summary>
         /// Maps to message.

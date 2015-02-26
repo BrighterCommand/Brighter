@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 09-26-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="Domain.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Generic;
 using paramore.brighter.restms.core.Ports.Common;
@@ -54,9 +56,9 @@ namespace paramore.brighter.restms.core.Model
     /// </summary>
     public class Domain : Resource, IAmAnAggregate
     {
-        readonly HashSet<Identity> feeds = new HashSet<Identity>();
-        readonly HashSet<Identity> pipes  = new HashSet<Identity>();
-        const string DOMAIN_URI_FORMAT = "http://{0}/restms/domain/{1}";
+        private readonly HashSet<Identity> _feeds = new HashSet<Identity>();
+        private readonly HashSet<Identity> _pipes = new HashSet<Identity>();
+        private const string DOMAIN_URI_FORMAT = "http://{0}/restms/domain/{1}";
 
         /// <summary>
         /// Gets the title.
@@ -75,7 +77,7 @@ namespace paramore.brighter.restms.core.Model
         /// <value>The identifier.</value>
         public Identity Id
         {
-            get { return new Identity(Name.Value);}
+            get { return new Identity(Name.Value); }
         }
         /// <summary>
         /// Gets the version.
@@ -89,7 +91,7 @@ namespace paramore.brighter.restms.core.Model
         /// <value>The feeds.</value>
         public IEnumerable<Identity> Feeds
         {
-            get { return feeds; }
+            get { return _feeds; }
         }
 
         /// <summary>
@@ -98,7 +100,7 @@ namespace paramore.brighter.restms.core.Model
         /// <value>The pipes.</value>
         public IEnumerable<Identity> Pipes
         {
-            get { return pipes; }
+            get { return _pipes; }
         }
 
         /// <summary>
@@ -113,7 +115,7 @@ namespace paramore.brighter.restms.core.Model
             Title = title;
             Profile = profile;
             Version = new AggregateVersion(0);
-            Href = new Uri(string.Format(DOMAIN_URI_FORMAT, Globals.HostName, Name.Value));   
+            Href = new Uri(string.Format(DOMAIN_URI_FORMAT, Globals.HostName, Name.Value));
         }
 
         /// <summary>
@@ -134,7 +136,7 @@ namespace paramore.brighter.restms.core.Model
         /// <param name="id">The identifier.</param>
         public void AddFeed(Identity id)
         {
-            feeds.Add(id);
+            _feeds.Add(id);
         }
 
         #region Equality operators
@@ -158,7 +160,7 @@ namespace paramore.brighter.restms.core.Model
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((Domain) obj);
+            return Equals((Domain)obj);
         }
 
         /// <summary>
@@ -199,7 +201,7 @@ namespace paramore.brighter.restms.core.Model
         /// <param name="identity">The identity.</param>
         public void RemoveFeed(Identity identity)
         {
-            feeds.RemoveWhere(feed => feed == identity);
+            _feeds.RemoveWhere(feed => feed == identity);
         }
 
         /// <summary>
@@ -208,7 +210,7 @@ namespace paramore.brighter.restms.core.Model
         /// <param name="id">The identifier.</param>
         public void AddPipe(Identity id)
         {
-            pipes.Add(id);
+            _pipes.Add(id);
         }
     }
 }

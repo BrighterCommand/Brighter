@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 09-26-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-10-2014
 // ***********************************************************************
-// <copyright file="IAmARepository.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Generic;
 
@@ -43,7 +45,7 @@ namespace paramore.brighter.restms.core.Ports.Common
     /// <summary>
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public interface IAmARepository<T> where T: class, IAmAnAggregate
+    public interface IAmARepository<T> where T : class, IAmAnAggregate
     {
         /// <summary>
         /// Adds the specified aggregate.
@@ -67,6 +69,6 @@ namespace paramore.brighter.restms.core.Ports.Common
         /// </summary>
         /// <param name="query">The query.</param>
         /// <returns>IEnumerable&lt;T&gt;.</returns>
-         IEnumerable<T> Find(Func<T, bool> query);
+        IEnumerable<T> Find(Func<T, bool> query);
     }
 }

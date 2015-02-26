@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.serviceactivator.controlbus
 // Author           : ian
 // Created          : 01-30-2015
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 01-30-2015
 // ***********************************************************************
-// <copyright file="ConfigurationMessageHandler.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -35,7 +37,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator.controlbus.Ports.Commands;
@@ -47,7 +48,7 @@ namespace paramore.brighter.serviceactivator.controlbus.Ports.Handlers
     /// </summary>
     public class ConfigurationMessageHandler : RequestHandler<ConfigurationCommand>
     {
-        readonly IDispatcher dispatcher;
+        private readonly IDispatcher _dispatcher;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationMessageHandler" /> class.
@@ -56,7 +57,7 @@ namespace paramore.brighter.serviceactivator.controlbus.Ports.Handlers
         /// <param name="dispatcher"></param>
         public ConfigurationMessageHandler(ILog logger, IDispatcher dispatcher) : base(logger)
         {
-            this.dispatcher = dispatcher;
+            _dispatcher = dispatcher;
         }
 
         #region Overrides of RequestHandler<ConfigurationCommand>
@@ -68,7 +69,7 @@ namespace paramore.brighter.serviceactivator.controlbus.Ports.Handlers
         /// <returns>TRequest.</returns>
         public override ConfigurationCommand Handle(ConfigurationCommand command)
         {
-            dispatcher.End();
+            _dispatcher.End();
             return base.Handle(command);
         }
 

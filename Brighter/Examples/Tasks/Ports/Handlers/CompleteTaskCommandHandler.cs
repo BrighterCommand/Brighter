@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -34,25 +36,25 @@ namespace Tasks.Ports.Handlers
 {
     public class CompleteTaskCommandHandler : RequestHandler<CompleteTaskCommand>
     {
-        readonly ITasksDAO tasksDAO;
+        private readonly ITasksDAO _tasksDAO;
 
         public CompleteTaskCommandHandler(ITasksDAO tasksDao, ILog logger) : base(logger)
         {
-            tasksDAO = tasksDao;
+            _tasksDAO = tasksDao;
         }
 
-        [RequestLogging(step:1, timing: HandlerTiming.Before)]
+        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
         [Validation(step: 2, timing: HandlerTiming.Before)]
         [TimeoutPolicy(step: 3, milliseconds: 300)]
         public override CompleteTaskCommand Handle(CompleteTaskCommand completeTaskCommand)
         {
-            using (var scope = tasksDAO.BeginTransaction()) 
+            using (var scope = _tasksDAO.BeginTransaction())
             {
-                Task task = tasksDAO.FindById(completeTaskCommand.TaskId);
+                Task task = _tasksDAO.FindById(completeTaskCommand.TaskId);
                 if (task != null)
                 {
                     task.CompletionDate = completeTaskCommand.CompletionDate;
-                    tasksDAO.Update(task);
+                    _tasksDAO.Update(task);
                     scope.Commit();
                 }
                 else

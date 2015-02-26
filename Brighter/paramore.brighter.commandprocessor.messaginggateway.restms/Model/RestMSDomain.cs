@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 09-27-2014
@@ -33,8 +36,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
 
@@ -43,7 +46,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.Model
     [DataContract(Name = "domain"), XmlRoot(ElementName = "domain", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSDomain
     {
-
         [DataMember(Name = "name"), XmlAttribute(AttributeName = "name")]
         public string Name { get; set; }
 
@@ -51,7 +53,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.Model
         public string Title { get; set; }
 
         [DataMember(Name = "profile"), XmlElement(ElementName = "profile")]
-        public RestMSProfile Profile {get; set;}
+        public RestMSProfile Profile { get; set; }
 
         [DataMember(Name = "href"), XmlAttribute(AttributeName = "href")]
         public string Href { get; set; }
@@ -61,6 +63,5 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.Model
 
         [DataMember(Name = "pipe"), XmlElement(ElementName = "pipe")]
         public RestMSPipeLink[] Pipes;
-        
     }
 }

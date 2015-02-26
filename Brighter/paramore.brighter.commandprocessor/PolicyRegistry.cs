@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-10-2014
 // ***********************************************************************
-// <copyright file="PolicyRegistry.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections;
 using System.Collections.Generic;
 using Polly;
@@ -56,7 +58,7 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class PolicyRegistry : IAmAPolicyRegistry, IEnumerable<KeyValuePair<string, Policy>>
     {
-        readonly Dictionary<string, Policy> policies = new Dictionary<string, Policy>();
+        private readonly Dictionary<string, Policy> _policies = new Dictionary<string, Policy>();
 
         /// <summary>
         /// Gets the specified policy name.
@@ -65,7 +67,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>Policy.</returns>
         public Policy Get(string policyName)
         {
-            return policies.ContainsKey(policyName) ? policies[policyName] : null;
+            return _policies.ContainsKey(policyName) ? _policies[policyName] : null;
         }
 
         /// <summary>
@@ -75,7 +77,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="policy">The policy.</param>
         public void Add(string policyName, Policy policy)
         {
-            policies.Add(policyName, policy);
+            _policies.Add(policyName, policy);
         }
 
         /// <summary>
@@ -84,7 +86,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
         public IEnumerator<KeyValuePair<string, Policy>> GetEnumerator()
         {
-            return policies.GetEnumerator();
+            return _policies.GetEnumerator();
         }
 
         /// <summary>

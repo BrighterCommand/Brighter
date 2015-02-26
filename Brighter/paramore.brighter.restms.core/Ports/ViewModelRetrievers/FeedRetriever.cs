@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 10-08-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-09-2014
 // ***********************************************************************
-// <copyright file="FeedRetriever.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
 using paramore.brighter.restms.core.Ports.Resources;
@@ -45,7 +47,7 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
     /// </summary>
     public class FeedRetriever
     {
-        readonly IAmARepository<Feed> feedRepository;
+        private readonly IAmARepository<Feed> _feedRepository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FeedRetriever"/> class.
@@ -53,7 +55,7 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
         /// <param name="feedRepository">The feed repository.</param>
         public FeedRetriever(IAmARepository<Feed> feedRepository)
         {
-            this.feedRepository = feedRepository;
+            _feedRepository = feedRepository;
         }
 
         /// <summary>
@@ -64,7 +66,7 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
         /// <exception cref="paramore.brighter.restms.core.Ports.Common.FeedDoesNotExistException"></exception>
         public RestMSFeed Retrieve(Name name)
         {
-            var feed = feedRepository[new Identity(name.Value)];
+            var feed = _feedRepository[new Identity(name.Value)];
 
             if (feed == null)
             {

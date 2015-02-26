@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.exceptionpolicy
 // Author           : ian
 // Created          : 07-01-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-01-2014
 // ***********************************************************************
-// <copyright file="UsePolicyAtttribute.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using paramore.brighter.commandprocessor.policy.Handlers;
 
@@ -49,7 +51,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
     /// </summary>
     public class UsePolicyAttribute : RequestHandlerAttribute
     {
-        private readonly string policy;
+        private readonly string _policy;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UsePolicyAttribute"/> class.
@@ -58,7 +60,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
         /// <param name="step">The step.</param>
         public UsePolicyAttribute(string policy, int step) : base(step, HandlerTiming.Before)
         {
-            this.policy = policy;
+            _policy = policy;
         }
 
         /// <summary>
@@ -67,7 +69,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
         /// <returns>System.Object[].</returns>
         public override object[] InitializerParams()
         {
-            return new object[] {policy};
+            return new object[] { _policy };
         }
 
         /// <summary>
@@ -76,7 +78,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
         /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
-            return typeof (ExceptionPolicyHandler<>);
+            return typeof(ExceptionPolicyHandler<>);
         }
     }
 }

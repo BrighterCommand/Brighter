@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using Microsoft.Practices.Unity;
 using paramore.brighter.restms.core.Model;
 using paramore.brighter.restms.core.Ports.Common;
@@ -37,7 +40,7 @@ namespace paramore.brighter.restms.server.Adapters.Service
             var credentialsStorage = container.Resolve<IAmACredentialStore>();
             new RestMSServerBuilder()
                 .With()
-                .Repositories(domainRepository,feedRepository)
+                .Repositories(domainRepository, feedRepository)
                 .Security(credentialsStorage)
                 .Do();
         }

@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Transactions;
 using paramore.brighter.restms.core.Model;
@@ -39,13 +42,13 @@ namespace paramore.brighter.restms.server.Adapters.Service
     /// </summary>
     internal class RestMSServerBuilder : IConfigureRestMSServers, IBuildARestMSService, IUseRepositories, IUseCredentials
     {
-        IAmARepository<Domain> domainRepository;
-        IAmARepository<Feed> feedRepository;
-        RestMSServerConfiguration configuration;
+        private IAmARepository<Domain> _domainRepository;
+        private IAmARepository<Feed> _feedRepository;
+        private RestMSServerConfiguration _configuration;
 
         public IUseRepositories With()
         {
-            configuration = RestMSServerConfiguration.GetConfiguration();
+            _configuration = RestMSServerConfiguration.GetConfiguration();
             return this;
         }
 
@@ -72,17 +75,17 @@ namespace paramore.brighter.restms.server.Adapters.Service
 
             using (var scope = new TransactionScope())
             {
-                domainRepository.Add(domain);
-                feedRepository.Add(feed);
+                _domainRepository.Add(domain);
+                _feedRepository.Add(feed);
                 scope.Complete();
             }
         }
 
 
-        public IUseCredentials  Repositories(IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository)
+        public IUseCredentials Repositories(IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository)
         {
-            this.domainRepository = domainRepository;
-            this.feedRepository = feedRepository;
+            _domainRepository = domainRepository;
+            _feedRepository = feedRepository;
             return this;
         }
 
@@ -95,15 +98,14 @@ namespace paramore.brighter.restms.server.Adapters.Service
         {
             credentialsStorage.Add(new Credential()
             {
-                Id = configuration.Admin.Id,
+                Id = _configuration.Admin.Id,
                 Algorithm = SupportedAlgorithms.SHA256,
-                User = configuration.Admin.User,
-                Key = Convert.FromBase64String(configuration.Admin.Key)
+                User = _configuration.Admin.User,
+                Key = Convert.FromBase64String(_configuration.Admin.Key)
             });
-        
+
             return this;
         }
-
     }
 
     internal interface IConfigureRestMSServers
@@ -129,12 +131,10 @@ namespace paramore.brighter.restms.server.Adapters.Service
     internal interface IUseCredentials
     {
         IBuildARestMSService Security(IAmACredentialStore credentialsStorage);
-        
     }
 
     internal interface IBuildARestMSService
     {
         void Do();
-
     }
 }

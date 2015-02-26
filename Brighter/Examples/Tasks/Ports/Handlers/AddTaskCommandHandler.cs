@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
@@ -33,21 +35,21 @@ namespace Tasks.Ports.Handlers
 {
     public class AddTaskCommandHandler : RequestHandler<AddTaskCommand>
     {
-        private readonly ITasksDAO tasksDAO;
+        private readonly ITasksDAO _tasksDAO;
 
-        public AddTaskCommandHandler(ITasksDAO tasksDAO, ILog logger): base(logger)
+        public AddTaskCommandHandler(ITasksDAO tasksDAO, ILog logger) : base(logger)
         {
-            this.tasksDAO = tasksDAO;
+            _tasksDAO = tasksDAO;
         }
 
-        [RequestLogging(step:1, timing: HandlerTiming.Before)]
+        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
         [Validation(step: 2, timing: HandlerTiming.Before)]
         [TimeoutPolicy(step: 3, milliseconds: 300)]
         public override AddTaskCommand Handle(AddTaskCommand addTaskCommand)
         {
-            using (var scope = tasksDAO.BeginTransaction())
+            using (var scope = _tasksDAO.BeginTransaction())
             {
-                var inserted = tasksDAO.Add(
+                var inserted = _tasksDAO.Add(
                     new Task(
                         taskName: addTaskCommand.TaskName,
                         taskDecription: addTaskCommand.TaskDecription,
@@ -56,9 +58,8 @@ namespace Tasks.Ports.Handlers
                     );
 
                 scope.Commit();
-                
-                addTaskCommand.TaskId = inserted.Id;
 
+                addTaskCommand.TaskId = inserted.Id;
             }
 
             return addTaskCommand;

@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,27 +22,27 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using Topshelf;
 
 namespace TaskMailer.Adapters.ServiceHost
 {
-    class Program
+    internal class Program
     {
         public static void Main()
         {
-            HostFactory.Run(x => x.Service<TaskMailerService >(sc =>
-                {
-                    sc.ConstructUsing(() => new TaskMailerService ());
+            HostFactory.Run(x => x.Service<TaskMailerService>(sc =>
+               {
+                   sc.ConstructUsing(() => new TaskMailerService());
 
                     // the start and stop methods for the service
                     sc.WhenStarted((s, hostcontrol) => s.Start(hostcontrol));
-                    sc.WhenStopped((s, hostcontrol) => s.Stop(hostcontrol));
+                   sc.WhenStopped((s, hostcontrol) => s.Stop(hostcontrol));
 
                     // optional, when shutdown is supported
                     sc.WhenShutdown((s, hostcontrol) => s.Shutdown(hostcontrol));
-                }));
+               }));
         }
     }
 }

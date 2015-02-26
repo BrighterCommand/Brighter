@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using paramore.brighter.commandprocessor;
 
@@ -31,7 +33,7 @@ namespace Tasks.Ports.Handlers
     {
         public ValidationAttribute(int step, HandlerTiming timing)
             : base(step, timing)
-        {}
+        { }
 
         public override Type GetHandlerType()
         {

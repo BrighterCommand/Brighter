@@ -1,12 +1,15 @@
-﻿using System;
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace HelloWorld
 {
-    class GreetingCommandHandler : RequestHandler<GreetingCommand>
+    internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
     {
-        public GreetingCommandHandler(ILog logger) : base(logger) {}
+        public GreetingCommandHandler(ILog logger) : base(logger) { }
 
         public override GreetingCommand Handle(GreetingCommand command)
         {

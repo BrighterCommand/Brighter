@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -22,7 +25,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Linq;
 using paramore.brighter.commandprocessor.Logging;
@@ -33,29 +35,29 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {
     internal class Join
     {
-        readonly RestMSMessageGateway gateway;
-        readonly Feed feed;
+        private readonly RestMSMessageGateway _gateway;
+        private readonly Feed _feed;
 
         public Join(RestMsMessageConsumer gateway, Feed feed)
         {
-            this.gateway = gateway;
-            this.feed = feed;
+            _gateway = gateway;
+            _feed = feed;
         }
 
         public RestMSJoin CreateJoin(string pipeUri, string routingKey)
         {
-            gateway.Logger.DebugFormat("Creating the join with key {0} for pipe {1}", routingKey, pipeUri);
-            var client = gateway.Client();
+            _gateway.Logger.DebugFormat("Creating the join with key {0} for pipe {1}", routingKey, pipeUri);
+            var client = _gateway.Client();
             try
             {
                 var response = client.SendAsync(
-                    gateway.CreateRequest(
+                    _gateway.CreateRequest(
                         pipeUri,
-                        gateway.CreateEntityBody(
+                        _gateway.CreateEntityBody(
                             new RestMSJoin
                             {
                                 Address = routingKey,
-                                Feed = feed.FeedUri,
+                                Feed = _feed.FeedUri,
                                 Type = "Default"
                             }
                             )
@@ -64,19 +66,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                                      .Result;
 
                 response.EnsureSuccessStatusCode();
-                var pipe = gateway.ParseResponse<RestMSPipe>(response);
+                var pipe = _gateway.ParseResponse<RestMSPipe>(response);
                 return pipe.Joins.FirstOrDefault();
             }
             catch (AggregateException ae)
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    gateway.Logger.ErrorFormat("Threw exception adding join with routingKey {0} to Pipe {1} on RestMS Server {2}", routingKey, pipeUri, exception.Message);
+                    _gateway.Logger.ErrorFormat("Threw exception adding join with routingKey {0} to Pipe {1} on RestMS Server {2}", routingKey, pipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error adding the join with routingKey {0} to Pipe {1} to the RestMS server, see log for details", routingKey, pipeUri));
             }
         }
-
     }
 }

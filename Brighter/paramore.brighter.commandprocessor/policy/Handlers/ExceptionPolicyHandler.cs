@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.exceptionpolicy
 // Author           : ian
 // Created          : 07-01-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-10-2014
 // ***********************************************************************
-// <copyright file="ExceptionPolicyHandler.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
@@ -54,14 +56,14 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
-        private Policy policy;
+        private Policy _policy;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExceptionPolicyHandler{TRequest}"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
         public ExceptionPolicyHandler(ILog logger) : base(logger)
-        {}
+        { }
 
         /// <summary>
         /// Initializes from attribute parameters. This will get the <see cref="IAmAPolicyRegistry"/> from the <see cref="IRequestContext"/> and query it for the
@@ -72,9 +74,9 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
             //we expect the first and only parameter to be a string
-            var policyName = (string) initializerList[0];
-            policy = Context.Policies.Get(policyName);
-            if (policy == null)
+            var policyName = (string)initializerList[0];
+            _policy = Context.Policies.Get(policyName);
+            if (_policy == null)
                 throw new ArgumentException("Could not find the policy for this attribute, did you register it with the command processor's container", "initializerList");
         }
 
@@ -85,7 +87,7 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// <returns>TRequest.</returns>
         public override TRequest Handle(TRequest command)
         {
-            return policy.Execute(() => base.Handle(command));
+            return _policy.Execute(() => base.Handle(command));
         }
     }
 }

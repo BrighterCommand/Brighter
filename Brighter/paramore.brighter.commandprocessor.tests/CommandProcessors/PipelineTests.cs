@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Linq;
 using FakeItEasy;
@@ -35,10 +38,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     [Subject(typeof(PipelineBuilder<>))]
     public class When_Finding_A_Handler_For_A_Command
     {
-        private static PipelineBuilder<MyCommand> Pipeline_Builder;
-        private static IHandleRequests<MyCommand> Pipeline;
+        private static PipelineBuilder<MyCommand> s_pipeline_Builder;
+        private static IHandleRequests<MyCommand> s_pipeline;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
@@ -46,18 +49,18 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             registry.Register<MyCommand, MyCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger); 
+            s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
+        private Because _of = () => s_pipeline = s_pipeline_Builder.Build(new RequestContext()).First();
 
-        It should_return_the_my_command_handler_as_the_implicit_handler = () => Pipeline.ShouldBeAssignableTo(typeof(MyCommandHandler));
-        It should_be_the_only_element_in_the_chain = () => TracePipeline().ToString().ShouldEqual("MyCommandHandler|");
+        private It _should_return_the_my_command_handler_as_the_implicit_handler = () => s_pipeline.ShouldBeAssignableTo(typeof(MyCommandHandler));
+        private It _should_be_the_only_element_in_the_chain = () => TracePipeline().ToString().ShouldEqual("MyCommandHandler|");
 
         private static PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();
-            Pipeline.DescribePath(pipelineTracer);
+            s_pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
     }
@@ -65,40 +68,40 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     [Subject(typeof(PipelineBuilder<>))]
     public class When_Finding_A_Hander_That_Has_Dependencies
     {
-        private static PipelineBuilder<MyCommand> Pipeline_Builder;
-        private static IHandleRequests<MyCommand> Pipeline;
+        private static PipelineBuilder<MyCommand> s_pipeline_Builder;
+        private static IHandleRequests<MyCommand> s_pipeline;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDependentCommandHandler>();
-            var handlerFactory = new TestHandlerFactory<MyCommand, MyDependentCommandHandler>(() => new MyDependentCommandHandler(new FakeRepository<MyAggregate>(new FakeSession()),logger));
+            var handlerFactory = new TestHandlerFactory<MyCommand, MyDependentCommandHandler>(() => new MyDependentCommandHandler(new FakeRepository<MyAggregate>(new FakeSession()), logger));
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger); 
+            s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
+        private Because _of = () => s_pipeline = s_pipeline_Builder.Build(new RequestContext()).First();
 
-        It should_return_the_command_handler_as_the_implicit_handler = () => Pipeline.ShouldBeAssignableTo(typeof(MyDependentCommandHandler));
-        It should_be_the_only_element_in_the_chain = () => TracePipeline().ToString().ShouldEqual("MyDependentCommandHandler|");
+        private It _should_return_the_command_handler_as_the_implicit_handler = () => s_pipeline.ShouldBeAssignableTo(typeof(MyDependentCommandHandler));
+        private It _should_be_the_only_element_in_the_chain = () => TracePipeline().ToString().ShouldEqual("MyDependentCommandHandler|");
 
         private static PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();
-            Pipeline.DescribePath(pipelineTracer);
+            s_pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
-        }      
+        }
     }
 
     [Subject(typeof(PipelineBuilder<>))]
     public class When_A_Handler_Is_Part_of_A_Pipeline
     {
-        private static PipelineBuilder<MyCommand> Pipeline_Builder;
-        private static IHandleRequests<MyCommand> Pipeline;
+        private static PipelineBuilder<MyCommand> s_pipeline_Builder;
+        private static IHandleRequests<MyCommand> s_pipeline;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
@@ -111,18 +114,18 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
             container.Register<ILog>(logger);
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger); 
-       };
+            s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
+        };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
+        private Because _of = () => s_pipeline = s_pipeline_Builder.Build(new RequestContext()).First();
 
-        It should_include_my_command_handler_filter_in_the_chain = () => TracePipeline().ToString().Contains("MyImplicitHandler").ShouldBeTrue();
-        It should_include_my_logging_handler_in_the_chain = () => TracePipeline().ToString().Contains("MyLoggingHandler").ShouldBeTrue();
+        private It _should_include_my_command_handler_filter_in_the_chain = () => TracePipeline().ToString().Contains("MyImplicitHandler").ShouldBeTrue();
+        private It _should_include_my_logging_handler_in_the_chain = () => TracePipeline().ToString().Contains("MyLoggingHandler").ShouldBeTrue();
 
         private static PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();
-            Pipeline.DescribePath(pipelineTracer);
+            s_pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
     }
@@ -130,10 +133,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     [Subject(typeof(PipelineBuilder<>))]
     public class When_Building_A_Pipeline_Preserve_The_Order
     {
-        private static PipelineBuilder<MyCommand> Pipeline_Builder;
-        private static IHandleRequests<MyCommand> Pipeline;
+        private static PipelineBuilder<MyCommand> s_pipeline_Builder;
+        private static IHandleRequests<MyCommand> s_pipeline;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
@@ -147,17 +150,17 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
             container.Register<ILog>(logger);
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger); 
+            s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
+        private Because _of = () => s_pipeline = s_pipeline_Builder.Build(new RequestContext()).First();
 
-        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => PipelineTracer().ToString().ShouldEqual("MyLoggingHandler`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
+        private It _should_add_handlers_in_the_correct_sequence_into_the_chain = () => PipelineTracer().ToString().ShouldEqual("MyLoggingHandler`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
 
         private static PipelineTracer PipelineTracer()
         {
             var pipelineTracer = new PipelineTracer();
-            Pipeline.DescribePath(pipelineTracer);
+            s_pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
     }
@@ -165,10 +168,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     [Subject(typeof(PipelineBuilder<>))]
     public class When_Building_A_Pipeline_Allow_Pre_And_Post_Tasks
     {
-        private static PipelineBuilder<MyCommand> Pipeline_Builder;
-        private static IHandleRequests<MyCommand> Pipeline;
+        private static PipelineBuilder<MyCommand> s_pipeline_Builder;
+        private static IHandleRequests<MyCommand> s_pipeline;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
@@ -182,17 +185,17 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
             container.Register<ILog>(logger);
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger); 
+            s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
+        private Because _of = () => s_pipeline = s_pipeline_Builder.Build(new RequestContext()).First();
 
-        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => TraceFilters().ToString().ShouldEqual("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|");
+        private It _should_add_handlers_in_the_correct_sequence_into_the_chain = () => TraceFilters().ToString().ShouldEqual("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|");
 
         private static PipelineTracer TraceFilters()
         {
             var pipelineTracer = new PipelineTracer();
-            Pipeline.DescribePath(pipelineTracer);
+            s_pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
     }
@@ -200,34 +203,34 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     [Subject(typeof(PipelineBuilder<>))]
     public class When_Building_A_Pipeline_Allow_ForiegnAttribues
     {
-        private static PipelineBuilder<MyCommand> Pipeline_Builder;
-        private static IHandleRequests<MyCommand> Pipeline;
+        private static PipelineBuilder<MyCommand> s_pipeline_Builder;
+        private static IHandleRequests<MyCommand> s_pipeline;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyObsoleteCommandHandler >();
+            registry.Register<MyCommand, MyObsoleteCommandHandler>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyObsoleteCommandHandler >();
+            container.Register<IHandleRequests<MyCommand>, MyObsoleteCommandHandler>();
             container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
             container.Register<ILog>(logger);
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger); 
+            s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        Because of = () => Pipeline = Pipeline_Builder.Build(new RequestContext()).First();
+        private Because _of = () => s_pipeline = s_pipeline_Builder.Build(new RequestContext()).First();
 
-        It should_add_handlers_in_the_correct_sequence_into_the_chain = () => TraceFilters().ToString().ShouldEqual("MyValidationHandler`1|MyObsoleteCommandHandler|MyLoggingHandler`1|");
+        private It _should_add_handlers_in_the_correct_sequence_into_the_chain = () => TraceFilters().ToString().ShouldEqual("MyValidationHandler`1|MyObsoleteCommandHandler|MyLoggingHandler`1|");
 
         private static PipelineTracer TraceFilters()
         {
             var pipelineTracer = new PipelineTracer();
-            Pipeline.DescribePath(pipelineTracer);
+            s_pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
     }
@@ -235,12 +238,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors
     [Subject(typeof(PipelineBuilder<>))]
     public class When_we_have_exercised_the_pipeline_cleanup_its_handlers
     {
-        private static PipelineBuilder<MyCommand> Pipeline_Builder;
-        static string released;
+        private static PipelineBuilder<MyCommand> s_pipeline_Builder;
+        private static string s_released;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            released = string.Empty;
+            s_released = string.Empty;
             var logger = A.Fake<ILog>();
 
 
@@ -250,8 +253,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             var handlerFactory = new CheapHandlerFactory();
 
-            Pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
-            Pipeline_Builder.Build(new RequestContext()).Any();
+            s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
+            s_pipeline_Builder.Build(new RequestContext()).Any();
         };
 
         internal class CheapHandlerFactory : IAmAHandlerFactory
@@ -259,15 +262,15 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             public IHandleRequests Create(Type handlerType)
             {
                 var logger = A.Fake<ILog>();
-                if (handlerType == typeof (MyPreAndPostDecoratedHandler))
+                if (handlerType == typeof(MyPreAndPostDecoratedHandler))
                 {
                     return new MyPreAndPostDecoratedHandler(logger);
                 }
-                if (handlerType == typeof (MyLoggingHandler<MyCommand>))
+                if (handlerType == typeof(MyLoggingHandler<MyCommand>))
                 {
                     return new MyLoggingHandler<MyCommand>(logger);
                 }
-                if (handlerType == typeof (MyValidationHandler<MyCommand>))
+                if (handlerType == typeof(MyValidationHandler<MyCommand>))
                 {
                     return new MyValidationHandler<MyCommand>(logger);
                 }
@@ -280,17 +283,15 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 if (disposable != null)
                     disposable.Dispose();
 
-                released += "|" + handler.Name;
+                s_released += "|" + handler.Name;
             }
-
         }
 
 
-        Because of = () => Pipeline_Builder.Dispose(); 
+        private Because _of = () => s_pipeline_Builder.Dispose();
 
-        It should_have_called_dispose_on_instances_from_ioc = () => MyPreAndPostDecoratedHandler.DisposeWasCalled.ShouldBeTrue();
-        It should_have_called_dispose_on_instances_from_pipeline_builder = () => MyLoggingHandler<MyCommand>.DisposeWasCalled.ShouldBeTrue();
-        It should_have_called_release_on_all_handlers = () => released.ShouldEqual("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1");
+        private It _should_have_called_dispose_on_instances_from_ioc = () => MyPreAndPostDecoratedHandler.DisposeWasCalled.ShouldBeTrue();
+        private It _should_have_called_dispose_on_instances_from_pipeline_builder = () => MyLoggingHandler<MyCommand>.DisposeWasCalled.ShouldBeTrue();
+        private It _should_have_called_release_on_all_handlers = () => s_released.ShouldEqual("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1");
     }
-
 }

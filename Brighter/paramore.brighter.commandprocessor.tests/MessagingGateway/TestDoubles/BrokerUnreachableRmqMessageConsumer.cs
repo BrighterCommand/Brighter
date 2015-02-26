@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
@@ -34,13 +36,13 @@ namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
      * Use to force a failure mirroring a RabbitMQ connection failure for testing flow of failure
      */
 
-    class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer 
+    internal class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public BrokerUnreachableRmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) {}
+        public BrokerUnreachableRmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) { }
 
         protected override void ConnectToBroker()
         {
@@ -48,48 +50,45 @@ namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
         }
     }
 
-    class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer 
+    internal class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public AlreadyClosedRmqMessageConsumer (string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) {}
+        public AlreadyClosedRmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) { }
 
         protected override void CreateConsumer()
         {
             throw new AlreadyClosedException(new ShutdownEventArgs(ShutdownInitiator.Application, 0, "test"));
         }
-
     }
 
-    class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer 
+    internal class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public OperationInterruptedRmqMessageConsumer (string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) {}
+        public OperationInterruptedRmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) { }
 
         protected override void CreateConsumer()
         {
             throw new OperationInterruptedException(new ShutdownEventArgs(ShutdownInitiator.Application, 0, "test"));
         }
-
     }
 
-    class NotSupportedRmqMessageConsumer : RmqMessageConsumer 
+    internal class NotSupportedRmqMessageConsumer : RmqMessageConsumer
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public NotSupportedRmqMessageConsumer (string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) {}
+        public NotSupportedRmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) { }
 
         protected override void CreateConsumer()
         {
             throw new NotSupportedException();
         }
-
     }
 }

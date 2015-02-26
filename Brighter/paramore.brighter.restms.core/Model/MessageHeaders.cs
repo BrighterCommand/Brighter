@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 11-05-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 11-05-2014
 // ***********************************************************************
-// <copyright file="MessageHeaders.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -46,7 +48,7 @@ namespace paramore.brighter.restms.core.Model
     /// </summary>
     public class MessageHeaders
     {
-        readonly NameValueCollection headers = new NameValueCollection();
+        private readonly NameValueCollection _headers = new NameValueCollection();
 
         /// <summary>
         /// Adds the header.
@@ -55,18 +57,18 @@ namespace paramore.brighter.restms.core.Model
         /// <param name="value">The value.</param>
         public void AddHeader(string name, string value)
         {
-            headers.Add(name, value);
+            _headers.Add(name, value);
         }
 
         /// <summary>
         /// Gets all.
         /// </summary>
         /// <value>All.</value>
-        public IEnumerable<Tuple<string, string>>  All
+        public IEnumerable<Tuple<string, string>> All
         {
-            get 
+            get
             {
-                return from string key in headers select new Tuple<string, string>(key, headers[key]);
+                return from string key in _headers select new Tuple<string, string>(key, _headers[key]);
             }
         }
 
@@ -78,7 +80,7 @@ namespace paramore.brighter.restms.core.Model
         /// <returns>System.String.</returns>
         public string this[string name]
         {
-            get { return headers[name]; }
+            get { return _headers[name]; }
         }
 
         /// <summary>
@@ -88,9 +90,9 @@ namespace paramore.brighter.restms.core.Model
         public MessageHeaders Copy()
         {
             var newMessageHeaders = new MessageHeaders();
-            foreach (var key in headers.AllKeys)
+            foreach (var key in _headers.AllKeys)
             {
-                newMessageHeaders.AddHeader(key, headers[key]);
+                newMessageHeaders.AddHeader(key, _headers[key]);
             }
             return newMessageHeaders;
         }

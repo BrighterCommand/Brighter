@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,33 +24,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator
 {
     /// Abstracts the thread that runs a message pump
-    internal class Performer : IAmAPerformer 
+    internal class Performer : IAmAPerformer
     {
-        private readonly IAmAnInputChannel channel;
-        private readonly IAmAMessagePump messagePump;
+        private readonly IAmAnInputChannel _channel;
+        private readonly IAmAMessagePump _messagePump;
 
         public Performer(IAmAnInputChannel channel, IAmAMessagePump messagePump)
         {
-            this.channel = channel;
-            this.messagePump = messagePump;
+            _channel = channel;
+            _messagePump = messagePump;
         }
 
         public void Stop()
         {
-            channel.Stop();
+            _channel.Stop();
         }
 
         public Task Run()
         {
-            return Task.Factory.StartNew(() => messagePump.Run(), TaskCreationOptions.LongRunning);
+            return Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
         }
-
     }
 }

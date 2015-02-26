@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 09-27-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="InMemoryRepository.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -49,17 +51,17 @@ namespace paramore.brighter.restms.core.Ports.Repositories
     /// Class InMemoryRepository.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class InMemoryRepository<T> : IAmARepository<T> where T: class, IAmAnAggregate
+    public class InMemoryRepository<T> : IAmARepository<T> where T : class, IAmAnAggregate
     {
-        readonly ConcurrentDictionary<Identity, T> domains = new  ConcurrentDictionary<Identity, T>();
-        readonly ILog logger;
+        private readonly ConcurrentDictionary<Identity, T> _domains = new ConcurrentDictionary<Identity, T>();
+        private readonly ILog _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:System.Object"/> class.
         /// </summary>
         public InMemoryRepository(ILog logger)
         {
-            this.logger = logger;
+            _logger = logger;
         }
 
         /// <summary>
@@ -68,7 +70,7 @@ namespace paramore.brighter.restms.core.Ports.Repositories
         /// <param name="aggregate">The aggregate.</param>
         public void Add(T aggregate)
         {
-            var op = new AddOperation(domains, aggregate, logger);
+            var op = new AddOperation(_domains, aggregate, _logger);
             var tx = Transaction.Current;
             if (tx == null)
             {
@@ -89,14 +91,14 @@ namespace paramore.brighter.restms.core.Ports.Repositories
         {
             get
             {
-                var aggregate = domains.ContainsKey(index) ? domains[index] : null;
+                var aggregate = _domains.ContainsKey(index) ? _domains[index] : null;
 
                 if (aggregate != null)
                 {
                     var tx = Transaction.Current;
                     if (tx != null)
                     {
-                        var op = new GetOperation(domains, aggregate, logger);
+                        var op = new GetOperation(_domains, aggregate, _logger);
                         tx.EnlistVolatile(op, EnlistmentOptions.None);
                     }
                 }
@@ -111,7 +113,7 @@ namespace paramore.brighter.restms.core.Ports.Repositories
         /// <param name="identity">The identity.</param>
         public void Remove(Identity identity)
         {
-            var op = new RemoveOperation(domains, identity, logger);
+            var op = new RemoveOperation(_domains, identity, _logger);
             var tx = Transaction.Current;
             if (tx == null)
             {
@@ -125,65 +127,65 @@ namespace paramore.brighter.restms.core.Ports.Repositories
 
         public IEnumerable<T> Find(Func<T, bool> query)
         {
-            return domains.Where((pair) => query(pair.Value)).Select((pair) => pair.Value);
+            return _domains.Where((pair) => query(pair.Value)).Select((pair) => pair.Value);
         }
 
-        abstract class RepositoryOperation : IEnlistmentNotification
+        private abstract class RepositoryOperation : IEnlistmentNotification
         {
             protected readonly ConcurrentDictionary<Identity, T> Domains;
             protected T Aggregate;
-            readonly ILog logger;
+            private readonly ILog _logger;
 
             protected RepositoryOperation(ConcurrentDictionary<Identity, T> domains, T aggregate, ILog logger)
             {
                 this.Domains = domains;
                 this.Aggregate = aggregate;
-                this.logger = logger;
+                _logger = logger;
             }
 
             public void Prepare(PreparingEnlistment preparingEnlistment)
             {
-                logger.DebugFormat("In Memory Repository, prepare notification received");
+                _logger.DebugFormat("In Memory Repository, prepare notification received");
                 OnPrepare();
                 preparingEnlistment.Prepared();
             }
 
-            internal virtual void OnPrepare() {}
+            internal virtual void OnPrepare() { }
 
             public void Commit(Enlistment enlistment)
             {
-                logger.DebugFormat("In Memory Repository, commit notification received");
+                _logger.DebugFormat("In Memory Repository, commit notification received");
                 OnCommit();
                 enlistment.Done();
             }
 
-            internal virtual void OnCommit() {}
-            
+            internal virtual void OnCommit() { }
+
 
             public void Rollback(Enlistment enlistment)
             {
-                logger.DebugFormat("In Memory Repository, rollback notification received");
+                _logger.DebugFormat("In Memory Repository, rollback notification received");
                 OnRollback();
                 enlistment.Done();
             }
 
-            internal virtual void OnRollback(){}
+            internal virtual void OnRollback() { }
 
             public void InDoubt(Enlistment enlistment)
             {
-                logger.DebugFormat("In Memory Repository, In doubt notification received");
+                _logger.DebugFormat("In Memory Repository, In doubt notification received");
                 OnInDoubt();
                 enlistment.Done();
             }
 
-            internal virtual void OnInDoubt(){}
+            internal virtual void OnInDoubt() { }
         }
 
-        class AddOperation : RepositoryOperation
+        private class AddOperation : RepositoryOperation
         {
-            public AddOperation(ConcurrentDictionary<Identity, T> domains, T aggregate, ILog logger) 
+            public AddOperation(ConcurrentDictionary<Identity, T> domains, T aggregate, ILog logger)
                 : base(domains, aggregate, logger)
-            {}
+            { }
 
             internal override void OnCommit()
             {
@@ -200,11 +202,11 @@ namespace paramore.brighter.restms.core.Ports.Repositories
             }
         }
 
-        class GetOperation : RepositoryOperation
+        private class GetOperation : RepositoryOperation
         {
-            public GetOperation(ConcurrentDictionary<Identity, T> domains, T aggregate, ILog logger) 
+            public GetOperation(ConcurrentDictionary<Identity, T> domains, T aggregate, ILog logger)
                 : base(domains, aggregate, logger)
-            {}
+            { }
 
             internal override void OnRollback()
             {
@@ -213,30 +215,29 @@ namespace paramore.brighter.restms.core.Ports.Repositories
             }
         }
 
-        class RemoveOperation : RepositoryOperation
+        private class RemoveOperation : RepositoryOperation
         {
-            readonly Identity identity;
+            private readonly Identity _identity;
 
-            public RemoveOperation(ConcurrentDictionary<Identity, T> domains, Identity identity, ILog logger) 
+            public RemoveOperation(ConcurrentDictionary<Identity, T> domains, Identity identity, ILog logger)
                 : base(domains, null, logger)
             {
-                this.identity = identity;
+                _identity = identity;
             }
 
             internal override void OnCommit()
             {
-                Domains.TryRemove(identity, out Aggregate);
+                Domains.TryRemove(_identity, out Aggregate);
             }
 
             internal override void OnRollback()
             {
                 //we may have already rolled back via Get unwind
-                if (!Domains.ContainsKey(identity))
+                if (!Domains.ContainsKey(_identity))
                 {
-                    Domains[identity] = Aggregate;
+                    Domains[_identity] = Aggregate;
                 }
             }
         }
-        
     }
 }

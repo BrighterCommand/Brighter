@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System.IO;
 using System.Reflection;
 using Simple.Data;
@@ -31,53 +33,51 @@ namespace Tasks.Adapters.DataAccess
 {
     public class TasksDAO : ITasksDAO
     {
-        private readonly dynamic db;
+        private readonly dynamic _db;
 
         public TasksDAO()
         {
-
             if (System.Web.HttpContext.Current != null)
             {
                 var databasePath = System.Web.HttpContext.Current.Server.MapPath("~\\App_Data\\Tasks.sdf");
-                db = Database.Opener.OpenFile(databasePath);
+                _db = Database.Opener.OpenFile(databasePath);
             }
             else
             {
-                var file =  Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\Tasks.sdf");
-    
-                db = Database.OpenFile(file);
+                var file = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\Tasks.sdf");
+
+                _db = Database.OpenFile(file);
             }
         }
- 
+
         public Task Add(Task newTask)
         {
-            return db.Tasks.Insert(newTask);
+            return _db.Tasks.Insert(newTask);
         }
 
         public dynamic BeginTransaction()
         {
-            return db.BeginTransaction();
+            return _db.BeginTransaction();
         }
 
         public void Update(Task task)
         {
-            db.Tasks.UpdateById(task);
+            _db.Tasks.UpdateById(task);
         }
 
         public void Clear()
         {
-            db.Tasks.DeleteAll();
+            _db.Tasks.DeleteAll();
         }
 
         public Task FindById(int taskId)
         {
-            return db.Tasks.FindById(taskId);
+            return _db.Tasks.FindById(taskId);
         }
 
         public Task FindByName(string taskName)
         {
-            return db.Tasks.FindBy(taskName: taskName);
+            return _db.Tasks.FindBy(taskName: taskName);
         }
-
     }
 }

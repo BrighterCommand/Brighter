@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.server
 // Author           : ian
 // Created          : 11-06-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 12-08-2014
 // ***********************************************************************
-// <copyright file="JoinController.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
@@ -51,7 +53,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
     [Authorize]
     public class JoinController : ApiController
     {
-        readonly IAmARepository<Join> joinRepository;
+        private readonly IAmARepository<Join> _joinRepository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JoinController"/> class.
@@ -59,7 +61,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         /// <param name="joinRepository">The join repository.</param>
         public JoinController(IAmARepository<Join> joinRepository)
         {
-            this.joinRepository = joinRepository;
+            _joinRepository = joinRepository;
         }
 
         /// <summary>
@@ -68,10 +70,10 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         /// <param name="name">The name.</param>
         /// <returns>RestMSJoin.</returns>
         [HttpGet]
-        [JoinDoesNotExistExceptionFilter] 
+        [JoinDoesNotExistExceptionFilter]
         public RestMSJoin Get(string name)
         {
-            var retriever = new JoinRetriever(joinRepository);
+            var retriever = new JoinRetriever(_joinRepository);
             return retriever.Retrieve(new Name(name));
         }
 

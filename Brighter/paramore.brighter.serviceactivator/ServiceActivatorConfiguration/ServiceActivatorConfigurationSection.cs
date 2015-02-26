@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System.Configuration;
 
 namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
@@ -30,7 +32,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
     {
         public static ServiceActivatorConfigurationSection GetConfiguration()
         {
-            var configuration = ConfigurationManager.GetSection("serviceActivatorConnections")as ServiceActivatorConfigurationSection;
+            var configuration = ConfigurationManager.GetSection("serviceActivatorConnections") as ServiceActivatorConfigurationSection;
 
             if (configuration != null)
                 return configuration;
@@ -44,7 +46,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
         {
             get
             {
-                return (ConnectionElements ) this["connections"] ;
+                return (ConnectionElements)this["connections"];
             }
         }
     }
