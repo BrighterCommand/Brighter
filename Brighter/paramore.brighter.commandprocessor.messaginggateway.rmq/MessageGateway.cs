@@ -1,6 +1,3 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
 // Author           : ian
@@ -37,6 +34,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using System;
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor.Logging;
@@ -63,7 +61,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         private readonly ContextualPolicy _retryPolicy;
         private readonly Policy _circuitBreakerPolicy;
 
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessageGateway"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
         public MessageGateway(ILog logger)
         {
             this.Logger = logger;
@@ -98,11 +99,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         protected IModel Channel;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MessageGateway"/> class.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-
-        /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public virtual void Dispose()
@@ -132,6 +128,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
         }
 
+        /// <summary>
+        /// Releases unmanaged and - optionally - managed resources.
+        /// </summary>
+        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)

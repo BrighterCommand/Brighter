@@ -1,7 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -32,33 +30,64 @@ using paramore.brighter.serviceactivator.ServiceActivatorConfiguration;
 
 namespace paramore.brighter.serviceactivator.controlbus
 {
+    /// <summary>
+    /// Class ControlBusBuilder.
+    /// </summary>
     public class ControlBusBuilder : INeedALogger, INeedACommandProcessor, INeedAChannelFactory, IAmADispatchBuilder
     {
+        /// <summary>
+        /// The configuration
+        /// </summary>
         public const string CONFIGURATION = "configuration";
+        /// <summary>
+        /// The heartbeat
+        /// </summary>
         public const string HEARTBEAT = "heartbeat";
 
         private ILog _logger;
         private CommandProcessor _commandProcessor;
         private IAmAChannelFactory _channelFactory;
 
+        /// <summary>
+        /// The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP
+        /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
+        /// layer. We provide an implementation for RabbitMQ for example.
+        /// </summary>
+        /// <param name="channelFactory">The channel factory.</param>
+        /// <returns>INeedAListOfConnections.</returns>
         public IAmADispatchBuilder ChannelFactory(IAmAChannelFactory channelFactory)
         {
             _channelFactory = channelFactory;
             return this;
         }
 
+        /// <summary>
+        /// The command processor used to send and publish messages to handlers by the service activator.
+        /// </summary>
+        /// <param name="commandProcessor">The command processor.</param>
+        /// <returns>INeedAMessageMapper.</returns>
         public INeedAChannelFactory CommandProcessor(CommandProcessor commandProcessor)
         {
             _commandProcessor = commandProcessor;
             return this;
         }
 
+        /// <summary>
+        /// The logger to use to report from the Dispatcher.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        /// <returns>INeedACommandProcessor.</returns>
         public INeedACommandProcessor Logger(ILog logger)
         {
             _logger = logger;
             return this;
         }
 
+        /// <summary>
+        /// Builds this instance.
+        /// </summary>
+        /// <param name="hostName">Name of the host.</param>
+        /// <returns>Dispatcher.</returns>
         public Dispatcher Build(string hostName)
         {
             var connections = new List<ConnectionElement>();
@@ -96,6 +125,10 @@ namespace paramore.brighter.serviceactivator.controlbus
                 .Build();
         }
 
+        /// <summary>
+        /// Withes this instance.
+        /// </summary>
+        /// <returns>INeedALogger.</returns>
         public static INeedALogger With()
         {
             return new ControlBusBuilder();
@@ -134,9 +167,9 @@ namespace paramore.brighter.serviceactivator.controlbus
     public interface INeedAChannelFactory
     {
         /// <summary>
-        /// The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP 
-        /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
-        /// layer. We provide an implementation for RabbitMQ for example.
+        /// {D255958A-8513-4226-94B9-080D98F904A1}The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP
+        /// {D255958A-8513-4226-94B9-080D98F904A1}needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
+        /// {D255958A-8513-4226-94B9-080D98F904A1}layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
         /// <param name="channelFactory">The channel factory.</param>
         /// <returns>INeedAListOfConnections.</returns>
@@ -151,6 +184,7 @@ namespace paramore.brighter.serviceactivator.controlbus
         /// <summary>
         /// Builds this instance.
         /// </summary>
+        /// <param name="hostName">Name of the host.</param>
         /// <returns>Dispatcher.</returns>
         Dispatcher Build(string hostName);
     }
