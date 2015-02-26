@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using paramore.brighter.commandprocessor;
 
@@ -28,14 +31,14 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     public class MyAbortingHandlerAttribute : RequestHandlerAttribute
     {
-        public MyAbortingHandlerAttribute(int step, HandlerTiming timing) 
+        public MyAbortingHandlerAttribute(int step, HandlerTiming timing)
             : base(step, timing)
         {
         }
 
         public override Type GetHandlerType()
         {
-            return typeof (MyAbortingHandler<>);
+            return typeof(MyAbortingHandler<>);
         }
     }
 }

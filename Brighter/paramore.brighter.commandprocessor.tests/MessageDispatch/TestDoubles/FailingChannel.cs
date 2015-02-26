@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,17 +24,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
 {
-    class FailingChannel : FakeChannel
+    internal class FailingChannel : FakeChannel
     {
         public int NumberOfRetries { get; set; }
-       int attempts = 0;
+        private int _attempts = 0;
 
         public FailingChannel()
         {
@@ -40,14 +42,13 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
 
         public override Message Receive(int timeoutinMilliseconds)
         {
-            if (attempts <= NumberOfRetries)
+            if (_attempts <= NumberOfRetries)
             {
-                attempts++;
+                _attempts++;
                 throw new ChannelFailureException("Test general failure", new Exception("inner test exception"));
             }
 
             return base.Receive(timeoutinMilliseconds);
         }
-
     }
 }

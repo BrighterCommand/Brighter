@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.serviceactivator
 // Author           : ian
 // Created          : 07-01-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-16-2014
 // ***********************************************************************
-// <copyright file="ConnectionName.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 
 namespace paramore.brighter.serviceactivator
@@ -44,7 +46,7 @@ namespace paramore.brighter.serviceactivator
     /// </summary>
     public class ConnectionName : IEquatable<ConnectionName>
     {
-        private readonly string name;
+        private readonly string _name;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectionName"/> class.
@@ -52,7 +54,7 @@ namespace paramore.brighter.serviceactivator
         /// <param name="name">The name.</param>
         public ConnectionName(string name)
         {
-            this.name = name;
+            _name = name;
         }
 
         /// <summary>
@@ -61,7 +63,7 @@ namespace paramore.brighter.serviceactivator
         /// <value>The value.</value>
         public string Value
         {
-            get { return name; }
+            get { return _name; }
         }
 
         /// <summary>
@@ -70,7 +72,7 @@ namespace paramore.brighter.serviceactivator
         /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return name;
+            return _name;
         }
 
         /// <summary>
@@ -78,7 +80,7 @@ namespace paramore.brighter.serviceactivator
         /// </summary>
         /// <param name="rhs">The RHS.</param>
         /// <returns>The result of the conversion.</returns>
-        public static implicit operator string(ConnectionName rhs)
+        public static implicit operator string (ConnectionName rhs)
         {
             return rhs.ToString();
         }
@@ -92,7 +94,7 @@ namespace paramore.brighter.serviceactivator
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return string.Equals(name, other.name);
+            return string.Equals(_name, other._name);
         }
 
         /// <summary>
@@ -105,7 +107,7 @@ namespace paramore.brighter.serviceactivator
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((ConnectionName) obj);
+            return Equals((ConnectionName)obj);
         }
 
         /// <summary>
@@ -114,7 +116,7 @@ namespace paramore.brighter.serviceactivator
         /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
         public override int GetHashCode()
         {
-            return (name != null ? name.GetHashCode() : 0);
+            return (_name != null ? _name.GetHashCode() : 0);
         }
 
         /// <summary>

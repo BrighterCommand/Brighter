@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using FakeItEasy;
 using Machine.Specifications;
@@ -38,20 +40,20 @@ namespace Tasklist.Adapters.Tests
     [Subject(typeof(AddTaskCommandHandler))]
     public class When_a_new_task_is_missing_the_description
     {
-        static AddTaskCommand cmd;
-        static IAmACommandProcessor commandProcessor;
-        static ITasksDAO tasksDAO;
-        static Exception exception;
+        private static AddTaskCommand s_cmd;
+        private static IAmACommandProcessor s_commandProcessor;
+        private static ITasksDAO s_tasksDAO;
+        private static Exception s_exception;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            tasksDAO = A.Fake<ITasksDAO>();
-            A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
+            s_tasksDAO = A.Fake<ITasksDAO>();
+            A.CallTo(() => s_tasksDAO.Add(A<Task>.Ignored));
             var log = A.Fake<ILog>();
 
             var container = new TinyIoCContainer();
-            container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
+            container.Register<ITasksDAO, ITasksDAO>(s_tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ILog, ILog>(log);
             var handlerFactory = new TinyIocHandlerFactory(container);
@@ -59,35 +61,35 @@ namespace Tasklist.Adapters.Tests
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
 
-            commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
-            cmd = new AddTaskCommand("Test task", null);
+            s_cmd = new AddTaskCommand("Test task", null);
         };
 
-        Because of = () => exception = Catch.Exception(() => commandProcessor.Send(cmd));
+        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_cmd));
 
-        It should_throw_a_validation_exception = () => exception.ShouldNotBeNull();
-        It should_be_of_the_correct_type = () => exception.ShouldBeAssignableTo<ArgumentException>();
-        It should_show_a_suitable_message = () => exception.ShouldContainErrorMessage("The commmand was not valid");
+        private It _should_throw_a_validation_exception = () => s_exception.ShouldNotBeNull();
+        private It _should_be_of_the_correct_type = () => s_exception.ShouldBeAssignableTo<ArgumentException>();
+        private It _should_show_a_suitable_message = () => s_exception.ShouldContainErrorMessage("The commmand was not valid");
     }
 
     [Subject(typeof(AddTaskCommandHandler))]
     public class When_a_new_task_is_missing_the_name
     {
-        static AddTaskCommand cmd;
-        static IAmACommandProcessor commandProcessor;
-        static ITasksDAO tasksDAO;
-        static Exception exception;
+        private static AddTaskCommand s_cmd;
+        private static IAmACommandProcessor s_commandProcessor;
+        private static ITasksDAO s_tasksDAO;
+        private static Exception s_exception;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            tasksDAO = A.Fake<ITasksDAO>();
-            A.CallTo(() => tasksDAO.Add(A<Task>.Ignored));
+            s_tasksDAO = A.Fake<ITasksDAO>();
+            A.CallTo(() => s_tasksDAO.Add(A<Task>.Ignored));
             var log = A.Fake<ILog>();
 
             var container = new TinyIoCContainer();
-            container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
+            container.Register<ITasksDAO, ITasksDAO>(s_tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ILog, ILog>(log);
             var handlerFactory = new TinyIocHandlerFactory(container);
@@ -95,33 +97,33 @@ namespace Tasklist.Adapters.Tests
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
 
-            commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
-            cmd = new AddTaskCommand(null, "Test that we store a task");
+            s_cmd = new AddTaskCommand(null, "Test that we store a task");
         };
 
-        Because of = () => exception = Catch.Exception(() => commandProcessor.Send(cmd));
+        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_cmd));
 
-        It should_throw_a_validation_exception = () => exception.ShouldNotBeNull();
-        It should_be_of_the_correct_type = () => exception.ShouldBeAssignableTo<ArgumentException>();
-        It should_show_a_suitable_message = () => exception.ShouldContainErrorMessage("The commmand was not valid");
+        private It _should_throw_a_validation_exception = () => s_exception.ShouldNotBeNull();
+        private It _should_be_of_the_correct_type = () => s_exception.ShouldBeAssignableTo<ArgumentException>();
+        private It _should_show_a_suitable_message = () => s_exception.ShouldContainErrorMessage("The commmand was not valid");
     }
 
     public class When_adding_a_valid_new_task
     {
-        static AddTaskCommand cmd;
-        static IAmACommandProcessor commandProcessor;
-        static ITasksDAO tasksDAO;
+        private static AddTaskCommand s_cmd;
+        private static IAmACommandProcessor s_commandProcessor;
+        private static ITasksDAO s_tasksDAO;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            tasksDAO = new TasksDAO();
-            tasksDAO.Clear();
+            s_tasksDAO = new TasksDAO();
+            s_tasksDAO.Clear();
             var log = A.Fake<ILog>();
 
             var container = new TinyIoCContainer();
-            container.Register<ITasksDAO, ITasksDAO>(tasksDAO);
+            container.Register<ITasksDAO, ITasksDAO>(s_tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
             container.Register<ILog, ILog>(log);
             var handlerFactory = new TinyIocHandlerFactory(container);
@@ -129,13 +131,13 @@ namespace Tasklist.Adapters.Tests
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
 
-            commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
-            cmd = new AddTaskCommand("Test task", "Test that we store a task", DateTime.Now);
+            s_cmd = new AddTaskCommand("Test task", "Test that we store a task", DateTime.Now);
         };
 
-        Because of = () => commandProcessor.Send(cmd);
+        private Because _of = () => s_commandProcessor.Send(s_cmd);
 
-        It should_add_the_task_to_the_task_List = () => tasksDAO.FindById(cmd.TaskId).ShouldNotBeNull();
+        private It _should_add_the_task_to_the_task_List = () => s_tasksDAO.FindById(s_cmd.TaskId).ShouldNotBeNull();
     }
 }

@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
@@ -37,14 +40,14 @@ namespace Greetings.Adapters.ServiceHost
 {
     internal class GreetingService : ServiceControl
     {
-        private Dispatcher dispatcher;
+        private Dispatcher _dispatcher;
 
         public GreetingService()
         {
             log4net.Config.XmlConfigurator.Configure();
             //Create a logger
             var logger = LogProvider.For<GreetingService>();
-                
+
             var container = new TinyIoCContainer();
             container.Register<ILog>(logger);
 
@@ -97,27 +100,26 @@ namespace Greetings.Adapters.ServiceHost
                  .MessageMappers(messageMapperRegistry)
                  .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
                  .ConnectionsFromConfiguration();
-           dispatcher = builder.Build();
-
+            _dispatcher = builder.Build();
         }
 
         public bool Start(HostControl hostControl)
         {
-            dispatcher.Receive();
+            _dispatcher.Receive();
             return true;
         }
 
         public bool Stop(HostControl hostControl)
         {
-            dispatcher.End();
-            dispatcher = null;
+            _dispatcher.End();
+            _dispatcher = null;
             return false;
         }
 
         public void Shutdown(HostControl hostcontrol)
         {
-            if (dispatcher != null)
-                dispatcher.End();
+            if (_dispatcher != null)
+                _dispatcher.End();
             return;
         }
     }

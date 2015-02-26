@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-11-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-16-2014
 // ***********************************************************************
-// <copyright file="MessageMapperRegistry.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -35,7 +37,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -51,8 +52,8 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class MessageMapperRegistry : IAmAMessageMapperRegistry, IEnumerable<KeyValuePair<Type, Type>>
     {
-        private readonly IAmAMessageMapperFactory messageMapperFactory;
-        readonly Dictionary<Type, Type> messageMappers = new Dictionary<Type, Type>();
+        private readonly IAmAMessageMapperFactory _messageMapperFactory;
+        private readonly Dictionary<Type, Type> _messageMappers = new Dictionary<Type, Type>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageMapperRegistry"/> class.
@@ -60,7 +61,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageMapperFactory">The message mapper factory.</param>
         public MessageMapperRegistry(IAmAMessageMapperFactory messageMapperFactory)
         {
-            this.messageMapperFactory = messageMapperFactory;
+            _messageMapperFactory = messageMapperFactory;
         }
 
         /// <summary>
@@ -70,16 +71,15 @@ namespace paramore.brighter.commandprocessor
         /// <returns>IAmAMessageMapper&lt;TRequest&gt;.</returns>
         public IAmAMessageMapper<TRequest> Get<TRequest>() where TRequest : class, IRequest
         {
-            if (messageMappers.ContainsKey(typeof (TRequest)))
+            if (_messageMappers.ContainsKey(typeof(TRequest)))
             {
-                var messageMapperType = messageMappers[typeof (TRequest)];
-                return (IAmAMessageMapper<TRequest>)messageMapperFactory.Create(messageMapperType);
+                var messageMapperType = _messageMappers[typeof(TRequest)];
+                return (IAmAMessageMapper<TRequest>)_messageMapperFactory.Create(messageMapperType);
             }
             else
             {
-                return (IAmAMessageMapper<TRequest>) null;
+                return (IAmAMessageMapper<TRequest>)null;
             }
-
         }
 
         //support object initializer
@@ -90,7 +90,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageMapper">The message mapper.</param>
         public void Add(Type messageType, Type messageMapper)
         {
-            messageMappers.Add(messageType, messageMapper);
+            _messageMappers.Add(messageType, messageMapper);
         }
 
         /// <summary>
@@ -99,12 +99,12 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
         /// <typeparam name="TMessageMapper">The type of the t message mapper.</typeparam>
         /// <exception cref="System.ArgumentException"></exception>
-        public void Register<TRequest, TMessageMapper>() where TRequest: class, IRequest where TMessageMapper : class, IAmAMessageMapper<TRequest>
+        public void Register<TRequest, TMessageMapper>() where TRequest : class, IRequest where TMessageMapper : class, IAmAMessageMapper<TRequest>
         {
-            if (messageMappers.ContainsKey(typeof(TRequest)))
+            if (_messageMappers.ContainsKey(typeof(TRequest)))
                 throw new ArgumentException(string.Format("Message type {0} alread has a mapper; only one mapper can be registred per type", typeof(TRequest).Name));
 
-            messageMappers.Add(typeof(TRequest), typeof(TMessageMapper));
+            _messageMappers.Add(typeof(TRequest), typeof(TMessageMapper));
         }
 
         /// <summary>
@@ -113,7 +113,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
         public IEnumerator<KeyValuePair<Type, Type>> GetEnumerator()
         {
-            return messageMappers.GetEnumerator();
+            return _messageMappers.GetEnumerator();
         }
 
         /// <summary>

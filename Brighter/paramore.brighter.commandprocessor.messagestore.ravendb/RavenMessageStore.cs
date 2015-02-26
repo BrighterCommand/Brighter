@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messagestore.ravendb
 // Author           : ian
 // Created          : 07-01-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-01-2014
 // ***********************************************************************
-// <copyright file="RavenMessageStore.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -50,8 +52,8 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
     /// </summary>
     public class RavenMessageStore : IAmAMessageStore<Message>
     {
-        private readonly IDocumentStore documentStore;
-        private readonly ILog logger;
+        private readonly IDocumentStore _documentStore;
+        private readonly ILog _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenMessageStore"/> class.
@@ -60,8 +62,8 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
         /// <param name="logger">The logger.</param>
         public RavenMessageStore(IDocumentStore documentStore, ILog logger)
         {
-            this.documentStore = documentStore;
-            this.logger = logger;
+            _documentStore = documentStore;
+            _logger = logger;
         }
 
         /// <summary>
@@ -71,12 +73,12 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
         /// <returns>Task.</returns>
         public async Task Add(Message message)
         {
-            logger.DebugFormat("Adding message to RavenDb Message Store: {0}", JsonConvert.SerializeObject(message));
-            using (var session = documentStore.OpenAsyncSession())
+            _logger.DebugFormat("Adding message to RavenDb Message Store: {0}", JsonConvert.SerializeObject(message));
+            using (var session = _documentStore.OpenAsyncSession())
             {
                 await session.StoreAsync(message);
                 await session.SaveChangesAsync();
-                logger.DebugFormat("Added message to RavenDb");
+                _logger.DebugFormat("Added message to RavenDb");
             }
         }
 
@@ -87,9 +89,9 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
         /// <returns>Task&lt;Message&gt;.</returns>
         public Task<Message> Get(Guid messageId)
         {
-            using (var session = documentStore.OpenAsyncSession())
+            using (var session = _documentStore.OpenAsyncSession())
             {
-                logger.DebugFormat("Retrieving message with Id {0} from RavenDb", messageId);
+                _logger.DebugFormat("Retrieving message with Id {0} from RavenDb", messageId);
                 return session.LoadAsync<Message>(messageId).ContinueWith(task => task.Result ?? new Message());
             }
         }

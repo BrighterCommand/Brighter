@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
@@ -32,7 +34,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
     {
         public Message MapToMessage(MyEvent request)
         {
-
             var header = new MessageHeader(messageId: request.Id, topic: "MyEvent", messageType: MessageType.MT_EVENT);
             var body = new MessageBody(JsonConvert.SerializeObject(request));
             var message = new Message(header, body);

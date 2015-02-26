@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messagestore.ravendb
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-10-2014
 // ***********************************************************************
-// <copyright file="MessageStoreFactory.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using Raven.Client;
 using Raven.Client.Document;
@@ -47,13 +49,12 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
     /// </summary>
     public class MessageStoreFactory
     {
-
-        private static readonly Lazy<DocumentStore> DOCUMENT_STORE = new Lazy<DocumentStore>(()=>
+        private static readonly Lazy<DocumentStore> s_DOCUMENT_STORE = new Lazy<DocumentStore>(() =>
         {
             var ds = new DocumentStore
-                {
-                    ConnectionStringName = "MessageStore"
-                };
+            {
+                ConnectionStringName = "MessageStore"
+            };
 
             ds.Initialize();
 
@@ -66,7 +67,7 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
         /// <value>The document store.</value>
         public static IDocumentStore DocumentStore
         {
-            get { return DOCUMENT_STORE.Value; }
+            get { return s_DOCUMENT_STORE.Value; }
         }
     }
 }

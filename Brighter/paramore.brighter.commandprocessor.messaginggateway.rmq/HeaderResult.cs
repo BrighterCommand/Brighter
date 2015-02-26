@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using System;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
@@ -10,14 +13,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             Result = result;
         }
 
-        public HeaderResult<TNew> Map<TNew>( Func<TResult, HeaderResult<TNew>> map)
+        public HeaderResult<TNew> Map<TNew>(Func<TResult, HeaderResult<TNew>> map)
         {
-            if(Success)
+            if (Success)
                 return map(Result);
             return HeaderResult<TNew>.Empty();
         }
 
-        public bool Success { get; private set;}
+        public bool Success { get; private set; }
         public TResult Result { get; private set; }
 
         public static HeaderResult<TResult> Empty()

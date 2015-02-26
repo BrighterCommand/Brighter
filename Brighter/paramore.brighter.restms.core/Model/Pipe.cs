@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 10-21-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="Pipe.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -57,10 +59,10 @@ namespace paramore.brighter.restms.core.Model
     /// </summary>
     public class Pipe : Resource, IAmAnAggregate
     {
-        SortedList<long, List<Message>> messages = new SortedList<long, List<Message>>();
-        readonly object messageSyncRoot = new object();
-        readonly ConcurrentBag<Join> joins = new ConcurrentBag<Join>(); 
-        const string PIPE_URI_FORMAT = "http://{0}/restms/pipe/{1}";
+        private SortedList<long, List<Message>> _messages = new SortedList<long, List<Message>>();
+        private readonly object _messageSyncRoot = new object();
+        private readonly ConcurrentBag<Join> _joins = new ConcurrentBag<Join>();
+        private const string PIPE_URI_FORMAT = "http://{0}/restms/pipe/{1}";
 
         /// <summary>
         /// Gets the identifier.
@@ -87,7 +89,9 @@ namespace paramore.brighter.restms.core.Model
         /// Gets the <see cref="Join"/> that connects the <see cref="Pipe"/> to a <see cref="Feed"/>.
         /// </summary>
         /// <value>The join.</value>
-        public IEnumerable<Join> Joins { get { return joins; }
+        public IEnumerable<Join> Joins
+        {
+            get { return _joins; }
         }
 
         /// <summary>
@@ -95,7 +99,7 @@ namespace paramore.brighter.restms.core.Model
         /// Messages are shown in order of time of being added to the pipe
         /// </summary>
         /// <value>The messages.</value>
-        public IEnumerable<Message> Messages { get { return messages.Values.SelectMany(messageList => messageList); } }
+        public IEnumerable<Message> Messages { get { return _messages.Values.SelectMany(messageList => messageList); } }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Pipe"/> class.
@@ -103,16 +107,16 @@ namespace paramore.brighter.restms.core.Model
         /// <param name="identity">The identity.</param>
         /// <param name="pipeType">Type of the pipe.</param>
         /// <param name="title">The title.</param>
-        public Pipe(string identity, string pipeType, string title= null)
+        public Pipe(string identity, string pipeType, string title = null)
         {
             Id = new Identity(identity);
             Title = new Title(title);
             Name = new Name(Id.Value);
             if (!string.IsNullOrEmpty(pipeType))
-                Type = (PipeType) Enum.Parse(typeof (PipeType), pipeType);
+                Type = (PipeType)Enum.Parse(typeof(PipeType), pipeType);
             else
                 Type = PipeType.Default;
-                
+
             Href = new Uri(string.Format(PIPE_URI_FORMAT, Globals.HostName, Name.Value));
         }
 
@@ -133,7 +137,7 @@ namespace paramore.brighter.restms.core.Model
 
         public void AddJoin(Join join)
         {
-            joins.Add(join);
+            _joins.Add(join);
         }
 
         /// <summary>
@@ -142,17 +146,17 @@ namespace paramore.brighter.restms.core.Model
         /// <param name="message">The message.</param>
         public void AddMessage(Message message)
         {
-            lock (messageSyncRoot)
+            lock (_messageSyncRoot)
             {
                 long ticks = DateTime.UtcNow.Ticks;
-                var matchingKey = messages.Keys.FirstOrDefault(key => key == ticks);
+                var matchingKey = _messages.Keys.FirstOrDefault(key => key == ticks);
                 if (matchingKey == 0)
                 {
-                    messages.Add(ticks, new List<Message>() {message});    
+                    _messages.Add(ticks, new List<Message>() { message });
                 }
                 else
                 {
-                    messages[ticks].Add(message);
+                    _messages[ticks].Add(message);
                 }
 
                 message.PipeName = Name;
@@ -165,23 +169,23 @@ namespace paramore.brighter.restms.core.Model
         /// <param name="messageId">The message identifier.</param>
         public void DeleteMessage(Guid messageId)
         {
-            lock (messageSyncRoot)
+            lock (_messageSyncRoot)
             {
                 var matchingKey = FindNodeContainingMessage(messageId);
-                if (matchingKey == 0) return; 
+                if (matchingKey == 0) return;
 
                 var partitionKey = DeleteRequestedMessage(matchingKey, messageId);
 
-                if(messages.Any())
+                if (_messages.Any())
                     DeleteOlderMessages(partitionKey);
             }
         }
 
-        long FindNodeContainingMessage(Guid messageId)
+        private long FindNodeContainingMessage(Guid messageId)
         {
             var matchingKey = (
-                from key in messages.Keys
-                let messageList = messages[key]
+                from key in _messages.Keys
+                let messageList = _messages[key]
                 let message = messageList.FirstOrDefault(msg => msg.MessageId == messageId)
                 where message != null
                 select key
@@ -190,63 +194,63 @@ namespace paramore.brighter.restms.core.Model
             return matchingKey;
         }
 
-        int DeleteRequestedMessage(long matchingKey, Guid messageId)
+        private int DeleteRequestedMessage(long matchingKey, Guid messageId)
         {
-            int partitionKey = messages.IndexOfKey(matchingKey);
-            var messageList = messages[matchingKey];
+            int partitionKey = _messages.IndexOfKey(matchingKey);
+            var messageList = _messages[matchingKey];
             var message = messageList.FirstOrDefault(msg => msg.MessageId == messageId);
-            
+
             if (message == null) return partitionKey;
 
             message.Content.Dispose();
             messageList.Remove(message);
             if (!messageList.Any())
             {
-                messages.Remove(matchingKey);
+                _messages.Remove(matchingKey);
                 partitionKey = partitionKey <= 1 ? 0 : partitionKey--;
             }
             return partitionKey;
         }
 
-        void DeleteOlderMessages(int partitionKey)
+        private void DeleteOlderMessages(int partitionKey)
         {
             var partitionedLists = PartitionOlderFromNewerThanMessage(partitionKey);
-            messages = partitionedLists.Item2;
+            _messages = partitionedLists.Item2;
             DeleteOldMessages(partitionedLists.Item1);
         }
 
-        Tuple<SortedList<long, List<Message>>, SortedList<long, List<Message>>> PartitionOlderFromNewerThanMessage(int partitionKey)
+        private Tuple<SortedList<long, List<Message>>, SortedList<long, List<Message>>> PartitionOlderFromNewerThanMessage(int partitionKey)
         {
             var olderMessageList = new SortedList<long, List<Message>>();
 
             for (var j = 0; j <= partitionKey; j++)
             {
-                var key = messages.Keys[j];
-                olderMessageList.Add(key, messages[key]);
+                var key = _messages.Keys[j];
+                olderMessageList.Add(key, _messages[key]);
             }
 
             var newerMessageList = new SortedList<long, List<Message>>();
-            var messageListLength = messages.Count();
+            var messageListLength = _messages.Count();
             for (var i = partitionKey + 1; i < messageListLength; i++)
             {
-                var key = messages.Keys[i];
-                newerMessageList.Add(key, messages[key]);
+                var key = _messages.Keys[i];
+                newerMessageList.Add(key, _messages[key]);
             }
 
             return new Tuple<SortedList<long, List<Message>>, SortedList<long, List<Message>>>(olderMessageList, newerMessageList);
         }
 
-        void DeleteOldMessages(SortedList<long, List<Message>> olderMessages)
+        private void DeleteOldMessages(SortedList<long, List<Message>> olderMessages)
         {
             olderMessages.Values.SelectMany(messageList => messageList).Each(message => message.Content.Dispose());
         }
 
         public Message FindMessage(Guid messageId)
         {
-            return (from key in messages.Keys
-             let messageList = messages[key]
-             let message = messageList.FirstOrDefault(msg => msg.MessageId == messageId)
-             select message).FirstOrDefault();
+            return (from key in _messages.Keys
+                    let messageList = _messages[key]
+                    let message = messageList.FirstOrDefault(msg => msg.MessageId == messageId)
+                    select message).FirstOrDefault();
         }
     }
 }

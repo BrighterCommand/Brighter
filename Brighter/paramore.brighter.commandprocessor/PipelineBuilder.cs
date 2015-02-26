@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -33,8 +36,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections.Generic;
 using System.Linq;
 using paramore.brighter.commandprocessor.extensions;
@@ -44,87 +47,86 @@ namespace paramore.brighter.commandprocessor
 {
     internal class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest> where TRequest : class, IRequest
     {
-        private readonly IAmAHandlerFactory handlerFactory;
-        private readonly ILog logger;
-        private readonly Interpreter<TRequest> interpreter;
-        private readonly IAmALifetime instanceScope;
+        private readonly IAmAHandlerFactory _handlerFactory;
+        private readonly ILog _logger;
+        private readonly Interpreter<TRequest> _interpreter;
+        private readonly IAmALifetime _instanceScope;
 
         internal PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory, ILog logger)
         {
-            this.handlerFactory = handlerFactory;
-            this.logger = logger;
-            instanceScope = new LifetimeScope(handlerFactory);
-            interpreter = new Interpreter<TRequest>(registry, handlerFactory);
+            _handlerFactory = handlerFactory;
+            _logger = logger;
+            _instanceScope = new LifetimeScope(handlerFactory);
+            _interpreter = new Interpreter<TRequest>(registry, handlerFactory);
         }
 
         public Pipelines<TRequest> Build(IRequestContext requestContext)
         {
-            var handlers = interpreter.GetHandlers(typeof(TRequest));
-            
+            var handlers = _interpreter.GetHandlers(typeof(TRequest));
+
             var pipelines = new Pipelines<TRequest>();
             handlers.Each((handler) => pipelines.Add(BuildPipeline(handler, requestContext)));
 
-            pipelines.Each((handler) => handler.AddToLifetime(instanceScope));
-  
+            pipelines.Each((handler) => handler.AddToLifetime(_instanceScope));
+
             return pipelines;
         }
 
         public void Dispose()
         {
-            instanceScope.Dispose();
+            _instanceScope.Dispose();
         }
 
-        IHandleRequests<TRequest> BuildPipeline(RequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
+        private IHandleRequests<TRequest> BuildPipeline(RequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
         {
             implicitHandler.Context = requestContext;
 
-            var preAttributes = 
+            var preAttributes =
                 implicitHandler.FindHandlerMethod()
                 .GetOtherHandlersInPipeline()
                 .Where(attribute => attribute.Timing == HandlerTiming.Before)
-                .OrderByDescending(attribute => attribute.Step); 
+                .OrderByDescending(attribute => attribute.Step);
 
             var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext);
-            
-            var postAttributes = 
+
+            var postAttributes =
                 implicitHandler.FindHandlerMethod()
                 .GetOtherHandlersInPipeline()
                 .Where(attribute => attribute.Timing == HandlerTiming.After)
                 .OrderByDescending(attribute => attribute.Step);
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext);
-            logger.DebugFormat("New handler pipeline created: {0}", TracePipeline(firstInPipeline));
+            _logger.DebugFormat("New handler pipeline created: {0}", TracePipeline(firstInPipeline));
             return firstInPipeline;
         }
 
-        void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
+        private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
         {
             IHandleRequests<TRequest> lastInPipeline = implicitHandler;
             attributes.Each((attribute) =>
             {
-                var decorator = new HandlerFactory<TRequest>(attribute, handlerFactory, requestContext).CreateRequestHandler();
+                var decorator = new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
                 lastInPipeline.Successor = decorator;
                 lastInPipeline = decorator;
             });
         }
 
-        IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
+        private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
         {
             attributes.Each((attribute) =>
             {
-                var decorator = new HandlerFactory<TRequest>(attribute, handlerFactory, requestContext).CreateRequestHandler();
+                var decorator = new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
                 decorator.Successor = lastInPipeline;
                 lastInPipeline = decorator;
             });
             return lastInPipeline;
         }
 
-        PipelineTracer TracePipeline(IHandleRequests<TRequest> firstInPipeline)
+        private PipelineTracer TracePipeline(IHandleRequests<TRequest> firstInPipeline)
         {
             var pipelineTracer = new PipelineTracer();
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
-
     }
 }

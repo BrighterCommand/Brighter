@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-01-2014
 // ***********************************************************************
-// <copyright file="MessageHeader.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Generic;
 
@@ -131,7 +133,7 @@ namespace paramore.brighter.commandprocessor
             TimeStamp = RoundToSeconds(timeStamp);
         }
 
-        public MessageHeader(Guid messageId, string result, MessageType messageType, DateTime timeStamp, int handledCount):this(messageId, result, messageType,timeStamp)
+        public MessageHeader(Guid messageId, string result, MessageType messageType, DateTime timeStamp, int handledCount) : this(messageId, result, messageType, timeStamp)
         {
             HandledCount = handledCount;
         }
@@ -153,7 +155,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(MessageHeader other)
         {
-            return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType && TimeStamp == other.TimeStamp && HandledCount ==other.HandledCount;
+            return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType && TimeStamp == other.TimeStamp && HandledCount == other.HandledCount;
         }
 
         /// <summary>
@@ -166,7 +168,7 @@ namespace paramore.brighter.commandprocessor
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((MessageHeader) obj);
+            return Equals((MessageHeader)obj);
         }
 
         /// <summary>
@@ -178,9 +180,9 @@ namespace paramore.brighter.commandprocessor
             unchecked
             {
                 var hashCode = Id.GetHashCode();
-                hashCode = (hashCode*397) ^ (Topic != null ? Topic.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (int) MessageType;
-                hashCode = (hashCode*397) ^ TimeStamp.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Topic != null ? Topic.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (int)MessageType;
+                hashCode = (hashCode * 397) ^ TimeStamp.GetHashCode();
                 hashCode = (hashCode * 397) ^ HandledCount.GetHashCode();
                 return hashCode;
             }

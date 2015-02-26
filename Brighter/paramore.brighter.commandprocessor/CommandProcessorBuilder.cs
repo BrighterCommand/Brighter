@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-01-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-29-2014
 // ***********************************************************************
-// <copyright file="CommandProcessorBuilder.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using paramore.brighter.commandprocessor.Logging;
 using Polly;
 
@@ -89,15 +91,15 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedLogging, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
-        private ILog logger;
-        private IAmAMessageStore<Message> messageStore;
-        private IAmAMessageProducer messagingGateway;
-        private IAmAMessageMapperRegistry messageMapperRegistry;
-        private IAmARequestContextFactory requestContextFactory;
-        private IAmASubscriberRegistry registry;
-        private IAmAHandlerFactory handlerFactory;
-        private IAmAPolicyRegistry policyRegistry;
-        private CommandProcessorBuilder() {}
+        private ILog _logger;
+        private IAmAMessageStore<Message> _messageStore;
+        private IAmAMessageProducer _messagingGateway;
+        private IAmAMessageMapperRegistry _messageMapperRegistry;
+        private IAmARequestContextFactory _requestContextFactory;
+        private IAmASubscriberRegistry _registry;
+        private IAmAHandlerFactory _handlerFactory;
+        private IAmAPolicyRegistry _policyRegistry;
+        private CommandProcessorBuilder() { }
 
         /// <summary>
         /// Begins the Fluent Interface
@@ -115,8 +117,8 @@ namespace paramore.brighter.commandprocessor
         /// <returns>INeedPolicy.</returns>
         public INeedPolicy Handlers(HandlerConfiguration handlerConfiguration)
         {
-            registry = handlerConfiguration.SubscriberRegistry;
-            handlerFactory = handlerConfiguration.HandlerFactory;
+            _registry = handlerConfiguration.SubscriberRegistry;
+            _handlerFactory = handlerConfiguration.HandlerFactory;
             return this;
         }
 
@@ -128,7 +130,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>INeedLogging.</returns>
         public INeedLogging Policies(IAmAPolicyRegistry thePolicyRegistry)
         {
-            policyRegistry = thePolicyRegistry;
+            _policyRegistry = thePolicyRegistry;
             return this;
         }
 
@@ -147,7 +149,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>INeedMessaging.</returns>
         public INeedMessaging Logger(ILog logger)
         {
-            this.logger = logger;
+            _logger = logger;
             return this;
         }
 
@@ -161,9 +163,9 @@ namespace paramore.brighter.commandprocessor
         /// <returns>INeedARequestContext.</returns>
         public INeedARequestContext TaskQueues(MessagingConfiguration configuration)
         {
-            messageStore = configuration.MessageStore;
-            messagingGateway = configuration.MessagingGateway;
-            messageMapperRegistry = configuration.MessageMapperRegistry;
+            _messageStore = configuration.MessageStore;
+            _messagingGateway = configuration.MessagingGateway;
+            _messageMapperRegistry = configuration.MessageMapperRegistry;
             return this;
         }
 
@@ -184,7 +186,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>IAmACommandProcessorBuilder.</returns>
         public IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory)
         {
-            this.requestContextFactory = requestContextFactory;
+            _requestContextFactory = requestContextFactory;
             return this;
         }
 
@@ -195,17 +197,16 @@ namespace paramore.brighter.commandprocessor
         public CommandProcessor Build()
         {
             return new CommandProcessor(
-                subscriberRegistry: registry,
-                handlerFactory: handlerFactory,
-                requestContextFactory: requestContextFactory,
-                policyRegistry: policyRegistry,
-                mapperRegistry: messageMapperRegistry,
-                messageStore: messageStore,
-                messagingGateway: messagingGateway,
-                logger: logger
+                subscriberRegistry: _registry,
+                handlerFactory: _handlerFactory,
+                requestContextFactory: _requestContextFactory,
+                policyRegistry: _policyRegistry,
+                mapperRegistry: _messageMapperRegistry,
+                messageStore: _messageStore,
+                messagingGateway: _messagingGateway,
+                logger: _logger
                 );
         }
-
     }
 
     #region Progressive interfaces

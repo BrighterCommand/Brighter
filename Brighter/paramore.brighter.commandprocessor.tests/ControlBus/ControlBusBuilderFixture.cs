@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System;
 using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
@@ -15,10 +18,10 @@ namespace paramore.commandprocessor.tests.ControlBus
 {
     public class When_configuring_a_control_bus
     {
-        static Dispatcher controlBus;
-        static ControlBusBuilder busBuilder;
+        private static Dispatcher s_controlBus;
+        private static ControlBusBuilder s_busBuilder;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
@@ -37,7 +40,7 @@ namespace paramore.commandprocessor.tests.ControlBus
 
             var commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer())))
-                .Policies(new PolicyRegistry() 
+                .Policies(new PolicyRegistry()
                 {
                     {CommandProcessor.RETRYPOLICY, retryPolicy},
                     {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
@@ -47,17 +50,16 @@ namespace paramore.commandprocessor.tests.ControlBus
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
-            busBuilder = ControlBusBuilder
+            s_busBuilder = ControlBusBuilder
                 .With()
                 .Logger(logger)
                 .CommandProcessor(commandProcessor)
                 .ChannelFactory(new InMemoryChannelFactory()) as ControlBusBuilder;
-
         };
-        
-        Because of = () => controlBus = busBuilder.Build("tests");
 
-        It should_have_a_configuration_channel = () => controlBus.Connections.Any(cn => cn.Name == ControlBusBuilder.CONFIGURATION).ShouldBeTrue();
-        It should_have_a_heartbeat_channel = () => controlBus.Connections.Any(cn => cn.Name == ControlBusBuilder.HEARTBEAT).ShouldBeTrue();
+        private Because _of = () => s_controlBus = s_busBuilder.Build("tests");
+
+        private It _should_have_a_configuration_channel = () => s_controlBus.Connections.Any(cn => cn.Name == ControlBusBuilder.CONFIGURATION).ShouldBeTrue();
+        private It _should_have_a_heartbeat_channel = () => s_controlBus.Connections.Any(cn => cn.Name == ControlBusBuilder.HEARTBEAT).ShouldBeTrue();
     }
 }

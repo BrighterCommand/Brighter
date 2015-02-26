@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -33,8 +36,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,16 +47,16 @@ namespace paramore.brighter.commandprocessor
     internal class RequestHandlers<TRequest> : IEnumerable<RequestHandler<TRequest>>
         where TRequest : class, IRequest
     {
-        private readonly IEnumerable<object> handlers;
+        private readonly IEnumerable<object> _handlers;
 
         internal RequestHandlers(IEnumerable<object> handlers)
         {
-            this.handlers = handlers;
+            _handlers = handlers;
         }
 
         public IEnumerator<RequestHandler<TRequest>> GetEnumerator()
         {
-            return handlers.Cast<RequestHandler<TRequest>>().GetEnumerator();
+            return _handlers.Cast<RequestHandler<TRequest>>().GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

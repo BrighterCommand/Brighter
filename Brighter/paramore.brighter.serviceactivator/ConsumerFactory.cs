@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 
@@ -29,29 +31,29 @@ namespace paramore.brighter.serviceactivator
 {
     internal class ConsumerFactory<TRequest> : IConsumerFactory where TRequest : class, IRequest
     {
-        private readonly IAmACommandProcessor commandProcessor;
-        private readonly IAmAMessageMapperRegistry messageMapperRegistry;
-        private readonly Connection connection;
-        private readonly ILog logger;
+        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
+        private readonly Connection _connection;
+        private readonly ILog _logger;
 
         public ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, Connection connection, ILog logger)
         {
-            this.commandProcessor = commandProcessor;
-            this.messageMapperRegistry = messageMapperRegistry;
-            this.connection = connection;
-            this.logger = logger;
+            _commandProcessor = commandProcessor;
+            _messageMapperRegistry = messageMapperRegistry;
+            _connection = connection;
+            _logger = logger;
         }
 
         public Consumer Create()
         {
-            var messagePump = new MessagePump<TRequest>(commandProcessor, messageMapperRegistry.Get<TRequest>())
+            var messagePump = new MessagePump<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
             {
-                Channel = connection.Channel,
-                TimeoutInMilliseconds = connection.TimeoutInMiliseconds,
-                RequeueCount = connection.RequeueCount,
-                Logger = logger
+                Channel = _connection.Channel,
+                TimeoutInMilliseconds = _connection.TimeoutInMiliseconds,
+                RequeueCount = _connection.RequeueCount,
+                Logger = _logger
             };
-            var consumer = new Consumer(connection.Name, connection.Channel, messagePump);
+            var consumer = new Consumer(_connection.Name, _connection.Channel, messagePump);
             return consumer;
         }
     }

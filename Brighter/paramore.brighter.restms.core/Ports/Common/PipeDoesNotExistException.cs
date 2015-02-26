@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 10-21-2014
@@ -32,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 
 namespace paramore.brighter.restms.core.Ports.Common
@@ -46,19 +49,19 @@ namespace paramore.brighter.restms.core.Ports.Common
         /// <summary>
         /// Initializes a new instance of the <see cref="PipeDoesNotExistException"/> class.
         /// </summary>
-        public PipeDoesNotExistException() {}
+        public PipeDoesNotExistException() { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PipeDoesNotExistException" /> class with a specified error message.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public PipeDoesNotExistException(string message) : base(message){}
+        public PipeDoesNotExistException(string message) : base(message) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PipeDoesNotExistException"/> class.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="innException">The inn exception.</param>
-        public PipeDoesNotExistException(string message, Exception innException) : base(message, innException){}
+        public PipeDoesNotExistException(string message, Exception innException) : base(message, innException) { }
     }
 }

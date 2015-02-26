@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -29,17 +32,17 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles
 {
-   internal class MyFailsWithDivideByZeroHandler : RequestHandler<MyCommand>
+    internal class MyFailsWithDivideByZeroHandler : RequestHandler<MyCommand>
     {
-       public MyFailsWithDivideByZeroHandler(ILog logger) : base(logger)
-       {}
+        public MyFailsWithDivideByZeroHandler(ILog logger) : base(logger)
+        { }
 
-       public static bool ReceivedCommand { get; set; }
+        public static bool ReceivedCommand { get; set; }
 
-       static MyFailsWithDivideByZeroHandler()
-       {
-           ReceivedCommand = false;
-       }
+        static MyFailsWithDivideByZeroHandler()
+        {
+            ReceivedCommand = false;
+        }
 
         [UsePolicy(policy: "MyDivideByZeroPolicy", step: 1)]
         public override MyCommand Handle(MyCommand command)
@@ -48,9 +51,9 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles
             throw new DivideByZeroException();
         }
 
-       public static bool Shouldreceive(MyCommand myCommand)
-       {
-           return ReceivedCommand;
-       }
+        public static bool Shouldreceive(MyCommand myCommand)
+        {
+            return ReceivedCommand;
+        }
     }
 }

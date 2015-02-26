@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using FakeItEasy;
 
@@ -34,41 +37,39 @@ using paramore.brighter.commandprocessor.messagestore.ravendb;
 
 namespace paramore.commandprocessor.tests.MessageStore.RavenDb
 {
-
     public class MessageStoreTests : RavenTestBase
     {
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            documentStore = new EmbeddableDocumentStore().Initialize();
+            s_documentStore = new EmbeddableDocumentStore().Initialize();
             var logger = A.Fake<ILog>();
-            messageStore = new RavenMessageStore(documentStore, logger);
+            s_messageStore = new RavenMessageStore(s_documentStore, logger);
         };
         public class when_writing_a_message_to_the_raven_message_store
         {
-            Establish context = () =>
+            private Establish _context = () =>
             {
-                message = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
-                messageStore.Add(message).Wait();
+                s_message = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
+                s_messageStore.Add(s_message).Wait();
             };
 
-            Because of = () => { retrievedMessage = messageStore.Get(message.Id).Result; };
+            private Because _of = () => { s_retrievedMessage = s_messageStore.Get(s_message.Id).Result; };
 
-            It should_read_the_message_from_the__raven_message_store = () => retrievedMessage.ShouldEqual(message);
+            private It _should_read_the_message_from_the__raven_message_store = () => s_retrievedMessage.ShouldEqual(s_message);
         }
 
         public class when_there_is_no_message_in_the_raven_message_store
         {
-            Establish context = () => { message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body")); };
-            Because of = () => { retrievedMessage = messageStore.Get(message.Id).Result; };
-            It should_return_a_empty_message = () => retrievedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+            private Establish _context = () => { s_message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body")); };
+            private Because _of = () => { s_retrievedMessage = s_messageStore.Get(s_message.Id).Result; };
+            private It _should_return_a_empty_message = () => s_retrievedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
         }
 
-        Cleanup cleanup = () => documentStore.Dispose();
+        private Cleanup _cleanup = () => s_documentStore.Dispose();
 
-        private static RavenMessageStore messageStore;
-        private static Message message;
-        private static Message retrievedMessage;
-        private static IDocumentStore documentStore;
-        
+        private static RavenMessageStore s_messageStore;
+        private static Message s_message;
+        private static Message s_retrievedMessage;
+        private static IDocumentStore s_documentStore;
     }
 }

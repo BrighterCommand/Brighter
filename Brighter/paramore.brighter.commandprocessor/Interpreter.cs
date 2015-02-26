@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-10-2014
 // ***********************************************************************
-// <copyright file="Interpreter.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,8 +52,8 @@ namespace paramore.brighter.commandprocessor
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     internal class Interpreter<TRequest> where TRequest : class, IRequest
     {
-        private readonly IAmASubscriberRegistry registry;
-        private readonly IAmAHandlerFactory handlerFactory;
+        private readonly IAmASubscriberRegistry _registry;
+        private readonly IAmAHandlerFactory _handlerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Interpreter{TRequest}"/> class.
@@ -60,8 +62,8 @@ namespace paramore.brighter.commandprocessor
         /// <param name="handlerFactory">The handler factory.</param>
         internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory)
         {
-            this.registry = registry ;
-            this.handlerFactory = handlerFactory;
+            _registry = registry;
+            _handlerFactory = handlerFactory;
         }
 
         /// <summary>
@@ -71,7 +73,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>IEnumerable&lt;RequestHandler&lt;TRequest&gt;&gt;.</returns>
         internal IEnumerable<RequestHandler<TRequest>> GetHandlers(Type requestType)
         {
-            return new RequestHandlers<TRequest>(registry.Get<TRequest>().Select(handlerType => handlerFactory.Create(handlerType)).Cast<IHandleRequests<TRequest>>());
+            return new RequestHandlers<TRequest>(_registry.Get<TRequest>().Select(handlerType => _handlerFactory.Create(handlerType)).Cast<IHandleRequests<TRequest>>());
         }
     }
 }

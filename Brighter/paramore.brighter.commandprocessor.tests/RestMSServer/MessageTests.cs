@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net.Mime;
@@ -44,15 +47,15 @@ namespace paramore.commandprocessor.tests.RestMSServer
 {
     public class When_retrieving_a_message
     {
-        const string ADDRESS_PATTERN = "*";
-        const string MESSAGE_CONTENT = "I am some message content";
-        static Message message;
-        static MessageRetriever messageRetriever;
-        static IAmARepository<Pipe> pipeRepository; 
-        static RestMSMessage restMSMessage;
-        static Pipe pipe;
+        private const string ADDRESS_PATTERN = "*";
+        private const string MESSAGE_CONTENT = "I am some message content";
+        private static Message s_message;
+        private static MessageRetriever s_messageRetriever;
+        private static IAmARepository<Pipe> s_pipeRepository;
+        private static RestMSMessage s_restMSMessage;
+        private static Pipe s_pipe;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
@@ -63,83 +66,82 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
-            pipe = new Pipe(
+            s_pipe = new Pipe(
                 new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
                 PipeType.Fifo,
                 new Title("My Title"));
 
-            message = new Message(
-                ADDRESS_PATTERN,
-                feed.Href.AbsoluteUri,
-                new NameValueCollection() {{"MyHeader", "MyValue"}},
-                Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain),
-                "http://host.com/");
-
-            pipe.AddMessage(message);
-
-            pipeRepository= new InMemoryPipeRepository(logger);
-            pipeRepository.Add(pipe);
-
-            messageRetriever = new MessageRetriever(pipeRepository);
-        };
-
-        Because of = () => restMSMessage = messageRetriever.Retrieve(pipe.Name, message.MessageId);
-
-        It should_have_the_message_address_pattern = () => restMSMessage.Address.ShouldEqual(message.Address.Value);
-        It should_have_the_message_id = () => restMSMessage.MessageId.ShouldEqual(message.MessageId.ToString());
-        It should_have_the_reply_to = () => restMSMessage.ReplyTo.ShouldEqual(message.ReplyTo.AbsoluteUri);
-        It should_have_the_originating_feed_uri = () => restMSMessage.Feed.ShouldEqual(message.FeedHref.AbsoluteUri);
-        It should_have_the_header_name_of_the_message = () => restMSMessage.Headers[0].Name.ShouldEqual(message.Headers.All.First().Item1);
-        It should_have_the_header_value_of_the_message = () => restMSMessage.Headers[0].Value.ShouldEqual(message.Headers.All.First().Item2);
-        It should_have_the_message_content = () => restMSMessage.Content.Value.ShouldEqual(MESSAGE_CONTENT);
-    }
-
-
-    public class When_retrieving_a_missing_message
-    {
-        const string ADDRESS_PATTERN = "*";
-        const string MESSAGE_CONTENT = "I am some message content";
-        static Message message;
-        static MessageRetriever messageRetriever;
-        static IAmARepository<Pipe> pipeRepository;
-        static Pipe pipe;
-        static bool exceptionWasThrown;
-
-        Establish context = () =>
-        {
-            Globals.HostName = "host.com";
-            var logger = A.Fake<ILog>();
-            exceptionWasThrown = false;
-
-            var feed = new Feed(
-                feedType: FeedType.Direct,
-                name: new Name("default"),
-                title: new Title("Default feed")
-                );
-
-            pipe = new Pipe(
-                new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
-                PipeType.Fifo,
-                new Title("My Title"));
-
-            message = new Message(
+            s_message = new Message(
                 ADDRESS_PATTERN,
                 feed.Href.AbsoluteUri,
                 new NameValueCollection() { { "MyHeader", "MyValue" } },
                 Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain),
                 "http://host.com/");
 
-            pipeRepository = new InMemoryPipeRepository(logger);
-            pipeRepository.Add(pipe);
+            s_pipe.AddMessage(s_message);
 
-            messageRetriever = new MessageRetriever(pipeRepository);
+            s_pipeRepository = new InMemoryPipeRepository(logger);
+            s_pipeRepository.Add(s_pipe);
+
+            s_messageRetriever = new MessageRetriever(s_pipeRepository);
+        };
+
+        private Because _of = () => s_restMSMessage = s_messageRetriever.Retrieve(s_pipe.Name, s_message.MessageId);
+
+        private It _should_have_the_message_address_pattern = () => s_restMSMessage.Address.ShouldEqual(s_message.Address.Value);
+        private It _should_have_the_message_id = () => s_restMSMessage.MessageId.ShouldEqual(s_message.MessageId.ToString());
+        private It _should_have_the_reply_to = () => s_restMSMessage.ReplyTo.ShouldEqual(s_message.ReplyTo.AbsoluteUri);
+        private It _should_have_the_originating_feed_uri = () => s_restMSMessage.Feed.ShouldEqual(s_message.FeedHref.AbsoluteUri);
+        private It _should_have_the_header_name_of_the_message = () => s_restMSMessage.Headers[0].Name.ShouldEqual(s_message.Headers.All.First().Item1);
+        private It _should_have_the_header_value_of_the_message = () => s_restMSMessage.Headers[0].Value.ShouldEqual(s_message.Headers.All.First().Item2);
+        private It _should_have_the_message_content = () => s_restMSMessage.Content.Value.ShouldEqual(MESSAGE_CONTENT);
+    }
+
+
+    public class When_retrieving_a_missing_message
+    {
+        private const string ADDRESS_PATTERN = "*";
+        private const string MESSAGE_CONTENT = "I am some message content";
+        private static Message s_message;
+        private static MessageRetriever s_messageRetriever;
+        private static IAmARepository<Pipe> s_pipeRepository;
+        private static Pipe s_pipe;
+        private static bool s_exceptionWasThrown;
+
+        private Establish _context = () =>
+        {
+            Globals.HostName = "host.com";
+            var logger = A.Fake<ILog>();
+            s_exceptionWasThrown = false;
+
+            var feed = new Feed(
+                feedType: FeedType.Direct,
+                name: new Name("default"),
+                title: new Title("Default feed")
+                );
+
+            s_pipe = new Pipe(
+                new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
+                PipeType.Fifo,
+                new Title("My Title"));
+
+            s_message = new Message(
+                ADDRESS_PATTERN,
+                feed.Href.AbsoluteUri,
+                new NameValueCollection() { { "MyHeader", "MyValue" } },
+                Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain),
+                "http://host.com/");
+
+            s_pipeRepository = new InMemoryPipeRepository(logger);
+            s_pipeRepository.Add(s_pipe);
+
+            s_messageRetriever = new MessageRetriever(s_pipeRepository);
         };
 
 
-        Because of = () => { try { messageRetriever.Retrieve(pipe.Name, message.MessageId); } catch (MessageDoesNotExistException) { exceptionWasThrown = true; }};
+        private Because _of = () => { try { s_messageRetriever.Retrieve(s_pipe.Name, s_message.MessageId); } catch (MessageDoesNotExistException) { s_exceptionWasThrown = true; } };
 
-        It should_throw_an_exception = () => exceptionWasThrown.ShouldBeTrue();
-
+        private It _should_throw_an_exception = () => s_exceptionWasThrown.ShouldBeTrue();
     }
 
     public class When_deleting_a_message
@@ -147,24 +149,24 @@ namespace paramore.commandprocessor.tests.RestMSServer
         //deletes the message and all older messages from the pipe.
         //When the server deletes a message it also deletes any contents that message contains.
 
-        const string ADDRESS_PATTERN = "*";
-        const string MESSAGE_CONTENT = "I am some message content";
-        static Pipe pipe;
-        static Message message;
-        static Message olderMessage;
-        static Message newerMessage;
-        static DeleteMessageCommandHandler deleteMessageCommandHandler;
-        static DeleteMessageCommand deleteMessageCommand;
-        static IAmARepository<Pipe> pipeRepository;
-        static IAmACommandProcessor commandProcessor;
-        
-        Establish context = () =>
+        private const string ADDRESS_PATTERN = "*";
+        private const string MESSAGE_CONTENT = "I am some message content";
+        private static Pipe s_pipe;
+        private static Message s_message;
+        private static Message s_olderMessage;
+        private static Message s_newerMessage;
+        private static DeleteMessageCommandHandler s_deleteMessageCommandHandler;
+        private static DeleteMessageCommand s_deleteMessageCommand;
+        private static IAmARepository<Pipe> s_pipeRepository;
+        private static IAmACommandProcessor s_commandProcessor;
+
+        private Establish _context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
-            commandProcessor = A.Fake<IAmACommandProcessor>();
+            s_commandProcessor = A.Fake<IAmACommandProcessor>();
 
-            pipeRepository = new InMemoryPipeRepository(logger);
+            s_pipeRepository = new InMemoryPipeRepository(logger);
 
             var feed = new Feed(
                 feedType: FeedType.Direct,
@@ -172,58 +174,57 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
-            pipe = new Pipe(
+            s_pipe = new Pipe(
                 new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
                 PipeType.Fifo,
                 new Title("My Title"));
 
-            pipeRepository.Add(pipe);
+            s_pipeRepository.Add(s_pipe);
 
             var join = new Join(
-                pipe,
+                s_pipe,
                 feed.Href,
                 new Address(ADDRESS_PATTERN));
-            pipe.AddJoin(join);
+            s_pipe.AddJoin(join);
 
-            olderMessage = new Message(
+            s_olderMessage = new Message(
                 ADDRESS_PATTERN,
                 feed.Href.AbsoluteUri,
-                new NameValueCollection() {{"MyHeader", "MyValue"}},
+                new NameValueCollection() { { "MyHeader", "MyValue" } },
                 Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain),
                 "http://host.com/");
-            pipe.AddMessage(olderMessage);
+            s_pipe.AddMessage(s_olderMessage);
 
 
-            message = new Message(
+            s_message = new Message(
                 ADDRESS_PATTERN,
                 feed.Href.AbsoluteUri,
-                new NameValueCollection() {{"MyHeader", "MyValue"}},
+                new NameValueCollection() { { "MyHeader", "MyValue" } },
                 Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain),
                 "http://host.com/");
-            pipe.AddMessage(message);
+            s_pipe.AddMessage(s_message);
 
             //delay long enough to ensure last message is 'newer'
             System.Threading.Tasks.Task.Delay(1.Seconds()).Wait();
 
-            newerMessage = new Message(
+            s_newerMessage = new Message(
                 ADDRESS_PATTERN,
                 feed.Href.AbsoluteUri,
-                new NameValueCollection() {{"MyHeader", "MyValue"}},
+                new NameValueCollection() { { "MyHeader", "MyValue" } },
                 Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain),
                 "http://host.com/");
-            pipe.AddMessage(newerMessage);
+            s_pipe.AddMessage(s_newerMessage);
 
-            deleteMessageCommand = new DeleteMessageCommand(pipe.Name.Value, message.MessageId);
-            deleteMessageCommandHandler = new DeleteMessageCommandHandler(pipeRepository, commandProcessor, logger);
-
+            s_deleteMessageCommand = new DeleteMessageCommand(s_pipe.Name.Value, s_message.MessageId);
+            s_deleteMessageCommandHandler = new DeleteMessageCommandHandler(s_pipeRepository, s_commandProcessor, logger);
         };
 
-        Because of = () => deleteMessageCommandHandler.Handle(deleteMessageCommand);
+        private Because _of = () => s_deleteMessageCommandHandler.Handle(s_deleteMessageCommand);
 
-        It should_delete_the_message = () => pipe.Messages.Any(msg => msg.MessageId == message.MessageId).ShouldBeFalse();
-        It should_delete_the_older_message = () => pipe.Messages.Any(msg => msg.MessageId == olderMessage.MessageId).ShouldBeFalse();
-        It should_not_delete_the_newer_message = () => pipe.Messages.Any(msg => msg.MessageId == newerMessage.MessageId).ShouldBeTrue();
-        It should_invalidate_the_pipe_in_the_cache = () => A.CallTo(() => commandProcessor.Send(A<InvalidateCacheCommand>.Ignored)).MustHaveHappened();
+        private It _should_delete_the_message = () => s_pipe.Messages.Any(msg => msg.MessageId == s_message.MessageId).ShouldBeFalse();
+        private It _should_delete_the_older_message = () => s_pipe.Messages.Any(msg => msg.MessageId == s_olderMessage.MessageId).ShouldBeFalse();
+        private It _should_not_delete_the_newer_message = () => s_pipe.Messages.Any(msg => msg.MessageId == s_newerMessage.MessageId).ShouldBeTrue();
+        private It _should_invalidate_the_pipe_in_the_cache = () => A.CallTo(() => s_commandProcessor.Send(A<InvalidateCacheCommand>.Ignored)).MustHaveHappened();
     }
 
     public class When_deleting_the_only_message
@@ -231,22 +232,22 @@ namespace paramore.commandprocessor.tests.RestMSServer
         //deletes the message and all older messages from the pipe.
         //When the server deletes a message it also deletes any contents that message contains.
 
-        const string ADDRESS_PATTERN = "*";
-        const string MESSAGE_CONTENT = "I am some message content";
-        static Pipe pipe;
-        static Message message;
-        static DeleteMessageCommandHandler deleteMessageCommandHandler;
-        static DeleteMessageCommand deleteMessageCommand;
-        static IAmARepository<Pipe> pipeRepository;
-        static IAmACommandProcessor commandProcessor;
-        
-        Establish context = () =>
+        private const string ADDRESS_PATTERN = "*";
+        private const string MESSAGE_CONTENT = "I am some message content";
+        private static Pipe s_pipe;
+        private static Message s_message;
+        private static DeleteMessageCommandHandler s_deleteMessageCommandHandler;
+        private static DeleteMessageCommand s_deleteMessageCommand;
+        private static IAmARepository<Pipe> s_pipeRepository;
+        private static IAmACommandProcessor s_commandProcessor;
+
+        private Establish _context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
-            commandProcessor = A.Fake<IAmACommandProcessor>();
+            s_commandProcessor = A.Fake<IAmACommandProcessor>();
 
-            pipeRepository = new InMemoryPipeRepository(logger);
+            s_pipeRepository = new InMemoryPipeRepository(logger);
 
             var feed = new Feed(
                 feedType: FeedType.Direct,
@@ -254,35 +255,34 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
-            pipe = new Pipe(
+            s_pipe = new Pipe(
                 new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
                 PipeType.Fifo,
                 new Title("My Title"));
 
-            pipeRepository.Add(pipe);
+            s_pipeRepository.Add(s_pipe);
 
             var join = new Join(
-                pipe,
+                s_pipe,
                 feed.Href,
                 new Address(ADDRESS_PATTERN));
-            pipe.AddJoin(join);
+            s_pipe.AddJoin(join);
 
-            message = new Message(
+            s_message = new Message(
                 ADDRESS_PATTERN,
                 feed.Href.AbsoluteUri,
-                new NameValueCollection() {{"MyHeader", "MyValue"}},
+                new NameValueCollection() { { "MyHeader", "MyValue" } },
                 Attachment.CreateAttachmentFromString(MESSAGE_CONTENT, MediaTypeNames.Text.Plain),
                 "http://host.com/");
-            pipe.AddMessage(message);
+            s_pipe.AddMessage(s_message);
 
-            deleteMessageCommand = new DeleteMessageCommand(pipe.Name.Value, message.MessageId);
-            deleteMessageCommandHandler = new DeleteMessageCommandHandler(pipeRepository, commandProcessor, logger);
-
+            s_deleteMessageCommand = new DeleteMessageCommand(s_pipe.Name.Value, s_message.MessageId);
+            s_deleteMessageCommandHandler = new DeleteMessageCommandHandler(s_pipeRepository, s_commandProcessor, logger);
         };
 
-        Because of = () => deleteMessageCommandHandler.Handle(deleteMessageCommand);
+        private Because _of = () => s_deleteMessageCommandHandler.Handle(s_deleteMessageCommand);
 
-        It should_delete_the_message = () => pipe.Messages.Any(msg => msg.MessageId == message.MessageId).ShouldBeFalse();
-        It should_invalidate_the_pipe_in_the_cache = () => A.CallTo(() => commandProcessor.Send(A<InvalidateCacheCommand>.Ignored)).MustHaveHappened();
+        private It _should_delete_the_message = () => s_pipe.Messages.Any(msg => msg.MessageId == s_message.MessageId).ShouldBeFalse();
+        private It _should_invalidate_the_pipe_in_the_cache = () => A.CallTo(() => s_commandProcessor.Send(A<InvalidateCacheCommand>.Ignored)).MustHaveHappened();
     }
 }

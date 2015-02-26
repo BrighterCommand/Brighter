@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-29-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-29-2014
 // ***********************************************************************
-// <copyright file="ChannelName.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
@@ -42,7 +44,7 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class ChannelName
     {
-        private readonly string name;
+        private readonly string _name;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelName"/> class.
@@ -50,7 +52,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="name">The name.</param>
         public ChannelName(string name)
         {
-            this.name = name;
+            _name = name;
         }
 
         /// <summary>
@@ -59,7 +61,7 @@ namespace paramore.brighter.commandprocessor
         /// <value>The value.</value>
         public string Value
         {
-            get { return name; }
+            get { return _name; }
         }
 
         /// <summary>
@@ -68,7 +70,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
         public override string ToString()
         {
-            return name;
+            return _name;
         }
 
         /// <summary>
@@ -76,7 +78,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="rhs">The RHS.</param>
         /// <returns>The result of the conversion.</returns>
-        public static implicit operator string(ChannelName rhs)
+        public static implicit operator string (ChannelName rhs)
         {
             return rhs.ToString();
         }
@@ -90,7 +92,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return string.Equals(name, other.name);
+            return string.Equals(_name, other._name);
         }
 
         /// <summary>
@@ -103,7 +105,7 @@ namespace paramore.brighter.commandprocessor
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((ChannelName) obj);
+            return Equals((ChannelName)obj);
         }
 
         /// <summary>
@@ -112,7 +114,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
         public override int GetHashCode()
         {
-            return (name != null ? name.GetHashCode() : 0);
+            return (_name != null ? _name.GetHashCode() : 0);
         }
 
         /// <summary>
@@ -135,5 +137,6 @@ namespace paramore.brighter.commandprocessor
         public static bool operator !=(ChannelName left, ChannelName right)
         {
             return !Equals(left, right);
-        }   }
+        }
+    }
 }

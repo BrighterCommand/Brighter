@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-01-2014
 // ***********************************************************************
-// <copyright file="RequestHandlerAttribute.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 
 namespace paramore.brighter.commandprocessor
@@ -48,9 +50,9 @@ namespace paramore.brighter.commandprocessor
     [AttributeUsage(AttributeTargets.Method)]
     public abstract class RequestHandlerAttribute : Attribute
     {
-        private readonly int step;
+        private readonly int _step;
 
-        private readonly HandlerTiming timing;
+        private readonly HandlerTiming _timing;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandlerAttribute"/> class.
@@ -59,8 +61,8 @@ namespace paramore.brighter.commandprocessor
         /// <param name="timing">The timing.</param>
         protected RequestHandlerAttribute(int step, HandlerTiming timing = HandlerTiming.Before)
         {
-            this.step = step;
-            this.timing = timing;
+            _step = step;
+            _timing = timing;
         }
 
         //We use this to pass params from the attribute into the instance of the handler
@@ -81,7 +83,7 @@ namespace paramore.brighter.commandprocessor
         /// <value>The step.</value>
         public int Step
         {
-            get { return step; }
+            get { return _step; }
         }
 
         //Should we run this before or after the main target?
@@ -91,7 +93,7 @@ namespace paramore.brighter.commandprocessor
         /// <value>The timing.</value>
         public HandlerTiming Timing
         {
-            get { return timing; }
+            get { return _timing; }
         }
 
         //What type do we implement for the Filter in the Command Processor Pipeline

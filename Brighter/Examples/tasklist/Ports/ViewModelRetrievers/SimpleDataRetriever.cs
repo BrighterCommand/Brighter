@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System.IO;
 using System.Reflection;
 
@@ -29,23 +31,23 @@ namespace Tasklist.Ports.ViewModelRetrievers
 {
     public class SimpleDataRetriever
     {
-        private static readonly string databasePath; 
+        private static readonly string s_databasePath;
 
         static SimpleDataRetriever()
         {
             if (System.Web.HttpContext.Current != null)
             {
-                databasePath = System.Web.HttpContext.Current.Server.MapPath("~\\App_Data\\Tasks.sdf");
+                s_databasePath = System.Web.HttpContext.Current.Server.MapPath("~\\App_Data\\Tasks.sdf");
             }
             else
             {
-                databasePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\Tasks.sdf");
+                s_databasePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\Tasks.sdf");
             }
         }
 
         protected static string DatabasePath
         {
-            get { return databasePath; }
+            get { return s_databasePath; }
         }
     }
 }

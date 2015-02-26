@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.serviceactivator
 // Author           : ian
 // Created          : 02-16-2015
@@ -35,7 +38,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 
 namespace paramore.brighter.commandprocessor
@@ -48,19 +50,19 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFailureException"/> class.
         /// </summary>
-        public ChannelFailureException() : base() {}
+        public ChannelFailureException() : base() { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFailureException" /> class with a specified error message.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ChannelFailureException(string message) : base(message){}
+        public ChannelFailureException(string message) : base(message) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFailureException" /> class with a specified error message and a reference to the inner exception that is the cause of this exception.
         /// </summary>
         /// <param name="message">The error message that explains the reason for the exception.</param>
         /// <param name="innerException">The exception that is the cause of the current exception, or a null reference (Nothing in Visual Basic) if no inner exception is specified.</param>
-        public ChannelFailureException(string message, Exception innerException) : base(message, innerException){}
+        public ChannelFailureException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

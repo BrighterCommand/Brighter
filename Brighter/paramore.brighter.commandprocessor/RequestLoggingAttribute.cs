@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-01-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-01-2014
 // ***********************************************************************
-// <copyright file="RequestLoggingAttribute.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 
 namespace paramore.brighter.commandprocessor
@@ -51,7 +53,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="timing">The timing.</param>
         public RequestLoggingAttribute(int step, HandlerTiming timing)
             : base(step, timing)
-        {}
+        { }
 
         /// <summary>
         /// Initializers the parameters.
@@ -59,7 +61,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>System.Object[].</returns>
         public override object[] InitializerParams()
         {
-            return new object[] {Timing};
+            return new object[] { Timing };
         }
 
         /// <summary>
@@ -70,4 +72,5 @@ namespace paramore.brighter.commandprocessor
         {
             return typeof(RequestLoggingHandler<>);
         }
-    }}
+    }
+}

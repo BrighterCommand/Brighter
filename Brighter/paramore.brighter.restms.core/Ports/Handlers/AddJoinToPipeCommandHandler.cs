@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 11-05-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 11-05-2014
 // ***********************************************************************
-// <copyright file="AddJoinToPipeCommandHandler.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Transactions;
 using paramore.brighter.commandprocessor;
@@ -50,8 +52,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
     /// </summary>
     public class AddJoinToPipeCommandHandler : RequestHandler<AddJoinToPipeCommand>
     {
-        readonly IAmARepository<Pipe> pipeRepository;
-        readonly IAmACommandProcessor commandProcessor;
+        private readonly IAmARepository<Pipe> _pipeRepository;
+        private readonly IAmACommandProcessor _commandProcessor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}" /> class.
@@ -61,8 +63,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <param name="logger">The logger.</param>
         public AddJoinToPipeCommandHandler(IAmARepository<Pipe> pipeRepository, IAmACommandProcessor commandProcessor, ILog logger) : base(logger)
         {
-            this.pipeRepository = pipeRepository;
-            this.commandProcessor = commandProcessor;
+            _pipeRepository = pipeRepository;
+            _commandProcessor = commandProcessor;
         }
 
         /// <summary>
@@ -81,7 +83,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
             Pipe pipe;
             using (var scope = new TransactionScope())
             {
-                pipe = pipeRepository[new Identity(addJoinToPipeCommand.PipeName)];
+                pipe = _pipeRepository[new Identity(addJoinToPipeCommand.PipeName)];
 
                 if (pipe == null)
                 {
@@ -96,7 +98,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                 scope.Complete();
             }
 
-            commandProcessor.Send(new AddJoinToFeedCommand(pipe, addJoinToPipeCommand.FeedAddress, addJoinToPipeCommand.AddressPattern));
+            _commandProcessor.Send(new AddJoinToFeedCommand(pipe, addJoinToPipeCommand.FeedAddress, addJoinToPipeCommand.AddressPattern));
             return base.Handle(addJoinToPipeCommand);
         }
     }

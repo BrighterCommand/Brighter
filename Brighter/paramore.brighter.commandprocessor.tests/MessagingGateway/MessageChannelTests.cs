@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using FakeItEasy;
 using Machine.Specifications;
@@ -31,123 +33,119 @@ namespace paramore.commandprocessor.tests.MessagingGateway
 {
     public class When_listening_to_messages_on_a_channel
     {
-        private static IAmAnInputChannel channel;
-        private static IAmAMessageConsumer gateway;
-        private static Message receivedMessage;
-        private static Message sentMessage;
+        private static IAmAnInputChannel s_channel;
+        private static IAmAMessageConsumer s_gateway;
+        private static Message s_receivedMessage;
+        private static Message s_sentMessage;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            gateway = A.Fake<IAmAMessageConsumer>();
+            s_gateway = A.Fake<IAmAMessageConsumer>();
 
-            channel = new InputChannel("test", "key", gateway);
+            s_channel = new InputChannel("test", "key", s_gateway);
 
-            sentMessage = new Message(
+            s_sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
-                
-            A.CallTo(() => gateway.Receive(1000)).Returns(sentMessage);
+
+            A.CallTo(() => s_gateway.Receive(1000)).Returns(s_sentMessage);
         };
 
-        Because of = () => receivedMessage = channel.Receive(1000);
+        private Because _of = () => s_receivedMessage = s_channel.Receive(1000);
 
-        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive(1000)).MustHaveHappened();
-        It should_return_the_next_message_from_the_gateway = () => receivedMessage.ShouldEqual(sentMessage);
+        private It _should_call_the_messaging_gateway = () => A.CallTo(() => s_gateway.Receive(1000)).MustHaveHappened();
+        private It _should_return_the_next_message_from_the_gateway = () => s_receivedMessage.ShouldEqual(s_sentMessage);
     }
 
     public class When_a_stop_message_is_added_to_a_channel
     {
-        private static IAmAnInputChannel channel;
-        private static IAmAMessageConsumer gateway;
-        private static Message receivedMessage;
-        private static Message sentMessage;
+        private static IAmAnInputChannel s_channel;
+        private static IAmAMessageConsumer s_gateway;
+        private static Message s_receivedMessage;
+        private static Message s_sentMessage;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            gateway = A.Fake<IAmAMessageConsumer>();
+            s_gateway = A.Fake<IAmAMessageConsumer>();
 
-            channel = new InputChannel("test", "key", gateway);
+            s_channel = new InputChannel("test", "key", s_gateway);
 
-            sentMessage = new Message(
+            s_sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
-            channel.Stop();
-                
-            A.CallTo(() => gateway.Receive(1000)).Returns(sentMessage);
+            s_channel.Stop();
+
+            A.CallTo(() => s_gateway.Receive(1000)).Returns(s_sentMessage);
         };
 
-        Because of = () => receivedMessage = channel.Receive(1000);
+        private Because _of = () => s_receivedMessage = s_channel.Receive(1000);
 
-        It should_call_the_messaging_gateway = () => A.CallTo(() => gateway.Receive(1000)).MustNotHaveHappened();
+        private It _should_call_the_messaging_gateway = () => A.CallTo(() => s_gateway.Receive(1000)).MustNotHaveHappened();
     }
 
     public class When_acknowledge_is_called_on_a_channel
     {
-        private static IAmAnInputChannel channel;
-        private static IAmAMessageConsumer gateway;
-        private static Message receivedMessage;
+        private static IAmAnInputChannel s_channel;
+        private static IAmAMessageConsumer s_gateway;
+        private static Message s_receivedMessage;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            gateway = A.Fake<IAmAMessageConsumer>();
+            s_gateway = A.Fake<IAmAMessageConsumer>();
 
-            channel = new InputChannel("test", "key", gateway);
+            s_channel = new InputChannel("test", "key", s_gateway);
 
-            receivedMessage = new Message(
+            s_receivedMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
-            receivedMessage.SetDeliveryTag(12345UL);
-
+            s_receivedMessage.SetDeliveryTag(12345UL);
         };
 
-        Because of = () => channel.Acknowledge(receivedMessage);
+        private Because _of = () => s_channel.Acknowledge(s_receivedMessage);
 
-        It should_ackonwledge_the_message = () => A.CallTo(() => gateway.Acknowledge(receivedMessage)).MustHaveHappened();
-
+        private It _should_ackonwledge_the_message = () => A.CallTo(() => s_gateway.Acknowledge(s_receivedMessage)).MustHaveHappened();
     }
 
     public class When_no_acknowledge_is_called_on_a_channel
     {
-        private static IAmAnInputChannel channel;
-        private static IAmAMessageConsumer gateway;
-        private static Message receivedMessage;
+        private static IAmAnInputChannel s_channel;
+        private static IAmAMessageConsumer s_gateway;
+        private static Message s_receivedMessage;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            gateway = A.Fake<IAmAMessageConsumer>();
+            s_gateway = A.Fake<IAmAMessageConsumer>();
 
-            channel = new InputChannel("test", "key", gateway);
+            s_channel = new InputChannel("test", "key", s_gateway);
 
-            receivedMessage = new Message(
+            s_receivedMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
-            receivedMessage.SetDeliveryTag(12345UL);
-
+            s_receivedMessage.SetDeliveryTag(12345UL);
         };
 
-        Because of = () => channel.Reject(receivedMessage);
+        private Because _of = () => s_channel.Reject(s_receivedMessage);
 
-        It should_ackonwledge_the_message = () => A.CallTo(() => gateway.Reject(receivedMessage, false)).MustHaveHappened();
-
+        private It _should_ackonwledge_the_message = () => A.CallTo(() => s_gateway.Reject(s_receivedMessage, false)).MustHaveHappened();
     }
 
     public class When_disposing_input_channel
     {
-        private static IAmAnInputChannel channel;
-        private static IAmAMessageConsumer messageConsumer;
+        private static IAmAnInputChannel s_channel;
+        private static IAmAMessageConsumer s_messageConsumer;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            messageConsumer = A.Fake<IAmAMessageConsumer>();
+            s_messageConsumer = A.Fake<IAmAMessageConsumer>();
 
-            channel = new InputChannel("test", "key", messageConsumer);
+            s_channel = new InputChannel("test", "key", s_messageConsumer);
         };
 
-        Because of = () => channel.Dispose();
+        private Because _of = () => s_channel.Dispose();
 
-        It should_call_dipose_on_messaging_gateway = () => A.CallTo(() => messageConsumer.Dispose()).MustHaveHappened();
+        private It _should_call_dipose_on_messaging_gateway = () => A.CallTo(() => s_messageConsumer.Dispose()).MustHaveHappened();
     }
 }

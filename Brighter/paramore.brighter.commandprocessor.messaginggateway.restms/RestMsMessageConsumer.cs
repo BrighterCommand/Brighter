@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.restms
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 12-31-2014
 // ***********************************************************************
-// <copyright file="RestMsMessageConsumer.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -49,11 +51,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMsMessageConsumer : RestMSMessageGateway, IAmAMessageConsumer
     {
-        private readonly string queueName;
-        private readonly string routingKey;
-        Pipe pipe;
-        readonly Feed feed;
-        readonly Domain domain; 
+        private readonly string _queueName;
+        private readonly string _routingKey;
+        private Pipe _pipe;
+        private readonly Feed _feed;
+        private readonly Domain _domain;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMsMessageConsumer"/> class.
@@ -62,10 +64,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         public RestMsMessageConsumer(string queueName, string routingKey, ILog logger)
             : base(logger)
         {
-            this.queueName = queueName;
-            this.routingKey = routingKey;
-            feed = new Feed(this);
-            domain = new Domain(this); 
+            _queueName = queueName;
+            _routingKey = routingKey;
+            _feed = new Feed(this);
+            _domain = new Domain(this);
         }
 
 
@@ -88,9 +90,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         {
             try
             {
-                feed.EnsureFeedExists(domain.GetDomain());
-                pipe = new Pipe(this, feed);
-                pipe.EnsurePipeExists(queueName, routingKey, domain.GetDomain());
+                _feed.EnsureFeedExists(_domain.GetDomain());
+                _pipe = new Pipe(this, _feed);
+                _pipe.EnsurePipeExists(_queueName, _routingKey, _domain.GetDomain());
 
                 return ReadMessage();
             }
@@ -113,7 +115,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <exception cref="System.NotImplementedException"></exception>
         public void Acknowledge(Message message)
         {
-            var pipe = this.pipe.GetPipe();
+            var pipe = _pipe.GetPipe();
             DeleteMessage(pipe, message);
         }
 
@@ -128,9 +130,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         {
             try
             {
-                this.pipe.EnsurePipeExists(queueName, routingKey, domain.GetDomain());
-                var pipe = this.pipe.GetPipe();
-                return pipe.Messages != null ? pipe.Messages.Count(): 0;
+                _pipe.EnsurePipeExists(_queueName, _routingKey, _domain.GetDomain());
+                var pipe = _pipe.GetPipe();
+                return pipe.Messages != null ? pipe.Messages.Count() : 0;
             }
             catch (RestMSClientException rmse)
             {
@@ -153,7 +155,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         {
             try
             {
-                var pipe = this.pipe.GetPipe();
+                var pipe = _pipe.GetPipe();
                 if (pipe != null && pipe.Messages != null)
                 {
                     var message = pipe.Messages.FirstOrDefault();
@@ -163,7 +165,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                         {
                             SendDeleteMessage(message);
                         }
-                         pipe = this.pipe.GetPipe();   
+                        pipe = _pipe.GetPipe();
                     } while (pipe.Messages != null && pipe.Messages.Any());
                 }
             }
@@ -179,7 +181,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
         }
 
-		public void Requeue(Message message)
+        public void Requeue(Message message)
         {
         }
 
@@ -194,8 +196,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         }
 
 
-        void DeleteMessage(RestMSPipe pipe, Message message)
-            {
+        private void DeleteMessage(RestMSPipe pipe, Message message)
+        {
             if (pipe.Messages == null || !pipe.Messages.Any())
             {
                 return;
@@ -211,7 +213,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             SendDeleteMessage(matchingMessage);
         }
 
-        Message GetMessage(RestMSMessageLink messageUri)
+        private Message GetMessage(RestMSMessageLink messageUri)
         {
             if (messageUri == null)
             {
@@ -232,25 +234,24 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    Logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", pipe.PipeUri, exception.Message);
+                    Logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", _pipe.PipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
             }
         }
 
-        Message ReadMessage()
+        private Message ReadMessage()
         {
-            var pipe = this.pipe.GetPipe();
+            var pipe = _pipe.GetPipe();
             return GetMessage(pipe.Messages != null ? pipe.Messages.FirstOrDefault() : null);
         }
 
-        void SendDeleteMessage(RestMSMessageLink matchingMessage)
+        private void SendDeleteMessage(RestMSMessageLink matchingMessage)
         {
             var client = Client();
             var response = client.DeleteAsync(matchingMessage.Href).Result;
             response.EnsureSuccessStatusCode();
         }
     }
-
 }

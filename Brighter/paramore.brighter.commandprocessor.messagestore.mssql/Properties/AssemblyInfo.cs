@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -19,9 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
-
-
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -33,7 +35,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("Debug")]
 [assembly: AssemblyCompany("Francesco Pighi")]
 [assembly: AssemblyProduct("Paramore.Brighter.CommandProcessor.MessageStore.MsSql")]
-[assembly: AssemblyCopyright("Copyright ©  2014 Francesco Pighi")]
+[assembly: AssemblyCopyright("Copyright \u00A9  2014 Francesco Pighi")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 

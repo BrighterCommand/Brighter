@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using FakeItEasy;
 using Machine.Specifications;
@@ -36,124 +38,124 @@ namespace Tasks.Adapters.Tests
     [Subject(typeof(AddTaskCommandHandler))]
     public class When_adding_a_new_task_to_the_list
     {
-        private static AddTaskCommandHandler handler;
-        private static AddTaskCommand cmd;
-        private static ITasksDAO tasksDAO;
-        private static Task taskToBeAdded;
+        private static AddTaskCommandHandler s_handler;
+        private static AddTaskCommand s_cmd;
+        private static ITasksDAO s_tasksDAO;
+        private static Task s_taskToBeAdded;
         private const string TASK_NAME = "Test task";
         private const string TASK_DESCRIPTION = "Test that we store a task";
-        private static readonly DateTime NOW = DateTime.Now;
+        private static readonly DateTime s_NOW = DateTime.Now;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            tasksDAO = new TasksDAO();
-            tasksDAO.Clear();
+            s_tasksDAO = new TasksDAO();
+            s_tasksDAO.Clear();
 
-            cmd = new AddTaskCommand(TASK_NAME, TASK_DESCRIPTION, NOW);
+            s_cmd = new AddTaskCommand(TASK_NAME, TASK_DESCRIPTION, s_NOW);
 
-            handler = new AddTaskCommandHandler(tasksDAO, logger);                            
+            s_handler = new AddTaskCommandHandler(s_tasksDAO, logger);
         };
 
-        Because of = () =>
+        private Because _of = () =>
         {
-            handler.Handle(cmd);
-            taskToBeAdded = tasksDAO.FindById(cmd.TaskId);
+            s_handler.Handle(s_cmd);
+            s_taskToBeAdded = s_tasksDAO.FindById(s_cmd.TaskId);
         };
 
-        It should_have_the_matching_task_name = () => taskToBeAdded.TaskName.ShouldEqual(TASK_NAME);
-        It should_have_the_matching_task_description = () => taskToBeAdded.TaskDescription.ShouldEqual(TASK_DESCRIPTION);
-        It sould_have_the_matching_task_name = () => taskToBeAdded.DueDate.Value.ToShortDateString().ShouldEqual(NOW.ToShortDateString());
+        private It _should_have_the_matching_task_name = () => s_taskToBeAdded.TaskName.ShouldEqual(TASK_NAME);
+        private It _should_have_the_matching_task_description = () => s_taskToBeAdded.TaskDescription.ShouldEqual(TASK_DESCRIPTION);
+        private It _sould_have_the_matching_task_name = () => s_taskToBeAdded.DueDate.Value.ToShortDateString().ShouldEqual(s_NOW.ToShortDateString());
     }
 
     [Subject(typeof(EditTaskCommandHandler))]
     public class When_editing_an_existing_task
     {
-        private static EditTaskCommandHandler handler;
-        private static EditTaskCommand cmd;
-        private static ITasksDAO tasksDAO;
-        private static Task taskToBeEdited;
+        private static EditTaskCommandHandler s_handler;
+        private static EditTaskCommand s_cmd;
+        private static ITasksDAO s_tasksDAO;
+        private static Task s_taskToBeEdited;
         private const string NEW_TASK_NAME = "New Test Task";
         private const string NEW_TASK_DESCRIPTION = "New Test that we store a Task";
-        private static readonly DateTime NEW_TIME = DateTime.Now.AddDays(1);
+        private static readonly DateTime s_NEW_TIME = DateTime.Now.AddDays(1);
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            taskToBeEdited = new Task("My Task", "My Task Description", DateTime.Now);   
-            tasksDAO = new TasksDAO();
-            tasksDAO.Clear();
-            taskToBeEdited = tasksDAO.Add(taskToBeEdited);
+            s_taskToBeEdited = new Task("My Task", "My Task Description", DateTime.Now);
+            s_tasksDAO = new TasksDAO();
+            s_tasksDAO.Clear();
+            s_taskToBeEdited = s_tasksDAO.Add(s_taskToBeEdited);
 
-            cmd = new EditTaskCommand(taskToBeEdited.Id, NEW_TASK_NAME, NEW_TASK_DESCRIPTION, NEW_TIME);
+            s_cmd = new EditTaskCommand(s_taskToBeEdited.Id, NEW_TASK_NAME, NEW_TASK_DESCRIPTION, s_NEW_TIME);
 
-            handler = new EditTaskCommandHandler(tasksDAO, logger);
+            s_handler = new EditTaskCommandHandler(s_tasksDAO, logger);
         };
 
-        Because of = () =>
+        private Because _of = () =>
         {
-            handler.Handle(cmd);
-            taskToBeEdited = tasksDAO.FindById(cmd.TaskId);
+            s_handler.Handle(s_cmd);
+            s_taskToBeEdited = s_tasksDAO.FindById(s_cmd.TaskId);
         };
 
-        It should_update_the_task_with_the_new_task_name = () => taskToBeEdited.TaskName.ShouldEqual(NEW_TASK_NAME);
-        It should_update_the_task_with_the_new_task_description = () => taskToBeEdited.TaskDescription.ShouldEqual(NEW_TASK_DESCRIPTION);
-        It should_update_the_task_with_the_new_task_time = () => taskToBeEdited.DueDate.Value.ToShortDateString().ShouldEqual(NEW_TIME.ToShortDateString());
+        private It _should_update_the_task_with_the_new_task_name = () => s_taskToBeEdited.TaskName.ShouldEqual(NEW_TASK_NAME);
+        private It _should_update_the_task_with_the_new_task_description = () => s_taskToBeEdited.TaskDescription.ShouldEqual(NEW_TASK_DESCRIPTION);
+        private It _should_update_the_task_with_the_new_task_time = () => s_taskToBeEdited.DueDate.Value.ToShortDateString().ShouldEqual(s_NEW_TIME.ToShortDateString());
     }
 
     [Subject(typeof(CompleteTaskCommandHandler))]
     public class When_completing_an_existing_task
     {
-        private static CompleteTaskCommandHandler handler;
-        private static CompleteTaskCommand cmd;
-        private static ITasksDAO tasksDAO;
-        private static Task taskToBeCompleted;
-        private static readonly DateTime COMPLETION_DATE = DateTime.Now.AddDays(-1);
+        private static CompleteTaskCommandHandler s_handler;
+        private static CompleteTaskCommand s_cmd;
+        private static ITasksDAO s_tasksDAO;
+        private static Task s_taskToBeCompleted;
+        private static readonly DateTime s_COMPLETION_DATE = DateTime.Now.AddDays(-1);
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            taskToBeCompleted = new Task("My Task", "My Task Description", DateTime.Now);   
-            tasksDAO = new TasksDAO();
-            tasksDAO.Clear();
-            taskToBeCompleted = tasksDAO.Add(taskToBeCompleted);
+            s_taskToBeCompleted = new Task("My Task", "My Task Description", DateTime.Now);
+            s_tasksDAO = new TasksDAO();
+            s_tasksDAO.Clear();
+            s_taskToBeCompleted = s_tasksDAO.Add(s_taskToBeCompleted);
 
-            cmd = new CompleteTaskCommand(taskToBeCompleted.Id, COMPLETION_DATE);
+            s_cmd = new CompleteTaskCommand(s_taskToBeCompleted.Id, s_COMPLETION_DATE);
 
-            handler = new CompleteTaskCommandHandler(tasksDAO, logger);                                    
+            s_handler = new CompleteTaskCommandHandler(s_tasksDAO, logger);
         };
 
-        Because of = () =>
+        private Because _of = () =>
         {
-            handler.Handle(cmd);
-            taskToBeCompleted = tasksDAO.FindById(cmd.TaskId);
+            s_handler.Handle(s_cmd);
+            s_taskToBeCompleted = s_tasksDAO.FindById(s_cmd.TaskId);
         };
 
-        It should_update_the_tasks_completed_date = () => taskToBeCompleted.CompletionDate.Value.ToShortDateString().ShouldEqual(COMPLETION_DATE.ToShortDateString());
+        private It _should_update_the_tasks_completed_date = () => s_taskToBeCompleted.CompletionDate.Value.ToShortDateString().ShouldEqual(s_COMPLETION_DATE.ToShortDateString());
     }
 
     [Subject(typeof(CompleteTaskCommandHandler))]
     public class When_completing_a_missing_task
     {
-        private static CompleteTaskCommandHandler handler;
-        private static CompleteTaskCommand cmd;
-        private static ITasksDAO tasksDAO;
+        private static CompleteTaskCommandHandler s_handler;
+        private static CompleteTaskCommand s_cmd;
+        private static ITasksDAO s_tasksDAO;
         private const int TASK_ID = 1;
-        private static readonly DateTime COMPLETION_DATE = DateTime.Now.AddDays(-1);
-        private static Exception exception;
+        private static readonly DateTime s_COMPLETION_DATE = DateTime.Now.AddDays(-1);
+        private static Exception s_exception;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-            tasksDAO = new TasksDAO();
-            tasksDAO.Clear();
-            cmd = new CompleteTaskCommand(TASK_ID, COMPLETION_DATE);
+            s_tasksDAO = new TasksDAO();
+            s_tasksDAO.Clear();
+            s_cmd = new CompleteTaskCommand(TASK_ID, s_COMPLETION_DATE);
 
-            handler = new CompleteTaskCommandHandler(tasksDAO, logger);                                    
+            s_handler = new CompleteTaskCommandHandler(s_tasksDAO, logger);
         };
 
-        Because of = () => exception = Catch.Exception(() => handler.Handle(cmd));
+        private Because _of = () => s_exception = Catch.Exception(() => s_handler.Handle(s_cmd));
 
-        It should_fail = () => exception.ShouldBeAssignableTo<ArgumentOutOfRangeException>();
+        private It _should_fail = () => s_exception.ShouldBeAssignableTo<ArgumentOutOfRangeException>();
     }
 }

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.timeoutpolicy
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-01-2014
 // ***********************************************************************
-// <copyright file="TimeoutPolicyHandler.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -70,8 +72,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 --------------------------------------------------------------------------------------------------
  */
-#endregion
 
+#endregion
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -91,15 +93,15 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// The context holds a timeout cancellation token with this key, that can be used by handlers to cancel an operation
         /// and kill the thread which manages the timeout
         /// </summary>
-        public const string CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN = "TimeoutCancellationToken"; 
-        private int milliseconds;
+        public const string CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN = "TimeoutCancellationToken";
+        private int _milliseconds;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TimeoutPolicyHandler{TRequest}"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
         public TimeoutPolicyHandler(ILog logger) : base(logger)
-        {}
+        { }
 
         /// <summary>
         /// Initializes from attribute parameters.
@@ -107,7 +109,7 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// <param name="initializerList">The initializer list.</param>
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
-            milliseconds = (int) initializerList[0];
+            _milliseconds = (int)initializerList[0];
         }
 
         /// <summary>
@@ -134,8 +136,8 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
                         cancellationToken: ct,
                         creationOptions: TaskCreationOptions.PreferFairness,
                         scheduler: TaskScheduler.Current
-                    ), 
-                    millisecondsTimeout: milliseconds,
+                    ),
+                    millisecondsTimeout: _milliseconds,
                     cancellationTokenSource: cts
                 );
 
@@ -174,16 +176,16 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
             var timer = new Timer(state =>
                 {
                     // Recover your state information
-                    var myTcs = (TaskCompletionSource<TRequest>) state;
+                    var myTcs = (TaskCompletionSource<TRequest>)state;
 
                     //signal cancellation to tasks that have run out of time - its up to them to try and abort
                     cancellationTokenSource.Cancel();
 
                     // Fault our proxy with a TimeoutException
                     myTcs.TrySetException(new TimeoutException());
-                }, 
-                tcs, 
-                millisecondsTimeout, 
+                },
+                tcs,
+                millisecondsTimeout,
                 Timeout.Infinite
             );
 
@@ -191,7 +193,7 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
             task.ContinueWith((antecedent, state) =>
                 {
                     // Recover our state data
-                    var tuple = (Tuple<Timer, TaskCompletionSource<TRequest>>) state;
+                    var tuple = (Tuple<Timer, TaskCompletionSource<TRequest>>)state;
 
                     // Cancel the Timer
                     tuple.Item1.Dispose();
@@ -199,9 +201,9 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
                     // Marshal results to proxy
                     MarshalTaskResults(antecedent, tuple.Item2);
                 },
-                Tuple.Create(timer, tcs), 
-                CancellationToken.None, 
-                TaskContinuationOptions.ExecuteSynchronously, 
+                Tuple.Create(timer, tcs),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default
             );
 
@@ -219,12 +221,11 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
                     proxy.TrySetCanceled();
                     break;
                 case TaskStatus.RanToCompletion:
-                    proxy.TrySetResult(source.Result); 
+                    proxy.TrySetResult(source.Result);
                     break;
             }
         }
 
         #endregion
-
     }
 }

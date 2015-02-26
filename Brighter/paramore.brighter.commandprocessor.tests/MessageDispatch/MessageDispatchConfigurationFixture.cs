@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System.Collections.Generic;
 using System.Linq;
 using Machine.Specifications;
@@ -40,33 +42,33 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
     public class When_configuring_a_message_dispatcher
     {
-        static IEnumerable<ConnectionElement> connectionElements;
-        static IEnumerable<Connection> connections;
-        static ConnectionFactory connectionFactory;
+        private static IEnumerable<ConnectionElement> s_connectionElements;
+        private static IEnumerable<Connection> s_connections;
+        private static ConnectionFactory s_connectionFactory;
 
-        Establish configuration = () =>
+        private Establish _configuration = () =>
         {
             var configuration = ServiceActivatorConfigurationSection.GetConfiguration();
-            connectionElements = from ConnectionElement connectionElement in configuration.Connections select connectionElement;
-            connectionFactory = new ConnectionFactory(new InMemoryChannelFactory());
+            s_connectionElements = from ConnectionElement connectionElement in configuration.Connections select connectionElement;
+            s_connectionFactory = new ConnectionFactory(new InMemoryChannelFactory());
         };
 
-        Because of = () => connections = connectionFactory.Create(connectionElements);
+        private Because _of = () => s_connections = s_connectionFactory.Create(s_connectionElements);
 
-        It should_have_two_connections_in_the_list = () => connections.Count().ShouldEqual(2);
-        It should_have_a_foo_connection = () => GetConnection("foo").ShouldNotBeNull();
-        It should_have_a_foo_connection_with_name_mary = () => GetConnection("foo").Channel.Name.Value.ShouldEqual("mary");
-        It should_have_a_bar_connection_with_name_alice = () => GetConnection("bar").Channel.Name.Value.ShouldEqual("alice");
-        It should_have_a_foo_connection_with_my_event_type = () => GetConnection("foo").DataType.FullName.ShouldEqual("paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent");
-        It should_have_a_bar_connection_with_my_event_type = () => GetConnection("bar").DataType.FullName.ShouldEqual("paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent");
-        It should_have_a_foo_connection_with_one_performer = () => GetConnection("foo").NoOfPeformers.ShouldEqual(1);
-        It should_have_a_bar_connection_with_two_performers = () => GetConnection("bar").NoOfPeformers.ShouldEqual(2);
-        It should_have_a_foo_connection_with_timeoutInMillisecondsOf_200 = () => GetConnection("foo").TimeoutInMiliseconds.ShouldEqual(200);
-        It should_have_a_bar_connection_with_timeoutInMillisecondsOf_100 = () => GetConnection("bar").TimeoutInMiliseconds.ShouldEqual(100);
+        private It _should_have_two_connections_in_the_list = () => s_connections.Count().ShouldEqual(2);
+        private It _should_have_a_foo_connection = () => GetConnection("foo").ShouldNotBeNull();
+        private It _should_have_a_foo_connection_with_name_mary = () => GetConnection("foo").Channel.Name.Value.ShouldEqual("mary");
+        private It _should_have_a_bar_connection_with_name_alice = () => GetConnection("bar").Channel.Name.Value.ShouldEqual("alice");
+        private It _should_have_a_foo_connection_with_my_event_type = () => GetConnection("foo").DataType.FullName.ShouldEqual("paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent");
+        private It _should_have_a_bar_connection_with_my_event_type = () => GetConnection("bar").DataType.FullName.ShouldEqual("paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent");
+        private It _should_have_a_foo_connection_with_one_performer = () => GetConnection("foo").NoOfPeformers.ShouldEqual(1);
+        private It _should_have_a_bar_connection_with_two_performers = () => GetConnection("bar").NoOfPeformers.ShouldEqual(2);
+        private It _should_have_a_foo_connection_with_timeoutInMillisecondsOf_200 = () => GetConnection("foo").TimeoutInMiliseconds.ShouldEqual(200);
+        private It _should_have_a_bar_connection_with_timeoutInMillisecondsOf_100 = () => GetConnection("bar").TimeoutInMiliseconds.ShouldEqual(100);
 
-        static Connection GetConnection(string name)
+        private static Connection GetConnection(string name)
         {
-            return connections.SingleOrDefault(connection => connection.Name == name);
+            return s_connections.SingleOrDefault(connection => connection.Name == name);
         }
     }
 }

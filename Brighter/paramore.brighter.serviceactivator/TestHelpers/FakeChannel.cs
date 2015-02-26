@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System.Collections.Concurrent;
 using paramore.brighter.commandprocessor;
 
@@ -29,53 +31,53 @@ namespace paramore.brighter.serviceactivator.TestHelpers
 {
     public class FakeChannel : IAmAnInputChannel, IAmAnOutputChannel
     {
-        private readonly ConcurrentQueue<Message> messageQueue = new ConcurrentQueue<Message>();
-        private readonly ChannelName channelName;
+        private readonly ConcurrentQueue<Message> _messageQueue = new ConcurrentQueue<Message>();
+        private readonly ChannelName _channelName;
         public bool DisposeHappened { get; set; }
 
         public FakeChannel(string channelName = "", string routingKey = "")
         {
-            this.channelName = new ChannelName(channelName);
+            _channelName = new ChannelName(channelName);
         }
 
         public virtual int Length
         {
-            get { return messageQueue.Count; }
+            get { return _messageQueue.Count; }
         }
 
         public virtual ChannelName Name
         {
-            get { return channelName; }
+            get { return _channelName; }
         }
 
         public virtual void Acknowledge(Message message)
-        {}
+        { }
 
         public virtual Message Receive(int timeoutinMilliseconds)
         {
             Message message;
-            if (messageQueue.TryDequeue(out message))
+            if (_messageQueue.TryDequeue(out message))
                 return message;
             else
                 return new Message();
         }
 
         public virtual void Reject(Message message)
-        {}
+        { }
 
         public virtual void Stop()
         {
-            messageQueue.Enqueue(MessageFactory.CreateQuitMessage());
+            _messageQueue.Enqueue(MessageFactory.CreateQuitMessage());
         }
 
         public virtual void Requeue(Message message)
         {
-            messageQueue.Enqueue(message);
+            _messageQueue.Enqueue(message);
         }
 
         public virtual void Send(Message message)
         {
-            messageQueue.Enqueue(message);
+            _messageQueue.Enqueue(message);
         }
 
         public virtual void Dispose()

@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-01-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-29-2014
 // ***********************************************************************
-// <copyright file="InputChannel.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -34,7 +36,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Collections.Concurrent;
 
@@ -47,10 +48,10 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class InputChannel : IAmAnInputChannel
     {
-        private readonly string queueName;
-        private readonly string routingKey;
+        private readonly string _queueName;
+        private readonly string _routingKey;
         private readonly IAmAMessageConsumer _messageConsumer;
-        private readonly ConcurrentQueue<Message> queue = new ConcurrentQueue<Message>();
+        private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannel"/> class.
@@ -59,16 +60,16 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageConsumer">The messageConsumer.</param>
         public InputChannel(string queueName, string routingKey, IAmAMessageConsumer messageConsumer)
         {
-            this.queueName = queueName;
-            this.routingKey = routingKey;
-            this._messageConsumer = messageConsumer;
+            _queueName = queueName;
+            _routingKey = routingKey;
+            _messageConsumer = messageConsumer;
         }
 
         /// <summary>
         /// Gets the name.
         /// </summary>
         /// <value>The name.</value>
-        public ChannelName Name {get { return new ChannelName(queueName); } }
+        public ChannelName Name { get { return new ChannelName(_queueName); } }
 
         /// <summary>
         /// Receives the specified timeout in milliseconds.
@@ -78,7 +79,7 @@ namespace paramore.brighter.commandprocessor
         public Message Receive(int timeoutinMilliseconds)
         {
             Message message;
-            if (!queue.TryDequeue(out message))
+            if (!_queue.TryDequeue(out message))
             {
                 message = _messageConsumer.Receive(timeoutinMilliseconds);
             }
@@ -108,7 +109,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         public void Stop()
         {
-            queue.Enqueue(MessageFactory.CreateQuitMessage());
+            _queue.Enqueue(MessageFactory.CreateQuitMessage());
         }
 
         /// <summary>
@@ -125,9 +126,10 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <value>The length.</value>
         /// <exception cref="System.NotImplementedException"></exception>
-        public int Length {
-            get { return queue.Count; }
-            set { throw new NotImplementedException(); } 
+        public int Length
+        {
+            get { return _queue.Count; }
+            set { throw new NotImplementedException(); }
         }
 
         /// <summary>
@@ -144,7 +146,7 @@ namespace paramore.brighter.commandprocessor
             Dispose(false);
         }
 
-        void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             _messageConsumer.Dispose();
         }

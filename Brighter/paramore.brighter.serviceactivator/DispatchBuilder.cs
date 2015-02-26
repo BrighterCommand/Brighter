@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.serviceactivator
 // Author           : ian
 // Created          : 07-01-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-10-2014
 // ***********************************************************************
-// <copyright file="DispatchBuilder.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections.Generic;
 using System.Linq;
 using paramore.brighter.commandprocessor;
@@ -50,12 +52,12 @@ namespace paramore.brighter.serviceactivator
     /// </summary>
     public class DispatchBuilder : INeedALogger, INeedACommandProcessor, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfConnections, IAmADispatchBuilder
     {
-        private IAmAChannelFactory channelFactory;
-        private IEnumerable<Connection> connections;
-        private ILog logger;
-        private CommandProcessor commandProcessor;
-        private IAmAMessageMapperRegistry messageMapperRegistry;
-        private DispatchBuilder() {}
+        private IAmAChannelFactory _channelFactory;
+        private IEnumerable<Connection> _connections;
+        private ILog _logger;
+        private CommandProcessor _commandProcessor;
+        private IAmAMessageMapperRegistry _messageMapperRegistry;
+        private DispatchBuilder() { }
 
 
         /// <summary>
@@ -75,7 +77,7 @@ namespace paramore.brighter.serviceactivator
         /// <returns>INeedACommandProcessor.</returns>
         public INeedACommandProcessor Logger(ILog logger)
         {
-            this.logger = logger;
+            _logger = logger;
             return this;
         }
 
@@ -86,7 +88,7 @@ namespace paramore.brighter.serviceactivator
         /// <returns>INeedAMessageMapper.</returns>
         public INeedAMessageMapper CommandProcessor(CommandProcessor theCommandProcessor)
         {
-            this.commandProcessor = theCommandProcessor;
+            _commandProcessor = theCommandProcessor;
             return this;
         }
 
@@ -97,7 +99,7 @@ namespace paramore.brighter.serviceactivator
         /// <returns>INeedAChannelFactory.</returns>
         public INeedAChannelFactory MessageMappers(IAmAMessageMapperRegistry theMessageMapperRegistry)
         {
-            this.messageMapperRegistry = theMessageMapperRegistry;
+            _messageMapperRegistry = theMessageMapperRegistry;
             return this;
         }
 
@@ -110,7 +112,7 @@ namespace paramore.brighter.serviceactivator
         /// <returns>INeedAListOfConnections.</returns>
         public INeedAListOfConnections ChannelFactory(IAmAChannelFactory channelFactory)
         {
-            this.channelFactory = channelFactory;
+            _channelFactory = channelFactory;
             return this;
         }
 
@@ -121,7 +123,7 @@ namespace paramore.brighter.serviceactivator
         /// <returns>IAmADispatchBuilder.</returns>
         public IAmADispatchBuilder Connections(IEnumerable<Connection> connections)
         {
-            this.connections = connections;
+            _connections = connections;
             return this;
         }
 
@@ -129,7 +131,7 @@ namespace paramore.brighter.serviceactivator
         /// Obtains a list of connections i.e. mappings of channels to commands or events via the configuration file for the application
         /// </summary>
         /// <returns>IAmADispatchBuilder.</returns>
-        public IAmADispatchBuilder  ConnectionsFromConfiguration()
+        public IAmADispatchBuilder ConnectionsFromConfiguration()
         {
             var configuration = ServiceActivatorConfigurationSection.GetConfiguration();
             var connectionElements = from ConnectionElement connection in configuration.Connections select connection;
@@ -143,7 +145,7 @@ namespace paramore.brighter.serviceactivator
         /// <returns>IAmADispatchBuilder.</returns>
         public IAmADispatchBuilder ConnectionsFromElements(IEnumerable<ConnectionElement> connectionElements)
         {
-            var connectionFactory = new ConnectionFactory(channelFactory);
+            var connectionFactory = new ConnectionFactory(_channelFactory);
             return Connections(connectionFactory.Create(connectionElements));
         }
 
@@ -154,9 +156,8 @@ namespace paramore.brighter.serviceactivator
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
-            return new Dispatcher(commandProcessor, messageMapperRegistry, connections, logger);
+            return new Dispatcher(_commandProcessor, _messageMapperRegistry, _connections, _logger);
         }
-
     }
 
     #region Progressive Interfaces
@@ -222,18 +223,18 @@ namespace paramore.brighter.serviceactivator
         /// A list of connections i.e. mappings of channels to commands or events
         /// </summary>
         /// <returns>IAmADispatchBuilder.</returns>
-       IAmADispatchBuilder ConnectionsFromConfiguration();
-       /// <summary>
-       /// Initialize the Dispatcher from a list of connection elements       
-       /// </summary>
-       /// <param name="connections">The connections.</param>
-       /// <returns>IAmADispatchBuilder.</returns>
-       IAmADispatchBuilder Connections(IEnumerable<Connection> connections);
-       /// <summary>
-       /// Obtains a list of connections i.e. mappings of channels to commands or events via the configuration file for the application
-       /// </summary>
-       /// <param name="connectionElements">The connection elements.</param>
-       /// <returns>IAmADispatchBuilder.</returns>
+        IAmADispatchBuilder ConnectionsFromConfiguration();
+        /// <summary>
+        /// Initialize the Dispatcher from a list of connection elements       
+        /// </summary>
+        /// <param name="connections">The connections.</param>
+        /// <returns>IAmADispatchBuilder.</returns>
+        IAmADispatchBuilder Connections(IEnumerable<Connection> connections);
+        /// <summary>
+        /// Obtains a list of connections i.e. mappings of channels to commands or events via the configuration file for the application
+        /// </summary>
+        /// <param name="connectionElements">The connection elements.</param>
+        /// <returns>IAmADispatchBuilder.</returns>
         IAmADispatchBuilder ConnectionsFromElements(IEnumerable<ConnectionElement> connectionElements);
     }
 

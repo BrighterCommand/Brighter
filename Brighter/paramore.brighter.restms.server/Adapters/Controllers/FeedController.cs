@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.server
 // Author           : ian
 // Created          : 12-18-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 12-31-2014
 // ***********************************************************************
-// <copyright file="FeedController.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Specialized;
 using System.Net;
@@ -60,9 +62,9 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
     [Authorize]
     public class FeedController : ApiController
     {
-        readonly IAmACommandProcessor commandProcessor;
-        readonly IAmARepository<Feed> feedRepository;
-        readonly ICachingHandler cachingHandler;
+        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly IAmARepository<Feed> _feedRepository;
+        private readonly ICachingHandler _cachingHandler;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FeedController"/> class.
@@ -72,9 +74,9 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         /// <param name="cachingHandler">The caching handler, used to invalidate related resources</param>
         public FeedController(IAmACommandProcessor commandProcessor, IAmARepository<Feed> feedRepository, ICachingHandler cachingHandler)
         {
-            this.commandProcessor = commandProcessor;
-            this.feedRepository = feedRepository;
-            this.cachingHandler = cachingHandler;
+            _commandProcessor = commandProcessor;
+            _feedRepository = feedRepository;
+            _cachingHandler = cachingHandler;
         }
 
         /// <summary>
@@ -86,7 +88,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [FeedDoesNotExistExceptionFilter]
         public RestMSFeed Get(string name)
         {
-            var feedRetriever = new FeedRetriever(feedRepository);
+            var feedRetriever = new FeedRetriever(_feedRepository);
             return feedRetriever.Retrieve(new Name(name));
         }
 
@@ -101,7 +103,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         public HttpResponseMessage Delete(string name)
         {
             var deleteFeedCommand = new DeleteFeedCommand(feedName: name);
-            commandProcessor.Send(deleteFeedCommand);
+            _commandProcessor.Send(deleteFeedCommand);
 
             return Request.CreateResponse(HttpStatusCode.OK);
         }
@@ -124,13 +126,13 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
                 GetAttachmentFromMessage(messageSpecification.Content)
                 );
 
-            commandProcessor.Send(addMessageToFeedCommand);
+            _commandProcessor.Send(addMessageToFeedCommand);
 
-            var item =new RestMSMessagePosted() {Count = addMessageToFeedCommand.MatchingJoins};
+            var item = new RestMSMessagePosted() { Count = addMessageToFeedCommand.MatchingJoins };
             return Request.CreateResponse<RestMSMessagePosted>(HttpStatusCode.OK, item);
         }
 
-        Attachment GetAttachmentFromMessage(RestMSMessageContent content)
+        private Attachment GetAttachmentFromMessage(RestMSMessageContent content)
         {
             return Attachment.CreateAttachmentFromString(
                 content.Value,
@@ -139,7 +141,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
                 content.Type);
         }
 
-        NameValueCollection GetHeadersFromMessage(RestMSMessage messageSpecification)
+        private NameValueCollection GetHeadersFromMessage(RestMSMessage messageSpecification)
         {
             var headers = new NameValueCollection();
             if (messageSpecification.Headers != null)

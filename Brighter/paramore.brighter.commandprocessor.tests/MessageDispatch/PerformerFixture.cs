@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Threading.Tasks;
 using Machine.Specifications;
@@ -38,33 +40,33 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 {
     public class When_running_a_message_pump_on_a_thread_should_be_able_to_stop
     {
-        static Performer performer;
-        private static SpyCommandProcessor commandProcessor;
-        private static FakeChannel channel;
-        private static Task performerTask;
+        private static Performer s_performer;
+        private static SpyCommandProcessor s_commandProcessor;
+        private static FakeChannel s_channel;
+        private static Task s_performerTask;
 
-        private Establish context = () =>
+        private Establish _context = () =>
         {
-            commandProcessor = new SpyCommandProcessor();
-            channel = new FakeChannel();
+            s_commandProcessor = new SpyCommandProcessor();
+            s_channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            var messagePump = new MessagePump<MyEvent>(commandProcessor, mapper);
-            messagePump.Channel = channel;
+            var messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper);
+            messagePump.Channel = s_channel;
             messagePump.TimeoutInMilliseconds = 5000;
 
             var @event = new MyEvent();
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
-            channel.Send(message);
+            s_channel.Send(message);
 
-            performer = new Performer(channel, messagePump);
-            performerTask = performer.Run();
-            performer.Stop();
+            s_performer = new Performer(s_channel, messagePump);
+            s_performerTask = s_performer.Run();
+            s_performer.Stop();
         };
 
-        Because of = () => performerTask.Wait() ;
-        It should_terminate_successfully = () => performerTask.IsCompleted.ShouldBeTrue();
-        It should_not_have_errored = () => performerTask.IsFaulted.ShouldBeFalse();
-        It should_not_show_as_cancelled = () => performerTask.IsCanceled.ShouldBeFalse();
-        It should_have_consumed_the_messages_in_the_channel = () => channel.Length.ShouldEqual(0);
+        private Because _of = () => s_performerTask.Wait();
+        private It _should_terminate_successfully = () => s_performerTask.IsCompleted.ShouldBeTrue();
+        private It _should_not_have_errored = () => s_performerTask.IsFaulted.ShouldBeFalse();
+        private It _should_not_show_as_cancelled = () => s_performerTask.IsCanceled.ShouldBeFalse();
+        private It _should_have_consumed_the_messages_in_the_channel = () => s_channel.Length.ShouldEqual(0);
     }
 }

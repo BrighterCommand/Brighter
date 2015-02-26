@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using FakeItEasy;
 using FluentAssertions;
@@ -36,23 +39,23 @@ using paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles;
 
 namespace paramore.commandprocessor.tests.ExceptionPolicy
 {
-   [Subject("Basic policy on a handler")]
+    [Subject("Basic policy on a handler")]
     public class When_sending_a_command_to_the_processor_with_a_retry_policy_check
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
-       static int retryCount;
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        private static int s_retryCount;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyFailsWithDivideByZeroHandler >();
+            registry.Register<MyCommand, MyFailsWithDivideByZeroHandler>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>().AsSingleton();
             container.Register<ILog>(logger);
 
@@ -65,42 +68,41 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
                     1.Seconds(),
                     2.Seconds(),
                     3.Seconds()
-                }, (exception, timeSpan) => 
+                }, (exception, timeSpan) =>
                 {
-                    retryCount++;
+                    s_retryCount++;
                 });
             policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
             MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
-
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
         };
 
-       //We have to catch the final exception that bubbles out after retry
-        Because of = () => Catch.Exception(() => commandProcessor.Send(myCommand));
+        //We have to catch the final exception that bubbles out after retry
+        private Because _of = () => Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
 
-       It should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.Shouldreceive(myCommand).ShouldBeTrue();
-       It should_retry_three_times = () => retryCount.ShouldEqual(3);
+        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.Shouldreceive(s_myCommand).ShouldBeTrue();
+        private It _should_retry_three_times = () => s_retryCount.ShouldEqual(3);
     }
 
     [Subject("Basic policy on a handler")]
     public class When_sending_a_command_to_the_processor_passes_policy_check
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
-        static int retryCount;
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        private static int s_retryCount;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyDoesNotFailPolicyHandler >();
+            registry.Register<MyCommand, MyDoesNotFailPolicyHandler>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler >("MyDoesNotFailPolicyHandler");
+            container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler>("MyDoesNotFailPolicyHandler");
             container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>("MyExceptionPolicyHandler");
             container.Register<ILog>(logger);
 
@@ -113,44 +115,43 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
                     1.Seconds(),
                     2.Seconds(),
                     3.Seconds()
-                }, (exception, timeSpan) => 
+                }, (exception, timeSpan) =>
                 {
-                    retryCount++;
+                    s_retryCount++;
                 });
             policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
             MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
-
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
         };
 
-       //We have to catch the final exception that bubbles out after retry
-        Because of = () => commandProcessor.Send(myCommand);
+        //We have to catch the final exception that bubbles out after retry
+        private Because _of = () => s_commandProcessor.Send(s_myCommand);
 
-       It should_send_the_command_to_the_command_handler = () => MyDoesNotFailPolicyHandler .Shouldreceive(myCommand).ShouldBeTrue();
-       It should_not_retry = () => retryCount.ShouldEqual(0);
+        private It _should_send_the_command_to_the_command_handler = () => MyDoesNotFailPolicyHandler.Shouldreceive(s_myCommand).ShouldBeTrue();
+        private It _should_not_retry = () => s_retryCount.ShouldEqual(0);
     }
 
     [Subject("Basic policy on a handler")]
     public class When_sending_a_command_to_the_processor_with_a_circuit_breaker
     {
-        static CommandProcessor commandProcessor;
-        static readonly MyCommand myCommand = new MyCommand();
-        static Exception thirdException;
-        static Exception firstException;
-        static Exception secondException;
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        private static Exception s_thirdException;
+        private static Exception s_firstException;
+        private static Exception s_secondException;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyFailsWithDivideByZeroHandler >();
+            registry.Register<MyCommand, MyFailsWithDivideByZeroHandler>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler >().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>().AsSingleton();
             container.Register<ILog>(logger);
 
@@ -164,23 +165,22 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
 
             MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
-            commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
-
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
         };
 
-       //We have to catch the final exception that bubbles out after retry
-        Because of = () =>
+        //We have to catch the final exception that bubbles out after retry
+        private Because _of = () =>
             {
                 //First two should be caught, and increment the count
-                firstException = Catch.Exception(() => commandProcessor.Send(myCommand));
-                secondException = Catch.Exception(() => commandProcessor.Send(myCommand));
+                s_firstException = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
+                s_secondException = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
                 //this one should tell us that the circuit is broken
-                thirdException = Catch.Exception(() => commandProcessor.Send(myCommand));
+                s_thirdException = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
             };
 
-       It should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.Shouldreceive(myCommand).ShouldBeTrue();
-       It should_bubble_up_the_first_exception = () => firstException.ShouldBeOfExactType<DivideByZeroException>();
-       It should_bubble_up_the_second_exception = () => secondException.ShouldBeOfExactType<DivideByZeroException>(); 
-       It should_break_the_circuit_after_two_fails = () => thirdException.ShouldBeOfExactType<BrokenCircuitException>();
+        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.Shouldreceive(s_myCommand).ShouldBeTrue();
+        private It _should_bubble_up_the_first_exception = () => s_firstException.ShouldBeOfExactType<DivideByZeroException>();
+        private It _should_bubble_up_the_second_exception = () => s_secondException.ShouldBeOfExactType<DivideByZeroException>();
+        private It _should_break_the_circuit_after_two_fails = () => s_thirdException.ShouldBeOfExactType<BrokenCircuitException>();
     }
 }

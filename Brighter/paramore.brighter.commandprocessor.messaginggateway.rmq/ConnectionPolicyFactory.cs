@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 
 using paramore.brighter.commandprocessor.Logging;
@@ -33,11 +35,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     public class ConnectionPolicyFactory
     {
-        private readonly ILog logger;
+        private readonly ILog _logger;
 
         public ConnectionPolicyFactory(ILog logger)
         {
-            this.logger = logger;
+            _logger = logger;
 
             var configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
             int retries = configuration.AMPQUri.ConnectionRetryCount;
@@ -71,7 +73,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                                 configuration.AMPQUri.GetSantizedUri());
                             throw exception;
                         }
-
                     });
 
             CircuitBreakerPolicy = Policy.Handle<BrokerUnreachableException>().CircuitBreaker(1, TimeSpan.FromMilliseconds(circuitBreakerTimeout));

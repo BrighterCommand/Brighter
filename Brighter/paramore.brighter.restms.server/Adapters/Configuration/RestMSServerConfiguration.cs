@@ -1,9 +1,12 @@
-﻿using System;
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System;
 using System.Configuration;
 
 namespace paramore.brighter.restms.server.Adapters.Configuration
 {
-     public class RestMSServerConfiguration: ConfigurationSection
+    public class RestMSServerConfiguration : ConfigurationSection
     {
         [ConfigurationProperty("address")]
         public RestMSUriSpecification Address
@@ -12,12 +15,12 @@ namespace paramore.brighter.restms.server.Adapters.Configuration
             set { this["address"] = value; }
         }
 
-         [ConfigurationProperty("admin")]
-         public RestMSAdminSpecification Admin
-         {
-             get { return this["admin"] as RestMSAdminSpecification; }
-             set { this["admin"] = value; }
-         }
+        [ConfigurationProperty("admin")]
+        public RestMSAdminSpecification Admin
+        {
+            get { return this["admin"] as RestMSAdminSpecification; }
+            set { this["admin"] = value; }
+        }
 
         public static RestMSServerConfiguration GetConfiguration()
         {
@@ -36,10 +39,9 @@ namespace paramore.brighter.restms.server.Adapters.Configuration
         [ConfigurationProperty("uri", DefaultValue = "http://localhost:3416/", IsRequired = true)]
         public Uri Uri
         {
-            get { return (Uri) this["uri"]; }
+            get { return (Uri)this["uri"]; }
             set { this["uri"] = value; }
         }
-
     }
     public class RestMSAdminSpecification : ConfigurationElement
     {

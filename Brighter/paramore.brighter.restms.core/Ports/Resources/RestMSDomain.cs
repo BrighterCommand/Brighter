@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 09-27-2014
@@ -33,8 +36,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -48,7 +51,6 @@ namespace paramore.brighter.restms.core.Ports.Resources
     [DataContract(Name = "domain"), XmlRoot(ElementName = "domain", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSDomain
     {
-
         /// <summary>
         /// Gets or sets the name.
         /// </summary>
@@ -66,7 +68,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// </summary>
         /// <value>The profile.</value>
         [DataMember(Name = "profile"), XmlElement(ElementName = "profile")]
-        public RestMSProfile Profile {get; set;}
+        public RestMSProfile Profile { get; set; }
 
         /// <summary>
         /// Gets or sets the href.

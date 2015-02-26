@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 09-26-2014
 // ***********************************************************************
-// <copyright file="Profile.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 
 namespace paramore.brighter.restms.core.Model
@@ -83,7 +85,7 @@ namespace paramore.brighter.restms.core.Model
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((Profile) obj);
+            return Equals((Profile)obj);
         }
 
         /// <summary>
@@ -94,7 +96,7 @@ namespace paramore.brighter.restms.core.Model
         {
             unchecked
             {
-                return ((Href != null ? Href.GetHashCode() : 0)*397) ^ (Name != null ? Name.GetHashCode() : 0);
+                return ((Href != null ? Href.GetHashCode() : 0) * 397) ^ (Name != null ? Name.GetHashCode() : 0);
             }
         }
 

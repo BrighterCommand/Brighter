@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Threading.Tasks;
 
@@ -37,133 +39,133 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 {
     public class When_reading_a_message_from_a_channel_pump_out_to_command_processor
     {
-        static IAmAMessagePump messagePump;
-        private static FakeChannel channel;
-        static SpyCommandProcessor commandProcessor;
-        static MyEvent @event;
+        private static IAmAMessagePump s_messagePump;
+        private static FakeChannel s_channel;
+        private static SpyCommandProcessor s_commandProcessor;
+        private static MyEvent s_event;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            commandProcessor = new SpyCommandProcessor();
-            channel = new FakeChannel();
+            s_commandProcessor = new SpyCommandProcessor();
+            s_channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) {Channel = channel, TimeoutInMilliseconds = 5000};
+            s_messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000 };
 
-            @event = new MyEvent();
+            s_event = new MyEvent();
 
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
-            channel.Send(message);
+            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
+            s_channel.Send(message);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            channel.Send(quitMessage);
+            s_channel.Send(quitMessage);
         };
 
-        Because of = () => messagePump.Run();
+        private Because _of = () => s_messagePump.Run();
 
-        It should_send_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
-        It should_convert_the_message_into_an_event = () => ((MyEvent) commandProcessor.Request).ShouldEqual(@event);
-        It should_dispose_the_input_channel = () => channel.DisposeHappened.ShouldBeTrue();
+        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.PublishHappened.ShouldBeTrue();
+        private It _should_convert_the_message_into_an_event = () => ((MyEvent)s_commandProcessor.Request).ShouldEqual(s_event);
+        private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
     }
 
     public class When_a_requeue_exception_is_thrown
     {
-        static IAmAMessagePump messagePump;
-        private static FakeChannel channel;
-        static SpyCommandProcessor commandProcessor;
-        static MyEvent @event;
+        private static IAmAMessagePump s_messagePump;
+        private static FakeChannel s_channel;
+        private static SpyCommandProcessor s_commandProcessor;
+        private static MyEvent s_event;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            commandProcessor = new SpyRequeueCommandProcessor();
-            channel = new FakeChannel();
+            s_commandProcessor = new SpyRequeueCommandProcessor();
+            s_channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = -1};
+            s_messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
 
-            @event = new MyEvent();
+            s_event = new MyEvent();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(@event)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
-            channel.Send(message1);
-            channel.Send(message2);
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_event)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
+            s_channel.Send(message1);
+            s_channel.Send(message2);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            channel.Send(quitMessage);
+            s_channel.Send(quitMessage);
         };
 
-        Because of = () => messagePump.Run();
+        private Because _of = () => s_messagePump.Run();
 
-        It should_send_the_message_via_the_command_processor = () => commandProcessor.SendHappened.ShouldBeTrue();
-        It should_publish_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
-        It should_requeue_the_messages = () => channel.Length.ShouldEqual(2);
-        It should_dispose_the_input_channel = () => channel.DisposeHappened.ShouldBeTrue();
+        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.SendHappened.ShouldBeTrue();
+        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.PublishHappened.ShouldBeTrue();
+        private It _should_requeue_the_messages = () => s_channel.Length.ShouldEqual(2);
+        private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
     }
 
     public class When_a_channel_failure_exception_is_thrown_should_retry_until_connection_re_established
     {
-        static IAmAMessagePump messagePump;
-        private static FailingChannel channel;
-        static SpyCommandProcessor commandProcessor;
-        static MyEvent @event;
+        private static IAmAMessagePump s_messagePump;
+        private static FailingChannel s_channel;
+        private static SpyCommandProcessor s_commandProcessor;
+        private static MyEvent s_event;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            commandProcessor = new SpyCommandProcessor();
-            channel = new FailingChannel {NumberOfRetries = 4};
+            s_commandProcessor = new SpyCommandProcessor();
+            s_channel = new FailingChannel { NumberOfRetries = 4 };
             var mapper = new MyEventMessageMapper();
-            messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = -1};
+            s_messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
 
-            @event = new MyEvent();
+            s_event = new MyEvent();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(@event)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
-            channel.Send(message1);
-            channel.Send(message2);
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_event)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
+            s_channel.Send(message1);
+            s_channel.Send(message2);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            channel.Send(quitMessage);
+            s_channel.Send(quitMessage);
         };
 
-        Because of = () => messagePump.Run();
+        private Because _of = () => s_messagePump.Run();
 
-        It should_send_the_message_via_the_command_processor = () => commandProcessor.SendHappened.ShouldBeTrue();
-        It should_publish_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
+        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.SendHappened.ShouldBeTrue();
+        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.PublishHappened.ShouldBeTrue();
     }
 
     public class When_a_requeue_count_threshold_has_been_reached
     {
-        static IAmAMessagePump messagePump;
-        private static FakeChannel channel;
-        static SpyRequeueCommandProcessor commandProcessor;
-        static MyEvent @event;
+        private static IAmAMessagePump s_messagePump;
+        private static FakeChannel s_channel;
+        private static SpyRequeueCommandProcessor s_commandProcessor;
+        private static MyEvent s_event;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
-            commandProcessor = new SpyRequeueCommandProcessor();
-            channel = new FakeChannel();
+            s_commandProcessor = new SpyRequeueCommandProcessor();
+            s_channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
+            s_messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
 
-            @event = new MyEvent();
+            s_event = new MyEvent();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(@event)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
-            channel.Send(message1);
-            channel.Send(message2);
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_event)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
+            s_channel.Send(message1);
+            s_channel.Send(message2);
         };
 
-        Because of = () =>
+        private Because _of = () =>
         {
-            var task = Task.Factory.StartNew(() => messagePump.Run(), TaskCreationOptions.LongRunning);
+            var task = Task.Factory.StartNew(() => s_messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(1000).Wait();
 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            channel.Send(quitMessage);
+            s_channel.Send(quitMessage);
 
             Task.WaitAll(new[] { task });
         };
 
-        It should_send_the_message_via_the_command_processor = () => commandProcessor.SendHappened.ShouldBeTrue();
-        It should_have_been_handled_3_times_via_send = () => commandProcessor.SendCount.ShouldEqual(3);
-        It should_publish_the_message_via_the_command_processor = () => commandProcessor.PublishHappened.ShouldBeTrue();
-        It should_have_been_handled_3_times_via_publish = () => commandProcessor.PublishCount.ShouldEqual(3);
-        It should_requeue_the_messages = () => channel.Length.ShouldEqual(0);
-        It should_dispose_the_input_channel = () => channel.DisposeHappened.ShouldBeTrue();
+        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.SendHappened.ShouldBeTrue();
+        private It _should_have_been_handled_3_times_via_send = () => s_commandProcessor.SendCount.ShouldEqual(3);
+        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.PublishHappened.ShouldBeTrue();
+        private It _should_have_been_handled_3_times_via_publish = () => s_commandProcessor.PublishCount.ShouldEqual(3);
+        private It _should_requeue_the_messages = () => s_channel.Length.ShouldEqual(0);
+        private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
     }
 }

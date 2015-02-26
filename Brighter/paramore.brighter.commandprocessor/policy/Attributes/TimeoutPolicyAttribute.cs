@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.timeoutpolicy
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-01-2014
 // ***********************************************************************
-// <copyright file="TimeoutPolicyAttribute.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using paramore.brighter.commandprocessor.policy.Handlers;
 
@@ -47,7 +49,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
     /// </summary>
     public class TimeoutPolicyAttribute : RequestHandlerAttribute
     {
-        private readonly int milliseconds;
+        private readonly int _milliseconds;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TimeoutPolicyAttribute"/> class.
@@ -57,7 +59,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
         /// <param name="timing">The timing.</param>
         public TimeoutPolicyAttribute(int milliseconds, int step, HandlerTiming timing = HandlerTiming.Before) : base(step, timing)
         {
-            this.milliseconds = milliseconds;
+            _milliseconds = milliseconds;
         }
 
         /// <summary>
@@ -66,7 +68,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
         /// <returns>System.Object[].</returns>
         public override object[] InitializerParams()
         {
-            return new object[] {milliseconds};
+            return new object[] { _milliseconds };
         }
 
         /// <summary>
@@ -75,7 +77,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
         /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
-            return typeof (TimeoutPolicyHandler<>);
+            return typeof(TimeoutPolicyHandler<>);
         }
     }
 }

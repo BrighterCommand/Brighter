@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Toby Henderson <hendersont@gmail.com>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 
 using OpenRasta.DI;
@@ -48,7 +50,7 @@ namespace Tasklist.Adapters.API.Configuration
 {
     public class DependencyRegistrar
     {
-        private InternalDependencyResolver internalDependencyResolver;
+        private InternalDependencyResolver _internalDependencyResolver;
 
         public void Initialise()
         {
@@ -99,17 +101,17 @@ namespace Tasklist.Adapters.API.Configuration
 
         private void OpenRastaRegistrar(CommandProcessor commandProcessor)
         {
-            internalDependencyResolver = new InternalDependencyResolver();
+            _internalDependencyResolver = new InternalDependencyResolver();
 
-            internalDependencyResolver.AddDependencyInstance<IAmACommandProcessor>(commandProcessor, DependencyLifetime.Singleton);
-            internalDependencyResolver.AddDependency<ITaskRetriever, TaskRetriever>(DependencyLifetime.Singleton);
-            internalDependencyResolver.AddDependency<ITaskListRetriever, TaskListRetriever>(DependencyLifetime.Singleton);
+            _internalDependencyResolver.AddDependencyInstance<IAmACommandProcessor>(commandProcessor, DependencyLifetime.Singleton);
+            _internalDependencyResolver.AddDependency<ITaskRetriever, TaskRetriever>(DependencyLifetime.Singleton);
+            _internalDependencyResolver.AddDependency<ITaskListRetriever, TaskListRetriever>(DependencyLifetime.Singleton);
         }
 
 
         public IDependencyResolver GetDependencyResolver()
         {
-            return internalDependencyResolver;
+            return _internalDependencyResolver;
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 10-01-2014
@@ -33,8 +36,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Transactions;
 using paramore.brighter.commandprocessor;
@@ -47,8 +50,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
 {
     public class AddFeedCommandHandler : RequestHandler<AddFeedCommand>
     {
-        readonly IAmARepository<Feed> feedRepository;
-        readonly IAmACommandProcessor commandProcessor;
+        private readonly IAmARepository<Feed> _feedRepository;
+        private readonly IAmACommandProcessor _commandProcessor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
@@ -58,8 +61,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <param name="commandProcessor"></param>
         public AddFeedCommandHandler(ILog logger, IAmARepository<Feed> feedRepository, IAmACommandProcessor commandProcessor) : base(logger)
         {
-            this.feedRepository = feedRepository;
-            this.commandProcessor = commandProcessor;
+            _feedRepository = feedRepository;
+            _commandProcessor = commandProcessor;
         }
 
         /// <summary>
@@ -71,23 +74,23 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         {
             using (var scope = new TransactionScope())
             {
-                var existingFeed = feedRepository[new Identity(command.Name)];
+                var existingFeed = _feedRepository[new Identity(command.Name)];
                 if (existingFeed != null)
                 {
                     throw new FeedAlreadyExistsException("The feed has already been created");
                 }
-                
+
                 var feed = new Feed(
                     name: new Name(command.Name),
-                    feedType: (FeedType) Enum.Parse(typeof (FeedType), command.Type),
+                    feedType: (FeedType)Enum.Parse(typeof(FeedType), command.Type),
                     title: new Title(command.Title),
                     license: new Name(command.License)
                     );
 
-                feedRepository.Add(feed);
+                _feedRepository.Add(feed);
                 scope.Complete();
             }
-            commandProcessor.Send(new AddFeedToDomainCommand(command.DomainName, command.Name));
+            _commandProcessor.Send(new AddFeedToDomainCommand(command.DomainName, command.Name));
 
             return base.Handle(command);
         }

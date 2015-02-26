@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
@@ -33,27 +35,27 @@ namespace Tasks.Ports.Handlers
 {
     public class EditTaskCommandHandler : RequestHandler<EditTaskCommand>
     {
-        private readonly ITasksDAO tasksDAO;
+        private readonly ITasksDAO _tasksDAO;
 
         public EditTaskCommandHandler(ITasksDAO tasksDAO, ILog logger) : base(logger)
         {
-            this.tasksDAO = tasksDAO;
+            _tasksDAO = tasksDAO;
         }
 
-        [RequestLogging(step:1, timing: HandlerTiming.Before)]
+        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
         [Validation(step: 2, timing: HandlerTiming.Before)]
         [TimeoutPolicy(step: 3, milliseconds: 300)]
         public override EditTaskCommand Handle(EditTaskCommand editTaskCommand)
         {
-            using (var scope = tasksDAO.BeginTransaction())
+            using (var scope = _tasksDAO.BeginTransaction())
             {
-                Task task = tasksDAO.FindById(editTaskCommand.TaskId);
+                Task task = _tasksDAO.FindById(editTaskCommand.TaskId);
 
                 task.TaskName = editTaskCommand.TaskName;
                 task.TaskDescription = editTaskCommand.TaskDescription;
                 task.DueDate = editTaskCommand.TaskDueDate;
 
-                tasksDAO.Update(task);
+                _tasksDAO.Update(task);
                 scope.Commit();
             }
 

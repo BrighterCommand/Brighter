@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using Tasks.Model;
 
 namespace Tasklist.Adapters.API.Resources
@@ -45,10 +47,10 @@ namespace Tasklist.Adapters.API.Resources
         public static Link Create(Task task, string hostName)
         {
             var link = new Link
-                {
-                    Rel = "item",
-                    HRef = string.Format("http://{0}/{1}/{2}", hostName, "task", task.Id)
-                };
+            {
+                Rel = "item",
+                HRef = string.Format("http://{0}/{1}/{2}", hostName, "task", task.Id)
+            };
             return link;
         }
 
@@ -56,10 +58,10 @@ namespace Tasklist.Adapters.API.Resources
         {
             //we don't need to use taskList to build the self link
             var self = new Link
-                {
-                    Rel = "self",
-                    HRef = string.Format("http://{0}/{1}", hostName, "tasks")
-                };
+            {
+                Rel = "self",
+                HRef = string.Format("http://{0}/{1}", hostName, "tasks")
+            };
 
             return self;
         }

@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 09-26-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 09-26-2014
 // ***********************************************************************
-// <copyright file="Each.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Generic;
 
@@ -51,7 +53,7 @@ namespace paramore.brighter.restms.core.Extensions
         /// <param name="doThis">The do this.</param>
         public static void Each<T>(this IEnumerable<T> collection, Action<T> doThis)
         {
-            foreach(var item in collection)
+            foreach (var item in collection)
             {
                 doThis(item);
             }

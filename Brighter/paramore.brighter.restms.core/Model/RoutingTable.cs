@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 10-21-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="RoutingTable.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
@@ -45,7 +47,7 @@ namespace paramore.brighter.restms.core.Model
     /// </summary>
     public class RoutingTable
     {
-        readonly ConcurrentDictionary<Address, List<Join>> joins = new ConcurrentDictionary<Address, List<Join>>();
+        private readonly ConcurrentDictionary<Address, List<Join>> _joins = new ConcurrentDictionary<Address, List<Join>>();
 
         /// <summary>
         /// Gets or sets the <see cref="IEnumerable{Join}"/> with the specified address.
@@ -57,7 +59,7 @@ namespace paramore.brighter.restms.core.Model
             get
             {
                 List<Join> value;
-                if (joins.TryGetValue(address, out value))
+                if (_joins.TryGetValue(address, out value))
                 {
                     return value;
                 }
@@ -69,17 +71,17 @@ namespace paramore.brighter.restms.core.Model
             set
             {
                 List<Join> matchingJoins;
-                if (!joins.TryGetValue(address, out matchingJoins))
+                if (!_joins.TryGetValue(address, out matchingJoins))
                 {
                     matchingJoins = new List<Join>();
-                    joins[address] = matchingJoins;
+                    _joins[address] = matchingJoins;
                 }
 
                 matchingJoins.AddRange(value);
             }
         }
 
-        IEnumerable<Join> CreateEmptyJoinList()
+        private IEnumerable<Join> CreateEmptyJoinList()
         {
             return new List<Join>();
         }

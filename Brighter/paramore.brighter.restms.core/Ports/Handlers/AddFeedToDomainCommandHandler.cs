@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="AddFeedToDomainCommandHandler.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Transactions;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -46,7 +48,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
 {
     public class AddFeedToDomainCommandHandler : RequestHandler<AddFeedToDomainCommand>
     {
-        readonly InMemoryDomainRepository repository;
+        private readonly InMemoryDomainRepository _repository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
@@ -55,7 +57,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <param name="logger">The logger.</param>
         public AddFeedToDomainCommandHandler(InMemoryDomainRepository repository, ILog logger) : base(logger)
         {
-            this.repository = repository;
+            _repository = repository;
         }
 
         /// <summary>
@@ -67,7 +69,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         {
             using (var scope = new TransactionScope())
             {
-                var domain = repository[new Identity(command.DomainName)];
+                var domain = _repository[new Identity(command.DomainName)];
                 if (domain == null)
                 {
                     throw new DomainDoesNotExistException();
@@ -79,6 +81,5 @@ namespace paramore.brighter.restms.core.Ports.Handlers
 
             return base.Handle(command);
         }
-
     }
 }

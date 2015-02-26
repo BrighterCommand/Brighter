@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.serviceactivator
 // Author           : ian
 // Created          : 07-01-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-29-2014
 // ***********************************************************************
-// <copyright file="Consumer.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -34,7 +36,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -52,11 +53,11 @@ namespace paramore.brighter.serviceactivator
         /// <summary>
         /// The consumer is shut and won't read messages from the task queue
         /// </summary>
-        Shut=0,
+        Shut = 0,
         /// <summary>
         /// The consumer is open and will receive messages from the task queue
         /// </summary>
-        Open=1
+        Open = 1
     }
 
     /// <summary>
@@ -66,7 +67,7 @@ namespace paramore.brighter.serviceactivator
     /// Waited on by callers. Shut closes the message pump.
     /// 
     /// </summary>
-    public class Consumer: IDisposable, IEquatable<Consumer>
+    public class Consumer : IDisposable, IEquatable<Consumer>
     {
         /// <summary>
         /// Gets or sets the name.
@@ -166,7 +167,7 @@ namespace paramore.brighter.serviceactivator
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((Consumer) obj);
+            return Equals((Consumer)obj);
         }
 
         /// <summary>
@@ -177,7 +178,7 @@ namespace paramore.brighter.serviceactivator
         {
             unchecked
             {
-                return ((Name != null ? Name.GetHashCode() : 0)*397) ^ (Job != null ? Job.GetHashCode() : 0);
+                return ((Name != null ? Name.GetHashCode() : 0) * 397) ^ (Job != null ? Job.GetHashCode() : 0);
             }
         }
 
@@ -202,6 +203,5 @@ namespace paramore.brighter.serviceactivator
         {
             return !Equals(left, right);
         }
-
     }
 }

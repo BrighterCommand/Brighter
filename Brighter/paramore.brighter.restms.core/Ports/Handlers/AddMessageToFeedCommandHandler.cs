@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 10-16-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="AddMessageToFeedCommandHandler.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,8 +55,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
     /// </summary>
     public class AddMessageToFeedCommandHandler : RequestHandler<AddMessageToFeedCommand>
     {
-        readonly IAmARepository<Feed> feedRepository;
-        readonly IAmACommandProcessor commandProcessor;
+        private readonly IAmARepository<Feed> _feedRepository;
+        private readonly IAmACommandProcessor _commandProcessor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
@@ -63,8 +65,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <param name="logger">The logger.</param>
         public AddMessageToFeedCommandHandler(IAmARepository<Feed> feedRepository, IAmACommandProcessor commandProcessor, ILog logger) : base(logger)
         {
-            this.feedRepository = feedRepository;
-            this.commandProcessor = commandProcessor;
+            _feedRepository = feedRepository;
+            _commandProcessor = commandProcessor;
         }
 
         #region Overrides of RequestHandler<AddMessageToFeedCommand>
@@ -79,7 +81,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
             IEnumerable<Pipe> pipes;
             using (var scope = new TransactionScope())
             {
-                var feed = feedRepository[new Identity(addMessageToFeedCommand.FeedName)];
+                var feed = _feedRepository[new Identity(addMessageToFeedCommand.FeedName)];
                 if (feed == null)
                 {
                     throw new FeedDoesNotExistException();
@@ -90,7 +92,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                         new Address(addMessageToFeedCommand.Address),
                         feed.Href,
                         addMessageToFeedCommand.Headers,
-                        addMessageToFeedCommand.Attachment, 
+                        addMessageToFeedCommand.Attachment,
                         !string.IsNullOrEmpty(addMessageToFeedCommand.ReplyTo) ? new Uri(addMessageToFeedCommand.ReplyTo) : null));
 
                 addMessageToFeedCommand.MatchingJoins = pipes.Count();
@@ -98,7 +100,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                 scope.Complete();
             }
 
-            pipes.Each(pipe => commandProcessor.Send(new InvalidateCacheCommand(pipe.Href)));
+            pipes.Each(pipe => _commandProcessor.Send(new InvalidateCacheCommand(pipe.Href)));
 
             return base.Handle(addMessageToFeedCommand);
         }

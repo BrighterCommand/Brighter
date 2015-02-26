@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using FakeItEasy;
 using Machine.Specifications;
@@ -37,11 +39,11 @@ namespace Tasklist.Adapters.Tests
 {
     public class When_I_add_a_new_task
     {
-        static AddTaskCommand cmd;
-        static IAmACommandProcessor commandProcessor;
-        static RequestContext requestContext; 
+        private static AddTaskCommand s_cmd;
+        private static IAmACommandProcessor s_commandProcessor;
+        private static RequestContext s_requestContext;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var container = new TinyIoCContainer();
             container.Register<ITasksDAO, TasksDAO>();
@@ -52,29 +54,29 @@ namespace Tasklist.Adapters.Tests
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
 
-            requestContext = new RequestContext();
+            s_requestContext = new RequestContext();
 
             var logger = A.Fake<ILog>();
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
-            A.CallTo(() => requestContextFactory.Create()).Returns(requestContext);
+            A.CallTo(() => requestContextFactory.Create()).Returns(s_requestContext);
 
-            commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, requestContextFactory, new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, requestContextFactory, new PolicyRegistry(), logger);
 
-            cmd = new AddTaskCommand("New Task", "Test that we store a task", DateTime.Now.AddDays(3));
+            s_cmd = new AddTaskCommand("New Task", "Test that we store a task", DateTime.Now.AddDays(3));
 
             new TasksDAO().Clear();
         };
 
-        Because of = () => commandProcessor.Send(cmd);
+        private Because _of = () => s_commandProcessor.Send(s_cmd);
 
-        It should_store_something_in_the_db = () => FindTaskinDb().ShouldNotBeNull();
-        It should_store_with_the_correct_name = () => FindTaskinDb().TaskName.ShouldEqual(cmd.TaskName);
-        It should_store_with_the_correct_description = () => FindTaskinDb().TaskDescription.ShouldEqual(cmd.TaskDecription);
-        It should_store_with_the_correct_duedate = () => FindTaskinDb().DueDate.Value.ToShortDateString().ShouldEqual(cmd.TaskDueDate.Value.ToShortDateString());
+        private It _should_store_something_in_the_db = () => FindTaskinDb().ShouldNotBeNull();
+        private It _should_store_with_the_correct_name = () => FindTaskinDb().TaskName.ShouldEqual(s_cmd.TaskName);
+        private It _should_store_with_the_correct_description = () => FindTaskinDb().TaskDescription.ShouldEqual(s_cmd.TaskDecription);
+        private It _should_store_with_the_correct_duedate = () => FindTaskinDb().DueDate.Value.ToShortDateString().ShouldEqual(s_cmd.TaskDueDate.Value.ToShortDateString());
 
-        static Task FindTaskinDb()
+        private static Task FindTaskinDb()
         {
-            return new TasksDAO().FindByName(cmd.TaskName);
+            return new TasksDAO().FindByName(s_cmd.TaskName);
         }
     }
 }

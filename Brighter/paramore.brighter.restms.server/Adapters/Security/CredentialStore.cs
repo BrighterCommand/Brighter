@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,27 +22,27 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections.Generic;
 using Thinktecture.IdentityModel.Hawk.Core;
 
 namespace paramore.brighter.restms.server.Adapters.Security
 {
-    internal class CredentialStore: IAmACredentialStore
+    internal class CredentialStore : IAmACredentialStore
     {
-        List<Credential> credentials = new List<Credential>();
+        private List<Credential> _credentials = new List<Credential>();
 
         #region Implementation of IAmACredentialStore
 
         public void Add(Credential credential)
         {
-            credentials.Add(credential);
+            _credentials.Add(credential);
         }
 
         public IEnumerable<Credential> Credentials
         {
-            get { return credentials; }
+            get { return _credentials; }
         }
 
         #endregion

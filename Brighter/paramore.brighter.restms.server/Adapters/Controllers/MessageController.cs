@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.server
 // Author           : ian
 // Created          : 11-06-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 11-06-2014
 // ***********************************************************************
-// <copyright file="MessageController.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Net;
 using System.Net.Http;
@@ -55,8 +57,8 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
     [Authorize]
     public class MessageController : ApiController
     {
-        readonly IAmACommandProcessor commandProcessor;
-        readonly IAmARepository<Pipe> pipeRepository;
+        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly IAmARepository<Pipe> _pipeRepository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageController"/> class.
@@ -65,8 +67,8 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         /// <param name="pipeRepository">The pipe repository.</param>
         public MessageController(IAmACommandProcessor commandProcessor, IAmARepository<Pipe> pipeRepository)
         {
-            this.commandProcessor = commandProcessor;
-            this.pipeRepository = pipeRepository;
+            _commandProcessor = commandProcessor;
+            _pipeRepository = pipeRepository;
         }
 
         /// <summary>
@@ -79,7 +81,7 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
         [PipeDoesNotExistExceptionFilter]
         public RestMSMessage Get(string pipeName, string messageName)
         {
-            var retriever = new MessageRetriever(pipeRepository);
+            var retriever = new MessageRetriever(_pipeRepository);
             return retriever.Retrieve(new Name(pipeName), Guid.Parse(messageName));
         }
 
@@ -91,10 +93,9 @@ namespace paramore.brighter.restms.server.Adapters.Controllers
                 pipeName,
                 Guid.Parse(messageName));
 
-            commandProcessor.Send(deleteMessageCommand);
+            _commandProcessor.Send(deleteMessageCommand);
 
             Request.CreateResponse(HttpStatusCode.OK);
         }
-
     }
 }

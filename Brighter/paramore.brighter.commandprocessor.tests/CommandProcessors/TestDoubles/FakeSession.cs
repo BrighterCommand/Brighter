@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections.Generic;
 using System.Linq;
 
@@ -28,19 +31,18 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     public class FakeSession : IUnitOfWork
     {
-        readonly IList<object> _identityMap = new List<object>(); 
+        private readonly IList<object> _identityMap = new List<object>();
 
         public void Add<T>(T aggregate)
         {
             _identityMap.Add(aggregate);
         }
 
-        public void Commit() {}
+        public void Commit() { }
 
         public T Load<T>(int id) where T : IAmAnAggregate
         {
             return _identityMap.Cast<T>().Where(aggregate => aggregate.ID == id).Select(aggregate => aggregate).FirstOrDefault();
-
         }
 
         public IEnumerable<T> Query<T>() where T : IAmAnAggregate

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 #region Licence
 
 /* The MIT License (MIT)
@@ -22,7 +25,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Linq;
 using paramore.brighter.commandprocessor.Logging;
@@ -33,21 +35,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {
     internal class Pipe
     {
-        readonly RestMSMessageGateway gateway;
-        readonly Join join;
+        private readonly RestMSMessageGateway _gateway;
+        private readonly Join _join;
 
         public string PipeUri { get; private set; }
 
         public Pipe(RestMsMessageConsumer gateway, Feed feed)
         {
-            this.gateway = gateway;
-            join = new Join(gateway, feed);
+            _gateway = gateway;
+            _join = new Join(gateway, feed);
         }
 
 
         public void EnsurePipeExists(string pipeTitle, string routingKey, RestMSDomain domain)
         {
-            gateway.Logger.DebugFormat("Checking for existence of the pipe {0} on the RestMS server: {1}", pipeTitle, gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            _gateway.Logger.DebugFormat("Checking for existence of the pipe {0} on the RestMS server: {1}", pipeTitle, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var pipeExists = PipeExists(pipeTitle, domain);
             if (!pipeExists)
             {
@@ -57,7 +59,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                     throw new RestMSClientException(string.Format("Unable to create pipe {0} on the default domain; see log for errors", pipeTitle));
                 }
 
-                join.CreateJoin(domain.Pipes.First(p => p.Title == pipeTitle).Href, routingKey);
+                _join.CreateJoin(domain.Pipes.First(p => p.Title == pipeTitle).Href, routingKey);
             }
 
             PipeUri = domain.Pipes.First(dp => dp.Title == pipeTitle).Href;
@@ -68,35 +70,34 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             /*TODO: Optimize this by using a repository approach with the repository checking for modification 
             through etag and serving existing version if not modified and grabbing new version if changed*/
 
-            gateway.Logger.DebugFormat("Getting the pipe from the RestMS server: {0}", PipeUri);
-            var client = gateway.Client();
+            _gateway.Logger.DebugFormat("Getting the pipe from the RestMS server: {0}", PipeUri);
+            var client = _gateway.Client();
 
             try
             {
                 var response = client.GetAsync(PipeUri).Result;
                 response.EnsureSuccessStatusCode();
-                return gateway.ParseResponse<RestMSPipe>(response);
+                return _gateway.ParseResponse<RestMSPipe>(response);
             }
             catch (AggregateException ae)
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    gateway.Logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", PipeUri, exception.Message);
+                    _gateway.Logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", PipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
             }
-
         }
 
-        RestMSDomain CreatePipe(string domainUri, string title)
+        private RestMSDomain CreatePipe(string domainUri, string title)
         {
-            gateway.Logger.DebugFormat("Creating the pipe {0} on the RestMS server: {1}", title, gateway.Configuration.RestMS.Uri.AbsoluteUri);
-            var client = gateway.Client();
+            _gateway.Logger.DebugFormat("Creating the pipe {0} on the RestMS server: {1}", title, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            var client = _gateway.Client();
             try
             {
-                var response = client.SendAsync(gateway.CreateRequest(
-                    domainUri, gateway.CreateEntityBody(
+                var response = client.SendAsync(_gateway.CreateRequest(
+                    domainUri, _gateway.CreateEntityBody(
                         new RestMSPipeNew
                         {
                             Type = "Default",
@@ -107,20 +108,20 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 .Result;
 
                 response.EnsureSuccessStatusCode();
-                return gateway.ParseResponse<RestMSDomain>(response);
+                return _gateway.ParseResponse<RestMSDomain>(response);
             }
             catch (AggregateException ae)
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    gateway.Logger.ErrorFormat("Threw exception adding Pipe {0} to RestMS Server {1}", title, exception.Message);
+                    _gateway.Logger.ErrorFormat("Threw exception adding Pipe {0} to RestMS Server {1}", title, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error adding the Feed {0} to the RestMS server, see log for details", title));
             }
         }
 
-        bool PipeExists(string pipeTitle, RestMSDomain domain)
+        private bool PipeExists(string pipeTitle, RestMSDomain domain)
         {
             return domain != null && domain.Pipes != null && domain.Pipes.Any(p => p.Title == pipeTitle);
         }

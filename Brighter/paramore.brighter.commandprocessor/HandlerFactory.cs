@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-10-2014
 // ***********************************************************************
-// <copyright file="HandlerFactory.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 
 namespace paramore.brighter.commandprocessor
@@ -45,10 +47,10 @@ namespace paramore.brighter.commandprocessor
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     internal class HandlerFactory<TRequest> where TRequest : class, IRequest
     {
-        private readonly RequestHandlerAttribute attribute;
-        private readonly IAmAHandlerFactory factory;
-        private readonly Type messageType;
-        private IRequestContext requestContext;
+        private readonly RequestHandlerAttribute _attribute;
+        private readonly IAmAHandlerFactory _factory;
+        private readonly Type _messageType;
+        private IRequestContext _requestContext;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HandlerFactory{TRequest}"/> class.
@@ -58,10 +60,10 @@ namespace paramore.brighter.commandprocessor
         /// <param name="requestContext">The request context.</param>
         public HandlerFactory(RequestHandlerAttribute attribute, IAmAHandlerFactory factory, IRequestContext requestContext)
         {
-            this.attribute = attribute;
-            this.factory = factory;
-            this.requestContext = requestContext;
-            messageType = typeof(TRequest);
+            _attribute = attribute;
+            _factory = factory;
+            _requestContext = requestContext;
+            _messageType = typeof(TRequest);
         }
 
         /// <summary>
@@ -70,11 +72,11 @@ namespace paramore.brighter.commandprocessor
         /// <returns>IHandleRequests&lt;TRequest&gt;.</returns>
         public IHandleRequests<TRequest> CreateRequestHandler()
         {
-            var handlerType = attribute.GetHandlerType().MakeGenericType(messageType);
-            var handler = (IHandleRequests<TRequest>) factory.Create(handlerType);
+            var handlerType = _attribute.GetHandlerType().MakeGenericType(_messageType);
+            var handler = (IHandleRequests<TRequest>)_factory.Create(handlerType);
             //Lod the context befor the initializer - in case we want to use the context from within the initializer
-            handler.Context = requestContext;
-            handler.InitializeFromAttributeParams(attribute.InitializerParams());
+            handler.Context = _requestContext;
+            handler.InitializeFromAttributeParams(_attribute.InitializerParams());
             return handler;
         }
     }

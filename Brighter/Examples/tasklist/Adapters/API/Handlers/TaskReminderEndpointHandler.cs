@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using System;
 using System.Net;
 using OpenRasta.Web;
@@ -9,11 +12,11 @@ namespace Tasklist.Adapters.API.Handlers
 {
     public class TaskReminderEndpointHandler
     {
-        private readonly IAmACommandProcessor commandProcessor;
+        private readonly IAmACommandProcessor _commandProcessor;
 
         public TaskReminderEndpointHandler(IAmACommandProcessor commandProcessor)
         {
-            this.commandProcessor = commandProcessor;
+            _commandProcessor = commandProcessor;
         }
 
         [HttpOperation(HttpMethod.POST)]
@@ -26,11 +29,11 @@ namespace Tasklist.Adapters.API.Handlers
                 copyTo: reminder.CopyTo
                 );
 
-            commandProcessor.Post(reminderCommand);
+            _commandProcessor.Post(reminderCommand);
 
             return new OperationResult.OK()
             {
-                StatusCode = (int) HttpStatusCode.Accepted
+                StatusCode = (int)HttpStatusCode.Accepted
             };
         }
     }

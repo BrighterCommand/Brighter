@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -33,8 +36,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Threading.Tasks;
 
@@ -50,7 +53,7 @@ namespace paramore.brighter.commandprocessor
     /// <item>RESTML</item>
     /// </list>
     /// </summary>
-    public interface IAmAMessageProducer: IDisposable
+    public interface IAmAMessageProducer : IDisposable
     {
         /// <summary>
         /// Sends the specified message.

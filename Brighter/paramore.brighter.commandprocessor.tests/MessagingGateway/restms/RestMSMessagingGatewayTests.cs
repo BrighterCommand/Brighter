@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
@@ -33,44 +36,41 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
     [Tags("Requires", new[] { "RestMS" })]
     public class When_posting_a_message_via_the_messaging_gateway
     {
-        const string TOPIC = "test";
-        static IAmAMessageProducer messageProducer;
-        static IAmAMessageConsumer messageConsumer;
-        static Message message;
-        static Message sentMessage;
-        static string messageBody;
-        const string QUEUE_NAME = "test";
+        private const string TOPIC = "test";
+        private static IAmAMessageProducer s_messageProducer;
+        private static IAmAMessageConsumer s_messageConsumer;
+        private static Message s_message;
+        private static Message s_sentMessage;
+        private static string s_messageBody;
+        private const string QUEUE_NAME = "test";
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = LogProvider.For<RmqMessageConsumer>();
-            messageProducer = new RestMsMessageProducer(logger);
-            messageConsumer = new RestMsMessageConsumer(QUEUE_NAME, TOPIC, logger);
-            message = new Message(
+            s_messageProducer = new RestMsMessageProducer(logger);
+            s_messageConsumer = new RestMsMessageConsumer(QUEUE_NAME, TOPIC, logger);
+            s_message = new Message(
                 header: new MessageHeader(Guid.NewGuid(), TOPIC, MessageType.MT_COMMAND),
                 body: new MessageBody("test content")
                 );
-
         };
 
-        Because of = () =>
+        private Because _of = () =>
         {
-            messageConsumer.Receive(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
-            messageProducer.Send(message);
-            sentMessage = messageConsumer.Receive(30000);
-            messageBody = sentMessage.Body.Value;
-            messageConsumer.Acknowledge(sentMessage);
+            s_messageConsumer.Receive(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
+            s_messageProducer.Send(s_message);
+            s_sentMessage = s_messageConsumer.Receive(30000);
+            s_messageBody = s_sentMessage.Body.Value;
+            s_messageConsumer.Acknowledge(s_sentMessage);
         };
 
-        It should_send_a_message_via_restms_with_the_matching_body = () => messageBody.ShouldEqual(message.Body.Value);
-        It should_have_an_empty_pipe_after_acknowledging_the_message = () => ((RestMsMessageConsumer)messageConsumer).NoOfOutstandingMessages(30000).ShouldEqual(0);
+        private It _should_send_a_message_via_restms_with_the_matching_body = () => s_messageBody.ShouldEqual(s_message.Body.Value);
+        private It _should_have_an_empty_pipe_after_acknowledging_the_message = () => ((RestMsMessageConsumer)s_messageConsumer).NoOfOutstandingMessages(30000).ShouldEqual(0);
 
-        Cleanup tearDown = () =>
+        private Cleanup _tearDown = () =>
         {
-            messageConsumer.Purge();
-            messageProducer.Dispose();
+            s_messageConsumer.Purge();
+            s_messageProducer.Dispose();
         };
-
     }
-
 }

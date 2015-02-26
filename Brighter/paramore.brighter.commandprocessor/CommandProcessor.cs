@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 07-29-2014
 // ***********************************************************************
-// <copyright file="CommandProcessor.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,14 +51,14 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class CommandProcessor : IAmACommandProcessor
     {
-        readonly IAmAMessageMapperRegistry mapperRegistry;
-        readonly IAmASubscriberRegistry subscriberRegistry;
-        readonly IAmAHandlerFactory handlerFactory;
-        readonly IAmARequestContextFactory requestContextFactory;
-        readonly IAmAPolicyRegistry policyRegistry;
-        readonly ILog logger;
-        readonly IAmAMessageStore<Message> messageStore;
-        readonly IAmAMessageProducer messagingGateway;
+        private readonly IAmAMessageMapperRegistry _mapperRegistry;
+        private readonly IAmASubscriberRegistry _subscriberRegistry;
+        private readonly IAmAHandlerFactory _handlerFactory;
+        private readonly IAmARequestContextFactory _requestContextFactory;
+        private readonly IAmAPolicyRegistry _policyRegistry;
+        private readonly ILog _logger;
+        private readonly IAmAMessageStore<Message> _messageStore;
+        private readonly IAmAMessageProducer _messagingGateway;
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
         /// Register that policy with your <see cref="IAmAPolicyRegistry"/> such as <see cref="PolicyRegistry"/>
@@ -80,17 +82,17 @@ namespace paramore.brighter.commandprocessor
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="logger">The logger.</param>
         public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry, 
-            IAmAHandlerFactory handlerFactory, 
-            IAmARequestContextFactory requestContextFactory, 
+            IAmASubscriberRegistry subscriberRegistry,
+            IAmAHandlerFactory handlerFactory,
+            IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             ILog logger)
         {
-            this.subscriberRegistry = subscriberRegistry;
-            this.handlerFactory = handlerFactory;
-            this.requestContextFactory = requestContextFactory;
-            this.policyRegistry = policyRegistry;
-            this.logger = logger;
+            _subscriberRegistry = subscriberRegistry;
+            _handlerFactory = handlerFactory;
+            _requestContextFactory = requestContextFactory;
+            _policyRegistry = policyRegistry;
+            _logger = logger;
         }
 
         /// <summary>
@@ -104,19 +106,19 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messagingGateway">The messaging gateway.</param>
         /// <param name="logger">The logger.</param>
         public CommandProcessor(
-            IAmARequestContextFactory requestContextFactory, 
+            IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
-            IAmAMessageMapperRegistry mapperRegistry, 
-            IAmAMessageStore<Message> messageStore, 
+            IAmAMessageMapperRegistry mapperRegistry,
+            IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messagingGateway,
             ILog logger)
         {
-            this.requestContextFactory = requestContextFactory;
-            this.policyRegistry = policyRegistry;
-            this.logger = logger;
-            this.mapperRegistry = mapperRegistry;
-            this.messageStore = messageStore;
-            this.messagingGateway = messagingGateway;
+            _requestContextFactory = requestContextFactory;
+            _policyRegistry = policyRegistry;
+            _logger = logger;
+            _mapperRegistry = mapperRegistry;
+            _messageStore = messageStore;
+            _messagingGateway = messagingGateway;
         }
 
         /// <summary>
@@ -134,17 +136,17 @@ namespace paramore.brighter.commandprocessor
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
-            IAmARequestContextFactory requestContextFactory, 
+            IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
-            IAmAMessageMapperRegistry mapperRegistry, 
-            IAmAMessageStore<Message> messageStore, 
+            IAmAMessageMapperRegistry mapperRegistry,
+            IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messagingGateway,
             ILog logger)
-            :this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
         {
-            this.mapperRegistry = mapperRegistry;
-            this.messageStore = messageStore;
-            this.messagingGateway = messagingGateway;
+            _mapperRegistry = mapperRegistry;
+            _messageStore = messageStore;
+            _messagingGateway = messagingGateway;
         }
 
 
@@ -157,21 +159,21 @@ namespace paramore.brighter.commandprocessor
         /// </exception>
         public void Send<T>(T command) where T : class, IRequest
         {
-            using (var builder = new PipelineBuilder<T>(subscriberRegistry, handlerFactory, logger))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _logger))
             {
-                var requestContext = requestContextFactory.Create();
-                requestContext.Policies = policyRegistry;
+                var requestContext = _requestContextFactory.Create();
+                requestContext.Policies = _policyRegistry;
 
-                logger.InfoFormat("Building send pipeline for command: {0}", command.Id);
+                _logger.InfoFormat("Building send pipeline for command: {0}", command.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 var handlerCount = handlerChain.Count();
 
-                logger.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id);
+                _logger.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id);
                 if (handlerCount > 1)
-                    throw new ArgumentException(string.Format("More than one handler was found for the typeof command {0} - a command should only have one handler.", typeof (T)));
+                    throw new ArgumentException(string.Format("More than one handler was found for the typeof command {0} - a command should only have one handler.", typeof(T)));
                 if (handlerCount == 0)
-                    throw new ArgumentException(string.Format("No command handler was found for the typeof command {0} - a command should have only one handler.",typeof (T)));
+                    throw new ArgumentException(string.Format("No command handler was found for the typeof command {0} - a command should have only one handler.", typeof(T)));
 
                 handlerChain.First().Handle(command);
             }
@@ -188,17 +190,17 @@ namespace paramore.brighter.commandprocessor
         /// <param name="event">The event.</param>
         public void Publish<T>(T @event) where T : class, IRequest
         {
-            using (var builder = new PipelineBuilder<T>(subscriberRegistry, handlerFactory, logger))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _logger))
             {
-                var requestContext = requestContextFactory.Create();
-                requestContext.Policies = policyRegistry;
+                var requestContext = _requestContextFactory.Create();
+                requestContext.Policies = _policyRegistry;
 
-                logger.InfoFormat("Building send pipeline for event: {0}", @event.Id);
+                _logger.InfoFormat("Building send pipeline for event: {0}", @event.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 var handlerCount = handlerChain.Count();
 
-                logger.InfoFormat("Found {0} pipelines for event: {0}", handlerCount, @event.Id);
+                _logger.InfoFormat("Found {0} pipelines for event: {0}", handlerCount, @event.Id);
 
                 var exceptions = new List<Exception>();
                 foreach (var handleRequests in handlerChain)
@@ -234,9 +236,9 @@ namespace paramore.brighter.commandprocessor
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(T request) where T : class, IRequest
         {
-            logger.InfoFormat("Decoupled invocation of request: {0}", request.Id);
+            _logger.InfoFormat("Decoupled invocation of request: {0}", request.Id);
 
-            var messageMapper = mapperRegistry.Get<T>();
+            var messageMapper = _mapperRegistry.Get<T>();
             if (messageMapper == null)
                 throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
 
@@ -247,8 +249,8 @@ namespace paramore.brighter.commandprocessor
             */
             RetryAndBreakCircuit(() =>
                 {
-                    messageStore.Add(message).Wait();
-                    messagingGateway.Send(message).Wait();
+                    _messageStore.Add(message).Wait();
+                    _messagingGateway.Send(message).Wait();
                 });
         }
 
@@ -260,42 +262,42 @@ namespace paramore.brighter.commandprocessor
         public void Repost(Guid messageId)
         {
             var requestedMessageid = messageId; //avoid closure on this
-            logger.InfoFormat("Resend of message: {0}", requestedMessageid);
+            _logger.InfoFormat("Resend of message: {0}", requestedMessageid);
 
             /* 
              * NOTE: Don't rewrite with await, compiles but Policy does not call await on the lambda so becomes fire and forget, 
              * see http://blogs.msdn.com/b/pfxteam/archive/2012/02/08/10265476.aspx
             */
             RetryAndBreakCircuit(() =>
-                { 
-                    var task = messageStore.Get(messageId);
+                {
+                    var task = _messageStore.Get(messageId);
                     task.Wait();
 
                     var message = task.Result;
 
                     if (message.Header.MessageType == MessageType.MT_NONE)
                     {
-                        logger.WarnFormat("Message {0} not found", requestedMessageid);
+                        _logger.WarnFormat("Message {0} not found", requestedMessageid);
                         return;
                     }
 
-                    messagingGateway.Send(message);
+                    _messagingGateway.Send(message);
                 });
         }
 
-        void RetryAndBreakCircuit(Action send)
+        private void RetryAndBreakCircuit(Action send)
         {
             CheckCircuit(() => Retry(send));
         }
 
-        void CheckCircuit(Action send)
+        private void CheckCircuit(Action send)
         {
-            policyRegistry.Get(CIRCUITBREAKER).Execute(send);
+            _policyRegistry.Get(CIRCUITBREAKER).Execute(send);
         }
 
-        void Retry(Action send)
+        private void Retry(Action send)
         {
-            policyRegistry.Get(RETRYPOLICY).Execute(send);
+            _policyRegistry.Get(RETRYPOLICY).Execute(send);
         }
     }
 }

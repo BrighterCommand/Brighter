@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
 // Author           : ian
 // Created          : 01-02-2015
@@ -6,7 +9,6 @@
 // Last Modified By : toby
 // Last Modified On : 01-02-2015
 // ***********************************************************************
-// <copyright file="RmqMessageConsumerFactory.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
@@ -44,7 +46,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
-        private readonly ILog logger;
+        private readonly ILog _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
@@ -52,7 +54,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="logger">The logger.</param>
         public RmqMessageConsumerFactory(ILog logger)
         {
-            this.logger = logger;
+            _logger = logger;
         }
 
         /// <summary>
@@ -61,7 +63,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create(string queueName, string routingKey)
         {
-            return new RmqMessageConsumer(queueName, routingKey, logger);
+            return new RmqMessageConsumer(queueName, routingKey, _logger);
         }
     }
 }

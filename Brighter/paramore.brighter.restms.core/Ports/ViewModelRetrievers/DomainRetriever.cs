@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 09-26-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-14-2014
 // ***********************************************************************
-// <copyright file="DomainRetriever.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Collections.Generic;
 using paramore.brighter.restms.core.Extensions;
 using paramore.brighter.restms.core.Model;
@@ -46,20 +48,20 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
     /// </summary>
     public class DomainRetriever
     {
-        readonly IAmARepository<Feed> feedRepository;
-        readonly IAmARepository<Pipe> pipeRepository;
-        readonly IAmARepository<Domain> domainRepository;
+        private readonly IAmARepository<Feed> _feedRepository;
+        private readonly IAmARepository<Pipe> _pipeRepository;
+        private readonly IAmARepository<Domain> _domainRepository;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DomainRetriever"/> class.
         /// </summary>
         /// <param name="domainRepository">The domain repository.</param>
         /// <param name="feedRepository">The feed repository.</param>
-        public DomainRetriever(IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository, IAmARepository<Pipe> pipeRepository )
+        public DomainRetriever(IAmARepository<Domain> domainRepository, IAmARepository<Feed> feedRepository, IAmARepository<Pipe> pipeRepository)
         {
-            this.feedRepository = feedRepository;
-            this.pipeRepository = pipeRepository;
-            this.domainRepository = domainRepository;
+            _feedRepository = feedRepository;
+            _pipeRepository = pipeRepository;
+            _domainRepository = domainRepository;
         }
 
         /// <summary>
@@ -70,8 +72,7 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
         /// <exception cref="DomainDoesNotExistException"></exception>
         public RestMSDomain Retrieve(Name name)
         {
-
-            var domain = domainRepository[new Identity(name.Value)];
+            var domain = _domainRepository[new Identity(name.Value)];
 
             if (domain == null)
             {
@@ -79,10 +80,10 @@ namespace paramore.brighter.restms.core.Ports.ViewModelRetrievers
             }
 
             var feeds = new List<Feed>();
-            domain.Feeds.Each(feed => feeds.Add(feedRepository[new Identity(feed.Value)]));
+            domain.Feeds.Each(feed => feeds.Add(_feedRepository[new Identity(feed.Value)]));
 
             var pipes = new List<Pipe>();
-            domain.Pipes.Each(pipe => pipes.Add(pipeRepository[new Identity(pipe.Value)]));
+            domain.Pipes.Each(pipe => pipes.Add(_pipeRepository[new Identity(pipe.Value)]));
 
             return new RestMSDomain(domain, feeds, pipes);
         }

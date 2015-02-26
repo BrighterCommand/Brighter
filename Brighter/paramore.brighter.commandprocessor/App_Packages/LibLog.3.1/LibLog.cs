@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 //===============================================================================
 // LibLog
 //
@@ -29,7 +32,6 @@
 // Define LIBLOG_PORTABLE conditional compilation symbol for PCL compatibility
 
 #pragma warning disable 1591
-
 namespace paramore.brighter.commandprocessor.Logging
 {
     using System.Collections.Generic;
@@ -56,7 +58,7 @@ namespace paramore.brighter.commandprocessor.Logging
         /// 
         /// To check IsEnabled call Log with only LogLevel and check the return value, no event will be written.
         /// </remarks>
-        bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters );
+        bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters);
     }
 
     /// <summary>
@@ -355,7 +357,7 @@ namespace paramore.brighter.commandprocessor.Logging
     /// </summary>
     public static class LogProvider
     {
-        private static ILogProvider _currentLogProvider;
+        private static ILogProvider s_currentLogProvider;
         private const string NullLogProvider = "Current Log Provider is not set. Call SetCurrentLogProvider " +
                                                "with a non-null value first.";
 
@@ -398,7 +400,7 @@ namespace paramore.brighter.commandprocessor.Logging
         /// <returns>An instance of <see cref="ILog"/></returns>
         public static ILog GetLogger(string name)
         {
-            ILogProvider logProvider = _currentLogProvider ?? ResolveLogProvider();
+            ILogProvider logProvider = s_currentLogProvider ?? ResolveLogProvider();
             return logProvider == null ? new NoOpLogger() : (ILog)new LoggerExecutionWrapper(logProvider.GetLogger(name));
         }
 
@@ -408,25 +410,25 @@ namespace paramore.brighter.commandprocessor.Logging
         /// <param name="logProvider">The log provider.</param>
         public static void SetCurrentLogProvider(ILogProvider logProvider)
         {
-            _currentLogProvider = logProvider;
+            s_currentLogProvider = logProvider;
         }
 
         public static IDisposable OpenNestedConext(string message)
         {
-            if(_currentLogProvider == null)
+            if (s_currentLogProvider == null)
             {
                 throw new InvalidOperationException(NullLogProvider);
             }
-            return _currentLogProvider.OpenNestedContext(message);
+            return s_currentLogProvider.OpenNestedContext(message);
         }
 
         public static IDisposable OpenMappedContext(string key, string value)
         {
-            if (_currentLogProvider == null)
+            if (s_currentLogProvider == null)
             {
                 throw new InvalidOperationException(NullLogProvider);
             }
-            return _currentLogProvider.OpenMappedContext(key, value);
+            return s_currentLogProvider.OpenMappedContext(key, value);
         }
 
         public delegate bool IsLoggerAvailable();
@@ -535,18 +537,18 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
         private readonly Lazy<OpenNdc> _lazyOpenNdcMethod;
         private readonly Lazy<OpenMdc> _lazyOpenMdcMethod;
-        private static readonly IDisposable NoopDisposableInstance = new DisposableAction();
+        private static readonly IDisposable s_noopDisposableInstance = new DisposableAction();
 
         protected LogProviderBase()
         {
-            _lazyOpenNdcMethod 
+            _lazyOpenNdcMethod
                 = new Lazy<OpenNdc>(GetOpenNdcMethod);
             _lazyOpenMdcMethod
                = new Lazy<OpenMdc>(GetOpenMdcMethod);
         }
 
         public abstract ILog GetLogger(string name);
-        
+
         public IDisposable OpenNestedContext(string message)
         {
             return _lazyOpenNdcMethod.Value(message);
@@ -559,19 +561,19 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
         protected virtual OpenNdc GetOpenNdcMethod()
         {
-            return _ => NoopDisposableInstance;
+            return _ => s_noopDisposableInstance;
         }
 
         protected virtual OpenMdc GetOpenMdcMethod()
         {
-            return (_, __) => NoopDisposableInstance;
+            return (_, __) => s_noopDisposableInstance;
         }
     }
 
     internal class NLogLogProvider : LogProviderBase
     {
         private readonly Func<string, object> _getLoggerByNameDelegate;
-        private static bool _providerIsAvailableOverride = true;
+        private static bool s_providerIsAvailableOverride = true;
 
         public NLogLogProvider()
         {
@@ -584,8 +586,8 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
         public static bool ProviderIsAvailableOverride
         {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
+            get { return s_providerIsAvailableOverride; }
+            set { s_providerIsAvailableOverride = value; }
         }
 
         public override ILog GetLogger(string name)
@@ -664,7 +666,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                 }
                 messageFunc = LogMessageFormatter.SimulateStructuredLogging(messageFunc, formatParameters);
 
-                if(exception != null)
+                if (exception != null)
                 {
                     return LogException(logLevel, messageFunc, exception);
                 }
@@ -790,7 +792,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
     internal class Log4NetLogProvider : LogProviderBase
     {
         private readonly Func<string, object> _getLoggerByNameDelegate;
-        private static bool _providerIsAvailableOverride = true;
+        private static bool s_providerIsAvailableOverride = true;
 
         public Log4NetLogProvider()
         {
@@ -803,8 +805,8 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
         public static bool ProviderIsAvailableOverride
         {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
+            get { return s_providerIsAvailableOverride; }
+            set { s_providerIsAvailableOverride = value; }
         }
 
         public override ILog GetLogger(string name)
@@ -996,26 +998,26 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
     internal class EntLibLogProvider : LogProviderBase
     {
         private const string TypeTemplate = "Microsoft.Practices.EnterpriseLibrary.Logging.{0}, Microsoft.Practices.EnterpriseLibrary.Logging";
-        private static bool _providerIsAvailableOverride = true;
-        private static readonly Type LogEntryType;
-        private static readonly Type LoggerType;
-        private static readonly Type TraceEventTypeType;
-        private static readonly Action<string, string, int> WriteLogEntry;
-        private static readonly Func<string, int, bool> ShouldLogEntry;
+        private static bool s_providerIsAvailableOverride = true;
+        private static readonly Type s_logEntryType;
+        private static readonly Type s_loggerType;
+        private static readonly Type s_traceEventTypeType;
+        private static readonly Action<string, string, int> s_writeLogEntry;
+        private static readonly Func<string, int, bool> s_shouldLogEntry;
 
         static EntLibLogProvider()
         {
-            LogEntryType = Type.GetType(string.Format(TypeTemplate, "LogEntry"));
-            LoggerType = Type.GetType(string.Format(TypeTemplate, "Logger"));
-            TraceEventTypeType = TraceEventTypeValues.Type;
-            if (LogEntryType == null
-                 || TraceEventTypeType == null
-                 || LoggerType == null)
+            s_logEntryType = Type.GetType(string.Format(TypeTemplate, "LogEntry"));
+            s_loggerType = Type.GetType(string.Format(TypeTemplate, "Logger"));
+            s_traceEventTypeType = TraceEventTypeValues.Type;
+            if (s_logEntryType == null
+                 || s_traceEventTypeType == null
+                 || s_loggerType == null)
             {
                 return;
             }
-            WriteLogEntry = GetWriteLogEntry();
-            ShouldLogEntry = GetShouldLogEntry();
+            s_writeLogEntry = GetWriteLogEntry();
+            s_shouldLogEntry = GetShouldLogEntry();
         }
 
         public EntLibLogProvider()
@@ -1028,20 +1030,20 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
         public static bool ProviderIsAvailableOverride
         {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
+            get { return s_providerIsAvailableOverride; }
+            set { s_providerIsAvailableOverride = value; }
         }
 
         public override ILog GetLogger(string name)
         {
-            return new EntLibLogger(name, WriteLogEntry, ShouldLogEntry);
+            return new EntLibLogger(name, s_writeLogEntry, s_shouldLogEntry);
         }
 
         internal static bool IsLoggerAvailable()
         {
             return ProviderIsAvailableOverride
-                 && TraceEventTypeType != null
-                 && LogEntryType != null;
+                 && s_traceEventTypeType != null
+                 && s_logEntryType != null;
         }
 
         private static Action<string, string, int> GetWriteLogEntry()
@@ -1053,11 +1055,11 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
             MemberInitExpression memberInit = GetWriteLogExpression(
                 messageParameter,
-                Expression.Convert(severityParameter, TraceEventTypeType),
+                Expression.Convert(severityParameter, s_traceEventTypeType),
                 logNameParameter);
 
             //Logger.Write(new LogEntry(....));
-            MethodInfo writeLogEntryMethod = LoggerType.GetMethodPortable("Write", new[] { LogEntryType });
+            MethodInfo writeLogEntryMethod = s_loggerType.GetMethodPortable("Write", new[] { s_logEntryType });
             var writeLogEntryExpression = Expression.Call(writeLogEntryMethod, memberInit);
 
             return Expression.Lambda<Action<string, string, int>>(
@@ -1075,11 +1077,11 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
             MemberInitExpression memberInit = GetWriteLogExpression(
                 Expression.Constant("***dummy***"),
-                Expression.Convert(severityParameter, TraceEventTypeType),
+                Expression.Convert(severityParameter, s_traceEventTypeType),
                 logNameParameter);
 
             //Logger.Write(new LogEntry(....));
-            MethodInfo writeLogEntryMethod = LoggerType.GetMethodPortable("ShouldLog", new[] { LogEntryType });
+            MethodInfo writeLogEntryMethod = s_loggerType.GetMethodPortable("ShouldLog", new[] { s_logEntryType });
             var writeLogEntryExpression = Expression.Call(writeLogEntryMethod, memberInit);
 
             return Expression.Lambda<Func<string, int, bool>>(
@@ -1091,8 +1093,8 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
         private static MemberInitExpression GetWriteLogExpression(Expression message,
             Expression severityParameter, ParameterExpression logNameParameter)
         {
-            var entryType = LogEntryType;
-            MemberInitExpression memberInit = Expression.MemberInit(Expression.New(entryType), new []
+            var entryType = s_logEntryType;
+            MemberInitExpression memberInit = Expression.MemberInit(Expression.New(entryType), new[]
             {
                 Expression.Bind(entryType.GetPropertyPortable("Message"), message),
                 Expression.Bind(entryType.GetPropertyPortable("Severity"), severityParameter),
@@ -1168,7 +1170,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
     internal class SerilogLogProvider : LogProviderBase
     {
         private readonly Func<string, object> _getLoggerByNameDelegate;
-        private static bool _providerIsAvailableOverride = true;
+        private static bool s_providerIsAvailableOverride = true;
 
         public SerilogLogProvider()
         {
@@ -1181,8 +1183,8 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
         public static bool ProviderIsAvailableOverride
         {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
+            get { return s_providerIsAvailableOverride; }
+            set { s_providerIsAvailableOverride = value; }
         }
 
         public override ILog GetLogger(string name)
@@ -1228,7 +1230,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                     valueParam,
                     destructureObjectParam)
                 .Compile();
-            
+
             return (key, value) => pushProperty(key, value, false);
         }
 
@@ -1246,7 +1248,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
             ParameterExpression destructureObjectsParam = Expression.Parameter(typeof(bool), "destructureObjects");
             MethodCallExpression methodCall = Expression.Call(null, method, new Expression[]
             {
-                propertyNameParam, 
+                propertyNameParam,
                 valueParam,
                 destructureObjectsParam
             });
@@ -1262,25 +1264,25 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
         public class SerilogLogger : ILog
         {
             private readonly object _logger;
-            private static readonly object DebugLevel;
-            private static readonly object ErrorLevel;
-            private static readonly object FatalLevel;
-            private static readonly object InformationLevel;
-            private static readonly object VerboseLevel;
-            private static readonly object WarningLevel;
-            private static readonly Func<object, object, bool> IsEnabled;
-            private static readonly Action<object, object, string, object[]> Write;
-            private static readonly Action<object, object, Exception, string, object[]> WriteException;
+            private static readonly object s_debugLevel;
+            private static readonly object s_errorLevel;
+            private static readonly object s_fatalLevel;
+            private static readonly object s_informationLevel;
+            private static readonly object s_verboseLevel;
+            private static readonly object s_warningLevel;
+            private static readonly Func<object, object, bool> s_isEnabled;
+            private static readonly Action<object, object, string, object[]> s_write;
+            private static readonly Action<object, object, Exception, string, object[]> s_writeException;
 
             static SerilogLogger()
             {
                 var logEventTypeType = Type.GetType("Serilog.Events.LogEventLevel, Serilog");
-                DebugLevel = Enum.Parse(logEventTypeType, "Debug", false);
-                ErrorLevel = Enum.Parse(logEventTypeType, "Error", false);
-                FatalLevel = Enum.Parse(logEventTypeType, "Fatal", false);
-                InformationLevel = Enum.Parse(logEventTypeType, "Information", false);
-                VerboseLevel = Enum.Parse(logEventTypeType, "Verbose", false);
-                WarningLevel = Enum.Parse(logEventTypeType, "Warning", false);
+                s_debugLevel = Enum.Parse(logEventTypeType, "Debug", false);
+                s_errorLevel = Enum.Parse(logEventTypeType, "Error", false);
+                s_fatalLevel = Enum.Parse(logEventTypeType, "Fatal", false);
+                s_informationLevel = Enum.Parse(logEventTypeType, "Information", false);
+                s_verboseLevel = Enum.Parse(logEventTypeType, "Verbose", false);
+                s_warningLevel = Enum.Parse(logEventTypeType, "Warning", false);
 
                 // Func<object, object, bool> isEnabled = (logger, level) => { return ((SeriLog.ILogger)logger).IsEnabled(level); }
                 var loggerType = Type.GetType("Serilog.ILogger, Serilog");
@@ -1291,7 +1293,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                 ParameterExpression levelParam = Expression.Parameter(typeof(object));
                 UnaryExpression levelCast = Expression.Convert(levelParam, logEventTypeType);
                 MethodCallExpression isEnabledMethodCall = Expression.Call(instanceCast, isEnabledMethodInfo, levelCast);
-                IsEnabled = Expression.Lambda<Func<object, object, bool>>(isEnabledMethodCall, instanceParam, levelParam).Compile();
+                s_isEnabled = Expression.Lambda<Func<object, object, bool>>(isEnabledMethodCall, instanceParam, levelParam).Compile();
 
                 // Action<object, object, string> Write =
                 // (logger, level, message, params) => { ((SeriLog.ILoggerILogger)logger).Write(level, message, params); }
@@ -1300,19 +1302,19 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                 ParameterExpression propertyValuesParam = Expression.Parameter(typeof(object[]));
                 MethodCallExpression writeMethodExp = Expression.Call(instanceCast, writeMethodInfo, levelCast, messageParam, propertyValuesParam);
                 var expression = Expression.Lambda<Action<object, object, string, object[]>>(
-                    writeMethodExp, 
+                    writeMethodExp,
                     instanceParam,
                     levelParam,
                     messageParam,
                     propertyValuesParam);
-                Write = expression.Compile();
+                s_write = expression.Compile();
 
                 // Action<object, object, string, Exception> WriteException =
                 // (logger, level, exception, message) => { ((ILogger)logger).Write(level, exception, message, new object[]); }
                 MethodInfo writeExceptionMethodInfo = loggerType.GetMethodPortable("Write", new[]
                 {
                     logEventTypeType,
-                    typeof(Exception), 
+                    typeof(Exception),
                     typeof(string),
                     typeof(object[])
                 });
@@ -1324,8 +1326,8 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                     exceptionParam,
                     messageParam,
                     propertyValuesParam);
-                WriteException = Expression.Lambda<Action<object, object, Exception, string, object[]>>(
-                    writeMethodExp, 
+                s_writeException = Expression.Lambda<Action<object, object, Exception, string, object[]>>(
+                    writeMethodExp,
                     instanceParam,
                     levelParam,
                     exceptionParam,
@@ -1342,7 +1344,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
             {
                 if (messageFunc == null)
                 {
-                    return IsEnabled(_logger, logLevel);
+                    return s_isEnabled(_logger, logLevel);
                 }
                 if (exception != null)
                 {
@@ -1352,44 +1354,44 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                 switch (logLevel)
                 {
                     case LogLevel.Debug:
-                        if (IsEnabled(_logger, DebugLevel))
+                        if (s_isEnabled(_logger, s_debugLevel))
                         {
-                            Write(_logger, DebugLevel, messageFunc(), formatParameters);
+                            s_write(_logger, s_debugLevel, messageFunc(), formatParameters);
                             return true;
                         }
                         break;
                     case LogLevel.Info:
-                        if (IsEnabled(_logger, InformationLevel))
+                        if (s_isEnabled(_logger, s_informationLevel))
                         {
-                            Write(_logger, InformationLevel, messageFunc(), formatParameters);
+                            s_write(_logger, s_informationLevel, messageFunc(), formatParameters);
                             return true;
                         }
                         break;
                     case LogLevel.Warn:
-                        if (IsEnabled(_logger, WarningLevel))
+                        if (s_isEnabled(_logger, s_warningLevel))
                         {
-                            Write(_logger, WarningLevel, messageFunc(), formatParameters);
+                            s_write(_logger, s_warningLevel, messageFunc(), formatParameters);
                             return true;
                         }
                         break;
                     case LogLevel.Error:
-                        if (IsEnabled(_logger, ErrorLevel))
+                        if (s_isEnabled(_logger, s_errorLevel))
                         {
-                            Write(_logger, ErrorLevel, messageFunc(), formatParameters);
+                            s_write(_logger, s_errorLevel, messageFunc(), formatParameters);
                             return true;
                         }
                         break;
                     case LogLevel.Fatal:
-                        if (IsEnabled(_logger, FatalLevel))
+                        if (s_isEnabled(_logger, s_fatalLevel))
                         {
-                            Write(_logger, FatalLevel, messageFunc(), formatParameters);
+                            s_write(_logger, s_fatalLevel, messageFunc(), formatParameters);
                             return true;
                         }
                         break;
                     default:
-                        if (IsEnabled(_logger, VerboseLevel))
+                        if (s_isEnabled(_logger, s_verboseLevel))
                         {
-                            Write(_logger, VerboseLevel, messageFunc(), formatParameters);
+                            s_write(_logger, s_verboseLevel, messageFunc(), formatParameters);
                             return true;
                         }
                         break;
@@ -1402,44 +1404,44 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                 switch (logLevel)
                 {
                     case LogLevel.Debug:
-                        if (IsEnabled(_logger, DebugLevel))
+                        if (s_isEnabled(_logger, s_debugLevel))
                         {
-                            WriteException(_logger, DebugLevel, exception, messageFunc(), formatParams);
+                            s_writeException(_logger, s_debugLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
                         break;
                     case LogLevel.Info:
-                        if (IsEnabled(_logger, InformationLevel))
+                        if (s_isEnabled(_logger, s_informationLevel))
                         {
-                            WriteException(_logger, InformationLevel, exception, messageFunc(), formatParams);
+                            s_writeException(_logger, s_informationLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
                         break;
                     case LogLevel.Warn:
-                        if (IsEnabled(_logger, WarningLevel))
+                        if (s_isEnabled(_logger, s_warningLevel))
                         {
-                            WriteException(_logger, WarningLevel, exception, messageFunc(), formatParams);
+                            s_writeException(_logger, s_warningLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
                         break;
                     case LogLevel.Error:
-                        if (IsEnabled(_logger, ErrorLevel))
+                        if (s_isEnabled(_logger, s_errorLevel))
                         {
-                            WriteException(_logger, ErrorLevel, exception, messageFunc(), formatParams);
+                            s_writeException(_logger, s_errorLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
                         break;
                     case LogLevel.Fatal:
-                        if (IsEnabled(_logger, FatalLevel))
+                        if (s_isEnabled(_logger, s_fatalLevel))
                         {
-                            WriteException(_logger, FatalLevel, exception, messageFunc(), formatParams);
+                            s_writeException(_logger, s_fatalLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
                         break;
                     default:
-                        if (IsEnabled(_logger, VerboseLevel))
+                        if (s_isEnabled(_logger, s_verboseLevel))
                         {
-                            WriteException(_logger, VerboseLevel, exception, messageFunc(), formatParams);
+                            s_writeException(_logger, s_verboseLevel, exception, messageFunc(), formatParams);
                             return true;
                         }
                         break;
@@ -1468,7 +1470,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
             params object[] args
             );
 
-        private static bool _providerIsAvailableOverride = true;
+        private static bool s_providerIsAvailableOverride = true;
         private readonly WriteDelegate _logWriteDelegate;
 
         public LoupeLogProvider()
@@ -1489,8 +1491,8 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
         /// </value>
         public static bool ProviderIsAvailableOverride
         {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
+            get { return s_providerIsAvailableOverride; }
+            set { s_providerIsAvailableOverride = value; }
         }
 
         public override ILog GetLogger(string name)
@@ -1518,7 +1520,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                 "Write",
                 new[]
                 {
-                    logMessageSeverityType, typeof(string), typeof(int), typeof(Exception), typeof(bool), 
+                    logMessageSeverityType, typeof(string), typeof(int), typeof(Exception), typeof(bool),
                     logWriteModeType, typeof(string), typeof(string), typeof(string), typeof(string), typeof(object[])
                 });
 
@@ -1608,18 +1610,18 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
     internal class ColouredConsoleLogProvider : LogProviderBase
     {
-        private static readonly Type ConsoleType;
-        private static readonly Type ConsoleColorType;
-        private static readonly Action<string> ConsoleWriteLine;
-        private static readonly Func<int> GetConsoleForeground;
-        private static readonly Action<int> SetConsoleForeground;
-        private static bool _providerIsAvailableOverride = true;
-        private static readonly IDictionary<LogLevel, int> Colors;
- 
+        private static readonly Type s_consoleType;
+        private static readonly Type s_consoleColorType;
+        private static readonly Action<string> s_consoleWriteLine;
+        private static readonly Func<int> s_getConsoleForeground;
+        private static readonly Action<int> s_setConsoleForeground;
+        private static bool s_providerIsAvailableOverride = true;
+        private static readonly IDictionary<LogLevel, int> s_colors;
+
         static ColouredConsoleLogProvider()
         {
-            ConsoleType = Type.GetType("System.Console");
-            ConsoleColorType = ConsoleColorValues.Type;
+            s_consoleType = Type.GetType("System.Console");
+            s_consoleColorType = ConsoleColorValues.Type;
 
             if (!IsLoggerAvailable())
             {
@@ -1627,7 +1629,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
             }
 
             MessageFormatter = DefaultMessageFormatter;
-            Colors = new Dictionary<LogLevel, int>
+            s_colors = new Dictionary<LogLevel, int>
                 {
                     {LogLevel.Fatal, ConsoleColorValues.Red},
                     {LogLevel.Error, ConsoleColorValues.Yellow},
@@ -1636,19 +1638,19 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                     {LogLevel.Debug, ConsoleColorValues.Gray},
                     {LogLevel.Trace, ConsoleColorValues.DarkGray},
                 };
-            ConsoleWriteLine = GetConsoleWrite();
-            GetConsoleForeground = GetGetConsoleForeground();
-            SetConsoleForeground = GetSetConsoleForeground();
+            s_consoleWriteLine = GetConsoleWrite();
+            s_getConsoleForeground = GetGetConsoleForeground();
+            s_setConsoleForeground = GetSetConsoleForeground();
         }
 
         internal static bool IsLoggerAvailable()
         {
-            return ProviderIsAvailableOverride && ConsoleType != null && ConsoleColorType != null;
+            return ProviderIsAvailableOverride && s_consoleType != null && s_consoleColorType != null;
         }
 
         public override ILog GetLogger(string name)
         {
-            return new ColouredConsoleLogger(name, ConsoleWriteLine, GetConsoleForeground, SetConsoleForeground);
+            return new ColouredConsoleLogger(name, s_consoleWriteLine, s_getConsoleForeground, s_setConsoleForeground);
         }
 
         /// <summary>
@@ -1669,8 +1671,8 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
         public static bool ProviderIsAvailableOverride
         {
-            get { return _providerIsAvailableOverride; }
-            set { _providerIsAvailableOverride = value; }
+            get { return s_providerIsAvailableOverride; }
+            set { s_providerIsAvailableOverride = value; }
         }
 
         protected static string DefaultMessageFormatter(string loggerName, LogLevel level, object message, Exception e)
@@ -1678,7 +1680,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
             var stringBuilder = new StringBuilder();
             stringBuilder.Append(DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss", CultureInfo.InvariantCulture));
             stringBuilder.Append(" ");
-            
+
             // Append a readable representation of the log level
             stringBuilder.Append(("[" + level.ToString().ToUpper() + "]").PadRight(8));
             stringBuilder.Append("(" + loggerName + ") ");
@@ -1701,7 +1703,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
         {
             var messageParameter = Expression.Parameter(typeof(string), "message");
 
-            MethodInfo writeMethod = ConsoleType.GetMethodPortable("WriteLine", new[] { typeof(string) });
+            MethodInfo writeMethod = s_consoleType.GetMethodPortable("WriteLine", new[] { typeof(string) });
             var writeExpression = Expression.Call(writeMethod, messageParameter);
 
             return Expression.Lambda<Action<string>>(
@@ -1710,7 +1712,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
         private static Func<int> GetGetConsoleForeground()
         {
-            MethodInfo getForeground = ConsoleType.GetPropertyPortable("ForegroundColor").GetGetMethod();
+            MethodInfo getForeground = s_consoleType.GetPropertyPortable("ForegroundColor").GetGetMethod();
             var getForegroundExpression = Expression.Convert(Expression.Call(getForeground), typeof(int));
 
             return Expression.Lambda<Func<int>>(getForegroundExpression).Compile();
@@ -1720,9 +1722,9 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
         {
             var colorParameter = Expression.Parameter(typeof(int), "color");
 
-            MethodInfo setForeground = ConsoleType.GetPropertyPortable("ForegroundColor").GetSetMethod();
+            MethodInfo setForeground = s_consoleType.GetPropertyPortable("ForegroundColor").GetSetMethod();
             var setForegroundExpression = Expression.Call(setForeground,
-                Expression.Convert(colorParameter, ConsoleColorType));
+                Expression.Convert(colorParameter, s_consoleColorType));
 
             return Expression.Lambda<Action<int>>(
                 setForegroundExpression, colorParameter).Compile();
@@ -1760,10 +1762,10 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
             protected void Write(LogLevel logLevel, string message, Exception e = null)
             {
-                var formattedMessage = MessageFormatter(this._name, logLevel, message, e);
+                var formattedMessage = MessageFormatter(_name, logLevel, message, e);
                 int color;
 
-                if (Colors.TryGetValue(logLevel, out color))
+                if (s_colors.TryGetValue(logLevel, out color))
                 {
                     var originalColor = _getForeground();
                     try
@@ -1809,7 +1811,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
     internal static class LogMessageFormatter
     {
-        private static readonly Regex Pattern = new Regex(@"\{\w{1,}\}");
+        private static readonly Regex s_pattern = new Regex(@"\{\w{1,}\}");
 
         /// <summary>
         /// Some logging frameworks support structured logging, such as serilog. This will allow you to add names to structured data in a format string:
@@ -1823,7 +1825,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
         /// <returns></returns>
         public static Func<string> SimulateStructuredLogging(Func<string> messageBuilder, object[] formatParameters)
         {
-            if(formatParameters == null)
+            if (formatParameters == null)
             {
                 return messageBuilder;
             }
@@ -1832,10 +1834,10 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
             {
                 string targetMessage = messageBuilder();
                 int argumentIndex = 0;
-                foreach (Match match in Pattern.Matches(targetMessage))
+                foreach (Match match in s_pattern.Matches(targetMessage))
                 {
                     int notUsed;
-                    if (!int.TryParse(match.Value.Substring(1, match.Value.Length -2), out notUsed))
+                    if (!int.TryParse(match.Value.Substring(1, match.Value.Length - 2), out notUsed))
                     {
                         targetMessage = ReplaceFirst(targetMessage, match.Value,
                             "{" + argumentIndex++ + "}");
@@ -1932,7 +1934,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
         public void Dispose()
         {
-            if(_onDispose != null)
+            if (_onDispose != null)
             {
                 _onDispose();
             }

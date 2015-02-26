@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 10-21-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="PipeType.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -32,8 +34,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 namespace paramore.brighter.restms.core.Model
 {
     /// <summary>
@@ -56,6 +58,6 @@ namespace paramore.brighter.restms.core.Model
         /// <summary>
         /// The default{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
         /// </summary>
-        Default=Fifo
+        Default = Fifo
     }
 }

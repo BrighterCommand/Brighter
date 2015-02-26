@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 // ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 11-05-2014
 // ***********************************************************************
-// <copyright file="RestMSMessage.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
@@ -51,7 +53,7 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMSMessage"/> class.
         /// </summary>
-        public RestMSMessage(){}
+        public RestMSMessage() { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMSMessage"/> class.
@@ -108,6 +110,5 @@ namespace paramore.brighter.restms.core.Ports.Resources
         /// <value>The content.</value>
         [DataMember(Name = "content"), XmlElement(ElementName = "content")]
         public RestMSMessageContent Content { get; set; }
-
     }
 }

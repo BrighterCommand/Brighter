@@ -1,13 +1,16 @@
-﻿using paramore.brighter.commandprocessor;
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.restms.core.Ports.Cache;
 using paramore.brighter.restms.core.Ports.Commands;
 
 namespace paramore.brighter.restms.core.Ports.Handlers
 {
-    public class CacheCleaningHandler: RequestHandler<InvalidateCacheCommand>
+    public class CacheCleaningHandler : RequestHandler<InvalidateCacheCommand>
     {
-        readonly IAmACache cache;
+        private readonly IAmACache _cache;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
@@ -16,7 +19,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <param name="logger">The logger.</param>
         public CacheCleaningHandler(IAmACache cache, ILog logger) : base(logger)
         {
-            this.cache = cache;
+            _cache = cache;
         }
 
         /// <summary>
@@ -26,9 +29,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <returns>TRequest.</returns>
         public override InvalidateCacheCommand Handle(InvalidateCacheCommand command)
         {
-            cache.InvalidateResource(command.ResourceToInvalidate);
+            _cache.InvalidateResource(command.ResourceToInvalidate);
             return base.Handle(command);
         }
-
     }
 }

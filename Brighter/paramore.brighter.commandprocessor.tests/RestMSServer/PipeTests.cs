@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net.Mail;
@@ -22,15 +25,15 @@ namespace paramore.commandprocessor.tests.RestMSServer
     [Subject("Pipes, a user-defined feed")]
     public class When_retrieving_a_pipe
     {
-        const string ADDRESS_PATTERN = "*";
-        static Pipe pipe;
-        static Join join;
-        static Message message;
-        static PipeRetriever pipeRetriever;
-        static RestMSPipe restMSpipe;
-        static IAmARepository<Pipe> pipeRepository;
+        private const string ADDRESS_PATTERN = "*";
+        private static Pipe s_pipe;
+        private static Join s_join;
+        private static Message s_message;
+        private static PipeRetriever s_pipeRetriever;
+        private static RestMSPipe s_restMSpipe;
+        private static IAmARepository<Pipe> s_pipeRepository;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
             Globals.HostName = "host.com";
@@ -41,58 +44,58 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
-            pipe = new Pipe(
+            s_pipe = new Pipe(
                 new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
                 PipeType.Fifo,
                 new Title("My Title"));
 
-            
-            join = new Join(
-                pipe,
+
+            s_join = new Join(
+                s_pipe,
                 new Uri("http://host.com/restms/feed/myfeed"),
                 new Address(ADDRESS_PATTERN));
-            pipe.AddJoin(join);
+            s_pipe.AddJoin(s_join);
 
-             message = new Message(
-                ADDRESS_PATTERN,
-                feed.Href.AbsoluteUri,
-                new NameValueCollection(),
-                Attachment.CreateAttachmentFromString("", MediaTypeNames.Text.Plain)
-                );
+            s_message = new Message(
+               ADDRESS_PATTERN,
+               feed.Href.AbsoluteUri,
+               new NameValueCollection(),
+               Attachment.CreateAttachmentFromString("", MediaTypeNames.Text.Plain)
+               );
 
-            pipe.AddMessage(message);
+            s_pipe.AddMessage(s_message);
 
-            pipeRepository = new InMemoryPipeRepository(logger);
-            pipeRepository.Add(pipe);
-            pipeRetriever = new PipeRetriever(pipeRepository);
+            s_pipeRepository = new InMemoryPipeRepository(logger);
+            s_pipeRepository.Add(s_pipe);
+            s_pipeRetriever = new PipeRetriever(s_pipeRepository);
         };
 
 
-        Because of = () => restMSpipe = pipeRetriever.Retrieve(pipe.Name);
+        private Because _of = () => s_restMSpipe = s_pipeRetriever.Retrieve(s_pipe.Name);
 
-        It should_have_the_pipe_name = () => restMSpipe.Name.ShouldEqual(pipe.Name.Value);
-        It should_have_the_pipe_type = () => restMSpipe.Type.ShouldEqual(pipe.Type.ToString());
-        It should_have_the_pipe_title = () => restMSpipe.Title.ShouldEqual(pipe.Title.Value);
-        It should_have_the_pipe_href = () => restMSpipe.Href.ShouldEqual(pipe.Href.AbsoluteUri);
-        It should_have_the_join_associated_with_the_pipe = () => restMSpipe.Joins.First().Name.ShouldEqual(join.Name.Value);
-        It should_have_a_link_for_the_message_associated_with_the_pipe = () => restMSpipe.Messages.First().Href.ShouldEqual(new Uri(string.Format("http://{0}/restms/pipe/{1}/message/{2}", Globals.HostName, message.PipeName.Value, message.MessageId)).AbsoluteUri);
+        private It _should_have_the_pipe_name = () => s_restMSpipe.Name.ShouldEqual(s_pipe.Name.Value);
+        private It _should_have_the_pipe_type = () => s_restMSpipe.Type.ShouldEqual(s_pipe.Type.ToString());
+        private It _should_have_the_pipe_title = () => s_restMSpipe.Title.ShouldEqual(s_pipe.Title.Value);
+        private It _should_have_the_pipe_href = () => s_restMSpipe.Href.ShouldEqual(s_pipe.Href.AbsoluteUri);
+        private It _should_have_the_join_associated_with_the_pipe = () => s_restMSpipe.Joins.First().Name.ShouldEqual(s_join.Name.Value);
+        private It _should_have_a_link_for_the_message_associated_with_the_pipe = () => s_restMSpipe.Messages.First().Href.ShouldEqual(new Uri(string.Format("http://{0}/restms/pipe/{1}/message/{2}", Globals.HostName, s_message.PipeName.Value, s_message.MessageId)).AbsoluteUri);
     }
 
     public class When_retrieving_a_pipe_that_does_not_exist
     {
-        const string ADDRESS_PATTERN = "*";
-        static Pipe pipe;
-        static Join join;
-        static Message message;
-        static PipeRetriever pipeRetriever;
-        static IAmARepository<Pipe> pipeRepository;
-        static bool exceptionWasThrown;
+        private const string ADDRESS_PATTERN = "*";
+        private static Pipe s_pipe;
+        private static Join s_join;
+        private static Message s_message;
+        private static PipeRetriever s_pipeRetriever;
+        private static IAmARepository<Pipe> s_pipeRepository;
+        private static bool s_exceptionWasThrown;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
             Globals.HostName = "host.com";
-            exceptionWasThrown = false;
+            s_exceptionWasThrown = false;
 
             var feed = new Feed(
                 feedType: FeedType.Direct,
@@ -100,108 +103,105 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
-            pipe = new Pipe(
+            s_pipe = new Pipe(
                 new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
                 PipeType.Fifo,
                 new Title("My Title"));
 
-            
-            join = new Join(
-                pipe,
+
+            s_join = new Join(
+                s_pipe,
                 new Uri("http://host.com/restms/feed/myfeed"),
                 new Address(ADDRESS_PATTERN));
-            pipe.AddJoin(join);
+            s_pipe.AddJoin(s_join);
 
-             message = new Message(
-                ADDRESS_PATTERN,
-                feed.Href.AbsoluteUri,
-                new NameValueCollection(),
-                Attachment.CreateAttachmentFromString("", MediaTypeNames.Text.Plain)
-                );
+            s_message = new Message(
+               ADDRESS_PATTERN,
+               feed.Href.AbsoluteUri,
+               new NameValueCollection(),
+               Attachment.CreateAttachmentFromString("", MediaTypeNames.Text.Plain)
+               );
 
-            pipe.AddMessage(message);
+            s_pipe.AddMessage(s_message);
 
-            pipeRepository = new InMemoryPipeRepository(logger);
-            pipeRetriever = new PipeRetriever(pipeRepository);
+            s_pipeRepository = new InMemoryPipeRepository(logger);
+            s_pipeRetriever = new PipeRetriever(s_pipeRepository);
         };
 
 
-        Because of = () => { try { pipeRetriever.Retrieve(pipe.Name); } catch (PipeDoesNotExistException) { exceptionWasThrown = true; } };
+        private Because _of = () => { try { s_pipeRetriever.Retrieve(s_pipe.Name); } catch (PipeDoesNotExistException) { s_exceptionWasThrown = true; } };
 
-        It should_have_thrown_an_exception = () => exceptionWasThrown.ShouldBeTrue();
-
+        private It _should_have_thrown_an_exception = () => s_exceptionWasThrown.ShouldBeTrue();
     }
 
     [Subject("Pipes, a user-defined feed")]
     public class When_adding_a_pipe
     {
-        static AddPipeCommand addPipeCommand;
-        static AddPipeCommandHandler addPipeCommandHandler;
-        static IAmARepository<Pipe> pipeRepository; 
-        static IAmACommandProcessor commandProcessor;
+        private static AddPipeCommand s_addPipeCommand;
+        private static AddPipeCommandHandler s_addPipeCommandHandler;
+        private static IAmARepository<Pipe> s_pipeRepository;
+        private static IAmACommandProcessor s_commandProcessor;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
-            commandProcessor = A.Fake<IAmACommandProcessor>();
-            pipeRepository = new InMemoryPipeRepository(logger);
+            s_commandProcessor = A.Fake<IAmACommandProcessor>();
+            s_pipeRepository = new InMemoryPipeRepository(logger);
 
-            addPipeCommand = new AddPipeCommand("Default", "Fifo ", "My Pipe");
+            s_addPipeCommand = new AddPipeCommand("Default", "Fifo ", "My Pipe");
 
-            addPipeCommandHandler = new AddPipeCommandHandler(pipeRepository, commandProcessor, logger);
-
+            s_addPipeCommandHandler = new AddPipeCommandHandler(s_pipeRepository, s_commandProcessor, logger);
         };
 
-        Because of = () => addPipeCommandHandler.Handle(addPipeCommand);
+        private Because _of = () => s_addPipeCommandHandler.Handle(s_addPipeCommand);
 
-        It should_add_the_pipe_into_the_pipe_repository = () => pipeRepository[new Identity(addPipeCommand.Id.ToString())].Title.Value.ShouldEqual(addPipeCommand.Title);
-        It should_use_the_command_identifier_as_the_pipe_identifier = () => pipeRepository[new Identity(addPipeCommand.Id.ToString())].Id.Value.ShouldEqual(addPipeCommand.Id.ToString());
-        It should_use_the_command_identifier_as_the_pipe_name = () => pipeRepository[new Identity(addPipeCommand.Id.ToString())].Name.Value.ShouldEqual(addPipeCommand.Id.ToString());
-        It should_have_uri_for_the_new_pipe = () => pipeRepository[new Identity(addPipeCommand.Id.ToString())].Href.AbsoluteUri.ShouldEqual(string.Format("http://{0}/restms/pipe/{1}", Globals.HostName, addPipeCommand.Id.ToString()));
-        It should_have_the_type_of_the_pipe = () => pipeRepository[new Identity(addPipeCommand.Id.ToString())].Type.ShouldEqual(PipeType.Default);
-        It should_raise_an_event_to_add_the_pipe_to_the_domain  = () => A.CallTo(() => commandProcessor.Send(A<AddPipeToDomainCommand>.Ignored)).MustHaveHappened();
+        private It _should_add_the_pipe_into_the_pipe_repository = () => s_pipeRepository[new Identity(s_addPipeCommand.Id.ToString())].Title.Value.ShouldEqual(s_addPipeCommand.Title);
+        private It _should_use_the_command_identifier_as_the_pipe_identifier = () => s_pipeRepository[new Identity(s_addPipeCommand.Id.ToString())].Id.Value.ShouldEqual(s_addPipeCommand.Id.ToString());
+        private It _should_use_the_command_identifier_as_the_pipe_name = () => s_pipeRepository[new Identity(s_addPipeCommand.Id.ToString())].Name.Value.ShouldEqual(s_addPipeCommand.Id.ToString());
+        private It _should_have_uri_for_the_new_pipe = () => s_pipeRepository[new Identity(s_addPipeCommand.Id.ToString())].Href.AbsoluteUri.ShouldEqual(string.Format("http://{0}/restms/pipe/{1}", Globals.HostName, s_addPipeCommand.Id.ToString()));
+        private It _should_have_the_type_of_the_pipe = () => s_pipeRepository[new Identity(s_addPipeCommand.Id.ToString())].Type.ShouldEqual(PipeType.Default);
+        private It _should_raise_an_event_to_add_the_pipe_to_the_domain = () => A.CallTo(() => s_commandProcessor.Send(A<AddPipeToDomainCommand>.Ignored)).MustHaveHappened();
     }
 
     [Subject("Pipes, a user-defined feed")]
     public class When_adding_a_default_pipe
     {
-        static AddPipeCommand addPipeCommand;
-        static AddPipeCommandHandler addPipeCommandHandler;
-        static IAmARepository<Pipe> pipeRepository; 
-        static IAmACommandProcessor commandProcessor;
+        private static AddPipeCommand s_addPipeCommand;
+        private static AddPipeCommandHandler s_addPipeCommandHandler;
+        private static IAmARepository<Pipe> s_pipeRepository;
+        private static IAmACommandProcessor s_commandProcessor;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             Globals.HostName = "host.com";
             var logger = A.Fake<ILog>();
-            commandProcessor = A.Fake<IAmACommandProcessor>();
-            pipeRepository = new InMemoryPipeRepository(logger);
+            s_commandProcessor = A.Fake<IAmACommandProcessor>();
+            s_pipeRepository = new InMemoryPipeRepository(logger);
 
-            addPipeCommand = new AddPipeCommand("Default", "Fifo ", "My Pipe");
+            s_addPipeCommand = new AddPipeCommand("Default", "Fifo ", "My Pipe");
 
-            addPipeCommandHandler = new AddPipeCommandHandler(pipeRepository, commandProcessor, logger);
-
+            s_addPipeCommandHandler = new AddPipeCommandHandler(s_pipeRepository, s_commandProcessor, logger);
         };
 
-        Because of = () => addPipeCommandHandler.Handle(addPipeCommand);
+        private Because _of = () => s_addPipeCommandHandler.Handle(s_addPipeCommand);
 
-        It should_send_a_message_to_add_a_default_join_to_the_default_feed = () => A.CallTo(() => commandProcessor.Send(A<AddJoinToPipeCommand>.Ignored)).MustHaveHappened();
+        private It _should_send_a_message_to_add_a_default_join_to_the_default_feed = () => A.CallTo(() => s_commandProcessor.Send(A<AddJoinToPipeCommand>.Ignored)).MustHaveHappened();
     }
 
 
     [Subject("Pipes, a user-defined feed")]
     public class When_deleting_a_pipe
     {
-        const string ADDRESS_PATTERN = "*";
-        static Pipe pipe;
-        static Join join;
-        static Message message;
-        static IAmARepository<Pipe> pipeRepository;
-        static DeletePipeCommand deletePipeCommand;
-        static DeletePipeCommandHandler deletePipeCommandHandler;
+        private const string ADDRESS_PATTERN = "*";
+        private static Pipe s_pipe;
+        private static Join s_join;
+        private static Message s_message;
+        private static IAmARepository<Pipe> s_pipeRepository;
+        private static DeletePipeCommand s_deletePipeCommand;
+        private static DeletePipeCommandHandler s_deletePipeCommandHandler;
 
-        Establish context = () =>
+        private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
             Globals.HostName = "host.com";
@@ -212,37 +212,36 @@ namespace paramore.commandprocessor.tests.RestMSServer
                 title: new Title("Default feed")
                 );
 
-            pipe = new Pipe(
+            s_pipe = new Pipe(
                 new Identity("{B5A49969-DCAA-4885-AFAE-A574DED1E96A}"),
                 PipeType.Fifo,
                 new Title("My Title"));
 
-            
-            join = new Join(
-                pipe,
+
+            s_join = new Join(
+                s_pipe,
                 new Uri("http://host.com/restms/feed/myfeed"),
                 new Address(ADDRESS_PATTERN));
-            pipe.AddJoin(join);
+            s_pipe.AddJoin(s_join);
 
-             message = new Message(
-                ADDRESS_PATTERN,
-                feed.Href.AbsoluteUri,
-                new NameValueCollection(),
-                Attachment.CreateAttachmentFromString("", MediaTypeNames.Text.Plain)
-                );
+            s_message = new Message(
+               ADDRESS_PATTERN,
+               feed.Href.AbsoluteUri,
+               new NameValueCollection(),
+               Attachment.CreateAttachmentFromString("", MediaTypeNames.Text.Plain)
+               );
 
-            pipe.AddMessage(message);
+            s_pipe.AddMessage(s_message);
 
-            pipeRepository = new InMemoryPipeRepository(logger);
-            pipeRepository.Add(pipe);
+            s_pipeRepository = new InMemoryPipeRepository(logger);
+            s_pipeRepository.Add(s_pipe);
 
-            deletePipeCommand = new DeletePipeCommand(pipe.Name.Value);
-            deletePipeCommandHandler = new DeletePipeCommandHandler(pipeRepository, logger);
+            s_deletePipeCommand = new DeletePipeCommand(s_pipe.Name.Value);
+            s_deletePipeCommandHandler = new DeletePipeCommandHandler(s_pipeRepository, logger);
         };
 
-        Because of = () => deletePipeCommandHandler.Handle(deletePipeCommand);
+        private Because _of = () => s_deletePipeCommandHandler.Handle(s_deletePipeCommand);
 
-        It should_remove_the_pipe_from_the_repository = () => pipeRepository[pipe.Id].ShouldBeNull();
-
+        private It _should_remove_the_pipe_from_the_repository = () => s_pipeRepository[s_pipe.Id].ShouldBeNull();
     }
 }

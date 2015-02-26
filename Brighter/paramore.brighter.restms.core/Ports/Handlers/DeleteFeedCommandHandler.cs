@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 10-09-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="DeleteFeedCommandHandler.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Transactions;
 using paramore.brighter.commandprocessor;
@@ -50,8 +52,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
     /// </summary>
     public class DeleteFeedCommandHandler : RequestHandler<DeleteFeedCommand>
     {
-        readonly IAmARepository<Feed> feedRepository;
-        readonly IAmACommandProcessor commandProcessor;
+        private readonly IAmARepository<Feed> _feedRepository;
+        private readonly IAmACommandProcessor _commandProcessor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
@@ -69,8 +71,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <param name="log">The log.</param>
         public DeleteFeedCommandHandler(IAmARepository<Feed> feedRepository, IAmACommandProcessor commandProcessor, ILog log) : base(log)
         {
-            this.feedRepository = feedRepository;
-            this.commandProcessor = commandProcessor;
+            _feedRepository = feedRepository;
+            _commandProcessor = commandProcessor;
         }
 
         /// <summary>
@@ -82,7 +84,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         {
             using (var scope = new TransactionScope())
             {
-                var feed = feedRepository[new Identity(command.FeedName)];
+                var feed = _feedRepository[new Identity(command.FeedName)];
                 if (feed == null)
                 {
                     throw new FeedDoesNotExistException();
@@ -92,11 +94,11 @@ namespace paramore.brighter.restms.core.Ports.Handlers
                     throw new InvalidOperationException("You cannot delete the default feed");
                 }
 
-                feedRepository.Remove(new Identity(command.FeedName));
+                _feedRepository.Remove(new Identity(command.FeedName));
                 scope.Complete();
             }
 
-            commandProcessor.Send(new RemoveFeedFromDomainCommand(command.FeedName));
+            _commandProcessor.Send(new RemoveFeedFromDomainCommand(command.FeedName));
 
             return base.Handle(command);
         }

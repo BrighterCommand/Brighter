@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Collections.Generic;
 
@@ -64,7 +66,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         {
             RepostHappened = true;
         }
-
     }
 
     internal class SpyRequeueCommandProcessor : SpyCommandProcessor
@@ -81,7 +82,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         public override void Send<T>(T command)
         {
             base.Send(command);
-            SendCount ++;
+            SendCount++;
             throw new RequeueException();
         }
 
@@ -91,7 +92,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
             PublishCount++;
 
             var exceptions = new List<Exception>();
-            exceptions.Add(new RequeueException() );
+            exceptions.Add(new RequeueException());
             throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
 
 

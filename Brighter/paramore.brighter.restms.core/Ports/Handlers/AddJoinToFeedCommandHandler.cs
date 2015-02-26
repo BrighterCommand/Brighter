@@ -1,4 +1,7 @@
-﻿// ***********************************************************************
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+// ***********************************************************************
 // Assembly         : paramore.brighter.restms.core
 // Author           : ian
 // Created          : 10-21-2014
@@ -6,7 +9,6 @@
 // Last Modified By : ian
 // Last Modified On : 10-21-2014
 // ***********************************************************************
-// <copyright file="AddJoinToFeedCommandHandler.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -33,8 +35,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Linq;
 using System.Transactions;
@@ -48,8 +50,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
 {
     public class AddJoinToFeedCommandHandler : RequestHandler<AddJoinToFeedCommand>
     {
-        readonly IAmARepository<Feed> feedRepository;
-        readonly IAmACommandProcessor commandProcessor;
+        private readonly IAmARepository<Feed> _feedRepository;
+        private readonly IAmACommandProcessor _commandProcessor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
@@ -59,8 +61,8 @@ namespace paramore.brighter.restms.core.Ports.Handlers
         /// <param name="logger">The logger.</param>
         public AddJoinToFeedCommandHandler(IAmARepository<Feed> feedRepository, IAmACommandProcessor commandProcessor, ILog logger) : base(logger)
         {
-            this.feedRepository = feedRepository;
-            this.commandProcessor = commandProcessor;
+            _feedRepository = feedRepository;
+            _commandProcessor = commandProcessor;
         }
 
         /// <summary>
@@ -74,7 +76,7 @@ namespace paramore.brighter.restms.core.Ports.Handlers
             using (var scope = new TransactionScope())
             {
                 var feedUri = new Uri(addJoinToFeedCommand.FeedAddress);
-                var feed = feedRepository.Find(f => f.Href == feedUri).FirstOrDefault();
+                var feed = _feedRepository.Find(f => f.Href == feedUri).FirstOrDefault();
                 if (feed == null)
                 {
                     throw new FeedDoesNotExistException();
@@ -82,13 +84,13 @@ namespace paramore.brighter.restms.core.Ports.Handlers
 
                 //this creates the same join as added to the pipe - but is a different instance. It will compare equal by value
                 join = new Join(addJoinToFeedCommand.Pipe, new Uri(addJoinToFeedCommand.FeedAddress), new Address(addJoinToFeedCommand.AddressPattern));
-                
+
                 feed.AddJoin(join);
 
                 scope.Complete();
             }
 
-            commandProcessor.Send(new AddJoinCommand(join));
+            _commandProcessor.Send(new AddJoinCommand(join));
             return base.Handle(addJoinToFeedCommand);
         }
     }

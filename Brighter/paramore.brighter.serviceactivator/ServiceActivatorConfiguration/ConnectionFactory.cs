@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,23 +33,23 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
 {
     internal class ConnectionFactory
     {
-        private readonly IAmAChannelFactory channelFactory;
+        private readonly IAmAChannelFactory _channelFactory;
 
         public ConnectionFactory(IAmAChannelFactory channelFactory)
         {
-            this.channelFactory = channelFactory;
+            _channelFactory = channelFactory;
         }
 
         public IEnumerable<Connection> Create(IEnumerable<ConnectionElement> connectionElements)
         {
-            var connections = 
+            var connections =
             (
-               from ConnectionElement connectionElement in connectionElements 
+               from ConnectionElement connectionElement in connectionElements
                select new Connection(
-                   name: new ConnectionName(connectionElement.ConnectionName), 
-                   channel: channelFactory.CreateInputChannel(connectionElement.ChannelName, connectionElement.RoutingKey), 
-                   dataType: GetType(connectionElement.DataType), 
-                   noOfPerformers: connectionElement.NoOfPerformers, 
+                   name: new ConnectionName(connectionElement.ConnectionName),
+                   channel: _channelFactory.CreateInputChannel(connectionElement.ChannelName, connectionElement.RoutingKey),
+                   dataType: GetType(connectionElement.DataType),
+                   noOfPerformers: connectionElement.NoOfPerformers,
                    timeoutInMilliseconds: connectionElement.TimeoutInMiliseconds,
                    requeueCount: connectionElement.RequeueCount)
              ).ToList();

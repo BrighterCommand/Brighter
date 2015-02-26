@@ -1,17 +1,20 @@
-﻿using System;
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-  internal class MyObsoleteCommandHandler : RequestHandler<MyCommand>
+    internal class MyObsoleteCommandHandler : RequestHandler<MyCommand>
     {
-        private static MyCommand command;
+        private static MyCommand s_command;
 
-        public MyObsoleteCommandHandler (ILog logger)
-            :base(logger)
+        public MyObsoleteCommandHandler(ILog logger)
+            : base(logger)
         {
-            command = null;
+            s_command = null;
         }
 
         [MyPreValidationHandlerAttribute(step: 2, timing: HandlerTiming.Before)]
@@ -25,12 +28,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 
         public static bool Shouldreceive(MyCommand expectedCommand)
         {
-            return (command != null) && (expectedCommand.Id == command.Id);
+            return (s_command != null) && (expectedCommand.Id == s_command.Id);
         }
 
         private void LogCommand(MyCommand request)
         {
-            command = request;
+            s_command = request;
         }
     }
 }

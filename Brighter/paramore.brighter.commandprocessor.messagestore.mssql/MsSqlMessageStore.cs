@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -19,8 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion
 
+#endregion
 using System;
 using System.Data;
 using System.Data.Common;
@@ -49,9 +52,9 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Body) VALUES (@MessageId, @MessageType, @Topic, @Body)", _configuration.MessageStoreTableName);
             var parameters = new[]
             {
-                CreateSqlParameter("MessageId", message.Id), 
-                CreateSqlParameter("MessageType", message.Header.MessageType.ToString()), 
-                CreateSqlParameter("Topic", message.Header.Topic), 
+                CreateSqlParameter("MessageId", message.Id),
+                CreateSqlParameter("MessageType", message.Header.MessageType.ToString()),
+                CreateSqlParameter("Topic", message.Header.Topic),
                 CreateSqlParameter("Body", message.Body.Value),
             };
 
@@ -83,7 +86,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                         _log.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing", message.Id);
                         return;
                     }
-                    
+
                     throw;
                 }
             }
@@ -153,7 +156,6 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                 await connection.OpenAsync();
                 T item = await execute(command);
                 return item;
-                
             }
         }
     }

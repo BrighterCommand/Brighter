@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -21,7 +24,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -35,25 +37,25 @@ namespace paramore.brighter.serviceactivator.controlbus
         public const string CONFIGURATION = "configuration";
         public const string HEARTBEAT = "heartbeat";
 
-        ILog logger;
-        CommandProcessor commandProcessor;
-        IAmAChannelFactory channelFactory;
+        private ILog _logger;
+        private CommandProcessor _commandProcessor;
+        private IAmAChannelFactory _channelFactory;
 
         public IAmADispatchBuilder ChannelFactory(IAmAChannelFactory channelFactory)
         {
-            this.channelFactory = channelFactory;
+            _channelFactory = channelFactory;
             return this;
         }
 
         public INeedAChannelFactory CommandProcessor(CommandProcessor commandProcessor)
         {
-            this.commandProcessor = commandProcessor;
+            _commandProcessor = commandProcessor;
             return this;
         }
 
-        public INeedACommandProcessor  Logger(ILog logger)
+        public INeedACommandProcessor Logger(ILog logger)
         {
-            this.logger = logger;
+            _logger = logger;
             return this;
         }
 
@@ -68,30 +70,28 @@ namespace paramore.brighter.serviceactivator.controlbus
 
             var configurationElement = new ConnectionElement
             {
-                ChannelName = CONFIGURATION, 
-                ConnectionName = CONFIGURATION, 
+                ChannelName = CONFIGURATION,
+                ConnectionName = CONFIGURATION,
                 DataType = typeof(ConfigurationCommand).AssemblyQualifiedName,
                 RoutingKey = hostName + "." + CONFIGURATION,
-
             };
             connections.Add(configurationElement);
 
             var heartbeatElement = new ConnectionElement
             {
-                ChannelName = HEARTBEAT , 
-                ConnectionName = HEARTBEAT , 
+                ChannelName = HEARTBEAT,
+                ConnectionName = HEARTBEAT,
                 DataType = typeof(HeartBeatCommand).AssemblyQualifiedName,
                 RoutingKey = hostName + "." + HEARTBEAT,
-
             };
             connections.Add(heartbeatElement);
 
             return DispatchBuilder
                 .With()
-                .Logger(logger)
-                .CommandProcessor(commandProcessor)
+                .Logger(_logger)
+                .CommandProcessor(_commandProcessor)
                 .MessageMappers(new MessageMapperRegistry(new ControlBusMessageMapperFactory()))
-                .ChannelFactory(channelFactory)
+                .ChannelFactory(_channelFactory)
                 .ConnectionsFromElements(connections)
                 .Build();
         }
@@ -100,7 +100,6 @@ namespace paramore.brighter.serviceactivator.controlbus
         {
             return new ControlBusBuilder();
         }
-
     }
 
     /// <summary>
@@ -129,7 +128,7 @@ namespace paramore.brighter.serviceactivator.controlbus
         INeedAChannelFactory CommandProcessor(CommandProcessor commandProcessor);
     }
 
-      /// <summary>
+    /// <summary>
     /// Interface INeedAChannelFactory
     /// </summary>
     public interface INeedAChannelFactory
@@ -143,8 +142,8 @@ namespace paramore.brighter.serviceactivator.controlbus
         /// <returns>INeedAListOfConnections.</returns>
         IAmADispatchBuilder ChannelFactory(IAmAChannelFactory channelFactory);
     }
- 
-       /// <summary>
+
+    /// <summary>
     /// Interface IAmADispatchBuilder
     /// </summary>
     public interface IAmADispatchBuilder
@@ -155,5 +154,4 @@ namespace paramore.brighter.serviceactivator.controlbus
         /// <returns>Dispatcher.</returns>
         Dispatcher Build(string hostName);
     }
-
 }

@@ -1,4 +1,7 @@
-﻿#region Licence
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -22,7 +25,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
 using System.Linq;
 using System.Text;
@@ -41,7 +43,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             return new Message(header, body);
         }
 
-        static MessageBody ReadMessageBody(RestMSMessage restMSMessage)
+        private static MessageBody ReadMessageBody(RestMSMessage restMSMessage)
         {
             var srcEncoding = Encoding.Default;
             if (restMSMessage.Content.Encoding == "QuotedPrintable" || restMSMessage.Content.Encoding == "Plain")
@@ -55,7 +57,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             return new MessageBody(Encoding.Unicode.GetString(body));
         }
 
-        static MessageHeader ReadMessageHeaders(RestMSMessage restMSMessage)
+        private static MessageHeader ReadMessageHeaders(RestMSMessage restMSMessage)
         {
             var messageId = Guid.Empty;
             if (!Guid.TryParse(restMSMessage.MessageId, out messageId))
@@ -77,10 +79,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             return messageHeader;
         }
 
-        static MessageHeader FailureMessageHeader(Guid messageId, string topic)
+        private static MessageHeader FailureMessageHeader(Guid messageId, string topic)
         {
             return new MessageHeader(messageId, topic, MessageType.MT_UNACCEPTABLE);
         }
-
-     }
+    }
 }

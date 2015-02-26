@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -57,7 +60,5 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             message.Header.Bag.Each((header) => basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value)));
             return basicProperties;
         }
-
-        
     }
 }
