@@ -100,7 +100,22 @@ namespace paramore.brighter.serviceactivator
         {
             do
             {
-                Message message = ReceiveMessage();
+                if (Logger != null) Logger.DebugFormat("MessagePump: Receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, _messageMapper.GetType().ToString());
+                Message message = null;
+                try
+                {
+                    message = Channel.Receive(TimeoutInMilliseconds);
+                }
+                catch (ChannelFailureException)
+                {
+                    if (Logger != null) Logger.WarnFormat("MessagePump: ChannelFailureException messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, _messageMapper.GetType().ToString());
+                    continue;
+                }
+                catch (Exception exception)
+                {
+                    if (Logger != null)
+                        Logger.ErrorFormat("MessagePump: Exception receiving messages for {1} on thread # {0} because of {2}", Thread.CurrentThread.ManagedThreadId, _messageMapper.GetType().ToString(), exception);
+                }
 
                 if (message == null) throw new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
 
@@ -169,28 +184,6 @@ namespace paramore.brighter.serviceactivator
             } while (true);
 
             if (Logger != null) Logger.DebugFormat("MessagePump: Finished running message loop, no longer receiving messages for {0} on thread # {1}", _messageMapper.GetType().ToString(), Thread.CurrentThread.ManagedThreadId);
-        }
-
-        private Message ReceiveMessage()
-        {
-            Message message = null;
-
-            if (Logger != null) Logger.DebugFormat("MessagePump: Receiving messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, _messageMapper.GetType().ToString());
-            
-            try
-            {
-                message = Channel.Receive(TimeoutInMilliseconds);
-            }
-            catch (ChannelFailureException)
-            {
-                if (Logger != null) Logger.WarnFormat("MessagePump: ChannelFailureException messages for {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, _messageMapper.GetType().ToString());
-            }
-            catch (Exception exception)
-            {
-                if (Logger != null) Logger.ErrorFormat("MessagePump: Exception receiving messages for {1} on thread # {0} because of {2}", Thread.CurrentThread.ManagedThreadId, _messageMapper.GetType().ToString(), exception);
-            }
-
-            return message;
         }
 
         private void AcknowledgeMessage(Message message)
