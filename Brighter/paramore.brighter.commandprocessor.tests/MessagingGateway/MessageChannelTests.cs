@@ -40,7 +40,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             s_gateway = A.Fake<IAmAMessageConsumer>();
 
-            s_channel = new InputChannel("test", "key", s_gateway);
+            s_channel = new InputChannel("test", s_gateway);
 
             s_sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
@@ -66,7 +66,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             s_gateway = A.Fake<IAmAMessageConsumer>();
 
-            s_channel = new InputChannel("test", "key", s_gateway);
+            s_channel = new InputChannel("test", s_gateway);
 
             s_sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
@@ -92,7 +92,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             s_gateway = A.Fake<IAmAMessageConsumer>();
 
-            s_channel = new InputChannel("test", "key", s_gateway);
+            s_channel = new InputChannel("test", s_gateway);
 
             s_receivedMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
@@ -116,7 +116,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             s_gateway = A.Fake<IAmAMessageConsumer>();
 
-            s_channel = new InputChannel("test", "key", s_gateway);
+            s_channel = new InputChannel("test", s_gateway);
 
             s_receivedMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
@@ -139,7 +139,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             s_messageConsumer = A.Fake<IAmAMessageConsumer>();
 
-            s_channel = new InputChannel("test", "key", s_messageConsumer);
+            s_channel = new InputChannel("test", s_messageConsumer);
         };
 
         private Because _of = () => s_channel.Dispose();
