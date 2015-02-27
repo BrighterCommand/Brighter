@@ -59,7 +59,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     {
         private readonly string _queueName;
         private readonly string _routingKey;
-        private const bool AUTO_ACK = false;
+        private const bool AutoAck = false;
         /// <summary>
         /// The consumer
         /// </summary>
@@ -261,7 +261,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         protected virtual void CreateConsumer()
         {
             _consumer = new QueueingBasicConsumer(Channel);
-            Channel.BasicConsume(_queueName, AUTO_ACK, _consumer);
+            Channel.BasicConsume(_queueName, AutoAck, _consumer);
 
             Logger.InfoFormat("RmqMessageConsumer: Created consumer with ConsumerTag {4} for queue {0} with routing key {1} via exchange {2} on connection {3}",
                               _queueName,
@@ -311,6 +311,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
         ~RmqMessageConsumer()
         {
             Dispose(false);
