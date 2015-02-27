@@ -35,9 +35,13 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using System.Reflection;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.policy.Attributes;
+using paramore.brighter.commandprocessor.policy.Handlers;
+using Polly.CircuitBreaker;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -135,6 +139,35 @@ namespace paramore.brighter.commandprocessor
             return command;
         }
 
+        /// <summary>
+        /// If a request cannot be completed by <see cref="Handle"/>, implementing the <see cref="Fallback"/> method provides an alternate code path that can be used
+        /// This allows for graceful  degradation. Using the <see cref="FallbackPolicyAttribute"/> handler you can configure a policy to catch either all <see cref="Exception"/>'s or
+        /// just <see cref="BrokenCircuitException"/> that occur later in the pipeline, and then call the <see cref="Fallback"/> path.
+        /// Note that the <see cref="FallbackPolicyAttribute"/> target handler might be 'beginning of chain' and need to pass through to actual handler that is end of chain.
+        /// Because of this we need to call Fallback on the chain. Later step handlers don't know the context of failure so they cannot know if any operations they had, 
+        /// that could fail (such as DB access) were the cause of the failure chain being hit.
+        /// Steps that don't know how to handle should pass through.
+        /// Useful alternatives for Fallback are to try via the cache.
+        /// Note that a Fallback handler implementation should not catch exceptions in the <see cref="Fallback"/> chain to avoid an infinite loop.
+        /// Call <see cref="Successor"/>.<see cref="Handle"/> if having provided a Fallback you want the chain to return to the 'happy' path. Excerise caution here though
+        /// as you do not know who generated the exception that caused the fallback chain.
+        /// For this reason, the <see cref="FallbackPolicyHandler"/> puts the exception in the request context.
+        /// When the <see cref="FallbackPolicyAttribute"/> is set on the <see cref="Handle"/> method of a derived class
+        /// The <see cref="FallbackPolicyHandler{TRequest}"/> will catch either all failures (backstop) or <see cref="BrokenCircuitException"/> depending on configuration
+        /// and call the <see cref="RequestHandler{TRequest}"/>'s <see cref="Fallback"/> method
+        /// </summary>
+        /// <param name="command">The command.</param>
+        /// <returns>TRequest.</returns>
+        public virtual TRequest Fallback(TRequest command)
+        {
+            if (_successor != null)
+            {
+                logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
+                return _successor.Fallback(command);
+            }
+            return command;
+        }
+
         //default is just to do nothing - use this if you need to pass data from an attribute into a handler
         /// <summary>
         /// Initializes from attribute parameters.
@@ -151,5 +184,6 @@ namespace paramore.brighter.commandprocessor
                 .Where(method => method.GetParameters().Count() == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest))
                 .SingleOrDefault();
         }
+
     }
 }
