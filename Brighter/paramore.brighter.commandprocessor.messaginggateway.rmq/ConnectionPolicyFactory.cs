@@ -1,5 +1,16 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
+// Author           : ian
+// Created          : 02-16-2015
+//
+// Last Modified By : ian
+// Last Modified On : 02-26-2015
+// ***********************************************************************
+// <copyright file="ConnectionPolicyFactory.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 
 #region Licence
 /* The MIT License (MIT)
@@ -24,6 +35,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using System;
 
 using paramore.brighter.commandprocessor.Logging;
@@ -33,10 +45,17 @@ using RabbitMQ.Client.Exceptions;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
+    /// <summary>
+    /// Class ConnectionPolicyFactory.
+    /// </summary>
     public class ConnectionPolicyFactory
     {
         private readonly ILog _logger;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConnectionPolicyFactory"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
         public ConnectionPolicyFactory(ILog logger)
         {
             _logger = logger;
@@ -78,7 +97,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             CircuitBreakerPolicy = Policy.Handle<BrokerUnreachableException>().CircuitBreaker(1, TimeSpan.FromMilliseconds(circuitBreakerTimeout));
         }
 
+        /// <summary>
+        /// Gets the retry policy.
+        /// </summary>
+        /// <value>The retry policy.</value>
         public ContextualPolicy RetryPolicy { get; private set; }
+        /// <summary>
+        /// Gets the circuit breaker policy.
+        /// </summary>
+        /// <value>The circuit breaker policy.</value>
         public Policy CircuitBreakerPolicy { get; private set; }
     }
 }

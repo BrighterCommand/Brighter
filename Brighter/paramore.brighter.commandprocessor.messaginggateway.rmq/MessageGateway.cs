@@ -1,6 +1,3 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
 // Author           : ian
@@ -37,6 +34,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using System;
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor.Logging;
@@ -140,8 +138,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
         }
 
-        private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
-        {
+        private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)        {
             //desired state configuration of the exchange
             channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, configuration.Exchange.Durable);
         }
@@ -179,7 +176,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     Channel.Abort();
                     Channel = null;
                 }
-
                 if (Connection != null)
                 {
                     Connection.Abort();
