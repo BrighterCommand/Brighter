@@ -1,10 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-// ***********************************************************************
-// Assembly         : paramore.brighter.restms.core
-// Author           : ian
-// Created          : 10-09-2014
+﻿// Created          : 10-09-2014
 //
 // Last Modified By : ian
 // Last Modified On : 10-09-2014
@@ -37,6 +31,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using System.Linq;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;

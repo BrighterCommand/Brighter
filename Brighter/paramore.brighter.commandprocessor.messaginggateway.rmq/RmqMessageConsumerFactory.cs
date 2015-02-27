@@ -1,7 +1,4 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
 // Author           : ian
 // Created          : 01-02-2015
@@ -37,6 +34,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
@@ -58,8 +56,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         }
 
         /// <summary>
-        /// Creates this instance.
+        /// Creates the specified queue name.
         /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="routingKey">The routing key.</param>
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create(string queueName, string routingKey)
         {
