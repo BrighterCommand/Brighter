@@ -141,7 +141,7 @@ namespace paramore.brighter.serviceactivator
         {
             if (disposing)
             {
-                Shut();
+                Performer.Dispose();
             }
         }
 

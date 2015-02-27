@@ -36,6 +36,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
+using System;
 using System.Threading.Tasks;
 
 namespace paramore.brighter.serviceactivator
@@ -44,7 +46,7 @@ namespace paramore.brighter.serviceactivator
     /// Interface IAmAPerformer
     /// Abstracts the thread that runs a message pump
     /// </summary>
-    public interface IAmAPerformer
+    public interface IAmAPerformer : IDisposable
     {
         /// <summary>
         /// Stops this instance.
