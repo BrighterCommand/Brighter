@@ -69,9 +69,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
-        /// <param name="routingKey"></param>
+        /// <param name="routingKey">The routing key.</param>
         /// <param name="logger">The logger.</param>
-        /// <param name="queueName"></param>
+        /// <param name="queueName">The queue name.</param>
         public RmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(logger)
         {
             _queueName = queueName;
@@ -199,7 +199,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     Configuration.Exchange.Name,
                     Configuration.AMPQUri.GetSantizedUri(),
                     _consumer.ConsumerTag);
-                _consumer = null;
             }
             catch (BrokerUnreachableException bue)
             {
@@ -259,21 +258,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return message;
         }
 
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
-        public override void Dispose()
-        {
-            CancelConsumer();
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        ~RmqMessageConsumer()
-        {
-            Dispose(false);
-        }
-
         protected virtual void CreateConsumer()
         {
             _consumer = new QueueingBasicConsumer(Channel);
@@ -289,7 +273,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         private void EnsureConsumer()
         {
-            if (_consumer == null || !_consumer.IsRunning)
+            if (_consumer == null || !_consumer.Model.IsOpen)
             {
                 EnsureChannelBind();
                 CreateConsumer();
@@ -299,8 +283,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         private void EnsureChannelBind()
         {
             EnsureChannel(_queueName);
+
             Logger.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", _queueName, Configuration.AMPQUri.GetSantizedUri());
+
             Channel.QueueDeclare(_queueName, false, false, false, SetQueueArguments());
+
             Channel.QueueBind(_queueName, Configuration.Exchange.Name, _routingKey);
         }
 
@@ -316,19 +303,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             if (Configuration.Queues.HighAvailability) { arguments.Add("x-ha-policy", "all"); }
         }
 
-        private void CancelConsumer()
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public override void Dispose()
         {
-            if (_consumer != null)
-            {
-                if (_consumer.IsRunning)
-                {
-                    _consumer.OnCancel();
-                    Channel.BasicCancel(_consumer.ConsumerTag);
-                }
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-                Logger.InfoFormat("RmqMessageConsumer: Cancelled consumer with ConsumerTag {0}", _consumer.ConsumerTag);
-                _consumer = null;
-            }
+        ~RmqMessageConsumer()
+        {
+            Dispose(false);
         }
     }
 }
