@@ -67,7 +67,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="logger">The logger.</param>
         public MessageGateway(ILog logger)
         {
-            this.Logger = logger;
+            Logger = logger;
             Configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
 
             var connectionPolicyFactory = new ConnectionPolicyFactory(logger);
@@ -99,20 +99,29 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         protected IModel Channel;
 
         /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// Connects the specified queue name.
         /// </summary>
-        public virtual void Dispose()
+        /// <param name="queueName">Name of the queue.</param>
+        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+        protected void EnsureChannel(string queueName = "Producer Channel")
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            ConnectWithCircuitBreaker(queueName);
+        }
+
+        private void ConnectWithCircuitBreaker(string queueName)
+        {
+            _circuitBreakerPolicy.Execute(() => ConnectWithRetry(queueName));
+        }
+
+        private void ConnectWithRetry(string queueName)
+        {
+            _retryPolicy.Execute(ConnectToBroker, new Dictionary<string, object> { { "queueName", queueName } });
         }
 
         protected virtual void ConnectToBroker()
         {
             if (Channel == null || Channel.IsClosed)
             {
-                EnsureSafeDisposal();
-
                 GetConnection();
 
                 Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.GetSantizedUri());
@@ -124,99 +133,54 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 Channel.BasicQos(0, Configuration.Queues.QosPrefetchSize, false);
 
                 Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri());
+
                 DeclareExchange(Channel, Configuration);
             }
         }
 
-        /// <summary>
-        /// Releases unmanaged and - optionally - managed resources.
-        /// </summary>
-        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                if (Channel != null)
-                {
-                    if (Channel.IsOpen) Channel.Close();
-
-                    Channel.Dispose();
-                }
-
-                if (Connection != null)
-                {
-                    if (Connection.IsOpen) Connection.Close();
-
-                    Connection.Dispose();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Connects the specified queue name.
-        /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
-        /// <param name="routingKey"></param>
-        /// <param name="createQueues"></param>
-        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        protected void EnsureChannel(string queueName = "Producer Channel")
-        {
-            ConnectWithCircuitBreaker(queueName);
-        }
-
-        private void ConnectWithCircuitBreaker(string queueName)
-        {
-            _circuitBreakerPolicy.Execute(() =>
-                 ConnectWithRetry(queueName)
-                );
-        }
-
-        private void ConnectWithRetry(string queueName)
-        {
-            _retryPolicy.Execute(() =>
-                ConnectToBroker(),
-                new Dictionary<string, object>() { { "queueName", queueName } }
-                );
-        }
-
-
-        private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)
-        {
+        private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)        {
             //desired state configuration of the exchange
             channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, configuration.Exchange.Durable);
-        }
-
-        private void EnsureSafeDisposal()
-        {
-            if (Channel != null)
-            {
-                try
-                {
-                    Channel.Dispose();
-                }
-                catch (Exception)
-                {
-                }
-                finally
-                {
-                    Channel = null;
-                }
-            }
         }
 
         private void GetConnection()
         {
             if (Connection == null || !Connection.IsOpen)
             {
+                Logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.GetSantizedUri());
+                
+                Connection = _connectionFactory.CreateConnection();
+            }
+        }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public virtual void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~MessageGateway()
+        {
+            Dispose(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (Channel != null)
+                {
+                    Channel.Abort();
+                    Channel = null;
+                }
                 if (Connection != null)
                 {
-                    try { Connection.Dispose(); }
-                    catch (Exception) { }
-                    finally { Connection = null; }
+                    Connection.Abort();
+                    Connection = null;
                 }
-
-                Logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.GetSantizedUri());
-                Connection = _connectionFactory.CreateConnection();
             }
         }
     }
