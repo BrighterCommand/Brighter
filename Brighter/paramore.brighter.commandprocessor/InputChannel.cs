@@ -48,7 +48,6 @@ namespace paramore.brighter.commandprocessor
     public class InputChannel : IAmAnInputChannel
     {
         private readonly string _queueName;
-        private readonly string _routingKey;
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
 
@@ -57,10 +56,9 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="messageConsumer">The messageConsumer.</param>
-        public InputChannel(string queueName, string routingKey, IAmAMessageConsumer messageConsumer)
+        public InputChannel(string queueName, IAmAMessageConsumer messageConsumer)
         {
             _queueName = queueName;
-            _routingKey = routingKey;
             _messageConsumer = messageConsumer;
         }
 
@@ -147,7 +145,10 @@ namespace paramore.brighter.commandprocessor
 
         private void Dispose(bool disposing)
         {
-            _messageConsumer.Dispose();
+            if (disposing)
+            {
+                _messageConsumer.Dispose();
+            }
         }
     }
 }
