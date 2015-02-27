@@ -60,6 +60,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMsMessageConsumer"/> class.
         /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="routingKey">The routing key.</param>
         /// <param name="logger">The logger.</param>
         public RestMsMessageConsumer(string queueName, string routingKey, ILog logger)
             : base(logger)
@@ -81,8 +83,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// Receives the specified queue name.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
-        /// <param name="routingKey">The routing key.</param>
+
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
         /// <exception cref="System.NotImplementedException"></exception>
@@ -122,8 +123,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// Noes the of outstanding messages.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
-        /// <param name="routingKey">The routing key.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>System.Int32.</returns>
         public int NoOfOutstandingMessages(int timeoutInMilliseconds = -1)
@@ -149,7 +148,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
         /// <exception cref="System.NotImplementedException"></exception>
         public void Purge()
         {

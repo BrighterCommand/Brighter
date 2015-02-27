@@ -24,6 +24,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
+using System;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 
@@ -49,6 +51,26 @@ namespace paramore.brighter.serviceactivator
         public Task Run()
         {
             return Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~Performer()
+        {
+            Dispose(false);
+        }
+
+
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _channel.Dispose();
+            }
         }
     }
 }
