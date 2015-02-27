@@ -26,32 +26,54 @@ using System;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
+using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
+using Polly;
 
 namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles
 {
-    internal class MyFailsWithDivideByZeroHandler : RequestHandler<MyCommand>
+    internal class MyFailsWithFallbackDivideByZeroHandler : RequestHandler<MyCommand>
     {
-        public MyFailsWithDivideByZeroHandler(ILog logger) : base(logger)
+        public MyFailsWithFallbackDivideByZeroHandler (ILog logger) : base(logger)
         { }
 
+        public static bool FallbackCalled { get; set; }
         public static bool ReceivedCommand { get; set; }
+        public static bool SetException { get; set; }
 
-        static MyFailsWithDivideByZeroHandler()
+        static MyFailsWithFallbackDivideByZeroHandler()
         {
             ReceivedCommand = false;
         }
 
-        [UsePolicy(policy: "MyDivideByZeroPolicy", step: 1)]
+        [FallbackPolicy(backstop: true, circuitBreaker: false, step: 1)]
         public override MyCommand Handle(MyCommand command)
         {
             ReceivedCommand = true;
             throw new DivideByZeroException();
         }
 
+        public override MyCommand Fallback(MyCommand command)
+        {
+            FallbackCalled = true;
+            if (Context.Bag.ContainsKey(FallbackPolicyHandler<MyCommand>.CAUSE_OF_FALLBACK_EXCEPTION))
+                SetException = true;
+            return base.Fallback(command);
+        }
+
+        public static bool ShouldFallback(MyCommand command)
+        {
+            return FallbackCalled;
+        }
+
         public static bool ShouldReceive(MyCommand myCommand)
         {
             return ReceivedCommand;
+        }
+
+        public static bool ShouldSetException(MyCommand myCommand)
+        {
+            return SetException;
         }
     }
 }

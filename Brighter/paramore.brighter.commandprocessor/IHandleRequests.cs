@@ -100,6 +100,16 @@ namespace paramore.brighter.commandprocessor
         /// <param name="request">The request.</param>
         /// <returns>TRequest.</returns>
         TRequest Handle(TRequest request);
+
+
+        /// <summary>
+        /// If a request cannot be completed by <see cref="Handle"/>, implementing the <see cref="Fallback"/> method provides an alternate code path that can be used
+        /// This allows for graceful  degradation.  
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>TRequest.</returns>
+        TRequest Fallback(TRequest request);
+
         /// <summary>
         /// Sets the successor.
         /// </summary>

@@ -80,7 +80,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
         //We have to catch the final exception that bubbles out after retry
         private Because _of = () => Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
 
-        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.Shouldreceive(s_myCommand).ShouldBeTrue();
+        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.ShouldReceive(s_myCommand).ShouldBeTrue();
         private It _should_retry_three_times = () => s_retryCount.ShouldEqual(3);
     }
 
@@ -176,7 +176,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
                 s_thirdException = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
             };
 
-        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.Shouldreceive(s_myCommand).ShouldBeTrue();
+        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.ShouldReceive(s_myCommand).ShouldBeTrue();
         private It _should_bubble_up_the_first_exception = () => s_firstException.ShouldBeOfExactType<DivideByZeroException>();
         private It _should_bubble_up_the_second_exception = () => s_secondException.ShouldBeOfExactType<DivideByZeroException>();
         private It _should_break_the_circuit_after_two_fails = () => s_thirdException.ShouldBeOfExactType<BrokenCircuitException>();

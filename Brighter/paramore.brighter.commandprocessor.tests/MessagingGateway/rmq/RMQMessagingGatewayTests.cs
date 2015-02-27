@@ -169,7 +169,6 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         private static IAmAMessageConsumer s_receiver;
         private static IAmAMessageConsumer s_badReceiver;
         private static Message s_sentMessage;
-        private static Exception s_expectedException;
         private static Exception s_firstException;
 
         private Establish _context = () =>
@@ -213,7 +212,6 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         private static IAmAMessageConsumer s_receiver;
         private static IAmAMessageConsumer s_badReceiver;
         private static Message s_sentMessage;
-        private static Exception s_expectedException;
         private static Exception s_firstException;
 
         private Establish _context = () =>
@@ -257,7 +255,6 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         private static IAmAMessageConsumer s_receiver;
         private static IAmAMessageConsumer s_badReceiver;
         private static Message s_sentMessage;
-        private static Exception s_expectedException;
         private static Exception s_firstException;
 
         private Establish _context = () =>

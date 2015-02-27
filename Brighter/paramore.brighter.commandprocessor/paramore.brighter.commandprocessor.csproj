@@ -70,9 +70,11 @@
     <Compile Include="MessageFactory.cs" />
     <Compile Include="MessageMapperRegistry.cs" />
     <Compile Include="PolicyRegistry.cs" />
+    <Compile Include="policy\Attributes\FallbackPolicyAttribute.cs" />
     <Compile Include="policy\Attributes\TimeoutPolicyAttribute.cs" />
     <Compile Include="policy\Attributes\UsePolicyAtttribute.cs" />
     <Compile Include="policy\Handlers\ExceptionPolicyHandler.cs" />
+    <Compile Include="policy\Handlers\FallbackPolicyHandler.cs" />
     <Compile Include="policy\Handlers\TimeoutPolicyHandler.cs" />
     <Compile Include="SubscriberRegistry.cs" />
     <Compile Include="IAmAHandlerFactory.cs" />
