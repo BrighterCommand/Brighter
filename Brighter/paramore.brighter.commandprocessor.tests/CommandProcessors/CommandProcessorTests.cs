@@ -369,8 +369,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();
         private static Message s_message;
-        private static IAmAMessageStore<Message> s_messageStore;
-        private static IAmAMessageProducer s_messagingGateway;
+        private static FakeMessageStore s_messageStore;
+        private static FakeErroringMessageProducer s_messagingProducer;
         private static Exception s_failedException;
         private static BrokenCircuitException s_circuitBrokenException;
 
@@ -378,19 +378,15 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
             s_myCommand.Value = "Hello World";
-            s_messageStore = A.Fake<IAmAMessageStore<Message>>();
-            var tcs = new TaskCompletionSource<object>();
-            tcs.SetResult(new object());
-            A.CallTo(() => s_messageStore.Add(A<Message>.Ignored)).Returns(tcs.Task);
+            s_messageStore = new FakeMessageStore();
 
-            s_messagingGateway = A.Fake<IAmAMessageProducer>();
+            s_messagingProducer = new FakeErroringMessageProducer();
             s_message = new Message(
                 header: new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
                 body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
                 );
             var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-            A.CallTo(() => s_messagingGateway.Send(s_message)).Throws<Exception>().NumberOfTimes(4);
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -411,7 +407,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                  new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                  messageMapperRegistry,
                  s_messageStore,
-                 s_messagingGateway,
+                 s_messagingProducer,
                  logger);
         };
 
@@ -423,7 +419,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 s_circuitBrokenException = (BrokenCircuitException)Catch.Exception(() => s_commandProcessor.Post(s_myCommand));
             };
 
-        private It _should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => s_messagingGateway.Send(A<Message>.Ignored)).MustHaveHappened(Repeated.Exactly.Times(4));
+        private It _should_send_messages_via_the_messaging_gateway = () => s_messagingProducer.SentCalledCount.ShouldEqual(4);
         private It _should_throw_a_exception_out_once_all_retries_exhausted = () => s_failedException.ShouldBeOfExactType(typeof(Exception));
         private It _should_throw_a_circuit_broken_exception_once_circuit_broken = () => s_circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
     }
