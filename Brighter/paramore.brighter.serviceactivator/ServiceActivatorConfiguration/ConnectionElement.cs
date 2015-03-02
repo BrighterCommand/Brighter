@@ -70,11 +70,19 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
             get { return Convert.ToInt32(this["timeOutInMilliseconds"]); }
             set { this["timeOutInMilliseconds"] = value; }
         }
+
         [ConfigurationProperty("requeueCount", DefaultValue = "-1", IsRequired = false)]
         public int RequeueCount
         {
             get { return Convert.ToInt32(this["requeueCount"]); }
             set { this["requeueCount"] = value; }
+        }
+
+        [ConfigurationProperty("unacceptableMessageLimit", DefaultValue = "0", IsRequired = false)]
+        public int UnacceptableMessageLimit
+        {
+            get { return Convert.ToInt32(this["unacceptableMessageLimit"]); }
+            set { this["unacceptableMessageLimit"] = value; }
         }
     }
 }

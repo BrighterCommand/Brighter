@@ -32,6 +32,8 @@ namespace paramore.brighter.serviceactivator.TestHelpers
         private readonly ConcurrentQueue<Message> _messageQueue = new ConcurrentQueue<Message>();
         private readonly ChannelName _channelName;
         public bool DisposeHappened { get; set; }
+        public bool AcknowledgeHappened { get; set; }
+        public int AcknowledgeCount { get; set; }
 
         public FakeChannel(string channelName = "", string routingKey = "")
         {
@@ -47,9 +49,13 @@ namespace paramore.brighter.serviceactivator.TestHelpers
         {
             get { return _channelName; }
         }
+        public int RejectCount { get; set; }
 
         public virtual void Acknowledge(Message message)
-        { }
+        {
+            AcknowledgeHappened = true;
+            AcknowledgeCount++;
+        }
 
         public virtual Message Receive(int timeoutinMilliseconds)
         {
@@ -61,7 +67,9 @@ namespace paramore.brighter.serviceactivator.TestHelpers
         }
 
         public virtual void Reject(Message message)
-        { }
+        {
+            RejectCount++;
+        }
 
         public virtual void Stop()
         {
