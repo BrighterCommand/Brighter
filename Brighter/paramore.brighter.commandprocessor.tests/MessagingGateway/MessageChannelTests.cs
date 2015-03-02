@@ -127,7 +127,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
 
         private Because _of = () => s_channel.Reject(s_receivedMessage);
 
-        private It _should_ackonwledge_the_message = () => A.CallTo(() => s_gateway.Reject(s_receivedMessage, false)).MustHaveHappened();
+        private It _should_ackonwledge_the_message = () => A.CallTo(() => s_gateway.Reject(s_receivedMessage, true)).MustHaveHappened();
     }
 
     public class When_disposing_input_channel

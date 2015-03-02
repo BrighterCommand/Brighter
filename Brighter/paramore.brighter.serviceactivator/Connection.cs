@@ -73,6 +73,10 @@ namespace paramore.brighter.serviceactivator
         /// <value>The timeout in miliseconds.</value>
         public int TimeoutInMiliseconds { get; private set; }
         public int RequeueCount { get; private set; }
+        /// <summary>
+        /// Gets the unacceptable messages limit
+        /// </summary>
+        public int UnacceptableMessageLimit { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Connection"/> class.
@@ -83,7 +87,8 @@ namespace paramore.brighter.serviceactivator
         /// <param name="noOfPerformers">The no of performers.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it</param>
-        public Connection(ConnectionName name, IAmAnInputChannel channel, Type dataType, int noOfPerformers = 1, int timeoutInMilliseconds = 300, int requeueCount = -1)
+        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel</param>
+        public Connection(ConnectionName name, IAmAnInputChannel channel, Type dataType, int noOfPerformers = 1, int timeoutInMilliseconds = 300, int requeueCount = -1, int unacceptableMessageLimit = 0)
         {
             RequeueCount = requeueCount;
             Name = name;
@@ -91,6 +96,7 @@ namespace paramore.brighter.serviceactivator
             DataType = dataType;
             NoOfPeformers = noOfPerformers;
             TimeoutInMiliseconds = timeoutInMilliseconds;
+            UnacceptableMessageLimit = unacceptableMessageLimit;
         }
     }
 }

@@ -98,7 +98,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="message">The message.</param>
         public void Reject(Message message)
         {
-            _messageConsumer.Reject(message, false);
+            _messageConsumer.Reject(message, true);
         }
 
         /// <summary>

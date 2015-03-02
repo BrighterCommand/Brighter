@@ -150,7 +150,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             try
             {
                 EnsureChannel(_queueName);
-                Logger.DebugFormat("RmqMessageConsumer: NoAck message {0}", message.Id);
+                Logger.InfoFormat("RmqMessageConsumer: NoAck message {0} with delivery tag {1}", message.Id, message.GetDeliveryTag());
                 Channel.BasicNack(message.GetDeliveryTag(), false, requeue);
             }
             catch (Exception exception)
