@@ -86,13 +86,5 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             tcs.SetResult(new object());
             return tcs.Task;
         }
-
-        /// <summary>
-        /// Finalizes an instance of the <see cref="RmqMessageProducer"/> class.
-        /// </summary>
-        ~RmqMessageProducer()
-        {
-            Dispose(false);
-        }
     }
 }

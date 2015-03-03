@@ -259,6 +259,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         private Because _of = () => s_commandProcessor.Post(s_myCommand);
 
+        private Cleanup cleanup = () => s_commandProcessor.Dispose();
+
         private It _should_store_the_message_in_the_sent_command_message_repository = () => s_fakeMessageStore.MessageWasAdded.ShouldBeTrue();
         private It _should_send_a_message_via_the_messaging_gateway = () => s_fakeMessageProducer.MessageWasSent.ShouldBeTrue();
     }
@@ -305,6 +307,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         private Because _of = () => s_commandProcessor.Repost(s_message.Header.Id);
 
+        private Cleanup cleanup = () => s_commandProcessor.Dispose();
+
         private It _should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => s_messagingGateway.Send(s_message)).MustHaveHappened();
     }
 
@@ -331,6 +335,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         };
 
         private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
+
+        private Cleanup cleanup = () => s_commandProcessor.Dispose();
 
         private It _should_throw_an_exception = () => s_exception.ShouldNotBeNull();
         private It _should_fail_the_pipeline_not_execute_it = () => MyUnusedCommandHandler.Shouldreceive(s_myCommand).ShouldBeFalse();
@@ -412,12 +418,14 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         };
 
         private Because _of = () =>
-            {
-                //break circuit with retries
-                s_failedException = Catch.Exception(() => s_commandProcessor.Post(s_myCommand));
-                //now resond with broken ciruit
-                s_circuitBrokenException = (BrokenCircuitException)Catch.Exception(() => s_commandProcessor.Post(s_myCommand));
-            };
+        {
+            //break circuit with retries
+            s_failedException = Catch.Exception(() => s_commandProcessor.Post(s_myCommand));
+            //now resond with broken ciruit
+            s_circuitBrokenException = (BrokenCircuitException)Catch.Exception(() => s_commandProcessor.Post(s_myCommand));
+        };
+
+        private Cleanup cleanup = () => s_commandProcessor.Dispose();
 
         private It _should_send_messages_via_the_messaging_gateway = () => s_messagingProducer.SentCalledCount.ShouldEqual(4);
         private It _should_throw_a_exception_out_once_all_retries_exhausted = () => s_failedException.ShouldBeOfExactType(typeof(Exception));
