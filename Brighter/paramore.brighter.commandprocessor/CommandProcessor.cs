@@ -48,7 +48,7 @@ namespace paramore.brighter.commandprocessor
     /// Implements both the <a href="http://www.hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher</a> 
     /// and <a href="http://wiki.hsr.ch/APF/files/CommandProcessor.pdf">Command Processor</a> Design Patterns 
     /// </summary>
-    public class CommandProcessor : IAmACommandProcessor
+    public class CommandProcessor : IAmACommandProcessor, IDisposable
     {
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
@@ -56,8 +56,10 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmAPolicyRegistry _policyRegistry;
         private readonly ILog _logger;
-        private readonly IAmAMessageStore<Message> _messageStore;
-        private readonly IAmAMessageProducer _messagingGateway;
+        private IAmAMessageStore<Message> _messageStore;
+        private IAmAMessageProducer _messagingGateway;
+        private bool _disposed;
+
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
         /// Register that policy with your <see cref="IAmAPolicyRegistry"/> such as <see cref="PolicyRegistry"/>
@@ -298,5 +300,31 @@ namespace paramore.brighter.commandprocessor
         {
             _policyRegistry.Get(RETRYPOLICY).Execute(send);
         }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                if (_messagingGateway != null )
+                    _messagingGateway.Dispose();
+            }
+
+            _messageStore = null;
+            _messagingGateway = null; 
+
+            _disposed = true;
+        } 
     }
 }
