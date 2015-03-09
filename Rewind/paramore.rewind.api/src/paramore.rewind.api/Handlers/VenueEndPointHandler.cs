@@ -1,9 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using OpenRasta.Web;
 using paramore.commandprocessor;
 using paramore.rewind.adapters.presentation.api.Resources;
 using paramore.rewind.adapters.presentation.api.Translators;
+using Paramore.Rewind.Core.Adapters.Repositories;
+using Paramore.Rewind.Core.Domain.Common;
+using Paramore.Rewind.Core.Domain.Venues;
+using Paramore.Rewind.Core.Ports.Commands.Venue;
+using Paramore.Rewind.Core.Ports.ThinReadLayer;
+using Version = Paramore.Rewind.Core.Adapters.Repositories.Version;
 
 namespace paramore.rewind.adapters.presentation.api.Handlers
 {

@@ -1,11 +1,13 @@
 ﻿using System;
-using System.Data;
 using FakeItEasy;
 using Machine.Specifications;
 using Paramore.Adapters.Tests.UnitTests.fakes;
-using Paramore.Domain.Common;
-using Paramore.Domain.Venues;
-using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
+using Paramore.Rewind.Core.Adapters.Repositories;
+using Paramore.Rewind.Core.Domain.Common;
+using Paramore.Rewind.Core.Domain.Venues;
+using Paramore.Rewind.Core.Ports.Commands.Venue;
+using Paramore.Rewind.Core.Ports.Handlers.Venues;
+using Version = Paramore.Rewind.Core.Adapters.Repositories.Version;
 
 namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Venues
 {

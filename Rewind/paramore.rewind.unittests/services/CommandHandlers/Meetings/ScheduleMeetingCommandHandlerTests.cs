@@ -1,9 +1,12 @@
 ﻿using System;
 using FakeItEasy;
 using Machine.Specifications;
-using Paramore.Domain.Meetings;
-using Paramore.Domain.Venues;
-using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
+using Paramore.Rewind.Core.Adapters.Repositories;
+using Paramore.Rewind.Core.Domain.Meetings;
+using Paramore.Rewind.Core.Domain.Venues;
+using Paramore.Rewind.Core.Ports.Commands.Meeting;
+using Paramore.Rewind.Core.Ports.Handlers.Meetings;
+using Version = Paramore.Rewind.Core.Adapters.Repositories.Version;
 
 namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Meetings
 {

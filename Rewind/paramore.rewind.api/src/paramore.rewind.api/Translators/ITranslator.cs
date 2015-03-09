@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Paramore.Rewind.Core.Adapters.Repositories;
 
 namespace paramore.rewind.adapters.presentation.api.Translators
 {

@@ -88,6 +88,20 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\paramore.rewind.api\src\paramore.rewind.api\paramore.rewind.api.csproj">
+      <Project>{cc4ae266-7d06-4309-9dfd-d76477f6245d}</Project>
+      <Name>paramore.rewind.api</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.rewind.core\paramore.rewind.core.csproj">
+      <Project>{41d1c746-9959-403c-956e-f4538ca72a83}</Project>
+      <Name>paramore.rewind.core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.rewind.web\paramore.rewind.web.csproj">
+      <Project>{b099d3d2-55e1-4161-86f7-6d610ace4e57}</Project>
+      <Name>paramore.rewind.web</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

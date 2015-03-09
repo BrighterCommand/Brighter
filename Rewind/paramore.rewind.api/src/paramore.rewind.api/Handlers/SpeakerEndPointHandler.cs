@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using OpenRasta.Web;
 using paramore.commandprocessor;
 using paramore.rewind.adapters.presentation.api.Resources;
+using Paramore.Rewind.Core.Adapters.Repositories;
+using Version = Paramore.Rewind.Core.Adapters.Repositories.Version;
 
 namespace paramore.rewind.adapters.presentation.api.Handlers
 {

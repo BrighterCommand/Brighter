@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Paramore.Rewind.Core.Adapters.Repositories;
 
 namespace Paramore.Adapters.Tests.UnitTests.fakes
 {

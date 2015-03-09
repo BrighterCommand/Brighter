@@ -1,7 +1,7 @@
 ﻿using FakeItEasy;
 using Machine.Specifications;
-using Paramore.Domain.Meetings;
-using Paramore.Domain.Venues;
+using Paramore.Rewind.Core.Domain.Meetings;
+using Paramore.Rewind.Core.Domain.Venues;
 
 namespace Paramore.Adapters.Tests.UnitTests.domain.Meetings
 {
