@@ -3,6 +3,10 @@ using OpenRasta.Pipeline;
 using OpenRasta.Web;
 using paramore.commandprocessor;
 using paramore.commandprocessor.ioccontainers.IoCContainers;
+using Paramore.Rewind.Core.Adapters.Repositories;
+using Paramore.Rewind.Core.Domain.Venues;
+using Paramore.Rewind.Core.Ports.Commands.Venue;
+using Paramore.Rewind.Core.Ports.Handlers.Venues;
 using TinyIoC;
 
 namespace paramore.rewind.adapters.presentation.api.Contributors

@@ -2,7 +2,10 @@
 using FakeItEasy;
 using Machine.Specifications;
 using Paramore.Adapters.Tests.UnitTests.fakes;
-using Paramore.Domain.Speakers;
+using Paramore.Rewind.Core.Adapters.Repositories;
+using Paramore.Rewind.Core.Domain.Speakers;
+using Paramore.Rewind.Core.Ports.Commands.Speaker;
+using Paramore.Rewind.Core.Ports.Handlers.Speakers;
 
 namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Speakers
 {

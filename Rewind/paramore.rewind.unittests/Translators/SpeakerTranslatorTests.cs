@@ -5,11 +5,12 @@ using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 using Machine.Specifications;
-using Paramore.Adapters.Presentation.API.Resources;
-using Paramore.Adapters.Presentation.API.Translators;
-using Paramore.Domain.Common;
-using Paramore.Domain.Speakers;
-using Version = Paramore.Adapters.Infrastructure.Repositories.Version;
+using paramore.rewind.adapters.presentation.api.Resources;
+using paramore.rewind.adapters.presentation.api.Translators;
+using Paramore.Rewind.Core.Adapters.Repositories;
+using Paramore.Rewind.Core.Domain.Common;
+using Paramore.Rewind.Core.Domain.Speakers;
+using Version = Paramore.Rewind.Core.Adapters.Repositories.Version;
 
 namespace Paramore.Adapters.Tests.UnitTests.Translators
 {

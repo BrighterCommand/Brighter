@@ -2,7 +2,10 @@
 using FakeItEasy;
 using Machine.Specifications;
 using Paramore.Adapters.Tests.UnitTests.fakes;
-using Paramore.Domain.Venues;
+using Paramore.Rewind.Core.Adapters.Repositories;
+using Paramore.Rewind.Core.Domain.Venues;
+using Paramore.Rewind.Core.Ports.Commands.Venue;
+using Paramore.Rewind.Core.Ports.Handlers.Venues;
 
 namespace Paramore.Adapters.Tests.UnitTests.services.CommandHandlers.Venues
 {
