@@ -1,74 +1,57 @@
 ﻿var listVm = function () {
     var taskList;
+    var getCallback, postCallback;
 
     var getTasks = function () {
-        //$.cookie('Origin', '*', { path: '/' });
-//        $.support.cors = true;
-
         $.ajax({
-            //            url: "http://localhost:49743/tasks",
             url: "/tasklist",
             dataType: 'json',
             type: 'GET',
-            crossDomain: true,
-            success: function (data) {
-                alert("success");
+            success: function(data) {
                 taskList = data;
-            },
-            error: function (request, status, ex) {
-                alert("error");
+                getCallback(taskList);
             }
         });
     };
-    
-    var addTaskInternal = function(task) {
-        taskList.push(task);
+    var addTaskInternal = function (taskText, addCallback) {
+        postCallback = addCallback;
+        $.ajax({
+            url: "/tasklist",
+            dataType: 'json',
+            type: 'POST',
+            success: function (data) {
+                taskList = data;
+                postCallback(data);
+            }
+        });
     };
-
     return {
-        init: function() { getTasks(); },
-        getTasks: function() { return taskList; },
+        init: function (cb) {
+            getCallback = cb;
+            getTasks();
+        },
         addTask: addTaskInternal
     };
 }();
 
-var navVm = function () {
-    var initialise = function() {
-        $("#navViewTasks").on('click', viewTaskClick);
-        $("#navAddTask").on('click', addTaskClick);
-        $("#navSendTask").on('click', sendTaskClick);
-    };
-
-    var viewTaskClick = function (e) {
-
-        //then display result in container
-        var templateToBind = $("#addTemplate");
-        var vmDataSource = listVm.getTasks();
-        var content = Mustache.to_html(templateToBind, vmDataSource);
-        $("#contentContainer").html(content);
-    };
-    var addTaskClick = function (e) {
-
-    };
-    var sendTaskClick = function (e) {
-
-    };
-
-    return {
-        init: initialise
-    };
-}();
-
+var onTaskLoad = function (tl) {
+    //alert(tl);
+    var content = Mustache.to_html($("#viewTemplate").html(), tl);
+    $("#taskContainer").html(content);
+}
+var onTaskCreated = function () {
+    alert('added!');
+    listVm.init(onTaskLoad);
+}
+var onTaskAddClick = function () {
+    var taskText = $("#todoAdd").parent().first().text();
+    listVm.addTask(taskText, onTaskCreated);
+}
 $(document).ready(function () {
-    listVm.init();
-    navVm.init();
-
+    listVm.init(onTaskLoad);
+    $("#todoAdd").click(onTaskAddClick);
     //listVm.addTask(toDo.create("testTask"));
     //listVm.addTask(toDo.create("testTask"));
     //listVm.addTask(toDo.create("testTask"));
-
-    //        var mustacheContent = Mustache.to_html(templateCache.cellMenu, documentModel);
-
 });
-
 
