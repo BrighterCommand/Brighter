@@ -1,13 +1,38 @@
 ﻿@model dynamic
 
 @{    
-    ViewBag.Title = "title";
+    ViewBag.Title = "TodoUI - Brighter Example";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h1>Index - hi</h1>
+<script id="viewTemplate" type="text/template">
+    <ul id="taskList">
+        {{#links}}
+        <li>
+            <div>
+                <label>{{Rel}}</label>
+                <label>{{HRef}}</label>
+                <button id="HRef"></button>
+            </div>
+        </li>
+        {{/links}}
+    </ul>
+</script>
 
-@Scripts.Render("~/bundles/jquery")
-@Scripts.Render("~/app/app.js")
+<h1>todos</h1>
+<div id="todoList">
+    <header>
+        <h1>
+            <input placeholder="Enter new task?"/>
+            <button id="todoAdd">Add</button>
+        </h1>
+    </header>
+    <section id="taskContainer">
+    </section>
+</div>
+
+<script src="~/Scripts/jquery-2.1.3.js"></script>
+<script src="~/Scripts/mustache.js"></script>
+<script src="~/app/app.js"></script>
 
 
