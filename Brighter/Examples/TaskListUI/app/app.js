@@ -1,9 +1,8 @@
 ﻿var listVm = function () {
     var taskList;
-    var getCallback, addCallback;
+    var getCallback, addCallback, completeCallback;
     var getTasks = function () {
         $.ajax({
-            //url: "/tasklist",
             url: 'http://localhost:49743/tasks',
             dataType: 'json',
             type: 'GET',
@@ -17,33 +16,25 @@
         addCallback = addCallback;
         //TODO: sort the date format.
         $.ajax({
-//            url: 'http://localhost:49743/tasks',
-//            dataType: 'json',
-
-            url: "/tasklist/create",
-            dataType: 'text',
+            dataType: 'text', //to process location, not json
+            url: 'http://localhost:49743/tasks',
             contentType: "application/json",
             type: 'POST',
-            data: "{'dueDate':'01-Jan-2014', 'taskDescription':'" + taskText + "', 'taskName':'" + taskText + "'}",
+            data: '{"dueDate": "01-Jan-2014", "taskDescription": "' + taskText + '", "taskName": "' + taskText + '"}',
             success: function (data) {
                 addCallback(data);
             },
         });
     };
-    var completeTaskInternal = function (taskText, completeCallback) {
-        addCallback = addCallback;
-        //TODO: sort the date format.
+    var completeTaskInternal = function (taskId, completeCb) {
+        completeCallback = completeCb;
         $.ajax({
-            url: "/tasklist/create",
-            //dataType: 'text',
+            url: 'http://localhost:49743/tasks/' + taskId,
+            dataType: 'json',
             type: 'DELETE',
-            data: "{'dueDate':'01-Jan-2014', 'taskDescription':'" + taskText + "', 'taskName':'" + taskText + "'}",
             success: function (data) {
                 addCallback(data);
-            },
-            error: function (data) {
-                addCallback(data);
-            },
+            }
         });
     };
     return {
@@ -51,17 +42,30 @@
             getCallback = cb;
             getTasks();
         },
-        addTask: addTaskInternal
+        addTask: addTaskInternal,
+        completeTask: completeTaskInternal
     };
 }();
-
+var refreshTaskList = function() {
+    listVm.init(onTaskLoad);
+}
+var onTaskCompleteClick = function() {
+    //TODO - get the right Id here!!!!
+    var taskText = $(this).parent().find(".taskHref").val();
+    var taskId = 1;
+    listVm.completeTask(taskId, onTaskCompletedCb);
+}
+var onTaskCompletedCb = function() {
+    refreshTaskList();
+}
 var onTaskLoad = function (tl) {
     var content = Mustache.to_html($("#viewTemplate").html(), tl);
     $("#taskContainer").html(content);
+    //bind complete
+    $("#taskContainer").find(".complete").click(onTaskCompleteClick);
 }
 var onTaskCreated = function (newHref) {
-    //alert('added! ' + newHref);
-    listVm.init(onTaskLoad);
+    refreshTaskList();
 }
 var onTaskAddClick = function () {
     var parent = $("#todoAdd").parent();
@@ -69,7 +73,7 @@ var onTaskAddClick = function () {
     listVm.addTask(taskText, onTaskCreated);
 }
 $(document).ready(function () {
-    listVm.init(onTaskLoad);
+    refreshTaskList();
     $("#todoAdd").click(onTaskAddClick);
     //listVm.addTask(toDo.create("testTask"));
     //listVm.addTask(toDo.create("testTask"));
