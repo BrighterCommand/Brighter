@@ -1,7 +1,6 @@
 ﻿var listVm = function () {
     var taskList;
     var getCallback, postCallback;
-
     var getTasks = function () {
         $.ajax({
             url: "/tasklist",
@@ -15,13 +14,20 @@
     };
     var addTaskInternal = function (taskText, addCallback) {
         postCallback = addCallback;
+        //TODO: sort the date format.
+        //TODO: get this working (!)
         $.ajax({
-            url: "/tasklist",
+            url: "/tasklist/create",
             dataType: 'json',
+            contentType: "application/json",
             type: 'POST',
+            data: "{'dueDate':'01-Jan-2014', 'taskDescription':'" + taskText + "', 'taskName':'" + taskText + "'}",
             success: function (data) {
-                taskList = data;
+                alert('added success:' + data);
                 postCallback(data);
+            },
+            error: function (jqXhr, textStatus, errorThrown) {
+                postCallback(jqXhr.responseText);
             }
         });
     };
@@ -39,12 +45,13 @@ var onTaskLoad = function (tl) {
     var content = Mustache.to_html($("#viewTemplate").html(), tl);
     $("#taskContainer").html(content);
 }
-var onTaskCreated = function () {
-    alert('added!');
+var onTaskCreated = function (newHref) {
+    alert('added! ' + newHref);
     listVm.init(onTaskLoad);
 }
 var onTaskAddClick = function () {
-    var taskText = $("#todoAdd").parent().first().text();
+    var parent = $("#todoAdd").parent();
+    var taskText = parent.children().first().val();
     listVm.addTask(taskText, onTaskCreated);
 }
 $(document).ready(function () {
