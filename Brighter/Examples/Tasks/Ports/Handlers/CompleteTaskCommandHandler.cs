@@ -36,9 +36,9 @@ namespace Tasks.Ports.Handlers
     {
         private readonly ITasksDAO _tasksDAO;
 
-        public CompleteTaskCommandHandler(ITasksDAO tasksDao, ILog logger) : base(logger)
+        public CompleteTaskCommandHandler(ITasksDAO tasksDAO, ILog logger) : base(logger)
         {
-            _tasksDAO = tasksDao;
+            _tasksDAO = tasksDAO;
         }
 
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
