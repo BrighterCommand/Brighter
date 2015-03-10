@@ -29,10 +29,10 @@ namespace Tasks.Ports.Commands
 {
     public class EditTaskCommand : Command, ICanBeValidated
     {
-        public int TaskId { get; set; }
-        public string TaskDescription { get; set; }
-        public DateTime? TaskDueDate { get; set; }
-        public string TaskName { get; set; }
+        public int TaskId { get; private set; }
+        public string TaskDescription { get; private set; }
+        public DateTime? TaskDueDate { get; private set; }
+        public string TaskName { get; private set; }
 
         public EditTaskCommand(int taskId, string taskName, string taskDecription, DateTime? dueDate = null)
             : base(Guid.NewGuid())

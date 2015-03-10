@@ -64,7 +64,7 @@ namespace Tasklist.Adapters.API.Handlers
         {
             var addTaskCommand = new AddTaskCommand(
                 taskName: newTask.TaskName,
-                taskDecription: newTask.TaskDescription,
+                taskDescription: newTask.TaskDescription,
                 dueDate: DateTime.Parse(newTask.DueDate)
                 );
 
