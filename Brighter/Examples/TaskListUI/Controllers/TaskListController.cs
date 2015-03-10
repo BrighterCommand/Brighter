@@ -51,13 +51,7 @@ namespace TaskListUI.Controllers
         public async Task<string> Delete(string href)
         {
             var client = GetHttpClient();
-            var content = new FormUrlEncodedContent(new[] 
-            {
-                new KeyValuePair<string, string>("dueDate", dueDate),
-                new KeyValuePair<string, string>("taskDescription", taskDescription),
-                new KeyValuePair<string, string>("taskName", taskName)
-            });
-            HttpResponseMessage response = await client.PostAsync("tasks", content);
+            HttpResponseMessage response = await client.DeleteAsync("tasks/" + href);
             if (response.IsSuccessStatusCode)
             {
                 if (response.StatusCode == HttpStatusCode.Created)
