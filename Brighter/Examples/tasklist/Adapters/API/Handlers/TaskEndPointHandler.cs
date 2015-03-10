@@ -75,5 +75,18 @@ namespace Tasklist.Adapters.API.Handlers
                 RedirectLocation = new Uri(string.Format("{0}/tasks/{1}", _communicationContext.ApplicationBaseUri, addTaskCommand.TaskId))
             };
         }
+
+        [HttpOperation(HttpMethod.DELETE)]
+        public OperationResult Delete(int taskId)
+        {
+            var completeTaskCommand = new CompleteTaskCommand(
+                taskId: taskId,
+                completionDate: DateTime.UtcNow
+                );
+
+            _commandProcessor.Send(completeTaskCommand);
+
+            return new OperationResult.OK();
+        }
     }
 }
