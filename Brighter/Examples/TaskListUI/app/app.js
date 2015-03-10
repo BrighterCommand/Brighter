@@ -26,6 +26,7 @@
                 alert('added success:' + data);
                 postCallback(data);
             },
+            //201 trapped as error here
             error: function (jqXhr, textStatus, errorThrown) {
                 postCallback(jqXhr.responseText);
             }
