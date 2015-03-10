@@ -108,7 +108,7 @@ namespace Greetings.Adapters.ServiceHost
 
         public bool Stop(HostControl hostControl)
         {
-            _dispatcher.End();
+            _dispatcher.End().Wait();
             _dispatcher = null;
             return false;
         }
