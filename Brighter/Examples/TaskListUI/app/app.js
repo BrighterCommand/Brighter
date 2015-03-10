@@ -1,9 +1,10 @@
 ﻿var listVm = function () {
     var taskList;
-    var getCallback, postCallback;
+    var getCallback, addCallback;
     var getTasks = function () {
         $.ajax({
-            url: "/tasklist",
+            //url: "/tasklist",
+            url: 'http://localhost:49743/tasks',
             dataType: 'json',
             type: 'GET',
             success: function(data) {
@@ -13,23 +14,36 @@
         });
     };
     var addTaskInternal = function (taskText, addCallback) {
-        postCallback = addCallback;
+        addCallback = addCallback;
         //TODO: sort the date format.
-        //TODO: get this working (!)
         $.ajax({
+//            url: 'http://localhost:49743/tasks',
+//            dataType: 'json',
+
             url: "/tasklist/create",
-            dataType: 'json',
+            dataType: 'text',
             contentType: "application/json",
             type: 'POST',
             data: "{'dueDate':'01-Jan-2014', 'taskDescription':'" + taskText + "', 'taskName':'" + taskText + "'}",
             success: function (data) {
-                alert('added success:' + data);
-                postCallback(data);
+                addCallback(data);
             },
-            //201 trapped as error here
-            error: function (jqXhr, textStatus, errorThrown) {
-                postCallback(jqXhr.responseText);
-            }
+        });
+    };
+    var completeTaskInternal = function (taskText, completeCallback) {
+        addCallback = addCallback;
+        //TODO: sort the date format.
+        $.ajax({
+            url: "/tasklist/create",
+            //dataType: 'text',
+            type: 'DELETE',
+            data: "{'dueDate':'01-Jan-2014', 'taskDescription':'" + taskText + "', 'taskName':'" + taskText + "'}",
+            success: function (data) {
+                addCallback(data);
+            },
+            error: function (data) {
+                addCallback(data);
+            },
         });
     };
     return {
@@ -42,12 +56,11 @@
 }();
 
 var onTaskLoad = function (tl) {
-    //alert(tl);
     var content = Mustache.to_html($("#viewTemplate").html(), tl);
     $("#taskContainer").html(content);
 }
 var onTaskCreated = function (newHref) {
-    alert('added! ' + newHref);
+    //alert('added! ' + newHref);
     listVm.init(onTaskLoad);
 }
 var onTaskAddClick = function () {

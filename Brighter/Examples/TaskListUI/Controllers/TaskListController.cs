@@ -10,19 +10,19 @@ namespace TaskListUI.Controllers
 {
     public class TaskListController : Controller
     {
-        // GET: TaskList
-        public async Task<string> Index()
-        {
-            var client = GetHttpClient();
-            HttpResponseMessage response = await client.GetAsync("tasks");
-            if (response.IsSuccessStatusCode)
-            {
-                var model = response.Content.ReadAsStringAsync().Result;
-                return model;
-           }
+        //// GET: TaskList
+        //public async Task<string> Index()
+        //{
+        //    var client = GetHttpClient();
+        //    HttpResponseMessage response = await client.GetAsync("tasks");
+        //    if (response.IsSuccessStatusCode)
+        //    {
+        //        var model = response.Content.ReadAsStringAsync().Result;
+        //        return model;
+        //   }
 
-            return await Task.FromResult<string>(null);
-        }
+        //    return await Task.FromResult<string>(null);
+        //}
 
         //ToDo: change to Task<HttpResponseMessage>
         [HttpPost]
