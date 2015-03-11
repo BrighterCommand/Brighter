@@ -135,10 +135,7 @@
     <Content Include="Views\Shared\_Layout.cshtml" />
     <Content Include="Views\Tasks\Index.cshtml" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="App_Data\" />
-    <Folder Include="Models\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <Content Include="packages.config" />
   </ItemGroup>
