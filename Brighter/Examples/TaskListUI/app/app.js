@@ -1,7 +1,8 @@
-﻿var listVm = function() {
+﻿var listVm = function () {
+    var baseUri = 'http://localhost:49743/tasks';
     var getTasks = function(getCallback) {
         $.ajax({
-            url: 'http://localhost:49743/tasks',
+            url: baseUri,
             dataType: 'json',
             type: 'GET',
             success: function(data) { getCallback(data); }
@@ -10,17 +11,17 @@
     var addTaskInternal = function(taskText, addCallback) {
         //TODO: sort the date format.
         $.ajax({
+            url: baseUri,
             dataType: 'text', //to process location, not json
-            url: 'http://localhost:49743/tasks',
-            contentType: "application/json",
             type: 'POST',
-            data: '{"dueDate": "01-Jan-2014", "taskDescription": "' + taskText + '", "taskName": "' + taskText + '"}',
-            success: function(data) { addCallback(data); }
+            success: function(data) { addCallback(data); },
+            contentType: "application/json",
+            data: '{"dueDate": "01-Jan-2014", "taskDescription": "' + taskText + '", "taskName": "' + taskText + '"}'
         });
     };
     var completeTaskInternal = function(taskId, completeCb) {
         $.ajax({
-            url: 'http://localhost:49743/tasks/' + taskId,
+            url: baseUri + '/' + taskId,
             dataType: 'text',
             type: 'DELETE',
             success: function(data) { completeCb(data); }
@@ -43,9 +44,8 @@ var onTaskCompleteClick = function() {
 var onTaskCompletedCb = function(data) {
     refreshTaskList();
 };
-
 function taskSorter(a, b) {
-    //completed last., then by due date
+    //completed last, then by id
     if (a.isComplete && b.isComplete) {
         if (a.completionDate < b.completionDate) {
             return 1;
@@ -58,12 +58,11 @@ function taskSorter(a, b) {
         }
         return -1;
     }
-    if (a.dueDate < b.dueDate) {
+    if (a.id < b.id) {
         return 1;
     }
     return -1;
 }
-
 var onTaskLoad = function(tl) {
     tl.items.sort(taskSorter);
     var content = Mustache.to_html($("#viewTemplate").html(), tl);
@@ -72,13 +71,17 @@ var onTaskLoad = function(tl) {
 };
 var onTaskCreated = function(newHref) {
     refreshTaskList();
+    $("#taskAddName").val("");
 };
 var onTaskAddClick = function() {
-    var parent = $("#todoAdd").parent();
+    var parent = $("#taskAddName").parent();
     var taskText = parent.children().first().val();
     listVm.addTask(taskText, onTaskCreated);
 };
 $(document).ready(function() {
     refreshTaskList();
-    $("#todoAdd").click(onTaskAddClick);
+    $("#taskAddName").bind('blur keyup', function (e) {
+        if (e.type === 'keyup' && e.keyCode !== 10 && e.keyCode !== 13) return;
+        onTaskAddClick();
+    });
 });
