@@ -21,7 +21,7 @@
     var completeTaskInternal = function (taskId, completeCb) {
         $.ajax({
             url: 'http://localhost:49743/tasks/' + taskId,
-            dataType: 'json',
+            dataType: 'text',
             type: 'DELETE',
             success: function (data) { completeCb(data); }
         });
@@ -40,7 +40,7 @@ var onTaskCompleteClick = function() {
     var taskId = taskUri.substring(taskUri.lastIndexOf('/') + 1);
     listVm.completeTask(taskId, onTaskCompletedCb);
 }
-var onTaskCompletedCb = function() {
+var onTaskCompletedCb = function(data) {
     refreshTaskList();
 }
 var onTaskLoad = function (tl) {

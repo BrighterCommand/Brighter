@@ -7,15 +7,19 @@
 
 <script id="viewTemplate" type="text/template">
     <ul id="taskList">
-        {{#links}}
+        {{#items}}
         <li>
             <div>
-                <label>{{Rel}}</label>
-                <label class="taskHref">{{HRef}}</label>
+                @*<label>{{Rel}}</label>*@
+                <label class="taskHref">{{href}}</label>
+                <label>{{name}}</label>
+                <label>{{description}}</label>
+                <label>{{dueDate}}</label>
+                <label>{{completionDate}}</label>
                 <button id="HRef" class="complete">COMPLETE</button>
             </div>
         </li>
-        {{/links}}
+        {{/items}}
     </ul>
 </script>
 
