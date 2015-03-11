@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -34,12 +35,12 @@ namespace Tasklist.Adapters.API.Resources
     public class TaskListModel
     {
         private Link _self;
-        private IEnumerable<Link> _links;
+        private IEnumerable<TaskListItemModel> _items;
 
         public TaskListModel(IEnumerable<Task> tasks, string hostName)
         {
             _self = Link.Create(this, hostName);
-            _links = tasks.Select(task => Link.Create((Task)task, hostName));
+            _items = tasks.Select(task => TaskListItemModel.Create(task, hostName));
         }
 
         [DataMember(Name = "self"), XmlElement(ElementName = "self")]
@@ -49,11 +50,54 @@ namespace Tasklist.Adapters.API.Resources
             set { _self = value; }
         }
 
-        [DataMember(Name = "links"), XmlElement(ElementName = "links")]
-        public IEnumerable<Link> Links
+        [DataMember(Name = "items"), XmlElement(ElementName = "items")]
+        public IEnumerable<TaskListItemModel> Items
         {
-            get { return _links; }
-            set { _links = value; }
+            get { return _items; }
+            set { _items = value; }
+        }
+    }
+
+    [DataContract, XmlRoot]
+    public class TaskListItemModel
+    {
+        [DataMember(Name = "self"), XmlElement(ElementName = "self")]
+        public Link Self{ get; private set; }
+        [DataMember(Name = "name"), XmlElement(ElementName = "name")]
+        public string Name { get; private set; }
+        [DataMember(Name = "description"), XmlElement(ElementName = "description")]
+        public string Description { get; private set; }
+        [DataMember(Name = "completionDate"), XmlElement(ElementName = "completionDate")]
+        public string CompletionDate { get; private set; }
+        [DataMember(Name = "dueDate"), XmlElement(ElementName = "dueDate")]
+        public string DueDate { get; private set; }
+        [DataMember(Name = "href"), XmlElement(ElementName = "href")]
+        public string HRef { get; private set; }
+        [DataMember(Name = "isComplete"), XmlElement(ElementName = "isComplete")]
+        public bool IsComplete { get; set; }
+
+        public static TaskListItemModel Create(Task task, string hostName)
+        {
+            var hRef = string.Format("http://{0}/{1}/{2}", hostName, "task", task.Id);
+            return new TaskListItemModel
+            {
+                HRef = hRef,
+                Self = new Link { Rel = "item", HRef = hRef },
+                Name = task.TaskName,
+                Description = task.TaskDescription,
+                IsComplete = task.CompletionDate.HasValue,
+                CompletionDate = task.CompletionDate.ToDisplayString(),
+                DueDate = task.DueDate.ToDisplayString()
+            };
+        }
+    }
+
+    public static class Extensions
+    {
+        public static string ToDisplayString(this DateTime? dateTimeToFormat)
+        {
+            if (!dateTimeToFormat.HasValue) return "";
+            return dateTimeToFormat.Value.ToString("dd-MMM-yyyy HH:mm:ss");
         }
     }
 }
