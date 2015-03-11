@@ -81,7 +81,7 @@ namespace Tasklist.Adapters.Tests
         {
             var task = s_taskList.Items.Single();
             task.ShouldNotBeNull();
-            task.CompletionDate.ShouldBeNull();
+            task.CompletionDate.ShouldBeEmpty();
         };
     }
 }
