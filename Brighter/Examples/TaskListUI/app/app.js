@@ -51,8 +51,8 @@ var refreshTaskList = function() {
 }
 var onTaskCompleteClick = function() {
     //TODO - get the right Id here!!!!
-    var taskText = $(this).parent().find(".taskHref").val();
-    var taskId = 1;
+    var taskUri= $(this).parent().find(".taskHref").text();
+    var taskId = taskUri.substring(taskUri.lastIndexOf('/') + 1);
     listVm.completeTask(taskId, onTaskCompletedCb);
 }
 var onTaskCompletedCb = function() {
