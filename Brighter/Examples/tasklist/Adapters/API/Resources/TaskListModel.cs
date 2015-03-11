@@ -75,6 +75,8 @@ namespace Tasklist.Adapters.API.Resources
         public string HRef { get; private set; }
         [DataMember(Name = "isComplete"), XmlElement(ElementName = "isComplete")]
         public bool IsComplete { get; set; }
+        [DataMember(Name = "id"), XmlElement(ElementName = "id")]
+        public int Id { get; set; }
 
         public static TaskListItemModel Create(Task task, string hostName)
         {
@@ -87,9 +89,11 @@ namespace Tasklist.Adapters.API.Resources
                 Description = task.TaskDescription,
                 IsComplete = task.CompletionDate.HasValue,
                 CompletionDate = task.CompletionDate.ToDisplayString(),
-                DueDate = task.DueDate.ToDisplayString()
+                DueDate = task.DueDate.ToDisplayString(),
+                Id = task.Id
             };
         }
+
     }
 
     public static class Extensions
