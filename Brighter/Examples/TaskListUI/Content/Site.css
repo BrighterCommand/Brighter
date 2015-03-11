@@ -5,7 +5,7 @@
     background: none repeat scroll 0% 0% #F5F5F5;
     color: #4D4D4D;
     min-width: 230px;
-    max-width: 550px;
+    max-width: 750px;
     margin: 0px auto;
 }
 
@@ -58,4 +58,17 @@ h1 {
     font-weight: 100;
     color: rgba(175, 47, 47, 0.15);
     line-height: 35px;
+}
+#todoList span.taskInfoRow {
+    display: inline-block;
+    min-width: 300px;
+}
+#todoList div.mailForm {
+    margin: 20px 5px 5px 50px;
+    margin-left: 50px;
+    line-height: 1.2em;
+}
+#todoList input.emailAddress {
+    min-width: 350px;
+    font-size: 20px;
 }

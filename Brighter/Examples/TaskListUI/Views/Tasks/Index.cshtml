@@ -7,14 +7,31 @@
 <script id="viewTemplate" type="text/template">
     <ul id="taskList">
         {{#items}}
-        <li {{#isComplete}} class=completed {{/isComplete}}>
+        {{#isComplete}} 
+        <li class=completed>
+        {{/isComplete}} 
+        {{^isComplete}} 
+        <li>
+        {{/isComplete}} 
+            <div class="taskRow" style="width:100%">
+                <span class="taskInfoRow">
+                    {{^isComplete}}
+                    <input type="checkbox" id="HRef" class="complete" />
+                    {{/isComplete}}
+                    <label class="taskHref" style="display:none">{{href}}</label>
+                    <label>{{name}}</label>
+                    <label>{{completionDate}}</label>
+                </span>
+
+                <button class="mail" style="display:inline-block">Email Reminder</button>
+            </div>
             <div>
-                {{^isComplete}}
-                <input type="checkbox" id="HRef" class="complete" />
-                {{/isComplete}}
-                <label class="taskHref" style="display:none">{{href}}</label>
-                <label>{{name}}</label>
-                <label>{{completionDate}}</label>
+                <div id="email{{HRef}}" style="display:none" class="mailForm">
+                    <input type="email" name="recipient" class="emailAddress" placeholder="email to send reminder to"/>
+                    <input type="hidden" name="dueDate" value="{{dueDate}} " />
+                    <input type="hidden" name="taskName" value="{{name}} "/>
+                    <button class="mailFormSubmit">Send</button>
+                </div>
             </div>
         </li>
         {{/items}}
@@ -25,7 +42,6 @@
 <div id="todoList">
     <header>
         <input id="taskAddName" placeholder="Enter new task?"/>
-        @*<button id="todoAdd">Add</button>*@
     </header>
     <section id="taskContainer">
     </section>
