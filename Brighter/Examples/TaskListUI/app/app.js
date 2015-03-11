@@ -43,7 +43,27 @@ var onTaskCompleteClick = function() {
 var onTaskCompletedCb = function(data) {
     refreshTaskList();
 }
+function taskSorter(a, b) {
+    //completed last., then by due date
+    if (a.isComplete && b.isComplete) {
+        if (a.completionDate < b.completionDate) {
+            return 1;
+        }
+        return -1;
+    }
+    if (a.isComplete || b.isComplete) {
+        if (a.isComplete) {
+            return 1;
+        }
+        return -1;
+    }
+    if (a.dueDate < b.dueDate) {
+        return 1;
+    }
+    return -1;
+}
 var onTaskLoad = function (tl) {
+    tl.items.sort(taskSorter);
     var content = Mustache.to_html($("#viewTemplate").html(), tl);
     $("#taskContainer").html(content);
     $("#taskContainer").find(".complete").click(onTaskCompleteClick);
