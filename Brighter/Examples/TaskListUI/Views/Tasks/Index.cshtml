@@ -4,13 +4,11 @@
     ViewBag.Title = "TodoUI - Brighter Example";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
-
 <script id="viewTemplate" type="text/template">
     <ul id="taskList">
         {{#items}}
         <li>
             <div>
-                @*<label>{{Rel}}</label>*@
                 <label class="taskHref">{{href}}</label>
                 <label>{{name}}</label>
                 <label>{{description}}</label>
@@ -35,8 +33,9 @@
     </section>
 </div>
 
-<script src="~/Scripts/jquery-2.1.3.js"></script>
+<script src="~/Scripts/jquery-2.1.3.min.js"></script>
 <script src="~/Scripts/mustache.js"></script>
+<script src="~/Scripts/bootstrap.min.js"></script>
 <script src="~/app/app.js"></script>
-
+<link href="~/Content/bootstrap.min.css" rel="stylesheet" />
 
