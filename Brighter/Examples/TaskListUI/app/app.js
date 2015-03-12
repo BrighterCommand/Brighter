@@ -57,7 +57,8 @@ var onTaskCompletedCb = function(data) {
     refreshTaskList();
 };
 var onReminderSentCb = function(data) {
-    alert('sent it!');
+    //alert('sent it!');
+    closeMailFormsAndShowReminderButtons();
 }
 var onReminderSendClick = function () {
     var divForm = $(this).parent();
@@ -90,9 +91,8 @@ $(document).ready(function() {
     });
 });
 var onReminderClick = function () {
-    $("#taskList button.mail").show(); 
     $(this).hide();
-    $("#taskList li div.mailForm").css({ 'display': 'none' }); //hide all
+    closeMailFormsAndShowReminderButtons();
     var thisForm = $(this).parents("li").find("div.mailForm");
     thisForm.css({ 'display': 'block' });
     thisForm.find("button").click(onReminderSendClick);
@@ -122,3 +122,8 @@ function taskSorter(a, b) {
     }
     return -1;
 }
+var closeMailFormsAndShowReminderButtons = function () {
+    $("#taskList li div.mailForm").css({ 'display': 'none' });
+    $("#taskList button.mail").show();
+}
+
