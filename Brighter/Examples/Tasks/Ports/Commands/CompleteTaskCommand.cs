@@ -27,7 +27,7 @@ using paramore.brighter.commandprocessor;
 
 namespace Tasks.Ports.Commands
 {
-    public class CompleteTaskCommand : Command, IRequest
+    public class CompleteTaskCommand : Command, ICanBeValidated
     {
         public CompleteTaskCommand(int taskId, DateTime completionDate)
             : base(Guid.NewGuid())
@@ -38,5 +38,11 @@ namespace Tasks.Ports.Commands
 
         public DateTime CompletionDate { get; set; }
         public int TaskId { get; set; }
+
+        public bool IsValid()
+        {
+            return CompletionDate != DateTime.MinValue
+                    && CompletionDate != DateTime.MaxValue;
+        }
     }
 }

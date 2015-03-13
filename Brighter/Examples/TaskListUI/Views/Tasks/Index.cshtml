@@ -1,0 +1,55 @@
+﻿@model dynamic
+
+@{
+    ViewBag.Title = "TodoUI - Brighter Example";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<script id="viewTemplate" type="text/template">
+    <ul id="taskList">
+        {{#items}}
+        {{#isComplete}} 
+        <li class=completed>
+        {{/isComplete}} 
+        {{^isComplete}} 
+        <li>
+        {{/isComplete}} 
+            <div class="taskRow" style="width:100%">
+                <span class="taskInfoRow">
+                    {{^isComplete}}
+                    <input type="checkbox" id="HRef" class="complete" />
+                    {{/isComplete}}
+                    <label class="taskHref" style="display:none">{{href}}</label>
+                    <label>{{name}}</label>
+                    <label>{{completionDate}}</label>
+                </span>
+
+                <button class="mail" style="display:inline-block">Email Reminder</button>
+            </div>
+            <div>
+                <div id="email{{HRef}}" style="display:none" class="mailForm">
+                    <input type="email" name="recipient" class="emailAddress" placeholder="email to send reminder to"/>
+                    <input type="hidden" name="dueDate" value="{{dueDate}} " />
+                    <input type="hidden" name="taskName" value="{{name}} "/>
+                    <button class="mailFormSubmit">Send</button>
+                </div>
+            </div>
+        </li>
+        {{/items}}
+    </ul>
+</script>
+
+<h1>todos</h1>
+<div id="todoList">
+    <header>
+        <input id="taskAddName" placeholder="Enter new task?"/>
+    </header>
+    <section id="taskContainer">
+    </section>
+</div>
+
+<script src="~/Scripts/jquery-2.1.3.min.js"></script>
+<script src="~/Scripts/mustache.js"></script>
+<script src="~/Scripts/bootstrap.min.js"></script>
+<script src="~/app/app.js"></script>
+<link href="~/Content/bootstrap.min.css" rel="stylesheet" />
+<link href="~/Content/Site.css" rel="stylesheet" />

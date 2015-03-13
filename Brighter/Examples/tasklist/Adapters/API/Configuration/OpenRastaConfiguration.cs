@@ -37,6 +37,8 @@ namespace Tasklist.Adapters.API.Configuration
         {
             using (OpenRasta.Configuration.OpenRastaConfiguration.Manual)
             {
+                ResourceSpace.Uses.PipelineContributor<CrossDomainPipelineContributor>();
+
                 ResourceSpace.Has.ResourcesOfType<TaskModel>()
                         .AtUri("/tasks/{taskId}")
                         .HandledBy<TaskEndPointHandler>()

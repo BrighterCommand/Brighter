@@ -66,11 +66,15 @@ namespace Tasklist.Adapters.API.Configuration
             container.Register<ITasksDAO, TasksDAO>().AsSingleton();
 
             //create handler 
-            container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>().AsMultiInstance();
             var handlerFactory = new TinyIocHandlerFactory(container);
             var subscriberRegistry = new SubscriberRegistry();
+            container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>().AsMultiInstance();
             subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
 
+            //complete handler 
+            container.Register<IHandleRequests<CompleteTaskCommand>, CompleteTaskCommandHandler>().AsMultiInstance();
+            subscriberRegistry.Register<CompleteTaskCommand, CompleteTaskCommandHandler>();
+            
             //create policies
             var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
             var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
