@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+VisualStudioVersion = 12.0.30501.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
 EndProject
@@ -41,6 +41,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.serviceactivator.controlbus", "paramore.brighter.serviceactivator.controlbus\paramore.brighter.serviceactivator.controlbus.csproj", "{FEAB93C1-3232-42FB-89B0-3387DEE4CED9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "Examples\Greetings\Greetings.csproj", "{A58FD535-81C2-4E96-87FC-DDC034E56EEE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskListUI", "Examples\TaskListUI\TaskListUI.csproj", "{23519DAF-76E5-4243-B231-5550F87698E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -202,6 +204,16 @@ Global
 		{A58FD535-81C2-4E96-87FC-DDC034E56EEE}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{A58FD535-81C2-4E96-87FC-DDC034E56EEE}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{A58FD535-81C2-4E96-87FC-DDC034E56EEE}.Release|x86.ActiveCfg = Release|Any CPU
+		{23519DAF-76E5-4243-B231-5550F87698E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23519DAF-76E5-4243-B231-5550F87698E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23519DAF-76E5-4243-B231-5550F87698E8}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{23519DAF-76E5-4243-B231-5550F87698E8}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{23519DAF-76E5-4243-B231-5550F87698E8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{23519DAF-76E5-4243-B231-5550F87698E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23519DAF-76E5-4243-B231-5550F87698E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{23519DAF-76E5-4243-B231-5550F87698E8}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{23519DAF-76E5-4243-B231-5550F87698E8}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{23519DAF-76E5-4243-B231-5550F87698E8}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -213,5 +225,6 @@ Global
 		{E7900A56-DA88-46CA-8418-FB4C2BC2D326} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{33C68FFA-F7FC-4475-A413-63AC036C201A} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{A58FD535-81C2-4E96-87FC-DDC034E56EEE} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
+		{23519DAF-76E5-4243-B231-5550F87698E8} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 	EndGlobalSection
 EndGlobal

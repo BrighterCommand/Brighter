@@ -130,6 +130,7 @@
     <Content Include="default.aspx" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Adapters\API\Configuration\CrossDomainPipelineContributor.cs" />
     <Compile Include="Adapters\API\Configuration\DependencyRegistrar.cs" />
     <Compile Include="Adapters\API\Handlers\TaskReminderEndpointHandler.cs" />
     <Compile Include="Adapters\API\Resources\Link.cs" />
