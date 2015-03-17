@@ -261,8 +261,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         protected virtual void CreateConsumer()
         {
             _consumer = new QueueingBasicConsumer(Channel);
-            Channel.BasicConsume(_queueName, AutoAck, _consumer);
 
+            Channel.BasicConsume(_queueName, AutoAck, _consumer.ConsumerTag, SetConsumerArguments(), _consumer);
+            
             Logger.InfoFormat("RmqMessageConsumer: Created consumer with ConsumerTag {4} for queue {0} with routing key {1} via exchange {2} on connection {3}",
                               _queueName,
                               _routingKey,
@@ -273,7 +274,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         private void EnsureConsumer()
         {
-            if (_consumer == null || !_consumer.Model.IsOpen)
+            if (_consumer == null || !_consumer.IsRunning)
             {
                 EnsureChannelBind();
                 CreateConsumer();
@@ -291,23 +292,36 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             Channel.QueueBind(_queueName, Configuration.Exchange.Name, _routingKey);
         }
 
-        private Dictionary<string, object> SetQueueArguments()
+        private Dictionary<string, object> SetConsumerArguments()
         {
             var arguments = new Dictionary<string, object>();
-            QueueIsMirroredAcrossAllNodesInTheCluster(arguments);
+            if (IsQueueMirroredAcrossAllNodesInTheCluster)
+            {
+                arguments.Add("x-cancel-on-ha-failover", true);
+            }
             return arguments;
         }
 
-        private void QueueIsMirroredAcrossAllNodesInTheCluster(Dictionary<string, object> arguments)
+        private Dictionary<string, object> SetQueueArguments()
         {
-            if (Configuration.Queues.HighAvailability) { arguments.Add("x-ha-policy", "all"); }
+            var arguments = new Dictionary<string, object>();
+            if (IsQueueMirroredAcrossAllNodesInTheCluster)
+            {
+                // Only work for RabbitMQ Server version before 3.0
+                //http://www.rabbitmq.com/blog/2012/11/19/breaking-things-with-rabbitmq-3-0/
+                arguments.Add("x-ha-policy", "all");
+            } 
+            return arguments;
         }
+
+        private bool IsQueueMirroredAcrossAllNodesInTheCluster{ get { return Configuration.Queues.HighAvailability; } }
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public override void Dispose()
         {
+            CancelConsumer();
             Dispose(true);
             GC.SuppressFinalize(this);
         }
@@ -315,6 +329,20 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         ~RmqMessageConsumer()
         {
             Dispose(false);
+        }
+
+        private void CancelConsumer()
+        {
+            if (_consumer != null)
+            {
+                if (_consumer.IsRunning)
+                {
+                    _consumer.OnCancel();
+                }
+
+                Logger.InfoFormat("RmqMessageConsumer: Cancelled consumer with ConsumerTag {0}", _consumer.ConsumerTag);
+                _consumer = null;
+            }
         }
     }
 }
