@@ -1,7 +1,4 @@
-﻿
-
-
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
 using Tasks.Ports.Commands;

@@ -50,7 +50,7 @@ namespace Tasks.Ports.Handlers
                 var inserted = _tasksDAO.Add(
                     new Task(
                         taskName: addTaskCommand.TaskName,
-                        taskDecription: addTaskCommand.TaskDecription,
+                        taskDecription: addTaskCommand.TaskDescription,
                         dueDate: addTaskCommand.TaskDueDate
                         )
                     );
