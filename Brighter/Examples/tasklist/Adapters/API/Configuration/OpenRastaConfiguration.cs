@@ -53,7 +53,7 @@ namespace Tasklist.Adapters.API.Configuration
                          .TranscodedBy<JsonDataContractCodec>()
                          .ForMediaType("application/json")
                          .ForExtension("js")
-                         .ForExtension(".json");
+                         .ForExtension("json");
 
                 ResourceSpace.Has.ResourcesOfType<TaskReminderModel>()
                     .AtUri("/tasks/reminders")

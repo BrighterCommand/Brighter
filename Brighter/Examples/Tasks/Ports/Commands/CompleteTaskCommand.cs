@@ -36,8 +36,8 @@ namespace Tasks.Ports.Commands
             CompletionDate = completionDate;
         }
 
-        public DateTime CompletionDate { get; set; }
-        public int TaskId { get; set; }
+        public DateTime CompletionDate { get; private set; }
+        public int TaskId { get; private set; }
 
         public bool IsValid()
         {

@@ -29,22 +29,22 @@ namespace Tasks.Ports.Commands
 {
     public class AddTaskCommand : Command, ICanBeValidated
     {
-        public string TaskDecription { get; set; }
-        public DateTime? TaskDueDate { get; set; }
+        public string TaskDescription { get; private set; }
+        public DateTime? TaskDueDate { get; private set; }
         public int TaskId { get; set; }
-        public string TaskName { get; set; }
+        public string TaskName { get; private set; }
 
-        public AddTaskCommand(string taskName, string taskDecription, DateTime? dueDate = null)
+        public AddTaskCommand(string taskName, string taskDescription, DateTime? dueDate = null)
             : base(Guid.NewGuid())
         {
             TaskName = taskName;
-            TaskDecription = taskDecription;
+            TaskDescription = taskDescription;
             TaskDueDate = dueDate;
         }
 
         public bool IsValid()
         {
-            if ((TaskDecription == null) || (TaskName == null))
+            if ((TaskDescription == null) || (TaskName == null))
             {
                 return false;
             }
