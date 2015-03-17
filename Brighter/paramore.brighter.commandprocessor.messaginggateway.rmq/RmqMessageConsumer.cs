@@ -262,7 +262,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             _consumer = new QueueingBasicConsumer(Channel);
 
-            Channel.BasicConsume(_queueName, AutoAck, _consumer.ConsumerTag, SetConsumerArguments(), _consumer);
+            Channel.BasicConsume(_queueName, AutoAck, string.Empty, SetConsumerArguments(), _consumer);
             
             Logger.InfoFormat("RmqMessageConsumer: Created consumer with ConsumerTag {4} for queue {0} with routing key {1} via exchange {2} on connection {3}",
                               _queueName,
@@ -340,7 +340,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     _consumer.OnCancel();
                 }
 
-                Logger.InfoFormat("RmqMessageConsumer: Cancelled consumer with ConsumerTag {0}", _consumer.ConsumerTag);
                 _consumer = null;
             }
         }
