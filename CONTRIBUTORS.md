@@ -2,7 +2,7 @@ Paramore contributors (sorted alphabeticaly)
 ============================================
 
 **[Ian Battersby](https://github.com/ianbattersby)**
-* Documentation fixes
+* Documentation fixes & general code tidying
 
 **[Ian Cooper](https://github.com/iancooper)**
 
