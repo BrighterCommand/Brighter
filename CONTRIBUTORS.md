@@ -1,6 +1,9 @@
 Paramore contributors (sorted alphabeticaly)
 ============================================
 
+**[Ian Battersby](https://github.com/ianbattersby)**
+* Documentation fixes
+
 **[Ian Cooper](https://github.com/iancooper)**
 
   * Wrote first version of Command Processor, Policy, RavenDb Message Store, RMQ gateway, RestMS Core, RestMS Server, RestMS Gateway and ServiceActivator
