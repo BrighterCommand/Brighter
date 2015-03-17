@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <configuration  xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <!-- Remove section tag -->
   <configSections>
-    <add name="rmqMessagingGateway" xdt:Transform="Remove" xdt:Locator="Match(name)" />
+    <section name="rmqMessagingGateway" xdt:Transform="Remove" xdt:Locator="Match(name)" />
   </configSections>
 </configuration>

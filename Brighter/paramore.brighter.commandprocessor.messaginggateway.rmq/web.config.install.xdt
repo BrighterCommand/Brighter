@@ -1,12 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <configuration  xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <!-- If configSections tag is absent -->
   <configSections  xdt:Transform="InsertIfMissing">
   </configSections>
-  
-  <configSections  xdt:Transform="InsertIfMissing">
-      <section name="rmqMessagingGateway" type="paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, paramore.brighter.commandprocessor.messaginggateway.rmq" allowLocation="true" allowDefinition="Everywhere"  xdt:Transform="Insert"  />
+
+  <!-- Remove and re-insert rmqMessagingGateway section tag -->
+  <configSections>
+    <section name="rmqMessagingGateway" xdt:Transform="Remove" xdt:Locator="Match(name)" />
+    <section name="rmqMessagingGateway" type="paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, paramore.brighter.commandprocessor.messaginggateway.rmq" allowLocation="true" allowDefinition="Everywhere"  xdt:Transform="Insert"  />
   </configSections>
-  
+
+  <!-- If rmqMessagingGateway tag is absent -->
   <rmqMessagingGateway xdt:Transform="InsertIfMissing">
     <!-- 
         amqp://{user}:{password}@{host}:{port}/{vhost}
