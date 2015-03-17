@@ -28,7 +28,7 @@ Paramore contributors (sorted alphabeticaly)
 **[Solveig Oskarsdottir] (https://github.com/solveigo)**
  * QA of Brighter
  
-**[Anthonoy Peyron] (https://github.com/MrHypnos)**
+**[Anthony Peyron] (https://github.com/MrHypnos)**
 
  * Stability fixes for Service Activator
 
