@@ -79,7 +79,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                                 exception,
                                 context["queueName"],
                                 configuration.Exchange.Name,
-                                configuration.AMPQUri.GetSantizedUri(),
+                                configuration.AMPQUri.GetSanitizedUri(),
                                 retries);
                         }
                         else
@@ -89,7 +89,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                                 exception,
                                 context["queueName"],
                                 configuration.Exchange.Name,
-                                configuration.AMPQUri.GetSantizedUri());
+                                configuration.AMPQUri.GetSanitizedUri());
                             throw exception;
                         }
                     });

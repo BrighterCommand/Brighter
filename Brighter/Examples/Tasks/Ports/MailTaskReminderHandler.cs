@@ -30,11 +30,11 @@ using Tasks.Ports.Commands;
 
 namespace Tasks.Ports
 {
-    public class MailTaskReminderHander : RequestHandler<TaskReminderCommand>
+    public class MailTaskReminderHandler : RequestHandler<TaskReminderCommand>
     {
         private readonly IAmAMailGateway _mailGateway;
 
-        public MailTaskReminderHander(IAmAMailGateway mailGateway, ILog logger) : base(logger)
+        public MailTaskReminderHandler(IAmAMailGateway mailGateway, ILog logger) : base(logger)
         {
             _mailGateway = mailGateway;
         }

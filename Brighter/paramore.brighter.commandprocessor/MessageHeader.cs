@@ -126,12 +126,14 @@ namespace paramore.brighter.commandprocessor
         }
 
 
-        public MessageHeader(Guid messageId, string result, MessageType messageType, DateTime timeStamp) : this(messageId, result, messageType)
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp)
+            : this(messageId, topic, messageType)
         {
             TimeStamp = RoundToSeconds(timeStamp);
         }
 
-        public MessageHeader(Guid messageId, string result, MessageType messageType, DateTime timeStamp, int handledCount) : this(messageId, result, messageType, timeStamp)
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, int handledCount)
+            : this(messageId, topic, messageType, timeStamp)
         {
             HandledCount = handledCount;
         }
