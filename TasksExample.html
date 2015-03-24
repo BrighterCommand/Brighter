@@ -26,16 +26,18 @@
         <p><a href="Brighter.html">Brighter Home</a></p>
     </header>
     <section>
-        <h1>Tasks: A Fuller Example</h1>
+        <h1>Tasks: An Example to support a Web UI with supporting API and Application Service</h1>
         <p>Tasks is intended to give a slightly fuller example of the use of Brighter.</p>
-        <p> Whilst we show snippets of code here, you will either want to clone Paramore from GitHub to follow along, or
+        <p>Whilst we show snippets of code here, you will either want to clone Paramore from GitHub to follow along, or
             <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples">browse the code</a> on the web.</p>
-        <p>The scenario is an application that manages a user's todo list, and sends notifications about imminent or overdue tasks. The example application is not fully-featured: we don't include a UI
-        in the example and are missing many methods it would need to be truly functional. The components of the example are:</p>
+        <h2>Scenario</h2>
+        <p>An application that manages a user's todo list, and sends notifications about imminent or overdue tasks.
+        <p>The components of the example are:</p>
         <ul>
             <li><strong>Tasks</strong>: A core library that models tasks used by both Tasklist and TaskMailer</li>
             <li><strong>Tasklist</strong>: An HTTP API for tasks</li>
             <li><strong>TaskMailer</strong>: As service that notifies task owners of upcoming or overdue tasks</li>
+            <li><strong>Tasklist UI</strong>: A Web UI SPA for tasks</li>
         </ul>
         <p>In a production SOA application we would consider all of these components to be part of the Tasks SOA and would be happy for these Autonomous Components within that  to
             share a model, as we are not crossing an SOA boundary. If we were to cross an SOA boundary we would not share the core library as we do here. Another way of stating this is to point out that these
@@ -44,6 +46,97 @@
         <h2>Tasks</h2>
         <p>Tasks uses a <strong><a href="PortsAndAdapters.html">Ports and Adapters architecture</a></strong> and the structure of the assembly surfaces that architectural style.</p>
         <p>The <strong>Ports</strong> folder contains a folder for our <strong>Handlers</strong>, which implement <strong>IHandleRequests&lt;TRequest&gt;</strong>. These form the ports into our application. </p>
+        <h2>Tasklist (API)</h2>
+        <p>Tasklist also uses a Ports and Adapters architecture and the structure of the assembly surfaces that architectural style.</p>
+        <p>Tasklist is responsible for providing API endpoints to support a UI implemented as a thin OpenRasta-API veneer to our Core Domain</p>
+        <p>As such two OpenRasta handlers, TaskEndPointHandler and TaskRemindEndpointHandler as used as Adaptors to our Core Task List Ports.</p>
+        <h3>TaskEndPointHandler</h3>
+        <p>Responsible for REST operations on Task resources</p>
+        <table>
+            <thead>
+                <h4>
+                    <th>REST Operation</th>
+                    <th>Port</th>
+                    <th>Description</th>
+                </h4>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>GET /</td>
+                    <td>ITaskListRetriever</td>
+                    <td>Returns all tasks from the TaskList using a Port against our preferred Thin-Read model - a Retriever</td>
+                </tr>
+                <tr>
+                    <td>GET /taskId</td>
+                    <td>ITaskRetriever</td>
+                    <td>Returns a specified task from the TaskList using a Port against our preferred Thin-Read model - a Retriever</td>
+                </tr>
+                <tr>
+                    <td>POST {TaskModel}</td>
+                    <td>AddTaskCommandHandler</td>
+                    <td>Adds a new task specified by the TaskModel a Port against our preferred Domain-Write model - a <strong>IHandleRequests&lt;TRequest&gt;</strong></td>
+                </tr>
+                <tr>
+                    <td>DELETE /taskId</td>
+                    <td>CompleteTaskCommandHandler</td>
+                    <td>Completes a given task specified by the taskId with a Port against our preferred Domain-Write model - a <strong>IHandleRequests&lt;TRequest&gt;</strong></p>. A command is therefore dispatched to the CommandProcessor</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>TaskReminderEndpointHandler</h3>
+        <p>Responsible for REST operations on Task Reminder resources. Implemented as a shallow Adaptor to transformm POSTed arguments into Commands that will be handled by a Port</p>
+        <p>It should be noted the Handler contains no Port for handling the command. This will be processed by the separate TaskMailer Service.</p>
+        <table>
+            <thead>
+                <h4>
+                    <th>REST Operation</th>
+                    <th>Mapper/Port</th>
+                    <th>Description</th>
+                </h4>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>POST {TaskReminderModel}</td>
+                    <td>n/a</td>
+                    <td>Receives the arguments via HTTP and posts a TaskReminderCommand</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>TaskMailer</h2>
+        <p>A separate service responsible for sending emails using Azure SendGrid</p>
+        <table>
+            <thead>
+                <h4>
+                    <th>REST Operation</th>
+                    <th>Port</th>
+                    <th>Description</th>
+                </h4>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>POST {TaskReminderModel}</td>
+                    <td>TaskReminderCommandMessageMapper</td>
+                    <td>API to receive the POST to send a Reminder. The TaskReminderCommand is then mapped through TaskReminderCommandMessageMapper to demonstrate Message Transformation </td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>MailTaskReminderHander</td>
+                    <td>Processes transformed message and initiates Mail Sending using the MailGateway.</td>
+                </tr>
+            </tbody>
+        </table>
+    
+        <h2>TasklistUI</h2>
+        <p>A demo Web UI based upon todoMVC to offer a SPA-like representation of the TaskList API data</p>
+        <p>Provides the following functionality:</p>
+        <ul>
+            <li>Get all Tasks</li>
+            <li>Complete a Task</li>
+            <li>Send Reminder for a Task</li>
+        </ul>    
+        <p>Hosted within iisExpress, uses MVC API to host SPA website written using jQuery, mustache and bootstrap</p>
     </section>
     <footer>
         <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
