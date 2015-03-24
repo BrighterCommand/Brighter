@@ -125,7 +125,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
     /// </summary>
     public class AMQPUriSpecification : ConfigurationElement
     {
-        private string _santizedUri = null;
+        private string _sanitizedUri = null;
         /// <summary>
         /// Gets or sets the URI.
         /// </summary>
@@ -137,17 +137,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
             set { this["uri"] = value; }
         }
 
-        public string GetSantizedUri()
+        public string GetSanitizedUri()
         {
-            if (_santizedUri == null)
+            if (_sanitizedUri == null)
             {
                 var uri = Uri.ToString();
                 var positionOfSlashSlash = uri.IndexOf("//", StringComparison.InvariantCulture) + 2;
                 var usernameAndPassword = uri.Substring(positionOfSlashSlash, uri.IndexOf('@') - positionOfSlashSlash);
-                _santizedUri = uri.Replace(usernameAndPassword, "*****");
+                _sanitizedUri = uri.Replace(usernameAndPassword, "*****");
             }
 
-            return _santizedUri;
+            return _sanitizedUri;
         }
 
         /// <summary>
