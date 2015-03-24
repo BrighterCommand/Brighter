@@ -72,9 +72,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             {
                 EnsureChannel();
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
-                Logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri(), message.Header.Topic, message.Id, message.Body.Value);
+                Logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, message.Body.Value);
                 rmqMessagePublisher.PublishMessage(message);
-                Logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with topic {2} and id {3} and message: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSantizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow);
+                Logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with topic {2} and id {3} and message: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow);
             }
             catch (Exception e)
             {
