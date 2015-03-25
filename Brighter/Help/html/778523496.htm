@@ -29,7 +29,7 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="Class RequestHandlerAttribute." />
+      <MSHelp:Attr Name="Abstract" Value="Class RequestHandlerAttribute. To satisfy orthogonal concerns it is possible to create a pipeline of handlers. The 'target' handler should handle the domain logic, the other handlers in the pipeline should handle Quality of Service conc ..." />
       <MSHelp:Attr Name="AssemblyVersion" Value="" />
     </xml>
   </head>
@@ -44,6 +44,10 @@
               <div id="mainBody">
                 <div class="summary">
    Class RequestHandlerAttribute.
+   To satisfy orthogonal concerns it is possible to create a pipeline of <a href="820491368.htm">IHandleRequests</a> handlers. The 'target' handler should handle the domain
+   logic, the other handlers in the pipeline should handle Quality of Service concerns or similar orthogonal concerns. We use an approach of attributing the <span class="nolink">[IHandleRequests{T}.Handle]</span>
+   method to indicate the other handlers in the pipeline that handle orthogonal concerns. This approach is preferred over fluent-pipeline configuration
+   because it allows you to easily see orthogonal concerns within the context of the target handler. In this sense Brighter is 'opinionated' about approach.
    </div>
                 <p />
     <b>Namespace:</b> 

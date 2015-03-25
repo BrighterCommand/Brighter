@@ -29,7 +29,7 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="Interface IAmACommandProcessor{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}" />
+      <MSHelp:Attr Name="Abstract" Value="Interface IAmACommandProcessor Paramore.Brighter.CommandProcessor provides the default implementation of this interface and it is unlikely you need to override this for anything other than testing purposes. The usual need is that in a ..." />
       <MSHelp:Attr Name="AssemblyVersion" Value="" />
     </xml>
   </head>
@@ -43,7 +43,12 @@
             <div id="mainSection">
               <div id="mainBody">
                 <div class="summary">
-   Interface IAmACommandProcessor{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmACommandProcessor
+   Paramore.Brighter.CommandProcessor provides the default implementation of this interface <a href="1551909888.htm">CommandProcessor</a> and it is unlikely you need
+   to override this for anything other than testing purposes. The usual need is that in a <a href="827179800.htm">RequestHandler<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a> you intend to publish an
+   <a href="987625519.htm">Event</a> to indicate the handler has completed to other components. In this case your tests should only verify that the correct
+   event was raised by listening to <span class="nolink">[Publish{T}]</span> calls on this interface, using a mocking framework of your choice or bespoke
+   Test Double.
    </div>
                 <p />
     <b>Namespace:</b> 

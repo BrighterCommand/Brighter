@@ -67,6 +67,7 @@
                       <td>
                         <div class="summary">
    Initializes a new instance of the <a href="1551909888.htm">CommandProcessor</a> class.
+   Use this constructor when no task queue support is required
    </div>
                       </td>
                     </tr>
@@ -75,11 +76,12 @@
                         <img src="../icons/pubmethod.gif" alt="Public method" title="Public method" />
                       </td>
                       <td>
-                        <a href="1140356435.htm">CommandProcessor(IAmARequestContextFactory, IAmAPolicyRegistry, IAmAMessageMapperRegistry, IAmAMessageStore<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="fs">&lt;'</span><span class="nu">(</span></span>Message<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="fs">&gt;</span><span class="nu">)</span></span>, IAmASendMessageGateway, ILog)</a>
+                        <a href="2028441589.htm">CommandProcessor(IAmARequestContextFactory, IAmAPolicyRegistry, IAmAMessageMapperRegistry, IAmAMessageStore<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="fs">&lt;'</span><span class="nu">(</span></span>Message<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="fs">&gt;</span><span class="nu">)</span></span>, IAmAMessageProducer, ILog)</a>
                       </td>
                       <td>
                         <div class="summary">
    Initializes a new instance of the <a href="1551909888.htm">CommandProcessor</a> class.
+   Use this constructor when only task queue support is required
    </div>
                       </td>
                     </tr>
@@ -88,11 +90,12 @@
                         <img src="../icons/pubmethod.gif" alt="Public method" title="Public method" />
                       </td>
                       <td>
-                        <a href="1310484821.htm">CommandProcessor(IAmASubscriberRegistry, IAmAHandlerFactory, IAmARequestContextFactory, IAmAPolicyRegistry, IAmAMessageMapperRegistry, IAmAMessageStore<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="fs">&lt;'</span><span class="nu">(</span></span>Message<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="fs">&gt;</span><span class="nu">)</span></span>, IAmASendMessageGateway, ILog)</a>
+                        <a href="343941500.htm">CommandProcessor(IAmASubscriberRegistry, IAmAHandlerFactory, IAmARequestContextFactory, IAmAPolicyRegistry, IAmAMessageMapperRegistry, IAmAMessageStore<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="fs">&lt;'</span><span class="nu">(</span></span>Message<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="fs">&gt;</span><span class="nu">)</span></span>, IAmAMessageProducer, ILog)</a>
                       </td>
                       <td>
                         <div class="summary">
    Initializes a new instance of the <a href="1551909888.htm">CommandProcessor</a> class.
+   Use this constructor when both task queue and command processor support is required
    </div>
                       </td>
                     </tr>
@@ -115,6 +118,19 @@
             </th>
                       <th class="nameColumn">Name</th>
                       <th class="descriptionColumn">Description</th>
+                    </tr>
+                    <tr data="public;declared;notNetfw;">
+                      <td>
+                        <img src="../icons/pubmethod.gif" alt="Public method" title="Public method" />
+                      </td>
+                      <td>
+                        <a href="752550644.htm">Dispose<span class="languageSpecificText"><span class="cs">()</span><span class="cpp">()</span><span class="nu">()</span><span class="fs">()</span></span></a>
+                      </td>
+                      <td>
+                        <div class="summary">
+   Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+   </div>
+                      </td>
                     </tr>
                     <tr data="public;inherited;notNetfw;">
                       <td>
@@ -175,8 +191,12 @@
                       </td>
                       <td>
                         <div class="summary">
-   Posts the specified request.
-   </div>
+   Posts the specified request. The message is placed on a task queue and into a message store for reposting in the event of failure.
+   You will need to configure a service that reads from the task queue to process the message
+   Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
+   and then Sends or Publishes the message to a <a href="1551909888.htm">CommandProcessor</a> within that service. The decision to <span class="nolink">[Send{T}]</span> or <span class="nolink">[Publish{T}]</span> is based on the
+   mapper. Your mapper can map to a <a href="1521002829.htm">Message</a> with either a <span class="nolink">MT_COMMAND</span> , which results in a <span class="nolink">[Send{T}(T)]</span> or a
+   <span class="nolink">MT_EVENT</span> which results in a <span class="nolink">[Publish{T}(T)]</span></div>
                       </td>
                     </tr>
                     <tr data="public;declared;notNetfw;">
@@ -188,7 +208,11 @@
                       </td>
                       <td>
                         <div class="summary">
-   Publishes the specified event.
+   Publishes the specified event. We expect zero or more handlers. The events are handled synchronously, in turn
+   Because any pipeline might throw, yet we want to execute the remaining handler chains,  we catch exceptions on any publisher
+   instead of stopping at the first failure and then we throw an AggregateException if any of the handlers failed,
+   with the InnerExceptions property containing the failures.
+   It is up the implementer of the handler that throws to take steps to make it easy to identify the handler that threw.
    </div>
                       </td>
                     </tr>
@@ -201,7 +225,8 @@
                       </td>
                       <td>
                         <div class="summary">
-   Reposts the specified message identifier.
+   Reposts the specified message identifier. It retrieves a message previously posted via Post, from the Message Store, and publishes it
+   onto the Work Queue again.
    </div>
                       </td>
                     </tr>
@@ -214,7 +239,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Sends the specified command.
+   Sends the specified command. We expect only one handler. The command is handled synchronously.
    </div>
                       </td>
                     </tr>
@@ -258,7 +283,9 @@
                       </td>
                       <td>
                         <div class="summary">
-   The circuitbreaker{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Use this as an identifier for your <span class="nolink">Policy</span> that determines for how long to break the circuit when communication with the Work Queue fails.
+   Register that policy with your <a href="560753741.htm">IAmAPolicyRegistry</a> such as <a href="1110601651.htm">PolicyRegistry</a>
+   You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
    </div>
                       </td>
                     </tr>
@@ -272,7 +299,9 @@
                       </td>
                       <td>
                         <div class="summary">
-   The retrypolicy{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Use this as an identifier for your <span class="nolink">Policy</span> that determines the retry strategy when communication with the Work Queue fails.
+   Register that policy with your <a href="560753741.htm">IAmAPolicyRegistry</a> such as <a href="1110601651.htm">PolicyRegistry</a>
+   You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
    </div>
                       </td>
                     </tr>

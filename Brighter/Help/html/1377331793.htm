@@ -27,7 +27,7 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="Tasks the queues." />
+      <MSHelp:Attr Name="Abstract" Value="The wants to support or using Task Queues. You need to provide a policy to specify how QoS issues, specifically or are handled by adding appropriate when choosing this option." />
       <MSHelp:Attr Name="AssemblyVersion" Value="" />
     </xml>
   </head>
@@ -41,7 +41,10 @@
             <div id="mainSection">
               <div id="mainBody">
                 <div class="summary">
-   Tasks the queues.
+   The <a href="1551909888.htm">CommandProcessor</a> wants to support <span class="nolink">[CommandProcessor.Post{T}(T)]</span> or <a href="613625173.htm">Repost(Guid)</a> using Task Queues.
+   You need to provide a policy to specify how QoS issues, specifically <span class="nolink">[CommandProcessor.RETRYPOLICY ]</span> or <span class="nolink">[CommandProcessor.CIRCUITBREAKER ]</span>
+   are handled by adding appropriate <a href="1865117320.htm">Policies(IAmAPolicyRegistry)</a> when choosing this option.
+  
    </div>
                 <p />
     <b>Namespace:</b> 
@@ -54,7 +57,7 @@
 ) <span class="keyword">As</span> <a href="2062042881.htm">INeedARequestContext</a></pre></div><div class="CodeSnippetContainerCode ManagedCPlusPlusCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">public</span>:
 <a href="2062042881.htm">INeedARequestContext</a>^ <span class="identifier">TaskQueues</span>(
 	<a href="1221912875.htm">MessagingConfiguration</a>^ <span class="parameter">configuration</span>
-)</pre></div></div></div><div id="parameters"><h4 class="subHeading">Parameters</h4><dl paramName="configuration"><dt><span class="parameterItalic">configuration</span></dt><dd>Type: <a href="1221912875.htm">paramore.brighter.commandprocessor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>MessagingConfiguration</a><br />The configuration.</dd></dl></div><h4 class="subHeading">Return Value</h4>INeedARequestContext.</div><div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">See Also</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="seeAlsoSection"><!----></a><div class="seeAlsoStyle"><a href="1998769638.htm">CommandProcessorBuilder Class</a></div><div class="seeAlsoStyle"><a href="1096871896.htm">paramore.brighter.commandprocessor Namespace</a></div></div></div>
+)</pre></div></div></div><div id="parameters"><h4 class="subHeading">Parameters</h4><dl paramName="configuration"><dt><span class="parameterItalic">configuration</span></dt><dd>Type: <a href="1221912875.htm">paramore.brighter.commandprocessor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>MessagingConfiguration</a><br />The Task Queues configuration.</dd></dl></div><h4 class="subHeading">Return Value</h4>INeedARequestContext.</div><div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">See Also</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="seeAlsoSection"><!----></a><div class="seeAlsoStyle"><a href="1998769638.htm">CommandProcessorBuilder Class</a></div><div class="seeAlsoStyle"><a href="1096871896.htm">paramore.brighter.commandprocessor Namespace</a></div></div></div>
             </div>
           </div>
         </div>

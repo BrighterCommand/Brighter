@@ -64,6 +64,7 @@
                       <td>
                         <div class="summary">
    Initializes a new instance of the <a href="1551909888.htm">CommandProcessor</a> class.
+   Use this constructor when no task queue support is required
    </div>
                       </td>
                     </tr>
@@ -72,11 +73,12 @@
                         <img src="../icons/pubmethod.gif" alt="Public method" title="Public method" />
                       </td>
                       <td>
-                        <a href="1140356435.htm">CommandProcessor(IAmARequestContextFactory, IAmAPolicyRegistry, IAmAMessageMapperRegistry, IAmAMessageStore<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="fs">&lt;'</span><span class="nu">(</span></span>Message<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="fs">&gt;</span><span class="nu">)</span></span>, IAmASendMessageGateway, ILog)</a>
+                        <a href="2028441589.htm">CommandProcessor(IAmARequestContextFactory, IAmAPolicyRegistry, IAmAMessageMapperRegistry, IAmAMessageStore<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="fs">&lt;'</span><span class="nu">(</span></span>Message<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="fs">&gt;</span><span class="nu">)</span></span>, IAmAMessageProducer, ILog)</a>
                       </td>
                       <td>
                         <div class="summary">
    Initializes a new instance of the <a href="1551909888.htm">CommandProcessor</a> class.
+   Use this constructor when only task queue support is required
    </div>
                       </td>
                     </tr>
@@ -85,11 +87,12 @@
                         <img src="../icons/pubmethod.gif" alt="Public method" title="Public method" />
                       </td>
                       <td>
-                        <a href="1310484821.htm">CommandProcessor(IAmASubscriberRegistry, IAmAHandlerFactory, IAmARequestContextFactory, IAmAPolicyRegistry, IAmAMessageMapperRegistry, IAmAMessageStore<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="fs">&lt;'</span><span class="nu">(</span></span>Message<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="fs">&gt;</span><span class="nu">)</span></span>, IAmASendMessageGateway, ILog)</a>
+                        <a href="343941500.htm">CommandProcessor(IAmASubscriberRegistry, IAmAHandlerFactory, IAmARequestContextFactory, IAmAPolicyRegistry, IAmAMessageMapperRegistry, IAmAMessageStore<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="fs">&lt;'</span><span class="nu">(</span></span>Message<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="fs">&gt;</span><span class="nu">)</span></span>, IAmAMessageProducer, ILog)</a>
                       </td>
                       <td>
                         <div class="summary">
    Initializes a new instance of the <a href="1551909888.htm">CommandProcessor</a> class.
+   Use this constructor when both task queue and command processor support is required
    </div>
                       </td>
                     </tr>

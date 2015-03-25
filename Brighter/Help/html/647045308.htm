@@ -62,7 +62,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Builds this instance.
+   Builds the <a href="1551909888.htm">CommandProcessor</a> from the configuration.
    </div>
                       </td>
                     </tr>
@@ -115,7 +115,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Handlerses the specified handler configuration.
+   Supplies the specified handler configuration, so that we can register subscribers and the handler factory used to create instances of them
    </div>
                       </td>
                     </tr>
@@ -128,7 +128,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Loggers the specified logger.
+   Use the specified logger.
    </div>
                       </td>
                     </tr>
@@ -151,7 +151,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Noes the policy.
+   Use this if you do not require policy (i.e. No Tasks Queues or QoS needs).
    </div>
                       </td>
                     </tr>
@@ -164,7 +164,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Noes the task queues.
+   Use to indicate that you are not using Task Queues.
    </div>
                       </td>
                     </tr>
@@ -177,7 +177,8 @@
                       </td>
                       <td>
                         <div class="summary">
-   Policieses the specified the policy registry.
+   Supplies the specified the policy registry, so we can use policies for Task Queues or in user-defined request handlers such as ExceptionHandler
+   that provide quality of service concerns
    </div>
                       </td>
                     </tr>
@@ -190,7 +191,8 @@
                       </td>
                       <td>
                         <div class="summary">
-   Requests the context factory.
+   The factory for <a href="2110624453.htm">IRequestContext</a> used within the pipeline to pass information between <a href="1582137372.htm">IHandleRequests<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a> steps. If you do not need to override
+   provide <a href="2114541437.htm">InMemoryRequestContextFactory</a>.
    </div>
                       </td>
                     </tr>
@@ -203,7 +205,10 @@
                       </td>
                       <td>
                         <div class="summary">
-   Tasks the queues.
+   The <a href="1551909888.htm">CommandProcessor</a> wants to support <span class="nolink">[CommandProcessor.Post{T}(T)]</span> or <a href="613625173.htm">Repost(Guid)</a> using Task Queues.
+   You need to provide a policy to specify how QoS issues, specifically <span class="nolink">[CommandProcessor.RETRYPOLICY ]</span> or <span class="nolink">[CommandProcessor.CIRCUITBREAKER ]</span>
+   are handled by adding appropriate <a href="1865117320.htm">Policies(IAmAPolicyRegistry)</a> when choosing this option.
+  
    </div>
                       </td>
                     </tr>
@@ -227,7 +232,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Withes this instance.
+   Begins the Fluent Interface
    </div>
                       </td>
                     </tr>

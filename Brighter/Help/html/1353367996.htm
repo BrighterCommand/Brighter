@@ -27,7 +27,7 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="Initializes a new instance of the class." />
+      <MSHelp:Attr Name="Abstract" Value="Initializes a new instance of the class. We use the instance to look up subscribers for messages when dispatching. Use unless you have some reason to override. We expect a to have one registered handler We use the" />
       <MSHelp:Attr Name="AssemblyVersion" Value="" />
     </xml>
   </head>
@@ -42,6 +42,9 @@
               <div id="mainBody">
                 <div class="summary">
    Initializes a new instance of the <a href="1511288919.htm">HandlerConfiguration</a> class.
+   We use the <a href="5116153.htm">IAmASubscriberRegistry</a> instance to look up subscribers for messages when dispatching. Use <a href="51813318.htm">SubscriberRegistry</a> unless
+   you have some reason to override. We expect a <span class="nolink">[CommandProcessor.Send{T}(T)]</span> to have one registered handler
+   We use the
    </div>
                 <p />
     <b>Namespace:</b> 

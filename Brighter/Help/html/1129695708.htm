@@ -69,7 +69,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Initializes a new instance of the <span class="nolink">[RequestLoggingHandler{TRequest}]</span> class.
+   Initializes a new instance of the <a href="1395923284.htm">RequestLoggingHandler<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a> class.
    </div>
                       </td>
                     </tr>
@@ -126,6 +126,32 @@
                       </td>
                       <td>
                         <div class="summary">Determines whether the specified <a href="http://msdn.microsoft.com/en-us/library/system.object.aspx" target="_blank">Object</a> is equal to the current <a href="http://msdn.microsoft.com/en-us/library/system.object.aspx" target="_blank">Object</a>.</div> (Inherited from <a href="http://msdn.microsoft.com/en-us/library/system.object.aspx" target="_blank">Object</a>.)</td>
+                    </tr>
+                    <tr data="public;inherited;notNetfw;">
+                      <td>
+                        <img src="../icons/pubmethod.gif" alt="Public method" title="Public method" />
+                      </td>
+                      <td>
+                        <a href="371030702.htm">Fallback</a>
+                      </td>
+                      <td>
+                        <div class="summary">
+   If a request cannot be completed by <a href="394197310.htm">Handle(TRequest)</a>, implementing the <a href="371030702.htm">Fallback(TRequest)</a> method provides an alternate code path that can be used
+   This allows for graceful  degradation. Using the <a href="1833751664.htm">FallbackPolicyAttribute</a> handler you can configure a policy to catch either all <a href="http://msdn.microsoft.com/en-us/library/system.exception.aspx" target="_blank">Exception</a>'s or
+   just <span class="nolink">BrokenCircuitException</span> that occur later in the pipeline, and then call the <a href="371030702.htm">Fallback(TRequest)</a> path.
+   Note that the <a href="1833751664.htm">FallbackPolicyAttribute</a> target handler might be 'beginning of chain' and need to pass through to actual handler that is end of chain.
+   Because of this we need to call Fallback on the chain. Later step handlers don't know the context of failure so they cannot know if any operations they had,
+   that could fail (such as DB access) were the cause of the failure chain being hit.
+   Steps that don't know how to handle should pass through.
+   Useful alternatives for Fallback are to try via the cache.
+   Note that a Fallback handler implementation should not catch exceptions in the <a href="371030702.htm">Fallback(TRequest)</a> chain to avoid an infinite loop.
+   Call <a href="369347778.htm">Successor</a>.<a href="394197310.htm">Handle(TRequest)</a> if having provided a Fallback you want the chain to return to the 'happy' path. Excerise caution here though
+   as you do not know who generated the exception that caused the fallback chain.
+   For this reason, the <span class="nolink">[FallbackPolicyHandler]</span> puts the exception in the request context.
+   When the <a href="1833751664.htm">FallbackPolicyAttribute</a> is set on the <a href="394197310.htm">Handle(TRequest)</a> method of a derived class
+   The <a href="999428388.htm">FallbackPolicyHandler<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a> will catch either all failures (backstop) or <span class="nolink">BrokenCircuitException</span> depending on configuration
+   and call the <a href="827179800.htm">RequestHandler<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a>'s <a href="371030702.htm">Fallback(TRequest)</a> method
+   </div> (Inherited from <a href="827179800.htm">RequestHandler<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a>.)</td>
                     </tr>
                     <tr data="protected;inherited;notNetfw;">
                       <td>

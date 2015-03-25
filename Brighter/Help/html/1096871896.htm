@@ -24,8 +24,8 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}" />
     </xml>
+    <link type="text/css" rel="stylesheet" href="../styles/highlight.css" />
   </head>
   <body>
     <div class="contentPlaceHolder" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt">
@@ -36,9 +36,6 @@
             <h1 class="title">paramore.brighter.commandprocessor Namespace</h1>
             <div id="mainSection">
               <div id="mainBody">
-                <div class="summary">
-   The commandprocessor namespace.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
                 <div class="LW_CollapsibleArea_Container">
                   <div class="LW_CollapsibleArea_TitleDiv">
                     <h2 class="LW_CollapsibleArea_Title">Classes</h2>
@@ -62,11 +59,24 @@
                         <img src="../icons/pubclass.gif" alt="Public class" title="Public class" />
                       </td>
                       <td>
+                        <a href="400767434.htm">ChannelFailureException</a>
+                      </td>
+                      <td>
+                        <div class="summary">
+   We raise a ChannelFailureException when we are unable to communicate with the work queue channel.
+   </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <img src="../icons/pubclass.gif" alt="Public class" title="Public class" />
+                      </td>
+                      <td>
                         <a href="373543693.htm">ChannelName</a>
                       </td>
                       <td>
                         <div class="summary">
-   Class ChannelName.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   The name of a channel used to wrap communication with a Broker
    </div>
                       </td>
                     </tr>
@@ -79,7 +89,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class Command.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
    </div>
                       </td>
                     </tr>
@@ -92,7 +102,9 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class CommandProcessor.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Class CommandProcessor.
+   Implements both the <a href="http://www.hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher</a>
+   and <a href="http://wiki.hsr.ch/APF/files/CommandProcessor.pdf">Command Processor</a> Design Patterns
    </div>
                       </td>
                     </tr>
@@ -106,6 +118,44 @@
                       <td>
                         <div class="summary">
    Class CommandProcessorBuilder.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Provides a fluent interface to construct a <a href="1551909888.htm">CommandProcessor</a>. We need to identify the following dependencies in order to create a <a href="1551909888.htm">CommandProcessor</a><ul><li>
+               A <a href="1511288919.htm">HandlerConfiguration</a> containing a <a href="5116153.htm">IAmASubscriberRegistry</a> and a <a href="38136503.htm">IAmAHandlerFactory</a>. You can use <a href="51813318.htm">SubscriberRegistry</a>
+               to provide the <a href="5116153.htm">IAmASubscriberRegistry</a> but you need to implement your own  <a href="38136503.htm">IAmAHandlerFactory</a>, for example using your preferred Inversion of Control
+               (IoC) container
+           </li><li>
+               A <a href="560753741.htm">IAmAPolicyRegistry</a> containing a list of policies that you want to be accessible to the <a href="1551909888.htm">CommandProcessor</a>. You can use
+               <a href="1110601651.htm">PolicyRegistry</a> to provide the <a href="560753741.htm">IAmAPolicyRegistry</a>. Policies are expected to be Polly <span class="nolink">[!:https://github.com/michael-wolfenden/Polly]</span><span class="nolink">Policy</span> references.
+               If you do not need any policies around quality of service (QoS) concerns - you do not have Work Queues and/or do not intend to use Polly Policies for
+               QoS concerns - you can use <span class="nolink">[NoPolicy]</span> to indicate you do not need them.
+           </li><li>
+               A <a href="1611365628.htm">ILog</a> that is the logger to use for diagnostic feedback. <a href="1611365628.htm">ILog</a> is defined by
+               LibLog <span class="nolink">[!:hhttps://github.com/damianh/LibLog]</span> as an abstraction over logging frameworks and allows us to support your
+               preferred logging framework
+           </li><li>
+               A <a href="1221912875.htm">MessagingConfiguration</a> describing how you want to configure Task Queues for the <a href="1551909888.htm">CommandProcessor</a>. We store messages in a <span class="nolink">[IAmAMessageStore]</span>
+               for later replay (in case we need to compensate by trying a message again). We send messages to a Task Queue via a <a href="1740782637.htm">IAmAMessageProducer</a> and we  want to know how
+               to map the <a href="1129012828.htm">IRequest</a> (<a href="1650404514.htm">Command</a> or <a href="987625519.htm">Event</a>) to a <a href="1521002829.htm">Message</a> using a <a href="1546792997.htm">IAmAMessageMapper</a> using
+               an <a href="343614780.htm">IAmAMessageMapperRegistry</a>. You can use the default <a href="1700995936.htm">MessageMapperRegistry</a> to register the association. You need to
+               provide a <a href="1091437229.htm">IAmAMessageMapperFactory</a> so that we can create instances of your  <a href="1546792997.htm">IAmAMessageMapper</a>. You need to provide a <a href="1091437229.htm">IAmAMessageMapperFactory</a>
+               when using <a href="1700995936.htm">MessageMapperRegistry</a> so that we can create instances of your mapper.
+               If you don't want to use Task Queues i.e. you are just using a synchronous Command Dispatcher approach, then use the <span class="nolink">[NoTaskQueues]</span> method to indicate your intent
+           </li><li>
+               Finally we need to provide a <a href="2110624453.htm">IRequestContext</a> to provide context to requests handlers in the pipeline that can be used to pass information without using the message
+               that initiated the pipeline. We instantiate this via a user-provided <a href="519316750.htm">IAmARequestContextFactory</a>. The default approach is use <a href="2114541437.htm">InMemoryRequestContextFactory</a>
+               to provide a <a href="1883414501.htm">RequestContext</a> unless you have a requirement to replace this, such as in testing.
+           </li></ul></div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <img src="../icons/pubclass.gif" alt="Public class" title="Public class" />
+                      </td>
+                      <td>
+                        <a href="372376132.htm">ConfigurationException</a>
+                      </td>
+                      <td>
+                        <div class="summary">
+   A ConfigurationException, thrown when we cannot configure the CommandProcessor.
    </div>
                       </td>
                     </tr>
@@ -118,7 +168,9 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class Event.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Class Event
+   An event is an indicator to interested parties that 'something has happened'. We expect zero to many receivers as it is one-to-many communication i.e. publish-subscribe
+   An event is usually fire-and-forget, because we do not know it is received.
    </div>
                       </td>
                     </tr>
@@ -131,7 +183,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class HandlerConfiguration.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Class HandlerConfiguration
    </div>
                       </td>
                     </tr>
@@ -144,7 +196,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class HandlerName.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Strongly typed class for the name of a handler
    </div>
                       </td>
                     </tr>
@@ -157,7 +209,22 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class InMemoryRequestContextFactory.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Class InMemoryRequestContextFactory
+   </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <img src="../icons/pubclass.gif" alt="Public class" title="Public class" />
+                      </td>
+                      <td>
+                        <a href="1793738522.htm">InputChannel</a>
+                      </td>
+                      <td>
+                        <div class="summary">
+   Class InputChannel.
+   An <a href="516061677.htm">IAmAChannel</a> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+   and acknowledging receipt of those messages
    </div>
                       </td>
                     </tr>
@@ -170,8 +237,8 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class Message.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
+   A message sent over <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> for asynchronous processing of a <a href="1650404514.htm">Command</a>
+   or <a href="987625519.htm">Event</a></div>
                       </td>
                     </tr>
                     <tr>
@@ -183,8 +250,8 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class MessageBody.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
+   Class MessageBody
+   The body of a <a href="1521002829.htm">Message</a></div>
                       </td>
                     </tr>
                     <tr>
@@ -196,7 +263,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class MessageFactory.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Used to create off-the-shelf messages: empty, and quit, used to control processing.
    </div>
                       </td>
                     </tr>
@@ -209,8 +276,8 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class MessageHeader.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
+   Class MessageHeader
+   The header for a <a href="1521002829.htm">Message</a></div>
                       </td>
                     </tr>
                     <tr>
@@ -222,7 +289,11 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class MessageMapperRegistry.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Class MessageMapperRegistry
+   In order to use a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> approach we require you to provide
+   a <a href="1546792997.htm">IAmAMessageMapper</a> to map between <a href="1650404514.htm">Command</a> or <a href="987625519.htm">Event</a> and a <a href="1521002829.htm">Message</a>
+   registered via <a href="343614780.htm">IAmAMessageMapperRegistry</a>
+   This is a default implementation of<a href="343614780.htm">IAmAMessageMapperRegistry</a> which is suitable for most usages, the interface is provided mainly for testing
    </div>
                       </td>
                     </tr>
@@ -235,20 +306,8 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class MessagingConfiguration.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <img src="../icons/pubclass.gif" alt="Public class" title="Public class" />
-                      </td>
-                      <td>
-                        <a href="635375484.htm">Pipelines<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a>
-                      </td>
-                      <td>
-                        <div class="summary">
-   Class Pipelines.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Class MessagingConfiguration.
+   Used to set the components of a work queue solution
    </div>
                       </td>
                     </tr>
@@ -261,7 +320,15 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class PolicyRegistry.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Class PolicyRegistry
+   We use <a href="">Polly</a> policies to provide Quality of Service.
+   By default we provide them for a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> and require you to register policies with
+   the policy names of:
+   <ul><li>CommandProcessor.RETRYPOLICY</li><li>CommandProcessor.CIRCUTIBREAKER</li></ul>
+   to respectively determine retry attempts for putting onto and popping off the queue and for breaking the circuit if we cannot
+   You can register additional policies (or reuse these) to provide QoS for individual handlers. The <span class="nolink">[UsePolicyAttribute]</span> and <span class="nolink">[ExceptionPolicyandler]</span>
+   provide an easy way to do this using the policies that you add to this registry
+   This is a default implementation of <a href="560753741.htm">IAmAPolicyRegistry</a> and is suitable for most purposes excluding testing
    </div>
                       </td>
                     </tr>
@@ -274,7 +341,10 @@
                       </td>
                       <td>
                         <div class="summary">
-   Class RequestContext.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Class RequestContext
+   Any pipeline has a request context that allows you to flow information between instances of <a href="820491368.htm">IHandleRequests</a>
+   The default in-memory <a href="1883414501.htm">RequestContext</a> created by an <a href="2114541437.htm">InMemoryRequestContextFactory</a> is suitable for most purposes
+   and this interface is mainly provided for testing
    </div>
                       </td>
                     </tr>
@@ -288,6 +358,14 @@
                       <td>
                         <div class="summary">
    Class RequestHandler.
+   A target of the <a href="1551909888.htm">CommandProcessor</a> either as the target of the Command Dispatcher to provide the domain logic required to handle the <a href="1650404514.htm">Command</a>
+   or <a href="987625519.htm">Event</a> or as an orthogonal handler used as part of the Command Processor pipeline.
+   We recommend deriving your concrete handler from <a href="827179800.htm">RequestHandler<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a> instead of implementing the interface as it provides boilerplate
+   code for calling the next handler in sequence in the pipeline and describing the path
+   By default the <span class="nolink">[Name]</span> is based of the Type name, and the <span class="nolink">[DescribePath]</span> adds that <span class="nolink">[Name]</span> into the <a href="857022689.htm">IAmAPipelineTracer</a> list.
+   By default the <span class="nolink">[Handle]</span> method will log the calls and forward the call to the handler's <span class="nolink">[Successor]</span>. You should call
+   <span id="cbc_1" x-lang="CSharp" codeLanguage="CSharp"><div class="highlight-title"><span class="highlight-copycode" tabindex="0"></span>C#</div><div class="code"><pre xml:space="preserve"><span class="highlight-keyword">base</span>.Handle(command);</pre></div></span>
+   within your derived class handler to forward the call to the next handler in the chain.
    </div>
                       </td>
                     </tr>
@@ -301,6 +379,10 @@
                       <td>
                         <div class="summary">
    Class RequestHandlerAttribute.
+   To satisfy orthogonal concerns it is possible to create a pipeline of <a href="820491368.htm">IHandleRequests</a> handlers. The 'target' handler should handle the domain
+   logic, the other handlers in the pipeline should handle Quality of Service concerns or similar orthogonal concerns. We use an approach of attributing the <span class="nolink">[IHandleRequests{T}.Handle]</span>
+   method to indicate the other handlers in the pipeline that handle orthogonal concerns. This approach is preferred over fluent-pipeline configuration
+   because it allows you to easily see orthogonal concerns within the context of the target handler. In this sense Brighter is 'opinionated' about approach.
    </div>
                       </td>
                     </tr>
@@ -314,7 +396,7 @@
                       <td>
                         <div class="summary">
    Class RequestLoggingAttribute.
-   </div>
+   Provides logging of a request using the <a href="1395923284.htm">RequestLoggingHandler<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a></div>
                       </td>
                     </tr>
                     <tr>
@@ -327,6 +409,8 @@
                       <td>
                         <div class="summary">
    Class RequestLoggingHandler.
+   Logs a request to a <a href="820491368.htm">IHandleRequests</a> handler using the Common.Logging logger registered with the <a href="1551909888.htm">CommandProcessor</a>
+   The log shows the original <a href="1129012828.htm">IRequest</a> properties as well as the timer handling.
    </div>
                       </td>
                     </tr>
@@ -340,6 +424,9 @@
                       <td>
                         <div class="summary">
    Class SubscriberRegistry.
+   In order to map an <a href="820491368.htm">IHandleRequests</a> to a <a href="1650404514.htm">Command</a> or an <a href="987625519.htm">Event</a> we need you to register the association
+   via the <a href="51813318.htm">SubscriberRegistry</a>
+   The default implementation of <a href="51813318.htm">SubscriberRegistry</a> is usable in most instances and this is provided for testing
    </div>
                       </td>
                     </tr>
@@ -372,7 +459,9 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAChannel{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmAChannel
+   A channel is an abstraction for an <a href="http://en.wikipedia.org/wiki/OSI_model">OSI model</a> Application Layer used to provide support for a
+   <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> pattern of dispatch and processing
    </div>
                       </td>
                     </tr>
@@ -385,7 +474,10 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAChannelFactory{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmAChannelFactory
+   Creates instances of <a href="516061677.htm">IAmAChannel</a>channels. We provide support for some Application Layer channels, and provide factories for those:
+   <ul><li>AMQP</li><li>RestML</li></ul>
+   If you need to support other Application Layer protocols, please consider issuing a Pull request for your implementation
    </div>
                       </td>
                     </tr>
@@ -398,7 +490,12 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmACommandProcessor{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmACommandProcessor
+   Paramore.Brighter.CommandProcessor provides the default implementation of this interface <a href="1551909888.htm">CommandProcessor</a> and it is unlikely you need
+   to override this for anything other than testing purposes. The usual need is that in a <a href="827179800.htm">RequestHandler<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a> you intend to publish an
+   <a href="987625519.htm">Event</a> to indicate the handler has completed to other components. In this case your tests should only verify that the correct
+   event was raised by listening to <span class="nolink">[Publish{T}]</span> calls on this interface, using a mocking framework of your choice or bespoke
+   Test Double.
    </div>
                       </td>
                     </tr>
@@ -424,7 +521,11 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAHandlerFactory{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmAHandlerFactory
+   We do not know how to create instances of <a href="820491368.htm">IHandleRequests</a> implemented by your application, but need to create instances to instantiate a pipeline.
+   To achieve this we require clients of the Paramore.Brighter.CommandProcessor library need to implement <a href="38136503.htm">IAmAHandlerFactory</a> to provide
+   instances of their <a href="820491368.htm">IHandleRequests</a> types. You need to provide a Handler Factory to support all <a href="820491368.htm">IHandleRequests</a> registered
+   with <a href="5116153.htm">IAmASubscriberRegistry</a>. Typically you would use an IoC container to implement the Handler Factory.
    </div>
                       </td>
                     </tr>
@@ -437,7 +538,35 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmALifetime{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmALifetime
+   Used to manage the lifetime of objects created for the request handling pipeline
+   <span class="nolink">LifetimeScope</span> for default implementation.
+   </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <img src="../icons/pubinterface.gif" alt="Public interface" title="Public interface" />
+                      </td>
+                      <td>
+                        <a href="784626765.htm">IAmAMessageConsumer</a>
+                      </td>
+                      <td>
+                        <div class="summary">
+   Interface IAmAReceiveMessageGateway
+   </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <img src="../icons/pubinterface.gif" alt="Public interface" title="Public interface" />
+                      </td>
+                      <td>
+                        <a href="1141514342.htm">IAmAMessageConsumerFactory</a>
+                      </td>
+                      <td>
+                        <div class="summary">
+   Interface IAmAMessageConsumerFactory
    </div>
                       </td>
                     </tr>
@@ -450,8 +579,9 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAMessageMapper{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
+   Interface IAmAMessageMapper
+   Map between a <a href="1650404514.htm">Command</a> or an <a href="987625519.htm">Event</a> and a <a href="1521002829.htm">Message</a>. You must implement this for each Command or Message you intend to send over
+   a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a></div>
                       </td>
                     </tr>
                     <tr>
@@ -463,8 +593,9 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAMessageMapper{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
+   Interface IAmAMessageMapper
+   Map between a <a href="1650404514.htm">Command</a> or an <a href="987625519.htm">Event</a> and a <a href="1521002829.htm">Message</a>. You must implement this for each Command or Message you intend to send over
+   a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a></div>
                       </td>
                     </tr>
                     <tr>
@@ -476,7 +607,12 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAMessageMapperFactory{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmAMessageMapperFactory
+   In order to use a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> approach we require you to provide
+   a <a href="1546792997.htm">IAmAMessageMapper</a> to map between <a href="1650404514.htm">Command</a> or <a href="987625519.htm">Event</a> and a <a href="1521002829.htm">Message</a> registered via <a href="343614780.htm">IAmAMessageMapperRegistry</a>
+   We then call the instance of the factory which the client provides to create instances of that <a href="1546792997.htm">IAmAMessageMapper</a>. You will need to implement the
+   <a href="1091437229.htm">IAmAMessageMapperFactory</a> to use the Task Queue approach, and provide the instance of your mapper on request. Typically you might use an IoC container
+   to implement this.
    </div>
                       </td>
                     </tr>
@@ -489,8 +625,28 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAMessageMapperRegistry{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmAMessageMapperRegistry
+   In order to use a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> approach we require you to provide
+   a <a href="1546792997.htm">IAmAMessageMapper</a> to map between <a href="1650404514.htm">Command</a> or <a href="987625519.htm">Event</a> and a <a href="1521002829.htm">Message</a>
+   registered via <a href="343614780.htm">IAmAMessageMapperRegistry</a>
+   The default implementation<a href="1700995936.htm">MessageMapperRegistry</a> is suitable for most purposes and the interface is provided for testing
    </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <img src="../icons/pubinterface.gif" alt="Public interface" title="Public interface" />
+                      </td>
+                      <td>
+                        <a href="1740782637.htm">IAmAMessageProducer</a>
+                      </td>
+                      <td>
+                        <div class="summary">
+   Interface IAmASendMessageGateway
+   Abstracts away the Application Layer used to push messages onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+   Usually clients do not need to instantiate as access is via an <a href="516061677.htm">IAmAChannel</a> derived class.
+   We provide the following default gateway applications
+   <ul><li>AMQP</li><li>RESTML</li></ul></div>
                       </td>
                     </tr>
                     <tr>
@@ -502,7 +658,11 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAMessageStore{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmAMessageStore
+   In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
+   store the message into a Message Store to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
+   We provide an implementation of <a href="1658401338.htm">IAmAMessageStore<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>T<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a> for Raven <span class="nolink">[RavenMessageStore]</span>. Clients using other message stores should consider a Pull
+   request
    </div>
                       </td>
                     </tr>
@@ -515,7 +675,9 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAnInputChannel{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmAnInputChannel
+   An <a href="516061677.htm">IAmAChannel</a> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+   and acknowledging receipt of those messages
    </div>
                       </td>
                     </tr>
@@ -528,21 +690,8 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAnOutputChannel{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <img src="../icons/pubinterface.gif" alt="Public interface" title="Public interface" />
-                      </td>
-                      <td>
-                        <a href="387282686.htm">IAmAPipelineBuilder<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a>
-                      </td>
-                      <td>
-                        <div class="summary">
-   Interface IAmAPipelineBuilder{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
+   Interface IAmAnOutputChannel
+   An <a href="516061677.htm">IAmAChannel</a> for pushing messages onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a></div>
                       </td>
                     </tr>
                     <tr>
@@ -554,7 +703,9 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAPipelineTracer{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmAPipelineTracer
+   It can be useful to understand what <a href="820491368.htm">IHandleRequests</a> will be called to satisfy a request and their order
+   The default implementation of <span class="nolink">PipelineTracer</span> can be used in most instances
    </div>
                       </td>
                     </tr>
@@ -567,7 +718,15 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmAPolicyRegistry{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmAPolicyRegistry
+   We use <a href="">Polly</a> policies to provide Quality of Service.
+   By default we provide them for a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> and require you to register policies with
+   the policy names of:
+   <ul><li>CommandProcessor.RETRYPOLICY</li><li>CommandProcessor.CIRCUTIBREAKER</li></ul>
+   to respectively determine retry attempts for putting onto and popping off the queue and for breaking the circuit if we cannot
+   You can register additional policies (or reuse these) to provide QoS for individual handlers. The <span class="nolink">[UsePolicyAttribute]</span> and <span class="nolink">[ExceptionPolicyandler]</span>
+   provide an easy way to do this using the policies that you add to this registry
+   The default implementation of <a href="1110601651.htm">PolicyRegistry</a> is suitable for most purposes and the interface is provided for testing.0vjy
    </div>
                       </td>
                     </tr>
@@ -580,20 +739,9 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmARequestContextFactory{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <img src="../icons/pubinterface.gif" alt="Public interface" title="Public interface" />
-                      </td>
-                      <td>
-                        <a href="927914422.htm">IAmASendMessageGateway</a>
-                      </td>
-                      <td>
-                        <div class="summary">
-   Interface IAmASendMessageGateway{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmARequestContextFactory
+   Any pipeline has a request context that allows you to flow information between instances of <a href="820491368.htm">IHandleRequests</a>
+   The default <a href="2114541437.htm">InMemoryRequestContextFactory</a> is usable for most cases, and this interface mainly supports testing
    </div>
                       </td>
                     </tr>
@@ -606,7 +754,10 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IAmASubscriberRegistry{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmASubscriberRegistry
+   In order to map an <a href="820491368.htm">IHandleRequests</a> to a <a href="1650404514.htm">Command</a> or an <a href="987625519.htm">Event</a> we need you to register the association
+   via the <a href="51813318.htm">SubscriberRegistry</a>
+   The default implementation of <a href="51813318.htm">SubscriberRegistry</a> is usable in most instances and this is provided for testing
    </div>
                       </td>
                     </tr>
@@ -619,7 +770,8 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface ICommand{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface ICommand
+   A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
    </div>
                       </td>
                     </tr>
@@ -632,7 +784,13 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IHandleRequests{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IHandleRequests
+   A target of the <a href="1551909888.htm">CommandProcessor</a> either as the target of the Command Dispatcher to provide the domain logic required to handle the <a href="1650404514.htm">Command</a>
+   or <a href="987625519.htm">Event</a> or as an orthogonal handler used as part of the Command Processor pipeline.
+   We recommend deriving your concrete handler from <a href="827179800.htm">RequestHandler<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a> instead of implementing the interface as it provides boilerplate
+   code for calling the next handler in sequence in the pipeline and describing the path
+   The <a href="820491368.htm">IHandleRequests</a> interface contains a contract not dependant on the <a href="1129012828.htm">IRequest</a> and is useful when you need to deal with a handler
+   without knowing the specific <a href="1129012828.htm">IRequest</a> type, but most implementations should use <a href="1582137372.htm">IHandleRequests<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a> directly
    </div>
                       </td>
                     </tr>
@@ -645,8 +803,14 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IHandleRequests{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
+   Interface IHandleRequests
+   A target of the <a href="1551909888.htm">CommandProcessor</a> either as the target of the Command Dispatcher to provide the domain logic required to handle the <a href="1650404514.htm">Command</a>
+   or <a href="987625519.htm">Event</a> or as an orthogonal handler used as part of the Command Processor pipeline.
+   We recommend deriving your concrete handler from <a href="827179800.htm">RequestHandler<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a> instead of implementing the interface as it provides boilerplate
+   code for calling the next handler in sequence in the pipeline and describing the path.
+   It derives from <a href="820491368.htm">IHandleRequests</a> which provides functionality that is not dependant on <a href="1129012828.htm">IRequest</a>. This simplifies some tasks that do not know
+   the specific type of the <a href="1129012828.htm">IRequest</a>
+   Implementors should use on class to implement both <a href="1582137372.htm">IHandleRequests<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a> and <a href="820491368.htm">IHandleRequests</a> as per <a href="827179800.htm">RequestHandler<span class="languageSpecificText"><span class="cs">&lt;</span><span class="vb">(Of </span><span class="cpp">&lt;</span><span class="nu">(</span><span class="fs">&lt;'</span></span>TRequest<span class="languageSpecificText"><span class="cs">&gt;</span><span class="vb">)</span><span class="cpp">&gt;</span><span class="nu">)</span><span class="fs">&gt;</span></span></a></div>
                       </td>
                     </tr>
                     <tr>
@@ -723,7 +887,8 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IRequest{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IRequest
+   Base class of <a href="1650404514.htm">Command</a> and <a href="987625519.htm">Event</a>. A request that can be handled by the Command Processor/Dispatcher
    </div>
                       </td>
                     </tr>
@@ -736,7 +901,9 @@
                       </td>
                       <td>
                         <div class="summary">
-   Interface IRequestContext{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Any pipeline has a request context that allows you to flow information between instances of <a href="820491368.htm">IHandleRequests</a>
+   The default in-memory <a href="1883414501.htm">RequestContext</a> created by an <a href="2114541437.htm">InMemoryRequestContextFactory</a> is suitable for most purposes
+   and this interface is mainly provided for testing
    </div>
                       </td>
                     </tr>
@@ -769,7 +936,13 @@
                       </td>
                       <td>
                         <div class="summary">
-   Enum HandlerTiming{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Enum HandlerTiming
+   The Subscriber Registry registers 'target' handlers for commands or events.
+   A <a href="778523496.htm">RequestHandlerAttribute</a> identifies handlers to run in the pipeline with the target handler, to deal with 'orthogonal' concerns
+   Those handlers can run either before or after the target handler, and the timing value indicates where they should run
+   Note that handlers explicitly call the next handler in sequence, so 'child' handlers always run in the scope of their 'parent' handlers, which means
+   that you can choose to only execute code in a 'parent' only after a 'child' handler has executed. So you can control order of operation by that approach
+   and do not need to use an After handler for that.
    </div>
                       </td>
                     </tr>
@@ -782,7 +955,8 @@
                       </td>
                       <td>
                         <div class="summary">
-   Enum MessageType{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Enum MessageType
+   The type of a message, used on the receiving side of a Task Queue to handle the message appropriately
    </div>
                       </td>
                     </tr>

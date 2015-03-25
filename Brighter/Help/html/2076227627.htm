@@ -27,7 +27,7 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="Initializes from attribute parameters." />
+      <MSHelp:Attr Name="Abstract" Value="Initializes from the attribute parameters. Use when you need to provide parameter information from the attribute to the handler. Note that the attribute implementation might include types other than primitives that you intend to pass across ..." />
       <MSHelp:Attr Name="AssemblyVersion" Value="" />
     </xml>
   </head>
@@ -41,7 +41,11 @@
             <div id="mainSection">
               <div id="mainBody">
                 <div class="summary">
-   Initializes from attribute parameters.
+   Initializes from the <a href="778523496.htm">RequestHandlerAttribute</a> attribute parameters. Use when you need to provide parameter information from the
+   attribute to the handler. Note that the attribute implementation might include types other than primitives that you intend to pass across, but
+   the attribute itself can only use primitives.
+   You couple the handler to a specific attribute using this as you need to know about the parameters passed, so this is really only appropriate
+   for an attribute-handler pair used to provide orthogonal QoS to the pipeline.
    </div>
                 <p />
     <b>Namespace:</b> 

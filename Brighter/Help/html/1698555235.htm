@@ -62,11 +62,25 @@
                         <img src="../icons/pubmethod.gif" alt="Public method" title="Public method" />
                       </td>
                       <td>
+                        <a href="1525276590.htm">AddToLifetime</a>
+                      </td>
+                      <td>
+                        <div class="summary">
+   Adds to lifetime so that the pipeline can manage destroying handlers created as part of the pipeline by calling the client provided <a href="38136503.htm">IAmAHandlerFactory</a> .
+   </div>
+                      </td>
+                    </tr>
+                    <tr data="public;declared;notNetfw;">
+                      <td>
+                        <img src="../icons/pubmethod.gif" alt="Public method" title="Public method" />
+                      </td>
+                      <td>
                         <a href="1147880392.htm">DescribePath</a>
                       </td>
                       <td>
                         <div class="summary">
-   Describes the path.
+   Describes the path. To support pipeline tracing. Generally return the name of this handler to <a href="857022689.htm">IAmAPipelineTracer</a>,
+    or other information to determine the path a request will take
    </div>
                       </td>
                     </tr>
@@ -119,7 +133,11 @@
                       </td>
                       <td>
                         <div class="summary">
-   Initializes from attribute parameters.
+   Initializes from the <a href="778523496.htm">RequestHandlerAttribute</a> attribute parameters. Use when you need to provide parameter information from the
+   attribute to the handler. Note that the attribute implementation might include types other than primitives that you intend to pass across, but
+   the attribute itself can only use primitives.
+   You couple the handler to a specific attribute using this as you need to know about the parameters passed, so this is really only appropriate
+   for an attribute-handler pair used to provide orthogonal QoS to the pipeline.
    </div>
                       </td>
                     </tr>
@@ -172,7 +190,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Gets or sets the context.
+   Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
    </div>
                       </td>
                     </tr>
@@ -185,7 +203,7 @@
                       </td>
                       <td>
                         <div class="summary">
-   Gets the name.
+   Gets the name of the Handler. Useful for diagnostic purposes
    </div>
                       </td>
                     </tr>

@@ -29,7 +29,7 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="Publishes the specified event." />
+      <MSHelp:Attr Name="Abstract" Value="Publishes the specified event. We expect zero or more handlers. The events are handled synchronously, in turn Because any pipeline might throw, yet we want to execute the remaining handler chains, we catch exceptions on any publisher in ..." />
       <MSHelp:Attr Name="AssemblyVersion" Value="" />
     </xml>
   </head>
@@ -43,7 +43,11 @@
             <div id="mainSection">
               <div id="mainBody">
                 <div class="summary">
-   Publishes the specified event.
+   Publishes the specified event. We expect zero or more handlers. The events are handled synchronously, in turn
+   Because any pipeline might throw, yet we want to execute the remaining handler chains,  we catch exceptions on any publisher
+   instead of stopping at the first failure and then we throw an AggregateException if any of the handlers failed,
+   with the InnerExceptions property containing the failures.
+   It is up the implementer of the handler that throws to take steps to make it easy to identify the handler that threw.
    </div>
                 <p />
     <b>Namespace:</b> 

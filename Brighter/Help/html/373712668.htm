@@ -36,7 +36,7 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="Enum HandlerTiming{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}" />
+      <MSHelp:Attr Name="Abstract" Value="Enum HandlerTiming The Subscriber Registry registers 'target' handlers for commands or events. A identifies handlers to run in the pipeline with the target handler, to deal with 'orthogonal' concerns Those handlers can run either be ..." />
       <MSHelp:Attr Name="AssemblyVersion" Value="" />
     </xml>
   </head>
@@ -50,16 +50,22 @@
             <div id="mainSection">
               <div id="mainBody">
                 <div class="summary">
-   Enum HandlerTiming{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Enum HandlerTiming
+   The Subscriber Registry registers 'target' handlers for commands or events.
+   A <a href="778523496.htm">RequestHandlerAttribute</a> identifies handlers to run in the pipeline with the target handler, to deal with 'orthogonal' concerns
+   Those handlers can run either before or after the target handler, and the timing value indicates where they should run
+   Note that handlers explicitly call the next handler in sequence, so 'child' handlers always run in the scope of their 'parent' handlers, which means
+   that you can choose to only execute code in a 'parent' only after a 'child' handler has executed. So you can control order of operation by that approach
+   and do not need to use an After handler for that.
    </div>
                 <p />
     <b>Namespace:</b> 
    <a href="1096871896.htm">paramore.brighter.commandprocessor</a><br />
     <b>Assembly:</b>
    <span sdata="assembly">paramore.brighter.commandprocessor</span> (in paramore.brighter.commandprocessor.dll)<div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">Syntax</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="syntaxSection"><!----></a><div class="CodeSnippetContainer"><div class="CodeSnippetContainerTabs"><div class="CodeSnippetContainerTabLeft"><!----></div><div class="CodeSnippetContainerTabFirst CSharpTab" id="CSharpTabId" style="background:white;border-bottom-color:white"><a href="javascript:setActiveTab('CodeSnippetContainerCode','CSharpCode','CSharpTabId');" title="C#">C#</a></div><div class="CodeSnippetContainerTab VisualBasicTab" id="VisualBasicTabId"><a href="javascript:setActiveTab('CodeSnippetContainerCode','VisualBasicCode','VisualBasicTabId');" title="Visual Basic">VB</a></div><div class="CodeSnippetContainerTab ManagedCPlusPlusTab" id="ManagedCPlusPlusTabId"><a href="javascript:setActiveTab('CodeSnippetContainerCode','ManagedCPlusPlusCode','ManagedCPlusPlusTabId');" title="Visual C++">C++</a></div><div class="CodeSnippetContainerTabRight"><!----></div></div><div class="CodeSnippetContainerCodeCollection"><div class="CodeSnippetToolBar"><div class="CodeSnippetToolBarText" /></div><div class="CodeSnippetContainerCode CSharpCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">public</span> <span class="keyword">enum</span> <span class="identifier">HandlerTiming</span></pre></div><div class="CodeSnippetContainerCode VisualBasicCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">Public</span> <span class="keyword">Enumeration</span> <span class="identifier">HandlerTiming</span></pre></div><div class="CodeSnippetContainerCode ManagedCPlusPlusCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">public</span> <span class="keyword">enum class</span> <span class="identifier">HandlerTiming</span></pre></div></div></div></div><div id="enumerationSection"><div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">Members</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="membersSection"><!----></a><table class="members" id="memberList" frame="lhs" cellpadding="2"><tr><th class="iconColumn" /><th class="nameColumn">Member name</th><th class="descriptionColumn">Description</th></tr><tr><td /><td target="F:paramore.brighter.commandprocessor.HandlerTiming.Before"><span class="selflink">Before</span></td><td>
-   The before{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Execute this 'orthogonal' handler before the 'target' handler
    </td></tr><tr><td /><td target="F:paramore.brighter.commandprocessor.HandlerTiming.After"><span class="selflink">After</span></td><td>
-   The after{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Execute this 'orthogonal' handler after the 'target' handler
    </td></tr></table></div></div><div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">See Also</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="seeAlsoSection"><!----></a><div class="seeAlsoStyle"><a href="1096871896.htm">paramore.brighter.commandprocessor Namespace</a></div></div></div>
             </div>
           </div>

@@ -29,7 +29,7 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="Class CommandProcessorBuilder.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}" />
+      <MSHelp:Attr Name="Abstract" Value="Class CommandProcessorBuilder.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C} Provides a fluent interface to construct a . We need to identify the following dependencies in order to create a A containing a and a . You can use ..." />
       <MSHelp:Attr Name="AssemblyVersion" Value="" />
     </xml>
   </head>
@@ -44,7 +44,32 @@
               <div id="mainBody">
                 <div class="summary">
    Class CommandProcessorBuilder.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-   </div>
+   Provides a fluent interface to construct a <a href="1551909888.htm">CommandProcessor</a>. We need to identify the following dependencies in order to create a <a href="1551909888.htm">CommandProcessor</a><ul><li>
+               A <a href="1511288919.htm">HandlerConfiguration</a> containing a <a href="5116153.htm">IAmASubscriberRegistry</a> and a <a href="38136503.htm">IAmAHandlerFactory</a>. You can use <a href="51813318.htm">SubscriberRegistry</a>
+               to provide the <a href="5116153.htm">IAmASubscriberRegistry</a> but you need to implement your own  <a href="38136503.htm">IAmAHandlerFactory</a>, for example using your preferred Inversion of Control
+               (IoC) container
+           </li><li>
+               A <a href="560753741.htm">IAmAPolicyRegistry</a> containing a list of policies that you want to be accessible to the <a href="1551909888.htm">CommandProcessor</a>. You can use
+               <a href="1110601651.htm">PolicyRegistry</a> to provide the <a href="560753741.htm">IAmAPolicyRegistry</a>. Policies are expected to be Polly <span class="nolink">[!:https://github.com/michael-wolfenden/Polly]</span><span class="nolink">Policy</span> references.
+               If you do not need any policies around quality of service (QoS) concerns - you do not have Work Queues and/or do not intend to use Polly Policies for
+               QoS concerns - you can use <span class="nolink">[NoPolicy]</span> to indicate you do not need them.
+           </li><li>
+               A <a href="1611365628.htm">ILog</a> that is the logger to use for diagnostic feedback. <a href="1611365628.htm">ILog</a> is defined by
+               LibLog <span class="nolink">[!:hhttps://github.com/damianh/LibLog]</span> as an abstraction over logging frameworks and allows us to support your
+               preferred logging framework
+           </li><li>
+               A <a href="1221912875.htm">MessagingConfiguration</a> describing how you want to configure Task Queues for the <a href="1551909888.htm">CommandProcessor</a>. We store messages in a <span class="nolink">[IAmAMessageStore]</span>
+               for later replay (in case we need to compensate by trying a message again). We send messages to a Task Queue via a <a href="1740782637.htm">IAmAMessageProducer</a> and we  want to know how
+               to map the <a href="1129012828.htm">IRequest</a> (<a href="1650404514.htm">Command</a> or <a href="987625519.htm">Event</a>) to a <a href="1521002829.htm">Message</a> using a <a href="1546792997.htm">IAmAMessageMapper</a> using
+               an <a href="343614780.htm">IAmAMessageMapperRegistry</a>. You can use the default <a href="1700995936.htm">MessageMapperRegistry</a> to register the association. You need to
+               provide a <a href="1091437229.htm">IAmAMessageMapperFactory</a> so that we can create instances of your  <a href="1546792997.htm">IAmAMessageMapper</a>. You need to provide a <a href="1091437229.htm">IAmAMessageMapperFactory</a>
+               when using <a href="1700995936.htm">MessageMapperRegistry</a> so that we can create instances of your mapper.
+               If you don't want to use Task Queues i.e. you are just using a synchronous Command Dispatcher approach, then use the <span class="nolink">[NoTaskQueues]</span> method to indicate your intent
+           </li><li>
+               Finally we need to provide a <a href="2110624453.htm">IRequestContext</a> to provide context to requests handlers in the pipeline that can be used to pass information without using the message
+               that initiated the pipeline. We instantiate this via a user-provided <a href="519316750.htm">IAmARequestContextFactory</a>. The default approach is use <a href="2114541437.htm">InMemoryRequestContextFactory</a>
+               to provide a <a href="1883414501.htm">RequestContext</a> unless you have a requirement to replace this, such as in testing.
+           </li></ul></div>
                 <p />
     <b>Namespace:</b> 
    <a href="1096871896.htm">paramore.brighter.commandprocessor</a><br />
