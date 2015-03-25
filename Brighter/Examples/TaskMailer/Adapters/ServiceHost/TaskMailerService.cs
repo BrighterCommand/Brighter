@@ -48,7 +48,7 @@ namespace TaskMailer.Adapters.ServiceHost
 
             var container = new TinyIoCContainer();
             container.Register<IAmAMessageMapper<TaskReminderCommand>, TaskReminderCommandMessageMapper>();
-            container.Register<MailTaskReminderHander, MailTaskReminderHander>();
+            container.Register<MailTaskReminderHandler, MailTaskReminderHandler>();
             container.Register<IAmAMailGateway, MailGateway>();
             container.Register<ILog>(logger);
             container.Register<IAmAMailTranslator, MailTranslator>();
@@ -57,7 +57,7 @@ namespace TaskMailer.Adapters.ServiceHost
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
 
             var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.Register<TaskReminderCommand, MailTaskReminderHander>();
+            subscriberRegistry.Register<TaskReminderCommand, MailTaskReminderHandler>();
 
             //create policies
             var retryPolicy = Policy

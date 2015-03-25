@@ -111,7 +111,7 @@
     <Compile Include="Ports\Handlers\ValidationAttribute.cs" />
     <Compile Include="Ports\Handlers\ValidationHandler.cs" />
     <Compile Include="Ports\IAmAMailTranslator.cs" />
-    <Compile Include="Ports\MailTaskReminderHander.cs" />
+    <Compile Include="Ports\MailTaskReminderHandler.cs" />
     <Compile Include="Ports\MailTranslator.cs" />
     <Compile Include="Ports\TaskReminderCommandMessageMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
