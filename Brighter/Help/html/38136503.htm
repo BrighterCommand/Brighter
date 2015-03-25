@@ -29,7 +29,7 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="Interface IAmAHandlerFactory{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}" />
+      <MSHelp:Attr Name="Abstract" Value="Interface IAmAHandlerFactory We do not know how to create instances of implemented by your application, but need to create instances to instantiate a pipeline. To achieve this we require clients of the Paramore.Brighter.CommandProcessor ..." />
       <MSHelp:Attr Name="AssemblyVersion" Value="" />
     </xml>
   </head>
@@ -43,7 +43,11 @@
             <div id="mainSection">
               <div id="mainBody">
                 <div class="summary">
-   Interface IAmAHandlerFactory{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+   Interface IAmAHandlerFactory
+   We do not know how to create instances of <a href="820491368.htm">IHandleRequests</a> implemented by your application, but need to create instances to instantiate a pipeline.
+   To achieve this we require clients of the Paramore.Brighter.CommandProcessor library need to implement <span class="selflink">IAmAHandlerFactory</span> to provide
+   instances of their <a href="820491368.htm">IHandleRequests</a> types. You need to provide a Handler Factory to support all <a href="820491368.htm">IHandleRequests</a> registered
+   with <a href="5116153.htm">IAmASubscriberRegistry</a>. Typically you would use an IoC container to implement the Handler Factory.
    </div>
                 <p />
     <b>Namespace:</b> 

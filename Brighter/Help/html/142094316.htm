@@ -23,7 +23,7 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="Initializes a new instance of the class." />
+      <MSHelp:Attr Name="Abstract" Value="Initializes a new instance of the class. Use this constructor when no task queue support is required" />
       <MSHelp:Attr Name="AssemblyVersion" Value="" />
     </xml>
   </head>
@@ -38,6 +38,7 @@
               <div id="mainBody">
                 <div class="summary">
    Initializes a new instance of the <a href="1551909888.htm">CommandProcessor</a> class.
+   Use this constructor when no task queue support is required
    </div>
                 <p />
     <b>Namespace:</b> 
@@ -48,21 +49,21 @@
 	<a href="38136503.htm">IAmAHandlerFactory</a> <span class="parameter">handlerFactory</span>,
 	<a href="519316750.htm">IAmARequestContextFactory</a> <span class="parameter">requestContextFactory</span>,
 	<a href="560753741.htm">IAmAPolicyRegistry</a> <span class="parameter">policyRegistry</span>,
-	<span class="nolink">ILog</span> <span class="parameter">logger</span>
+	<a href="1611365628.htm">ILog</a> <span class="parameter">logger</span>
 )</pre></div><div class="CodeSnippetContainerCode VisualBasicCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">Public</span> <span class="keyword">Sub</span> <span class="identifier">New</span> ( _
 	<span class="parameter">subscriberRegistry</span> <span class="keyword">As</span> <a href="5116153.htm">IAmASubscriberRegistry</a>, _
 	<span class="parameter">handlerFactory</span> <span class="keyword">As</span> <a href="38136503.htm">IAmAHandlerFactory</a>, _
 	<span class="parameter">requestContextFactory</span> <span class="keyword">As</span> <a href="519316750.htm">IAmARequestContextFactory</a>, _
 	<span class="parameter">policyRegistry</span> <span class="keyword">As</span> <a href="560753741.htm">IAmAPolicyRegistry</a>, _
-	<span class="parameter">logger</span> <span class="keyword">As</span> <span class="nolink">ILog</span> _
+	<span class="parameter">logger</span> <span class="keyword">As</span> <a href="1611365628.htm">ILog</a> _
 )</pre></div><div class="CodeSnippetContainerCode ManagedCPlusPlusCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">public</span>:
 <span class="identifier">CommandProcessor</span>(
 	<a href="5116153.htm">IAmASubscriberRegistry</a>^ <span class="parameter">subscriberRegistry</span>, 
 	<a href="38136503.htm">IAmAHandlerFactory</a>^ <span class="parameter">handlerFactory</span>, 
 	<a href="519316750.htm">IAmARequestContextFactory</a>^ <span class="parameter">requestContextFactory</span>, 
 	<a href="560753741.htm">IAmAPolicyRegistry</a>^ <span class="parameter">policyRegistry</span>, 
-	<span class="nolink">ILog</span>^ <span class="parameter">logger</span>
-)</pre></div></div></div><div id="parameters"><h4 class="subHeading">Parameters</h4><dl paramName="subscriberRegistry"><dt><span class="parameterItalic">subscriberRegistry</span></dt><dd>Type: <a href="5116153.htm">paramore.brighter.commandprocessor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>IAmASubscriberRegistry</a><br />The subscriber registry.</dd></dl><dl paramName="handlerFactory"><dt><span class="parameterItalic">handlerFactory</span></dt><dd>Type: <a href="38136503.htm">paramore.brighter.commandprocessor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>IAmAHandlerFactory</a><br />The handler factory.</dd></dl><dl paramName="requestContextFactory"><dt><span class="parameterItalic">requestContextFactory</span></dt><dd>Type: <a href="519316750.htm">paramore.brighter.commandprocessor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>IAmARequestContextFactory</a><br />The request context factory.</dd></dl><dl paramName="policyRegistry"><dt><span class="parameterItalic">policyRegistry</span></dt><dd>Type: <a href="560753741.htm">paramore.brighter.commandprocessor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>IAmAPolicyRegistry</a><br />The policy registry.</dd></dl><dl paramName="logger"><dt><span class="parameterItalic">logger</span></dt><dd>Type: <span class="nolink">ILog</span><br />The logger.</dd></dl></div></div><div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">See Also</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="seeAlsoSection"><!----></a><div class="seeAlsoStyle"><a href="1551909888.htm">CommandProcessor Class</a></div><div class="seeAlsoStyle"><a href="241217049.htm">CommandProcessor Overload</a></div><div class="seeAlsoStyle"><a href="1096871896.htm">paramore.brighter.commandprocessor Namespace</a></div></div></div>
+	<a href="1611365628.htm">ILog</a>^ <span class="parameter">logger</span>
+)</pre></div></div></div><div id="parameters"><h4 class="subHeading">Parameters</h4><dl paramName="subscriberRegistry"><dt><span class="parameterItalic">subscriberRegistry</span></dt><dd>Type: <a href="5116153.htm">paramore.brighter.commandprocessor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>IAmASubscriberRegistry</a><br />The subscriber registry.</dd></dl><dl paramName="handlerFactory"><dt><span class="parameterItalic">handlerFactory</span></dt><dd>Type: <a href="38136503.htm">paramore.brighter.commandprocessor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>IAmAHandlerFactory</a><br />The handler factory.</dd></dl><dl paramName="requestContextFactory"><dt><span class="parameterItalic">requestContextFactory</span></dt><dd>Type: <a href="519316750.htm">paramore.brighter.commandprocessor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>IAmARequestContextFactory</a><br />The request context factory.</dd></dl><dl paramName="policyRegistry"><dt><span class="parameterItalic">policyRegistry</span></dt><dd>Type: <a href="560753741.htm">paramore.brighter.commandprocessor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>IAmAPolicyRegistry</a><br />The policy registry.</dd></dl><dl paramName="logger"><dt><span class="parameterItalic">logger</span></dt><dd>Type: <a href="1611365628.htm">paramore.brighter.commandprocessor.Logging<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>ILog</a><br />The logger.</dd></dl></div></div><div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">See Also</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="seeAlsoSection"><!----></a><div class="seeAlsoStyle"><a href="1551909888.htm">CommandProcessor Class</a></div><div class="seeAlsoStyle"><a href="241217049.htm">CommandProcessor Overload</a></div><div class="seeAlsoStyle"><a href="1096871896.htm">paramore.brighter.commandprocessor Namespace</a></div></div></div>
             </div>
           </div>
         </div>

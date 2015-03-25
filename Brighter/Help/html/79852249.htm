@@ -29,7 +29,7 @@
       <MSHelp:Attr Name="Locale" Value="en-us" />
       <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
       <MSHelp:Attr Name="TopicType" Value="apiref" />
-      <MSHelp:Attr Name="Abstract" Value="Posts the specified request." />
+      <MSHelp:Attr Name="Abstract" Value="Posts the specified request. The message is placed on a task queue and into a message store for reposting in the event of failure. You will need to configure a service that reads from the task queue to process the message Paramore.Bright ..." />
       <MSHelp:Attr Name="AssemblyVersion" Value="" />
     </xml>
   </head>
@@ -43,8 +43,12 @@
             <div id="mainSection">
               <div id="mainBody">
                 <div class="summary">
-   Posts the specified request.
-   </div>
+   Posts the specified request. The message is placed on a task queue and into a message store for reposting in the event of failure.
+   You will need to configure a service that reads from the task queue to process the message
+   Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
+   and then Sends or Publishes the message to a <a href="1551909888.htm">CommandProcessor</a> within that service. The decision to <span class="nolink">[Send{T}]</span> or <span class="nolink">[Publish{T}]</span> is based on the
+   mapper. Your mapper can map to a <a href="1521002829.htm">Message</a> with either a <span class="nolink">MT_COMMAND</span> , which results in a <span class="nolink">[Send{T}(T)]</span> or a
+   <span class="nolink">MT_EVENT</span> which results in a <span class="nolink">[Publish{T}(T)]</span></div>
                 <p />
     <b>Namespace:</b> 
    <a href="1096871896.htm">paramore.brighter.commandprocessor</a><br />

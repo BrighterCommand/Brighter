@@ -41,7 +41,7 @@ using Polly;
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class CommandProcessorBuilder.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Class CommandProcessorBuilder.
     /// Provides a fluent interface to construct a <see cref="CommandProcessor"/>. We need to identify the following dependencies in order to create a <see cref="CommandProcessor"/>
     /// <list type="bullet">
     ///     <item>
@@ -209,7 +209,7 @@ namespace paramore.brighter.commandprocessor
 
     #region Progressive interfaces
     /// <summary>
-    /// Interface INeedAHandlers{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface INeedAHandlers
     /// </summary>
     public interface INeedAHandlers
     {
