@@ -146,14 +146,16 @@ internal class SimpleHandlerFactory : IAmAHandlerFactory
     public override GreetingCommand Handle(GreetingCommand command)
     {
         Console.WriteLine("Hello {0}", command.Name);
-        return command;
+        return base.Handle(command);
     }
  }
          </code></pre>
         <p>You could directly implement the base class, but as we provide useful functionality to make sure that your handler participates in the handler pipeline correctly you
             should derive from this class unless you have a compelling reason to implement that support yourself.</p>
         <p>As each handler participates in the chain it is expected that you will return the input you were given, the command or event, so that the next handler in the chain
-        can also process the request.</p>
+            can also process the request. We call the base class Handle() method at the end, as this calls the next handler in the pipeline for you, if there is one. In this case
+            there is no handler, so you could get away with just returning the Command argument, but calling the base method is a good habit to form, as it allows you to later chain together
+            handlers.</p>
         <p>In a 'real' application you would load your domain model's state from persistent storage here, process the request using your domain model and then save the
         state of the domain model. See <a href="CommandsCommandDispatcherandProcessor.html">Commands, Command Dispatcher and Processor</a> for more on this idiom.</p>
         <h3>Step Four</h3>
@@ -246,7 +248,7 @@ class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
     public override GreetingCommand Handle(GreetingCommand command)
     {
         Console.WriteLine("Hello {0}", command.Name);
-        return command;
+        return base.Handle(command);
     }
 }
         </code></pre>

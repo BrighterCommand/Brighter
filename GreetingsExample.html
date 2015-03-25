@@ -78,8 +78,166 @@ allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot;/&gt;
             <li>PM> Install-Package Topshelf</li>
         </ul>
         <img src="images/NuGet-Topshelf.png">
-        <p>You will need to accept the licence for Topshelf</p>
         <img src="images/NuGet-Topshelf-Licence.png">
+        <p>You will need to accept the licence for <a href="http://topshelf-project.com/">Topshelf</a>. We don't go into detail on <stong>Topshelf</stong> here,
+            please see that package's own documentation for how to use it in more depth.</p>
+        <h3>Step Four</h3>
+        <p>We use  <a href="https://github.com/grumpydev/TinyIoC">TinyIoC</a> as a DI container within Greetings, so we need to add that package into the solution as well. Brighter is a
+            <a href="http://blog.ploeh.dk/2014/05/19/di-friendly-framework/">DI Friendly Frameworks</a> so you can use the DI container of your choice with Brighter.</p>
+        <ul>
+            <li>PM> Install-Package TinyIoC</li>
+        </ul>
+        <img src="images/TinyIoC-Nuget.png">
+        <h3>Step Five</h3>
+        <p>Brighter uses <a href="https://github.com/damianh/LibLog">LibLog</a> to abstract the implementation details of a client's logger. Greetings uses log4net as the concrete logger
+        so we need to add a NuGet reference to that project too.</p>
+        <ul>
+            <li>PM> Install-Package LibLog</li>
+        </ul>
+        <img src="images/log4Net-NuGet.png">
+        <h3>Step Six</h3>
+        <p>We use boiler plate code to implement the Main method to configure the <stong>Topshelf</stong> service.</p>
+        <pre><code>
+            public static void Main()
+            {
+                /*
+                * Send a message in this format to this service and it will print it out
+                * We document this here so that you can simply paste this into the RMQ web portal
+                * to see commands flowing through the system.
+                * {"Greeting":"hello world","Id":"0a81cbbc-5f82-4912-99ee-19f0b7ee4bc8"}
+                */
+
+                HostFactory.Run(x => x.Service&lt;GreetingService&gt;(sc =>
+                {
+                    sc.ConstructUsing(() => new GreetingService());
+
+                    // the start and stop methods for the service
+                    sc.WhenStarted((s, hostcontrol) => s.Start(hostcontrol));
+                    sc.WhenStopped((s, hostcontrol) => s.Stop(hostcontrol));
+
+                    // optional, when shutdown is supported
+                    sc.WhenShutdown((s, hostcontrol) => s.Shutdown(hostcontrol));
+                }));
+            }
+        </code></pre>
+        <p>A summary of this code is: it provides callbacks for <stong>Topshelf</stong> to call in response to OS instructions to a Windows Service to start, stop or shutdown. In other words
+            it configures how we respond to service lifetime events. We use a class called GreetingService to implement our response.</p>
+        <h3>Step Seven</h3>
+        <p>We now need to implement the GreetingsService to respond to the control messages. Add a new class to the project called GreetingService and enter the following code:</p>
+        <pre><code>
+            internal class GreetingService : ServiceControl
+            {
+                private Dispatcher _dispatcher;
+
+                public GreetingService()
+                {
+                    log4net.Config.XmlConfigurator.Configure();
+                    //Create a logger
+                    var logger = LogProvider.For&lt;GreetingService>();
+
+                    var container = new TinyIoCContainer();
+                    container.Register&lt;ILog>(logger);
+
+                    var handlerFactory = new TinyIocHandlerFactory(container);
+                    var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
+                    container.Register&lt;IHandleRequests&lt;GreetingCommand&gt;, GreetingCommandHandler>();
+
+                    var subscriberRegistry = new SubscriberRegistry();
+                    subscriberRegistry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
+
+                    //create policies
+                    var retryPolicy = Policy
+                    .Handle&lt;Exception&gt;()
+                        .WaitAndRetry(new[]
+                        {
+                            TimeSpan.FromMilliseconds(50),
+                            TimeSpan.FromMilliseconds(100),
+                            TimeSpan.FromMilliseconds(150)
+                        });
+
+                    var circuitBreakerPolicy = Policy
+                        .Handle&lt;Exception&gt;()
+                            .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+
+                            var policyRegistry = new PolicyRegistry()
+                            {
+                                {CommandProcessor.RETRYPOLICY, retryPolicy},
+                                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+                            };
+
+                    //create message mappers
+                    var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
+                    {
+                        {typeof(GreetingCommand), typeof(GreetingCommandMessageMapper)}
+                    };
+
+                    //create the gateway
+                    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
+                    var builder = DispatchBuilder
+                        .With()
+                        .Logger(logger)
+                        .CommandProcessor(CommandProcessorBuilder.With()
+                            .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+                            .Policies(policyRegistry)
+                            .Logger(logger)
+                            .NoTaskQueues()
+                            .RequestContextFactory(new InMemoryRequestContextFactory())
+                            .Build()
+                        )
+                        .MessageMappers(messageMapperRegistry)
+                        .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
+                        .ConnectionsFromConfiguration();
+                     _dispatcher = builder.Build();
+                }
+
+                public bool Start(HostControl hostControl)
+                {
+                _dispatcher.Receive();
+                return true;
+                }
+
+                public bool Stop(HostControl hostControl)s
+                {
+                _dispatcher.End().Wait();
+                _dispatcher = null;
+                return false;
+                }
+
+                public void Shutdown(HostControl hostcontrol)
+                {
+                    if (_dispatcher != null)
+                        _dispatcher.End();
+                    return;
+                }
+         }
+        </code></pre>
+        <p>The key behavior of Greeting is to configure the <strong>Command Processor</strong> and the <strong>Dispatcher</strong>. We covered the basics of the CommandProcessor in the
+            <a href="HelloWorldExample.html">Hello World Example</a>.</p>
+        <p>We use a  <strong>DispatchBuilder</strong> to build a <strong>Dispatcher</strong>, which dispatches messages from a <a href="ImplementingDistributedTaskQueue.html">Task Queue</a>
+            to a Command Handler. The principle is that once configured you can send messages to handlers in the service without having to write the infrastructure code around reading from a queue,
+            translating the message body into an IRequest (Command or Event), and dispatching to a handler. The goal here is that the task queue should remain transparent to the developer,
+            who simply uses <strong>IAmACommandProcessor.Post</strong> to send  a message from one process and then uses the <strong>Dispatcher</strong> to read that same message and pass to a handler in another.</p>
+        <p>We create a <strong>Command Processor</strong> as part of creating our <strong>Dispatcher</strong> to map de-serialized Commands or Events to handlers. Note that it may seem counter-intuitive
+            that we set no Task Queue on the Command Processor. This is because we are not sending to a task queue from this service, just reading, so we do not need to configure  <strong>Command Processor</strong>
+            for sending only receiving. The <a href="TasksExample.html">Tasks Example</a> shows an application that has both sending and receiving components.</p>
+        <p>We add both a <a href="QualityOfServicePatterns.html">Retry Policy and a Circuit Breaker Policy</a> using the <a href="https://github.com/michael-wolfenden/Polly">Polly</a> library.
+            We create policies to decide what intervals to retry at in the event of failure, and how long to break a circuit for in the presence of persistent failure. We register these policies in the
+            <strong>PolicyRegistry</strong>, using the well-known names <strong>CommandProcessor.RETRYPOLICY</strong> and <strong>CommandProcessor.CIRCUITBREAKER</strong>. Internally,
+            CommandProcessor uses the policies you register when you call <strong>IAmACommandProcessor.Post</strong> to push a message onto a Task Queue, but you can re-use them yourself.
+            As discussed above, we are not doing a Post here.</p>
+            <p>(You can also use policies in your own handlers as discussed <a href="PolicyRetryAndCircuitBreaker.html">here</a>).</p>
+        <p>We register implementations of <strong>IAmAMessageMapper</strong> with the <strong>MessageMapperRegistry</strong> to map the message body from the Task Queue into Commands and Events. In this
+            case we only have one: <strong>GreetingCommandMessageMapper</strong> which we use to map a <strong>GreetingCommand</strong> to and from the message body (as JSON). </p>
+        <p>In order to read messages from a Task Queue we need a <strong>IAmAMessageConsumerFactory</strong>. In this case we are reading from a RabbitMQ Task Queue so we use
+            <strong>RmqMessageConsumerFactory</strong>. We set this as the parameter to an <strong>InputChannelFactory</strong> and pass to the <strong>DispatchBuilder</strong> </p>
+        <p>The <strong>Input Channel</strong> is an abstraction over the stream from which we read messages - mostly implemented using Message-Oriented Middleware - and <strong>Dispatcher</strong> uses
+            the <strong>InputChannelFactory</strong> to create instances of the stream to read from, as specified in configuration. We pass the application protocol specific factory to this,
+            so that we can create input channels for that protocol. The use of abstraction is intended to allow support for different protocols and implementations of those protocols to be
+            used as the stream that underlies the Task Queue</p>
+        <p> As outlined in <a href="HelloWorldExample.html">Hello World</a> our goal is to be a <a href="http://blog.ploeh.dk/2014/05/19/di-friendly-framework/">DI Friendly Frameworks</a> so we rely
+            on the client implementing a factory to provide instances of handlers and message mappers to us. In this example we use <a href="https://github.com/grumpydev/TinyIoC">TinyIoC</a>
+            as our DI framework and implement the required factories using that DI framework.</p>
+        <h3>Step Eight</h3>
     </section>
     <footer>
         <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
