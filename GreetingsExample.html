@@ -311,6 +311,91 @@ allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot;/&gt;
             }
         }
         </code></pre>
+        <h3>Step Nine</h3>
+        <p>Now we need to add the GreetingCommand itself. Add a new class GreetingCommand to the project and enter the following code.</p>
+        <pre><code>
+        using System;
+        using paramore.brighter.commandprocessor;
+
+        namespace Greetings.Ports.Commands
+        {
+            public class GreetingCommand : Command
+            {
+                public GreetingCommand() : base(Guid.NewGuid()) { }
+
+                public GreetingCommand(string greeting) : base(Guid.NewGuid())
+                {
+                    Greeting = greeting;
+                }
+
+             public string Greeting { get; set; }
+            }
+        }
+        </code></pre>
+        <p>We simply derive our class from <strong>Command</strong> and add a property that allows you to set the Greeting which we intend to send.</p>
+        <h3>Step Ten</h3>
+        <p>Once we have a command we need to add the code for its <strong>Message Mapper</strong> which we use to de-serialize the message from the wire protocol.
+            Add a class GreetingCommandMessageMapper to the project.</p>
+        <pre><code>
+        using Greetings.Ports.Commands;
+        using Newtonsoft.Json;
+        using paramore.brighter.commandprocessor;
+
+        namespace Greetings.Ports.Mappers
+        {
+           internal class GreetingCommandMessageMapper : IAmAMessageMapper&lt;GreetingCommand&gt;
+           {
+               public Message MapToMessage(GreetingCommand request)
+               {
+                   var header = new MessageHeader(messageId: request.Id, topic: "greeting.command", messageType: MessageType.MT_COMMAND);
+                   var body = new MessageBody(JsonConvert.SerializeObject(request));
+                   var message = new Message(header, body);
+                   return message;
+               }
+
+               public GreetingCommand MapToRequest(Message message)
+               {
+                return JsonConvert.DeserializeObject&lt;GreetingCommand&gt;(message.Body.Value);
+               }
+           }
+        }
+        </code></pre>
+        <p>A message has a header - where we write metadata about the message - and a body - where we write the contents of the message.</p>
+        <p>When mapping to a message, on the header, we set the <strong>Message Type</strong> to <strong>MT_COMMAND</strong> because we want only one handler in the target to receive the message.
+            The topic is used for routing subscribers to the message use the topic to indicate their interest in receiving the message</p>
+        <p>The body of the message is a JSON string representing the GreetingCommand</p>
+        <p>Because we don't send from this service, we don't need MapToMessage and could simply throw a NotImplemented exception instead.</p>
+        <p>When mapping back to a request we simply serialize the entity body into the Command we want to raise.</p>
+        <h3>Step Eleven</h3>
+        <p>Now we need to add the handler, which actually does the work. Add a new class GreetingCommandHandler to the project</p>
+        <pre><code>
+        using System;
+        using Greetings.Ports.Commands;
+        using paramore.brighter.commandprocessor;
+        using paramore.brighter.commandprocessor.Logging;
+
+        namespace Greetings.Ports.CommandHandlers
+        {
+            internal class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
+            {
+                public GreetingCommandHandler(ILog logger) : base(logger) { }
+
+                public override GreetingCommand Handle(GreetingCommand command)
+                {
+                    Console.WriteLine("Received Greeting. Message Follows");
+                    Console.WriteLine("----------------------------------");
+                    Console.WriteLine(command.Greeting);
+                    Console.WriteLine("----------------------------------");
+                    Console.WriteLine("Message Ends");
+                    return base.Handle(command);
+                }
+            }
+        }
+        </code></pre>
+        <p>We derive from <strong>RequestHandler</strong> to reduce the boiler plate code we need to write, and override the <strong>Handle()</strong> method to provide
+        an implementation that just echoes the greeting out to the console.</p>
+        <h3>Step Twelve</h3>
+        <p>Build the project</p>
     </section>
     <footer>
         <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
