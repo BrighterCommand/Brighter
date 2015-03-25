@@ -43,24 +43,21 @@
         <h3>Step Three</h3>
         <p>Add the following code to the Main class:</p>
          <pre><code>
- var properties = new NameValueCollection();
- properties["showDateTime"] = "true";
- LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
- var logger = LogManager.GetLogger(typeof (Program));
+var logger = LogProvider.For&lt;Program&gt;();
 
- var registry = new SubscriberRegistry();
+var registry = new SubscriberRegistry();
 
- var builder = CommandProcessorBuilder.With()
-     .Handlers(new HandlerConfiguration(
-        subscriberRegistry: registry,
-        handlerFactory: new SimpleHandlerFactory(logger)
-     ))
+var builder = CommandProcessorBuilder.With()
+    .Handlers(new HandlerConfiguration(
+            subscriberRegistry: registry,
+            handlerFactory: new SimpleHandlerFactory(logger)
+        ))
     .NoPolicy()
     .Logger(logger)
     .NoTaskQueues()
     .RequestContextFactory(new InMemoryRequestContextFactory());
 
- var commandProcessor = builder.Build();
+var commandProcessor = builder.Build();
          </code></pre>
         <h4>Requests and Request Handlers</h4>
         <p>A <em>Command Dispatcher</em> works by looking up registered handlers for the command or event and forwarding the request to them, i.e. publish-subscribe.</p>
@@ -185,20 +182,17 @@ class Program
 {
     static void Main(string[] args)
     {
-        var properties = new NameValueCollection();
-        properties["showDateTime"] = "true";
-        LogManager.Adapter = new ConsoleOutLoggerFactoryAdapter(properties);
-        var logger = LogManager.GetLogger(typeof(Program));
+        var logger = LogProvider.For&lt;Program&gt;();
 
         var registry = new SubscriberRegistry();
         registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
 
-
         var builder = CommandProcessorBuilder.With()
             .Handlers(new HandlerConfiguration(
-                subscriberRegistry: registry,
-                handlerFactory: new SimpleHandlerFactory(logger)
-             ))
+            .Handlers(new HandlerConfiguration(
+                    subscriberRegistry: registry,
+                    handlerFactory: new SimpleHandlerFactory(logger)
+                ))
             .NoPolicy()
             .Logger(logger)
             .NoTaskQueues()
