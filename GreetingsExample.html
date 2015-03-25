@@ -125,6 +125,20 @@ allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot;/&gt;
         <h3>Step Seven</h3>
         <p>We now need to implement the GreetingsService to respond to the control messages. Add a new class to the project called GreetingService and enter the following code:</p>
         <pre><code>
+        using System;
+        using Greetings.Ports.CommandHandlers;
+        using Greetings.Ports.Commands;
+        using Greetings.Ports.Mappers;
+        using paramore.brighter.commandprocessor;
+        using paramore.brighter.commandprocessor.Logging;
+        using paramore.brighter.commandprocessor.messaginggateway.rmq;
+        using paramore.brighter.serviceactivator;
+        using Polly;
+        using TinyIoC;
+        using Topshelf;
+
+        namespace Greetings.Adapters.ServiceHost
+        {
             internal class GreetingService : ServiceControl
             {
                 private Dispatcher _dispatcher;
@@ -209,6 +223,7 @@ allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot;/&gt;
                         _dispatcher.End();
                     return;
                 }
+            }
          }
         </code></pre>
         <p>The key behavior of Greeting is to configure the <strong>Command Processor</strong> and the <strong>Dispatcher</strong>. We covered the basics of the CommandProcessor in the
@@ -238,6 +253,64 @@ allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot;/&gt;
             on the client implementing a factory to provide instances of handlers and message mappers to us. In this example we use <a href="https://github.com/grumpydev/TinyIoC">TinyIoC</a>
             as our DI framework and implement the required factories using that DI framework.</p>
         <h3>Step Eight</h3>
+        <p>Add a TinyIocHandlerFactory class to the project and enter the following code</p>
+        <pre><code>
+        using System;
+        using paramore.brighter.commandprocessor;
+        using TinyIoC;
+
+        namespace Greetings.Adapters.ServiceHost
+        {
+            internal class TinyIocHandlerFactory : IAmAHandlerFactory
+            {
+               private readonly TinyIoCContainer _container;
+
+            public TinyIocHandlerFactory(TinyIoCContainer container)
+            {
+                _container = container;
+            }
+
+            public IHandleRequests Create(Type handlerType)
+            {
+                return (IHandleRequests)_container.Resolve(handlerType);
+            }
+
+            public void Release(IHandleRequests handler)
+            {
+                var disposable = handler as IDisposable;
+                if (disposable != null)
+                {
+                    disposable.Dispose();
+                }
+                    handler = null;
+                }
+            }
+        }
+    </code></pre>
+        <p>Add a TinyIoCMessageMapperFactory class to the project and enter the following code</p>
+        <pre><code>
+        using System;
+        using paramore.brighter.commandprocessor;
+        using TinyIoC;
+
+        namespace Greetings.Adapters.ServiceHost
+        {
+            internal class TinyIoCMessageMapperFactory : IAmAMessageMapperFactory
+            {
+                private readonly TinyIoCContainer _container;
+
+                public TinyIoCMessageMapperFactory(TinyIoCContainer container)
+                {
+                    _container = container;
+                }
+
+                public IAmAMessageMapper Create(Type messageMapperType)
+                {
+                    return (IAmAMessageMapper)_container.Resolve(messageMapperType);
+                }
+            }
+        }
+        </code></pre>
     </section>
     <footer>
         <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
