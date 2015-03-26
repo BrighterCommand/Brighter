@@ -1,5 +1,9 @@
 # Release Notes #
 ## Master ##
+NuGet packages for the last good build on master are available via AppVeyor (see Artifacts). https://ci.appveyor.com/project/IanCooper/paramore
+ When we push a collection of functionality it is available via www.nuget.org
+ This section lists features in master but not yet deployed.
+
 
 ## Release 3.0.129 ##
 1. We now support a Fallback method on IHandleRequests<TRequest> which is intended to be used for compensating or emergency action when a Handle method cannot be executed. The [FallbackPolicy] attribute supports the pipeline calling the Fallback method for you, in the event of either any exception bubbling into the handler, or a broken circuit exception bubbling into the handler.
