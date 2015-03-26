@@ -1,5 +1,7 @@
 # Release Notes #
 ## Master ##
+
+## Release 3.0.129 ##
 1. We now support a Fallback method on IHandleRequests<TRequest> which is intended to be used for compensating or emergency action when a Handle method cannot be executed. The [FallbackPolicy] attribute supports the pipeline calling the Fallback method for you, in the event of either any exception bubbling into the handler, or a broken circuit exception bubbling into the handler.
 2. Fix issue with RabbitMQ consumers running on a High Availability cluster not cancelling properly after cluster failover.
 3. Fixed bug with config section duplication https://github.com/iancooper/Paramore/issues/52
