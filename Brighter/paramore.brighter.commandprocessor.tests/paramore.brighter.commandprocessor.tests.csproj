@@ -181,13 +181,6 @@
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
     <Compile Include="MessagingGateway\TestDoubles\BrokerUnreachableRmqMessageConsumer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RestMSServer\CachingTests.cs" />
-    <Compile Include="RestMSServer\DomainTests.cs" />
-    <Compile Include="RestMSServer\FeedTests.cs" />
-    <Compile Include="RestMSServer\JoinTests.cs" />
-    <Compile Include="RestMSServer\MessageTests.cs" />
-    <Compile Include="RestMSServer\PipeTests.cs" />
-    <Compile Include="RestMSServer\SerializationTests.cs" />
     <Compile Include="Timeout\Test Doubles\MyPassesTimeoutHandler.cs" />
     <Compile Include="Timeout\Test Doubles\MyFailsDueToTimeoutHandler.cs" />
     <Compile Include="Timeout\TimeoutDecoratorTests.cs" />
@@ -213,14 +206,6 @@
     <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
       <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
       <Name>paramore.brighter.commandprocessor</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.restms.core\paramore.brighter.restms.core.csproj">
-      <Project>{72e03a7f-a406-4364-9861-2a10a746ae3a}</Project>
-      <Name>paramore.brighter.restms.core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.restms.server\paramore.brighter.restms.server.csproj">
-      <Project>{0D2FBF93-0555-45EB-A92F-5A7C822F9AE0}</Project>
-      <Name>paramore.brighter.restms.server</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.serviceactivator.controlbus\paramore.brighter.serviceactivator.controlbus.csproj">
       <Project>{feab93c1-3232-42fb-89b0-3387dee4ced9}</Project>
