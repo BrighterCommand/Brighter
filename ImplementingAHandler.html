@@ -27,19 +27,8 @@
     </header>
     <section>
         <h2>How to Implement a Request Handler</h2>
-        <p>Although it is possible to implement the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/IHandleRequests.cs">IHandleRequests</a>
-            interface directly, we recommend deriving your handler from <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/RequestHandler.cs">RequestHandlerT&lt;&gt;</a> directly
-            as it provides support for the <em>Russian Doll Model</em> of calling the handler pipeline, a context bag for the pipeline, and request path description out-of-the-box.</p>
-        <p>The <em>Russian Doll Model</em> is names for the <a href="http://en.wikipedia.org/wiki/Matryoshka_doll">Matryoshka</a> wooden dolls, in which dolls of decreasing sizes are nested one inside another.
-            The importance of this for a <a href="https://msdn.microsoft.com/en-us/library/dn589788.aspx">pipes and filters pattern</a> style is that each filter in the pipeline is called
-            within the scope of a previous filter in the pipeline. This is significant because you may desire to act before and after a subsequent filter step. One particular use case is exception
-            handling: a try-catch block that wraps the call to a subsequent step can react to exceptions raised by subsequent steps. This allows us to create policy decisions around exceptions
-            using a library such as <a href="https://github.com/michael-wolfenden/Polly">Polly</a> and thus support <a href="https://msdn.microsoft.com/en-us/library/dn589788.aspx">Retry</a>
-            and <a href="https://msdn.microsoft.com/en-gb/library/dn589784.aspx?f=255&MSPPError=-2147217396">Circuit Breaker</a></p>
-        <p><em>Usage of the Russian Doll Model was inspired by <a href="http://codebetter.com/jeremymiller/2011/01/09/fubumvcs-internal-runtime-the-russian-doll-model-and-how-it-compares-to-asp-net-mvc-and-openrasta/">FubuMVC</a></em></p>
         <p>To implement a handler, derive from RequestHandlerT&lt;T&gt; where T should be the Command or Event derived type that you wish to handle. Then override the base class Handle() method to implement
-        your handling for the Command or Event. Finally, remember to call base.Handle() so that the next handler in sequence is called. Even if you are implementing the target handler, you may wish
-        to add handlers into the chain via Attributes that control orthogonal concerns in processing the request.</p>
+        your handling for the Command or Event.</p>
         <p>For example, assume that you want to handle the Command
         GreetingCommand</p>
         <pre><code>
