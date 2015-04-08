@@ -48,6 +48,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
     /// assumed that you have registered required policies with a Policy Registry such as <see cref="PolicyRegistry"/> and configured that as a 
     /// dependency of the <see cref="CommandProcessor"/> using the <see cref="CommandProcessorBuilder"/>
     /// </summary>
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public class UsePolicyAttribute : RequestHandlerAttribute
     {
         private readonly string _policy;

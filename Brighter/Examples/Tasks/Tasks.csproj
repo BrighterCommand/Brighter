@@ -108,10 +108,10 @@
     <Compile Include="Ports\Handlers\AddTaskCommandHandler.cs" />
     <Compile Include="Ports\Handlers\CompleteTaskCommandHandler.cs" />
     <Compile Include="Ports\Handlers\EditTaskCommandHandler.cs" />
+    <Compile Include="Ports\Handlers\MailTaskReminderHandler.cs" />
     <Compile Include="Ports\Handlers\ValidationAttribute.cs" />
     <Compile Include="Ports\Handlers\ValidationHandler.cs" />
     <Compile Include="Ports\IAmAMailTranslator.cs" />
-    <Compile Include="Ports\MailTaskReminderHandler.cs" />
     <Compile Include="Ports\MailTranslator.cs" />
     <Compile Include="Ports\TaskReminderCommandMessageMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
