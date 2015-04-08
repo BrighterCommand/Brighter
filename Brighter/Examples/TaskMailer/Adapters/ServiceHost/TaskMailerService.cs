@@ -31,6 +31,7 @@ using Polly;
 using Tasks.Adapters.MailGateway;
 using Tasks.Ports;
 using Tasks.Ports.Commands;
+using Tasks.Ports.Handlers;
 using TinyIoC;
 using Topshelf;
 

@@ -43,6 +43,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
     /// <summary>
     /// Class FallbackPolicyAttribute.
     /// </summary>
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public class FallbackPolicyAttribute : RequestHandlerAttribute
     {
         readonly bool _backstop;
