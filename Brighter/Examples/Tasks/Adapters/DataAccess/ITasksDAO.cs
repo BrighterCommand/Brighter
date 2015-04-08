@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using Tasks.Model;
 
 namespace Tasks.Adapters.DataAccess
@@ -31,6 +32,7 @@ namespace Tasks.Adapters.DataAccess
         dynamic BeginTransaction();
 
         Task Add(Task newTask);
+        IEnumerable<Task> FindAll();
         Task FindById(int id);
         void Update(Task task);
 

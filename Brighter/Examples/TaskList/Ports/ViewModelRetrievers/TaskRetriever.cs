@@ -24,19 +24,24 @@ THE SOFTWARE. */
 
 using Simple.Data;
 using Tasklist.Adapters.API.Resources;
+using Tasks.Adapters.DataAccess;
 
 namespace Tasklist.Ports.ViewModelRetrievers
 {
-    internal class TaskRetriever : SimpleDataRetriever, ITaskRetriever
+    internal class TaskRetriever :  ITaskRetriever
     {
+        private readonly ITasksDAO _tasksDao;
+
+        public TaskRetriever(ITasksDAO tasksDAO)
+        {
+            _tasksDao = tasksDAO;
+        }
+
         public TaskModel Get(int taskId)
         {
-            var db = Database.Opener.OpenFile(DatabasePath);
-            var matchingTask = db.Tasks.QueryById(taskId)
-                .Select(db.Tasks.TaskName, db.Tasks.TaskDescription, db.Tasks.DueDate)
-                .Single();
-            string dueDate = matchingTask.duedate != null ? matchingTask.duedate.ToString() : string.Empty;
-            return new TaskModel(dueDate: dueDate, taskName: matchingTask.taskname, taskDescription: matchingTask.taskdescription);
+            var matchingTask = _tasksDao.FindById(taskId);
+            string dueDate = matchingTask.DueDate != null ? matchingTask.DueDate.ToString() : string.Empty;
+            return new TaskModel(dueDate: dueDate, taskName: matchingTask.TaskName, taskDescription: matchingTask.TaskDescription);
         }
     }
 }

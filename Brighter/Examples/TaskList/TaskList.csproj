@@ -161,7 +161,6 @@
     <Compile Include="Adapters\Tests\TaskPipelines_UnitTests.cs" />
     <Compile Include="Adapters\API\Handlers\TaskEndPointHandler.cs" />
     <Compile Include="Ports\ViewModelRetrievers\ITaskListRetriever.cs" />
-    <Compile Include="Ports\ViewModelRetrievers\SimpleDataRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\TaskListRetriever.cs" />
     <Compile Include="TinyIoC.cs" />
   </ItemGroup>

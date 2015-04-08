@@ -34,7 +34,7 @@ namespace Tasklist.Adapters.Tests
     public class When_retrieving_a_task
     {
         private static TasksDAO s_dao;
-        private static readonly TaskRetriever s_retriever = new TaskRetriever();
+        private static TaskRetriever s_retriever; 
         private static Task s_newTask;
         private static Task s_addedTask;
 
@@ -42,6 +42,7 @@ namespace Tasklist.Adapters.Tests
             {
                 s_dao = new TasksDAO();
                 s_dao.Clear();
+                s_retriever = new TaskRetriever(s_dao);
                 s_newTask = new Task(taskName: "Test Name", taskDecription: "Task Description", dueDate: DateTime.Now);
             };
 

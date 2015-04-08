@@ -25,28 +25,30 @@ THE SOFTWARE. */
 using OpenRasta.Web;
 using Simple.Data;
 using Tasklist.Adapters.API.Resources;
+using Tasks.Adapters.DataAccess;
 using Tasks.Model;
 
 namespace Tasklist.Ports.ViewModelRetrievers
 {
-    public class TaskListRetriever : SimpleDataRetriever, ITaskListRetriever
+    public class TaskListRetriever : ITaskListRetriever
     {
+        private readonly ITasksDAO _tasksDao;
         private readonly string _hostName;
 
-        public TaskListRetriever(ICommunicationContext context)
+        public TaskListRetriever(ICommunicationContext context, ITasksDAO tasksDAO)
+            : this(context.ApplicationBaseUri.Host, tasksDAO)
         {
-            _hostName = context.ApplicationBaseUri.Host;
         }
 
-        public TaskListRetriever(string hostName)
+        public TaskListRetriever(string hostName, ITasksDAO tasksDAO)
         {
             _hostName = hostName;
+            _tasksDao = tasksDAO;
         }
 
         public dynamic RetrieveTasks()
         {
-            var db = Database.Opener.OpenFile(DatabasePath);
-            var tasks = db.Tasks.All().ToList<Task>();
+            var tasks = _tasksDao.FindAll();
             var taskList = new TaskListModel(tasks, _hostName);
             return taskList;
         }

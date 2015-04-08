@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Simple.Data;
@@ -51,6 +52,11 @@ namespace Tasks.Adapters.DataAccess
         public Task Add(Task newTask)
         {
             return _db.Tasks.Insert(newTask);
+        }
+
+        public IEnumerable<Task> FindAll()
+        {
+            return _db.Tasks.All().ToList<Task>();
         }
 
         public dynamic BeginTransaction()
