@@ -1,4 +1,6 @@
 =================================
+
+[![Join the chat at https://gitter.im/iancooper/Paramore](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/iancooper/Paramore?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [Brighter](http://iancooper.github.io/Paramore/Brighter.html)
 =================================
 
