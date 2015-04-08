@@ -53,6 +53,7 @@
     <Compile Include="ConnectionPolicyFactory.cs" />
     <Compile Include="HeaderNames.cs" />
     <Compile Include="HeaderResult.cs" />
+    <Compile Include="MessageGatewayConnectionPool.cs" />
     <Compile Include="MessagingGatewayConfiguration\RMQMessagingGatewayConfigurationSection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="InputChannelfactory.cs" />
