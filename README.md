@@ -9,6 +9,7 @@
 | Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.commandprocessor.svg)](https://www.nuget.org/packages/Paramore.Brighter.CommandProcessor/) |
 | Web  |http://iancooper.github.io/Paramore/  |
 | Source  |https://github.com/iancooper/Paramore |
+| Chat | [![Join the chat at https://gitter.im/iancooper/Paramore](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/iancooper/Paramore?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) |
 | Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, c#, command, command dispatcher, command  processor, queue, distributed |
 
 ## Why a Command Dispatcher, Command Processor, and Task Queue?
