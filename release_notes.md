@@ -1,11 +1,12 @@
 # Release Notes #
-## Master ##
 NuGet packages for the last good build on master are available via [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore) (see Artifacts). The simplest way to work with this is to create a local NuGet source in Visual Studio for a shared directory visible to your team and download the packages there.
  
 When we push a collection of functionality it is available via [nuget.org](http://www.nuget.org) and symbol files are published to [symbolsource.org](http://www.symbolsource.org)
  
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore), but not yet deployed to [nuget.org](http://www.nuget.org).
 
+## Master ##
+1. Fixed an issue where you could not have multiple UsePolicy or FallbackPolicy attributes on a single handler.
 
 ## Release 3.0.129 ##
 1. We now support a Fallback method on IHandleRequests<TRequest> which is intended to be used for compensating or emergency action when a Handle method cannot be executed. The [FallbackPolicy] attribute supports the pipeline calling the Fallback method for you, in the event of either any exception bubbling into the handler, or a broken circuit exception bubbling into the handler.
