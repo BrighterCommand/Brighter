@@ -30,6 +30,38 @@
 | Master | The tip of active development. Anything in master should ship at the next release. Code here should conform to CI basics: compile, pass tests etc.  |
 | Other  | A branch for any work that is not ready to go into master (for example would break CI) or is experimental i.e. we don't know if we intend to ever ship, we are just trying out ideas  |
 
+##How Do I get the NuGet packages for the latest build?
+We release the build artefacts (NuGet packages) to [Nuget](http://nuget.org) on a regular basis and we update the release notes on those drops. We also tag the master code line. If you want to take the packages that represent master at any point you can download the packages for the latest good build from [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore). The easiest approach to using those is to download them into a folder that you add to your NuGet sources. 
+
+<a href="https://scan.coverity.com/projects/2900">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/2900/badge.svg"/>
+</a>
+
+[![Build status](https://ci.appveyor.com/api/projects/status/kuigla5ifar07r1v?svg=true)](https://ci.appveyor.com/project/IanCooper/paramore)
+
+=================================
+Brightside 
+=================================
+|               |               |
+| ------------- | ------------- |
+|![replay] (https://openclipart.org/download/97987/bulb-01.svg)|Brightside is a Python Service Activator |
+| Version  | 1.0.0.pre-  |
+* Under Construction
+* Allows you to consume messages raised in Paramore.Brighter.CommandProcessor in Python
+* In essence, it competes with Celery, whose use of RPC over messaging creates coupling issues
+* (Yes, it violates are discography based naming scheme, but given Monty Python and "Always look on the bright side of life, it was too tempting).
+
+=================================
+Renegade 
+=================================
+|               |               |
+| ------------- | ------------- |
+|![replay] (https://openclipart.org/download/170451/biker-b-w.svg)|Renegade is an implementation of the [RESTMS](http://www.restms.org/) protocol on the CLR. |
+| Version  | 1.0.0.pre-  |
+* Under Construction
+* Not production ready, as it is transient (i.e. everything is in memory) and needs persistence, HA etc.
+
 =================================
 Rewind 
 =================================
@@ -52,11 +84,7 @@ Rewind
  * Client-Server (REST, SPA)  
 
 
-<a href="https://scan.coverity.com/projects/2900">
-  <img alt="Coverity Scan Build Status"
-       src="https://scan.coverity.com/projects/2900/badge.svg"/>
-</a>
 
-[![Build status](https://ci.appveyor.com/api/projects/status/kuigla5ifar07r1v?svg=true)](https://ci.appveyor.com/project/IanCooper/paramore)
+
 
 
