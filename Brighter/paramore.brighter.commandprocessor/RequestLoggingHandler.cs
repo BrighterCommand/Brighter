@@ -38,6 +38,9 @@ THE SOFTWARE. */
 using System;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.policy.Attributes;
+using paramore.brighter.commandprocessor.policy.Handlers;
+using Polly.CircuitBreaker;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -79,9 +82,40 @@ namespace paramore.brighter.commandprocessor
             return base.Handle(command);
         }
 
+        /// <summary>
+        /// If a request cannot be completed by <see cref="RequestHandler{TRequest}.Handle"/>, implementing the <see cref="RequestHandler{TRequest}.Fallback"/> method provides an alternate code path that can be used
+        /// This allows for graceful  degradation. Using the <see cref="FallbackPolicyAttribute"/> handler you can configure a policy to catch either all <see cref="Exception"/>'s or
+        /// just <see cref="BrokenCircuitException"/> that occur later in the pipeline, and then call the <see cref="RequestHandler{TRequest}.Fallback"/> path.
+        /// Note that the <see cref="FallbackPolicyAttribute"/> target handler might be 'beginning of chain' and need to pass through to actual handler that is end of chain.
+        /// Because of this we need to call Fallback on the chain. Later step handlers don't know the context of failure so they cannot know if any operations they had, 
+        /// that could fail (such as DB access) were the cause of the failure chain being hit.
+        /// Steps that don't know how to handle should pass through.
+        /// Useful alternatives for Fallback are to try via the cache.
+        /// Note that a Fallback handler implementation should not catch exceptions in the <see cref="RequestHandler{TRequest}.Fallback"/> chain to avoid an infinite loop.
+        /// Call <see cref="RequestHandler{TRequest}.Successor"/>.<see cref="RequestHandler{TRequest}.Handle"/> if having provided a Fallback you want the chain to return to the 'happy' path. Excerise caution here though
+        /// as you do not know who generated the exception that caused the fallback chain.
+        /// For this reason, the <see cref="FallbackPolicyHandler{TRequest}"/> puts the exception in the request context.
+        /// When the <see cref="FallbackPolicyAttribute"/> is set on the <see cref="RequestHandler{TRequest}.Handle"/> method of a derived class
+        /// The <see cref="FallbackPolicyHandler{TRequest}"/> will catch either all failures (backstop) or <see cref="BrokenCircuitException"/> depending on configuration
+        /// and call the <see cref="RequestHandler{TRequest}"/>'s <see cref="RequestHandler{TRequest}.Fallback"/> method
+        /// </summary>
+        /// <param name="command">The command.</param>
+        /// <returns>TRequest.</returns>
+        public override TRequest Fallback(TRequest command)
+        {
+            LogFailure(command);
+            return base.Fallback(command);
+        }
+
+
         private void LogCommand(TRequest request)
         {
             logger.InfoFormat("Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}", _timing.ToString(), typeof(TRequest), JsonConvert.SerializeObject(request), DateTime.UtcNow);
+        }
+
+        private void LogFailure(TRequest request)
+        {
+            logger.InfoFormat("Failure in pipeline call for {0} with values of {1} at: {2}", typeof(TRequest), JsonConvert.SerializeObject(request), DateTime.UtcNow);
         }
     }
 }
