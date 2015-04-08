@@ -53,7 +53,7 @@ namespace Tasklist.Adapters.Tests
                 var addedTask = s_dao.Add(s_newTask);
                 s_taskId = addedTask.Id;
 
-                s_retriever = new TaskListRetriever(hostName);
+                s_retriever = new TaskListRetriever(hostName, s_dao);
             };
 
         private Because _of = () => s_taskList = s_retriever.RetrieveTasks();
