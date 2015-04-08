@@ -173,7 +173,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;
         private static SpyRequeueCommandProcessor s_commandProcessor;
-        private static MyEvent s_event;
 
         private Establish context = () =>
         {
@@ -206,7 +205,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;
         private static SpyRequeueCommandProcessor s_commandProcessor;
-        private static MyEvent s_event;
 
         private Establish context = () =>
         {
@@ -242,7 +240,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;
         private static SpyRequeueCommandProcessor s_commandProcessor;
-        private static MyEvent s_event;
 
         private Establish context = () =>
         {
@@ -274,7 +271,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;
         private static SpyRequeueCommandProcessor s_commandProcessor;
-        private static MyEvent s_event;
 
         private Establish context = () =>
         {

@@ -41,15 +41,15 @@ namespace Tasklist.Adapters.Tests
         private static int s_taskId;
         private static TaskListModel s_taskList;
         private const string hostName = "http://localhost:49743";
-        private static string taskName = "Test Name";
-        private static string taskDescription = "Task Description";
-        private static DateTime? dueDate = DateTime.Now;
+        private const string taskName = "Test Name";
+        private const string taskDescription = "Task Description";
+        private static DateTime? s_dueDate = DateTime.Now;
 
         private Establish _context = () =>
             {
                 s_dao = new TasksDAO();
                 s_dao.Clear();
-                s_newTask = new Task(taskName: taskName, taskDecription: taskDescription, dueDate: dueDate);
+                s_newTask = new Task(taskName: taskName, taskDecription: taskDescription, dueDate: s_dueDate);
                 var addedTask = s_dao.Add(s_newTask);
                 s_taskId = addedTask.Id;
 
@@ -61,25 +61,25 @@ namespace Tasklist.Adapters.Tests
         private It _should_have_a_link_in_the_list_to_the_task = () => s_taskList.Items.Any(taskLink => taskLink.HRef == string.Format("<link rel=\"item\" href=\"http://{0}/task/{1}\" />", hostName, s_taskId));
         private It _should_have_a_name_for_the_task = () =>
         {
-            var task = s_taskList.Items.Single();
+            var task = s_taskList.Items.First();
             task.ShouldNotBeNull();
             task.Name.ShouldEqual(taskName);
         };
         private It _should_have_a_description_for_the_task = () =>
         {
-            var task = s_taskList.Items.Single();
+            var task = s_taskList.Items.First(t => t.Id == s_taskId);
             task.ShouldNotBeNull();
             task.Description.ShouldEqual(taskDescription);
         };
         private It _should_have_a_due_date_for_the_task = () =>
         {
-            var task = s_taskList.Items.Single();
+            var task = s_taskList.Items.First(t => t.Id == s_taskId);
             task.ShouldNotBeNull();
-            task.DueDate.ShouldEqual(dueDate.ToDisplayString());
+            task.DueDate.ShouldEqual(s_dueDate.ToDisplayString());
         };
         private It _should_have_null_completion_date_for_the_task = () =>
         {
-            var task = s_taskList.Items.Single();
+            var task = s_taskList.Items.First(t => t.Id == s_taskId);
             task.ShouldNotBeNull();
             task.CompletionDate.ShouldBeEmpty();
         };
