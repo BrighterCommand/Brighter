@@ -43,7 +43,7 @@ namespace Tasks.Ports.Handlers
 
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
         [Validation(step: 2, timing: HandlerTiming.Before)]
-        [TimeoutPolicy(step: 3, milliseconds: 1000)]
+        [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
         public override CompleteTaskCommand Handle(CompleteTaskCommand completeTaskCommand)
         {
             using (var scope = _tasksDAO.BeginTransaction())

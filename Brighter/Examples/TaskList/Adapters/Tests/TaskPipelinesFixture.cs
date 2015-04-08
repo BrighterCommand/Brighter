@@ -26,6 +26,7 @@ using System;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.Logging;
+using Polly;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
 using Tasks.Ports.Commands;
@@ -58,7 +59,10 @@ namespace Tasklist.Adapters.Tests
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
             A.CallTo(() => requestContextFactory.Create()).Returns(s_requestContext);
 
-            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, requestContextFactory, new PolicyRegistry(), logger);
+            var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
+            var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy } };
+
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger);
 
             s_cmd = new AddTaskCommand("New Task", "Test that we store a task", DateTime.Now.AddDays(3));
 
