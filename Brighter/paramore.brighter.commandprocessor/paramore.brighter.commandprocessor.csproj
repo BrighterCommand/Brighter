@@ -19,7 +19,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;LIBLOG_PUBLIC</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -48,7 +48,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="App_Packages\LibLog.3.1\LibLog.cs" />
+    <Compile Include="App_Packages\LibLog.4.2\LibLog.cs" />
     <Compile Include="ChannelName.cs" />
     <Compile Include="CommandProcessorBuilder.cs" />
     <Compile Include="ConfigurationException.cs" />
