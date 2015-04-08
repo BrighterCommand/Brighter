@@ -26,6 +26,7 @@ using System;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.Logging;
+using Polly;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
 using Tasks.Ports.Commands;
@@ -59,7 +60,10 @@ namespace Tasklist.Adapters.Tests
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
 
-            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
+            var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy } };
+
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
 
             s_cmd = new AddTaskCommand("Test task", null);
         };
@@ -95,7 +99,10 @@ namespace Tasklist.Adapters.Tests
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
 
-            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
+            var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy } };
+
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
 
             s_cmd = new AddTaskCommand(null, "Test that we store a task");
         };
@@ -129,7 +136,10 @@ namespace Tasklist.Adapters.Tests
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
 
-            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
+            var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy } };
+
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
 
             s_cmd = new AddTaskCommand("Test task", "Test that we store a task", DateTime.Now);
         };

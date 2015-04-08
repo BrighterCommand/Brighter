@@ -42,7 +42,7 @@ namespace Tasks.Ports.Handlers
 
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
         [Validation(step: 2, timing: HandlerTiming.Before)]
-        [TimeoutPolicy(step: 3, milliseconds: 300)]
+        [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
         public override EditTaskCommand Handle(EditTaskCommand editTaskCommand)
         {
             using (var scope = _tasksDAO.BeginTransaction())
