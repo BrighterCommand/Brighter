@@ -108,6 +108,7 @@ namespace Tasklist.Adapters.API.Configuration
             _internalDependencyResolver.AddDependencyInstance<IAmACommandProcessor>(commandProcessor, DependencyLifetime.Singleton);
             _internalDependencyResolver.AddDependency<ITaskRetriever, TaskRetriever>(DependencyLifetime.Singleton);
             _internalDependencyResolver.AddDependency<ITaskListRetriever, TaskListRetriever>(DependencyLifetime.Singleton);
+            _internalDependencyResolver.AddDependency<ITasksDAO, TasksDAO>(DependencyLifetime.Singleton);
         }
 
 
