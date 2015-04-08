@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Explorations of the Ports and Adapters and CQRS architectural styles for .NET, Intended as reusable libraries and supporting examples</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+    </header>
+    <section>
+    <h2>Dispatching Requests</h2>
+    <p>Once you have <a href="ImplementingAHandler.html">implemented your Request Handler</a>, you will want to dispatch <strong>Commands</strong> or <strong>Events</strong> to that Handler.</p>
+    <h3>Registering a Handler</h3>
+    <p>In order for a <strong>Command Dispatcher</strong> to find a Handler for your <strong>Command</strong> or <strong>Event</strong> you need to register the association between that
+        <strong>Command</strong> or <strong>Event</strong> and your Handler.</p>
+    <p>The <strong>Subscriber Registry</strong> is where you register your Handlers.</p>
+    <pre><code>
+    var subscriberRegistry = new SubscriberRegistry();
+    subscriberRegistry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
+    </code></pre>
+    <h3>Dispatching Requests</h3>
+    <p>Once you have registered your Handlers, you can dispatch requests to them. To do that you simply use the <strong>CommandProcessor.Send()</strong> method passing in an instance of
+        your command.</p>
+    <pre><code>
+    commandProcessor.Send(new GreetingCommand("Ian"));
+    </code></pre>
+    <h3>Building a Command Dispatcher</h3>
+    <p>We associate a <strong>Subscriber Registry</strong> with a <strong>Command Processor</strong> by passing it into the constructor of the <strong>Command Processor</strong>. For convenience,
+        we provide a <strong>Commmand Processor Builder</strong> that helps you configure new instances of <strong>Command Processor</strong>.</p>
+    <pre><code>
+    var logger = LogProvider.For&lt;Program&gt;();
+
+    var registry = new SubscriberRegistry();
+    registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
+
+
+    var builder = CommandProcessorBuilder.With()
+        .Handlers(new HandlerConfiguration(
+            subscriberRegistry: registry,
+            handlerFactory: new SimpleHandlerFactory(logger)
+        ))
+        .NoPolicy()
+        .Logger(logger)
+        .NoTaskQueues()
+        .RequestContextFactory(new InMemoryRequestContextFactory());
+
+    var commandProcessor = builder.Build();
+    </code></pre>
+    <p>We cover <a href="BasicConfiguration.html"> configuration of a <strong>Command Processor</strong></a> in more detail later.</p>
+    <h3>Returning results to the caller.</h3>
+    <p>We use <a href="http://martinfowler.com/bliki/CommandQuerySeparation.html">Command-Query separation</a> so a Command does not have return value and <strong>CommandDispatcher.Send()</strong>
+        does not return anything.</p>
+    <p>This in turn leads to a set of questions that we need to answer about common scenarios:</p>
+    <ul>
+        <li>How do I handle failure? With no return value, what do I do if my handler fails</li>
+        <li>How do I pass information back to the caller? Creation scenarios particularly seem to require the caller knows about identies for created entities.</li>
+    </ul>
+    <p>We discuss these issues below.</p>
+    <h3>Handling Failure</h3>
+    <p>If we don't allow return values, what do you do on failure?</p>
+    <ul>
+        <li>The basic failure strategy is to throw an exception. This will terminate the request handling pipeline.</li>
+        <li>If you want to support <a href="PolicyRetryAndCircuitBreaker.html">Retry, and Circuit Breaker</a> you can use our support for <a href="https://github.com/michael-wolfenden/Polly">Polly</a>
+            Policies</li>
+        <li>You can also build your own exception handling into your <a href="BuildingAPipeline.html">Pipeline</a>.</li>
+        <li>Finally you can use our support for a <a href="PolicyFallback.html">Fallback</a> handler to provide backstop exception handling.</li>
+    </ul>
+    <h3>Passing Information to the Caller</h3>
+    <p>Sometimes you need to provide information to the caller about the success of the operation. The most common requirement is the Identity of a new created Entity so that you can query for it.
+        For example you are implementing a REST API and in response to a POST request you create a new entity and want to return the entity body in the HTTP response body.</p>
+    <p>The best approach is to generate the Identity to use for the new Entity and pass that as a parameter on the <strong>Command</strong>, such as Guid or Hi-Lo identity.</p>
+    <p>But what if you are not be able to do this or want to support it for performance reasons?</p>
+    <p>In that case add a property to the <strong>Command</strong> that you can initialize from the Handler, for example create a <strong>NewEntityIdentity</strong> property in
+        your command that you write the new entity's identity to in the Handler, and then inspect the property in your <strong>Command</strong> in the calling code after
+        the call to <strong>CommandDispatcher.Send()</strong> completes.</p>
+    <p>Note that you cannot use this strategy with <strong>CommandDispatcher.Send()</strong> as you have no way to update the <strong>Command</strong> in process.</p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>

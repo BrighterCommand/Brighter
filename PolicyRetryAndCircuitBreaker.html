@@ -69,7 +69,7 @@
         });
         policyRegistry.Add(&quot;MyExceptionPolicy&quot;, policy);
         </code></pre>
-        <p>When creating policies, refer to the <a href="https://github.com/michael-wolfenden/Polly"><strong>Polly</strong></a> documentation.</p>
+        <p>When creating policies, refer to the <a href="https://github.com/michael-wolfenden/Polly">Polly</a> documentation.</p>
         <p>Whilst <a href="https://github.com/michael-wolfenden/Polly"><strong>Polly</strong></a> does not support a Policy that is both Circuit Breaker and Retry i.e. retry n times with an
             interval between each retry, and then break circuit, to implement that simply put a Circuit Breaker UsePolicy attribute as an earlier step than the Retry UsePolicy attribute.
             If retries expire, the exception will bubble out to the Circuit Breaker.</p>
