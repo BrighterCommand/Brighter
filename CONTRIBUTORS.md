@@ -28,6 +28,10 @@ Paramore contributors (sorted alphabeticaly)
 **[Solveig Oskarsdottir] (https://github.com/solveigo)**
  * QA of Brighter
  
+** [Ian Pender] (https://github.com/penderi)
+  * Work on Tasks examples
+  * Documentation for Tasks examples
+ 
 **[Anthony Peyron] (https://github.com/MrHypnos)**
 
  * Stability fixes for Service Activator
