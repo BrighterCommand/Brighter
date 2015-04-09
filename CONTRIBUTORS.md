@@ -31,6 +31,7 @@ Paramore contributors (sorted alphabeticaly)
 **[Anthony Peyron] (https://github.com/MrHypnos)**
 
  * Stability fixes for Service Activator
+ * Gateway connection pooling
 
 **[Francesco Pighi](https://github.com/fpighi)**
 
