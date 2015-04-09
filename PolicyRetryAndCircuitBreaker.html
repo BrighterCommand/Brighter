@@ -31,7 +31,7 @@
         <p>Brighter is a <a href="CommandsCommandDispatcherandProcessor.html">Command Processor</a> and supports a <a href="BuildingAPipeline.html">pipeline of Handlers to handle orthogonal requests</a>.</p>
         <p>Amongst the valuable uses of orthogonal requests is patterns to support Quality of Service in a distributed environment: <a href="QualityOfServicePatterns.html">Timeout, Retry, and Circuit Breaker</a>.</p>
         <p>Even if you don't believe that you are writing a distributed system that needs this protection, consider that as soon as you have multiple processes, such as a database server, you are.</p>
-        <p>Brighter uses <a href="https://github.com/michael-wolfenden/Polly"><strong>Polly</strong></a> to support Retry and Circuit-Breaker. Through our <a href="BuildingAPipeline.html">Russian Doll Model</a>
+        <p>Brighter uses <a href="https://github.com/michael-wolfenden/Polly">Polly</a> to support Retry and Circuit-Breaker. Through our <a href="BuildingAPipeline.html">Russian Doll Model</a>
             we are able to run the target handler in the context of a Policy Handler, that catches exceptions, and applies a Policy on how to deal with them.</p>
         <h2>Using Brighter's UsePolicy Attribute</h2>
         <p>By adding the <strong>UsePolicy</strong> attribute, you instruct the Command Processor to insert a handler (filter) into the pipeline that runs all later steps using that Polly policy.</p>

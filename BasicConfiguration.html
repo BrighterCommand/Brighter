@@ -27,13 +27,114 @@
     </header>
     <section>
         <h1>Brighter</h1>
+        <h2>Your Code's Responsibilities</h2>
         <p>We want to support using Brighter in your project with the minimum of dependencies on other packages. Specifically we want to avoid a dependency on Inversion Of Control (IoC)framework,
             or logging framework to give you freedom over the libraries you chose for your project.</p>
         <p>Mark Seeman's blogs on a <a href="http://blog.ploeh.dk/2014/05/19/di-friendly-framework/">DI Friendly Framework</a> and
             <a href="http://blog.ploeh.dk/2011/09/19/MessageDispatchingwithoutServiceLocation/">Message Dispatching without Service Location</a> are highly  influential on the current
             implementation of Brighter. (An earlier version of Brighter used Service Location for message dispatch which resulted in the need for abstraction of the client's IoC implementation of choice).</p>
         <p>This does mean that clients have slightly more to implement over simply plugging us into their IoC container, but the loose-coupling from an IoC container is on our opinion
-        worth that cost.</p>
+            worth that cost.</p>
+        <h2>What you need to provide</h2>
+        <ul>
+            <li>You need to provide a <strong>Subscriber Registry</strong> with all of the <strong>Command</strong>s or <strong>Event</strong>s you wish to handle, mapped to their <strong>Request Handlers</strong>.</li>
+            <li>You need to provide a <strong>Handler Factory</strong> to create your Handlers</li>
+            <li>You need to provide a <strong>Policy Registry</strong> if you intend to use <a href="https://github.com/michael-wolfenden/Polly">Polly</a> to support Retry and Circuit-Breaker.</li>
+            <li>You need to provide an logger to map to <a href="https://github.com/damianh/LibLog">LibLog</a>'s ILog</li>
+            <li>You need to provide a <strong>Request Context Factory</strong></li>
+        </ul>
+        <h3>Subscriber Registry</h3>
+        <p>The Command Dispatcher needs to be able to map <strong>Command</strong>s or <strong>Event</strong>s to a <strong>Request Handlers</strong>. For a <strong>Command</strong>
+            we expect one and only one <strong>Request Handlers</strong> for an event we expect many. Regsiter your handlers with the <strong>Subscriber Registry</strong> </p>
+        <pre><code>
+            var registry = new SubscriberRegistry();
+            registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
+        </code></pre>
+        We also support an initializer syntax
+        <pre><code>
+        var registry = new SubscriberRegistry()
+        {
+            {typeof(GreetingCommand), typeof(GreetingCommandHandler)}
+        }
+        </code></pre>
+        <h3>Handler Factory</h3>
+        <p>We don't know how to construct your handler so we call a factory, that you provide us, to build this entire
+            dependency chain. This factory needs to implement the interface defined in <strong>IAmAHandlerFactory</strong>.</p>
+        <p>Brighter manages the lifetimes of handlers, as we consider the request pipeline to be a scope, and we will call your factory again asking to release those handlers once we have terminated
+            the pipeline and finished processing the request. You should take appropriate action to clear up the handler and its dependencies in response to that call</p>
+        <p>It's worth reading Mark Seeman's article on <a href="http://blog.ploeh.dk/2014/05/19/di-friendly-framework/">DI Friendly Frameworks</a> to understand this technique. Brighter originally
+            used a conforming container but switched to user defined factories as per Mark's blog.</p>
+        <p>You can implement the Handler Factory using an IoC container, in your own code. For example:</p>
+        <pre><code>
+        internal class TinyIocHandlerFactory : IAmAHandlerFactory
+        {
+            private readonly TinyIoCContainer _container;
+
+            public TinyIocHandlerFactory(TinyIoCContainer container)
+            {
+                _container = container;
+            }
+
+            public IHandleRequests Create(Type handlerType)
+            {
+                return (IHandleRequests)_container.Resolve(handlerType);
+            }
+
+            public void Release(IHandleRequests handler)
+            {
+                var disposable = handler as IDisposable;
+                if (disposable != null)
+                {
+                    disposable.Dispose();
+                }
+            }
+        }
+        </code></pre>
+        <h3>Policy Registry</h3>
+        <p>If you intend to use a <a href="https://github.com/michael-wolfenden/Polly">Polly</a> Policy to support <a href="PolicyRetryAndCircuitBreaker.html">Retry and Circuit-Breaker</a>
+            then you will need to register the Policies in the <strong>Policy Registry</strong>. Registration requires a string as a key, that you will use in your [UsePolicy] attribute
+            to choose the policy. We provide two keys: CommandProcessor. and C</p>
+        <pre><code>
+var retryPolicy = Policy.Handle&lt;Exception&gt;().WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
+var circuitBreakerPolicy = Policy.Handle&lt;Exception&gt;().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
+        </code></pre>#
+        <p>which you can then use in code like this</p>
+        <pre><code>
+        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+        [UsePolicy(CommandProcessor.CIRCUITBREAKER, step: 2)]
+        [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
+        public override TaskReminderCommand Handle(TaskReminderCommand command)
+        {
+            _mailGateway.Send(new TaskReminder(
+                taskName: new TaskName(command.TaskName),
+                dueDate: command.DueDate,
+                reminderTo: new EmailAddress(command.Recipient),
+                copyReminderTo: new EmailAddress(command.CopyTo)
+            ));
+
+            return base.Handle(command);
+        }
+        </code></pre>
+        <h3>Logger</h3>
+        <p>We use <a href="https://github.com/damianh/LibLog">LibLog</a> so that we do not have to depend on a given logging library. You need to add a logger (as per the instructions for LibLog)</p>
+        <h3>Request Context Factory</h3>
+        <p>You need to provide a factory to give us instances of a <a href="UsingTheContextBag.html">Context</a>. If you have no implementation to use, just use the default
+            <strong>InMemoryRequestContextFactory</strong></p>
+        <h3>Putting it all together</h3>
+        <p>All these individual elements can be passed to a <strong>Command Processor Builder</strong> to help build a <strong>Command Processor</strong>. This has a fluent interface to help
+            guide you when configuring Brighter. The result looks like this:</p>
+        <pre><code>
+        var commandProcessor =
+        CommandProcessorBuilder.With()
+            .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+            .Policies(policyRegistry)
+            .Logger(logger)
+            .NoTaskQueues()
+            .RequestContextFactory(new InMemoryRequestContextFactory())
+            .Build();
+        </code></pre>
+        <p>We discuss <a href="DistributedTaskQueueConfiguration.html">Task Queues</a> later.</p>
     </section>
     <footer>
         <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
