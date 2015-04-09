@@ -89,11 +89,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         protected readonly RMQMessagingGatewayConfigurationSection Configuration;
 
         /// <summary>
-        /// The connection
-        /// </summary>
-        protected IConnection Connection;
-
-        /// <summary>
         /// The channel
         /// </summary>
         protected IModel Channel;
@@ -122,11 +117,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             if (Channel == null || Channel.IsClosed)
             {
-                GetConnection();
+                var connection = MessageGatewayConnectionPool.GetConnection(_connectionFactory);
 
                 Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.GetSanitizedUri());
 
-                Channel = Connection.CreateModel();
+                Channel = connection.CreateModel();
+
+                //When AutoClose is true, the last channel to close will also cause the connection to close1. If it is set to
+                //true before any channel is created, the connection will close then and there.
+                if (connection.AutoClose == false)
+                    connection.AutoClose = true;
 
                 // Configure the Quality of service for the model.
                 // BasicQos(0="Don't send me a new message until I?ve finished",  1= "Send me one message at a time", false ="Applied separately to each new consumer on the channel")
@@ -141,16 +141,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)        {
             //desired state configuration of the exchange
             channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, configuration.Exchange.Durable);
-        }
-
-        private void GetConnection()
-        {
-            if (Connection == null || !Connection.IsOpen)
-            {
-                Logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ on AMPQUri {0}", Configuration.AMPQUri.GetSanitizedUri());
-                
-                Connection = _connectionFactory.CreateConnection();
-            }
         }
 
         /// <summary>
@@ -175,11 +165,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 {
                     Channel.Abort();
                     Channel = null;
-                }
-                if (Connection != null)
-                {
-                    Connection.Abort();
-                    Connection = null;
                 }
             }
         }
