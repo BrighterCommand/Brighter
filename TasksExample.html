@@ -256,7 +256,7 @@ public OperationResult Post(TaskModel newTask)
         <p>The handler is very simple - simpyl adding the given state using the TasksDao:</p>
         <pre><code>[RequestLogging(step: 1, timing: HandlerTiming.Before)]
 [Validation(step: 2, timing: HandlerTiming.Before)]
-[TimeoutPolicy(step: 3, milliseconds: 300)]
+[UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
 public override AddTaskCommand Handle(AddTaskCommand addTaskCommand)
 {
     using (var scope = _tasksDAO.BeginTransaction())
@@ -320,7 +320,11 @@ public OperationResult Post(TaskReminderModel reminder)
 </code></pre>
         <p>The relevant handler (<a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/Tasks/Ports/MailTaskReminderHandler.cs">MailTaskReminderHandler</a>) will pick up the command (as it was configured to handle TaskReminderCommand in the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskMailer/Adapters/ServiceHost/TaskMailerService.cs">TaskMailerService (that handles it's own dependency registration)</a>.</p>
         <p>The handler is very simple - it invokes the MailGateway to send the email:</p>
-        <pre><code>public override TaskReminderCommand Handle(TaskReminderCommand command)
+        <pre><code>
+[RequestLogging(step: 1, timing: HandlerTiming.Before)]
+[UsePolicy(CommandProcessor.CIRCUITBREAKER, step: 2)]
+[UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
+public override TaskReminderCommand Handle(TaskReminderCommand command)
 {
     _mailGateway.Send(new TaskReminder(
         taskName: new TaskName(command.TaskName),
