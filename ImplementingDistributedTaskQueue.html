@@ -41,11 +41,29 @@
         <p>A problem with the TPL approach is that your operation can only meet the 100ms threshold if your work can be parallelised such that no sub-task takes longer than 100ms. Your speed is always
             constrained by the slowest operation that you need to parallelize.If you are I/O bound on a resource experiencing contention beyond 100ms, you will not meet your goal by introducing
             more threads. Your minimum time is your minimum time.</p>
-        <p>You might try to fix this by acking the request, and completing the work asynchronously. Now you risk that the work will be lost if the server fails prior to completion of the work.</p>
-        <p>What you need is <a href="http://www.eaipatterns.com/GuaranteedMessaging.html">Guaranteed Delivery</a> to ensure that work you ack will eventually be handled.</p>
-        <p>A distributed task queue allows you offload work to another process, to be handled in asynchronously and in parallel.</p>
+        <p>You might try to fix this by acking the request, and completing the work asynchronously. This option is particularly attractive if the work is I/O bound as you can proces other requests
+            whilst you wait for the I/O to complete. </p>
+        <p>The downside of the async approach is that you risk that the work will be lost if the server fails prior to completion of the work.</p>
+        <p>These requirements tend to push you in the direction of <a href="http://www.eaipatterns.com/GuaranteedMessaging.html">Guaranteed Delivery</a> to ensure that work you ack will eventually be handled.</p>
+        <p>A distributed task queue allows you offload work to another process, to be handled in asynchronously and in parallel. It also allows you to ensure delivery of the message, eventually.</p>
         <p>In addition use of a distributed task queue allows you to throttle requests - you can hand work off from the web server to a queue that only needs to consume at the
             rate you have resources to support. This allows you to scale to meet unexpected demand, at the price of <a href="http://en.wikipedia.org/wiki/Eventual_consistency">eventual consistency.</a> </p>
+        <h2>Brighter's Task Queue Architecture</h2>
+        <p>Brighter assumes implements Task Queues using a Message Broker.</p>
+        <p>The producer sends a <strong>Command</strong> or <strong>Event</strong> to a <a href="http://www.enterpriseintegrationpatterns.com/MessageBroker.html">Broker</a>
+            using <strong>CommandProcessor.Post()</strong>. Using an  <strong>IAmAMessageMapper</strong> the <strong>Command</strong> or <strong>Event</strong>
+            is deserialized to a <strong>Message</strong> (usually we just serialize the object to JSON and add to the <strong>MessageBody</strong>).
+            When we deserialize we set the <strong>MessageHeader</strong> which includes a topic (often we use a namespaced name for the <strong>Command</strong> or <strong>Event</strong>.</p>
+            <p>We store the created <strong>Message</strong> in a <a href="http://www.enterpriseintegrationpatterns.com/MessageStore.html">Message Store</a> for use by
+                <strong>CommandProcessor.Repost()</strong> if we need to resend a failed message.</p>
+        <p>The Message Broker manages a <a href="http://www.enterpriseintegrationpatterns.com/RecipientList.html">Recipient List</a> of subscribers to a topic. When it receives a <strong>Message</strong>
+            the Broker looks at the topic in the <strong>MessageHeader</strong> and dispatches the <strong>Message</strong> to the
+            <a href="http://www.enterpriseintegrationpatterns.com/MessageChannel.html">Recipient Channels</a> identified by the Recipient List.</p>
+        <p>A consumer reads the <strong>Message</strong> using the <a href="http://www.enterpriseintegrationpatterns.com/MessagingAdapter.html">Service Activator</a> pattern to map between an
+            <a href="http://www.enterpriseintegrationpatterns.com/EventDrivenConsumer.html">Event Driven Consumer</a> and a Handler.</p>
+        <p>A <strong>Message</strong> may be delivered to multiple Consumers, all of whom get their own copy.</p>
+        <p>in addition, we can support a <a href="http://www.enterpriseintegrationpatterns.com/CompetingConsumers.html">Competing Consumers</a> approach by having multiple consumers read
+            from the same <a href="http://www.enterpriseintegrationpatterns.com/MessageChannel.html">Channel</a> to allow us to scale out to meet load.</p>
         <img src="images/Task%20Queues.png">
     </section>
     <footer>
