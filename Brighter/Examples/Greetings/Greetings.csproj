@@ -73,10 +73,6 @@
       <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
       <Name>paramore.brighter.commandprocessor</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\paramore.brighter.serviceactivator.controlbus\paramore.brighter.serviceactivator.controlbus.csproj">
-      <Project>{feab93c1-3232-42fb-89b0-3387dee4ced9}</Project>
-      <Name>paramore.brighter.serviceactivator.controlbus</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj">
       <Project>{b9126b00-5a97-4c7d-b395-755456e5fa28}</Project>
       <Name>paramore.brighter.serviceactivator</Name>
