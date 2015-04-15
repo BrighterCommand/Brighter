@@ -221,10 +221,6 @@
       <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
       <Name>paramore.brighter.commandprocessor</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.serviceactivator.controlbus\paramore.brighter.serviceactivator.controlbus.csproj">
-      <Project>{feab93c1-3232-42fb-89b0-3387dee4ced9}</Project>
-      <Name>paramore.brighter.serviceactivator.controlbus</Name>
-    </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj">
       <Project>{b9126b00-5a97-4c7d-b395-755456e5fa28}</Project>
       <Name>paramore.brighter.serviceactivator</Name>
@@ -236,7 +232,9 @@
     </None>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Monitoring\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

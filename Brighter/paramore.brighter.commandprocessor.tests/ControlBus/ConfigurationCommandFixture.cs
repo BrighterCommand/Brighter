@@ -26,8 +26,8 @@ using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
-using paramore.brighter.serviceactivator.controlbus.Ports.Commands;
-using paramore.brighter.serviceactivator.controlbus.Ports.Handlers;
+using paramore.brighter.serviceactivator.Ports.Commands;
+using paramore.brighter.serviceactivator.Ports.Handlers;
 
 namespace paramore.commandprocessor.tests.ControlBus
 {
