@@ -34,35 +34,60 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
 {
     internal class SpyCommandProcessor : IAmACommandProcessor
     {
-        public IRequest Request { get; private set; }
+        readonly Queue<IRequest> _requests = new Queue<IRequest>();
+
         public bool SendHappened { get; private set; }
         public bool PublishHappened { get; private set; }
         public bool PostHappened { get; set; }
         public bool RepostHappened { get; set; }
 
+
+        /// <summary>
+        /// Sends the specified command.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="command">The command.</param>
         public virtual void Send<T>(T command) where T : class, IRequest
         {
+            _requests.Enqueue(command);
             SendHappened = true;
-            Request = command;
         }
 
+        /// <summary>
+        /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="event">The event.</param>
         public virtual void Publish<T>(T @event) where T : class, IRequest
         {
+            _requests.Enqueue(@event);
             PublishHappened = true;
-            Request = @event;
         }
 
-
-        public void Post<T>(T request) where T : class, IRequest
+        /// <summary>
+        /// Posts the specified request.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="request">The request.</param>
+        public virtual void Post<T>(T request) where T : class, IRequest
         {
+            _requests.Enqueue(request);
             PostHappened = true;
-            Request = request;
         }
 
-
-        public void Repost(Guid messageId)
+        /// <summary>
+        /// Reposts the specified message identifier.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
+        public virtual void Repost(Guid messageId)
         {
             RepostHappened = true;
+            return;
+        }
+
+        public virtual T Observe<T>() where T : class, IRequest
+        {
+            return (T) _requests.Dequeue();
         }
     }
 

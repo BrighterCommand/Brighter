@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,18 +22,34 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 
-namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
+namespace paramore.brighter.commandprocessor.monitoring.Handlers
 {
-    public class MyAbortingHandlerAttribute : RequestHandlerAttribute
+    public class MonitorHandler<T> : RequestHandler<T> where T: class, IRequest
     {
-        public MyAbortingHandlerAttribute(int step, HandlerTiming timing) : base(step, timing) {}
+        readonly IAmACommandProcessor _commandProcessor;
 
-        public override Type GetHandlerType()
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
+        /// </summary>
+        /// <param name="logger">The logger</param>
+        /// <param name="commandProcessor">The control bus command processor, to post over</param>
+        public MonitorHandler(ILog logger, IAmACommandProcessor commandProcessor) : base(logger)
         {
-            return typeof(MyAbortingHandler<>);
+            _commandProcessor = commandProcessor;
         }
+
+
+        /// <summary>
+        /// Handles the specified command.
+        /// </summary>
+        /// <param name="command">The command.</param>
+        /// <returns>TRequest.</returns>
+        public override T Handle(T command)
+        {
+            return base.Handle(command);
+        }
+
     }
 }

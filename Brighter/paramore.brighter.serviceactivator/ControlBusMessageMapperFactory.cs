@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -25,15 +25,18 @@ THE SOFTWARE. */
 using System;
 using paramore.brighter.commandprocessor;
 
-namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
+namespace paramore.brighter.serviceactivator.controlbus
 {
-    public class MyAbortingHandlerAttribute : RequestHandlerAttribute
+    public class ControlBusMessageMapperFactory : IAmAMessageMapperFactory
     {
-        public MyAbortingHandlerAttribute(int step, HandlerTiming timing) : base(step, timing) {}
-
-        public override Type GetHandlerType()
+        /// <summary>
+        /// Creates the specified message mapper type.
+        /// </summary>
+        /// <param name="messageMapperType">Type of the message mapper.</param>
+        /// <returns>IAmAMessageMapper.</returns>
+        public IAmAMessageMapper Create(Type messageMapperType)
         {
-            return typeof(MyAbortingHandler<>);
+            throw new NotImplementedException();
         }
     }
 }

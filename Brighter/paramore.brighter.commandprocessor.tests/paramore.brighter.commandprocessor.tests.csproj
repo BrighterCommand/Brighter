@@ -136,6 +136,7 @@
     <Compile Include="CommandProcessors\PipelineContextTests.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeMessageProducer.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeMessageStore.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyMonitoredHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyThrowingEventHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyObsoleteCommandHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyCommandMessageMapper.cs" />
@@ -168,7 +169,7 @@
     <Compile Include="CommandProcessors\TestDoubles\TestMessageMapperFactory.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TinyIocHandlerFactory.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TinyIoCMessageMapperFactory.cs" />
-    <Compile Include="ControlBus\ConfigurationCommandFixture.cs" />
+    <Compile Include="ControlBus\ConfigurationCommandTests.cs" />
     <Compile Include="ControlBus\ControlBusBuilderFixture.cs" />
     <Compile Include="ExceptionPolicy\FallbackSupportTests.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithFallbackMultipleHandlers.cs" />
@@ -194,6 +195,7 @@
     <Compile Include="MessagingGateway\restms\RestMSParserTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
     <Compile Include="MessagingGateway\TestDoubles\BrokerUnreachableRmqMessageConsumer.cs" />
+    <Compile Include="Monitoring\HandlerMonitoringTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Timeout\Test Doubles\MyPassesTimeoutHandler.cs" />
     <Compile Include="Timeout\Test Doubles\MyFailsDueToTimeoutHandler.cs" />
@@ -232,9 +234,7 @@
     </None>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Monitoring\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

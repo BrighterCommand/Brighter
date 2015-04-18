@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,18 +22,27 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using System.Threading;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.monitoring.Attributes;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    public class MyAbortingHandlerAttribute : RequestHandlerAttribute
+    internal class MyMonitoredHandler : RequestHandler<MyCommand>
     {
-        public MyAbortingHandlerAttribute(int step, HandlerTiming timing) : base(step, timing) {}
+        readonly IAmACommandProcessor _commandProcessor;
 
-        public override Type GetHandlerType()
+        public MyMonitoredHandler(ILog logger, IAmACommandProcessor commandProcessor) : base(logger)
         {
-            return typeof(MyAbortingHandler<>);
+            _commandProcessor = commandProcessor;
         }
+
+        [Monitor(step: 1, timing: HandlerTiming.Before)]
+        public override MyCommand Handle(MyCommand command)
+        {
+            return base.Handle(command);
+        }
+
     }
 }

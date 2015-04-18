@@ -60,7 +60,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private Because _of = () => s_messagePump.Run();
 
         private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.PublishHappened.ShouldBeTrue();
-        private It _should_convert_the_message_into_an_event = () => ((MyEvent)s_commandProcessor.Request).ShouldEqual(s_event);
+        private It _should_convert_the_message_into_an_event = () => (s_commandProcessor.Observe<MyEvent>()).ShouldEqual(s_event);
         private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
     }
 
