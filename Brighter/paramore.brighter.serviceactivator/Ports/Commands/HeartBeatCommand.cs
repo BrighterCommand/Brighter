@@ -1,6 +1,20 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.serviceactivator.controlbus
+// Author           : ian
+// Created          : 02-11-2015
+//
+// Last Modified By : ian
+// Last Modified On : 02-26-2015
+// ***********************************************************************
+// <copyright file="HeartBeatCommand.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -25,15 +39,18 @@ THE SOFTWARE. */
 using System;
 using paramore.brighter.commandprocessor;
 
-namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
+namespace paramore.brighter.serviceactivator.Ports.Commands
 {
-    public class MyAbortingHandlerAttribute : RequestHandlerAttribute
+    /// <summary>
+    /// Class HeartBeatCommand.
+    /// </summary>
+    public class HeartBeatCommand : Command
     {
-        public MyAbortingHandlerAttribute(int step, HandlerTiming timing) : base(step, timing) {}
-
-        public override Type GetHandlerType()
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Command" /> class.
+        /// </summary>
+        public HeartBeatCommand() : base(Guid.NewGuid())
         {
-            return typeof(MyAbortingHandler<>);
         }
     }
 }

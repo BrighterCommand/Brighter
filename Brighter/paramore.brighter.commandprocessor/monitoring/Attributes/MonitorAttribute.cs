@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,17 +23,26 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
+using System.Configuration;
+using System.Linq;
+using paramore.brighter.commandprocessor.monitoring.Handlers;
 
-namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
+namespace paramore.brighter.commandprocessor.monitoring.Attributes
 {
-    public class MyAbortingHandlerAttribute : RequestHandlerAttribute
+    public class MonitorAttribute: RequestHandlerAttribute
     {
-        public MyAbortingHandlerAttribute(int step, HandlerTiming timing) : base(step, timing) {}
+        bool _monitoringEnabled = false;
+
+        public MonitorAttribute(int step, HandlerTiming timing)
+            : base(step, timing)
+        {
+            var monitoringSetting = ConfigurationManager.AppSettings["IsMonitoringEnabled"];
+            _monitoringEnabled = Convert.ToBoolean(monitoringSetting);
+        }
 
         public override Type GetHandlerType()
         {
-            return typeof(MyAbortingHandler<>);
+            return typeof(MonitorHandler<>);
         }
     }
 }
