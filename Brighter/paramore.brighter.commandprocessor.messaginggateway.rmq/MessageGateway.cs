@@ -117,7 +117,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             if (Channel == null || Channel.IsClosed)
             {
-                var connection = MessageGatewayConnectionPool.GetConnection(_connectionFactory);
+                var connection = new  MessageGatewayConnectionPool().GetConnection(_connectionFactory);
 
                 Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.GetSanitizedUri());
 
