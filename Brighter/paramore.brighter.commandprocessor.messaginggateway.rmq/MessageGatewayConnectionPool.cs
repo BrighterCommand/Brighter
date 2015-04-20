@@ -45,11 +45,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// <summary>
     /// Class MessageGatewayConnectionPool.
     /// </summary>
-    public static class MessageGatewayConnectionPool
+    public class MessageGatewayConnectionPool
     {
         private static readonly Dictionary<string, IConnection> s_connectionPool = new Dictionary<string, IConnection>();
-        private static object s_lock = new object();
-        private static ILog s_logger = LogProvider.GetCurrentClassLogger();
+        private static readonly object s_lock = new object();
+        private static readonly ILog s_logger = LogProvider.GetCurrentClassLogger();
 
         /// <summary>
         /// Return matching RabbitMQ connection if exist (match by amqp scheme)
@@ -57,30 +57,30 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="connectionFactory"></param>
         /// <returns></returns>
-        public static IConnection GetConnection(ConnectionFactory connectionFactory)
+        public IConnection GetConnection(ConnectionFactory connectionFactory)
         {
             var connectionId = GetConnectionId(connectionFactory);
 
             IConnection connection;
             var connectionFound = s_connectionPool.TryGetValue(connectionId, out connection);
 
-            if (connectionFound == false || connection.IsOpen == false)
-            {
-                lock (s_lock)
-                {
-                    connectionFound = s_connectionPool.TryGetValue(connectionId, out connection);
+            if (connectionFound != false && connection.IsOpen != false) 
+                return connection;
 
-                    if (connectionFound == false || connection.IsOpen == false)
-                    {
-                        connection = CreateConnection(connectionFactory);
-                    }
+            lock (s_lock)
+            {
+                connectionFound = s_connectionPool.TryGetValue(connectionId, out connection);
+
+                if (connectionFound == false || connection.IsOpen == false)
+                {
+                    connection = CreateConnection(connectionFactory);
                 }
-            }    
-            
+            }
+
             return connection;
         }
 
-        private static IConnection CreateConnection(ConnectionFactory connectionFactory)
+        private IConnection CreateConnection(ConnectionFactory connectionFactory)
         {
             var connectionId = GetConnectionId(connectionFactory);
 
@@ -97,13 +97,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             return connection;
         }
 
-        private static void TryRemoveConnection(string connectionId)
+        private void TryRemoveConnection(string connectionId)
         {
             if(s_connectionPool.ContainsKey(connectionId))
                 s_connectionPool.Remove(connectionId);
         }
 
-        private static string GetConnectionId(ConnectionFactory connectionFactory)
+        private string GetConnectionId(ConnectionFactory connectionFactory)
         {
             return string.Concat(connectionFactory.UserName, ".", connectionFactory.Password, ".", connectionFactory.HostName, ".", connectionFactory.Port, ".", connectionFactory.VirtualHost).ToLowerInvariant();
         }
