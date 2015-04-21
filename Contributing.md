@@ -33,6 +33,7 @@ It isn't wise to build something that can be a part of someone's ecosystem witho
 	0. Providing [BDD] (http://dannorth.net/introducing-bdd/) style tests should provide for the need to use scenarios to test the design of your API
 	1. Use the coding style from [dotnet/corefx] (https://github.com/dotnet/corefx/wiki/Contributing#c-coding-style)
 	2. You can use [codeformatter] (https://github.com/dotnet/codeformatter) if you can run VS2015 to automatically update your format
+		3. Ensure you update the template for your copyright if using codeformatter 
 0. Commit
 	0. Try to write a [good commit message](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html).    
 0. Merge back into your fork
