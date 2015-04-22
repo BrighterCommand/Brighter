@@ -70,44 +70,44 @@
          <p>Let us assume that we want to log all requests travelling through the pipeline. (We provide this for you in the Paramore.Brighter.CommandProcessor packages so this for illustration only). We could
             implement a generic handler as follows:</p>
         <pre><code>
-        using System;
-        using Newtonsoft.Json;
-        using paramore.brighter.commandprocessor.Logging;
+using System;
+using Newtonsoft.Json;
+using paramore.brighter.commandprocessor.Logging;
 
-        namespace paramore.brighter.commandprocessor
+namespace paramore.brighter.commandprocessor
+{
+    public class RequestLoggingHandler&lt;TRequest&gt;
+        : RequestHandler&lt;TRequest&gt; where TRequest : class, IRequest
+    {
+        private HandlerTiming _timing;
+
+        public RequestLoggingHandler(ILog logger)
+        : base(logger)
+        { }
+
+        public override void InitializeFromAttributeParams(
+            params object[] initializerList
+        )
         {
-            public class RequestLoggingHandler&lt;TRequest&gt;
-                : RequestHandler&lt;TRequest&gt; where TRequest : class, IRequest
-            {
-                private HandlerTiming _timing;
-
-                public RequestLoggingHandler(ILog logger)
-                : base(logger)
-                { }
-
-                public override void InitializeFromAttributeParams(
-                    params object[] initializerList
-                )
-                {
-                    _timing = (HandlerTiming)initializerList[0];
-                }
-
-                public override TRequest Handle(TRequest command)
-                {
-                    LogCommand(command);
-                    return base.Handle(command);
-                }
-
-                private void LogCommand(TRequest request)
-                {
-                    logger.InfoFormat(&quot;Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}&quot;,
-                        _timing.ToString(),
-                        typeof(TRequest),
-                        JsonConvert.SerializeObject(request),
-                        DateTime.UtcNow);
-                }
-            }
+            _timing = (HandlerTiming)initializerList[0];
         }
+
+        public override TRequest Handle(TRequest command)
+        {
+            LogCommand(command);
+            return base.Handle(command);
+        }
+
+        private void LogCommand(TRequest request)
+        {
+            logger.InfoFormat(&quot;Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}&quot;,
+                _timing.ToString(),
+                typeof(TRequest),
+                JsonConvert.SerializeObject(request),
+                DateTime.UtcNow);
+        }
+    }
+}
         </code></pre>
         <p>Our Handle method is the method which will be called by the pipeline to service the request. After we log we call <strong>return base.Handle(command)</strong>
             to ensure that the next handler in the chain is called. If we failed to do this, the <em>target handler</em>  would not be called nor any subsequent handlers in the chain.
@@ -117,40 +117,39 @@
             For this reason <strong>**all**</strong> handlers should remember to call their successor, <strong>even **your** target handler</strong>.</p>
         <p>We now need to tell our pipeline to call this orthogonal handler before our target handler. To do this we use attributes. The code we want to write looks like this:</p>
         <pre><code>
-            class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
-            {
-                public GreetingCommandHandler(ILog logger) : base(logger) {}
+class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
+{
+    public GreetingCommandHandler(ILog logger) : base(logger) {}
 
-                [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-                public override GreetingCommand Handle(GreetingCommand command)
-                {
-                    Console.WriteLine("Hello {0}", command.Name);
-                    return base.Handle(command);
-                }
-            }
+    [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+    public override GreetingCommand Handle(GreetingCommand command)
+    {
+        Console.WriteLine("Hello {0}", command.Name);
+        return base.Handle(command);
+    }
+}
         </code></pre>
         <p>The <strong>RequestLogging</strong> Attribute tells the Command Processor to insert a Logging handler into the request handling pipeline before
             (<strong>HandlerTiming.Before</strong>) we run the target handler. It tells the Command Processor that we want it to be the first handler to run
             if we have multiple orthogonal handlers i.e. attributes (<strong>step: 1</strong>).</p>
         <p>We implement the <strong>RequestLoggingAttribute</strong> by creating our own Attribute class, derived from <strong>RequestHandlerAttribute</strong>.</p>
         <pre><code>
-        public class RequestLoggingAttribute : RequestHandlerAttribute
-        {
-            public RequestLoggingAttribute(int step, HandlerTiming timing)
-                : base(step, timing)
-                { }
+public class RequestLoggingAttribute : RequestHandlerAttribute
+{
+    public RequestLoggingAttribute(int step, HandlerTiming timing)
+        : base(step, timing)
+        { }
 
-            public override object[] InitializerParams()
-            {
-                return new object[] { Timing };
-            }
+    public override object[] InitializerParams()
+    {
+        return new object[] { Timing };
+    }
 
-            public override Type GetHandlerType()
-            {
-                return typeof(RequestLoggingHandler&lt;&gt;);
-            }
-        }
-
+    public override Type GetHandlerType()
+    {
+        return typeof(RequestLoggingHandler&lt;&gt;);
+    }
+}
         </code></pre>
         <p>The most important part of this implementation is the GetHandlerType() method, where we return the type of our handler. At runtime the Command Processor
             uses reflection to determine what attributes are on the target handler and requests an instance of that type from the user-supplied <strong>Handler Factory</strong>.</p>

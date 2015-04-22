@@ -47,23 +47,23 @@
     <p>We associate a <strong>Subscriber Registry</strong> with a <strong>Command Processor</strong> by passing it into the constructor of the <strong>Command Processor</strong>. For convenience,
         we provide a <strong>Commmand Processor Builder</strong> that helps you configure new instances of <strong>Command Processor</strong>.</p>
     <pre><code>
-    var logger = LogProvider.For&lt;Program&gt;();
+var logger = LogProvider.For&lt;Program&gt;();
 
-    var registry = new SubscriberRegistry();
-    registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
+var registry = new SubscriberRegistry();
+registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
 
 
-    var builder = CommandProcessorBuilder.With()
-        .Handlers(new HandlerConfiguration(
-            subscriberRegistry: registry,
-            handlerFactory: new SimpleHandlerFactory(logger)
-        ))
-        .NoPolicy()
-        .Logger(logger)
-        .NoTaskQueues()
-        .RequestContextFactory(new InMemoryRequestContextFactory());
+var builder = CommandProcessorBuilder.With()
+    .Handlers(new HandlerConfiguration(
+        subscriberRegistry: registry,
+        handlerFactory: new SimpleHandlerFactory(logger)
+    ))
+    .NoPolicy()
+    .Logger(logger)
+    .NoTaskQueues()
+    .RequestContextFactory(new InMemoryRequestContextFactory());
 
-    var commandProcessor = builder.Build();
+var commandProcessor = builder.Build();
     </code></pre>
     <p>We cover <a href="BasicConfiguration.html"> configuration of a <strong>Command Processor</strong></a> in more detail later.</p>
     <h3>Returning results to the caller.</h3>

@@ -47,15 +47,15 @@
         <p>The Command Dispatcher needs to be able to map <strong>Command</strong>s or <strong>Event</strong>s to a <strong>Request Handlers</strong>. For a <strong>Command</strong>
             we expect one and only one <strong>Request Handlers</strong> for an event we expect many. Regsiter your handlers with the <strong>Subscriber Registry</strong> </p>
         <pre><code>
-            var registry = new SubscriberRegistry();
-            registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
+var registry = new SubscriberRegistry();
+registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
         </code></pre>
         We also support an initializer syntax
         <pre><code>
-        var registry = new SubscriberRegistry()
-        {
-            {typeof(GreetingCommand), typeof(GreetingCommandHandler)}
-        }
+var registry = new SubscriberRegistry()
+{
+    {typeof(GreetingCommand), typeof(GreetingCommandHandler)}
+}
         </code></pre>
         <h3>Handler Factory</h3>
         <p>We don't know how to construct your handler so we call a factory, that you provide us, to build this entire
@@ -66,29 +66,29 @@
             used a conforming container but switched to user defined factories as per Mark's blog.</p>
         <p>You can implement the Handler Factory using an IoC container, in your own code. For example:</p>
         <pre><code>
-        internal class TinyIocHandlerFactory : IAmAHandlerFactory
+internal class TinyIocHandlerFactory : IAmAHandlerFactory
+{
+    private readonly TinyIoCContainer _container;
+
+    public TinyIocHandlerFactory(TinyIoCContainer container)
+    {
+        _container = container;
+    }
+
+    public IHandleRequests Create(Type handlerType)
+    {
+        return (IHandleRequests)_container.Resolve(handlerType);
+    }
+
+    public void Release(IHandleRequests handler)
+    {
+        var disposable = handler as IDisposable;
+        if (disposable != null)
         {
-            private readonly TinyIoCContainer _container;
-
-            public TinyIocHandlerFactory(TinyIoCContainer container)
-            {
-                _container = container;
-            }
-
-            public IHandleRequests Create(Type handlerType)
-            {
-                return (IHandleRequests)_container.Resolve(handlerType);
-            }
-
-            public void Release(IHandleRequests handler)
-            {
-                var disposable = handler as IDisposable;
-                if (disposable != null)
-                {
-                    disposable.Dispose();
-                }
-            }
+            disposable.Dispose();
         }
+    }
+}
         </code></pre>
         <h3>Policy Registry</h3>
         <p>If you intend to use a <a href="https://github.com/michael-wolfenden/Polly">Polly</a> Policy to support <a href="PolicyRetryAndCircuitBreaker.html">Retry and Circuit-Breaker</a>
@@ -101,20 +101,20 @@ var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retr
         </code></pre>#
         <p>which you can then use in code like this</p>
         <pre><code>
-        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-        [UsePolicy(CommandProcessor.CIRCUITBREAKER, step: 2)]
-        [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
-        public override TaskReminderCommand Handle(TaskReminderCommand command)
-        {
-            _mailGateway.Send(new TaskReminder(
-                taskName: new TaskName(command.TaskName),
-                dueDate: command.DueDate,
-                reminderTo: new EmailAddress(command.Recipient),
-                copyReminderTo: new EmailAddress(command.CopyTo)
-            ));
+[RequestLogging(step: 1, timing: HandlerTiming.Before)]
+[UsePolicy(CommandProcessor.CIRCUITBREAKER, step: 2)]
+[UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
+public override TaskReminderCommand Handle(TaskReminderCommand command)
+{
+    _mailGateway.Send(new TaskReminder(
+        taskName: new TaskName(command.TaskName),
+        dueDate: command.DueDate,
+        reminderTo: new EmailAddress(command.Recipient),
+        copyReminderTo: new EmailAddress(command.CopyTo)
+    ));
 
-            return base.Handle(command);
-        }
+    return base.Handle(command);
+}
         </code></pre>
         <h3>Logger</h3>
         <p>We use <a href="https://github.com/damianh/LibLog">LibLog</a> so that we do not have to depend on a given logging library. You need to add a logger (as per the instructions for LibLog)</p>
@@ -125,14 +125,14 @@ var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retr
         <p>All these individual elements can be passed to a <strong>Command Processor Builder</strong> to help build a <strong>Command Processor</strong>. This has a fluent interface to help
             guide you when configuring Brighter. The result looks like this:</p>
         <pre><code>
-        var commandProcessor =
-        CommandProcessorBuilder.With()
-            .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-            .Policies(policyRegistry)
-            .Logger(logger)
-            .NoTaskQueues()
-            .RequestContextFactory(new InMemoryRequestContextFactory())
-            .Build();
+var commandProcessor =
+CommandProcessorBuilder.With()
+    .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+    .Policies(policyRegistry)
+    .Logger(logger)
+    .NoTaskQueues()
+    .RequestContextFactory(new InMemoryRequestContextFactory())
+    .Build();
         </code></pre>
         <p>We discuss <a href="DistributedTaskQueueConfiguration.html">Task Queues</a> later.</p>
     </section>

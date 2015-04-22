@@ -27,7 +27,122 @@
     </header>
     <section>
         <h1>Brighter</h1>
+        <h2>How Brighter configures Task Queues</h2>
         <p>In order to use the distributed task queue you need to configure the Dispatcher.</p>
+        <p>There are two steps. The first is in-code configuration of your options and the second is configuration of your files in a configuration file.</p>
+        <h3>Why the split?</h3>
+        <p>Generally we prefer to configure design time options in code because that is the easiest to manage and only run-time options in an external configuration file.</p>
+        <p>In essence, anything that you want to configure post-build i.e. when you deploy needs to go into external configuration, and anything you can configure at build
+            should go into code.</p>
+        <p>Because you may choose to configure the channels that a service processes at runtime we configure them there. An example use case here is that you may have busy channels
+            that need more consumers to process a backlog. You can add channels to existing services at run-time to help share the load, and then remove those channels
+            later once the backlog has been worked through.</p>
+        <h2>Configuring the Dispatcher in Code</h2>
+        <p>We provide a Dispatch Builder that has a progressive interface to assist you in configuring a <strong>Dispatcher</strong></p>
+        <p>You need to consider the following when configuring the Dispatcher</p>
+        <ul>
+            <li>Logging</li>
+            <li>Command Processor</li>
+            <li>Message Mappers</li>
+            <li>Channel Factory</li>
+            <li>Connection List</li>
+        </ul>
+        <p>Of these <strong>Logging</strong> and the <strong>Command Processor</strong> are covered in <strong>Basic Configuration</strong>.</p>
+        <h3>Message Mappers</h3>
+        <p>We use <strong>IAmAMessageMapper&lt;T&gt;</strong> to map between messages in the Task Queue and a <strong>Message</strong>.</p>
+        <p>A <strong>Message</strong> consists of two parts, a <strong>Message Header</strong> and <strong>Message Body</strong>. The header contains metadata about the message.
+            Key properties are time <strong>TimeStamp</strong>, <strong>Topic</strong>, and <strong>Id</strong>. The body consists of the serialized <strong>IRequest</strong>
+            sent over the Task Queue.</p>
+        <p>We dispatch a <strong>Message</strong> using either <strong>CommandProcessor.Send()</strong> or <strong>CommandProcessor.Publish()</strong> depending
+            on whether the <strong>MessageHeader.MessageType</strong> is <strong>MT_COMMAND</strong> or <strong>MT_EVENT</strong>.</p>
+        <p>You create a <strong>Message Mapper</strong> by deriving from <strong>IAmAMessageMapper&lt;TaskReminderCommand&gt;</strong> and implementing the <strong>MapToMessage()</strong>
+            and <strong>MapToRequest</strong> methods.</p>
+        <pre><code>
+public class TaskReminderCommandMessageMapper : IAmAMessageMapper&lt;TaskReminderCommand&gt;
+{
+    public Message MapToMessage(TaskReminderCommand request)
+    {
+        var header = new MessageHeader(messageId: request.Id, topic: &quot;Task.Reminder&quot;, messageType: MessageType.MT_COMMAND);
+        var body = new MessageBody(JsonConvert.SerializeObject(request));
+        var message = new Message(header, body);
+        return message;
+    }
+
+    public TaskReminderCommand MapToRequest(Message message)
+    {
+        return JsonConvert.DeserializeObject&lt;TaskReminderCommand&gt;(message.Body.Value);
+    }
+}
+        </code></pre>
+        <p>You then need to register your Message Mapper so that we can find it, using a class that derives from <strong>IAmAMessageMapperRegistry</strong>. We recommend using
+            <strong>MessageMapperRegistry</strong> unless you have more specific requirements.</p>
+        <pre><code>
+var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
+{
+    {typeof(GreetingCommand), typeof(GreetingCommandMessageMapper)}
+};
+        </code></pre>
+        <h3>Channel Factory</h3>
+        <p>The Channel Factory is where we take a dependency on a specific Broker. We pass the <strong>Dispatcher</strong> an instances of <strong>InputChannelFactory</strong> passing it
+            an implementation of <strong>IAmAChannelFactory</strong>. The channel factory is used to create channels that wrap the underlying Message-Oriented Middleware that you are using.</p>
+        <p>For production use we support RabbitMQ <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/paramore.brighter.commandprocessor.messaginggateway.rmq"></a> as a Broker.
+            We are actively working on other implementations.</p>
+        <p></p>
+        <p>You can see the code for this in the full builder snipped below.</p>
+        <p>We don't cover details of how to implement a Channel Factory here, for simplicity.</p>
+        <h3></h3>
+        <h3>Connection List</h3>
+        <p>The preferred way to get a connection list is via configuration. You can pass it in directly. This is mainly intended to support our Control Bus or testing and we don't cover that here.</p>
+        <p>Again, you can see the code for this in the full builder snippet below.</p>
+        <p>What you do care about is the shape of the configuration entries. In your configuration file you first need to ensure that you have the Configuration Section Handler for Service Activator
+            registered</p>
+        <pre><code>
+&lt;configSections&gt;
+&lt;section name=&quot;rmqMessagingGateway&quot; type=&quot;paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, paramore.brighter.commandprocessor.messaginggateway.rmq&quot; allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot; /&gt;
+&lt;/configSections&gt;
+        </code></pre>
+        <p>And then you need to configure your channels. The important part is the <strong>routing key</strong>. This must be the same as the topic you set in the <strong>Message Header</strong> when sending.
+            In addition the <strong>dataType</strong> should be the name of the <strong>Command</strong> or <strong>Event</strong> derived type that you want to deserialize into.</p>
+        <p>You must set the <strong>connectionName</strong> and <strong>channelName</strong>. The naming scheme is at your discretion. The <strong>timeOutInMilliseconds</strong> sets how long we wait for a message before timing out. Note
+            that after a timeout we will wait for messages on the channel again, following a delay. This just allows us to yield to receive control messages on the message pump.</p>
+        <pre><code>
+&lt;serviceActivatorConnections&gt;
+&lt;connections&gt;
+&lt;add connectionName=&quot;paramore.example.greeting&quot; channelName=&quot;greeting.command&quot; routingKey=&quot;greeting.command&quot; dataType=&quot;Greetings.Ports.Commands.GreetingCommand&quot; timeOutInMilliseconds=&quot;200&quot; /&gt;
+&lt;/connections&gt;
+&lt;/serviceActivatorConnections&gt;
+        </code></pre>
+        <h3>Creating a Bulder</h3>
+        <p>This code fragment shows putting the whole thing together</p>
+        <pre><code>
+//create message mappers
+var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
+{
+    {typeof(GreetingCommand), typeof(GreetingCommandMessageMapper)}
+};
+
+//create the gateway
+var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
+var builder = DispatchBuilder
+    .With()
+    .Logger(logger)
+    .CommandProcessor(CommandProcessorBuilder.With()
+        .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+        .Policies(policyRegistry)
+        .Logger(logger)
+        .NoTaskQueues()
+        .RequestContextFactory(new InMemoryRequestContextFactory())
+        .Build()
+    )
+    .MessageMappers(messageMapperRegistry)
+    .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
+    .ConnectionsFromConfiguration();
+_dispatcher = builder.Build();
+        </code></pre>
+        <pre><code>
+
+        </code></pre>
+        <h3>Broker Specific Configuration Documentation</h3>
         <ul>
             <li><a href="RabbitMQConfiguration.html">RabbitMQ configuration</a></li>
         </ul>

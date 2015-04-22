@@ -85,34 +85,34 @@
         <p>Instead of using <strong>CommandProcessor.Send()</strong> you use <strong>CommandProcessor.Post()</strong> to send the message</p>
         <pre>
         <code>
-            var reminderCommand = new TaskReminderCommand(
-                 taskName: reminder.TaskName,
-                 dueDate: DateTime.Parse(reminder.DueDate),
-                 recipient: reminder.Recipient,
-                 copyTo: reminder.CopyTo
-                 );
+var reminderCommand = new TaskReminderCommand(
+     taskName: reminder.TaskName,
+     dueDate: DateTime.Parse(reminder.DueDate),
+     recipient: reminder.Recipient,
+     copyTo: reminder.CopyTo
+     );
 
-             _commandProcessor.Post(reminderCommand);
+ _commandProcessor.Post(reminderCommand);
         </code>
         </pre>
         <p>You add a message mapper to tell Brighter how to serialize the message for sending to your consumers.</p>
         <pre>
         <code>
-        public class TaskReminderCommandMessageMapper : IAmAMessageMapper&lt;TaskReminderCommand&gt;
-        {
-            public Message MapToMessage(TaskReminderCommand request)
-            {
-                var header = new MessageHeader(messageId: request.Id, topic: &quot;Task.Reminder&quot;, messageType: MessageType.MT_COMMAND);
-                var body = new MessageBody(JsonConvert.SerializeObject(request));
-                var message = new Message(header, body);
-                return message;
-            }
+public class TaskReminderCommandMessageMapper : IAmAMessageMapper&lt;TaskReminderCommand&gt;
+{
+    public Message MapToMessage(TaskReminderCommand request)
+    {
+        var header = new MessageHeader(messageId: request.Id, topic: &quot;Task.Reminder&quot;, messageType: MessageType.MT_COMMAND);
+        var body = new MessageBody(JsonConvert.SerializeObject(request));
+        var message = new Message(header, body);
+        return message;
+    }
 
-            public TaskReminderCommand MapToRequest(Message message)
-            {
-                return JsonConvert.DeserializeObject&lt;TaskReminderCommand&gt;(message.Body.Value);
-            }
-        }
+    public TaskReminderCommand MapToRequest(Message message)
+    {
+        return JsonConvert.DeserializeObject&lt;TaskReminderCommand&gt;(message.Body.Value);
+    }
+}
         </code>
         </pre>
         <p>One option is to use a <em>Core</em> assembly that contains your domain model, handlers, message mappers etc. and then pull that assembly into endpoints that consume such as services and
@@ -120,37 +120,81 @@
             one on the consumer side and one on the sender side.</p>
         <p>The <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples">Tasks Example</a> uses this strategy.</p>
         <p> This model only works if your library is shared between components that operate on the same bounded context i.e. Continuous Integration that are released together.
-            never share such an assembly between projects that should be released autonomously as it is a shared dependency. In that case you **must** implement the mapper
+            Never share such an assembly between projects that should be released autonomously as it is a shared dependency. In that case you **must** implement the mapper
             on both sides.</p>
         <p>Then you write a handler as normal.</p>
         <pre>
         <code>
-        public class MailTaskReminderHandler : RequestHandler&lt;TaskReminderCommand&gt;
-        {
-            private readonly IAmAMailGateway _mailGateway;
+public class MailTaskReminderHandler : RequestHandler&lt;TaskReminderCommand&gt;
+{
+    private readonly IAmAMailGateway _mailGateway;
 
-            public MailTaskReminderHandler(IAmAMailGateway mailGateway, ILog logger) : base(logger)
-            {
-                _mailGateway = mailGateway;
-            }
+    public MailTaskReminderHandler(IAmAMailGateway mailGateway, ILog logger) : base(logger)
+    {
+        _mailGateway = mailGateway;
+    }
 
-            [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-            [UsePolicy(CommandProcessor.CIRCUITBREAKER, step: 2)]
-            [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
-            public override TaskReminderCommand Handle(TaskReminderCommand command)
-            {
-                _mailGateway.Send(new TaskReminder(
-                taskName: new TaskName(command.TaskName),
-                dueDate: command.DueDate,
-                reminderTo: new EmailAddress(command.Recipient),
-                copyReminderTo: new EmailAddress(command.CopyTo)
-                ));
+    [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+    [UsePolicy(CommandProcessor.CIRCUITBREAKER, step: 2)]
+    [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
+    public override TaskReminderCommand Handle(TaskReminderCommand command)
+    {
+        _mailGateway.Send(new TaskReminder(
+        taskName: new TaskName(command.TaskName),
+        dueDate: command.DueDate,
+        reminderTo: new EmailAddress(command.Recipient),
+        copyReminderTo: new EmailAddress(command.CopyTo)
+        ));
 
-                return base.Handle(command);
-            }
-        }
+        return base.Handle(command);
+    }
+}
         </code>
         </pre>
+        <h2>The Dispatcher</h2>
+        <p>To ensure that messages reach the handlers from the queue you have to use the <strong>Dispatcher</strong>.</p>
+        <p>The Dispatcher reads messages of input channels. Internally it creates a message pump for each channel, and allocates a thread to run that message pump. The pump consumes messages from the channel,
+            using the <strong>Message Mapper</strong> to translate them into a <strong>Message</strong> and from there a <strong>Command</strong> or <strong>Event</strong>. It then dispatches
+            those to handlers (using the Brighter <strong>Command Processor</strong>.</p>
+        <p>To use the Dispatcher you need to host it in a consumer application. Usually a console application or Windows Service is appropriate. We recommend using
+            <a href="http://topshelf-project.com/">Topshelf</a> to host your consumers.</p>
+        <p>The following code shows an example of using the <strong>Dispatcher</strong> from Topshelf. The key methods are <strong>Dispatcher.Receive()</strong> to start the message pumps
+            and <strong>Dispatcher.End()</strong> to shut them.</p>
+        <p>We do allow you to start and stop individual channels, but this is an advanced feature for operating the services.</p>
+        <pre>
+        <code>
+internal class GreetingService : ServiceControl
+{
+    private Dispatcher _dispatcher;
+
+    public GreetingService()
+    {
+       /* Configfuration Code Goes here*/
+    }
+
+    public bool Start(HostControl hostControl)
+    {
+        _dispatcher.Receive();
+        return true;
+    }
+
+    public bool Stop(HostControl hostControl)
+    {
+        _dispatcher.End().Wait();
+        _dispatcher = null;
+        return false;
+    }
+
+    public void Shutdown(HostControl hostcontrol)
+    {
+        if (_dispatcher != null)
+            _dispatcher.End();
+        return;
+    }
+}
+        </code>
+        </pre>
+        <h2>Configuration</h2>
         <p>So how do we route messages from the channel to the handler? The answer is the framework uses configuration that your provide to do that. Configuration is the subject of this
             documentation <a href="DistributedTaskQueueConfiguration.html">here</a>.</p>
     </section>

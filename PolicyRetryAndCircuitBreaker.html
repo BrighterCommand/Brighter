@@ -36,39 +36,39 @@
         <h2>Using Brighter's UsePolicy Attribute</h2>
         <p>By adding the <strong>UsePolicy</strong> attribute, you instruct the Command Processor to insert a handler (filter) into the pipeline that runs all later steps using that Polly policy.</p>
         <pre><code>
-        internal class MyQoSProtectedHandler : RequestHandler&lt;MyCommand&gt;
-        {
-            public MyQoSProtectedHandler(ILog logger) : base(logger)
-            { }
+internal class MyQoSProtectedHandler : RequestHandler&lt;MyCommand&gt;
+{
+    public MyQoSProtectedHandler(ILog logger) : base(logger)
+    { }
 
-            static MyQoSProtectedHandler()
-            {
-                ReceivedCommand = false;
-            }
+    static MyQoSProtectedHandler()
+    {
+        ReceivedCommand = false;
+    }
 
-            [UsePolicy(policy: &quot;MyExceptionPolicy&quot;, step: 1)]
-            public override MyCommand Handle(MyCommand command)
-            {
-                /*Do work that could throw error because of distributed computing reliability*/
-            }
-        }
+    [UsePolicy(policy: &quot;MyExceptionPolicy&quot;, step: 1)]
+    public override MyCommand Handle(MyCommand command)
+    {
+        /*Do work that could throw error because of distributed computing reliability*/
+    }
+}
         </code></pre>
         <p> To configure the Polly policy you use the PolicyRegistry to register the Polly Policy with a name. At runtime we look up that Policy by name.</p>
         <pre><code>
-        var policyRegistry = new PolicyRegistry();
+var policyRegistry = new PolicyRegistry();
 
-        var policy = Policy
-        .Handle&lt;Exception&gt;()
-        .WaitAndRetry(new[]
-        {
-            1.Seconds(),
-            2.Seconds(),
-            3.Seconds()
-        }, (exception, timeSpan) =&gt;
-        {
-            s_retryCount++;
-        });
-        policyRegistry.Add(&quot;MyExceptionPolicy&quot;, policy);
+var policy = Policy
+.Handle&lt;Exception&gt;()
+.WaitAndRetry(new[]
+{
+    1.Seconds(),
+    2.Seconds(),
+    3.Seconds()
+}, (exception, timeSpan) =&gt;
+{
+    s_retryCount++;
+});
+policyRegistry.Add(&quot;MyExceptionPolicy&quot;, policy);
         </code></pre>
         <p>When creating policies, refer to the <a href="https://github.com/michael-wolfenden/Polly">Polly</a> documentation.</p>
         <p>Whilst <a href="https://github.com/michael-wolfenden/Polly"><strong>Polly</strong></a> does not support a Policy that is both Circuit Breaker and Retry i.e. retry n times with an
@@ -86,35 +86,35 @@
             required time period.</p>
     <pre>
         <code>
-        public class EditTaskCommandHandler : RequestHandler&lt;EditTaskCommand&gt;
+public class EditTaskCommandHandler : RequestHandler&lt;EditTaskCommand&gt;
+{
+    private readonly ITasksDAO _tasksDAO;
+
+    public EditTaskCommandHandler(ITasksDAO tasksDAO, ILog logger) : base(logger)
+    {
+    _tasksDAO = tasksDAO;
+    }
+
+    [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+    [Validation(step: 2, timing: HandlerTiming.Before)]
+    [TimeoutPolicy(step: 3, milliseconds: 300)]
+    public override EditTaskCommand Handle(EditTaskCommand editTaskCommand)
+    {
+        using (var scope = _tasksDAO.BeginTransaction())
         {
-            private readonly ITasksDAO _tasksDAO;
+            Task task = _tasksDAO.FindById(editTaskCommand.TaskId);
 
-            public EditTaskCommandHandler(ITasksDAO tasksDAO, ILog logger) : base(logger)
-            {
-            _tasksDAO = tasksDAO;
-            }
+            task.TaskName = editTaskCommand.TaskName;
+            task.TaskDescription = editTaskCommand.TaskDescription;
+            task.DueDate = editTaskCommand.TaskDueDate;
 
-            [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-            [Validation(step: 2, timing: HandlerTiming.Before)]
-            [TimeoutPolicy(step: 3, milliseconds: 300)]
-            public override EditTaskCommand Handle(EditTaskCommand editTaskCommand)
-            {
-                using (var scope = _tasksDAO.BeginTransaction())
-                {
-                    Task task = _tasksDAO.FindById(editTaskCommand.TaskId);
-
-                    task.TaskName = editTaskCommand.TaskName;
-                    task.TaskDescription = editTaskCommand.TaskDescription;
-                    task.DueDate = editTaskCommand.TaskDueDate;
-
-                    _tasksDAO.Update(task);
-                    scope.Commit();
-                }
-
-                return editTaskCommand;
-            }
+            _tasksDAO.Update(task);
+            scope.Commit();
         }
+
+        return editTaskCommand;
+    }
+}
         </code>
     </pre>
     </section>
