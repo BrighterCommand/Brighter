@@ -55,15 +55,17 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         MT_NONE = 0,
         /// <summary>
-        /// There is no message type set, probably uninitialized
+        /// The message was sent as a command, and the producer intended it to be handled by a consumer
         /// </summary>
         MT_COMMAND = 1,
         /// <summary>
-        /// The message was sent as a command, and the producer intended it to be handled by a consumer
+        /// The message was raised as an event and the producer does not care if anyone listens to it
+        /// It only contains a simple notification, not the data of what changed
         /// </summary>
         MT_EVENT = 2,
         /// <summary>
         /// The message was raised as an event and the producer does not care if anyone listens to it
+        /// It contains a notification of what changed
         /// </summary>
         MT_DOCUMENT = 3,
         /// <summary>
