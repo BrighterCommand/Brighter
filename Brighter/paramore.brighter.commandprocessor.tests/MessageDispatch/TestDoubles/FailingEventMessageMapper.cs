@@ -1,7 +1,5 @@
 using System;
 
-using Newtonsoft.Json;
-
 using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
@@ -26,7 +24,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         /// Gets or sets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
-        public Guid Id { get; set; }
+        public Guid Id { get; private set; }
         public string MissingStringField { get; set; }
         public int MissingIntField { get; set; }
         
