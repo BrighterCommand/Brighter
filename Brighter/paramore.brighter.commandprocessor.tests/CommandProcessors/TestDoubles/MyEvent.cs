@@ -31,9 +31,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
     {
         public int Data { get; private set; }
 
-        public MyEvent()
+        public MyEvent() : base(Guid.NewGuid())
         {
-            Id = Guid.NewGuid();
             Data = 7;
         }
 
