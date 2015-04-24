@@ -15,7 +15,7 @@
 <div class="wrapper">
     <header>
         <h1>Paramore</h1>
-        <p>Explorations of the Ports and Adapters and CQRS architectural styles for .NET, Intended as reusable libraries and supporting examples</p>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
         <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
         <ul>
             <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
@@ -24,10 +24,12 @@
         </ul>
         <p><a href="index.html">Paramore Home</a></p>
         <p><a href="Brighter.html">Brighter Home</a></p>
+        <p><a href="PolicyRetryAndCircuitBreaker.html">Next</a></p>
+        <p><a href="BuildingAPipeline.html">Prev</a></p>
     </header>
     <section>
     <h1>Brighter</h1>
-    <h2>Passing information between Handler in the Pipeline</h2>
+    <h2>Passing information between Handlers in the Pipeline</h2>
     <p>A key constraint of the Pipes and Filters architectural style is that Filters do not share state. One reason is that this limits your ability to recompose the pipeline as steps must follow other steps.</p>
     <p>However, when dealing with Handlers that implement orthogonal concerns it can be useful to pass context along the chain. Given that many orthogonal concerns have constraints
         about ordering anyway, we can live with the ordering constraints imposed by passing context. So how do you approach passing context from one Handler to another when it is necessary?</p>

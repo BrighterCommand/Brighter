@@ -15,7 +15,7 @@
 <div class="wrapper">
     <header>
         <h1>Paramore</h1>
-        <p>Explorations of the Ports and Adapters and CQRS architectural styles for .NET, Intended as reusable libraries and supporting examples</p>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
         <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
         <ul>
             <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
@@ -24,6 +24,7 @@
         </ul>
         <p><a href="index.html">Paramore Home</a></p>
         <p><a href="Brighter.html">Brighter Home</a></p>
+        <a href="HelloWorldExample.html">Next</a>
     </header>
     <section>
         <h1>Introduction</h1>
@@ -40,7 +41,7 @@
         <p>Brighter is intended to be a library not a framework, so it is consciously lightweight and divided into packages that allow you to consume only those facilities that you need in your
             project.</p>
         <p>Brighter provides utility packages to help build quality of service into the handler pipeline, which can also serve as examples for your own pipelines.</p>
-        <p>In addition, Brighter supports tasks queues: passing commands and events over an amqp broker, such as RabbitMQ, to be handle asynchronously by one or more event consumers.</p>
+        <p>In addition, Brighter supports Tasks Queues: passing commands and events over an amqp broker, such as RabbitMQ, to be handle asynchronously by one or more event consumers.</p>
         <p> The intent of Brighter is to make the difference between synchronous and asynchronous handling as small as possible: both write the same handlers with the same steps in the sequence.
         On the producer side, sending asynchronously is just a different method on the dispatcher. On the consumer side a Service Activator library helps implement the endpoint code
             so that marshalling to an asynchronous handler is as friction-free a manner as possible.</p>
