@@ -51,6 +51,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Events
             IRequest targetHandlerRequest,
             DateTime eventTime, 
             HandlerTiming timing)
+            :base(new Guid())
         {
             InstanceName = instanceName;
             EventType = eventType;
@@ -58,7 +59,6 @@ namespace paramore.brighter.commandprocessor.monitoring.Events
             TargetHandlerRequest = targetHandlerRequest;
             EventTime = eventTime;
             Timing = timing;
-            Id = Guid.NewGuid();
         }
     }
 }

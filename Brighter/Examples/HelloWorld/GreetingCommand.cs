@@ -3,15 +3,14 @@ using paramore.brighter.commandprocessor;
 
 namespace HelloWorld
 {
-    internal class GreetingCommand : IRequest
+    internal class GreetingCommand : Command
     {
         public GreetingCommand(string name)
+            :base(new Guid())
         {
-            Id = Guid.NewGuid();
             Name = name;
         }
 
-        public Guid Id { get; private set; }
         public string Name { get; private set; }
     }
 }
