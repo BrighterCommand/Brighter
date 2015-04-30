@@ -34,6 +34,7 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.Monitoring
 {
+    [Ignore("Work in progress")]
     public class WhenMonitoringIsOnForAHandler
     {
         static MyMonitoredHandler s_handler;
