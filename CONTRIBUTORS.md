@@ -42,6 +42,9 @@ Paramore contributors (sorted alphabeticaly)
   * SQL Message Store
   * Various fixes
 
+**[Daniel Stockhammer](https://github.com/dstockhammer?tab=activity)** 
+  * Various fixes
+
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
   * Various Fixes
 

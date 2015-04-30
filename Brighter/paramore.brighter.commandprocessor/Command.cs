@@ -49,7 +49,7 @@ namespace paramore.brighter.commandprocessor
         /// Gets or sets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
-        public Guid Id { get; set; }
+        public Guid Id { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Command"/> class.
