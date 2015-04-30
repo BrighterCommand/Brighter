@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Configuration;
-using System.Linq;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
 
 namespace paramore.brighter.commandprocessor.monitoring.Attributes

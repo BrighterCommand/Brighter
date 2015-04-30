@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Threading;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Attributes;
