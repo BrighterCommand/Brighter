@@ -34,6 +34,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using System;
 
 namespace paramore.brighter.commandprocessor
@@ -49,6 +50,15 @@ namespace paramore.brighter.commandprocessor
         /// Gets or sets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
-        public Guid Id { get; set; }
+        public Guid Id { get; private set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Event"/> class.
+        /// </summary>
+        /// <param name="id">The identifier.</param>
+        public Event(Guid id)
+        {
+            Id = id;
+        }
     }
 }
