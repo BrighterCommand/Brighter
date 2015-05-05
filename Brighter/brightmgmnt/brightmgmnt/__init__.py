@@ -28,13 +28,30 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
+import configparser
+#from kombu import Exchange
 
-from kombu import Connection, Exchange, Queue
+config = configparser.ConfigParser()
+config.read('BrightMgmnt.ini')
+
+if not config['Broker']:
+    print('Missing the Broker config section in the BrightMgmnt.ini file')
+elif not config['Broker']['amqpuri']:
+    print('Missing the AMQP URI in the config section of the BrightMgmnt.ini file')
+'''
+elif not config['Broker']['exchangename']:
+    print('Missing the Exchange Name in the Broker config section in the BrightMgmnt.ini file')
+elif not config['Broker']['exchangetype']:
+    print('Missing the Exchange Type in the Broker config section in the BrightMgmnt.ini file')
+'''
 
 
-def send(amqpuri, message, routing_key):
-    with Connection(amqpuri) as conn:
-        producer = conn.Producer()
-        producer.publish(message, routing_key)
+#exchange_name = config['Broker']['exchangename']
+#exchange_type = config['Broker']['exchangetype']
+
+#exchange = Exchange(exchange_name, exchange_type, durable=True)
+
+amqp_uri = config['Broker']['amqpuri']
+
 
 

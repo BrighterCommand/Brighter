@@ -36,7 +36,8 @@ Options:
 """
 
 from docopt import docopt
-
+from .controlbus import send
+from brightmgmnt import amqp_uri
 
 def run(cmdlne_arguments):
     """
@@ -45,11 +46,19 @@ def run(cmdlne_arguments):
     :param cmdlne_arguments:
     """
     # connect to rabbit & send the message
+    print("[BrightMgmt] Running management service with the following arguments:")
+    print(cmdlne_arguments)
 
+    routing_key = cmdlne_arguments['<serviceName>'] + "." + "configuration"
+    print("[BrightMgmt]Sending commands to: " + "\"" + routing_key + "\"")
+
+
+    send(amqp_uri, )
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='Brighter Management v0.0')
     run(arguments)
+
 
 
 
