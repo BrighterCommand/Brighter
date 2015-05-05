@@ -28,21 +28,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
-import configparser
-from kombu import Exchange
 
-config = configparser.ConfigParser()
-config.read('BrightMgmnt.ini')
-
-if not config['Broker']:
-    print('Missing the Broker config section in the BrightMgmnt.ini file')
-elif not config['Broker']['exchangename']:
-    print('Missing the Exchange Name in the Broker config section in the BrightMgmnt.ini file')
-elif not config['Broker']['exchangetype']:
-    print('Missing the Exchange Type in the Broker config section in the BrightMgmnt.ini file')
+from kombu import Connection, Exchange, Queue
 
 
-exchange_name = config['Broker']['exchangename']
-exchange_type =  config['Broker']['exchangetype']
+def send(amqpuri, message, routing_key):
 
-exchange = Exchange(exchange_name, exchange_type, durable=True)
+    #Just so we can test seeing the message, we can discard once we know it's working. Consumer will create
+    firehose_queue = Queue('firehose', exchange=media_exchange, routing_key='video')
+
+    with Connection(amqpuri) as conn:
+        producer = conn.Producer()
+        producer.publish(message, routing_key)
+
+
+
+
