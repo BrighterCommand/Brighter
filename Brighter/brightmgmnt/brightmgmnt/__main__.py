@@ -52,8 +52,7 @@ def run(cmdlne_arguments):
     routing_key = cmdlne_arguments['<serviceName>'] + "." + "configuration"
     print("[BrightMgmt]Sending commands to: " + "\"" + routing_key + "\"")
 
-
-    send(amqp_uri, )
+    send(amqp_uri, "stop", routing_key)
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='Brighter Management v0.0')
