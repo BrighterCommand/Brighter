@@ -39,7 +39,7 @@ def send(destination, message, routing_key):
     print("Connect to broker {amqpuri}".format(amqpuri=destination))
     firehose_queue = Queue('paramore.brighter.controlbus', exchange=exchange, routing_key=routing_key)
 
-    connection = BrokerConnection(hostname='amqp://guest:guest@localhost:5672//')
+    connection = BrokerConnection(hostname=destination)
 
     with producers[connection].acquire(block=True) as producer:
         print("Send message to broker {amqpuri} with routing key {routing_key}".format(amqpuri=destination, routing_key=routing_key))
