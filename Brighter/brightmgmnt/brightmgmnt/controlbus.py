@@ -29,17 +29,27 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-from kombu import Connection, Exchange, Queue
+from kombu import BrokerConnection, Queue
+from kombu.pools import producers
+from brightmgmnt import exchange
 
 
-def send(amqpuri, message, routing_key):
+def send(destination, message, routing_key):
 
-    #Just so we can test seeing the message, we can discard once we know it's working. Consumer will create
-    firehose_queue = Queue('firehose', exchange=media_exchange, routing_key='video')
+    print("Connect to broker {amqpuri}".format(amqpuri=destination))
+    firehose_queue = Queue('paramore.brighter.controlbus', exchange=exchange, routing_key=routing_key)
 
-    with Connection(amqpuri) as conn:
-        producer = conn.Producer()
-        producer.publish(message, routing_key)
+    connection = BrokerConnection(hostname='amqp://guest:guest@localhost:5672//')
+
+    with producers[connection].acquire(block=True) as producer:
+        print("Send message to broker {amqpuri} with routing key {routing_key}".format(amqpuri=destination, routing_key=routing_key))
+        producer.publish(message,
+                         exchange=exchange,
+                         serializer='json',
+                         routing_key=routing_key,
+                         declare=[exchange, firehose_queue])
+
+
 
 
 
