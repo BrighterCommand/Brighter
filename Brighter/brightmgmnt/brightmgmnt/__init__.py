@@ -53,6 +53,3 @@ exchange = Exchange(exchange_name, exchange_type, durable=exchange_durability)
 
 amqp_uri = config['Broker']['amqpuri']
 
-
-
-
