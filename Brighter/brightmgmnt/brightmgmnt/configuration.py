@@ -1,5 +1,5 @@
 """
-File         : brightermgmnt.py
+File         : __init__.py
 Author           : ian
 Created          : 02-16-2015
 
@@ -27,32 +27,23 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
-
-Usage:
-  brightermgmnt.py stop <machineName> <serviceName>
-  brightermgmnt.py start <machineName> <serviceName>
-
-Options:
-  -h --help     Show this screen.
 """
 
-from docopt import docopt
-from .controlbus import send
-from .configuration import configure
+import configparser
+from kombu import Exchange
 
 
-def run(amqp_uri, exchange, cmdlne_arguments):
-    routing_key = cmdlne_arguments['<machineName>'] + "." + cmdlne_arguments['<serviceName>'] + "." + "configuration"
-    send(amqp_uri, exchange, "stop", routing_key)
+def configure():
+    config = configparser.ConfigParser(interpolation=None)
+    config.read('cfg/brightmgmnt.ini')
 
-if __name__ == '__main__':
-    arguments = docopt(__doc__, version='Brighter Management v0.0')
-    exchange, amqp_uri = configure()
-    run(amqp_uri, exchange, arguments)
+    exchange_name = config['Broker']['exchangename']
+    exchange_type = config['Broker']['exchangetype']
+    exchange_durability = config.getboolean('Broker', 'durableexchange')
 
+    exchange = Exchange(exchange_name, exchange_type, durable=exchange_durability)
+    amqp_uri = config['Broker']['amqpuri']
 
-
-
-
+    return exchange, amqp_uri
 
 

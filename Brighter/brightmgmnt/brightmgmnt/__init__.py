@@ -28,28 +28,5 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
-import configparser
-from kombu import Exchange
 
-config = configparser.ConfigParser(interpolation=None)
-config.read('cfg/brightmgmnt.ini')
-
-if not config['Broker']:
-    print('Missing the Broker config section in the brightmgmnt.ini file')
-elif not config['Broker']['amqpuri']:
-    print('Missing amqpuri in the config section of the brightmgmnt.ini file')
-elif not config['Broker']['exchangename']:
-    print('Missing exchangename in the Broker config section in the brightmgmnt.ini file')
-elif not config['Broker']['exchangetype']:
-    print('Missing exchangetype in the Broker config section in the brightmgmnt.ini file')
-elif not config['Broker']['durableexchange']:
-    print('Missing durableexchange in the Broker config section in the brightmgmnt.ini file')
-
-exchange_name = config['Broker']['exchangename']
-exchange_type = config['Broker']['exchangetype']
-exchange_durability = config.getboolean('Broker', 'durableexchange')
-
-exchange = Exchange(exchange_name, exchange_type, durable=exchange_durability)
-
-amqp_uri = config['Broker']['amqpuri']
 
