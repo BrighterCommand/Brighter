@@ -81,6 +81,16 @@ namespace paramore.brighter.serviceactivator.TestHelpers
             _messageQueue.Enqueue(message);
         }
 
+        public bool SupportsCaching()
+        {
+            return false;
+        }
+
+        public void SetCachedMessageCount(int count)
+        {
+            
+        }
+
         public virtual void Send(Message message, int millisecondsDelay = 0)
         {
             _messageQueue.Enqueue(message);

@@ -196,8 +196,7 @@ namespace paramore.brighter.serviceactivator
 
         private void Start()
         {
-            _controlTask = Task.Factory.StartNew(
-                () =>
+            _controlTask = Task.Factory.StartNew(() =>
                 {
                     if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
                     {
