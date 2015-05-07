@@ -45,7 +45,8 @@ namespace paramore.brighter.serviceactivator
         public Consumer Create()
         {
             var channel = _connection.ChannelFactory.CreateInputChannel(_connection.ChannelName, _connection.RoutingKey, _connection.IsDurable);
-
+            if(channel.SupportsCaching())
+                channel.SetCachedMessageCount(_connection.NoOfPeformers);
             var messagePump = new MessagePump<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
             {
                 Channel = channel,
