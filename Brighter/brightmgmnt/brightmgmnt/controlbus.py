@@ -31,10 +31,9 @@ THE SOFTWARE.
 
 from kombu import BrokerConnection, Queue
 from kombu.pools import producers
-from brightmgmnt import exchange
 
 
-def send(destination, message, routing_key):
+def send(destination, exchange, message, routing_key):
 
     print("Connect to broker {amqpuri}".format(amqpuri=destination))
     firehose_queue = Queue('paramore.brighter.controlbus', exchange=exchange, routing_key=routing_key)
