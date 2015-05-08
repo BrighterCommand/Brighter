@@ -1,5 +1,5 @@
 """
-File         : configuration.py
+File         :messaging.py
 Author           : ian
 Created          : 02-16-2015
 
@@ -28,22 +28,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
-
-import configparser
-from kombu import Exchange
+from enum import Enum
 
 
-def configure():
-    config = configparser.ConfigParser(interpolation=None)
-    config.read('cfg/brightmgmnt.ini')
-
-    exchange_name = config['Broker']['exchangename']
-    exchange_type = config['Broker']['exchangetype']
-    exchange_durability = config.getboolean('Broker', 'durableexchange')
-
-    exchange = Exchange(exchange_name, exchange_type, durable=exchange_durability)
-    amqp_uri = config['Broker']['amqpuri']
-
-    return exchange, amqp_uri
+def build_message(command):
+    pass
 
 
+class ConfigurationCommandType(Enum):
+    """
+        It is worth noting that these values much match those in Paramore\Brighter\paramore.brighter.serviceactivator\Ports\Commands\ConfigurationCommand.cs
+        otherwise the sent message and the received message will not agree on the code.
+        We could fix this to parse a string.
+    """
+    CM_STOPALL = 0
+    CM_STARTALL = 1
+    CM_STOPCHANNEL = 2
+    CM_STARTCHANNEL = 3

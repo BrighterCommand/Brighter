@@ -1,5 +1,5 @@
 """
-File         : brightermgmnt.py
+File         : __main__.py
 Author           : ian
 Created          : 02-16-2015
 
@@ -35,7 +35,7 @@ Usage:
 Options:
   -h --help     Show this screen.
 """
-
+from .messaging import build_message
 from docopt import docopt
 from .controlbus import send
 from .configuration import configure
@@ -43,7 +43,7 @@ from .configuration import configure
 
 def run(amqp_uri, exchange, cmdlne_arguments):
     routing_key = cmdlne_arguments['<machineName>'] + "." + cmdlne_arguments['<serviceName>'] + "." + "configuration"
-    send(amqp_uri, exchange, "stop", routing_key)
+    send(amqp_uri, exchange, build_message("stop"), routing_key)
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='Brighter Management v0.0')
