@@ -1,5 +1,5 @@
 """
-File         : __init__.py
+File         : controlbus.py
 Author           : ian
 Created          : 02-16-2015
 
