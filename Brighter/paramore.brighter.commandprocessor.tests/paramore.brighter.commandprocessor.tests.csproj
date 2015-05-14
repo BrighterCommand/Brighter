@@ -170,7 +170,7 @@
     <Compile Include="CommandProcessors\TestDoubles\TinyIocHandlerFactory.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TinyIoCMessageMapperFactory.cs" />
     <Compile Include="ControlBus\ConfigurationCommandTests.cs" />
-    <Compile Include="ControlBus\ControlBusBuilderFixture.cs" />
+    <Compile Include="ControlBus\ControlBusBuilderTests.cs" />
     <Compile Include="ControlBus\ControlBusMessageMapperTests.cs" />
     <Compile Include="ExceptionPolicy\FallbackSupportTests.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithFallbackMultipleHandlers.cs" />

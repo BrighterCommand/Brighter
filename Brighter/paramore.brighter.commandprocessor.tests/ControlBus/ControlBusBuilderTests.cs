@@ -25,11 +25,14 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using FakeItEasy;
+using FluentAssertions;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
+using paramore.brighter.serviceactivator.Ports;
+using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.TestHelpers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using Polly;
@@ -41,40 +44,17 @@ namespace paramore.commandprocessor.tests.ControlBus
     {
         private static Dispatcher s_controlBus;
         private static ControlBusBuilder s_busBuilder;
+        private static IDispatcher s_dispatcher;
 
         private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .WaitAndRetry(new[]
-                {
-                    TimeSpan.FromMilliseconds(50),
-                    TimeSpan.FromMilliseconds(100),
-                    TimeSpan.FromMilliseconds(150)
-                });
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-
-            var commandProcessor = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer())))
-                .Policies(new PolicyRegistry()
-                {
-                    {CommandProcessor.RETRYPOLICY, retryPolicy},
-                    {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
-                })
-                .Logger(logger)
-                .NoTaskQueues()
-                .RequestContextFactory(new InMemoryRequestContextFactory())
-                .Build();
+            s_dispatcher = A.Fake<IDispatcher>();
 
             s_busBuilder = ControlBusBuilder
                 .With()
                 .Logger(logger)
-                .CommandProcessor(commandProcessor)
+                .Dispatcher(s_dispatcher)
                 .ChannelFactory(new InMemoryChannelFactory()) as ControlBusBuilder;
         };
 
@@ -82,5 +62,38 @@ namespace paramore.commandprocessor.tests.ControlBus
 
         private It _should_have_a_configuration_channel = () => s_controlBus.Connections.Any(cn => cn.Name == ControlBusBuilder.CONFIGURATION).ShouldBeTrue();
         private It _should_have_a_heartbeat_channel = () => s_controlBus.Connections.Any(cn => cn.Name == ControlBusBuilder.HEARTBEAT).ShouldBeTrue();
+        private It _should_have_a_command_processor = () => s_controlBus.CommandProcessor.ShouldNotBeNull();
+    }
+
+    public class When_we_build_a_control_bus_we_can_send_configuration_messages_to_it
+    {
+        private static IDispatcher s_dispatcher;
+        private static Dispatcher s_controlBus;
+        private static ControlBusBuilder s_busBuilder;
+        private static ConfigurationCommand s_configurationCommand;
+        private static Exception s_exception;
+
+        private Establish _context = () =>
+        {
+            var logger = A.Fake<ILog>();
+            s_dispatcher = A.Fake<IDispatcher>();
+
+            s_busBuilder = (ControlBusBuilder) ControlBusBuilder
+                .With()
+                .Logger(logger)
+                .Dispatcher(s_dispatcher)
+                .ChannelFactory(new InMemoryChannelFactory());
+
+            s_controlBus = s_busBuilder.Build("tests");
+
+            s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL);
+
+        };
+
+        private Because _of = () => s_exception = Catch.Exception(() => s_controlBus.CommandProcessor.Send(s_configurationCommand));
+
+        private It should_not_raise_exceptions_for_missing_handlers = () => s_exception.ShouldBeNull();
+        private It should_call_the_dispatcher_to_start_it = () => A.CallTo(() => s_dispatcher.Receive()).MustHaveHappened();
+
     }
 }

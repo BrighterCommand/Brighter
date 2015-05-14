@@ -45,16 +45,16 @@ namespace paramore.brighter.serviceactivator.Ports.Handlers
     /// <summary>
     /// Class ConfigurationMessageHandler.
     /// </summary>
-    public class ConfigurationMessageHandler : RequestHandler<ConfigurationCommand>
+    public class ConfigurationCommandHandler : RequestHandler<ConfigurationCommand>
     {
         private readonly IDispatcher _dispatcher;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ConfigurationMessageHandler" /> class.
+        /// Initializes a new instance of the <see cref="ConfigurationCommandHandler" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
         /// <param name="dispatcher"></param>
-        public ConfigurationMessageHandler(ILog logger, IDispatcher dispatcher) : base(logger)
+        public ConfigurationCommandHandler(ILog logger, IDispatcher dispatcher) : base(logger)
         {
             _dispatcher = dispatcher;
         }

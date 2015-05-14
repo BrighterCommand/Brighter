@@ -4,15 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{A58FD535-81C2-4E96-87FC-DDC034E56EEE}</ProjectGuid>
+    <ProjectGuid>{CC48B432-25E3-4497-B468-7719E2CF86E4}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Greetings</RootNamespace>
-    <AssemblyName>Greetings</AssemblyName>
+    <RootNamespace>ManagementAndMonitoring</RootNamespace>
+    <AssemblyName>ManagementAndMonitoring</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,6 +23,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -29,33 +31,36 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject>Greetings.Adapters.ServiceHost.Program</StartupObject>
-  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="log4net">
       <HintPath>..\..\packages\log4net-oldkey.1.2.13\lib\net40-full\log4net.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="Polly, Version=2.2.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="paramore.brighter.commandprocessor.messaginggateway.rmq">
+      <HintPath>..\..\..\..\..\Documents\Visual Studio 2013\Projects\Greetings\Libs\paramore.brighter.commandprocessor.messaginggateway.rmq.dll</HintPath>
+    </Reference>
+    <Reference Include="paramore.brighter.serviceactivator">
+      <HintPath>..\..\..\..\..\Documents\Visual Studio 2013\Projects\Greetings\Libs\paramore.brighter.serviceactivator.dll</HintPath>
+    </Reference>
+    <Reference Include="Polly">
       <HintPath>..\..\packages\Polly.2.2.1\lib\net45\Polly.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.ComponentModel.Composition" />
-    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
     <Reference Include="Topshelf">
       <HintPath>..\..\packages\Topshelf.3.1.4\lib\net40-full\Topshelf.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Adapters\ServiceHost\GreetingService.cs" />
     <Compile Include="Adapters\ServiceHost\Program.cs" />
-    <Compile Include="Adapters\ServiceHost\MeetingAndManagementService.cs" />
     <Compile Include="Adapters\ServiceHost\TinyIoCHandlerFactory.cs" />
     <Compile Include="Adapters\ServiceHost\TinyIoCMessageMapperFactory.cs" />
     <Compile Include="Ports\CommandHandlers\GreetingCommandHandler.cs" />
@@ -65,24 +70,15 @@
     <Compile Include="TinyIoC.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
-      <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>
-      <Name>paramore.brighter.commandprocessor.messaginggateway.rmq</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
-      <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
-      <Name>paramore.brighter.commandprocessor</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj">
-      <Project>{b9126b00-5a97-4c7d-b395-755456e5fa28}</Project>
-      <Name>paramore.brighter.serviceactivator</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
+      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
+      <Name>paramore.brighter.commandprocessor</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
