@@ -55,11 +55,16 @@ namespace paramore.brighter.serviceactivator
     /// </summary>
     public class Dispatcher : IDispatcher
     {
-        private readonly IAmACommandProcessor _commandProcessor;
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
         private readonly ILog _logger;
         private Task _controlTask;
         private readonly IList<Task> _tasks = new SynchronizedCollection<Task>();
+
+        /// <summary>
+        /// Gets the command processor.
+        /// </summary>
+        /// <value>The command processor.</value>
+        public IAmACommandProcessor CommandProcessor { get; private set; }
 
         /// <summary>
         /// Gets the connections.
@@ -88,7 +93,7 @@ namespace paramore.brighter.serviceactivator
         /// <param name="logger">The logger.</param>
         public Dispatcher(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, IEnumerable<Connection> connections, ILog logger)
         {
-            _commandProcessor = commandProcessor;
+            CommandProcessor = commandProcessor;
             _messageMapperRegistry = messageMapperRegistry;
             this.Connections = connections;
             _logger = logger;
@@ -251,7 +256,7 @@ namespace paramore.brighter.serviceactivator
                     int performer = i;
                     _logger.InfoFormat("Dispatcher: Creating consumer number {0} for connection: {1}", (performer + 1), connection.Name);
                     var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(connection.DataType);
-                    var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, new object[] { _commandProcessor, _messageMapperRegistry, connection, _logger });
+                    var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, new object[] { CommandProcessor, _messageMapperRegistry, connection, _logger });
 
                     list.Add(consumerFactory.Create());
                 }

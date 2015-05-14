@@ -22,18 +22,22 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.serviceactivator.Ports;
 using paramore.brighter.serviceactivator.Ports.Commands;
+using paramore.brighter.serviceactivator.Ports.Handlers;
 using paramore.brighter.serviceactivator.ServiceActivatorConfiguration;
+using Polly;
 
 namespace paramore.brighter.serviceactivator.controlbus
 {
     /// <summary>
     /// Class ControlBusBuilder.
     /// </summary>
-    public class ControlBusBuilder : INeedALogger, INeedACommandProcessor, INeedAChannelFactory, IAmADispatchBuilder
+    public class ControlBusBuilder : INeedALogger, INeedADispatcher, INeedAChannelFactory, IAmADispatchBuilder
     {
         /// <summary>
         /// The configuration
@@ -45,8 +49,8 @@ namespace paramore.brighter.serviceactivator.controlbus
         public const string HEARTBEAT = "heartbeat";
 
         private ILog _logger;
-        private CommandProcessor _commandProcessor;
         private IAmAChannelFactory _channelFactory;
+        private IDispatcher _dispatcher;
 
         /// <summary>
         /// The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP
@@ -61,25 +65,21 @@ namespace paramore.brighter.serviceactivator.controlbus
             return this;
         }
 
-        /// <summary>
-        /// The command processor used to send and publish messages to handlers by the service activator.
-        /// </summary>
-        /// <param name="commandProcessor">The command processor.</param>
-        /// <returns>INeedAMessageMapper.</returns>
-        public INeedAChannelFactory CommandProcessor(CommandProcessor commandProcessor)
-        {
-            _commandProcessor = commandProcessor;
-            return this;
-        }
 
         /// <summary>
         /// The logger to use to report from the Dispatcher.
         /// </summary>
         /// <param name="logger">The logger.</param>
         /// <returns>INeedACommandProcessor.</returns>
-        public INeedACommandProcessor Logger(ILog logger)
+        public INeedADispatcher Logger(ILog logger)
         {
             _logger = logger;
+            return this;
+        }
+
+        public INeedAChannelFactory Dispatcher(IDispatcher dispatcher)
+        {
+            _dispatcher = dispatcher;
             return this;
         }
 
@@ -115,10 +115,52 @@ namespace paramore.brighter.serviceactivator.controlbus
             };
             connections.Add(heartbeatElement);
 
+            /* We want to register policies, messages and handlers for receiving built in commands. It's simple enough to do this for
+             the registries, but we cannot know your HandlerFactory implementation in order to insert. So we have to rely on
+             an internal HandlerFactory to build these for you.
+             
+             * We also need to  pass the supervised dispatcher as a dependency to our command handlers, so this allows us to manage
+             * the injection of the dependency as part of our handler factory
+             
+             */
+            
+            var retryPolicy = Policy
+                .Handle<Exception>()
+                .WaitAndRetry(new[]
+                {
+                    TimeSpan.FromMilliseconds(50),
+                    TimeSpan.FromMilliseconds(100),
+                    TimeSpan.FromMilliseconds(150)
+                });
+
+            var circuitBreakerPolicy = Policy
+                .Handle<Exception>()
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+
+            var policyRegistry = new PolicyRegistry()
+            {
+                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy},
+                {CommandProcessor.RETRYPOLICY, retryPolicy}
+            };
+
+
+            var subscriberRegistry = new SubscriberRegistry();
+            subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
+            
+
+            var commandProcessor = CommandProcessorBuilder.With()
+                .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher, _logger)))
+                .Policies(policyRegistry)
+                .Logger(_logger)
+                .NoTaskQueues()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
+
+
             return DispatchBuilder
                 .With()
                 .Logger(_logger)
-                .CommandProcessor(_commandProcessor)
+                .CommandProcessor(commandProcessor)
                 .MessageMappers(new MessageMapperRegistry(new ControlBusMessageMapperFactory()))
                 .ChannelFactory(_channelFactory)
                 .ConnectionsFromElements(connections)
@@ -145,21 +187,23 @@ namespace paramore.brighter.serviceactivator.controlbus
         /// </summary>
         /// <param name="logger">The logger.</param>
         /// <returns>INeedACommandProcessor.</returns>
-        INeedACommandProcessor Logger(ILog logger);
+        INeedADispatcher Logger(ILog logger);
     }
 
     /// <summary>
-    /// Interface INeedACommandProcessor
+    /// Interface INeedADispatcher
     /// </summary>
-    public interface INeedACommandProcessor
+    public interface INeedADispatcher
     {
         /// <summary>
-        /// The command processor used to send and publish messages to handlers by the service activator.
+        /// This is the main dispatcher for the service. A control bus supervises this dispatcher (even though it is a dispatcher itself).
+        /// We provide this dependency to the control bus so that we can manage it.
         /// </summary>
-        /// <param name="commandProcessor">The command processor.</param>
-        /// <returns>INeedAMessageMapper.</returns>
-        INeedAChannelFactory CommandProcessor(CommandProcessor commandProcessor);
+        /// <param name="dispatcher">The dispatcher.</param>
+        /// <returns>INeedAChannelFactory.</returns>
+        INeedAChannelFactory Dispatcher(IDispatcher dispatcher);
     }
+
 
     /// <summary>
     /// Interface INeedAChannelFactory
@@ -167,9 +211,9 @@ namespace paramore.brighter.serviceactivator.controlbus
     public interface INeedAChannelFactory
     {
         /// <summary>
-        /// {D255958A-8513-4226-94B9-080D98F904A1}The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP
-        /// {D255958A-8513-4226-94B9-080D98F904A1}needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
-        /// {D255958A-8513-4226-94B9-080D98F904A1}layer. We provide an implementation for RabbitMQ for example.
+        /// The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP
+        /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
+        /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
         /// <param name="channelFactory">The channel factory.</param>
         /// <returns>INeedAListOfConnections.</returns>

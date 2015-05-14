@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Greetings.Ports.CommandHandlers;
-using Greetings.Ports.Commands;
-using Greetings.Ports.Mappers;
+using ManagementAndMonitoring.Ports.CommandHandlers;
+using ManagementAndMonitoring.Ports.Commands;
+using ManagementAndMonitoring.Ports.Mappers;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
@@ -34,7 +34,7 @@ using Polly;
 using TinyIoC;
 using Topshelf;
 
-namespace Greetings.Adapters.ServiceHost
+namespace ManagementAndMonitoring.Adapters.ServiceHost
 {
     internal class GreetingService : ServiceControl
     {

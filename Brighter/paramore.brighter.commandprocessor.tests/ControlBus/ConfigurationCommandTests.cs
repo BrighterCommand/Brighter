@@ -33,7 +33,7 @@ namespace paramore.commandprocessor.tests.ControlBus
 {
     public class When_receiving_an_all_stop_message
     {
-        private static ConfigurationMessageHandler s_configurationMessageHandler;
+        private static ConfigurationCommandHandler s_configurationCommandHandler;
         private static ConfigurationCommand s_configurationCommand;
         private static IDispatcher s_dispatcher;
 
@@ -42,19 +42,19 @@ namespace paramore.commandprocessor.tests.ControlBus
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
 
-            s_configurationMessageHandler = new ConfigurationMessageHandler(logger, s_dispatcher);
+            s_configurationCommandHandler = new ConfigurationCommandHandler(logger, s_dispatcher);
 
             s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPALL);
         };
 
-        private Because _of = () => s_configurationMessageHandler.Handle(s_configurationCommand);
+        private Because _of = () => s_configurationCommandHandler.Handle(s_configurationCommand);
 
         private It _should_call_end_on_the_dispatcher = () => A.CallTo(() => s_dispatcher.End()).MustHaveHappened();
     }
 
     public class When_receiving_an_all_start_message
     {
-        private static ConfigurationMessageHandler s_configurationMessageHandler;
+        private static ConfigurationCommandHandler s_configurationCommandHandler;
         private static ConfigurationCommand s_configurationCommand;
         private static IDispatcher s_dispatcher;
 
@@ -63,12 +63,12 @@ namespace paramore.commandprocessor.tests.ControlBus
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
 
-            s_configurationMessageHandler = new ConfigurationMessageHandler(logger, s_dispatcher);
+            s_configurationCommandHandler = new ConfigurationCommandHandler(logger, s_dispatcher);
 
             s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL);
         };
 
-        private Because _of = () => s_configurationMessageHandler.Handle(s_configurationCommand);
+        private Because _of = () => s_configurationCommandHandler.Handle(s_configurationCommand);
 
         private It _should_call_receive_on_the_dispatcher = () => A.CallTo(() => s_dispatcher.Receive()).MustHaveHappened();
     }
@@ -76,7 +76,7 @@ namespace paramore.commandprocessor.tests.ControlBus
     public class When_receiving_a_stop_message_for_a_connection
     {
         const string CONNECTION_NAME = "Test";
-        private static ConfigurationMessageHandler s_configurationMessageHandler;
+        private static ConfigurationCommandHandler s_configurationCommandHandler;
         private static ConfigurationCommand s_configurationCommand;
         private static IDispatcher s_dispatcher;
 
@@ -85,12 +85,12 @@ namespace paramore.commandprocessor.tests.ControlBus
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
 
-            s_configurationMessageHandler = new ConfigurationMessageHandler(logger, s_dispatcher);
+            s_configurationCommandHandler = new ConfigurationCommandHandler(logger, s_dispatcher);
 
             s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPCHANNEL) {ConnectionName = CONNECTION_NAME};
         };
 
-        private Because _of = () => s_configurationMessageHandler.Handle(s_configurationCommand);
+        private Because _of = () => s_configurationCommandHandler.Handle(s_configurationCommand);
 
         private It _should_call_stop_for_the_given_connection = () => A.CallTo(() => s_dispatcher.Shut(CONNECTION_NAME));
     }
@@ -98,7 +98,7 @@ namespace paramore.commandprocessor.tests.ControlBus
     public class When_receiving_a_start_message_for_a_connection
     {
         const string CONNECTION_NAME = "Test";
-        private static ConfigurationMessageHandler s_configurationMessageHandler;
+        private static ConfigurationCommandHandler s_configurationCommandHandler;
         private static ConfigurationCommand s_configurationCommand;
         private static IDispatcher s_dispatcher;
 
@@ -107,12 +107,12 @@ namespace paramore.commandprocessor.tests.ControlBus
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
 
-            s_configurationMessageHandler = new ConfigurationMessageHandler(logger, s_dispatcher);
+            s_configurationCommandHandler = new ConfigurationCommandHandler(logger, s_dispatcher);
 
             s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTCHANNEL) {ConnectionName = CONNECTION_NAME};
         };
 
-        private Because _of = () => s_configurationMessageHandler.Handle(s_configurationCommand);
+        private Because _of = () => s_configurationCommandHandler.Handle(s_configurationCommand);
 
         private It _should_call_stop_for_the_given_connection = () => A.CallTo(() => s_dispatcher.Shut(CONNECTION_NAME));
     }
