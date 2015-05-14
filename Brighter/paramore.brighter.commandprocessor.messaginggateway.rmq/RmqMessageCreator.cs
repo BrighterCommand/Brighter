@@ -76,6 +76,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var messageId = HeaderResult<Guid>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
             var handledCount = HeaderResult<int>.Empty();
+            var delayedMilliseconds = HeaderResult<int>.Empty();
 
             Message message;
             try
@@ -84,6 +85,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
                 timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
                 handledCount = ReadHandledCount(headers);
+                delayedMilliseconds = ReadDelayedMilliseconds(headers);
                 var messageType = ReadMessageType(headers);
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
@@ -95,7 +97,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     string body = Encoding.UTF8.GetString(fromQueue.Body);
 
                     message = new Message(
-                        timeStamp.Success ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result) : new MessageHeader(messageId.Result, topic.Result, messageType.Result),
+                        timeStamp.Success ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, delayedMilliseconds.Result) : new MessageHeader(messageId.Result, topic.Result, messageType.Result),
                         new MessageBody(body));
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString((byte[])header.Value)));
@@ -159,6 +161,24 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 int handledCount;
                 var val = int.TryParse(s, out handledCount) ? handledCount : 0;
                 return new HeaderResult<int>(val, true);
+            });
+        }
+
+        private HeaderResult<int> ReadDelayedMilliseconds(IDictionary<string, object> headers)
+        {
+            return ReadHeader(headers, HeaderNames.DELAYED_MILLISECONDS).Map(s =>
+            {
+                if (string.IsNullOrEmpty(s))
+                {
+                    return new HeaderResult<int>(-1, true);
+                }
+
+                int delayedMilliseconds;
+
+                if (int.TryParse(s, out delayedMilliseconds))
+                    return new HeaderResult<int>(delayedMilliseconds > 0 ? -1 : (delayedMilliseconds * -1), true);
+                else
+                    return new HeaderResult<int>(-1, false);
             });
         }
 

@@ -37,6 +37,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
@@ -48,7 +49,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// The <see cref="RmqMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles connection establishment, request sending and error handling
     /// </summary>
-    public class RmqMessageProducer : MessageGateway, IAmAMessageProducer
+    public class RmqMessageProducer : MessageGateway, IAmAMessageProducerSupportingDelay
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
@@ -63,6 +64,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>Task.</returns>
         public Task Send(Message message)
         {
+            return this.Send(message, 0);
+        }
+
+        /// <summary>
+        /// Send the specified message with specified delay
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <returns>Task.</returns>
+        public Task Send(Message message, int delayMilliseconds)
+        {
             //RabbitMQ .NET Client does not have an async publish, so fake this for now as we want to support messaging frameworks that do have this option
             var tcs = new TaskCompletionSource<object>();
 
@@ -72,9 +84,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             {
                 EnsureChannel();
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
-                Logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, message.Body.Value);
-                rmqMessagePublisher.PublishMessage(message);
-                Logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with topic {2} and id {3} and message: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow);
+                Logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, message.Body.Value, delayMilliseconds);
+                rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
+                Logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and message: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds);
             }
             catch (Exception e)
             {

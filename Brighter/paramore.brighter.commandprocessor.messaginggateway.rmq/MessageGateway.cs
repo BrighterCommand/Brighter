@@ -134,13 +134,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
                 Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri());
 
-                DeclareExchange(Channel, Configuration);
+                //desired state configuration of the exchange
+                Channel.DeclareExchangeForConfiguration(Configuration);
             }
-        }
-
-        private void DeclareExchange(IModel channel, RMQMessagingGatewayConfigurationSection configuration)        {
-            //desired state configuration of the exchange
-            channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, configuration.Exchange.Durable);
         }
 
         /// <summary>

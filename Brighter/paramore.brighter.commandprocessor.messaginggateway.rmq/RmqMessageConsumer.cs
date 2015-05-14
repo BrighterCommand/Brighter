@@ -55,7 +55,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// inter-process communication tasks from the server. It handles connection establishment, request reception and dispatching, 
     /// result sending, and error handling.
     /// </summary>
-    public class RmqMessageConsumer : MessageGateway, IAmAMessageConsumer
+    public class RmqMessageConsumer : MessageGateway, IAmAMessageConsumerSupportingDelay
     {
         private readonly string _queueName;
         private readonly string _routingKey;
@@ -125,12 +125,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         public void Requeue(Message message)
         {
+            this.Requeue(message, 0);
+        }
+
+        public void Requeue(Message message, int delayMilliseconds)
+        {
             try
             {
                 EnsureChannel(_queueName);
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name);
-                Logger.DebugFormat("RmqMessageConsumer: Re-queueing message {0}", message.Id);
-                rmqMessagePublisher.PublishMessage(message);
+                Logger.DebugFormat("RmqMessageConsumer: Re-queueing message {0} with a delay of {1} milliseconds", message.Id, delayMilliseconds);
+                rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
                 Reject(message, false);
             }
             catch (Exception exception)
