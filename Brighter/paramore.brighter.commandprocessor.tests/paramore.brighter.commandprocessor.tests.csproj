@@ -131,6 +131,7 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AppConfig.cs" />
     <Compile Include="CommandProcessors\PipelineTests.cs" />
     <Compile Include="CommandProcessors\CommandProcessorTests.cs" />
     <Compile Include="CommandProcessors\PipelineContextTests.cs" />
@@ -230,6 +231,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.with-delay.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="app.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

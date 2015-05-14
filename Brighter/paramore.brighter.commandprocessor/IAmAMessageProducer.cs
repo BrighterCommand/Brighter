@@ -60,4 +60,25 @@ namespace paramore.brighter.commandprocessor
         /// <returns>Task.</returns>
         Task Send(Message message);
     }
+
+    /// <summary>
+    /// Interface IAmAMessageProducerSupportingDelay
+    /// Abstracts away the Application Layer used to push messages onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+    /// Usually clients do not need to instantiate as access is via an <see cref="IAmAChannel"/> derived class.
+    /// We provide the following default gateway applications
+    /// <list type="bullet">
+    /// <item>AMQP</item>
+    /// <item>RESTML</item>
+    /// </list>
+    /// </summary>
+    public interface IAmAMessageProducerSupportingDelay : IAmAMessageProducer
+    {
+        /// <summary>
+        /// Send the specified message with specified delay
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <returns>Task.</returns>
+        Task Send(Message message, int delayMilliseconds);
+    }
 }

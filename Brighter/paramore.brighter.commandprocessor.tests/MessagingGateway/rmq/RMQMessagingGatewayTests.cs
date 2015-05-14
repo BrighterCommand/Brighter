@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Machine.Specifications;
@@ -37,7 +38,7 @@ using RabbitMQ.Client.Exceptions;
 namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 {
     [Subject("Messaging Gateway")]
-    [Tags("Requires", new[] { "RabbitMQ" })]
+    [Tags("Requires", new[] { "RabbitMQ", "RabbitMQProducerReceiver" })]
     public class When_posting_a_message_via_the_messaging_gateway
     {
         private static IAmAMessageProducer s_messageProducer;
@@ -45,6 +46,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         private static Message s_message;
         private static TestRMQListener s_client;
         private static string s_messageBody;
+        private static IDictionary<string, object> s_messageHeaders;
 
         private Establish _context = () =>
         {
@@ -54,18 +56,81 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
             s_messageProducer = new RmqMessageProducer(logger);
             s_messageConsumer = new RmqMessageConsumer(s_message.Header.Topic, s_message.Header.Topic, logger);
+            s_messageConsumer.Purge();
 
             s_client = new TestRMQListener(s_message.Header.Topic);
-            s_messageConsumer.Purge();
         };
 
         private Because _of = () =>
         {
             s_messageProducer.Send(s_message);
-            s_messageBody = s_client.Listen();
+
+            var result = s_client.Listen();
+            s_messageBody = result.GetBody();
+            s_messageHeaders = result.GetHeaders();
         };
 
         private It _should_send_a_message_via_rmq_with_the_matching_body = () => s_messageBody.ShouldEqual(s_message.Body.Value);
+        private It _should_send_a_message_via_rmq_without_delay_header = () => s_messageHeaders.Keys.ShouldNotContain(HeaderNames.DELAY_MILLISECONDS);
+        private It _should_received_a_message_via_rmq_without_delayed_header = () => s_messageHeaders.Keys.ShouldNotContain(HeaderNames.DELAYED_MILLISECONDS);
+
+        private Cleanup _tearDown = () =>
+        {
+            s_messageConsumer.Purge();
+            s_messageProducer.Dispose();
+        };
+    }
+
+    [Subject("Messaging Gateway")]
+    [Tags("Requires", new[] { "RabbitMQ", "RabbitMQProducerReceiver", "RabbitMQDelayed" })]
+    //[Ignore("This only works if RabbitMQ 3.5 w/plugin rabbitmq_delayed_message_exchange")]
+    public class When_reading_a_delayed_message_via_the_messaging_gateway
+    {
+        private static IAmAMessageProducerSupportingDelay s_messageProducer;
+        private static IAmAMessageConsumer s_messageConsumer;
+        private static Message s_message;
+        private static TestRMQListener s_client;
+        private static string s_messageBody;
+        private static bool s_immediateReadIsNull;
+        private static IDictionary<string, object> s_messageHeaders;
+
+        private Establish _context = () =>
+        {
+            using (AppConfig.Change("app.with-delay.config"))
+            {
+                var logger = LogProvider.For<RmqMessageConsumer>();
+
+                var s_header = new MessageHeader(Guid.NewGuid(), "test3", MessageType.MT_COMMAND);
+                var s_originalMessage = new Message(header: s_header, body: new MessageBody("test3 content"));
+
+                var s_mutatedHeader = new MessageHeader(s_header.Id, "test3", MessageType.MT_COMMAND);
+                s_mutatedHeader.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
+                s_message = new Message(header: s_mutatedHeader, body: s_originalMessage.Body);
+
+                s_messageProducer = new RmqMessageProducer(logger);
+                s_messageConsumer = new RmqMessageConsumer(s_message.Header.Topic, s_message.Header.Topic, logger);
+                s_messageConsumer.Purge();
+
+                s_client = new TestRMQListener(s_message.Header.Topic);
+            }
+        };
+
+        private Because _of = () =>
+        {
+            s_messageProducer.Send(s_message, 1000);
+
+            var immediateResult = s_client.Listen(waitForMilliseconds: 0, suppressDisposal: true);
+            s_immediateReadIsNull = immediateResult == null;
+
+            var delayedResult = s_client.Listen(waitForMilliseconds: 2000);
+            s_messageBody = delayedResult.GetBody();
+            s_messageHeaders = delayedResult.GetHeaders();
+        };
+
+        private It _should_have_not_been_able_get_message_before_delay = () => s_immediateReadIsNull.ShouldBeTrue();
+        private It _should_send_a_message_via_rmq_with_the_matching_body = () => s_messageBody.ShouldEqual(s_message.Body.Value);
+        private It _should_send_a_message_via_rmq_with_delay_header = () => s_messageHeaders.Keys.ShouldContain(HeaderNames.DELAY_MILLISECONDS);
+        private It _should_received_a_message_via_rmq_with_delayed_header = () => s_messageHeaders.Keys.ShouldContain(HeaderNames.DELAYED_MILLISECONDS);
 
         private Cleanup _tearDown = () =>
         {
@@ -88,77 +153,50 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             _connectionFactory = new ConnectionFactory { Uri = configuration.AMPQUri.Uri.ToString() };
             _connection = _connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
-            _channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, false);
+            _channel.DeclareExchangeForConfiguration(configuration);
             _channel.QueueDeclare(_channelName, false, false, false, null);
             _channel.QueueBind(_channelName, configuration.Exchange.Name, _channelName);
         }
 
-        public string Listen()
+        public BasicGetResult Listen(int waitForMilliseconds = 0, bool suppressDisposal = false)
         {
             try
             {
+                if (waitForMilliseconds > 0)
+                    Task.Delay(waitForMilliseconds).Wait();
+
                 var result = _channel.BasicGet(_channelName, true);
                 if (result != null)
                 {
                     _channel.BasicAck(result.DeliveryTag, false);
-                    var message = Encoding.UTF8.GetString(result.Body);
-                    return message;
+                    return result;
                 }
             }
             finally
             {
-                //Added wait as rabbit needs some time to sort it self out and the close and dispose was happening to quickly
-                Task.Delay(200).Wait();
-                _channel.Dispose();
-                if (_connection.IsOpen) _connection.Dispose();
+                if (!suppressDisposal)
+                {
+                    //Added wait as rabbit needs some time to sort it self out and the close and dispose was happening to quickly
+                    Task.Delay(200).Wait();
+                    _channel.Dispose();
+                    if (_connection.IsOpen) _connection.Dispose();
+                }
             }
             return null;
         }
     }
 
-    [Subject("Messaging Gateway")]
-    [Tags("Requires", new[] { "RabbitMQ" })]
-    public class When_reading_a_message_via_the_messaging_gateway
+    internal static class TestRMQExtensions
     {
-        private static IAmAMessageProducer s_sender;
-        private static IAmAMessageConsumer s_receiver;
-        private static Message s_sentMessage;
-        private static Message s_receivedMessage;
-
-        private Establish _context = () =>
+        public static string GetBody(this BasicGetResult result)
         {
-            var testGuid = Guid.NewGuid();
-            var logger = LogProvider.For<RmqMessageConsumer>();
+            return result == null ? null : Encoding.UTF8.GetString(result.Body);
+        }
 
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
-
-            messageHeader.UpdateHandledCount();
-            s_sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
-
-            s_sender = new RmqMessageProducer(logger);
-            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
-
-            s_receiver.Purge();
-
-            //create queue if missing
-            s_receiver.Receive(1);
-        };
-
-        private Because _of = () =>
+        public static IDictionary<string, object> GetHeaders(this BasicGetResult result)
         {
-            s_sender.Send(s_sentMessage);
-            s_receivedMessage = s_receiver.Receive(2000);
-            s_receiver.Acknowledge(s_receivedMessage);
-        };
-
-        private It _should_send_a_message_via_rmq_with_the_matching_body = () => s_receivedMessage.ShouldEqual(s_sentMessage);
-
-        private Cleanup _teardown = () =>
-        {
-            s_receiver.Purge();
-            s_sender.Dispose();
-            s_receiver.Dispose();
-        };
+            return result == null ? null : result.BasicProperties.Headers;
+        }
     }
 
     [Subject("Messaging Gateway")]

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 
 using paramore.brighter.commandprocessor.extensions;
@@ -38,6 +39,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessagePublisher
     {
+        private static string[] HeadersToReset = { HeaderNames.DELAY_MILLISECONDS };
+
         private readonly IModel _channel;
         private readonly string _exchangeName;
 
@@ -70,18 +73,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Publishes the message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void PublishMessage(Message message)
+        /// <param name="headers">User specified message headers.</param>
+        public void PublishMessage(Message message, int delayMilliseconds)
         {
             _channel.BasicPublish(
                 _exchangeName,
                 message.Header.Topic,
                 false,
                 false,
-                CreateBasicProperties(message),
+                CreateBasicProperties(
+                    message: message, 
+                    additionalHeaders: delayMilliseconds > 0 ? new Dictionary<string, object> {{HeaderNames.DELAY_MILLISECONDS, delayMilliseconds}} : null),
                 Encoding.UTF8.GetBytes(message.Body.Value));
         }
 
-        private IBasicProperties CreateBasicProperties(Message message)
+        private IBasicProperties CreateBasicProperties(Message message, IDictionary<string, object> additionalHeaders = null)
         {
             var basicProperties = _channel.CreateBasicProperties();
             basicProperties.DeliveryMode = 1;
@@ -95,7 +101,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                                           {HeaderNames.HANDLED_COUNT , message.Header.HandledCount.ToString(CultureInfo.InvariantCulture)}
                                       };
 
-            message.Header.Bag.Each((header) => basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value)));
+            if (additionalHeaders != null)
+                additionalHeaders.Each((header) => basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value)));
+            
+            message.Header.Bag.Each((header) => {
+                if(!HeadersToReset.Any(htr => htr.Equals(header.Key))) basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value));
+            });
+
             return basicProperties;
         }
     }
