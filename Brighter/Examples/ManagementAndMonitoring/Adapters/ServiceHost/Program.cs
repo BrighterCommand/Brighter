@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Greetings.Adapters.ServiceHost;
 using Topshelf;
 
 namespace ManagementAndMonitoring.Adapters.ServiceHost
@@ -37,9 +38,9 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
              * {"Greeting":"hello world","Id":"0a81cbbc-5f82-4912-99ee-19f0b7ee4bc8"}
              */
 
-            HostFactory.Run(x => x.Service<GreetingService>(sc =>
+            HostFactory.Run(x => x.Service<MeetingAndManagementService >(sc =>
                {
-                   sc.ConstructUsing(() => new GreetingService());
+                   sc.ConstructUsing(() => new MeetingAndManagementService ());
 
                     // the start and stop methods for the service
                     sc.WhenStarted((s, hostcontrol) => s.Start(hostcontrol));

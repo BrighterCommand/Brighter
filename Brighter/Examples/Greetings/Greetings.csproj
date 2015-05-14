@@ -54,8 +54,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Adapters\ServiceHost\GreetingService.cs" />
     <Compile Include="Adapters\ServiceHost\Program.cs" />
-    <Compile Include="Adapters\ServiceHost\MeetingAndManagementService.cs" />
     <Compile Include="Adapters\ServiceHost\TinyIoCHandlerFactory.cs" />
     <Compile Include="Adapters\ServiceHost\TinyIoCMessageMapperFactory.cs" />
     <Compile Include="Ports\CommandHandlers\GreetingCommandHandler.cs" />
@@ -63,6 +63,10 @@
     <Compile Include="Ports\Mappers\GreetingCommandMessageMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TinyIoC.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
@@ -78,11 +82,6 @@
       <Name>paramore.brighter.serviceactivator</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

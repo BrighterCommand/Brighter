@@ -36,9 +36,9 @@ namespace Greetings.Adapters.ServiceHost
              * {"Greeting":"hello world","Id":"0a81cbbc-5f82-4912-99ee-19f0b7ee4bc8"}
              */
 
-            HostFactory.Run(x => x.Service<MeetingAndManagementService>(sc =>
+            HostFactory.Run(x => x.Service<GreetingService >(sc =>
                {
-                   sc.ConstructUsing(() => new MeetingAndManagementService());
+                   sc.ConstructUsing(() => new GreetingService ());
 
                     // the start and stop methods for the service
                     sc.WhenStarted((s, hostcontrol) => s.Start(hostcontrol));
