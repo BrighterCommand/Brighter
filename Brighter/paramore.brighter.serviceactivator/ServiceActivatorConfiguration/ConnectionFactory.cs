@@ -50,6 +50,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
                    noOfPerformers: connectionElement.NoOfPerformers,
                    timeoutInMilliseconds: connectionElement.TimeoutInMiliseconds,
                    requeueCount: connectionElement.RequeueCount,
+                   requeueDelayInMilliseconds: connectionElement.RequeueDelayInMilliseconds,
                    unacceptableMessageLimit: connectionElement.UnacceptableMessageLimit
                    )
              ).ToList();
