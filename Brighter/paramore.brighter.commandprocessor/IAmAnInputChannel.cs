@@ -69,7 +69,8 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Requeues the specified message.
         /// </summary>
-        /// <param name="message"></param>
-        void Requeue(Message message);
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        void Requeue(Message message, int delayMilliseconds = 0);
     }
 }
