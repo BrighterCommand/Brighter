@@ -105,7 +105,10 @@ namespace paramore.brighter.commandprocessor
         /// Gets the number of times this message has been seen 
         /// </summary>
         public int HandledCount { get; private set; }
-        //intended for extended headers
+        /// <summary>
+        /// Gets the number of milliseconds the message was instructed to be delayed for
+        /// </summary>
+        public int DelayedMilliseconds { get; private set; }
 
         public MessageHeader()
         {
@@ -125,8 +128,8 @@ namespace paramore.brighter.commandprocessor
             Bag = new Dictionary<string, object>();
             TimeStamp = RoundToSeconds(DateTime.UtcNow);
             HandledCount = 0;
+            DelayedMilliseconds = 0;
         }
-
 
         public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp)
             : this(messageId, topic, messageType)
@@ -134,10 +137,11 @@ namespace paramore.brighter.commandprocessor
             TimeStamp = RoundToSeconds(timeStamp);
         }
 
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, int handledCount)
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, int handledCount, int delayedMilliseconds)
             : this(messageId, topic, messageType, timeStamp)
         {
             HandledCount = handledCount;
+            DelayedMilliseconds = delayedMilliseconds;
         }
 
         //AMQP spec says:
@@ -157,7 +161,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(MessageHeader other)
         {
-            return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType && TimeStamp == other.TimeStamp && HandledCount == other.HandledCount;
+            return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType && TimeStamp == other.TimeStamp && HandledCount == other.HandledCount && DelayedMilliseconds == other.DelayedMilliseconds;
         }
 
         /// <summary>
@@ -186,6 +190,7 @@ namespace paramore.brighter.commandprocessor
                 hashCode = (hashCode * 397) ^ (int)MessageType;
                 hashCode = (hashCode * 397) ^ TimeStamp.GetHashCode();
                 hashCode = (hashCode * 397) ^ HandledCount.GetHashCode();
+                hashCode = (hashCode * 397) ^ DelayedMilliseconds.GetHashCode();
                 return hashCode;
             }
         }

@@ -22,7 +22,7 @@
   
   <serviceActivatorConnections>
     <connections>
-      <!--<add connectionName="TestConnectionName" channelName="TestChannelName" routingKey="TestRoutingKey" dataType="TestDataType" timeOutInMilliseconds="200"/>-->
+      <!--<add connectionName="TestConnectionName" channelName="TestChannelName" routingKey="TestRoutingKey" dataType="TestDataType" timeOutInMilliseconds="200" requeueDelayInMilliseconds="5000" />-->
     </connections>
   </serviceActivatorConnections>
 </configuration>

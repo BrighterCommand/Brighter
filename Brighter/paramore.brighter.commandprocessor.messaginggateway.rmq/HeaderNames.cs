@@ -59,5 +59,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// The handle d_ count{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
         /// </summary>
         public const string HANDLED_COUNT = "HandledCount";
+        /// <summary>
+        /// The milliseconds to delay the message by (requires plugin rabbitmq_delayed_message_exchange)
+        /// </summary>
+        public const string DELAY_MILLISECONDS = "x-delay";
+        /// <summary>
+        /// The milliseconds the message was instructed to be delayed for (sent as negative) (requires plugin rabbitmq_delayed_message_exchange)
+        /// </summary>
+        public const string DELAYED_MILLISECONDS = "x-delay";
     }
 }

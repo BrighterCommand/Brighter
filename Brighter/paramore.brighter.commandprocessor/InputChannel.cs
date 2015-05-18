@@ -37,6 +37,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -50,6 +51,7 @@ namespace paramore.brighter.commandprocessor
         private readonly string _queueName;
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
+        private readonly bool _messageConsumerSupportsDelay;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannel"/> class.
@@ -60,6 +62,7 @@ namespace paramore.brighter.commandprocessor
         {
             _queueName = queueName;
             _messageConsumer = messageConsumer;
+            _messageConsumerSupportsDelay = _messageConsumer is IAmAMessageConsumerSupportingDelay && (_messageConsumer as IAmAMessageGatewaySupportingDelay).DelaySupported;
         }
 
         /// <summary>
@@ -113,9 +116,16 @@ namespace paramore.brighter.commandprocessor
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        public void Requeue(Message message)
+        public void Requeue(Message message, int delayMilliseconds = 0)
         {
-            _messageConsumer.Requeue(message);
+            if (delayMilliseconds > 0 && !_messageConsumerSupportsDelay)
+                Task.Delay(delayMilliseconds).Wait();
+
+            if (_messageConsumerSupportsDelay)
+                (_messageConsumer as IAmAMessageConsumerSupportingDelay).Requeue(message, delayMilliseconds);
+            else
+                _messageConsumer.Requeue(message);
+
         }
 
         /// <summary>
