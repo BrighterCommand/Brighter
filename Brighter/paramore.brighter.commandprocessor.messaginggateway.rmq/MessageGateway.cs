@@ -76,6 +76,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicy;
 
             _connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), RequestedHeartbeat = 30 };
+
+            DelaySupported = (this is IAmAMessageGatewaySupportingDelay) && Configuration.Exchange.SupportDelay;
         }
 
         /// <summary>
@@ -92,6 +94,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// The channel
         /// </summary>
         protected IModel Channel;
+
+        /// <summary>
+        /// Gets if the current provider configuration is able to support delayed delivery of messages.
+        /// </summary>
+        public bool DelaySupported { get; private set; }
 
         /// <summary>
         /// Connects the specified queue name.

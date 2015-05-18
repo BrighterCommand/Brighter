@@ -62,7 +62,7 @@ namespace paramore.brighter.commandprocessor
         {
             _queueName = queueName;
             _messageConsumer = messageConsumer;
-            _messageConsumerSupportsDelay = _messageConsumer is IAmAMessageConsumerSupportingDelay;
+            _messageConsumerSupportsDelay = _messageConsumer is IAmAMessageConsumerSupportingDelay && (_messageConsumer as IAmAMessageGatewaySupportingDelay).DelaySupported;
         }
 
         /// <summary>

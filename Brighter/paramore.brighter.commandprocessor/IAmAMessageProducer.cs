@@ -71,7 +71,7 @@ namespace paramore.brighter.commandprocessor
     /// <item>RESTML</item>
     /// </list>
     /// </summary>
-    public interface IAmAMessageProducerSupportingDelay : IAmAMessageProducer
+    public interface IAmAMessageProducerSupportingDelay : IAmAMessageProducer, IAmAMessageGatewaySupportingDelay
     {
         /// <summary>
         /// Send the specified message with specified delay

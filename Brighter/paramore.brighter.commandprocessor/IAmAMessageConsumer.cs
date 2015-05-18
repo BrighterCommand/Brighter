@@ -73,7 +73,7 @@ namespace paramore.brighter.commandprocessor
         void Requeue(Message message);
     }
 
-    public interface IAmAMessageConsumerSupportingDelay : IAmAMessageConsumer
+    public interface IAmAMessageConsumerSupportingDelay : IAmAMessageConsumer, IAmAMessageGatewaySupportingDelay
     {
         /// <summary>
         /// Requeues the specified message.
