@@ -39,7 +39,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessagePublisher
     {
-        private static string[] HeadersToReset = { HeaderNames.DELAY_MILLISECONDS };
+        private static string[] HeadersToReset = { HeaderNames.DELAY_MILLISECONDS, HeaderNames.MESSAGE_TYPE, HeaderNames.TOPIC, HeaderNames.HANDLED_COUNT };
 
         private readonly IModel _channel;
         private readonly string _exchangeName;
