@@ -198,10 +198,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         };
 
         private It _should_call_the_messaging_gateway = () => A.CallTo(() => s_gateway.Requeue(s_requeueMessage)).MustHaveHappened();
-        private It _should_have_process_delayed_the_call = () => (s_stopWatch.ElapsedMilliseconds > 1000).ShouldBeTrue();
+        private It _should_have_process_delayed_the_call = () => (s_stopWatch.ElapsedMilliseconds > 900).ShouldBeTrue();
     }
 
-    public class When_requeuing_a_message_with_supported_delay
+    public class When_requeuing_a_message_with_supported_but_disabled_delay
     {
         private static IAmAnInputChannel s_channel;
         private static IAmAMessageConsumerSupportingDelay s_gateway;
@@ -211,6 +211,39 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         private Establish _context = () =>
         {
             s_gateway = A.Fake<IAmAMessageConsumerSupportingDelay>();
+            A.CallTo(() => s_gateway.DelaySupported).Returns(false);
+
+            s_channel = new InputChannel("test", s_gateway);
+
+            s_requeueMessage = new Message(
+                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
+                new MessageBody("a test body"));
+
+            s_stopWatch = new Stopwatch();
+        };
+
+        private Because _of = () =>
+        {
+            s_stopWatch.Start();
+            s_channel.Requeue(s_requeueMessage, 1000);
+            s_stopWatch.Stop();
+        };
+
+        private It _should_call_the_messaging_gateway = () => A.CallTo(() => s_gateway.Requeue(s_requeueMessage)).MustHaveHappened();
+        private It _should_have_process_delayed_the_call = () => (s_stopWatch.ElapsedMilliseconds > 900).ShouldBeTrue();
+    }
+
+    public class When_requeuing_a_message_with_supported_and_enabled_delay
+    {
+        private static IAmAnInputChannel s_channel;
+        private static IAmAMessageConsumerSupportingDelay s_gateway;
+        private static Message s_requeueMessage;
+        private static Stopwatch s_stopWatch;
+
+        private Establish _context = () =>
+        {
+            s_gateway = A.Fake<IAmAMessageConsumerSupportingDelay>();
+            A.CallTo(() => s_gateway.DelaySupported).Returns(true);
 
             s_channel = new InputChannel("test", s_gateway);
 
