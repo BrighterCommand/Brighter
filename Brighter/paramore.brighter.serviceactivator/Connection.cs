@@ -72,7 +72,15 @@ namespace paramore.brighter.serviceactivator
         /// </summary>
         /// <value>The timeout in miliseconds.</value>
         public int TimeoutInMiliseconds { get; private set; }
+        /// <summary>
+        /// Gets or sets the requeue count.
+        /// </summary>
+        /// <value>The requeue count.</value>
         public int RequeueCount { get; private set; }
+        /// <summary>
+        /// Gets or sets number of milliseconds to delay delivery of re-queued messages.
+        /// </summary>
+        public int RequeueDelayInMilliseconds { get; private set; }
         /// <summary>
         /// Gets the unacceptable messages limit
         /// </summary>
@@ -87,8 +95,9 @@ namespace paramore.brighter.serviceactivator
         /// <param name="noOfPerformers">The no of performers.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it</param>
+        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel</param>
-        public Connection(ConnectionName name, IAmAnInputChannel channel, Type dataType, int noOfPerformers = 1, int timeoutInMilliseconds = 300, int requeueCount = -1, int unacceptableMessageLimit = 0)
+        public Connection(ConnectionName name, IAmAnInputChannel channel, Type dataType, int noOfPerformers = 1, int timeoutInMilliseconds = 300, int requeueCount = -1, int requeueDelayInMilliseconds = 0, int unacceptableMessageLimit = 0)
         {
             RequeueCount = requeueCount;
             Name = name;
@@ -97,6 +106,7 @@ namespace paramore.brighter.serviceactivator
             NoOfPeformers = noOfPerformers;
             TimeoutInMiliseconds = timeoutInMilliseconds;
             UnacceptableMessageLimit = unacceptableMessageLimit;
+            RequeueDelayInMilliseconds = requeueDelayInMilliseconds;
         }
     }
 }

@@ -78,6 +78,13 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
             set { this["requeueCount"] = value; }
         }
 
+        [ConfigurationProperty("requeueDelayInMilliseconds", DefaultValue = "0", IsRequired = false)]
+        public int RequeueDelayInMilliseconds
+        {
+            get { return Convert.ToInt32(this["requeueDelayInMilliseconds"]); }
+            set { this["requeueDelayInMilliseconds"] = value; }
+        }
+
         [ConfigurationProperty("unacceptableMessageLimit", DefaultValue = "0", IsRequired = false)]
         public int UnacceptableMessageLimit
         {

@@ -223,5 +223,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
             get { return (bool)this["durable"]; }
             set { this["durable"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets a value indicating if the declared <see cref="Exchange"/> support delayed messages.
+        /// (requires plugin rabbitmq_delayed_message_exchange)
+        /// </summary>
+        /// <value><c>true</c> if supporting; otherwise, <c>false</c>.</value>
+        [ConfigurationProperty("supportDelay", DefaultValue = false)]
+        public bool SupportDelay
+        {
+            get { return (bool)this["supportDelay"]; }
+            set { this["supportDelay"] = value; }
+        }
     }
 }

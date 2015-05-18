@@ -72,6 +72,10 @@ namespace paramore.brighter.serviceactivator
         /// <value>The requeue count.</value>
         public int RequeueCount { get; set; }
         /// <summary>
+        /// Gets or sets number of milliseconds to delay delivery of re-queued messages.
+        /// </summary>
+        public int RequeueDelayInMilliseconds { get; set; }
+        /// <summary>
         /// Gets or Sets the unacceptable message limit, once the limit is reached the 
         /// </summary>
         public int UnacceptableMessageLimit { get; set; }
@@ -305,7 +309,7 @@ namespace paramore.brighter.serviceactivator
 
             if (Logger != null) Logger.DebugFormat("MessagePump: Re-queueing message {0} from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
-            Channel.Requeue(message);
+            Channel.Requeue(message, RequeueDelayInMilliseconds);
         }
 
         private TRequest TranslateMessage(Message message)
