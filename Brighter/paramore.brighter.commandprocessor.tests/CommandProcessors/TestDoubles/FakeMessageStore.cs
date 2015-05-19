@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using paramore.brighter.commandprocessor;
@@ -44,6 +45,11 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         public Task<Message> Get(Guid messageId)
         {
             return null;
+        }
+
+        public Task<IList<Message>> Get(int pageSize = 100, int pageNumber = 1)
+        {
+            throw new NotImplementedException();
         }
     }
 }

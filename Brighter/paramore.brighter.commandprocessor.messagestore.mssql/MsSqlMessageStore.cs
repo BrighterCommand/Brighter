@@ -37,11 +37,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Data.SqlServerCe;
 using System.Threading.Tasks;
+using System.Web.Script.Serialization;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messagestore.mssql
@@ -49,10 +51,11 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
     /// <summary>
     /// Class MsSqlMessageStore.
     /// </summary>
-    public class MsSqlMessageStore : IAmAMessageStore<Message>
+    public class MsSqlMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreViewer<Message>
     {
         private readonly MsSqlMessageStoreConfiguration _configuration;
         private readonly ILog _log;
+        private readonly JavaScriptSerializer _javaScriptSerializer;
         private const int MsSqlDuplicateKeyError = 2601;
         private const int SqlCeDuplicateKeyError = 25016;
 
@@ -65,6 +68,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         {
             _configuration = configuration;
             _log = log;
+            _javaScriptSerializer = new JavaScriptSerializer();
         }
 
         /// <summary>
@@ -74,12 +78,15 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         /// <returns>Task.</returns>
         public async Task Add(Message message)
         {
-            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Body) VALUES (@MessageId, @MessageType, @Topic, @Body)", _configuration.MessageStoreTableName);
+            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)", _configuration.MessageStoreTableName);
+            var bagJson = _javaScriptSerializer.Serialize(message.Header.Bag);
             var parameters = new[]
             {
                 CreateSqlParameter("MessageId", message.Id),
                 CreateSqlParameter("MessageType", message.Header.MessageType.ToString()),
                 CreateSqlParameter("Topic", message.Header.Topic),
+                CreateSqlParameter("Timestamp", message.Header.TimeStamp),
+                CreateSqlParameter("HeaderBag", bagJson),
                 CreateSqlParameter("Body", message.Body.Value),
             };
 
@@ -148,7 +155,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         /// <returns>Task&lt;Message&gt;.</returns>
         public async Task<Message> Get(Guid messageId)
         {
-            var sql = string.Format("SELECT MessageId, MessageType, Topic, Body FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
             var parameters = new[]
             {
                 CreateSqlParameter("MessageId", messageId)
@@ -158,21 +165,46 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             return result;
         }
 
-        private static Message MapFunction(IDataReader dr)
+        private Message MapFunction(IDataReader dr)
         {
             if (dr.Read())
             {
-                var id = dr.GetGuid(dr.GetOrdinal("MessageId"));
-                var messageType = (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
-                var topic = dr.GetString(dr.GetOrdinal("Topic"));
-
-                var header = new MessageHeader(id, topic, messageType);
-                var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
-
-                return new Message(header, body);
+                return MapAMessage(dr);
             }
 
             return new Message();
+        }
+
+        private Message MapAMessage(IDataReader dr)
+        {
+            var id = dr.GetGuid(dr.GetOrdinal("MessageId"));
+            var messageType = (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+            var topic = dr.GetString(dr.GetOrdinal("Topic"));
+
+            var header = new MessageHeader(id, topic, messageType);
+
+            if (dr.FieldCount > 4)
+            {
+                //new schema....we've got the extra header information
+                var ordinal = dr.GetOrdinal("Timestamp");
+                var timeStamp = dr.IsDBNull(ordinal)
+                    ? DateTime.MinValue
+                    : dr.GetDateTime(ordinal);
+                header = new MessageHeader(id, topic, messageType, timeStamp, 0);
+
+                var i = dr.GetOrdinal("HeaderBag");
+                var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
+                var dictionaryBag = _javaScriptSerializer.Deserialize<Dictionary<string, string>>(headerBag);
+
+                foreach (var key in dictionaryBag.Keys)
+                {
+                    header.Bag.Add(key, dictionaryBag[key]);
+                }
+            }
+
+            var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
+
+            return new Message(header, body);
         }
 
         private async Task<T> ExecuteCommand<T>(Func<DbCommand, Task<T>> execute, string sql, params DbParameter[] parameters)
@@ -187,6 +219,68 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                 T item = await execute(command);
                 return item;
             }
+        }
+
+        /// <summary>
+        /// Returns all messages in the store
+        /// </summary>
+        /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
+        /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+        /// <returns></returns>
+        public async Task<IList<Message>> Get(int pageSize = 100, int pageNumber = 1)
+        {
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                SetPagingCommandFor(command, _configuration, pageSize, pageNumber);
+                
+                await connection.OpenAsync();
+
+                var dbDataReader = await command.ExecuteReaderAsync();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
+        }
+
+        private void SetPagingCommandFor(DbCommand command, MsSqlMessageStoreConfiguration configuration, int pageSize, int pageNumber)
+        {
+            string pagingSqlFormat;
+            DbParameter[] parameters;
+            switch (configuration.Type)
+            {
+                case MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer:
+                    //works 2005+
+                    pagingSqlFormat=
+                        "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+                    parameters = new[]
+                    {
+                        CreateSqlParameter("PageNumber", pageNumber)
+                        , CreateSqlParameter("PageSize", pageSize)
+                    };
+                    break;
+                case MsSqlMessageStoreConfiguration.DatabaseType.SqlCe:
+                    //2012+/ce only
+                    pagingSqlFormat="SELECT * FROM {0} ORDER BY Timestamp DESC OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+                    parameters = new[]
+                    {
+                        
+                        CreateSqlParameter("Offset", (pageNumber-1) * pageSize) //sqlce doesn't like arithmetic in offset...
+                        , CreateSqlParameter("PageSize", pageSize)
+                    };
+                    break;
+                default:
+                    throw new ArgumentException("Cannot generate command for sql env " + configuration.Type);
+            }
+            
+            var sql = string.Format(pagingSqlFormat, _configuration.MessageStoreTableName);
+            
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
         }
     }
 }

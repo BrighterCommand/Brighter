@@ -51,7 +51,7 @@
   <ItemGroup>
     <Compile Include="App_Packages\LibLog.4.2\LibLog.cs" />
     <Compile Include="ChannelName.cs" />
-    <Compile Include="Clock.cs" />
+    <Compile Include="ClockAbstraction.cs" />
     <Compile Include="CommandProcessorBuilder.cs" />
     <Compile Include="ConfigurationException.cs" />
     <Compile Include="ChannelFailureException.cs" />
@@ -63,6 +63,7 @@
     <Compile Include="IAmAMessageConsumerFactory.cs" />
     <Compile Include="IAmAMessageGatewaySupportingDelay.cs" />
     <Compile Include="IAmAMessageMapperFactory.cs" />
+    <Compile Include="IAmAMessageStoreViewer.cs" />
     <Compile Include="IAmAnInputChannel.cs" />
     <Compile Include="IAmAnOutputChannel.cs" />
     <Compile Include="IAmAPolicyRegistry.cs" />
