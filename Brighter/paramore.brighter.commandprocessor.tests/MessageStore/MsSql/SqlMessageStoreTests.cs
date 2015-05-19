@@ -55,7 +55,7 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
         {
             private Establish _context = () =>
             {
-                var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT, DateTime.UtcNow.AddDays(-1), 5);
+                var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT, DateTime.UtcNow.AddDays(-1), 5, 5);
                 messageHeader.Bag.Add(key1, value1 );
                 messageHeader.Bag.Add(key2, value2);
                 
@@ -90,16 +90,16 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
         {
             private Establish _context = () =>
             {
-                ClockAbstraction.SetUtcNowOverride(DateTime.UtcNow.AddHours(-3));
+                Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
                 s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
                 s_sqlMessageStore.Add(s_messageEarliest).Wait();
 
-                ClockAbstraction.SetUtcNowOverride(DateTime.UtcNow.AddHours(-2));
+                Clock.OverrideTime = DateTime.UtcNow.AddHours(-2);
                 
                 s_message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND), new MessageBody("Body2"));
                 s_sqlMessageStore.Add(s_message2).Wait();
 
-                ClockAbstraction.SetUtcNowOverride(DateTime.UtcNow.AddHours(-1));
+                Clock.OverrideTime = DateTime.UtcNow.AddHours(-1);
 
                 s_messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND), new MessageBody("Body3"));
                 s_sqlMessageStore.Add(s_messageLatest).Wait();

@@ -190,7 +190,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                 var timeStamp = dr.IsDBNull(ordinal)
                     ? DateTime.MinValue
                     : dr.GetDateTime(ordinal);
-                header = new MessageHeader(id, topic, messageType, timeStamp, 0);
+                header = new MessageHeader(id, topic, messageType, timeStamp, 0, 0);
 
                 var i = dr.GetOrdinal("HeaderBag");
                 var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
