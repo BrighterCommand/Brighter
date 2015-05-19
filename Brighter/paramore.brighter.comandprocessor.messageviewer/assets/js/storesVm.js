@@ -18,8 +18,8 @@
             dataType: 'json',
             type: 'GET',
             success: function(data) { onStoreLoad(data); },
-            error: function(jqXHR, textStatus, errorThrown) {
-                onStoreLoadError(jqXHR, textStatus, errorThrown);
+            error: function(jqXhr, textStatus, errorThrown) {
+                onStoreLoadError(jqXhr, textStatus, errorThrown);
             }
         });
 
@@ -46,7 +46,8 @@
                 + model.Stores[i].Name + "</option>";
         };
         $('#storeList').on('hidden.bs.collapse', function(e) {
-            var storeId = e.target.id;
+            //var storeId = e.target.id;
+
         });
         $('#storeList').on('shown.bs.collapse', function(e) {
             var storeId = e.target.id;
@@ -56,7 +57,7 @@
         log("done stores Loaded");
 
     };
-    var onStoreLoadError = function (jqXHR, status, error) {
+    var onStoreLoadError = function (jqXhr, status, error) {
         // alert(error);
         setBadServerInternal(seletedStoreName, error);
     };

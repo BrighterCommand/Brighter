@@ -30,7 +30,7 @@
                 dataType: 'json',
                 type: 'GET',
                 success: function(data) { onSearchMessageLoad(data); },
-                error: function(jqXHR, textStatus, errorThrown) {
+                error: function(jqXhr, textStatus, errorThrown) {
                     onMessageLoadError(textStatus, errorThrown);
                 }
             });
@@ -66,8 +66,8 @@
                 dataType: 'json',
                 type: 'GET',
                 success: function(data) { onMessageLoad(data); },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    onMessageLoadError(jqXHR, textStatus, errorThrown);
+                error: function(jqXhr, textStatus, errorThrown) {
+                    onMessageLoadError(jqXhr, textStatus, errorThrown);
                 }
             });
         }
@@ -98,13 +98,24 @@
             sVm.setBadServer(storeName, error);
         }
     };
-
-    var onMessageLoadError = function (jqXHR, status, error) {
+    function isJsonString(str) {
+        try {
+            JSON.parse(str);
+        } catch (e) {
+            return false;
+        }
+        return true;
+    }
+    var onMessageLoadError = function (jqXhr, status, error) {
+        var responseText = jqXhr.responseText;
+        if (isJsonString(responseText)) {
+            error = JSON.parse(responseText).Message;
+        }
         hideInternal();
         setBadServer(seletedStoreName, error);
     };
     var setStoreVmInternal = function(storeVm) {
-        sVm = storesVm;
+        sVm = storeVm;
     };
     return {
         load: loadInternal,

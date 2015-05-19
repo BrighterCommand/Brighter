@@ -36,6 +36,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
@@ -51,9 +52,13 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
         {
             private Establish _context = () =>
             {
+                _message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic1", MessageType.MT_COMMAND), new MessageBody("a body"));
+                var messageHeader = new MessageHeader(Guid.NewGuid(), "MyTopic2", MessageType.MT_COMMAND);
+                messageHeader.Bag.Add("bagVal1", "value1");
+                messageHeader.Bag.Add("bagVal2", "value2");
                 _messages = new List<Message>{
-                    new Message(new MessageHeader(Guid.NewGuid(), "MyTopic1", MessageType.MT_COMMAND), new MessageBody("")), 
-                    new Message(new MessageHeader(Guid.NewGuid(), "MyTopic2", MessageType.MT_COMMAND), new MessageBody(""))};
+                    _message1, 
+                    new Message(messageHeader, new MessageBody(""))};
 
                 var fakeStore = new FakeMessageStoreWithViewer();
                 _messages.ForEach(m => fakeStore.Add(m));
@@ -72,9 +77,31 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
                 model.MessageCount.ShouldEqual(_messages.Count);
             };
 
+            private It should_return_expected_message_state = () =>
+            {
+                var model = _result.Result;
+                var foundMessage = model.Messages.Single(m => m.MessageId == _message1.Id);
+                foundMessage.ShouldNotBeNull();
+
+                foundMessage.HandledCount.ShouldEqual(_message1.Header.HandledCount);
+                foundMessage.MessageType.ShouldEqual(_message1.Header.MessageType.ToString());
+                foundMessage.Topic.ShouldEqual(_message1.Header.Topic);
+                foundMessage.TimeStamp.ShouldEqual(_message1.Header.TimeStamp);
+                
+                foreach (var key in _message1.Header.Bag.Keys)
+                {
+                    foundMessage.Bag.Contains(key);
+                    foundMessage.Bag.Contains(_message1.Header.Bag[key].ToString());
+                }
+                foundMessage.MessageBody.ShouldEqual(_message1.Body.Value);
+
+                foundMessage.TimeStampUI.ShouldContain("ago");
+            };
+
             private static MessageListViewModelRetriever _messageListViewModelRetriever;
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
             private static List<Message> _messages;
+            private static Message _message1;
         }
 
         public class When_retrieving_messages_for_non_existent_store
