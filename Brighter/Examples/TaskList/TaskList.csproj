@@ -180,6 +180,10 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
+      <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
+      <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj">
       <Project>{224f828a-1abf-4d7b-8c48-66856bfd1ded}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.ravendb</Name>
