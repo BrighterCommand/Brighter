@@ -126,7 +126,7 @@ namespace paramore.brighter.commandprocessor
             Topic = topic;
             MessageType = messageType;
             Bag = new Dictionary<string, object>();
-            TimeStamp = RoundToSeconds(ClockAbstraction.UtcNow);
+            TimeStamp = RoundToSeconds(Clock.Now().Value);
             HandledCount = 0;
             DelayedMilliseconds = 0;
         }

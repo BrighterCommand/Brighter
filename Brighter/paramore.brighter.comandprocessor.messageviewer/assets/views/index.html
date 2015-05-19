@@ -41,13 +41,6 @@ THE SOFTWARE. */
     <meta charset="utf-8" />
     <title>paramore Brighter Message Viewer</title>
     <script id="storeTemplate" type="text/template">
-        <!--<ul id="taskList">
-            {{#Stores}}
-            <li>
-                {{Name}}
-            </li>
-            {{/Stores}}
-        </ul>-->
         {{#Stores}}
         <div class="panel panel-default">
             <a href="#store{{Name}}" data-parent="#storeList" data-toggle="collapse" class="accordion-toggle collapsed">
@@ -81,6 +74,7 @@ THE SOFTWARE. */
                 <tr>
                     <th>Id</th>
                     <th>Type</th>
+                    <th>Topic</th>
                     <th>Bag</th>
                     <th>Message body</th>
                     <th>Handled</th>
@@ -92,10 +86,11 @@ THE SOFTWARE. */
                 <tr>
                     <td>{{MessageId}}</td>
                     <td>{{MessageType}}</td>
+                    <td>{{Topic}}</td>
                     <td>{{Bag}}</td>
                     <td>{{MessageBody}}</td>
                     <td>{{HandledCount}}</td>
-                    <td>{{TimeStamp}}</td>
+                    <td><span title="{{TimeStamp}}">{{TimeStampUI}}</span></td>
                 </tr>
                 {{/Messages}}
             </tbody>
