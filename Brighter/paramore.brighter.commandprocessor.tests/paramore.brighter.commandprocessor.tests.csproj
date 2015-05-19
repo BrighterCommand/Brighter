@@ -190,8 +190,9 @@
     <Compile Include="MessageDispatch\TestDoubles\FailingEventMessageMapper.cs" />
     <Compile Include="MessageDispatch\TestDoubles\MyEventMessageMapper.cs" />
     <Compile Include="MessageDispatch\TestDoubles\SpyCommandProcessor.cs" />
-    <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
     <Compile Include="MessageStore\MsSql\SqlMessageStoreTests.cs" />
+    <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
+    <Compile Include="MessageStore\MsSql\SqlMessageStoreMigrationTests.cs" />
     <Compile Include="MessagingGateway\MessageChannelTests.cs" />
     <Compile Include="MessagingGateway\restms\RestMSMessagingGatewayTests.cs" />
     <Compile Include="MessagingGateway\restms\RestMSParserTests.cs" />
