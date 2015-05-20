@@ -36,6 +36,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
@@ -49,7 +51,7 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
     /// store the message into a Message Store to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
     /// </summary>
-    public class RavenMessageStore : IAmAMessageStore<Message>
+    public class RavenMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreViewer<Message>
     {
         private readonly IDocumentStore _documentStore;
         private readonly ILog _logger;
@@ -92,6 +94,25 @@ namespace paramore.brighter.commandprocessor.messagestore.ravendb
             {
                 _logger.DebugFormat("Retrieving message with Id {0} from RavenDb", messageId);
                 return session.LoadAsync<Message>(messageId).ContinueWith(task => task.Result ?? new Message());
+            }
+        }
+
+        /// <summary>
+        /// Returns all messages in the store
+        /// </summary>
+        /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
+        /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+        /// <returns></returns>
+        public Task<IList<Message>> Get(int pageSize = 100, int pageNumber = 1)
+        {
+            using (var session = _documentStore.OpenAsyncSession())
+            {
+                return session
+                    .Query<Message>()
+                    .OrderByDescending(m => m.Header.TimeStamp)
+                    .Take(pageSize)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .ToListAsync();
             }
         }
     }
