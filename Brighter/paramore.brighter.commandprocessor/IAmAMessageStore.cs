@@ -48,7 +48,7 @@ namespace paramore.brighter.commandprocessor
     /// request
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public interface IAmAMessageStore<T> where T : Message
+    public interface IAmAMessageStore<in T> where T : Message
     {
         /// <summary>
         /// Adds the specified message.
