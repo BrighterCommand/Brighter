@@ -17,6 +17,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 2. Fix issue with RabbitMQ consumers running on a High Availability cluster not cancelling properly after cluster failover.
 3. Fixed bug with config section duplication https://github.com/iancooper/Paramore/issues/52
 4. Added functionality so after a specified number of unacceptable message (unable to read from queue or map message) a connection is shutdown, by default unacceptable message are acked and dropped. https://github.com/iancooper/Paramore/issues/51
+5. Move RequeueException to paramore.brighter.commandprocessor.exceptions (breaking change).
 
 ## Release 3 ##
 
