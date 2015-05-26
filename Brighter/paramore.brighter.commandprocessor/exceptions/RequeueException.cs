@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.serviceactivator
+namespace paramore.brighter.commandprocessor.exceptions
 {
     /// <summary>
     /// Class RequeueException.

@@ -40,6 +40,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.exceptions;
 using ConfigurationException = paramore.brighter.commandprocessor.ConfigurationException;
 
 namespace paramore.brighter.serviceactivator
