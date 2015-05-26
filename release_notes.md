@@ -8,6 +8,9 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 ## Master ##
 1. Fixed an issue where you could not have multiple UsePolicy or FallbackPolicy attributes on a single handler.#
 2. We pool connections now, to prevent clients with large number of channels overwhelming servers.
+3. Add concept of delayed (deferred) message sending.
+4. Implement delayed requeuing using gateway support (when supported).
+5. Delayed message provider support for RabbitMQ using [rabbitmq_delayed_message_exchange plugin (3.5+)](https://github.com/rabbitmq/rabbitmq-delayed-message-exchange/).
 
 ## Release 3.0.129 ##
 1. We now support a Fallback method on IHandleRequests<TRequest> which is intended to be used for compensating or emergency action when a Handle method cannot be executed. The [FallbackPolicy] attribute supports the pipeline calling the Fallback method for you, in the event of either any exception bubbling into the handler, or a broken circuit exception bubbling into the handler.
