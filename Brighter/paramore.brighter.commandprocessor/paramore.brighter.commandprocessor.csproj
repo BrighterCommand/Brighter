@@ -56,7 +56,7 @@
     <Compile Include="ConfigurationException.cs" />
     <Compile Include="ChannelFailureException.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
-    <Compile Include="exceptions\RequeueException.cs" />
+    <Compile Include="exceptions\DeferMessageAction.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="HandlerConfiguration.cs" />
     <Compile Include="IAmAChannel.cs" />

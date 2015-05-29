@@ -181,7 +181,7 @@ namespace paramore.brighter.serviceactivator
                     Channel.Dispose();
                     break;
                 }
-                catch (RequeueException) {
+                catch (DeferMessageAction) {
                     RequeueMessage(message);
                 }
                 catch (AggregateException aggregateException)
@@ -190,7 +190,7 @@ namespace paramore.brighter.serviceactivator
                     var requeue = false;
                     foreach (var exception in aggregateException.InnerExceptions)
                     {
-                        if (exception is RequeueException)
+                        if (exception is DeferMessageAction)
                         {
                             requeue = true;
                             continue;
