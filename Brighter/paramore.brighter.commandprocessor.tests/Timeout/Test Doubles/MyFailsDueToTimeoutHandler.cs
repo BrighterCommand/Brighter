@@ -56,9 +56,11 @@ namespace paramore.commandprocessor.tests.Timeout
                         // done something I should not do, because I should of been cancel
                         MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = false;
                     },
-                    ct);
+                    ct,
+                    TaskContinuationOptions.OnlyOnRanToCompletion,
+                    TaskScheduler.Current);
 
-                Task.WaitAll(new[] { delay });
+                delay.Wait();
             }
             catch (AggregateException e)
             {
