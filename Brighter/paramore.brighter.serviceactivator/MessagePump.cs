@@ -166,8 +166,7 @@ namespace paramore.brighter.serviceactivator
                 }
 
                 // Serviceable message
-                try 
-                {
+                try {
                     DispatchRequest(message.Header.MessageType, TranslateMessage(message));
                 }
                 catch (ConfigurationException configurationException)
@@ -188,23 +187,26 @@ namespace paramore.brighter.serviceactivator
                 catch (AggregateException aggregateException)
                 {
                     var stop = false;
+                    var requeue = false;
                     foreach (var exception in aggregateException.InnerExceptions)
                     {
-                        if (exception is RequeueException) {
-                            RequeueMessage(message);
-                        }
-                        else if (exception is ConfigurationException)
+                        if (exception is RequeueException)
                         {
-                            if (Logger != null)
-                                Logger.DebugException(
-                                    "MessagePump: Stopping receiving of messages from {1} on thread # {0}",
-                                    exception,
-                                    Thread.CurrentThread.ManagedThreadId,
-                                    Channel.Name);
+                            requeue = true;
+                            continue;
+                        }
+
+                        if (exception is ConfigurationException)
+                        {
+                            if (Logger != null) Logger.DebugException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
                             stop = true;
                             break;
                         }
+
+                        if (Logger != null) Logger.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
                     }
+
+                    if (requeue) { RequeueMessage(message); }
 
                     if (stop)
                     {
@@ -215,7 +217,12 @@ namespace paramore.brighter.serviceactivator
                 }
                 catch (MessageMappingException messageMappingException)
                 {
-                    if (Logger != null) Logger.WarnException("MessagePump: Failed to map the message from {1} on thread # {0}", messageMappingException, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    if (Logger != null)
+                        Logger.WarnException(
+                            "MessagePump: Failed to map the message from {1} on thread # {0}",
+                            messageMappingException,
+                            Thread.CurrentThread.ManagedThreadId,
+                            Channel.Name);
                     if (UnacceptableMessageLimitReached())
                     {
                         AcknowledgeMessage(message);
@@ -223,8 +230,7 @@ namespace paramore.brighter.serviceactivator
                         break;
                     }
                 }
-                catch (Exception e)
-                {
+                catch (Exception e) {
                     if (Logger != null) Logger.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", e, Thread.CurrentThread.ManagedThreadId, Channel.Name);
                 }
 
