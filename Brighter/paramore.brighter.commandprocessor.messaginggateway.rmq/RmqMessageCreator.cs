@@ -105,7 +105,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
             catch (Exception e)
             {
-                _logger.WarnFormat("Failed to create message from amqp message {0}", e);
+                _logger.WarnException("Failed to create message from amqp message", e);
                 message = FailureMessage(topic, messageId);
             }
 
