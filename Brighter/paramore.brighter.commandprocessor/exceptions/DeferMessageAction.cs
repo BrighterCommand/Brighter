@@ -40,12 +40,12 @@ using System;
 namespace paramore.brighter.commandprocessor.exceptions
 {
     /// <summary>
-    /// Class RequeueException.
-    /// Used to indicate that a message should be re-queued on the channel.
+    /// Class DeferMessageAction.
+    /// Used to indicate that a message should be defered.
     /// It's purpose is to allow messages received out of order to be delayed until
     /// missing messages have been processed
     /// </summary>
-    public class RequeueException : Exception
+    public class DeferMessageAction : Exception
     {
     }
 }
