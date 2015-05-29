@@ -50,7 +50,7 @@ namespace paramore.commandprocessor.tests.Timeout
             }
             try
             {
-                var delay = Task.Delay(500, ct).ContinueWith(
+                var delay = Task.Delay(700, ct).ContinueWith(
                     x =>
                     {
                         // done something I should not do, because I should of been cancel
