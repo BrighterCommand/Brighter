@@ -178,7 +178,7 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
                     cancellationTokenSource.Cancel();
 
                     // Fault our proxy with a TimeoutException
-                    myTcs.TrySetException(new TimeoutException());
+                    myTcs.SetException(new TimeoutException());
                 },
                 tcs,
                 millisecondsTimeout,
