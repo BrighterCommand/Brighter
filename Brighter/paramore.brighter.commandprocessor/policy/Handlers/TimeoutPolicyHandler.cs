@@ -121,23 +121,21 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
             var cts = new CancellationTokenSource();
             var ct = cts.Token;
 
-            var task = TimeoutAfter(
-                    task: Task<TRequest>.Factory.StartNew(
-                        function: () =>
-                            {
-                                //we already cancelled the task
-                                ct.ThrowIfCancellationRequested();
-                                //allow the handlers that can timeout to grab the cancellation token
-                                Context.Bag[CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN] = ct;
-                                return base.Handle(command);
-                            },
-                        cancellationToken: ct,
-                        creationOptions: TaskCreationOptions.PreferFairness,
-                        scheduler: TaskScheduler.Current
-                    ),
-                    millisecondsTimeout: _milliseconds,
-                    cancellationTokenSource: cts
+            var timeoutTask = Task<TRequest>.Factory.StartNew(
+                function: () =>
+                {
+                    //we already cancelled the task
+                    ct.ThrowIfCancellationRequested();
+                    //allow the handlers that can timeout to grab the cancellation token
+                    Context.Bag[CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN] = ct;
+                    return base.Handle(command);
+                },
+                cancellationToken: ct,
+                creationOptions: TaskCreationOptions.PreferFairness,
+                scheduler: TaskScheduler.Current
                 );
+
+            var task = TimeoutAfter(task: timeoutTask, millisecondsTimeout: _milliseconds, cancellationTokenSource: cts);
 
             task.Wait();
 
