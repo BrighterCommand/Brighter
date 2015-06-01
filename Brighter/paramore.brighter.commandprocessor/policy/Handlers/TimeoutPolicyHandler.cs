@@ -131,7 +131,7 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
                     return base.Handle(command);
                 },
                 cancellationToken: ct,
-                creationOptions: TaskCreationOptions.PreferFairness,
+                creationOptions: TaskCreationOptions.LongRunning,
                 scheduler: TaskScheduler.Current
                 );
 
