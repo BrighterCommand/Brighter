@@ -70,6 +70,7 @@ namespace paramore.commandprocessor.tests.Timeout
         };
 
         private It _should_throw_a_timeout_exception = () => s_thrownException.Flatten().InnerExceptions.First().ShouldBeOfExactType<TimeoutException>();
+        private It _should_throw_a_timeout_exception_alt = () => s_thrownException.Flatten().InnerExceptions.Any(e => e is TimeoutException).ShouldBeTrue();
         private It _should_signal_that_a_timeout_occured_and_handler_should_be_cancelled = () => MyFailsDueToTimeoutHandlerStateTracker.WasCancelled.ShouldBeTrue();
         private It _should_not_run_to_completion = () => MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted.ShouldBeFalse();
     }

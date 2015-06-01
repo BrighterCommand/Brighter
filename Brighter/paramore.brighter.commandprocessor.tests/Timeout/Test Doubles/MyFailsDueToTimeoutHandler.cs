@@ -50,17 +50,15 @@ namespace paramore.commandprocessor.tests.Timeout
             }
             try
             {
-                var delay = Task.Delay(700, ct).ContinueWith(
+                var delay = Task.Delay(500, ct).ContinueWith(
                     x =>
                     {
                         // done something I should not do, because I should of been cancel
                         MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = false;
                     },
-                    ct,
-                    TaskContinuationOptions.OnlyOnRanToCompletion,
-                    TaskScheduler.Current);
+                    ct);
 
-                delay.Wait();
+                Task.WaitAll(new[] { delay });
             }
             catch (AggregateException e)
             {
