@@ -55,12 +55,15 @@
     <Compile Include="CommandProcessorBuilder.cs" />
     <Compile Include="ConfigurationException.cs" />
     <Compile Include="ChannelFailureException.cs" />
+    <Compile Include="eventsourcing\Attributes\UseCommandSourcingAttribute.cs" />
+    <Compile Include="eventsourcing\Handlers\CommandSourcingHandler.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="exceptions\DeferMessageAction.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="HandlerConfiguration.cs" />
     <Compile Include="IAmAChannel.cs" />
     <Compile Include="IAmAChannelFactory.cs" />
+    <Compile Include="IAmACommandStore.cs" />
     <Compile Include="IAmAMessageConsumerFactory.cs" />
     <Compile Include="IAmAMessageGatewaySupportingDelay.cs" />
     <Compile Include="IAmAMessageMapperFactory.cs" />
@@ -70,6 +73,7 @@
     <Compile Include="IAmAPolicyRegistry.cs" />
     <Compile Include="IAmAMessageProducer.cs" />
     <Compile Include="IAmAMessageConsumer.cs" />
+    <Compile Include="InMemoryCommandStore.cs" />
     <Compile Include="InputChannel.cs" />
     <Compile Include="LifetimeScope.cs" />
     <Compile Include="MessageFactory.cs" />

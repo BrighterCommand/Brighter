@@ -173,6 +173,8 @@
     <Compile Include="ControlBus\ConfigurationCommandTests.cs" />
     <Compile Include="ControlBus\ControlBusBuilderTests.cs" />
     <Compile Include="ControlBus\ControlBusMessageMapperTests.cs" />
+    <Compile Include="EventSourcing\CommandStoreTests.cs" />
+    <Compile Include="EventSourcing\TestDoubles\MyStoredCommandHandler.cs" />
     <Compile Include="ExceptionPolicy\FallbackSupportTests.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithFallbackMultipleHandlers.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithUnsupportedExceptionForFallback.cs" />
