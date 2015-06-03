@@ -3,8 +3,8 @@
 // Author           : ian
 // Created          : 01-26-2015
 //
-// Last Modified By : ian
-// Last Modified On : 02-25-2015
+// Last Modified By : ian, toby
+// Last Modified On : 02-25-2015, 03-06-2015
 // ***********************************************************************
 //     Copyright (c) . All rights reserved.
 // </copyright>
@@ -67,16 +67,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="innerException">The exception that is the cause of the current exception, or a null reference (Nothing in Visual Basic) if no inner exception is specified.</param>
         public ConfigurationException(string message, Exception innerException)
             : base(message, innerException)
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="T:System.Exception" /> class with serialized data.
-        /// </summary>
-        /// <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected ConfigurationException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
         {
         }
     }
