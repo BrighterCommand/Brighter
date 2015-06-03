@@ -44,7 +44,6 @@ using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuratio
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
-using paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewModelRetrieverTests;
 using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.Ports
@@ -78,20 +77,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
                 model.TypeName.ShouldEqual(_messageStore.TypeName);
                 model.Name.ShouldEqual(_messageStore.Name);
             };
-
-            private static void AssertStoreItems(MessageStoreActivationStateListModel model, IEnumerable<MessageStoreActivationState> messageStoreListItems)
-            {
-                foreach (var messageStoreListItem in messageStoreListItems)
-                {
-                    var foundStore = model.Stores.Single(s => s.Name == messageStoreListItem.Name);
-                    foundStore.Name.ShouldEqual(messageStoreListItem.Name);
-                    foundStore.ConnectionString.ShouldEqual(messageStoreListItem.ConnectionString);
-                    foundStore.TableName.ShouldEqual(messageStoreListItem.TableName);
-                    foundStore.TypeName.ShouldEqual(messageStoreListItem.TypeName);
-                    foundStore.Name.ShouldEqual(messageStoreListItem.Name);
-                }
-            }
-
+            
             private static List<MessageStoreActivationState> _messageStores;
             private static MessageStoreViewerModelRetriever _messageStoreViewerModelRetriever;
             private static List<MessageStoreActivationState> _ravenMessageStores;
@@ -192,7 +178,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
     internal class FakeMessageStoreListCacheLoaderThatErrors : IMessageStoreListCacheLoader
     {
-        public IMessageStoreActivationState Load()
+        public IMessageStoreActivationStateCache Load()
         {
             throw new SystemException();
         }

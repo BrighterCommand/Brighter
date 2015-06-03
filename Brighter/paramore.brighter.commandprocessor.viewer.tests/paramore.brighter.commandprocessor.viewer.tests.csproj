@@ -103,9 +103,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Adaptors\MessagesModuleTests\MessagesModuleFilterTests.cs" />
+    <Compile Include="TestDoubles\FakeMessageStoreListCacheLoader.cs" />
     <Compile Include="TestDoubles\FakeActivationListModelRetriever.cs" />
     <Compile Include="TestDoubles\FakeMessageStoreViewerModelRetriever.cs" />
-    <Compile Include="Adaptors\StoresModuleTests2\StoresModuleItemTests.cs" />
+    <Compile Include="Adaptors\StoresModuleTests\StoresModuleItemTests.cs" />
     <Compile Include="TestBehaviours\ModuleWithBadConfigBehavior.cs" />
     <Compile Include="TestBehaviours\ModuleWithNoStoreConnectionBehavior.cs" />
     <Compile Include="TestBehaviours\ModuleWithStoreCantGetBehaviour.cs" />
@@ -127,7 +128,7 @@
     <Compile Include="Adaptors\IndexModuleTests.cs" />
     <Compile Include="Adaptors\MessagesModuleTests\MessagesModuleGetTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Adaptors\StoresModuleTests2\StoresModuleIndexTests.cs" />
+    <Compile Include="Adaptors\StoresModuleTests\StoresModuleIndexTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj">
