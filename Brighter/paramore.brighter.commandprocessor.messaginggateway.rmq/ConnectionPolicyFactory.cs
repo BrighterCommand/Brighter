@@ -50,6 +50,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class ConnectionPolicyFactory
     {
+        private const string PipeliningExceptionMessage = "Pipelining of requests forbidden";
+
         private readonly ILog _logger;
 
         /// <summary>
@@ -67,6 +69,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             RetryPolicy = Policy.Handle<BrokerUnreachableException>()
                 .Or<Exception>()
+                .Or<NotSupportedException>(ex => ex.Message.Equals(PipeliningExceptionMessage, StringComparison.CurrentCultureIgnoreCase))
                 .WaitAndRetry(
                     retries,
                     retryAttempt => TimeSpan.FromMilliseconds(retryWaitInMilliseconds * Math.Pow(2, retryAttempt)),
@@ -76,6 +79,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                         {
                             logger.WarnException(
                                 "RMQMessagingGateway: BrokerUnreachableException error on connecting to queue {0} exchange {1} on connection {2}. Will retry {3} times",
+                                exception,
+                                context["queueName"],
+                                configuration.Exchange.Name,
+                                configuration.AMPQUri.GetSanitizedUri(),
+                                retries);
+                        }
+                        else if (exception is NotSupportedException && exception.Message.Equals(PipeliningExceptionMessage, StringComparison.CurrentCultureIgnoreCase))
+                        {
+                            logger.InfoException(
+                                "RMQMessagingGateway: NotSupportedException:Pipelining error on connecting to queue {0} exchange {1} on connection {2}. Will retry {3} times",
                                 exception,
                                 context["queueName"],
                                 configuration.Exchange.Name,

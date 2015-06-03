@@ -42,7 +42,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
         /// <param name="logger">The logger.</param>
         public BrokerUnreachableRmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) { }
 
-        protected override void ConnectToBroker()
+        protected override void ConnectToBroker(string queueName)
         {
             throw new BrokerUnreachableException(new Exception("Force Test Failure"));
         }

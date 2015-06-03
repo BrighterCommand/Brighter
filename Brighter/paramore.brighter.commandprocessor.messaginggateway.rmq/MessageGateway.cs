@@ -41,6 +41,7 @@ using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using Polly;
 using RabbitMQ.Client;
+using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
@@ -117,10 +118,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         private void ConnectWithRetry(string queueName)
         {
-            _retryPolicy.Execute(ConnectToBroker, new Dictionary<string, object> { { "queueName", queueName } });
+            _retryPolicy.Execute(() => ConnectToBroker(queueName), new Dictionary<string, object> { { "queueName", queueName } });
         }
 
-        protected virtual void ConnectToBroker()
+        protected virtual void ConnectToBroker(string queueName)
         {
             if (Channel == null || Channel.IsClosed)
             {
@@ -137,12 +138,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
                 // Configure the Quality of service for the model.
                 // BasicQos(0="Don't send me a new message until I?ve finished",  1= "Send me one message at a time", false ="Applied separately to each new consumer on the channel")
-                Channel.BasicQos(0, Configuration.Queues.QosPrefetchSize, false);
+                _retryPolicy.Execute(() => Channel.BasicQos(0, Configuration.Queues.QosPrefetchSize, false), new Dictionary<string, object> { { "queueName", queueName } });
 
                 Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri());
 
                 //desired state configuration of the exchange
-                Channel.DeclareExchangeForConfiguration(Configuration);
+                _retryPolicy.Execute(() => Channel.DeclareExchangeForConfiguration(Configuration));
             }
         }
 
