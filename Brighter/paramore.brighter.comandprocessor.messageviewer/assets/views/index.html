@@ -112,15 +112,24 @@ THE SOFTWARE. */
                 <div id="messageContainer" >
                     <h3>Messages</h3>
                     <div>
-                            <h5>
-                                Search:<input id="messageSearchText" type="text" />
-                                <span class="btn-group">
-                                    <div class="btn-toolbar">
-                                        <button id="messageSearchButton" class="btn btn-primary">Search</button>
-                                        <button id="messageClearButton" class="btn btn-default ">Clear</button>
-                                    </div>
-                                </span>
+                        <h5>
+                            Search:<input id="messageSearchText" type="text" />
+                            <span class="btn-group">
+                                <div class="btn-toolbar">
+                                    <button id="messageSearchButton" class="btn btn-primary">Search</button>
+                                    <button id="messageClearButton" class="btn btn-default ">Clear</button>
+                                </div>
+                            </span>
                         </h5>
+                    </div>
+                    <div>
+                        <span id="pageControls">
+                            <span>Current Page:<label id="pageNumber"></label></span>
+                            <span id="pageControlsPrevious">
+                                <button id="pagePrevious" class="btn btn-info">Previous</button>
+                            </span>
+                            <button id="pageNext" class="btn btn-info">Next</button>
+                        </span>
                     </div>
                     <div id="messageList">
 
@@ -129,12 +138,7 @@ THE SOFTWARE. */
             </div>
         </div>
         <footer>
-            <!--<div>
-                <div>log:</div>
-                <div id="logLine">
-                    
-                </div>
-            </div>-->
+            <!--<div><div>log:</div><div id="logLine"></div></div>-->
             <p>paramore brighter Message Viewer</p>
         </footer>
 

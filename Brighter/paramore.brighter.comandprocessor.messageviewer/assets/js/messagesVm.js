@@ -1,6 +1,8 @@
 ﻿var messagesVm = function () {
+    var pageSize = 100;
     var baseUri;
     var seletedStoreName;
+    var selectedPageNumber = 1;
     var model;
     var log;
     var sVm;
@@ -16,6 +18,10 @@
         });
         $("#messageClearButton").click(onSearchClearClick);
         $("#messageContainer").hide();
+
+        $("#pagePrevious").click(onPagePrevious);
+        $("#pageNext").click(onPageNext);
+
         hideMessageSpinner();
     };
     var onSearchClick = function() {
@@ -39,7 +45,8 @@
     var onSearchClearClick = function () {
         log("click clear");
         $('#messageSearchText').val("");
-        loadInternal(seletedStoreName);
+        selectedPageNumber = 1;
+        loadFirstPageInternal(seletedStoreName);
     };
 
     var deactivateSearch = function () {
@@ -55,14 +62,17 @@
     };
     var hideMessageSpinner = function() {
     }
-    var loadInternal = function(storeName) {
+    var loadFirstPageInternal = function (storeName) {
+        loadInternal(storeName, 1);
+    }
+    var loadInternal = function (storeName, pageNumber) {
         seletedStoreName = storeName;
         if (storeName) {
             showMessageSpinner();
             deactivateSearch();
             log("start load");
             $.ajax({
-                url: baseUri + "/messages/" + storeName,
+                url: baseUri + "/messages/" + storeName + "/" + pageNumber,
                 dataType: 'json',
                 type: 'GET',
                 success: function(data) { onMessageLoad(data); },
@@ -72,7 +82,16 @@
             });
         }
     };
-
+    var onPageNext = function () {
+        selectedPageNumber++;
+        loadInternal(seletedStoreName, selectedPageNumber);
+        return false;
+    }
+    var onPagePrevious = function() {
+        selectedPageNumber--;
+        loadInternal(seletedStoreName, selectedPageNumber);
+        return false;
+    }
     var onMessageLoad = function (messageModel) {
         sVm.setGoodServer(seletedStoreName);
 
@@ -82,9 +101,22 @@
         model = messageModel;
         var content = Mustache.to_html($("#messageTemplate").html(), messageModel);
         $("#messageList").html(content);
+
+        if (messageModel.MessageCount < pageSize) {
+            $("#pageControls").hide();
+        } else {
+            $("#pageControls").show();
+        }
+        if (selectedPageNumber > 1) {
+            $("#pageControlsPrevious").show();
+        } else {
+            $("#pageControlsPrevious").hide();
+        }
+        $("#pageNumber").text(selectedPageNumber);
+
         log("end load");
     };
-
+    
     var onSearchMessageLoad = function(messageModel) {
         onMessageLoad(messageModel);
         log("end search load");
@@ -118,7 +150,7 @@
         sVm = storeVm;
     };
     return {
-        load: loadInternal,
+        loadFirstPage: loadFirstPageInternal,
         init: initInternal,
         hide: hideInternal,
         setStoresRef: setStoreVmInternal

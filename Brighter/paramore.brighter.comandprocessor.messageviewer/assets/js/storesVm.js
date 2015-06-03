@@ -31,7 +31,7 @@
     var selectStore = function(storeName) {
         log("selected " + storeName);
         seletedStoreName = storeName;
-        messageModel.load(storeName);
+        messageModel.loadFirstPage(storeName);
         log("doneSelecting " + storeName);
     };
     var onStoreLoad = function(storesModel) {
@@ -58,7 +58,6 @@
 
     };
     var onStoreLoadError = function (jqXhr, status, error) {
-        // alert(error);
         setBadServerInternal(seletedStoreName, error);
     };
     var setGoodServerInternal = function(storeName) {
