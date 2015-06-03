@@ -1,4 +1,18 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 04-30-2015
+//
+// Last Modified By : ian
+// Last Modified On : 04-30-2015
+// ***********************************************************************
+// <copyright file="MonitorAttribute.cs" company="">
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,12 +40,23 @@ using System;
 using System.Configuration;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
 
+/// <summary>
+/// The Attributes namespace.
+/// </summary>
 namespace paramore.brighter.commandprocessor.monitoring.Attributes
 {
+    /// <summary>
+    /// Class MonitorAttribute.
+    /// </summary>
     public class MonitorAttribute: RequestHandlerAttribute
     {
         bool _monitoringEnabled = false;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestHandlerAttribute" /> class.
+        /// </summary>
+        /// <param name="step">The step.</param>
+        /// <param name="timing">The timing.</param>
         public MonitorAttribute(int step, HandlerTiming timing)
             : base(step, timing)
         {
@@ -39,6 +64,10 @@ namespace paramore.brighter.commandprocessor.monitoring.Attributes
             _monitoringEnabled = Convert.ToBoolean(monitoringSetting);
         }
 
+        /// <summary>
+        /// Gets the type of the handler.
+        /// </summary>
+        /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
             return typeof(MonitorHandler<>);
