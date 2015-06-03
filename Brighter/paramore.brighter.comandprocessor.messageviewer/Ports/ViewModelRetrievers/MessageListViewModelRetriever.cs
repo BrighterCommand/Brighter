@@ -51,7 +51,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrie
     
     public interface IMessageListViewModelRetriever
     {
-        ViewModelRetrieverResult<MessageListModel, MessageListModelError> Get(string storeName);
+        ViewModelRetrieverResult<MessageListModel, MessageListModelError> Get(string storeName, int pageNumber, int pageSize=100);
         ViewModelRetrieverResult<MessageListModel, MessageListModelError> Filter(string storeName, string searchTerm);
     }
 
@@ -64,14 +64,14 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrie
             _messageStoreViewerFactory = messageStoreViewerFactory;
         }
 
-        public ViewModelRetrieverResult<MessageListModel, MessageListModelError> Get(string storeName)
+        public ViewModelRetrieverResult<MessageListModel, MessageListModelError> Get(string storeName, int pageNumber, int pageSize = 100)
         {
             ViewModelRetrieverResult<MessageListModel, MessageListModelError> errorResult;
             IAmAMessageStoreViewer<Message> foundViewer = GetStoreViewer(storeName, out errorResult);
             if (foundViewer == null) return errorResult;
             try
             {
-                var messages = foundViewer.Get().Result;
+                var messages = foundViewer.Get(pageSize, pageNumber).Result;
                 var messageListModel = new MessageListModel(messages);
 
                 return new ViewModelRetrieverResult<MessageListModel, MessageListModelError>(messageListModel);

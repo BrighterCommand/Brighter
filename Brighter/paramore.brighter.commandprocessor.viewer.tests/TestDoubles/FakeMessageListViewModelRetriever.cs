@@ -23,7 +23,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
         {
         }
 
-        public ViewModelRetrieverResult<MessageListModel, MessageListModelError> Get(string storeName)
+        public ViewModelRetrieverResult<MessageListModel, MessageListModelError> Get(string storeName, int pageSize, int pageNumber)
         {
             if (_fakeResultModel != null)
             {

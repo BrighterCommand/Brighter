@@ -39,7 +39,6 @@ using System;
 using Nancy;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
@@ -49,13 +48,14 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
         public MessagesNancyModule(IMessageListViewModelRetriever messageListViewModelRetriever)
             : base("/messages")
         {
-            Get["/{storeName}"] = parameters =>
+            Get["/{storeName}/{pageNumber}"] = parameters =>
             {
                 var logger = LogProvider.GetLogger("MessagesNancyModule");
                 logger.Log(LogLevel.Debug, () => "GET on messages");
 
                 string storeName = parameters.storeName;
-                var messageListModelResult = messageListViewModelRetriever.Get(storeName);
+                int pageNumber = parameters.pageNumber;
+                var messageListModelResult = messageListViewModelRetriever.Get(storeName, pageNumber);
 
                 if (!messageListModelResult.IsError)
                 {
