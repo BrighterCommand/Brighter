@@ -57,7 +57,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessageConsumer : MessageGateway, IAmAMessageConsumerSupportingDelay
     {
-        private readonly string _queueName;
         private readonly string _routingKey;
         private const bool AutoAck = false;
         /// <summary>
@@ -72,9 +71,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="routingKey">The routing key.</param>
         /// <param name="logger">The logger.</param>
         /// <param name="queueName">The queue name.</param>
-        public RmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(logger)
+        public RmqMessageConsumer(string queueName, string routingKey, ILog logger)
+            : base(logger, queueName)
         {
-            _queueName = queueName;
             _routingKey = routingKey;
             _messageCreator = new RmqMessageCreator(logger);
         }
@@ -88,9 +87,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var deliveryTag = message.GetDeliveryTag();
             try
             {
-                EnsureChannel(_queueName);
                 Logger.InfoFormat("RmqMessageConsumer: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag);
-                Channel.BasicAck(deliveryTag, false);
+                Channel(c => c.BasicAck(deliveryTag, false));
             }
             catch (Exception exception)
             {
@@ -106,10 +104,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             try
             {
-                EnsureChannel(_queueName);
+                EnsureChannel();
                 Logger.DebugFormat("RmqMessageConsumer: Purging channel {0}", _queueName);
 
-                try { Channel.QueuePurge(_queueName); }
+                try
+                {
+                    Channel(c => c.QueuePurge(_queueName));
+                }
                 catch (OperationInterruptedException operationInterruptedException)
                 {
                     if (operationInterruptedException.ShutdownReason.ReplyCode == 404) { return; }
@@ -133,9 +134,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             try
             {
                 Logger.DebugFormat("RmqMessageConsumer: Re-queueing message {0} with a delay of {1} milliseconds", message.Id, delayMilliseconds);
-                EnsureChannel(_queueName);
-                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name, Logger);
-                rmqMessagePublisher.PublishMessage(message, delayMilliseconds, regenerate: true);
+                PublishMessage(message, delayMilliseconds, regenerate: true);
                 Reject(message, false);
             }
             catch (Exception exception)
@@ -154,9 +153,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             try
             {
-                EnsureChannel(_queueName);
                 Logger.InfoFormat("RmqMessageConsumer: NoAck message {0} with delivery tag {1}", message.Id, message.GetDeliveryTag());
-                Channel.BasicNack(message.GetDeliveryTag(), false, requeue);
+                Channel(c => c.BasicNack(message.GetDeliveryTag(), false, requeue));
             }
             catch (Exception exception)
             {
@@ -265,10 +263,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         protected virtual void CreateConsumer()
         {
-            _consumer = new QueueingBasicConsumer(Channel);
+            _consumer = CreateQueueingConsumer();
 
-            Channel.BasicConsume(_queueName, AutoAck, string.Empty, SetConsumerArguments(), _consumer);
-            
+            Channel(c => c.BasicConsume(_queueName, AutoAck, string.Empty, SetConsumerArguments(), _consumer));
+
             Logger.InfoFormat("RmqMessageConsumer: Created consumer with ConsumerTag {4} for queue {0} with routing key {1} via exchange {2} on connection {3}",
                               _queueName,
                               _routingKey,
@@ -288,13 +286,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         private void EnsureChannelBind()
         {
-            EnsureChannel(_queueName);
-
             Logger.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", _queueName, Configuration.AMPQUri.GetSanitizedUri());
 
-            Channel.QueueDeclare(_queueName, false, false, false, SetQueueArguments());
-
-            Channel.QueueBind(_queueName, Configuration.Exchange.Name, _routingKey);
+            Channel(c =>
+            {
+                c.QueueDeclare(_queueName, false, false, false, SetQueueArguments());
+                c.QueueBind(_queueName, Configuration.Exchange.Name, _routingKey);
+            });
         }
 
         private Dictionary<string, object> SetConsumerArguments()
@@ -315,11 +313,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 // Only work for RabbitMQ Server version before 3.0
                 //http://www.rabbitmq.com/blog/2012/11/19/breaking-things-with-rabbitmq-3-0/
                 arguments.Add("x-ha-policy", "all");
-            } 
+            }
             return arguments;
         }
 
-        private bool IsQueueMirroredAcrossAllNodesInTheCluster{ get { return Configuration.Queues.HighAvailability; } }
+        private bool IsQueueMirroredAcrossAllNodesInTheCluster { get { return Configuration.Queues.HighAvailability; } }
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.

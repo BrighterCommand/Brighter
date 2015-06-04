@@ -34,6 +34,7 @@ using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using RabbitMQ.Client.Exceptions;
+using System.Threading;
 
 namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 {
@@ -50,6 +51,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         private Establish _context = () =>
         {
+            Thread.Sleep(10000);
             var logger = LogProvider.For<RmqMessageConsumer>();
 
             s_message = new Message(header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), body: new MessageBody("test content"));
@@ -232,13 +234,14 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                      };
 
         private It _should_return_a_channel_failure_exception = () => s_firstException.ShouldBeOfExactType<ChannelFailureException>();
-        private It _should_return_an_explainging_inner_exception = () => s_firstException.InnerException.ShouldBeOfExactType<AlreadyClosedException>();
+        private It _should_return_an_explaining_inner_exception = () => s_firstException.InnerException.ShouldBeOfExactType<AlreadyClosedException>();
 
         private Cleanup _teardown = () =>
         {
             s_receiver.Purge();
             s_sender.Dispose();
             s_receiver.Dispose();
+            Task.Delay(5000).Wait();
         };
     }
 

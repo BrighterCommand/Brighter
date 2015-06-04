@@ -55,7 +55,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RmqMessageProducer(ILog logger) : base(logger) { }
+        public RmqMessageProducer(ILog logger) : base(logger, "Producer Channel") { }
 
         /// <summary>
         /// Sends the specified message.
@@ -82,15 +82,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             try
             {
-                EnsureChannel();
-                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name, Logger);
                 Logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, message.Body.Value, delayMilliseconds);
-                rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
+                PublishMessage(message, delayMilliseconds);
                 Logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and message: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds);
             }
             catch (Exception e)
             {
-                if (Channel != null)
+                if (ChannelIsInitialized)
                     tcs.SetException(e);
                 throw;
             }
