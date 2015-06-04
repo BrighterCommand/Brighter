@@ -72,7 +72,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="routingKey">The routing key.</param>
         /// <returns>IAmAnOutputChannel.</returns>
-        public IAmAnOutputChannel CreateOutputChannel(string channelName, string routingKey)
+        public IAmAnOutputChannel CreateOutputChannel(string routingKey)
         {
             return new OutputChannel(_messageProducerFactory.Create());
         }
