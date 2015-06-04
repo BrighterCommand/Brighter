@@ -36,7 +36,7 @@ namespace paramore.brighter.commandprocessor.extensions
             var customAttributes = targetMethod.GetCustomAttributes(true);
             return customAttributes
                      .Select(attr => (Attribute)attr)
-                     .Where(a => a.GetType().BaseType == typeof(RequestHandlerAttribute))
+                     .Where(a => a.GetType().GetTypeInfo().BaseType == typeof(RequestHandlerAttribute))
                      .Cast<RequestHandlerAttribute>()
                      .ToList();
         }
