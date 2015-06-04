@@ -42,89 +42,40 @@ using System.Threading.Tasks;
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class InputChannel.
+    /// Class OutputChannel.
     /// An <see cref="IAmAChannel"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     /// and acknowledging receipt of those messages
     /// </summary>
-    public class InputChannel : IAmAnInputChannel
+    public class OutputChannel : IAmAnOutputChannel
     {
-        private readonly string _channelName;
-        private readonly IAmAMessageConsumer _messageConsumer;
+        private readonly IAmAMessageProducer _messageProducer;
         private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
-        private readonly bool _messageConsumerSupportsDelay;
+        private readonly bool _messageProducerSupportsDelay;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InputChannel"/> class.
+        /// Initializes a new instance of the <see cref="OutputChannel"/> class.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
         /// <param name="messageConsumer">The messageConsumer.</param>
-        public InputChannel(string channelName, IAmAMessageConsumer messageConsumer)
+        public OutputChannel(IAmAMessageProducer messageProducer)
         {
-            _channelName = channelName;
-            _messageConsumer = messageConsumer;
-            _messageConsumerSupportsDelay = _messageConsumer is IAmAMessageConsumerSupportingDelay && (_messageConsumer as IAmAMessageGatewaySupportingDelay).DelaySupported;
+            _messageProducer = messageProducer;
+            _messageProducerSupportsDelay = _messageProducer is IAmAMessageProducerSupportingDelay && (_messageProducer as IAmAMessageGatewaySupportingDelay).DelaySupported;
         }
 
         /// <summary>
-        /// Gets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        public ChannelName Name { get { return new ChannelName(_channelName); } }
-
-        /// <summary>
-        /// Receives the specified timeout in milliseconds.
-        /// </summary>
-        /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
-        /// <returns>Message.</returns>
-        public Message Receive(int timeoutinMilliseconds)
-        {
-            Message message;
-            if (!_queue.TryDequeue(out message))
-            {
-                message = _messageConsumer.Receive(timeoutinMilliseconds);
-            }
-            return message;
-        }
-
-        /// <summary>
-        /// Acknowledges the specified message.
+        /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Acknowledge(Message message)
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        public void Send(Message message, int delayMilliseconds = 0)
         {
-            _messageConsumer.Acknowledge(message);
-        }
-
-        /// <summary>
-        /// Rejects the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void Reject(Message message)
-        {
-            _messageConsumer.Reject(message, true);
-        }
-
-        /// <summary>
-        /// Stops this instance.
-        /// </summary>
-        public void Stop()
-        {
-            _queue.Enqueue(MessageFactory.CreateQuitMessage());
-        }
-
-        /// <summary>
-        /// Requeues the specified message.
-        /// </summary>
-        /// <param name="message"></param>
-        public void Requeue(Message message, int delayMilliseconds = 0)
-        {
-            if (delayMilliseconds > 0 && !_messageConsumerSupportsDelay)
+            if (delayMilliseconds > 0 && !_messageProducerSupportsDelay)
                 Task.Delay(delayMilliseconds).Wait();
 
-            if (_messageConsumerSupportsDelay)
-                (_messageConsumer as IAmAMessageConsumerSupportingDelay).Requeue(message, delayMilliseconds);
+            if (_messageProducerSupportsDelay)
+                (_messageProducer as IAmAMessageProducerSupportingDelay).Send(message, delayMilliseconds).Wait();
             else
-                _messageConsumer.Requeue(message);
+                _messageProducer.Send(message).Wait();
         }
 
         /// <summary>
@@ -147,7 +98,7 @@ namespace paramore.brighter.commandprocessor
             GC.SuppressFinalize(this);
         }
 
-        ~InputChannel()
+        ~OutputChannel()
         {
             Dispose(false);
         }
@@ -156,7 +107,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (disposing)
             {
-                _messageConsumer.Dispose();
+                _messageProducer.Dispose();
             }
         }
     }

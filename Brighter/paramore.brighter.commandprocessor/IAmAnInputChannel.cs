@@ -47,6 +47,11 @@ namespace paramore.brighter.commandprocessor
     public interface IAmAnInputChannel : IAmAChannel, IDisposable
     {
         /// <summary>
+        /// Gets the name.
+        /// </summary>
+        /// <value>The name.</value>
+        ChannelName Name { get; }
+        /// <summary>
         /// Receives the specified timeout in milliseconds.
         /// </summary>
         /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>

@@ -81,7 +81,7 @@ namespace paramore.brighter.serviceactivator.TestHelpers
             _messageQueue.Enqueue(message);
         }
 
-        public virtual void Send(Message message)
+        public virtual void Send(Message message, int millisecondsDelay = 0)
         {
             _messageQueue.Enqueue(message);
         }

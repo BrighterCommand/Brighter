@@ -63,6 +63,7 @@
     <Compile Include="IAmAChannel.cs" />
     <Compile Include="IAmAChannelFactory.cs" />
     <Compile Include="IAmACommandStore.cs" />
+    <Compile Include="IAmAMessageProducerFactory.cs" />
     <Compile Include="IAmAMessageConsumerFactory.cs" />
     <Compile Include="IAmAMessageGatewaySupportingDelay.cs" />
     <Compile Include="IAmAMessageMapperFactory.cs" />
@@ -73,6 +74,7 @@
     <Compile Include="IAmAMessageProducer.cs" />
     <Compile Include="IAmAMessageConsumer.cs" />
     <Compile Include="InMemoryCommandStore.cs" />
+    <Compile Include="OutputChannel.cs" />
     <Compile Include="InputChannel.cs" />
     <Compile Include="LifetimeScope.cs" />
     <Compile Include="MessageFactory.cs" />
