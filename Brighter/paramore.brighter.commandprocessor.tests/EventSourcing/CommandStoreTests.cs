@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading.Tasks;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
@@ -60,8 +61,14 @@ namespace paramore.commandprocessor.tests.EventSourcing
 
         };
 
-        private Because of = () => s_commandProcessor.Send(s_command);
+        private Because of = () =>
+         {
+             s_commandProcessor.Send(s_command);
 
-        private It should_store_the_command_to_the_command_store = () => s_commandstore.Find<MyCommand>(s_command.Id).Value.ShouldEqual(s_command.Value);
+             //we need to wait for the command store, which is asynchronous to complete writing
+             Task.Delay(500);
+         };
+
+        private It should_store_the_command_to_the_command_store = () => s_commandstore.Get<MyCommand>(s_command.Id).Result.Value.ShouldEqual(s_command.Value);
     }
 }

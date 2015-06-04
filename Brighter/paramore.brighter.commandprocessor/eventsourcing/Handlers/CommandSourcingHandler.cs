@@ -36,6 +36,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
@@ -59,13 +62,25 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
         }
 
         /// <summary>
-        /// Handles the specified command.
+        /// Logs the command we received to the command store. We want to run this asynchronously to avoid the performance hit on the pipeline
+        /// so we choose to make this fire-and-forget: http://stackoverflow.com/questions/5613951/simplest-way-to-do-a-fire-and-forget-method-in-c-sharp-4-0
+        /// The risk here is that we do not become aware of exceptions i.e. if you fail to write to the command store, this component won't tell you.
+        /// We trade this off against introducing an extra db write into every handler path that you need to wait for. 
         /// </summary>
         /// <param name="command">The command that we want to store.</param>
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
         public override T Handle(T command) 
         {
-            _commandStore.Add(command.Id, command);
+            logger.DebugFormat("Writing command {0} to the Command Store", command.Id);
+
+            #pragma warning disable 4014
+            //Task.Run(async () =>
+            //{
+            //    await _commandStore.Add(command.Id, command);
+            //}).ConfigureAwait(false);
+
+            _commandStore.Add(command.Id, command).Wait();
+
             return base.Handle(command);
         }
 
