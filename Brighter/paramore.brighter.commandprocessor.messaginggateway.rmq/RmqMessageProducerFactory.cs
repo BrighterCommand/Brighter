@@ -1,10 +1,10 @@
 ﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
+// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
 // Author           : ian
-// Created          : 07-29-2014
+// Created          : 01-02-2015
 //
-// Last Modified By : ian
-// Last Modified On : 07-29-2014
+// Last Modified By : toby
+// Last Modified On : 01-02-2015
 // ***********************************************************************
 //     Copyright (c) . All rights reserved.
 // </copyright>
@@ -13,7 +13,7 @@
 
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Toby Henderson 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -35,33 +35,35 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor
+using paramore.brighter.commandprocessor.Logging;
+
+namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
-    /// Interface IAmAChannelFactory
-    /// Creates instances of <see cref="IAmAChannel"/>channels. We provide support for some Application Layer channels, and provide factories for those:
-    /// <list type="bullet">
-    /// <item>AMQP</item>
-    /// <item>RestML</item>
-    /// </list>
-    /// If you need to support other Application Layer protocols, please consider issuing a Pull request for your implementation
+    /// Class RmqMessageProducerFactory.
     /// </summary>
-    public interface IAmAChannelFactory
+    public class RmqMessageProducerFactory : IAmAMessageProducerFactory
     {
-        /// <summary>
-        /// Creates the input channel.
-        /// </summary>
-        /// <param name="channelName">Name of the channel.</param>
-        /// <param name="routingKey"></param>
-        /// <returns>IAmAnInputChannel.</returns>
-        IAmAnInputChannel CreateInputChannel(string channelName, string routingKey);
+        private readonly ILog _logger;
 
         /// <summary>
-        /// Creates the output channel.
+        /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
         /// </summary>
-        /// <param name="channelName">Name of the channel.</param>
-        /// <param name="routingKey"></param>
-        /// <returns>IAmAnOutputChannel.</returns>
-        IAmAnOutputChannel CreateOutputChannel(string channelName, string routingKey);
+        /// <param name="logger">The logger.</param>
+        public RmqMessageProducerFactory(ILog logger)
+        {
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Creates the specified queue name.
+        /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="routingKey">The routing key.</param>
+        /// <returns>IAmAMessageProducer.</returns>
+        public IAmAMessageProducer Create()
+        {
+            return new RmqMessageProducer(_logger);
+        }
     }
 }

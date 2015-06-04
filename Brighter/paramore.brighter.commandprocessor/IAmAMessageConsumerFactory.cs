@@ -45,9 +45,9 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Creates the specified queue name.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="channelName">Name of the channel.</param>
         /// <param name="routingKey">The routing key.</param>
         /// <returns>IAmAMessageConsumer.</returns>
-        IAmAMessageConsumer Create(string queueName, string routingKey);
+        IAmAMessageConsumer Create(string channelName, string routingKey);
     }
 }
