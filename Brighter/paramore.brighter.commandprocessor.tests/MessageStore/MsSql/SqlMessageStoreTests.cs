@@ -27,7 +27,6 @@ using System.Collections.Generic;
 using System.Data.SqlServerCe;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -180,14 +179,7 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
             var en = new SqlCeEngine(ConnectionString);
             en.CreateDatabase();
 
-            var sql = string.Format("CREATE TABLE {0} (" +
-                                        "MessageId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
-                                        "Topic nvarchar(255)," +
-                                        "MessageType nvarchar(32)," +
-                                        "Timestamp dateTime," +
-                                        "HeaderBag ntext," +
-                                        "Body ntext" +
-                                    ")", TableName);
+            var sql = SqlMessageStoreBuilder.GetDDL(TableName);
 
             using (var cnn = new SqlCeConnection(ConnectionString))
             using (var cmd = cnn.CreateCommand())
