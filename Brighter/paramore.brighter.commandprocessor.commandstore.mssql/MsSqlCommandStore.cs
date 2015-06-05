@@ -77,7 +77,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         /// <returns>Task.</returns>
         public async Task Add<T>(Guid id, T command) where T : class, IRequest
         {
-            var sql = string.Format("insert into {0} (CommandID, CommandType, Topic,CommandBody, Timestamp) values (@CommandID, @CommandType, @Topic,CommandBody, @Timestamp)", _configuration.MessageStoreTableName);
+            var sql = string.Format("insert into {0} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)", _configuration.MessageStoreTableName);
             var commandJson = JsonConvert.SerializeObject(command);
             var parameters = new[]
             {

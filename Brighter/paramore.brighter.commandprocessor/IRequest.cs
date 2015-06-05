@@ -49,6 +49,6 @@ namespace paramore.brighter.commandprocessor
         /// Gets or sets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
-        Guid Id { get; }
+        Guid Id { get; set; }
     }
 }
