@@ -68,9 +68,10 @@ namespace paramore.brighter.commandprocessor
         /// <param name="request">The request.</param>
         void Post<T>(T request) where T : class, IRequest;
         /// <summary>
-        /// Reposts the specified message identifier.
+        /// Reposts the specified message identifier. Deprecated, we suggest using the message store interface directly instead.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
+        [ObsoleteAttribute]
         void Repost(Guid messageId);
     }
 }
