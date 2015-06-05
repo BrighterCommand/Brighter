@@ -37,15 +37,18 @@ THE SOFTWARE. */
 
 using System;
 using Nancy;
+using Nancy.ModelBinding;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
+using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
 using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
 {
     public class MessagesNancyModule : NancyModule
     {
-        public MessagesNancyModule(IMessageListViewModelRetriever messageListViewModelRetriever)
+        public MessagesNancyModule(IMessageListViewModelRetriever messageListViewModelRetriever,
+                                    IHandlerFactory handlerFactory)
             : base("/messages")
         {
             Get["/{storeName}/{pageNumber?1}"] = parameters =>
@@ -82,7 +85,18 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
                         throw new SystemException("Code can't reach here");
                 }
             };
+            Post["/{storeName}/repost"] = parameters =>
+            {
+                var repostModel = this.Bind<RepostView>();
+                var handler = handlerFactory.GetHandler<RepostCommand>();
+                var repostCommand = new RepostCommand { MessageIds = repostModel.Ids };
+                handler.Handle(repostCommand);
+
+                //Factory
+                //get handler
+                //execute
+                return null;
+            };
         }
     }
-
 }

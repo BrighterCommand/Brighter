@@ -131,6 +131,7 @@ var messagesVm = function () {
 
         hideMessageSpinner();
         $("#messageContainer").show();
+        $("#messageActionPanel").hide();
         activateSearch();
         model = messageModel;
         var content = Mustache.to_html($("#messageTemplate").html(), messageModel);
@@ -147,10 +148,25 @@ var messagesVm = function () {
             $("#pageControlsPrevious").hide();
         }
         $("#pageNumber").text(selectedPageNumber);
-
+        $("#messageContainer td input.messageCheck").change(onMessageChecked);
         log("end load");
     };
-    
+    var onMessageChecked = function() {
+        var checkedMessages = $("#messageContainer td input.messageCheck").filter(":checked");
+        $("#messagesSelectedNumber").text(checkedMessages.length);
+
+        var messageIds = [];
+        checkedMessages.each(function (index,element) {
+            messageIds.push($(element).parents("tr").find(".messageId").text());
+        });
+        $("#messagesSelectedIds").text(messageIds.toString());
+
+        if (checkedMessages.length > 0) {
+            $("#messageActionPanel").show();
+        } else {
+            $("#messageActionPanel").hide();
+        }
+    };
     var onSearchMessageLoad = function(messageModel) {
         onMessageLoad(messageModel);
         log("end search load");
