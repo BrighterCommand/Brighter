@@ -97,6 +97,9 @@ namespace paramore.brighter.commandprocessor
         private IAmASubscriberRegistry _registry;
         private IAmAHandlerFactory _handlerFactory;
         private IAmAPolicyRegistry _policyRegistry;
+        private int _messageStoreWriteTimeout;
+        private int _messagingGatewaySendTimeout;
+        private bool _useTaskQueues = false;
         private CommandProcessorBuilder() { }
 
         /// <summary>
@@ -161,9 +164,12 @@ namespace paramore.brighter.commandprocessor
         /// <returns>INeedARequestContext.</returns>
         public INeedARequestContext TaskQueues(MessagingConfiguration configuration)
         {
+            _useTaskQueues = true;
             _messageStore = configuration.MessageStore;
             _messagingGateway = configuration.MessagingGateway;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
+            _messageStoreWriteTimeout = configuration.MessageStoreWriteTimeout;
+            _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;
             return this;
         }
 
@@ -173,6 +179,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>INeedARequestContext.</returns>
         public INeedARequestContext NoTaskQueues()
         {
+            _useTaskQueues = false;
             return this;
         }
 
@@ -194,16 +201,31 @@ namespace paramore.brighter.commandprocessor
         /// <returns>CommandProcessor.</returns>
         public CommandProcessor Build()
         {
-            return new CommandProcessor(
-                subscriberRegistry: _registry,
-                handlerFactory: _handlerFactory,
-                requestContextFactory: _requestContextFactory,
-                policyRegistry: _policyRegistry,
-                mapperRegistry: _messageMapperRegistry,
-                messageStore: _messageStore,
-                messagingGateway: _messagingGateway,
-                logger: _logger
-                );
+            if (!_useTaskQueues)
+            {
+                return new CommandProcessor(
+                    
+                    subscriberRegistry: _registry,
+                    handlerFactory: _handlerFactory,
+                    requestContextFactory: _requestContextFactory,
+                    policyRegistry: _policyRegistry,
+                    logger: _logger);
+            }
+            else
+            {
+                return new CommandProcessor(
+                    subscriberRegistry: _registry,
+                    handlerFactory: _handlerFactory,
+                    requestContextFactory: _requestContextFactory,
+                    policyRegistry: _policyRegistry,
+                    mapperRegistry: _messageMapperRegistry,
+                    messageStore: _messageStore,
+                    messagingGateway: _messagingGateway,
+                    logger: _logger,
+                    messageStoreWriteTimeout: _messageStoreWriteTimeout,
+                    messageGatewaySendTimeout: _messagingGatewaySendTimeout
+                    );
+            }
         }
     }
 

@@ -56,6 +56,8 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmAPolicyRegistry _policyRegistry;
         private readonly ILog _logger;
+        private readonly int _messageStoreWriteTimeout;
+        private readonly int _messageGatewaySendTimeout;
         private IAmAMessageStore<Message> _messageStore;
         private IAmAMessageProducer _messagingGateway;
         private bool _disposed;
@@ -106,17 +108,24 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageStore">The message store.</param>
         /// <param name="messagingGateway">The messaging gateway.</param>
         /// <param name="logger">The logger.</param>
+        /// <param name="messageStoreWriteTimeout">How long should we wait to write to the message store</param>
+        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messagingGateway,
-            ILog logger)
+            ILog logger,
+            int messageStoreWriteTimeout = 300,
+            int messageGatewaySendTimeout = 300
+            )
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _logger = logger;
+            _messageStoreWriteTimeout = messageStoreWriteTimeout;
+            _messageGatewaySendTimeout = messageGatewaySendTimeout;
             _mapperRegistry = mapperRegistry;
             _messageStore = messageStore;
             _messagingGateway = messagingGateway;
@@ -134,6 +143,8 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageStore">The message store.</param>
         /// <param name="messagingGateway">The messaging gateway.</param>
         /// <param name="logger">The logger.</param>
+        /// <param name="messageStoreWriteTimeout">How long should we wait to write to the message store</param>
+        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -142,12 +153,17 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messagingGateway,
-            ILog logger)
+            ILog logger,
+            int messageStoreWriteTimeout = 300,
+            int messageGatewaySendTimeout = 300
+            )
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
         {
             _mapperRegistry = mapperRegistry;
             _messageStore = messageStore;
             _messagingGateway = messagingGateway;
+            _messageStoreWriteTimeout = messageStoreWriteTimeout;
+            _messageGatewaySendTimeout = messageGatewaySendTimeout;
         }
 
 
@@ -250,8 +266,8 @@ namespace paramore.brighter.commandprocessor
             */
             RetryAndBreakCircuit(() =>
                 {
-                    _messageStore.Add(message).Wait();
-                    _messagingGateway.Send(message).Wait();
+                    _messageStore.Add(message).Wait(_messageStoreWriteTimeout);
+                    _messagingGateway.Send(message).Wait(_messageGatewaySendTimeout);
                 });
         }
 
