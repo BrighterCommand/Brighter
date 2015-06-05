@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+        <p><a href="BasicConfiguration.html">Next</a></p>
+        <p><a href="PolicyFallback.html">Prev</a></p>
+    </header>
+    <section>
+        <h1>Brighter</h1>
+        <h2>Event(Command) Sourcing</h2>
+        <p>If we have dispatch commands to a target handler, and have a pipeline which acts as a preprocessor one obvious orthogonal operation is to log our commands so that we can understand
+         the commands that result in current system state. We can examine the logs, particularly if there is a problem, to understand what commands were sent to the application to create the current state.</p>
+        <p>We can also infer that if the current application state is a function of those commands, then we could potentially recreate the same application state by replaying those commands.</p>
+        <p>Now, within a log file, we are going to have to fiddle with <a href="http://www.grymoire.com/Unix/Sed.html">sed</a> or <a href="http://www.grymoire.com/Unix/Awk.html">awk</a> to pull
+        out the commands into a text file and then run those through something that reposts them. That works but it can be a little awkward and as such is a barrier to entry.</p>
+        <p>So if we stored these to a Command Store it could be much easier to slice and dice the data, and to extract it for replay.</p>
+        <p>In his bliki on <a href="http://martinfowler.com/eaaDev/EventSourcing.html">Event Sourcing</a> Martin Fowler describes using an architecture that
+            "guarantee[s] that all changes to the domain objects are initiated by the event objects" and one implementation approach is that an event processor sequentially logs the event
+            which is then applied to the domain. The system of record can be either the events (perhaps rebuilt overnight) or application state (in which case the events are only used for
+            analysis or recovery.</p>
+        <p>Brighter has an event processor equivalent, as it is a command processor and dispatcher, so it only needs to persist the commands to enable support for Event Sourcing. So if you make all
+        your changes to the domain through a command dispatcher such as Brighter you can meet the requirements for Event Sourcing by persisting your commands in a way that facilitates querying
+        or replay. As Brighter has a pipeline through it's command processor it is natural to simply add an attribute to the target handler that persists the command before it is applied to
+        domain model. This is essentially a write-ahead log.</p>
+        <p>Martin lists some issues to consider: new features, defect fixes, and temporal logic. A particular issue is external gateways. Brighter can provide support for preventing messages flowing
+        via Task Queues during reprocessing if required but you have to manage other gateways yourself.</p>
+        <h2>Command or Event Sourcing</h2>
+        <p>One complaint about Martin's article is that a Command is the intent to change the system, but an event is the result of that change. Because this model records the change to state many
+        people prefer to refer to this approach as Command Sourcing and reserve Event Sourcing for <a href="https://cqrs.wordpress.com/documents/events-as-storage-mechanism/">Greg Young's
+        related idea</a> of storing the results of those commands, the changes that would be made to application state, so that those changes can be replayed instead of the commands,
+        that could have side affects. We don't explicity provide help for that approach.</p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>
