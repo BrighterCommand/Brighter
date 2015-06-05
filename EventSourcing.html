@@ -30,7 +30,7 @@
     <section>
         <h1>Brighter</h1>
         <h2>Event(Command) Sourcing</h2>
-        <p>If we have dispatch commands to a target handler, and have a pipeline which acts as a preprocessor one obvious orthogonal operation is to log our commands so that we can understand
+        <p>If we dispatch commands to a target handler, and have a pipeline which acts as a preprocessor one obvious orthogonal operation is to log our commands so that we can understand
          the commands that result in current system state. We can examine the logs, particularly if there is a problem, to understand what commands were sent to the application to create the current state.</p>
         <p>We can also infer that if the current application state is a function of those commands, then we could potentially recreate the same application state by replaying those commands.</p>
         <p>Now, within a log file, we are going to have to fiddle with <a href="http://www.grymoire.com/Unix/Sed.html">sed</a> or <a href="http://www.grymoire.com/Unix/Awk.html">awk</a> to pull
