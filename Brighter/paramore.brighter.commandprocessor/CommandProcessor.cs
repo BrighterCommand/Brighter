@@ -258,8 +258,10 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Reposts the specified message identifier. It retrieves a message previously posted via Post, from the Message Store, and publishes it 
         /// onto the Work Queue again.
+        /// Deprecated, we suggest using the message store interface directly instead.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
+        [ObsoleteAttribute]
         public void Repost(Guid messageId)
         {
             var requestedMessageid = messageId; //avoid closure on this
