@@ -6,7 +6,9 @@ When we push a collection of functionality it is available via [nuget.org](http:
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore), but not yet deployed to [nuget.org](http://www.nuget.org).
 
 ## Master ##
-1. ....
+1. Made CommandProcessor.Repost deprecated with the Obsolete attribute. We will probably drop this in the next release. We suggest that you use the message store directly to retrieve a message and then call Post.
+2. Added a message store write timeout and message gateway timeout on a post; perviously we wait indefinitely (bad Brighter team, no biscuit).
+3. Added a UseCommandSourcing attribute that stores commands to a command store. This is the Event Sourcing paradigm described by Martin Fowler in http://martinfowler.com/eaaDev/EventSourcing.html The term Command Sourcing refers to the fact that as described the pattern stores commands (instructions to change state) not events (the results of applying those commands).
 
 ## Release 4.0.215 ##
 1. Fixed an issue where you could not have multiple UsePolicy or FallbackPolicy attributes on a single handler.#
