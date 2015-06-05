@@ -81,6 +81,11 @@
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerSection.cs" />
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerStoresElement.cs" />
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerStoresElementCollection.cs" />
+    <Compile Include="Ports\Handlers\ICommand.cs" />
+    <Compile Include="Ports\Handlers\IHandleCommand.cs" />
+    <Compile Include="Ports\Handlers\IHandlerFactory.cs" />
+    <Compile Include="Ports\Handlers\RepostCommandHandler.cs" />
+    <Compile Include="Adaptors\API\Resources\RepostView.cs" />
     <Compile Include="Ports\ViewModelRetrievers\MessageStoreViewerModelRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\MessageStoreActivationStateListViewModelRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\MessageListViewModelRetriever.cs" />

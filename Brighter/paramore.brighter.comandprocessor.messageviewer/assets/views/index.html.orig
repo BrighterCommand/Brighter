@@ -84,20 +84,30 @@ THE SOFTWARE. */
             <tbody>
                 {{#messages}}
                 <tr>
-                    <td>
-                        <div class="checkbox">
-                            <label>
-                                <input type="checkbox" id="check{{messageId}}" class="messageCheck" value="" aria-label="select Message">
-                            </label>
-                        </div>
-                    </td>
-                    <td class="messageId">{{MessageId}}</td>
+<<<<<<< HEAD
+                    <td>{{messageId}}</td>
                     <td>{{messageType}}</td>
                     <td>{{topic}}</td>
                     <td>{{bag}}</td>
                     <td>{{messageBody}}</td>
                     <td>{{handledCount}}</td>
                     <td><span title="{{timeStamp}}">{{timeStampUI}}</span></td>
+=======
+                    <td>
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox" id="check{{MessageId}}" class="messageCheck" value="" aria-label="select Message">
+                            </label>
+                        </div>
+                    </td>
+                    <td class="messageId">{{MessageId}}</td>
+                    <td>{{MessageType}}</td>
+                    <td>{{Topic}}</td>
+                    <td>{{Bag}}</td>
+                    <td>{{MessageBody}}</td>
+                    <td>{{HandledCount}}</td>
+                    <td><span title="{{TimeStamp}}">{{TimeStampUI}}</span></td>
+>>>>>>> brighter msg viewer - repost
                 </tr>
                 {{/messages}}
             </tbody>
