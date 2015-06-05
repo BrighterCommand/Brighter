@@ -177,7 +177,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
             return null;
         }
 
-        private TResult ReadCommand<TResult>(IDataReader dr) where TResult : class, new()
+        private TResult ReadCommand<TResult>(IDataReader dr) where TResult : class, IRequest, new()
         {
             if (dr.Read())
             {
@@ -185,7 +185,8 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 return JsonConvert.DeserializeObject<TResult>(body);
             }
 
-            return new TResult();
+            return new TResult {Id = Guid.Empty};
+            
         }
 
     }

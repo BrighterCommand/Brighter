@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Data.SqlServerCe;
 using System.IO;
 using Machine.Specifications;
@@ -68,11 +69,24 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
 
         public class When_there_is_no_message_in_the_sql_command_store
         {
+            private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(Guid.NewGuid()).Result; };
+
+            private It _should_return_an_empty_command_on_a_missing_command = () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
         }
 
         public class When_the_message_is_already_in_the_command_store
         {
+            private static Exception s_exception;
 
+            private Establish _context = () =>
+            {
+                s_raisedCommand = new MyCommand() { Value = "Test" };
+                s_sqlCommandStore.Add<MyCommand>(s_raisedCommand.Id, s_raisedCommand).Wait();
+            };
+
+            private Because _of = () => { s_exception = Catch.Exception(() => s_sqlCommandStore.Add(s_raisedCommand.Id, s_raisedCommand).Wait()); };
+
+            private It _should_succeed_even_if_the_message_is_a_duplicate = () => s_exception.ShouldBeNull();
         }
 
         private Cleanup _cleanup = () => CleanUpDb();
