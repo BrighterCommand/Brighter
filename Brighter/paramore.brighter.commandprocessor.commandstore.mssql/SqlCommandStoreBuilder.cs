@@ -30,7 +30,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
                 "CommandType nvarchar(256)," +
                 "CommandBody ntext," +
-                "Timestamp dateTime," +
+                "Timestamp dateTime" +
                 ")";
 
         public static string GetDDL(string tableName)

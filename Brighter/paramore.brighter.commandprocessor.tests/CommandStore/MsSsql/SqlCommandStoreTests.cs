@@ -50,7 +50,6 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
                     new LogProvider.NoOpLogger());
         };
 
-        [Ignore("Unfinished")]
         public class When_writing_a_message_to_the_command_store
         {
             private Establish _context = () =>
