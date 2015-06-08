@@ -89,7 +89,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
             {
                 var repostModel = this.Bind<RepostView>();
                 var handler = handlerFactory.GetHandler<RepostCommand>();
-                var repostCommand = new RepostCommand { MessageIds = repostModel.Ids };
+                var repostCommand = new RepostCommand { StoreName = parameters.storeName, MessageIds = repostModel.Ids};
                 handler.Handle(repostCommand);
 
                 //Factory
