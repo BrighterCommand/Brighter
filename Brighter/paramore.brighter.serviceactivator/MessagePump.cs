@@ -166,7 +166,8 @@ namespace paramore.brighter.serviceactivator
                 }
 
                 // Serviceable message
-                try {
+                try
+                {
                     DispatchRequest(message.Header.MessageType, TranslateMessage(message));
                 }
                 catch (ConfigurationException configurationException)
@@ -181,8 +182,10 @@ namespace paramore.brighter.serviceactivator
                     Channel.Dispose();
                     break;
                 }
-                catch (DeferMessageAction) {
+                catch (DeferMessageAction)
+                {
                     RequeueMessage(message);
+                    continue;
                 }
                 catch (AggregateException aggregateException)
                 {
@@ -206,7 +209,11 @@ namespace paramore.brighter.serviceactivator
                         if (Logger != null) Logger.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
                     }
 
-                    if (requeue) { RequeueMessage(message); }
+                    if (requeue)
+                    {
+                        RequeueMessage(message);
+                        continue;
+                    }
 
                     if (stop)
                     {
@@ -230,7 +237,8 @@ namespace paramore.brighter.serviceactivator
                         break;
                     }
                 }
-                catch (Exception e) {
+                catch (Exception e)
+                {
                     if (Logger != null) Logger.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", e, Thread.CurrentThread.ManagedThreadId, Channel.Name);
                 }
 
@@ -334,7 +342,7 @@ namespace paramore.brighter.serviceactivator
             {
                 request = _messageMapper.MapToRequest(message);
             }
-            catch (Exception exception) 
+            catch (Exception exception)
             {
                 throw new MessageMappingException(string.Format("Failed to map message {0} using message mapper {1} for type {2} ", message.Id, _messageMapper.GetType().FullName, typeof(TRequest).FullName), exception);
             }
@@ -345,6 +353,6 @@ namespace paramore.brighter.serviceactivator
 
     internal class MessageMappingException : Exception
     {
-        public MessageMappingException(string message, Exception exception): base(message, exception)  {}
+        public MessageMappingException(string message, Exception exception) : base(message, exception) { }
     }
 }
