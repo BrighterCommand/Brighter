@@ -98,10 +98,11 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.MessagesModul
 
             private It should_return_200_OK = () => _result.StatusCode.ShouldEqual(Nancy.HttpStatusCode.OK);
             private It should_invoke_handler_from_factory = () => _fakeRepostHandler.WasHandled.ShouldBeTrue();
-            private It should_invoke_handler_with_passed_ids = () =>
+            private It should_invoke_handler_with_store_and_passed_ids = () =>
             {
                 var command = _fakeRepostHandler.InvokedCommand;
                 command.ShouldNotBeNull();
+                command.StoreName.ShouldEqual(storeName);
                 command.MessageIds.Contains(_messages[0].Id.ToString()).ShouldBeTrue();
                 command.MessageIds.Contains(_messages[1].Id.ToString()).ShouldBeTrue();
             };
