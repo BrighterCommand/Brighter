@@ -45,6 +45,7 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class Message : IEquatable<Message>
     {
+        public const string OriginalMessageIdHeaderName = "x-original-message-id";
         public const string DeliveryTagHeaderName = "DeliveryTag";
 
         /// <summary>

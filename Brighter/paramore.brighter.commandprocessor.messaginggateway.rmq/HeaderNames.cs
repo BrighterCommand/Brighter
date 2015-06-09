@@ -70,7 +70,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// Indicates the original id of this message given a historic scenario (e.g. re-queueuing).
         /// </summary>
-        public const string ORIGINAL_MESSAGE_ID = "x-original-message-id";
+        public const string ORIGINAL_MESSAGE_ID = Message.OriginalMessageIdHeaderName;
         /// <summary>
         /// Tag used to identify this message in the sequence against it's Id (used to perform multiple ack against Id upto Tag).
         /// </summary>
