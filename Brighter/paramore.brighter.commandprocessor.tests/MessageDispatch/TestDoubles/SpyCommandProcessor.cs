@@ -26,7 +26,7 @@ using System;
 using System.Collections.Generic;
 
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.exceptions;
+using paramore.brighter.commandprocessor.actions;
 using paramore.brighter.serviceactivator;
 
 using Raven.Database.Indexing;

@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.commandprocessor.exceptions
+namespace paramore.brighter.commandprocessor.actions
 {
     /// <summary>
     /// Class DeferMessageAction.
