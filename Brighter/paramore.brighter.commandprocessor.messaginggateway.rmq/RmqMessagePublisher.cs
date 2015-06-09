@@ -83,7 +83,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var messageId = regenerate ? Guid.NewGuid() : message.Id;
             var deliveryTag = regenerate ? "1" : message.Header.Bag.ContainsKey(HeaderNames.DELIVERY_TAG) ? message.GetDeliveryTag().ToString() : null;
 
-            if (regenerate)
+            if (_logger != null && regenerate)
                 _logger.InfoFormat("RmqMessagePublisher: Regenerating message {0} with DeliveryTag of {1} to {2} with DeliveryTag of {3}", message.Id, deliveryTag ?? "(none)", messageId, 1);
 
             var headers = new Dictionary<string, object>
