@@ -59,9 +59,8 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Creates the output channel.
         /// </summary>
-        /// <param name="channelName">Name of the channel.</param>
         /// <param name="routingKey"></param>
         /// <returns>IAmAnOutputChannel.</returns>
-        IAmAnOutputChannel CreateOutputChannel(string channelName, string routingKey);
+        IAmAnOutputChannel CreateOutputChannel(string routingKey);
     }
 }
