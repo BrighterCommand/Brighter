@@ -13,6 +13,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>579e2c35</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -36,6 +37,12 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="EventStore.ClientAPI">
+      <HintPath>..\packages\EventStore.Client.3.0.2\lib\net40\EventStore.ClientAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="EventStore.ClientAPI.Embedded">
+      <HintPath>..\packages\EventStore.Client.Embedded.3.0.2\lib\net40\EventStore.ClientAPI.Embedded.dll</HintPath>
+    </Reference>
     <Reference Include="FakeItEasy, Version=1.25.2.0, Culture=neutral, PublicKeyToken=eff28e2146d5fd2c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\FakeItEasy.1.25.2\lib\net40\FakeItEasy.dll</HintPath>
@@ -193,6 +200,7 @@
     <Compile Include="MessageDispatch\TestDoubles\FailingEventMessageMapper.cs" />
     <Compile Include="MessageDispatch\TestDoubles\MyEventMessageMapper.cs" />
     <Compile Include="MessageDispatch\TestDoubles\SpyCommandProcessor.cs" />
+    <Compile Include="MessageStore\EventStore\EventStoreMessageStoreTests.cs" />
     <Compile Include="MessageStore\MsSql\SqlMessageStoreTests.cs" />
     <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
     <Compile Include="MessageStore\MsSql\SqlMessageStoreMigrationTests.cs" />
@@ -212,6 +220,10 @@
     <ProjectReference Include="..\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj">
       <Project>{de5ba1bc-cf70-4465-9a23-7a28604a5949}</Project>
       <Name>paramore.brighter.commandprocessor.commandstore.mssql</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj">
+      <Project>{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}</Project>
+      <Name>paramore.brighter.commandprocessor.messagestore.eventstore</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
       <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
@@ -249,6 +261,13 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\packages\EventStore.Client.Embedded.3.0.2\build\EventStore.Client.Embedded.targets" Condition="Exists('..\packages\EventStore.Client.Embedded.3.0.2\build\EventStore.Client.Embedded.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\EventStore.Client.Embedded.3.0.2\build\EventStore.Client.Embedded.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EventStore.Client.Embedded.3.0.2\build\EventStore.Client.Embedded.targets'))" />
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
