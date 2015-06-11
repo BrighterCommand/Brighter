@@ -35,52 +35,38 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
+using System.Collections.Generic;
+using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
-using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
 {
-    internal class FakeMessageListViewModelRetriever : IMessageListViewModelRetriever
+    internal class FakeMessageStoreListCacheLoader : IMessageStoreListCacheLoader
     {
-        private readonly MessageListModel _fakeResultModel;
-        private MessageListModelError _fakeResultError;
+        private readonly IMessageStoreActivationStateCache _messageStoreActivationStateCache;
+        public Dictionary<MessageStoreType, int> ctorCalled = new Dictionary<MessageStoreType, int>();
 
-        public FakeMessageListViewModelRetriever(MessageListModel fakeResultModel)
+        public FakeMessageStoreListCacheLoader(IMessageStoreActivationStateCache messageStoreActivationStateCache)
         {
-            _fakeResultModel = fakeResultModel;
+            _messageStoreActivationStateCache = messageStoreActivationStateCache;
         }
 
-        public FakeMessageListViewModelRetriever(MessageListModelError fakeResultError)
+        public IMessageStoreActivationStateCache Load()
         {
-            _fakeResultError = fakeResultError;
+            return _messageStoreActivationStateCache;
         }
 
-        private FakeMessageListViewModelRetriever()
+        public void Setup(MessageStoreType type, FakeMessageStoreWithViewer fakeMessageStoreWithViewer)
         {
-        }
-
-        public ViewModelRetrieverResult<MessageListModel, MessageListModelError> Get(string storeName, int pageSize, int pageNumber)
-        {
-            if (_fakeResultModel != null)
+            _messageStoreActivationStateCache.Set(type, msli =>
             {
-                return new ViewModelRetrieverResult<MessageListModel, MessageListModelError>(_fakeResultModel);
-            }
-            else
-            {
-                return new ViewModelRetrieverResult<MessageListModel, MessageListModelError>(_fakeResultError);
-                
-            }
-        }
-
-        public ViewModelRetrieverResult<MessageListModel, MessageListModelError> Filter(string messageStoreName, string searchTerm)
-        {
-            return null;
-        }
-
-        public static IMessageListViewModelRetriever Empty()
-        {
-            return  new FakeMessageListViewModelRetriever();
+                if (!ctorCalled.ContainsKey(type))
+                {
+                    ctorCalled.Add(type,0);
+                }
+                ctorCalled[type]++;
+                return fakeMessageStoreWithViewer;
+            });
         }
     }
 }
