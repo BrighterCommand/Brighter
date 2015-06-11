@@ -67,5 +67,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// The milliseconds the message was instructed to be delayed for (sent as negative) (requires plugin rabbitmq_delayed_message_exchange)
         /// </summary>
         public const string DELAYED_MILLISECONDS = "x-delay";
+        /// <summary>
+        /// Indicates the original id of this message given a historic scenario (e.g. re-queueuing).
+        /// </summary>
+        public const string ORIGINAL_MESSAGE_ID = Message.OriginalMessageIdHeaderName;
+        /// <summary>
+        /// Tag used to identify this message in the sequence against it's Id (used to perform multiple ack against Id upto Tag).
+        /// </summary>
+        public const string DELIVERY_TAG = Message.DeliveryTagHeaderName;
     }
 }

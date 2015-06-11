@@ -95,12 +95,13 @@ namespace TaskMailer.Adapters.ServiceHost
             };
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger);
 
             _dispatcher = DispatchBuilder.With()
                 .Logger(logger)
                 .CommandProcessor(commandProcessor)
                 .MessageMappers(messageMapperRegistry)
-                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
+                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
                 .ConnectionsFromConfiguration()
                 .Build();
         }

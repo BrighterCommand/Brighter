@@ -1,10 +1,10 @@
 ﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
-// Author           : ian
-// Created          : 07-29-2014
+// Assembly         : paramore.brighter.serviceactivator
+// Author           : toby
+// Created          : 01-26-2015
 //
 // Last Modified By : ian
-// Last Modified On : 07-29-2014
+// Last Modified On : 01-30-2015
 // ***********************************************************************
 //     Copyright (c) . All rights reserved.
 // </copyright>
@@ -13,7 +13,7 @@
 
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Toby Henderson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -35,19 +35,17 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor
+using System;
+
+namespace paramore.brighter.commandprocessor.actions
 {
     /// <summary>
-    /// Interface IAmAChannel
-    /// A channel is an abstraction for an <a href="http://en.wikipedia.org/wiki/OSI_model">OSI model</a> Application Layer used to provide support for a 
-    /// <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> pattern of dispatch and processing
+    /// Class DeferMessageAction.
+    /// Used to indicate that a message should be defered.
+    /// It's purpose is to allow messages received out of order to be delayed until
+    /// missing messages have been processed
     /// </summary>
-    public interface IAmAChannel
+    public class DeferMessageAction : Exception
     {
-        /// <summary>
-        /// Gets the length.
-        /// </summary>
-        /// <value>The length.</value>
-        int Length { get; }
     }
 }

@@ -45,6 +45,9 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class Message : IEquatable<Message>
     {
+        public const string OriginalMessageIdHeaderName = "x-original-message-id";
+        public const string DeliveryTagHeaderName = "DeliveryTag";
+
         /// <summary>
         /// Gets the header.
         /// </summary>
@@ -155,12 +158,12 @@ namespace paramore.brighter.commandprocessor
 
         public ulong GetDeliveryTag()
         {
-            return (ulong)Header.Bag["DeliveryTag"];
+            return (ulong)Header.Bag[DeliveryTagHeaderName];
         }
 
         public void SetDeliveryTag(ulong deliveryTag)
         {
-            Header.Bag["DeliveryTag"] = deliveryTag;
+            Header.Bag[DeliveryTagHeaderName] = deliveryTag;
         }
     }
 }

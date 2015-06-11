@@ -84,6 +84,7 @@ namespace Greetings.Adapters.ServiceHost
 
             //create the gateway
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger);
             var builder = DispatchBuilder
                 .With()
                 .Logger(logger)
@@ -96,7 +97,7 @@ namespace Greetings.Adapters.ServiceHost
                     .Build()
                  )
                  .MessageMappers(messageMapperRegistry)
-                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
+                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
                  .ConnectionsFromConfiguration();
             _dispatcher = builder.Build();
         }
