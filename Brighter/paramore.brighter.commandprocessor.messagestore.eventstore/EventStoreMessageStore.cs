@@ -51,7 +51,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
     /// <summary>
     /// Class EventStoreMessageStore.
     /// </summary>
-    public class EventStoreMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreViewer<Message>
+    public class EventStoreMessageStore : IAmAMessageStore<Message>
     {
         private readonly IEventStoreConnection _eventStore;
         private readonly ILog _logger;
@@ -69,7 +69,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
 
         /// <summary>
         /// Adds the specified message. 
-        /// The message must have a 'streamId' and an 'eventNumber in the message header bag.
+        /// The message must have a 'streamId' and an 'eventNumber' in the message header bag.
         /// The 'streamId' is the name of the stream to append the message to.
         /// The 'eventNumber' should be one greater than the last event in the stream.
         /// </summary>
@@ -126,17 +126,6 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         /// <param name="messageId">The message identifier.</param>
         /// <returns>Task&lt;Message&gt;.</returns>
         public Task<Message> Get(Guid messageId)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Returns all messages in the store. Currently not implemented
-        /// </summary>
-        /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
-        /// <param name="pageNumber">Page number of results to return (default = 1)</param>
-        /// <returns></returns>
-        public Task<IList<Message>> Get(int pageSize = 100, int pageNumber = 1)
         {
             throw new NotImplementedException();
         }
