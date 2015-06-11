@@ -300,7 +300,7 @@ namespace paramore.brighter.commandprocessor
                         return;
                     }
 
-                    _messagingGateway.Send(message);
+                    _messagingGateway.Send(message).Wait();
                 });
         }
 

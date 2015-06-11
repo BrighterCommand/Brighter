@@ -1,10 +1,10 @@
 ﻿// ***********************************************************************
-// Assembly         : paramore.brighter.serviceactivator
-// Author           : toby
-// Created          : 01-26-2015
+// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
+// Author           : ian
+// Created          : 01-02-2015
 //
-// Last Modified By : ian
-// Last Modified On : 01-30-2015
+// Last Modified By : toby
+// Last Modified On : 01-02-2015
 // ***********************************************************************
 //     Copyright (c) . All rights reserved.
 // </copyright>
@@ -13,7 +13,7 @@
 
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Toby Henderson
+Copyright © 2014 Toby Henderson 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -35,17 +35,35 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using paramore.brighter.commandprocessor.Logging;
 
-namespace paramore.brighter.commandprocessor.exceptions
+namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
-    /// Class DeferMessageAction.
-    /// Used to indicate that a message should be defered.
-    /// It's purpose is to allow messages received out of order to be delayed until
-    /// missing messages have been processed
+    /// Class RmqMessageProducerFactory.
     /// </summary>
-    public class DeferMessageAction : Exception
+    public class RmqMessageProducerFactory : IAmAMessageProducerFactory
     {
+        private readonly ILog _logger;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        public RmqMessageProducerFactory(ILog logger)
+        {
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Creates the specified queue name.
+        /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="routingKey">The routing key.</param>
+        /// <returns>IAmAMessageProducer.</returns>
+        public IAmAMessageProducer Create()
+        {
+            return new RmqMessageProducer(_logger);
+        }
     }
 }

@@ -1,9 +1,9 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright ¬© 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the ìSoftwareî), to deal
+of this software and associated documentation files (the ‚ÄúSoftware‚Äù), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -12,7 +12,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED ìAS ISî, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED ‚ÄúAS IS‚Äù, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -29,6 +29,7 @@ using System.Linq;
 using System.Text;
 
 using paramore.brighter.commandprocessor.extensions;
+using paramore.brighter.commandprocessor.Logging;
 
 using RabbitMQ.Client;
 
@@ -39,10 +40,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessagePublisher
     {
-        private static string[] HeadersToReset = { HeaderNames.DELAY_MILLISECONDS, HeaderNames.MESSAGE_TYPE, HeaderNames.TOPIC, HeaderNames.HANDLED_COUNT };
+        private static string[] HeadersToReset = { HeaderNames.DELAY_MILLISECONDS, HeaderNames.MESSAGE_TYPE, HeaderNames.TOPIC, HeaderNames.HANDLED_COUNT, HeaderNames.DELIVERY_TAG };
 
         private readonly IModel _channel;
         private readonly string _exchangeName;
+        private readonly ILog _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessagePublisher"/> class.
@@ -54,7 +56,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// or
         /// exchangeName
         /// </exception>
-        public RmqMessagePublisher(IModel channel, string exchangeName)
+        public RmqMessagePublisher(IModel channel, string exchangeName, ILog logger)
         {
             if (channel == null)
             {
@@ -67,6 +69,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             _channel = channel;
             _exchangeName = exchangeName;
+            _logger = logger;
         }
 
         /// <summary>
@@ -74,39 +77,56 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="headers">User specified message headers.</param>
-        public void PublishMessage(Message message, int delayMilliseconds)
+        /// <param name="regenerate">Generate new unique message identifier.</param>
+        public void PublishMessage(Message message, int delayMilliseconds, bool regenerate = false)
         {
+            var messageId = regenerate ? Guid.NewGuid() : message.Id;
+            var deliveryTag = regenerate ? "1" : message.Header.Bag.ContainsKey(HeaderNames.DELIVERY_TAG) ? message.GetDeliveryTag().ToString() : null;
+
+            if (_logger != null && regenerate)
+                _logger.InfoFormat("RmqMessagePublisher: Regenerating message {0} with DeliveryTag of {1} to {2} with DeliveryTag of {3}", message.Id, deliveryTag ?? "(none)", messageId, 1);
+
+            var headers = new Dictionary<string, object>
+                                      {
+                                          {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
+                                          {HeaderNames.TOPIC, message.Header.Topic},
+                                          {HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString(CultureInfo.InvariantCulture)},
+                                      };
+
+            message.Header.Bag.Each((header) =>
+            {
+                if (!HeadersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
+            });
+
+            if (!String.IsNullOrEmpty(deliveryTag))
+                headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
+
+            if (delayMilliseconds > 0)
+                headers.Add(HeaderNames.DELAY_MILLISECONDS, delayMilliseconds);
+
+            if (regenerate && !message.Header.Bag.Any(h => h.Key.Equals(HeaderNames.ORIGINAL_MESSAGE_ID, StringComparison.CurrentCultureIgnoreCase)))
+                headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id.ToString());
+
             _channel.BasicPublish(
                 _exchangeName,
                 message.Header.Topic,
                 false,
                 false,
-                CreateBasicProperties(
-                    message: message, 
-                    additionalHeaders: delayMilliseconds > 0 ? new Dictionary<string, object> {{HeaderNames.DELAY_MILLISECONDS, delayMilliseconds}} : null),
+                CreateBasicProperties(messageId, message.Header.TimeStamp, headers),
                 Encoding.UTF8.GetBytes(message.Body.Value));
         }
 
-        private IBasicProperties CreateBasicProperties(Message message, IDictionary<string, object> additionalHeaders = null)
+        private IBasicProperties CreateBasicProperties(Guid id, DateTime timeStamp, IDictionary<string, object> headers = null)
         {
             var basicProperties = _channel.CreateBasicProperties();
+
             basicProperties.DeliveryMode = 1;
             basicProperties.ContentType = "text/plain";
-            basicProperties.MessageId = message.Id.ToString();
-            basicProperties.Timestamp = new AmqpTimestamp(UnixTimestamp.GetUnixTimestampSeconds(message.Header.TimeStamp));
-            basicProperties.Headers = new Dictionary<string, object>
-                                      {
-                                          {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
-                                          {HeaderNames.TOPIC, message.Header.Topic},
-                                          {HeaderNames.HANDLED_COUNT , message.Header.HandledCount.ToString(CultureInfo.InvariantCulture)}
-                                      };
+            basicProperties.MessageId = id.ToString();
+            basicProperties.Timestamp = new AmqpTimestamp(UnixTimestamp.GetUnixTimestampSeconds(timeStamp));
 
-            if (additionalHeaders != null)
-                additionalHeaders.Each((header) => basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value)));
-            
-            message.Header.Bag.Each((header) => {
-                if(!HeadersToReset.Any(htr => htr.Equals(header.Key))) basicProperties.Headers.Add(new KeyValuePair<string, object>(header.Key, header.Value));
-            });
+            if (headers != null && headers.Any())
+                basicProperties.Headers = headers;
 
             return basicProperties;
         }

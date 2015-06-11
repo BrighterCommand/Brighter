@@ -44,14 +44,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     public class InputChannelFactory : IAmAChannelFactory
     {
         private readonly RmqMessageConsumerFactory _messageConsumerFactory;
+        private readonly RmqMessageProducerFactory _messageProducerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannelFactory"/> class.
         /// </summary>
         /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>
-        public InputChannelFactory(RmqMessageConsumerFactory messageConsumerFactory)
+        public InputChannelFactory(RmqMessageConsumerFactory messageConsumerFactory, RmqMessageProducerFactory messageProducerFactory)
         {
             _messageConsumerFactory = messageConsumerFactory;
+            _messageProducerFactory = messageProducerFactory;
         }
 
         /// <summary>
@@ -68,12 +70,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// Creates the output channel.
         /// </summary>
-        /// <param name="channelName">Name of the channel.</param>
         /// <param name="routingKey">The routing key.</param>
-        /// <returns>IAmAnInputChannel.</returns>
-        public IAmAnInputChannel CreateOutputChannel(string channelName, string routingKey)
+        /// <returns>IAmAnOutputChannel.</returns>
+        public IAmAnOutputChannel CreateOutputChannel(string routingKey)
         {
-            return new InputChannel(channelName, _messageConsumerFactory.Create(channelName, routingKey));
+            return new OutputChannel(_messageProducerFactory.Create());
         }
     }
 }

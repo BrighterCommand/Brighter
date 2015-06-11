@@ -342,6 +342,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
                 //var gateway = new RmqMessageConsumer(logger);
                 var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
+                var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger);
 
                 s_builder = DispatchBuilder.With()
                              .Logger(logger)
@@ -354,7 +355,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                                 .Build()
                                 )
                              .MessageMappers(messageMapperRegistry)
-                             .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
+                             .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
                              .ConnectionsFromConfiguration();
             };
 
