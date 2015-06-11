@@ -195,10 +195,12 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                 var i = dr.GetOrdinal("HeaderBag");
                 var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
                 var dictionaryBag = _javaScriptSerializer.Deserialize<Dictionary<string, string>>(headerBag);
-
-                foreach (var key in dictionaryBag.Keys)
+                if (dictionaryBag != null)
                 {
-                    header.Bag.Add(key, dictionaryBag[key]);
+                    foreach (var key in dictionaryBag.Keys)
+                    {
+                        header.Bag.Add(key, dictionaryBag[key]);
+                    }                    
                 }
             }
 

@@ -1,6 +1,19 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ianp
+// Created          : 25-03-2014
+//
+// Last Modified By : ian
+// Last Modified On : 25-03-2014
+// ***********************************************************************
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,11 +35,10 @@ THE SOFTWARE. */
 
 #endregion
 
+
 using System;
-using System.Collections.Generic;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
 
@@ -52,6 +64,37 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private static Exception exception;
         }
 
+        public class when_creating_a_store_with_same_type_twice
+        {
+            private Establish _context = () =>
+            {
+                storeName = "sqlce-1";
+                _provider = FakeMessageStoreActivationStateProvider.CreateEmpty();
+                _provider.Add(MessageStoreActivationStateFactory.Create(storeName, typeof(MsSqlMessageStore).FullName,
+                    "DataSource='test-1.sdf';", "table-1"));
+                _provider.Add(MessageStoreActivationStateFactory.Create("sqlce-2", typeof(MsSqlMessageStore).FullName,
+                    "DataSource='test-2.sdf';", "table-2"));
+                var messageStoreListCache = new MessageStoreActivationStateCache();
+                _fakeMessageStoreListCacheLoader = new FakeMessageStoreListCacheLoader(messageStoreListCache);
+                _fakeMessageStoreListCacheLoader.Setup(MessageStoreType.SqlCe, new FakeMessageStoreWithViewer());
+                _factory = new MessageStoreViewerFactory(_provider, _fakeMessageStoreListCacheLoader);                
+            };
+
+            private Because _of = () => exception = Catch.Exception(() =>
+            {
+                _factory.Connect(storeName);
+            });
+
+            private It should_throw_argument_exception = () => exception.ShouldBeNull();
+            private static FakeMessageStoreActivationStateProvider _provider;
+            protected static MessageStoreActivationState MessageStoreActivationState;
+            private static Exception exception;
+            private static FakeMessageStoreListCacheLoader _fakeMessageStoreListCacheLoader;
+            private static MessageStoreViewerFactory _factory;
+            private static string storeName;
+        }
+
+
         public class when_creating_a_sql_ce_message_store_twice
         {
             private Establish _context = () =>
@@ -76,37 +119,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private static FakeMessageStoreActivationStateProvider _provider;
             private static string storeName;
             private static FakeMessageStoreListCacheLoader _fakeMessageStoreListCacheLoader;
-
-
-            private class FakeMessageStoreListCacheLoader : IMessageStoreListCacheLoader
-            {
-                private readonly MessageStoreActivationStateCache _messageStoreActivationStateCache;
-                public Dictionary<MessageStoreType, int> ctorCalled = new Dictionary<MessageStoreType, int>();
-
-                public FakeMessageStoreListCacheLoader(MessageStoreActivationStateCache messageStoreActivationStateCache)
-                {
-                    _messageStoreActivationStateCache = messageStoreActivationStateCache;
-                }
-
-                public IMessageStoreActivationState Load()
-                {
-                    return _messageStoreActivationStateCache;
-                }
-
-                public void Setup(MessageStoreType type, FakeMessageStoreWithViewer fakeMessageStoreWithViewer)
-                {
-                    _messageStoreActivationStateCache.Set(type, msli =>
-                    {
-                        if (!ctorCalled.ContainsKey(type))
-                        {
-                            ctorCalled.Add(type,0);
-                        }
-                        ctorCalled[type]++;
-                        return fakeMessageStoreWithViewer;
-                    });
-                }
-            }
         }
     }
-
 }

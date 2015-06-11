@@ -67,7 +67,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             };
 
             private static string storeName = "testStore";
-            private Because _of_GET = () => _result = _messageListViewModelRetriever.Get(storeName);
+            private Because _of_GET = () => _result = _messageListViewModelRetriever.Get(storeName, 1);
 
             private It should_return_MessageListModel = () =>
             {
@@ -113,7 +113,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             };
 
             private static string storeName = "storeNamenotInStore";
-            private Because _of_GET = () => _result = _messageListViewModelRetriever.Get(storeName);
+            private Because _of_GET = () => _result = _messageListViewModelRetriever.Get(storeName, 1);
 
             private It should_return_error = () =>
             {
@@ -138,7 +138,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             };
 
             private static string storeName = "storeNotImplementingViewer";
-            private Because _of_GET = () => _result = _messageListViewModelRetriever.Get(storeName);
+            private Because _of_GET = () => _result = _messageListViewModelRetriever.Get(storeName, 1);
 
             private It should_return_error = () =>
             {
@@ -165,7 +165,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             };
 
             private static string storeName = "storeThatCannotGet";
-            private Because _of_GET = () => _result = _messageListViewModelRetriever.Get(storeName);
+            private Because _of_GET = () => _result = _messageListViewModelRetriever.Get(storeName, 1);
 
             private It should_return_error = () =>
             {
