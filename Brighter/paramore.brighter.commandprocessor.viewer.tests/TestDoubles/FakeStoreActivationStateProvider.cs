@@ -1,4 +1,17 @@
-﻿#region Licence
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ianp
+// Created          : 25-03-2014
+//
+// Last Modified By : ian
+// Last Modified On : 25-03-2014
+// ***********************************************************************
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
+
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 
@@ -36,6 +50,10 @@ namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
             Add(messageStore);
         }
 
+        public static FakeMessageStoreActivationStateProvider CreateEmpty()
+        {
+            return new FakeMessageStoreActivationStateProvider();
+        }
         protected FakeMessageStoreActivationStateProvider()
         {
         }

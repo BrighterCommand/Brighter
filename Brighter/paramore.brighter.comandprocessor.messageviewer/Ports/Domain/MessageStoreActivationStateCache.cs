@@ -38,24 +38,24 @@ using System.Collections.Generic;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
 {
-    public interface IMessageStoreActivationState
+    public interface IMessageStoreActivationStateCache
     {
         IAmAMessageStore<Message> Get(MessageStoreActivationState type);
         void Set(MessageStoreType storeType, Func<MessageStoreActivationState, IAmAMessageStore<Message>> storeCtor);
     }
 
-    public class MessageStoreActivationStateCache : IMessageStoreActivationState
+    public class MessageStoreActivationStateCache : IMessageStoreActivationStateCache
     {
         private readonly Dictionary<MessageStoreType, Func<MessageStoreActivationState, IAmAMessageStore<Message>>> _storeCtorLookup = new Dictionary<MessageStoreType, Func<MessageStoreActivationState, IAmAMessageStore<Message>>>();
-        private readonly Dictionary<MessageStoreType, IAmAMessageStore<Message>> _storesCreated = new Dictionary<MessageStoreType, IAmAMessageStore<Message>>();
+        private readonly Dictionary<string, IAmAMessageStore<Message>> _storesCreated = new Dictionary<string, IAmAMessageStore<Message>>();
 
         public IAmAMessageStore<Message> Get(MessageStoreActivationState messageStore)
         {
-            if (!_storesCreated.ContainsKey(messageStore.StoreType))
+            if (!_storesCreated.ContainsKey(messageStore.Name))
             {
-                _storesCreated.Add(messageStore.StoreType, _storeCtorLookup[messageStore.StoreType].Invoke(messageStore));
+                _storesCreated.Add(messageStore.Name, _storeCtorLookup[messageStore.StoreType].Invoke(messageStore));
             }
-            return _storesCreated[messageStore.StoreType];
+            return _storesCreated[messageStore.Name];
         }
 
         public void Set(MessageStoreType storeType, Func<MessageStoreActivationState, IAmAMessageStore<Message>> storeCtor)
