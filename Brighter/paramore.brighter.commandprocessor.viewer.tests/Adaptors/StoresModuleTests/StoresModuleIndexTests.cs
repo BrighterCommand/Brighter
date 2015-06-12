@@ -1,6 +1,6 @@
 ﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
-// Author           : ian
+// Author           : ianp
 // Created          : 25-03-2014
 //
 // Last Modified By : ian
