@@ -10,7 +10,8 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 2. Added a message store write timeout and message gateway timeout on a post; perviously we wait indefinitely (bad Brighter team, no biscuit).
 3. Added a UseCommandSourcing attribute that stores commands to a command store. This is the Event Sourcing paradigm described by Martin Fowler in http://martinfowler.com/eaaDev/EventSourcing.html The term Command Sourcing refers to the fact that as described the pattern stores commands (instructions to change state) not events (the results of applying those commands).
 	1. This may result in a breaking change that the Id on IRequest requires a setter to allow it to be deserialized
-2. Removed release branch. We just tag a release on master now, so this only existed to support an older version of the library that was pre the tagging strategy. Removed now as confusing to new users of the library.
+4. Removed release branch. We just tag a release on master now, so this only existed to support an older version of the library that was pre the tagging strategy. Removed now as confusing to new users of the library.
+5. Added an Event Store implementation of the Message Store.
 
 ## Release 4.0.215 ##
 1. Fixed an issue where you could not have multiple UsePolicy or FallbackPolicy attributes on a single handler.#
