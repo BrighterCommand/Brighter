@@ -27,9 +27,9 @@
 
 | Branch        | Description   |
 | ------------- | ------------- |
-| Release | DEPRECATED: The source for the 2.0.1 NuGet package (we now use release tags)|
 | Master | The tip of active development. Anything in master should ship at the next release. Code here should conform to CI basics: compile, pass tests etc.  |
-| Other  | A branch for any work that is not ready to go into master (for example would break CI) or is experimental i.e. we don't know if we intend to ever ship, we are just trying out ideas  |
+| gh-pages | Documentation for the library|
+| [Other]  | A branch for any work that is not ready to go into master (for example would break CI) or is experimental i.e. we don't know if we intend to ever ship, we are just trying out ideas.  |
 
 ##How Do I get the NuGet packages for the latest build?
 We release the build artefacts (NuGet packages) to [Nuget](http://nuget.org) on a regular basis and we update the release notes on those drops. We also tag the master code line. If you want to take the packages that represent master at any point you can download the packages for the latest good build from [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore). The easiest approach to using those is to download them into a folder that you add to your NuGet sources. 
