@@ -222,7 +222,7 @@
       <Name>paramore.brighter.commandprocessor.commandstore.mssql</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj">
-      <Project>{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}</Project>
+      <Project>{9fe83675-e4bd-42ea-aea5-70f6ba0eb8fe}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.eventstore</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">

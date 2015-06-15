@@ -144,7 +144,7 @@
       <Name>paramore.brighter.commandprocessor.messagestore.ravendb</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj">
-      <Project>{65BADB63-5F98-4F24-84D7-8C99263F88C6}</Project>
+      <Project>{65badb63-5f98-4f24-84d7-8c99263f88c6}</Project>
       <Name>paramore.brighter.commandprocessor.tests</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
