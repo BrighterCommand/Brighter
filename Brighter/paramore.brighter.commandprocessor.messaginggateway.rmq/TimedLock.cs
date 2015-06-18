@@ -1,8 +1,8 @@
 ﻿// Code licensed under the MIT License
 using System;
 #if DEBUG
-using System.Collections;
-using System.Diagnostics;
+//using System.Collections;
+//using System.Diagnostics;
 #endif
 using System.Runtime.Serialization;
 using System.Threading;
@@ -82,12 +82,12 @@ public struct TimedLock : IDisposable
         if (!Monitor.TryEnter(o, timeout))
         {
             // Failed to acquire lock.
-#if DEBUG
-            GC.SuppressFinalize(timedLock.leakDetector);
-            throw new LockTimeoutException(o);
-#else
+//#if DEBUG
+//            GC.SuppressFinalize(timedLock.leakDetector);
+//            throw new LockTimeoutException(o);
+//#else
             throw new LockTimeoutException();
-#endif
+//#endif
         }
         return timedLock;
     }
@@ -95,9 +95,9 @@ public struct TimedLock : IDisposable
     TimedLock(object o)
     {
         target = o;
-#if DEBUG
-        leakDetector = new Sentinel();
-#endif
+//#if DEBUG
+//        leakDetector = new Sentinel();
+//#endif
     }
 
     readonly object target;
@@ -109,7 +109,7 @@ public struct TimedLock : IDisposable
     {
         ///Console.WriteLine("Disposing lock");
         // Owning thread is done.
-#if DEBUG
+/*#if DEBUG
         try
         {
             //This shouldn't throw an exception.
@@ -120,20 +120,20 @@ public struct TimedLock : IDisposable
             //But just in case...
             Monitor.Exit(target);
         }
-#else
+#else*/
         Monitor.Exit(target);
-#endif
-#if DEBUG
+//#endif
+/*#if DEBUG
         // It's a bad error if someone forgets to call Dispose,
         // so in Debug builds, we put a finalizer in to detect
         // the error. If Dispose is called, we suppress the
         // finalizer.
         GC.SuppressFinalize(leakDetector);
-#endif
+#endif*/
         Thread.EndCriticalRegion();
     }
 
-#if DEBUG
+/*#if DEBUG
     // (In Debug mode, we make it a class so that we can add a finalizer
     // in order to detect when the object is not freed.)
     class Sentinel
@@ -149,7 +149,7 @@ public struct TimedLock : IDisposable
     }
 
     readonly Sentinel leakDetector;
-#endif
+#endif*/
 }
 
 /// <summary>
@@ -158,82 +158,82 @@ public struct TimedLock : IDisposable
 [Serializable]
 public class LockTimeoutException : Exception
 {
-#if DEBUG
-    readonly object lockTarget;
-    StackTrace blockingStackTrace;
-    static readonly Hashtable failedLockTargets = new Hashtable();
+//#if DEBUG
+//    readonly object lockTarget;
+//    StackTrace blockingStackTrace;
+//    static readonly Hashtable failedLockTargets = new Hashtable();
 
-    /// <summary>
-    /// Sets the stack trace for the given lock target 
-    /// if an error occurred.
-    /// </summary>
-    /// <param name="lockTarget">Lock target.</param>
-    public static void ReportStackTraceIfError(object lockTarget)
-    {
-        lock (failedLockTargets)
-        {
-            if (failedLockTargets.ContainsKey(lockTarget))
-            {
-                var waitHandle = failedLockTargets[lockTarget] as ManualResetEvent;
-                if (waitHandle != null)
-                {
-                    waitHandle.Set();
-                }
-                failedLockTargets[lockTarget] = new StackTrace();
-                //Also. if you don't call GetBlockingStackTrace()
-                //the lockTarget doesn't get removed from the hash 
-                //table and so we'll always think there's an error
-                //here (though no locktimeout exception is thrown).
-            }
-        }
-    }
+//    /// <summary>
+//    /// Sets the stack trace for the given lock target 
+//    /// if an error occurred.
+//    /// </summary>
+//    /// <param name="lockTarget">Lock target.</param>
+//    public static void ReportStackTraceIfError(object lockTarget)
+//    {
+//        lock (failedLockTargets)
+//        {
+//            if (failedLockTargets.ContainsKey(lockTarget))
+//            {
+//                var waitHandle = failedLockTargets[lockTarget] as ManualResetEvent;
+//                if (waitHandle != null)
+//                {
+//                    waitHandle.Set();
+//                }
+//                failedLockTargets[lockTarget] = new StackTrace();
+//                //Also. if you don't call GetBlockingStackTrace()
+//                //the lockTarget doesn't get removed from the hash 
+//                //table and so we'll always think there's an error
+//                //here (though no locktimeout exception is thrown).
+//            }
+//        }
+//    }
 
-    /// <summary>
-    /// Creates a new <see cref="LockTimeoutException"/> instance.
-    /// </summary>
-    /// <remarks>Use this exception.</remarks>
-    /// <param name="lockTarget">Object we tried to lock.</param>
-    public LockTimeoutException(object lockTarget)
-        : base("Timeout waiting for lock")
-    {
-        lock (failedLockTargets)
-        {
-            // This is safer in case somebody forgot to remove 
-            // the lock target.
-            var waitHandle = new ManualResetEvent(false);
-            failedLockTargets[lockTarget] = waitHandle;
-        }
-        this.lockTarget = lockTarget;
-    }
+//    /// <summary>
+//    /// Creates a new <see cref="LockTimeoutException"/> instance.
+//    /// </summary>
+//    /// <remarks>Use this exception.</remarks>
+//    /// <param name="lockTarget">Object we tried to lock.</param>
+//    public LockTimeoutException(object lockTarget)
+//        : base("Timeout waiting for lock")
+//    {
+//        lock (failedLockTargets)
+//        {
+//            // This is safer in case somebody forgot to remove 
+//            // the lock target.
+//            var waitHandle = new ManualResetEvent(false);
+//            failedLockTargets[lockTarget] = waitHandle;
+//        }
+//        this.lockTarget = lockTarget;
+//    }
 
-    /// <summary>
-    /// Stack trace of the thread that holds a lock on the object 
-    /// this lock is attempting to acquire when it fails.
-    /// </summary>
-    /// <param name="timeout">Number of milliseconds to wait for the blocking stack trace.</param>
-    public StackTrace GetBlockingStackTrace(int timeout)
-    {
-        if (timeout < 0)
-            throw new InvalidOperationException("We'd all like to be able to go back in time, but this is not allowed. Please choose a positive wait time.");
+//    /// <summary>
+//    /// Stack trace of the thread that holds a lock on the object 
+//    /// this lock is attempting to acquire when it fails.
+//    /// </summary>
+//    /// <param name="timeout">Number of milliseconds to wait for the blocking stack trace.</param>
+//    public StackTrace GetBlockingStackTrace(int timeout)
+//    {
+//        if (timeout < 0)
+//            throw new InvalidOperationException("We'd all like to be able to go back in time, but this is not allowed. Please choose a positive wait time.");
 
-        ManualResetEvent waitHandle;
-        lock (failedLockTargets)
-        {
-            waitHandle = failedLockTargets[lockTarget] as ManualResetEvent;
-        }
-        if (timeout > 0 && waitHandle != null)
-        {
-            waitHandle.WaitOne(timeout, false);
-        }
-        lock (failedLockTargets)
-        {
-            //Hopefully by now we have a stack trace.
-            blockingStackTrace = failedLockTargets[lockTarget] as StackTrace;
-        }
+//        ManualResetEvent waitHandle;
+//        lock (failedLockTargets)
+//        {
+//            waitHandle = failedLockTargets[lockTarget] as ManualResetEvent;
+//        }
+//        if (timeout > 0 && waitHandle != null)
+//        {
+//            waitHandle.WaitOne(timeout, false);
+//        }
+//        lock (failedLockTargets)
+//        {
+//            //Hopefully by now we have a stack trace.
+//            blockingStackTrace = failedLockTargets[lockTarget] as StackTrace;
+//        }
 
-        return blockingStackTrace;
-    }
-#endif
+//        return blockingStackTrace;
+//    }
+//#endif
 
     /// <summary>
     /// Creates a new <see cref="LockTimeoutException"/> instance.
@@ -279,12 +279,12 @@ public class LockTimeoutException : Exception
     public override string ToString()
     {
         string toString = base.ToString();
-#if DEBUG
-        if (blockingStackTrace != null)
-        {
-            toString += "\n-------Blocking Stack Trace--------\n" + blockingStackTrace;
-        }
-#endif
+//#if DEBUG
+//        if (blockingStackTrace != null)
+//        {
+//            toString += "\n-------Blocking Stack Trace--------\n" + blockingStackTrace;
+//        }
+//#endif
         return toString;
     }
 }

@@ -1,192 +1,187 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" InitialTargets="ValidateSolutionConfiguration;ValidateToolsVersions;ValidateProjects" DefaultTargets="Build">
+<Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" InitialTargets="ValidateSolutionConfiguration;ValidateToolsVersions;ValidateProjects" DefaultTargets="Build">
   <PropertyGroup>
-    <SDK35ToolsPath>C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\</SDK35ToolsPath>
-    <MSBuildToolsPath32>C:\Windows\Microsoft.NET\Framework\v4.0.30319\</MSBuildToolsPath32>
-    <MSBuildToolsRoot>C:\Windows\Microsoft.NET\Framework64\</MSBuildToolsRoot>
-    <FrameworkSDKRoot>C:\Program Files (x86)\Microsoft SDKs\Windows\v8.0A\</FrameworkSDKRoot>
+    <MSBuildToolsPath32>C:\Program Files (x86)\MSBuild\12.0\bin\</MSBuildToolsPath32>
+    <MSBuildToolsRoot>C:\Program Files (x86)\MSBuild\</MSBuildToolsRoot>
+    <MSBuildFrameworkToolsPath>C:\windows\Microsoft.NET\Framework64\v4.0.30319\</MSBuildFrameworkToolsPath>
+    <MSBuildFrameworkToolsPath32>C:\windows\Microsoft.NET\Framework\v4.0.30319\</MSBuildFrameworkToolsPath32>
+    <MSBuildFrameworkToolsRoot>C:\windows\Microsoft.NET\Framework64\</MSBuildFrameworkToolsRoot>
     <MSBuildRuntimeVersion>4.0.30319</MSBuildRuntimeVersion>
-    <SDK40ToolsPath>C:\Program Files (x86)\Microsoft SDKs\Windows\v8.0A\bin\NETFX 4.0 Tools\</SDK40ToolsPath>
-    <VisualStudioVersion>11.0</VisualStudioVersion>
-    <WindowsSDK80Path />
+    <FrameworkSDKRoot>C:\Program Files (x86)\Microsoft SDKs\Windows\v8.1A\</FrameworkSDKRoot>
+    <SDK35ToolsPath>C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\</SDK35ToolsPath>
+    <SDK40ToolsPath>C:\Program Files (x86)\Microsoft SDKs\Windows\v8.1A\bin\NETFX 4.5.1 Tools\</SDK40ToolsPath>
+    <VCTargetsPath>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\</VCTargetsPath>
+    <VCTargetsPath10>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\</VCTargetsPath10>
+    <VCTargetsPath11>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V110\</VCTargetsPath11>
+    <VCTargetsPath12>C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\</VCTargetsPath12>
+    <WindowsSDK80Path>C:\Program Files (x86)\Windows Kits\8.1\</WindowsSDK80Path>
     <Configuration>Debug</Configuration>
-    <Platform>Mixed Platforms</Platform>
     <AspNetConfiguration>Debug</AspNetConfiguration>
-    <SolutionDir>D:\Dev\github\Paramore\Brighter\</SolutionDir>
+    <SolutionDir>D:\dev\github\paramore\Brighter\</SolutionDir>
     <SolutionExt>.sln</SolutionExt>
     <SolutionFileName>Paramore.CommandProcessor.sln</SolutionFileName>
     <SolutionName>Paramore.CommandProcessor</SolutionName>
-    <SolutionPath>D:\Dev\github\Paramore\Brighter\Paramore.CommandProcessor.sln</SolutionPath>
+    <SolutionPath>D:\dev\github\paramore\Brighter\Paramore.CommandProcessor.sln</SolutionPath>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <CurrentSolutionConfigurationContents>
-      <SolutionConfiguration xmlns="">
-  <ProjectConfiguration Project="{9D36D28B-F9AE-4B51-A120-453D55360778}" AbsolutePath="D:\Dev\github\Paramore\Brighter\Examples\TaskList\TaskList.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{224F828A-1ABF-4D7B-8C48-66856BFD1DED}" AbsolutePath="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{380AF497-D2B5-49B2-AA7A-B0D86991B390}" AbsolutePath="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{2ACB382A-38FA-49A6-A9CD-212881D3CD37}" AbsolutePath="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{65BADB63-5F98-4F24-84D7-8C99263F88C6}" AbsolutePath="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{B9126B00-5A97-4C7D-B395-755456E5FA28}" AbsolutePath="D:\Dev\github\Paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}" AbsolutePath="D:\Dev\github\Paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{E7900A56-DA88-46CA-8418-FB4C2BC2D326}" AbsolutePath="D:\Dev\github\Paramore\Brighter\Examples\Tasks\Tasks.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{33C68FFA-F7FC-4475-A413-63AC036C201A}" AbsolutePath="D:\Dev\github\Paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}" AbsolutePath="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{C8BC2471-9D5C-4E94-81C8-036506F4EC34}" AbsolutePath="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{A58FD535-81C2-4E96-87FC-DDC034E56EEE}" AbsolutePath="D:\Dev\github\Paramore\Brighter\Examples\Greetings\Greetings.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{23519DAF-76E5-4243-B231-5550F87698E8}" AbsolutePath="D:\Dev\github\Paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{CC48B432-25E3-4497-B468-7719E2CF86E4}" AbsolutePath="D:\Dev\github\Paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{E35E86B3-B479-45D9-8A55-D9EA3EF7730B}" AbsolutePath="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{C64FE82E-8512-422A-8832-7821EF448F2C}" AbsolutePath="D:\Dev\github\Paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{DE5BA1BC-CF70-4465-9A23-7A28604A5949}" AbsolutePath="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-  <ProjectConfiguration Project="{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}" AbsolutePath="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
-</SolutionConfiguration>
-    </CurrentSolutionConfigurationContents>
   </PropertyGroup>
   <ItemDefinitionGroup />
   <ItemGroup>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\Examples\TaskList\TaskList.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
+    <SolutionConfiguration Include="Debug|Any CPU">
       <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
+      <Platform>Any CPU</Platform>
+      <Content>
+        <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{9D36D28B-F9AE-4B51-A120-453D55360778}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskList\TaskList.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{224F828A-1ABF-4D7B-8C48-66856BFD1DED}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{380AF497-D2B5-49B2-AA7A-B0D86991B390}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2ACB382A-38FA-49A6-A9CD-212881D3CD37}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{65BADB63-5F98-4F24-84D7-8C99263F88C6}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B9126B00-5A97-4C7D-B395-755456E5FA28}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E7900A56-DA88-46CA-8418-FB4C2BC2D326}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Tasks\Tasks.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{33C68FFA-F7FC-4475-A413-63AC036C201A}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C8BC2471-9D5C-4E94-81C8-036506F4EC34}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A58FD535-81C2-4E96-87FC-DDC034E56EEE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Greetings\Greetings.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{23519DAF-76E5-4243-B231-5550F87698E8}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{CC48B432-25E3-4497-B468-7719E2CF86E4}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E35E86B3-B479-45D9-8A55-D9EA3EF7730B}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C64FE82E-8512-422A-8832-7821EF448F2C}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DE5BA1BC-CF70-4465-9A23-7A28604A5949}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+      </Content>
+    </SolutionConfiguration>
+    <SolutionConfiguration Include="Debug|Mixed Platforms">
       <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
+      <Platform>Mixed Platforms</Platform>
+      <Content>
+        <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{9D36D28B-F9AE-4B51-A120-453D55360778}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskList\TaskList.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{224F828A-1ABF-4D7B-8C48-66856BFD1DED}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{380AF497-D2B5-49B2-AA7A-B0D86991B390}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2ACB382A-38FA-49A6-A9CD-212881D3CD37}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{65BADB63-5F98-4F24-84D7-8C99263F88C6}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B9126B00-5A97-4C7D-B395-755456E5FA28}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E7900A56-DA88-46CA-8418-FB4C2BC2D326}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Tasks\Tasks.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{33C68FFA-F7FC-4475-A413-63AC036C201A}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C8BC2471-9D5C-4E94-81C8-036506F4EC34}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A58FD535-81C2-4E96-87FC-DDC034E56EEE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Greetings\Greetings.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{23519DAF-76E5-4243-B231-5550F87698E8}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{CC48B432-25E3-4497-B468-7719E2CF86E4}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E35E86B3-B479-45D9-8A55-D9EA3EF7730B}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C64FE82E-8512-422A-8832-7821EF448F2C}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DE5BA1BC-CF70-4465-9A23-7A28604A5949}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj" BuildProjectInSolution="True">Debug|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+      </Content>
+    </SolutionConfiguration>
+    <SolutionConfiguration Include="Debug|x86">
       <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\Examples\Tasks\Tasks.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\Examples\Greetings\Greetings.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
-    <ProjectReference Include="D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj">
-      <ToolsVersion>
-      </ToolsVersion>
-      <SkipNonexistentProjects>False</SkipNonexistentProjects>
-      <AdditionalProperties>Configuration=Debug; Platform=AnyCPU; VisualStudioVersion=11.0</AdditionalProperties>
-      <Configuration>Debug</Configuration>
-      <Platform>AnyCPU</Platform>
-    </ProjectReference>
+      <Platform>x86</Platform>
+      <Content>
+        <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{9D36D28B-F9AE-4B51-A120-453D55360778}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskList\TaskList.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{224F828A-1ABF-4D7B-8C48-66856BFD1DED}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{380AF497-D2B5-49B2-AA7A-B0D86991B390}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2ACB382A-38FA-49A6-A9CD-212881D3CD37}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{65BADB63-5F98-4F24-84D7-8C99263F88C6}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B9126B00-5A97-4C7D-B395-755456E5FA28}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E7900A56-DA88-46CA-8418-FB4C2BC2D326}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Tasks\Tasks.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{33C68FFA-F7FC-4475-A413-63AC036C201A}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C8BC2471-9D5C-4E94-81C8-036506F4EC34}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A58FD535-81C2-4E96-87FC-DDC034E56EEE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Greetings\Greetings.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{23519DAF-76E5-4243-B231-5550F87698E8}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{CC48B432-25E3-4497-B468-7719E2CF86E4}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E35E86B3-B479-45D9-8A55-D9EA3EF7730B}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C64FE82E-8512-422A-8832-7821EF448F2C}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DE5BA1BC-CF70-4465-9A23-7A28604A5949}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj" BuildProjectInSolution="False">Debug|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+      </Content>
+    </SolutionConfiguration>
+    <SolutionConfiguration Include="Release|Any CPU">
+      <Configuration>Release</Configuration>
+      <Platform>Any CPU</Platform>
+      <Content>
+        <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{9D36D28B-F9AE-4B51-A120-453D55360778}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskList\TaskList.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{224F828A-1ABF-4D7B-8C48-66856BFD1DED}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{380AF497-D2B5-49B2-AA7A-B0D86991B390}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2ACB382A-38FA-49A6-A9CD-212881D3CD37}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{65BADB63-5F98-4F24-84D7-8C99263F88C6}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B9126B00-5A97-4C7D-B395-755456E5FA28}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E7900A56-DA88-46CA-8418-FB4C2BC2D326}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Tasks\Tasks.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{33C68FFA-F7FC-4475-A413-63AC036C201A}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C8BC2471-9D5C-4E94-81C8-036506F4EC34}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A58FD535-81C2-4E96-87FC-DDC034E56EEE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Greetings\Greetings.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{23519DAF-76E5-4243-B231-5550F87698E8}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{CC48B432-25E3-4497-B468-7719E2CF86E4}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E35E86B3-B479-45D9-8A55-D9EA3EF7730B}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C64FE82E-8512-422A-8832-7821EF448F2C}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DE5BA1BC-CF70-4465-9A23-7A28604A5949}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+      </Content>
+    </SolutionConfiguration>
+    <SolutionConfiguration Include="Release|Mixed Platforms">
+      <Configuration>Release</Configuration>
+      <Platform>Mixed Platforms</Platform>
+      <Content>
+        <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{9D36D28B-F9AE-4B51-A120-453D55360778}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskList\TaskList.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{224F828A-1ABF-4D7B-8C48-66856BFD1DED}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{380AF497-D2B5-49B2-AA7A-B0D86991B390}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2ACB382A-38FA-49A6-A9CD-212881D3CD37}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{65BADB63-5F98-4F24-84D7-8C99263F88C6}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B9126B00-5A97-4C7D-B395-755456E5FA28}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E7900A56-DA88-46CA-8418-FB4C2BC2D326}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Tasks\Tasks.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{33C68FFA-F7FC-4475-A413-63AC036C201A}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C8BC2471-9D5C-4E94-81C8-036506F4EC34}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A58FD535-81C2-4E96-87FC-DDC034E56EEE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Greetings\Greetings.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{23519DAF-76E5-4243-B231-5550F87698E8}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{CC48B432-25E3-4497-B468-7719E2CF86E4}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E35E86B3-B479-45D9-8A55-D9EA3EF7730B}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C64FE82E-8512-422A-8832-7821EF448F2C}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DE5BA1BC-CF70-4465-9A23-7A28604A5949}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj" BuildProjectInSolution="True">Release|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+      </Content>
+    </SolutionConfiguration>
+    <SolutionConfiguration Include="Release|x86">
+      <Configuration>Release</Configuration>
+      <Platform>x86</Platform>
+      <Content>
+        <SolutionConfiguration xmlns="">
+  <ProjectConfiguration Project="{9D36D28B-F9AE-4B51-A120-453D55360778}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskList\TaskList.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{224F828A-1ABF-4D7B-8C48-66856BFD1DED}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{380AF497-D2B5-49B2-AA7A-B0D86991B390}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{2ACB382A-38FA-49A6-A9CD-212881D3CD37}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{65BADB63-5F98-4F24-84D7-8C99263F88C6}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B9126B00-5A97-4C7D-B395-755456E5FA28}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{B7729FE8-B4DB-406F-B54D-49C40A4E49BE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E7900A56-DA88-46CA-8418-FB4C2BC2D326}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Tasks\Tasks.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{33C68FFA-F7FC-4475-A413-63AC036C201A}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C8BC2471-9D5C-4E94-81C8-036506F4EC34}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{A58FD535-81C2-4E96-87FC-DDC034E56EEE}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\Greetings\Greetings.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{23519DAF-76E5-4243-B231-5550F87698E8}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{CC48B432-25E3-4497-B468-7719E2CF86E4}" AbsolutePath="D:\dev\github\paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{E35E86B3-B479-45D9-8A55-D9EA3EF7730B}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{C64FE82E-8512-422A-8832-7821EF448F2C}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{DE5BA1BC-CF70-4465-9A23-7A28604A5949}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+  <ProjectConfiguration Project="{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}" AbsolutePath="D:\dev\github\paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj" BuildProjectInSolution="False">Release|AnyCPU</ProjectConfiguration>
+</SolutionConfiguration>
+      </Content>
+    </SolutionConfiguration>
   </ItemGroup>
   <Target Name="ValidateSolutionConfiguration">
     <Error Condition="('$(CurrentSolutionConfigurationContents)' == '') and ('$(SkipInvalidConfigurations)' != 'true')" Text="The specified solution configuration &quot;$(Configuration)|$(Platform)&quot; is invalid. Please specify a valid solution configuration using the Configuration and Platform properties (e.g. MSBuild.exe Solution.sln /p:Configuration=Debug /p:Platform=&quot;Any CPU&quot;) or leave those properties blank to use the default solution configuration." Code="MSB4126" HelpKeyword="MSBuild.SolutionInvalidSolutionConfiguration" />
@@ -234,6 +229,7 @@
     <Message Condition=" ('$(Configuration)' == 'Debug') and ('$(Platform)' == 'x86') " Text="The project &quot;paramore.brighter.commandprocessor.messagestore.eventstore&quot; is not selected for building in solution configuration &quot;Debug|x86&quot;." />
     <Message Condition=" ('$(Configuration)' == 'Release') and ('$(Platform)' == 'x86') " Text="The project &quot;paramore.brighter.commandprocessor.messagestore.eventstore&quot; is not selected for building in solution configuration &quot;Release|x86&quot;." />
   </Target>
+  <Target Name="GetSolutionConfigurationContents" Outputs="$(SolutionConfigurationContents)" />
   <Target Name="Build" Outputs="@(CollectedBuildOutput)">
     <MSBuild Projects="@(ProjectReference)" BuildInParallel="True" Properties="BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" SkipNonexistentProjects="%(ProjectReference.SkipNonexistentProjects)">
       <Output TaskParameter="TargetOutputs" ItemName="CollectedBuildOutput" />
@@ -249,293 +245,5 @@
   </Target>
   <Target Name="Publish">
     <MSBuild Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" Properties="BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" SkipNonexistentProjects="%(ProjectReference.SkipNonexistentProjects)" />
-  </Target>
-  <Target Name="Examples\TaskList" Outputs="@(Examples_TaskListBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskList\TaskList.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_TaskListBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\TaskList:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskList\TaskList.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\TaskList:Rebuild" Outputs="@(Examples_TaskListBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskList\TaskList.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_TaskListBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\TaskList:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskList\TaskList.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_ravendb" Outputs="@(paramore_brighter_commandprocessor_messagestore_ravendbBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messagestore_ravendbBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_ravendb:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_ravendb:Rebuild" Outputs="@(paramore_brighter_commandprocessor_messagestore_ravendbBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messagestore_ravendbBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_ravendb:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messaginggateway_rmq" Outputs="@(paramore_brighter_commandprocessor_messaginggateway_rmqBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messaginggateway_rmqBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messaginggateway_rmq:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messaginggateway_rmq:Rebuild" Outputs="@(paramore_brighter_commandprocessor_messaginggateway_rmqBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messaginggateway_rmqBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messaginggateway_rmq:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor" Outputs="@(paramore_brighter_commandprocessorBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessorBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor:Rebuild" Outputs="@(paramore_brighter_commandprocessorBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessorBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Tests\paramore_brighter_commandprocessor_tests" Outputs="@(Tests_paramore_brighter_commandprocessor_testsBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Tests_paramore_brighter_commandprocessor_testsBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Tests\paramore_brighter_commandprocessor_tests:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Tests\paramore_brighter_commandprocessor_tests:Rebuild" Outputs="@(Tests_paramore_brighter_commandprocessor_testsBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Tests_paramore_brighter_commandprocessor_testsBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Tests\paramore_brighter_commandprocessor_tests:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_serviceactivator" Outputs="@(paramore_brighter_serviceactivatorBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_serviceactivatorBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_serviceactivator:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_serviceactivator:Rebuild" Outputs="@(paramore_brighter_serviceactivatorBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_serviceactivatorBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_serviceactivator:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\TaskMailer" Outputs="@(Examples_TaskMailerBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_TaskMailerBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\TaskMailer:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\TaskMailer:Rebuild" Outputs="@(Examples_TaskMailerBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_TaskMailerBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\TaskMailer:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskMailer\TaskMailer.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\Tasks" Outputs="@(Examples_TasksBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\Tasks\Tasks.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_TasksBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\Tasks:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\Tasks\Tasks.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\Tasks:Rebuild" Outputs="@(Examples_TasksBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\Tasks\Tasks.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_TasksBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\Tasks:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\Tasks\Tasks.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\HelloWorld" Outputs="@(Examples_HelloWorldBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_HelloWorldBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\HelloWorld:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\HelloWorld:Rebuild" Outputs="@(Examples_HelloWorldBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_HelloWorldBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\HelloWorld:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\HelloWorld\HelloWorld.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_mssql" Outputs="@(paramore_brighter_commandprocessor_messagestore_mssqlBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messagestore_mssqlBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_mssql:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_mssql:Rebuild" Outputs="@(paramore_brighter_commandprocessor_messagestore_mssqlBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messagestore_mssqlBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_mssql:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messaginggateway_restms" Outputs="@(paramore_brighter_commandprocessor_messaginggateway_restmsBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messaginggateway_restmsBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messaginggateway_restms:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messaginggateway_restms:Rebuild" Outputs="@(paramore_brighter_commandprocessor_messaginggateway_restmsBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messaginggateway_restmsBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messaginggateway_restms:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\Greetings" Outputs="@(Examples_GreetingsBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\Greetings\Greetings.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_GreetingsBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\Greetings:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\Greetings\Greetings.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\Greetings:Rebuild" Outputs="@(Examples_GreetingsBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\Greetings\Greetings.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_GreetingsBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\Greetings:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\Greetings\Greetings.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\TaskListUI" Outputs="@(Examples_TaskListUIBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_TaskListUIBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\TaskListUI:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\TaskListUI:Rebuild" Outputs="@(Examples_TaskListUIBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_TaskListUIBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\TaskListUI:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\TaskListUI\TaskListUI.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\ManagementAndMonitoring" Outputs="@(Examples_ManagementAndMonitoringBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_ManagementAndMonitoringBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\ManagementAndMonitoring:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Examples\ManagementAndMonitoring:Rebuild" Outputs="@(Examples_ManagementAndMonitoringBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Examples_ManagementAndMonitoringBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Examples\ManagementAndMonitoring:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\Examples\ManagementAndMonitoring\ManagementAndMonitoring.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Tests\paramore_brighter_commandprocessor_viewer_tests" Outputs="@(Tests_paramore_brighter_commandprocessor_viewer_testsBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Tests_paramore_brighter_commandprocessor_viewer_testsBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Tests\paramore_brighter_commandprocessor_viewer_tests:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="Tests\paramore_brighter_commandprocessor_viewer_tests:Rebuild" Outputs="@(Tests_paramore_brighter_commandprocessor_viewer_testsBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="Tests_paramore_brighter_commandprocessor_viewer_testsBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="Tests\paramore_brighter_commandprocessor_viewer_tests:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.viewer.tests\paramore.brighter.commandprocessor.viewer.tests.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messageviewer" Outputs="@(paramore_brighter_commandprocessor_messageviewerBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messageviewerBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messageviewer:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messageviewer:Rebuild" Outputs="@(paramore_brighter_commandprocessor_messageviewerBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messageviewerBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messageviewer:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_commandstore_mssql" Outputs="@(paramore_brighter_commandprocessor_commandstore_mssqlBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_commandstore_mssqlBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_commandstore_mssql:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_commandstore_mssql:Rebuild" Outputs="@(paramore_brighter_commandprocessor_commandstore_mssqlBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_commandstore_mssqlBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_commandstore_mssql:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_eventstore" Outputs="@(paramore_brighter_commandprocessor_messagestore_eventstoreBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj'" Projects="@(ProjectReference)" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messagestore_eventstoreBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_eventstore:Clean">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj'" Projects="@(ProjectReference)" Targets="Clean" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_eventstore:Rebuild" Outputs="@(paramore_brighter_commandprocessor_messagestore_eventstoreBuildOutput)">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj'" Projects="@(ProjectReference)" Targets="Rebuild" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)">
-      <Output TaskParameter="TargetOutputs" ItemName="paramore_brighter_commandprocessor_messagestore_eventstoreBuildOutput" />
-    </MSBuild>
-  </Target>
-  <Target Name="paramore_brighter_commandprocessor_messagestore_eventstore:Publish">
-    <MSBuild Condition="'%(ProjectReference.Identity)' == 'D:\Dev\github\Paramore\Brighter\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj'" Projects="@(ProjectReference)" Targets="Publish" BuildInParallel="True" ToolsVersion="$(ProjectToolsVersion)" Properties="Configuration=Debug; Platform=AnyCPU;BuildingSolutionFile=true; CurrentSolutionConfigurationContents=$(CurrentSolutionConfigurationContents); SolutionDir=$(SolutionDir); SolutionExt=$(SolutionExt); SolutionFileName=$(SolutionFileName); SolutionName=$(SolutionName); SolutionPath=$(SolutionPath)" />
   </Target>
 </Project>

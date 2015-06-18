@@ -283,7 +283,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
             catch (LockTimeoutException e)
             {
+/*#if DEBUG
                 StackTrace otherStack = e.GetBlockingStackTrace(5000);
+#endif*/
 
                 Logger.InfoException(
                     "RMQMessagingGateway: Couldn't acquire lock on thread-unsafe Channel operation on queue {0} exchange {1} on connection {2}.",
