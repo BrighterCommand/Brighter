@@ -51,7 +51,6 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         private Establish _context = () =>
         {
-            Thread.Sleep(10000);
             var logger = LogProvider.For<RmqMessageConsumer>();
 
             s_message = new Message(header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), body: new MessageBody("test content"));
@@ -241,7 +240,6 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             s_receiver.Purge();
             s_sender.Dispose();
             s_receiver.Dispose();
-            Task.Delay(5000).Wait();
         };
     }
 

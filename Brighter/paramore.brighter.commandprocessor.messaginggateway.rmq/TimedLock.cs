@@ -76,7 +76,7 @@ public struct TimedLock : IDisposable
     /// <returns></returns>
     public static TimedLock Lock(object o, TimeSpan timeout)
     {
-        Console.WriteLine("Acquiring lock");
+        ///Console.WriteLine("Acquiring lock");
         Thread.BeginCriticalRegion();
         var timedLock = new TimedLock(o);
         if (!Monitor.TryEnter(o, timeout))
@@ -107,7 +107,7 @@ public struct TimedLock : IDisposable
     /// </summary>
     public void Dispose()
     {
-        Console.WriteLine("Disposing lock");
+        ///Console.WriteLine("Disposing lock");
         // Owning thread is done.
 #if DEBUG
         try
