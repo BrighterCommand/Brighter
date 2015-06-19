@@ -63,6 +63,11 @@ namespace paramore.brighter.serviceactivator
         /// <value>The type of the data.</value>
         public Type DataType { get; private set; }
         /// <summary>
+        /// Gets a value indicating whether this instance is durable.
+        /// </summary>
+        /// <value><c>true</c> if this instance is durable; otherwise, <c>false</c>.</value>
+        public bool IsDurable { get; private set; }
+        /// <summary>
         /// Gets the no of peformers.
         /// </summary>
         /// <value>The no of peformers.</value>

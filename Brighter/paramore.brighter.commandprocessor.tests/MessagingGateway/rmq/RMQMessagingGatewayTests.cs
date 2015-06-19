@@ -55,7 +55,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             s_message = new Message(header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
             s_messageProducer = new RmqMessageProducer(logger);
-            s_messageConsumer = new RmqMessageConsumer(s_message.Header.Topic, s_message.Header.Topic, logger);
+            s_messageConsumer = new RmqMessageConsumer(s_message.Header.Topic, s_message.Header.Topic, false, logger);
             s_messageConsumer.Purge();
 
             s_client = new TestRMQListener(s_message.Header.Topic);
@@ -108,7 +108,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
                 s_message = new Message(header: s_mutatedHeader, body: s_originalMessage.Body);
 
                 s_messageProducer = new RmqMessageProducer(logger);
-                s_messageConsumer = new RmqMessageConsumer(s_message.Header.Topic, s_message.Header.Topic, logger);
+                s_messageConsumer = new RmqMessageConsumer(s_message.Header.Topic, s_message.Header.Topic, false, logger);
                 s_messageConsumer.Purge();
 
                 s_client = new TestRMQListener(s_message.Header.Topic);
@@ -219,8 +219,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             s_sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
             s_sender = new RmqMessageProducer(logger);
-            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
-            s_badReceiver = new AlreadyClosedRmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
+            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, logger);
+            s_badReceiver = new AlreadyClosedRmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, logger);
 
             s_receiver.Purge();
             s_sender.Send(s_sentMessage);
@@ -262,8 +262,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             s_sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
             s_sender = new RmqMessageProducer(logger);
-            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
-            s_badReceiver = new OperationInterruptedRmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
+            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, logger);
+            s_badReceiver = new OperationInterruptedRmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, logger);
 
             s_receiver.Purge();
             s_sender.Send(s_sentMessage);
@@ -305,8 +305,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             s_sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
             s_sender = new RmqMessageProducer(logger);
-            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
-            s_badReceiver = new NotSupportedRmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, logger);
+            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, logger);
+            s_badReceiver = new NotSupportedRmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, logger);
 
             s_receiver.Purge();
             s_sender.Send(s_sentMessage);

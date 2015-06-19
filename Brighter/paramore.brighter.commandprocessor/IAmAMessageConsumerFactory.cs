@@ -48,6 +48,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="channelName">Name of the channel.</param>
         /// <param name="routingKey">The routing key.</param>
         /// <returns>IAmAMessageConsumer.</returns>
-        IAmAMessageConsumer Create(string channelName, string routingKey);
+        IAmAMessageConsumer Create(string channelName, string routingKey, bool isDurable);
     }
 }

@@ -101,6 +101,7 @@ namespace paramore.brighter.serviceactivator.controlbus
             {
                 ChannelName = CONFIGURATION,
                 ConnectionName = CONFIGURATION,
+                IsDurable = true,
                 DataType = typeof(ConfigurationCommand).AssemblyQualifiedName,
                 RoutingKey = hostName + "." + CONFIGURATION,
             };
@@ -110,6 +111,7 @@ namespace paramore.brighter.serviceactivator.controlbus
             {
                 ChannelName = HEARTBEAT,
                 ConnectionName = HEARTBEAT,
+                IsDurable = false,
                 DataType = typeof(HeartBeatCommand).AssemblyQualifiedName,
                 RoutingKey = hostName + "." + HEARTBEAT,
             };

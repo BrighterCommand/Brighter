@@ -60,10 +60,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="routingKey">The routing key.</param>
+        /// <param name="isDurable">Is the consumer target durable i.e. channel stores messages between restarts of consumer</param>
         /// <returns>IAmAMessageConsumer.</returns>
-        public IAmAMessageConsumer Create(string queueName, string routingKey)
+        public IAmAMessageConsumer Create(string queueName, string routingKey, bool isDurable)
         {
-            return new RmqMessageConsumer(queueName, routingKey, _logger);
+            return new RmqMessageConsumer(queueName, routingKey, isDurable, _logger);
         }
     }
 }
