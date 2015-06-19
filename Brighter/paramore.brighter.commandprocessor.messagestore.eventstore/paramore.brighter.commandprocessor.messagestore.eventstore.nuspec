@@ -20,7 +20,7 @@
     </frameworkAssemblies>
     <dependencies>
       <dependency id="Paramore.Brighter.CommandProcessor" version="$version$" />
-      <dependency id="EventStore.ClientAPI" version="3.0.2.0" />
+      <dependency id="EventStore.Client" version="3.0.2.0" />
       <dependency id="Newtonsoft.Json" version="6.0.0.0" />
     </dependencies>
   </metadata>
