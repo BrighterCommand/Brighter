@@ -45,7 +45,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
                from ConnectionElement connectionElement in connectionElements
                select new Connection(
                    name: new ConnectionName(connectionElement.ConnectionName),
-                   channel: _channelFactory.CreateInputChannel(connectionElement.ChannelName, connectionElement.RoutingKey),
+                   channel: _channelFactory.CreateInputChannel(connectionElement.ChannelName, connectionElement.RoutingKey, connectionElement.IsDurable),
                    dataType: GetType(connectionElement.DataType),
                    noOfPerformers: connectionElement.NoOfPerformers,
                    timeoutInMilliseconds: connectionElement.TimeoutInMiliseconds,

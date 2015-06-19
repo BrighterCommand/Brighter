@@ -29,6 +29,10 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
 {
     public class ConnectionElement : ConfigurationElement
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="T:System.Configuration.ConfigurationElement"/> class. 
+        /// </summary>
+         
         [ConfigurationProperty("connectionName", DefaultValue = "", IsRequired = true)]
         public string ConnectionName
         {
@@ -50,6 +54,13 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
             set { this["routingKey"] = value; }
         }
 
+        [ConfigurationProperty("isDurable", DefaultValue = false, IsRequired = false)]
+        public bool IsDurable
+        {
+            get { return (bool)this["isDurable"]; }
+            set { this["isDurable"] = value; }
+        }
+
         [ConfigurationProperty("dataType", DefaultValue = "", IsRequired = true)]
         public string DataType
         {
@@ -61,7 +72,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
         public int NoOfPerformers
         {
             get { return Convert.ToInt32(this["noOfPerformers"]); }
-            set { this["noOfPerformers"] = value; }
+            set { this["noOfPerformers"] = value;}
         }
 
         [ConfigurationProperty("timeOutInMilliseconds", DefaultValue = "200", IsRequired = true)]
@@ -75,7 +86,7 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
         public int RequeueCount
         {
             get { return Convert.ToInt32(this["requeueCount"]); }
-            set { this["requeueCount"] = value; }
+            set { this["requeueCount"] = value;}
         }
 
         [ConfigurationProperty("requeueDelayInMilliseconds", DefaultValue = "0", IsRequired = false)]

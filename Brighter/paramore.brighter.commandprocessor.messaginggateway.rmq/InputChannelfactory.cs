@@ -61,10 +61,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="channelName">Name of the channel.</param>
         /// <param name="routingKey">The routing key.</param>
+        /// <param name="isDurable"></param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAnInputChannel CreateInputChannel(string channelName, string routingKey)
+        public IAmAnInputChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = false)
         {
-            return new InputChannel(channelName, _messageConsumerFactory.Create(channelName, routingKey));
+            return new InputChannel(channelName, _messageConsumerFactory.Create(channelName, routingKey, isDurable));
         }
 
         /// <summary>

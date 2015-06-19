@@ -39,8 +39,11 @@ namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
+        /// <param name="queueName"></param>
+        /// <param name="routingKey"></param>
+        /// <param name="isDurable"></param>
         /// <param name="logger">The logger.</param>
-        public BrokerUnreachableRmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) { }
+        public BrokerUnreachableRmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger) : base(queueName, routingKey, isDurable, logger) { }
 
         protected override void ConnectToBroker()
         {
@@ -53,8 +56,11 @@ namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
+        /// <param name="queueName"></param>
+        /// <param name="routingKey"></param>
+        /// <param name="isDurable"></param>
         /// <param name="logger">The logger.</param>
-        public AlreadyClosedRmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) { }
+        public AlreadyClosedRmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger) : base(queueName, routingKey, isDurable, logger) { }
 
         protected override void CreateConsumer()
         {
@@ -67,8 +73,11 @@ namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
+        /// <param name="queueName"></param>
+        /// <param name="routingKey"></param>
+        /// <param name="isDurable"></param>
         /// <param name="logger">The logger.</param>
-        public OperationInterruptedRmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) { }
+        public OperationInterruptedRmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger) : base(queueName, routingKey, isDurable, logger) { }
 
         protected override void CreateConsumer()
         {
@@ -81,8 +90,11 @@ namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
+        /// <param name="queueName"></param>
+        /// <param name="routingKey"></param>
+        /// <param name="isDurable"></param>
         /// <param name="logger">The logger.</param>
-        public NotSupportedRmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(queueName, routingKey, logger) { }
+        public NotSupportedRmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger) : base(queueName, routingKey, isDurable, logger) { }
 
         protected override void CreateConsumer()
         {

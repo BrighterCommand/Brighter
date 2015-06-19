@@ -59,6 +59,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     {
         private readonly string _queueName;
         private readonly string _routingKey;
+        private readonly bool _isDurable;
         private const bool AutoAck = false;
         /// <summary>
         /// The consumer
@@ -69,13 +70,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
-        /// <param name="routingKey">The routing key.</param>
-        /// <param name="logger">The logger.</param>
         /// <param name="queueName">The queue name.</param>
-        public RmqMessageConsumer(string queueName, string routingKey, ILog logger) : base(logger)
+        /// <param name="routingKey">The routing key.</param>
+        /// <param name="isDurable"></param>
+        /// <param name="logger">The logger.</param>
+        public RmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger) : base(logger)
         {
             _queueName = queueName;
             _routingKey = routingKey;
+            _isDurable = isDurable;
             _messageCreator = new RmqMessageCreator(logger);
         }
 
@@ -292,7 +295,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             Logger.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", _queueName, Configuration.AMPQUri.GetSanitizedUri());
 
-            Channel.QueueDeclare(_queueName, false, false, false, SetQueueArguments());
+            Channel.QueueDeclare(_queueName, _isDurable, false, false, SetQueueArguments());
 
             Channel.QueueBind(_queueName, Configuration.Exchange.Name, _routingKey);
         }

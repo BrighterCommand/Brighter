@@ -33,8 +33,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 {
     /*
     <connections>
-      <add connectionName ="foo" channelName="mary" routingKey="bob" dataType="paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
-      <add connectionName ="bar" channelName="alice" routingKey="simon" dataType="paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent" noOfPerformers="2" timeOutInMilliseconds="100" />
+      <add connectionName ="foo" channelName="mary" routingKey="bob" isDurable="false" dataType="paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
+      <add connectionName ="bar" channelName="alice" routingKey="simon" isDurable="true" dataType="paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent" noOfPerformers="2" timeOutInMilliseconds="100" />
     </connections>
     */
 
