@@ -47,7 +47,7 @@
         </ul>
         <h3>Subscriber Registry</h3>
         <p>The Command Dispatcher needs to be able to map <strong>Command</strong>s or <strong>Event</strong>s to a <strong>Request Handlers</strong>. For a <strong>Command</strong>
-            we expect one and only one <strong>Request Handlers</strong> for an event we expect many. Regsiter your handlers with the <strong>Subscriber Registry</strong> </p>
+            we expect one and only one <strong>Request Handlers</strong> for an event we expect many. Register your handlers with the <strong>Subscriber Registry</strong> </p>
         <pre><code>
 var registry = new SubscriberRegistry();
 registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
