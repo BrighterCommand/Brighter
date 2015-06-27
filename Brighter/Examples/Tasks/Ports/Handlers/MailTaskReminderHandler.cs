@@ -43,16 +43,16 @@ namespace Tasks.Ports.Handlers
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
         [UsePolicy(CommandProcessor.CIRCUITBREAKER, step: 2)]
         [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
-        public override TaskReminderCommand Handle(TaskReminderCommand command)
+        public override TaskReminderCommand Handle(TaskReminderCommand taskReminderCommand)
         {
             _mailGateway.Send(new TaskReminder(
-                taskName: new TaskName(command.TaskName),
-                dueDate: command.DueDate,
-                reminderTo: new EmailAddress(command.Recipient),
-                copyReminderTo: new EmailAddress(command.CopyTo)
+                taskName: new TaskName(taskReminderCommand.TaskName),
+                dueDate: taskReminderCommand.DueDate,
+                reminderTo: new EmailAddress(taskReminderCommand.Recipient),
+                copyReminderTo: new EmailAddress(taskReminderCommand.CopyTo)
                 ));
 
-            return base.Handle(command);
+            return base.Handle(taskReminderCommand);
         }
     }
 }
