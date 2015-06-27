@@ -60,7 +60,7 @@ namespace Tasks.Ports.Handlers
                     throw new ArgumentOutOfRangeException("completeTaskCommand", completeTaskCommand, "Could not find the task to complete");
                 }
             }
-            return completeTaskCommand;
+            return base.Handle(completeTaskCommand);
         }
     }
 }

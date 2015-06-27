@@ -57,7 +57,7 @@ namespace Tasks.Ports.Handlers
                 scope.Commit();
             }
 
-            return editTaskCommand;
+            return base.Handle(editTaskCommand);
         }
     }
 }
