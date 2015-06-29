@@ -6,9 +6,8 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resource
     {
         public RepostView()
         {
-            Ids = new List<string>();
         }
 
-        public List<string> Ids { get; set; }
+        public string Ids { get; set; }
     }
 }

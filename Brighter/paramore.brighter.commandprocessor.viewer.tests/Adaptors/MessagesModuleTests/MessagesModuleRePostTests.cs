@@ -62,7 +62,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.MessagesModul
                         new MessageBody(""))
                 };
                 idList = new RepostView();
-                idList.Ids = _messages.Select(m => m.Id.ToString()).ToList();
+                //idList.Ids = _messages.Select(m => m.Id.ToString()).ToList();
 
                 var fakeHandlerFactory = new FakeHandlerFactory();
                 _fakeRepostHandler = new FakeRepostHandler();
