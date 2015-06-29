@@ -85,12 +85,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         }
 
         /// <summary>
-        /// Gets the timeout.
-        /// </summary>
-        /// <value>The timeout.</value>
-
-
-        /// <summary>
         /// Creates the entity body.
         /// </summary>
         /// <typeparam name="T"></typeparam>
