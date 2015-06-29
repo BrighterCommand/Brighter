@@ -55,6 +55,7 @@ var messagesVm = function () {
 
         $("#pagePrevious").click(onPagePrevious);
         $("#pageNext").click(onPageNext);
+        $("#messageRepost").click(onMessageRepost);
 
         hideMessageSpinner();
     };
@@ -85,7 +86,7 @@ var messagesVm = function () {
 
     var deactivateSearch = function () {
         $('#messageSearchButton').attr("disabled", true);
-         $('#messageClearButton').attr("disabled", "true");
+        $('#messageClearButton').attr("disabled", "true");
     };
     var activateSearch = function () {
         $('#messageSearchButton').attr("disabled", false);
@@ -116,6 +117,28 @@ var messagesVm = function () {
             });
         }
     };
+    var repostInternal = function (storeName, messageList) {
+        seletedStoreName = storeName;
+        if (storeName) {
+            showMessageSpinner();
+            deactivateSearch();
+            log("start repost");
+            $.ajax({
+                url: baseUri + "/messages/" + storeName + "/repost/" + messageList,
+                dataType: 'json',
+                type: 'POST',
+                data: messageList,
+                success: function (data) { loadFirstPageInternal(seletedStoreName); },
+                error: function (jqXhr, textStatus, errorThrown) {
+                    onMessageLoadError(jqXhr, textStatus, errorThrown);
+                }
+            });
+        }
+    };
+
+    var onMessageRepost = function () {
+        repostInternal(seletedStoreName, $("#messagesSelectedIds").text());
+    }
     var onPageNext = function () {
         selectedPageNumber++;
         loadInternal(seletedStoreName, selectedPageNumber);
