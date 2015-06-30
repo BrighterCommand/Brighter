@@ -64,6 +64,7 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// The logger
         /// </summary>
+        [Obsolete("Use your own logger")]
         protected readonly ILog logger;
         private IHandleRequests<TRequest> _successor;
 
@@ -71,10 +72,13 @@ namespace paramore.brighter.commandprocessor
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
+        [Obsolete("Use the parameterless constructor")]
         protected RequestHandler(ILog logger)
         {
             this.logger = logger;
         }
+        protected RequestHandler()
+        {}
 
         /// <summary>
         /// Gets or sets the context.
@@ -98,6 +102,7 @@ namespace paramore.brighter.commandprocessor
         public void SetSuccessor(IHandleRequests<TRequest> successor)
         {
             _successor = successor;
+            _successor.ContinuingPipeline += (e) => ContinuingPipeline(e);
         }
 
         /// <summary>
@@ -123,6 +128,8 @@ namespace paramore.brighter.commandprocessor
                 _successor.DescribePath(pathExplorer);
         }
 
+        public event Action<PipelineContinuingEvent> ContinuingPipeline;
+
         /// <summary>
         /// Handles the specified command.
         /// </summary>
@@ -132,7 +139,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
+                ContinuingPipeline(new PipelineContinuingEvent(Name, _successor.Name));
                 return _successor.Handle(command);
             }
 

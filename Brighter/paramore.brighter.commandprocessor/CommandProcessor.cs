@@ -192,7 +192,9 @@ namespace paramore.brighter.commandprocessor
                 if (handlerCount == 0)
                     throw new ArgumentException(string.Format("No command handler was found for the typeof command {0} - a command should have only one handler.", typeof(T)));
 
-                handlerChain.First().Handle(command);
+                var handler = handlerChain.First();
+                handler.ContinuingPipeline += e => _logger.DebugFormat("Passing request from {0} to {1}", e.ThisHandler, e.NextHandler);
+                handler.Handle(command);
             }
         }
 
@@ -220,11 +222,12 @@ namespace paramore.brighter.commandprocessor
                 _logger.InfoFormat("Found {0} pipelines for event: {0}", handlerCount, @event.Id);
 
                 var exceptions = new List<Exception>();
-                foreach (var handleRequests in handlerChain)
+                foreach (var handler in handlerChain)
                 {
                     try
                     {
-                        handleRequests.Handle(@event);
+                        handler.ContinuingPipeline += e => _logger.DebugFormat("Passing request from {0} to {1}", e.ThisHandler, e.NextHandler);
+                        handler.Handle(@event);
                     }
                     catch (Exception e)
                     {
@@ -340,7 +343,7 @@ namespace paramore.brighter.commandprocessor
             }
 
             _messageStore = null;
-            _messagingGateway = null; 
+            _messagingGateway = null;
 
             _disposed = true;
         } 

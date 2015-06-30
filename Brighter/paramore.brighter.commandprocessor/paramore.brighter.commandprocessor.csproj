@@ -82,6 +82,7 @@
     <Compile Include="monitoring\Attributes\MonitorAttribute.cs" />
     <Compile Include="monitoring\Events\MonitorEvent.cs" />
     <Compile Include="monitoring\Handlers\MonitorHandler.cs" />
+    <Compile Include="PipelineContinuingEvent.cs" />
     <Compile Include="PolicyRegistry.cs" />
     <Compile Include="policy\Attributes\FallbackPolicyAttribute.cs" />
     <Compile Include="policy\Attributes\TimeoutPolicyAttribute.cs" />
