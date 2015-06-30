@@ -23,10 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using OpenRasta.Web;
-using Simple.Data;
 using Tasklist.Adapters.API.Resources;
 using Tasks.Adapters.DataAccess;
-using Tasks.Model;
 
 namespace Tasklist.Ports.ViewModelRetrievers
 {

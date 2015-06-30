@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.ComponentModel;
 using Microsoft.Practices.Unity;
 using paramore.brighter.commandprocessor;
 

@@ -60,7 +60,7 @@ namespace Tasks.Ports.Handlers
                 addTaskCommand.TaskId = inserted.Id;
             }
 
-            return addTaskCommand;
+            return base.Handle(addTaskCommand);
         }
     }
 }

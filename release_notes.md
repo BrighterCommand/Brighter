@@ -12,6 +12,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 	1. This may result in a breaking change that the Id on IRequest requires a setter to allow it to be deserialized
 4. Removed release branch. We just tag a release on master now, so this only existed to support an older version of the library that was pre the tagging strategy. Removed now as confusing to new users of the library.
 5. Added an Event Store implementation of the Message Store.
+6. A connection can now be flagged as isDurable in the configuration. Choosing isDurable when using RMQ as the broker will create a durable channel (i.e. does not die if no one is consuming it, and thus continues to subscribe to messages that match it's topic). We think there are sufficient trade-offs with a message store that allows replay to make this setting false by default, but have configured to allow users to make this choice dependent on the characteristics of their consumers (i.e. sufficiently intermittend that messages would be lost).
 
 ## Release 4.0.215 ##
 1. Fixed an issue where you could not have multiple UsePolicy or FallbackPolicy attributes on a single handler.#
