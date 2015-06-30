@@ -23,20 +23,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-
 using OpenRasta.DI;
-
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
-
 using Polly;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
 using Tasklist.Ports.ViewModelRetrievers;
-
 using Tasks.Adapters.DataAccess;
 using Tasks.Ports;
 using Tasks.Ports.Commands;
@@ -86,10 +79,7 @@ namespace Tasklist.Adapters.API.Configuration
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory);
             messageMapperRegistry.Add(typeof(TaskReminderCommand), typeof(TaskReminderCommandMessageMapper));
            
-            //var ravenMessageStore = new RavenMessageStore(new EmbeddableDocumentStore().Initialize(), logger);
-            var ravenMessageStore = new RavenMessageStore(new DocumentStore{ConnectionStringName = ""}.Initialize(), logger);
             var gateway = new RmqMessageProducer(logger);
-
             IAmAMessageStore<Message> sqlMessageStore = new MsSqlMessageStore(new MsSqlMessageStoreConfiguration("Server=.;Database=brighterMessageStore;Trusted_Connection=True", "messages", MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer), logger);
             var commandProcessor =
                 CommandProcessorBuilder.With()
