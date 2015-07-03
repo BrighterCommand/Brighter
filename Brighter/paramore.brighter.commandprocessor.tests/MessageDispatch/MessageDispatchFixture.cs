@@ -56,7 +56,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
                 messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-                var connection = new Connection(name: new ConnectionName("test"), channel: s_channel, dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
+                var connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
                 s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { connection }, logger);
 
                 var @event = new MyEvent();
@@ -94,7 +94,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
                 messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-                var connection = new Connection(name: new ConnectionName("test"), channel: s_channel, dataType: typeof(MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000);
+                var connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
                 s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { connection }, logger);
 
                 var @event = new MyEvent();
@@ -140,8 +140,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
 
-                var myEventConnection = new Connection(name: new ConnectionName("test"), channel: s_eventChannel, dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
-                var myCommandConnection = new Connection(name: new ConnectionName("anothertest"), channel: s_commandChannel, dataType: typeof(MyCommand), noOfPerformers: 1, timeoutInMilliseconds: 1000);
+                var myEventConnection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_eventChannel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+                var myCommandConnection = new Connection(name: new ConnectionName("anothertest"), dataType: typeof(MyCommand), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_commandChannel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
                 s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { myEventConnection, myCommandConnection }, logger);
 
                 var @event = new MyEvent();
@@ -190,7 +190,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
                 messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-                s_connection = new Connection(name: new ConnectionName("test"), channel: s_channel, dataType: typeof(MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000);
+                s_connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
                 s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { s_connection }, logger);
 
                 var @event = new MyEvent();
@@ -232,7 +232,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                 var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
                 messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-                s_connection = new Connection(name: new ConnectionName("test"), channel: s_channel, dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
+                s_connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
                 s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { s_connection }, logger);
 
                 var @event = new MyEvent();
@@ -279,8 +279,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            s_connection = new Connection(name: new ConnectionName("test"), channel: s_channel, dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
-            s_newConnection = new Connection(name: new ConnectionName("newTest"), channel: s_channel, dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000);
+            s_connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+            s_newConnection = new Connection(name: new ConnectionName("newTest"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
             s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { s_connection, s_newConnection }, logger);
 
             var @event = new MyEvent();
