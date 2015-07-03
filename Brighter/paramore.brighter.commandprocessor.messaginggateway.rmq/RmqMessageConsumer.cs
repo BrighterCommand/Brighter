@@ -138,7 +138,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 Logger.DebugFormat("RmqMessageConsumer: Re-queueing message {0} with a delay of {1} milliseconds", message.Id, delayMilliseconds);
                 EnsureChannel(_queueName);
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name, Logger);
-                rmqMessagePublisher.PublishMessage(message, delayMilliseconds, regenerate: true);
+                rmqMessagePublisher.RequeueMessage(message, _queueName, delayMilliseconds);
                 Reject(message, false);
             }
             catch (Exception exception)
