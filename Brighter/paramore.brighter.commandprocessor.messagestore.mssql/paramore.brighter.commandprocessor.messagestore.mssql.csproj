@@ -56,8 +56,15 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="DDL Scripts\SQLCE\CreateMessageStore.sqlce" />
     <None Include="packages.config" />
     <None Include="paramore.brighter.commandprocessor.messagestore.mssql.nuspec" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="DDL Scripts\MSSQL\MessageStore.sql">
+      <SubType>Component</SubType>
+    </Content>
+    <Content Include="DDL Scripts\SQLite\MessageStore.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
