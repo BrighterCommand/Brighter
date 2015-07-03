@@ -57,7 +57,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="DDL Scripts\SQLCE\CommandStore.sqlce" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="DDL Scripts\MSSQL\MessageStore.sql" />
+    <Content Include="DDL Scripts\SQLite\MessageStore.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
