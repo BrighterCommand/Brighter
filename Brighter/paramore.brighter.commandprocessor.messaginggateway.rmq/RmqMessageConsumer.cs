@@ -268,9 +268,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         protected virtual void CreateConsumer()
         {
-            _consumer = new QueueingBasicConsumer(Channel);
+            if(_consumer == null)
+                _consumer = new QueueingBasicConsumer(Channel);
 
             Channel.BasicConsume(_queueName, AutoAck, string.Empty, SetConsumerArguments(), _consumer);
+
+            _consumer.HandleBasicConsumeOk(string.Empty);
             
             Logger.InfoFormat("RmqMessageConsumer: Created consumer with ConsumerTag {4} for queue {0} with routing key {1} via exchange {2} on connection {3}",
                               _queueName,
