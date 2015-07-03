@@ -105,14 +105,17 @@ namespace paramore.brighter.serviceactivator
         /// Initializes a new instance of the <see cref="Connection"/> class.
         /// </summary>
         /// <param name="name">The name.</param>
-        /// <param name="channel">The channel.</param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer</param>
         /// <param name="dataType">Type of the data.</param>
+        /// <param name="routingKey">The routing key</param>
         /// <param name="noOfPerformers">The no of performers.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it</param>
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel</param>
-        public Connection(ConnectionName name, IAmAChannelFactory channelFactory, Type dataType, ChannelName channelName, string routingKey, int noOfPerformers = 1, int timeoutInMilliseconds = 300, int requeueCount = -1, int requeueDelayInMilliseconds = 0, int unacceptableMessageLimit = 0, bool isDurable = true)
+        /// <param name="channelName">The channel name</param>
+        /// <param name="isDurable">The durability of the queue</param>
+        public Connection(ConnectionName name, IAmAChannelFactory channelFactory, Type dataType, ChannelName channelName, string routingKey, int noOfPerformers = 1, int timeoutInMilliseconds = 300, int requeueCount = -1, int requeueDelayInMilliseconds = 0, int unacceptableMessageLimit = 0, bool isDurable = false)
         {
             RequeueCount = requeueCount;
             Name = name;
