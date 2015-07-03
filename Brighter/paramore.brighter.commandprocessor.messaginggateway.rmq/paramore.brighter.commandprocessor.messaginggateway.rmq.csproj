@@ -60,11 +60,11 @@
     <Compile Include="InputChannelfactory.cs" />
     <Compile Include="MessageGateway.cs" />
     <Compile Include="RmqMessageProducerFactory.cs" />
-    <Compile Include="RmqMessagePublisher.cs" />
     <Compile Include="RmqMessageConsumerFactory.cs" />
     <Compile Include="RmqMessageCreator.cs" />
     <Compile Include="RmqMessageConsumer.cs" />
     <Compile Include="RmqMessageProducer.cs" />
+    <Compile Include="RmqMessagePublisher.cs" />
     <Compile Include="UnixTimestamp.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -55,8 +55,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         private It _should_have_two_connections_in_the_list = () => s_connections.Count().ShouldEqual(2);
         private It _should_have_a_foo_connection = () => GetConnection("foo").ShouldNotBeNull();
-        private It _should_have_a_foo_connection_with_name_mary = () => GetConnection("foo").Channel.Name.Value.ShouldEqual("mary");
-        private It _should_have_a_bar_connection_with_name_alice = () => GetConnection("bar").Channel.Name.Value.ShouldEqual("alice");
+        private It _should_have_a_foo_connection_with_name_mary = () => GetConnection("foo").ChannelName.Value.ShouldEqual("mary");
+        private It _should_have_a_bar_connection_with_name_alice = () => GetConnection("bar").ChannelName.Value.ShouldEqual("alice");
         private It _should_have_a_foo_connection_with_my_event_type = () => GetConnection("foo").DataType.FullName.ShouldEqual("paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent");
         private It _should_have_a_bar_connection_with_my_event_type = () => GetConnection("bar").DataType.FullName.ShouldEqual("paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent");
         private It _should_have_a_foo_connection_with_one_performer = () => GetConnection("foo").NoOfPeformers.ShouldEqual(1);
