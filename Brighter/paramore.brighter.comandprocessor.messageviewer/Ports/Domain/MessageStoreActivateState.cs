@@ -36,7 +36,6 @@ THE SOFTWARE. */
 
 using System;
 using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration.ConfigurationSections;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
@@ -76,10 +75,6 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
             if (typeName == typeof(MsSqlMessageStore).FullName)
             {
                 return connectionString.Contains("Server") ? MessageStoreType.SqlServer : MessageStoreType.SqlCe;
-            }
-            else if (typeName == typeof(RavenMessageStore).FullName)
-            {
-                return connectionString.Contains("DataDir") ? MessageStoreType.RavenLocal : MessageStoreType.RavenRemote;
             }
             throw  new ArgumentException(string.Format("Do not recognise Messsage store type:{0} connection string:{1}", typeName, connectionString));
         }

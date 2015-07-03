@@ -39,7 +39,6 @@ THE SOFTWARE. */
 using System;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
@@ -82,28 +81,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             }
         }
 
-        public class when_creating_a_raven_remote_message_store : when_creating_a_message_store_Base
-        {
-            private It should_create_expected_store = () => AssertStoreFromFactory();
-
-            public when_creating_a_raven_remote_message_store() 
-                : base(MessageStoreActivationStateFactory.Create("remoteRaven", typeof(RavenMessageStore).FullName,
-                    @"Url = http://ravendb.mydomain.com;User=user;Password=secret"))
-            {
-            }
-        }
-
-        public class when_creating_a_raven_local__message_store : when_creating_a_message_store_Base
-        {
-            private It should_create_expected_store = () => AssertStoreFromFactory();
-
-            public when_creating_a_raven_local__message_store()
-                : base(MessageStoreActivationStateFactory.Create("localRaven", typeof(RavenMessageStore).FullName, 
-                    @"Url = DataDir = ~\App_Data\RavenDB;Enlist=False"))
-                    //@"Url = DataDir = ."))
-            {
-            }
-        }
         public class when_creating_a_sql_2008_message_store : when_creating_a_message_store_Base
         {
             private It should_create_expected_store = () => AssertStoreFromFactory();

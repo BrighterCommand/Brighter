@@ -73,6 +73,10 @@
       <HintPath>..\..\packages\Machine.Specifications.Should.0.7.2\lib\net45\Machine.Specifications.Should.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="OpenRasta">
       <HintPath>Libs\OpenRasta\OpenRasta.dll</HintPath>
     </Reference>
@@ -171,10 +175,6 @@
     <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
       <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj">
-      <Project>{224f828a-1abf-4d7b-8c48-66856bfd1ded}</Project>
-      <Name>paramore.brighter.commandprocessor.messagestore.ravendb</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
       <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>

@@ -39,7 +39,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
@@ -54,11 +53,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
         {
             private Establish _context = () =>
             {
-                _ravenMessageStores = new List<MessageStoreActivationState>
-                {
-                    MessageStoreActivationStateFactory.Create("localRaven", typeof(RavenMessageStore).FullName, @"Url = DataDir = ~\App_Data\RavenDB;Enlist=False"),
-                    MessageStoreActivationStateFactory.Create("remoteRaven", typeof(RavenMessageStore).FullName, @"Url = http://ravendb.mydomain.com;User=user;Password=secret")
-                };
                 _sqlMessageStores = new List<MessageStoreActivationState>
                 {
                     MessageStoreActivationStateFactory.Create("sqlce", typeof(MsSqlMessageStore).FullName, "DataSource='test.sdf';", "table2"),

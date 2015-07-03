@@ -37,10 +37,7 @@ THE SOFTWARE. */
 
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messagestore.ravendb;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
-using Raven.Client.Document;
-using Raven.Client.Embedded;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration
 {
@@ -71,22 +68,6 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
                 (storeConfig) => new MsSqlMessageStore(
                     new MsSqlMessageStoreConfiguration(storeConfig.ConnectionString, storeConfig.TableName,
                         MsSqlMessageStoreConfiguration.DatabaseType.SqlCe), _logger));
-            _messageStoreActivationStateCache.Set( MessageStoreType.RavenRemote,
-                (storeConfig) =>
-                {
-                    var documentStore = new DocumentStore();
-                    documentStore.ParseConnectionString(storeConfig.ConnectionString);
-                    return new RavenMessageStore(documentStore.Initialize(), _logger);
-                });
-            _messageStoreActivationStateCache.Set(MessageStoreType.RavenLocal,
-                (storeConfig) =>
-                {
-                    //var embeddableDocumentStore = new EmbeddableDocumentStore {UseEmbeddedHttpServer = true};
-                    var embeddableDocumentStore = new EmbeddableDocumentStore ();
-                    embeddableDocumentStore.DataDirectory =
-                        storeConfig.ConnectionString.Replace(" ", "").Replace("Url=", "").Replace("DataDir=", "");
-                    return new RavenMessageStore(embeddableDocumentStore.Initialize(), _logger);
-                });
             return _messageStoreActivationStateCache;
         }
     }
