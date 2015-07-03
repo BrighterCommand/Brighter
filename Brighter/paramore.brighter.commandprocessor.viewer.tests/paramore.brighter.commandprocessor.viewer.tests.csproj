@@ -62,25 +62,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
     </Reference>
-    <Reference Include="Raven.Abstractions, Version=3.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\RavenDB.Tests.Helpers.3.0.3660\lib\net45\Raven.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="Raven.Client.Lightweight, Version=3.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\RavenDB.Client.3.0.3660\lib\net45\Raven.Client.Lightweight.dll</HintPath>
-    </Reference>
-    <Reference Include="Raven.Database, Version=3.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\RavenDB.Database.3.0.3660\lib\net45\Raven.Database.dll</HintPath>
-    </Reference>
-    <Reference Include="Raven.Server">
-      <HintPath>..\packages\RavenDB.Tests.Helpers.3.0.3660\lib\net45\Raven.Server.exe</HintPath>
-    </Reference>
-    <Reference Include="Raven.Tests.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\RavenDB.Tests.Helpers.3.0.3660\lib\net45\Raven.Tests.Helpers.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
@@ -138,10 +119,6 @@
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
       <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj">
-      <Project>{224F828A-1ABF-4D7B-8C48-66856BFD1DED}</Project>
-      <Name>paramore.brighter.commandprocessor.messagestore.ravendb</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj">
       <Project>{65badb63-5f98-4f24-84d7-8c99263f88c6}</Project>

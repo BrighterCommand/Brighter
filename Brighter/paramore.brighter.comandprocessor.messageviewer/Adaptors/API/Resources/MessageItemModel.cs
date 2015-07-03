@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using System;
 using Humanizer;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources
 {

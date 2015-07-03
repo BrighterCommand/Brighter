@@ -92,26 +92,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\RabbitMQ.Client.3.5.1\lib\net40\RabbitMQ.Client.dll</HintPath>
     </Reference>
-    <Reference Include="Raven.Abstractions, Version=3.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\RavenDB.Client.3.0.3660\lib\net45\Raven.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="Raven.Client.Lightweight, Version=3.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\RavenDB.Client.3.0.3660\lib\net45\Raven.Client.Lightweight.dll</HintPath>
-    </Reference>
-    <Reference Include="Raven.Database, Version=3.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\RavenDB.Database.3.0.3660\lib\net45\Raven.Database.dll</HintPath>
-    </Reference>
-    <Reference Include="Raven.Server, Version=3.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\RavenDB.Tests.Helpers.3.0.3660\lib\net45\Raven.Server.exe</HintPath>
-    </Reference>
-    <Reference Include="Raven.Tests.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=37f41c7f99471593, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\RavenDB.Tests.Helpers.3.0.3660\lib\net45\Raven.Tests.Helpers.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Configuration" />
@@ -202,7 +182,6 @@
     <Compile Include="MessageDispatch\TestDoubles\SpyCommandProcessor.cs" />
     <Compile Include="MessageStore\EventStore\EventStoreMessageStoreTests.cs" />
     <Compile Include="MessageStore\MsSql\SqlMessageStoreTests.cs" />
-    <Compile Include="MessageStore\RavenDb\MessageStoreTests.cs" />
     <Compile Include="MessageStore\MsSql\SqlMessageStoreMigrationTests.cs" />
     <Compile Include="MessagingGateway\MessageChannelTests.cs" />
     <Compile Include="MessagingGateway\restms\RestMSMessagingGatewayTests.cs" />
@@ -228,10 +207,6 @@
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
       <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.ravendb\paramore.brighter.commandprocessor.messagestore.ravendb.csproj">
-      <Project>{224f828a-1abf-4d7b-8c48-66856bfd1ded}</Project>
-      <Name>paramore.brighter.commandprocessor.messagestore.ravendb</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj">
       <Project>{c8bc2471-9d5c-4e94-81c8-036506f4ec34}</Project>
