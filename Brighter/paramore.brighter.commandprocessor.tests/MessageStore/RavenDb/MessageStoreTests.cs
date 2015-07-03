@@ -45,6 +45,8 @@ namespace paramore.commandprocessor.tests.MessageStore.RavenDb
             var logger = A.Fake<ILog>();
             s_messageStore = new RavenMessageStore(s_documentStore, logger);
         };
+
+        [Ignore("Raven to be replaced with SQLCE, so silence it.")]
         public class when_writing_a_message_to_the_raven_message_store
         {
             private Establish _context = () =>
@@ -78,6 +80,7 @@ namespace paramore.commandprocessor.tests.MessageStore.RavenDb
             private static string value2 = "value2";
         }
 
+        [Ignore("Raven to be replaced with SQLCE, so silence it.")]
         public class when_there_is_no_message_in_the_raven_message_store
         {
             private Establish _context = () => { s_message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body")); };
@@ -86,6 +89,7 @@ namespace paramore.commandprocessor.tests.MessageStore.RavenDb
             private static Message s_retrievedMessage;
         }
 
+        [Ignore("Raven to be replaced with SQLCE, so silence it.")]
         public class when_writing_messages_to_the_raven_message_store
         {
             private Establish _context = () =>
