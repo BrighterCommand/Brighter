@@ -143,8 +143,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             if (!message.Header.Bag.Any(h => h.Key.Equals(HeaderNames.ORIGINAL_MESSAGE_ID, StringComparison.CurrentCultureIgnoreCase)))
                 headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id.ToString());
 
+            // To send it to the right queue use the default (empty) exchange
             _channel.BasicPublish(
-                _exchangeName,
+                String.Empty,
                 queueName,
                 false,
                 false,
