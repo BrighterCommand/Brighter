@@ -104,7 +104,7 @@ namespace paramore.brighter.commandprocessor
             attributes.Each((attribute) =>
             {
                 var decorator = new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
-                lastInPipeline.Successor = decorator;
+                lastInPipeline.SetSuccessor(decorator);
                 lastInPipeline = decorator;
             });
         }
@@ -114,7 +114,7 @@ namespace paramore.brighter.commandprocessor
             attributes.Each((attribute) =>
             {
                 var decorator = new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
-                decorator.Successor = lastInPipeline;
+                decorator.SetSuccessor(lastInPipeline);
                 lastInPipeline = decorator;
             });
             return lastInPipeline;
