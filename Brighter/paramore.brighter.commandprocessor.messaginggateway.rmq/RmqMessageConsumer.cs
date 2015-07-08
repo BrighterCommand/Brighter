@@ -268,8 +268,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         protected virtual void CreateConsumer()
         {
-            if(_consumer == null)
-                _consumer = new QueueingBasicConsumer(Channel);
+            _consumer = new QueueingBasicConsumer(Channel);
 
             Channel.BasicConsume(_queueName, AutoAck, string.Empty, SetConsumerArguments(), _consumer);
 
