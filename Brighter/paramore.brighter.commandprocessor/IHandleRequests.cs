@@ -113,7 +113,7 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Sets the successor.
         /// </summary>
-        /// <value>The successor.</value>
-        IHandleRequests<TRequest> Successor { set; }
+        /// <param name="successor">The successor.</param>
+        void SetSuccessor(IHandleRequests<TRequest> successor);
     }
 }
