@@ -119,5 +119,6 @@ namespace paramore.brighter.commandprocessor
         void SetSuccessor(IHandleRequests<TRequest> successor);
 
         event Action<PipelineContinuingEvent> ContinuingPipeline;
+        event Action<FallingBackEvent> FallingBack;
     }
 }

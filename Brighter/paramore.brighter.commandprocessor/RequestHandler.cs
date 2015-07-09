@@ -107,6 +107,7 @@ namespace paramore.brighter.commandprocessor
             // this subscription won't get updated.
             // We have to get ContinuingPipeline from the closure to get around this
             _successor.ContinuingPipeline += (e) => this.ContinuingPipeline(e);
+            _successor.FallingBack += (e) => this.FallingBack(e);
         }
 
         /// <summary>
@@ -132,7 +133,8 @@ namespace paramore.brighter.commandprocessor
                 _successor.DescribePath(pathExplorer);
         }
 
-        public event Action<PipelineContinuingEvent> ContinuingPipeline = e => {};
+        public event Action<PipelineContinuingEvent> ContinuingPipeline = e => { };
+        public event Action<FallingBackEvent> FallingBack = e => { };
 
         /// <summary>
         /// Handles the specified command.
@@ -173,7 +175,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
+                FallingBack(new FallingBackEvent(Name, _successor.Name));
                 return _successor.Fallback(command);
             }
             return command;

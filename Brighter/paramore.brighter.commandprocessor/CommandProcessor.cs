@@ -195,6 +195,8 @@ namespace paramore.brighter.commandprocessor
                 var handler = handlerChain.First();
                 handler.ContinuingPipeline += e => 
                     _logger.DebugFormat("Passing request from {0} to {1}", e.ThisHandler, e.NextHandler);
+                handler.FallingBack += e =>
+                   _logger.DebugFormat("Falling back from {0} to {1}", e.ThisHandler, e.NextHandler);
                 handler.Handle(command);
             }
         }
@@ -229,6 +231,9 @@ namespace paramore.brighter.commandprocessor
                     {
                         handler.ContinuingPipeline += e => 
                             _logger.DebugFormat("Passing request from {0} to {1}", e.ThisHandler, e.NextHandler);
+                        handler.FallingBack += e =>
+                           _logger.DebugFormat("Falling back from {0} to {1}", e.ThisHandler, e.NextHandler);
+
                         handler.Handle(@event);
                     }
                     catch (Exception e)

@@ -64,7 +64,82 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
         private It _should_send_the_command_to_the_command_handler = () => MyFailsWithFallbackDivideByZeroHandler.ShouldReceive(s_myCommand);
         private It _should_call_the_fallback_chain = () => MyFailsWithFallbackDivideByZeroHandler.ShouldFallback(s_myCommand);
         private It _should_set_the_exeception_into_context = () => MyFailsWithFallbackDivideByZeroHandler.ShouldSetException(s_myCommand);
+    }
 
+    [Subject(typeof(CommandProcessor))]
+    public class When_falling_back_on_a_command_should_log_the_pipeline
+    {
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        static ILog _logger;
+
+        private Establish _context = () =>
+        {
+            _logger = A.Fake<ILog>();
+            A.CallTo(_logger).WithReturnType<bool>().Returns(true);
+
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, MyFailsWithFallbackDivideByZeroHandler>();
+            var policyRegistry = new PolicyRegistry();
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyFailsWithFallbackDivideByZeroHandler>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, FallbackPolicyHandler<MyCommand>>().AsSingleton();
+            container.Register<ILog>(_logger);
+
+
+            MyFailsWithFallbackDivideByZeroHandler.ReceivedCommand = false;
+
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, _logger);
+        };
+
+        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+
+        It _should_log_the_fallback_event = () => A.CallTo(_logger)
+            .Where(call => call.Arguments.Get<Func<string>>(1) != null
+                           && call.Arguments.Get<Func<string>>(1)() == "Falling back from {0} to {1}"
+                           && call.Arguments.Get<object[]>(3)[0].ToString() == "FallbackPolicyHandler`1"
+                           && call.Arguments.Get<object[]>(3)[1].ToString() == "MyFailsWithFallbackDivideByZeroHandler")
+            .MustHaveHappened();
+    }
+
+    [Subject(typeof(CommandProcessor))]
+    public class When_falling_back_on_an_event_should_log_the_pipeline
+    {
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyEvent s_myCommand = new MyEvent();
+        static ILog _logger;
+
+        private Establish _context = () =>
+        {
+            _logger = A.Fake<ILog>();
+            A.CallTo(_logger).WithReturnType<bool>().Returns(true);
+
+            var registry = new SubscriberRegistry();
+            registry.Register<MyEvent, MyFailsWithFallbackDivideByZeroEventHandler>();
+            var policyRegistry = new PolicyRegistry();
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyEvent>, MyFailsWithFallbackDivideByZeroEventHandler>().AsSingleton();
+            container.Register<IHandleRequests<MyEvent>, FallbackPolicyHandler<MyEvent>>().AsSingleton();
+            container.Register<ILog>(_logger);
+
+
+            MyFailsWithFallbackDivideByZeroHandler.ReceivedCommand = false;
+
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, _logger);
+        };
+
+        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+
+        It _should_log_the_fallback_event = () => A.CallTo(_logger)
+            .Where(call => call.Arguments.Get<Func<string>>(1) != null
+                           && call.Arguments.Get<Func<string>>(1)() == "Falling back from {0} to {1}"
+                           && call.Arguments.Get<object[]>(3)[0].ToString() == "FallbackPolicyHandler`1"
+                           && call.Arguments.Get<object[]>(3)[1].ToString() == "MyFailsWithFallbackDivideByZeroEventHandler")
+            .MustHaveHappened();
     }
 
     public class When_raising_a_broken_circuit_exception_on_a_handler_that_supports_fallback

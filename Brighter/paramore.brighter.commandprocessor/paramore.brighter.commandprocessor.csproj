@@ -59,6 +59,7 @@
     <Compile Include="eventsourcing\Handlers\CommandSourcingHandler.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="actions\DeferMessageAction.cs" />
+    <Compile Include="FallingBackEvent.cs" />
     <Compile Include="HandlerConfiguration.cs" />
     <Compile Include="IAmAChannel.cs" />
     <Compile Include="IAmAChannelFactory.cs" />
