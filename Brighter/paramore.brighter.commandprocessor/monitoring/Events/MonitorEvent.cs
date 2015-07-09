@@ -42,15 +42,14 @@ namespace paramore.brighter.commandprocessor.monitoring.Events
         public string HandlerName { get; private set; }
         public string InstanceName { get; set; }
         public IRequest TargetHandlerRequest { get; private set; }
-        public HandlerTiming Timing { get; private set; }
 
         public MonitorEvent(
             string instanceName,
             MonitorEventType eventType, 
             string handlerName,
             IRequest targetHandlerRequest,
-            DateTime eventTime, 
-            HandlerTiming timing)
+            DateTime eventTime 
+            )
             :base(new Guid())
         {
             InstanceName = instanceName;
@@ -58,7 +57,6 @@ namespace paramore.brighter.commandprocessor.monitoring.Events
             HandlerName = handlerName;
             TargetHandlerRequest = targetHandlerRequest;
             EventTime = eventTime;
-            Timing = timing;
         }
     }
 }

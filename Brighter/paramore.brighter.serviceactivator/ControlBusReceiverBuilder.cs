@@ -32,12 +32,13 @@ using paramore.brighter.serviceactivator.Ports.Handlers;
 using paramore.brighter.serviceactivator.ServiceActivatorConfiguration;
 using Polly;
 
+//Needs a different namespace to the DispatchBuilder to avoid collisions
 namespace paramore.brighter.serviceactivator.controlbus
 {
     /// <summary>
     /// Class ControlBusBuilder.
     /// </summary>
-    public class ControlBusBuilder : INeedALogger, INeedADispatcher, INeedAChannelFactory, IAmADispatchBuilder
+    public class ControlBusReceiverBuilder : INeedALogger, INeedADispatcher, INeedAChannelFactory, IAmADispatchBuilder
     {
         /// <summary>
         /// The configuration
@@ -175,7 +176,7 @@ namespace paramore.brighter.serviceactivator.controlbus
         /// <returns>INeedALogger.</returns>
         public static INeedALogger With()
         {
-            return new ControlBusBuilder();
+            return new ControlBusReceiverBuilder();
         }
     }
 

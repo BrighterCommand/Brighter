@@ -23,49 +23,72 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Configuration;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Events;
+using paramore.brighter.commandprocessor.monitoring.Handlers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
-using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
+using paramore.commandprocessor.tests.Monitoring.TestDoubles;
+using TinyIoC;
 
 namespace paramore.commandprocessor.tests.Monitoring
 {
-    [Ignore("Work in progress")]
+    [Subject("Monitoring")]
     public class WhenMonitoringIsOnForAHandler
     {
-        static MyMonitoredHandler s_handler;
-        static MyCommand s_command;
-        static SpyCommandProcessor s_commandProcessor;
-        static DateTime s_at;
+        private static MyMonitoredHandler s_handler;
+        private static MyCommand s_command;
+        private static IAmACommandProcessor s_commandProcessor;
+        private static SpyControlBusSender s_controlBusSender;
+        private static DateTime s_at;
+        private static MonitorEvent beforeEvent;
+        private static MonitorEvent afterEvent;
 
         private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
+            s_controlBusSender = new SpyControlBusSender();
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, MyMonitoredHandler>();
 
-            s_commandProcessor = new SpyCommandProcessor();
-            s_handler = new MyMonitoredHandler(logger, s_commandProcessor);
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyMonitoredHandler>();
+            container.Register<IHandleRequests<MyCommand>, MonitorHandler<MyCommand>>();
+            container.Register<ILog>(logger);
+            container.Register<IAmAControlBusSender>(s_controlBusSender);
 
-            ConfigurationManager.AppSettings["IsMonitoringEnabled"] = "true";
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+
+            s_command = new MyCommand();
+
             s_at = DateTime.UtcNow;
             Clock.OverrideTime = s_at;
         };
 
-        private Because _of = () => s_handler.Handle(s_command);
+        private Because _of = () =>
+        {
+            s_commandProcessor.Send(s_command);
+            beforeEvent = s_controlBusSender.Observe<MonitorEvent>();
+            afterEvent = s_controlBusSender.Observe<MonitorEvent>();
+        };
 
-        private It _should_have_an_instance_name_before = () => s_commandProcessor.Observe<MonitorEvent>().InstanceName.ShouldEqual("");
-        private It _should_post_the_event_type_to_the_control_bus_before = () => s_commandProcessor.Observe<MonitorEvent>().EventType.ShouldEqual(MonitorEventType.EnterHandler);
-        private It _should_post_the_handler_name_to_the_control_bus_before = () => s_commandProcessor.Observe<MonitorEvent>().HandlerName.ShouldEqual("MyMonitoredHandler");
-        private It _should_include_the_underlying_request_details_before = () => s_commandProcessor.Observe<MonitorEvent>().TargetHandlerRequest.ShouldNotBeNull();
-        private It should_post_the_time_of_the_request_before = () => s_commandProcessor.Observe<MonitorEvent>().EventTime.ShouldEqual(s_at);
+        private It _should_have_an_instance_name_before = () => beforeEvent.InstanceName.ShouldEqual("UnitTests"); //set in the config
+        private It _should_post_the_event_type_to_the_control_bus_before = () => beforeEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
+        private It _should_post_the_handler_name_to_the_control_bus_before = () => beforeEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_include_the_underlying_request_details_before = () => beforeEvent.TargetHandlerRequest.ShouldNotBeNull();
+        private It should_post_the_time_of_the_request_before = () => beforeEvent.EventTime.ShouldEqual(s_at);
+        private It _should_have_an_instance_name_after = () => afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
+        private It _should_post_the_event_type_to_the_control_bus_after= () => afterEvent.EventType.ShouldEqual(MonitorEventType.ExitHandler);
+        private It _should_post_the_handler_name_to_the_control_bus_after = () => afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_include_the_underlying_request_details_after = () => afterEvent.TargetHandlerRequest.ShouldNotBeNull();
+        private It should_post_the_time_of_the_request_after = () => afterEvent.EventTime.ShouldEqual(s_at);
 
         Cleanup _tearDown = () =>
         {
             Clock.Clear();
-            ConfigurationManager.AppSettings.Remove("IsMonitoringEnabled");
         };
     }
 }

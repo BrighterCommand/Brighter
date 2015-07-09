@@ -22,24 +22,39 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.monitoring.Events;
 
 namespace paramore.brighter.commandprocessor.monitoring.Handlers
 {
     public class MonitorHandler<T> : RequestHandler<T> where T: class, IRequest
     {
-        readonly IAmACommandProcessor _commandProcessor;
+        readonly IAmAControlBusSender _controlBusSender;
+        private bool _isMonitoringEnabled;
+        private string _handlerName;
+        private string _instanceName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
         /// <param name="logger">The logger</param>
-        /// <param name="commandProcessor">The control bus command processor, to post over</param>
-        public MonitorHandler(ILog logger, IAmACommandProcessor commandProcessor) : base(logger)
+        /// <param name="controlBusSender">The control bus command processor, to post over</param>
+        public MonitorHandler(ILog logger, IAmAControlBusSender controlBusSender) : base(logger)
         {
-            _commandProcessor = commandProcessor;
+            _controlBusSender = controlBusSender;
         }
 
+        /// <summary>
+        /// Initializes from attribute parameters.
+        /// </summary>
+        /// <param name="initializerList">The initializer list.</param>
+        public override void InitializeFromAttributeParams(params object[] initializerList)
+        {
+            _isMonitoringEnabled = (bool) initializerList[0];
+            _handlerName = (string) initializerList[1];
+            _instanceName = (string) initializerList[2];
+        }
 
         /// <summary>
         /// Handles the specified command.
@@ -48,6 +63,17 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// <returns>TRequest.</returns>
         public override T Handle(T command)
         {
+            if (_isMonitoringEnabled)
+            {
+                _controlBusSender.Post(new MonitorEvent(_instanceName, MonitorEventType.EnterHandler, _handlerName, command, Clock.Now().GetValueOrDefault()));
+
+                base.Handle(command);
+
+                _controlBusSender.Post(new MonitorEvent(_instanceName, MonitorEventType.ExitHandler, _handlerName, command, Clock.Now().GetValueOrDefault()));
+
+                return command;
+            }
+
             return base.Handle(command);
         }
 

@@ -22,23 +22,25 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.monitoring.Attributes;
 
-namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
+namespace paramore.commandprocessor.tests.Monitoring.TestDoubles
 {
-    internal class MyMonitoredHandler : RequestHandler<MyCommand>
+    class SpyControlBusSender : IAmAControlBusSender
     {
-        public MyMonitoredHandler(ILog logger) : base(logger)
+        readonly Queue<IRequest> _requests = new Queue<IRequest>();
+        public bool PostHappened { get; set; }
+
+        public void Post<T>(T request) where T : class, IRequest
         {
+            _requests.Enqueue(request);
+            PostHappened = true;
         }
 
-        [Monitor(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandler))]
-        public override MyCommand Handle(MyCommand command)
+        public virtual T Observe<T>() where T : class, IRequest
         {
-            return base.Handle(command);
+            return (T) _requests.Dequeue();
         }
-
     }
 }

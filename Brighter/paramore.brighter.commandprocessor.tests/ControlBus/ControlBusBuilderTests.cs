@@ -25,25 +25,19 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using FakeItEasy;
-using FluentAssertions;
 using Machine.Specifications;
-using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
-using paramore.brighter.serviceactivator.Ports;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.TestHelpers;
-using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
-using Polly;
-using TinyIoC;
 
 namespace paramore.commandprocessor.tests.ControlBus
 {
     public class When_configuring_a_control_bus
     {
         private static Dispatcher s_controlBus;
-        private static ControlBusBuilder s_busBuilder;
+        private static ControlBusReceiverBuilder s_busReceiverBuilder;
         private static IDispatcher s_dispatcher;
 
         private Establish _context = () =>
@@ -51,17 +45,17 @@ namespace paramore.commandprocessor.tests.ControlBus
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
 
-            s_busBuilder = ControlBusBuilder
+            s_busReceiverBuilder = ControlBusReceiverBuilder
                 .With()
                 .Logger(logger)
                 .Dispatcher(s_dispatcher)
-                .ChannelFactory(new InMemoryChannelFactory()) as ControlBusBuilder;
+                .ChannelFactory(new InMemoryChannelFactory()) as ControlBusReceiverBuilder;
         };
 
-        private Because _of = () => s_controlBus = s_busBuilder.Build("tests");
+        private Because _of = () => s_controlBus = s_busReceiverBuilder.Build("tests");
 
-        private It _should_have_a_configuration_channel = () => s_controlBus.Connections.Any(cn => cn.Name == ControlBusBuilder.CONFIGURATION).ShouldBeTrue();
-        private It _should_have_a_heartbeat_channel = () => s_controlBus.Connections.Any(cn => cn.Name == ControlBusBuilder.HEARTBEAT).ShouldBeTrue();
+        private It _should_have_a_configuration_channel = () => s_controlBus.Connections.Any(cn => cn.Name == ControlBusReceiverBuilder.CONFIGURATION).ShouldBeTrue();
+        private It _should_have_a_heartbeat_channel = () => s_controlBus.Connections.Any(cn => cn.Name == ControlBusReceiverBuilder.HEARTBEAT).ShouldBeTrue();
         private It _should_have_a_command_processor = () => s_controlBus.CommandProcessor.ShouldNotBeNull();
     }
 
@@ -69,7 +63,7 @@ namespace paramore.commandprocessor.tests.ControlBus
     {
         private static IDispatcher s_dispatcher;
         private static Dispatcher s_controlBus;
-        private static ControlBusBuilder s_busBuilder;
+        private static ControlBusReceiverBuilder s_busReceiverBuilder;
         private static ConfigurationCommand s_configurationCommand;
         private static Exception s_exception;
 
@@ -78,13 +72,13 @@ namespace paramore.commandprocessor.tests.ControlBus
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
 
-            s_busBuilder = (ControlBusBuilder) ControlBusBuilder
+            s_busReceiverBuilder = (ControlBusReceiverBuilder) ControlBusReceiverBuilder
                 .With()
                 .Logger(logger)
                 .Dispatcher(s_dispatcher)
                 .ChannelFactory(new InMemoryChannelFactory());
 
-            s_controlBus = s_busBuilder.Build("tests");
+            s_controlBus = s_busReceiverBuilder.Build("tests");
 
             s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL);
 

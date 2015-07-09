@@ -104,11 +104,11 @@ namespace Greetings.Adapters.ServiceHost
                  .ConnectionsFromConfiguration();
             _dispatcher = builder.Build();
 
-            var controlBusBuilder = ControlBusBuilder
+            var controlBusBuilder = ControlBusReceiverBuilder
                 .With()
                 .Logger(logger)
                 .Dispatcher(_dispatcher)
-                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory)) as ControlBusBuilder;
+                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory)) as ControlBusReceiverBuilder;
             _controlDispatcher = builder.Build();
         }
 
