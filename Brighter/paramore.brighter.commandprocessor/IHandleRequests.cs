@@ -35,6 +35,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
@@ -115,5 +117,8 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="successor">The successor.</param>
         void SetSuccessor(IHandleRequests<TRequest> successor);
+
+        event Action<PipelineContinuingEvent> ContinuingPipeline;
+        event Action<FallingBackEvent> FallingBack;
     }
 }

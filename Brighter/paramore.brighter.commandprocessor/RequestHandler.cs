@@ -64,6 +64,7 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// The logger
         /// </summary>
+        [Obsolete("Use your own logger")]
         protected readonly ILog logger;
         private IHandleRequests<TRequest> _successor;
 
@@ -71,10 +72,13 @@ namespace paramore.brighter.commandprocessor
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
+        [Obsolete("Use the parameterless constructor and your own logger")]
         protected RequestHandler(ILog logger)
         {
             this.logger = logger;
         }
+        protected RequestHandler()
+        {}
 
         /// <summary>
         /// Gets or sets the context.
@@ -98,6 +102,12 @@ namespace paramore.brighter.commandprocessor
         public void SetSuccessor(IHandleRequests<TRequest> successor)
         {
             _successor = successor;
+            // Don't replace this with a reference to the ContinuingPipeline method group.
+            // If someone adds another subscription to ContinuingPipeline,
+            // this subscription won't get updated.
+            // We have to get ContinuingPipeline from the closure to get around this
+            _successor.ContinuingPipeline += (e) => this.ContinuingPipeline(e);
+            _successor.FallingBack += (e) => this.FallingBack(e);
         }
 
         /// <summary>
@@ -123,6 +133,9 @@ namespace paramore.brighter.commandprocessor
                 _successor.DescribePath(pathExplorer);
         }
 
+        public event Action<PipelineContinuingEvent> ContinuingPipeline = e => { };
+        public event Action<FallingBackEvent> FallingBack = e => { };
+
         /// <summary>
         /// Handles the specified command.
         /// </summary>
@@ -132,7 +145,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
+                ContinuingPipeline(new PipelineContinuingEvent(Name, _successor.Name));
                 return _successor.Handle(command);
             }
 
@@ -162,7 +175,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
+                FallingBack(new FallingBackEvent(Name, _successor.Name));
                 return _successor.Fallback(command);
             }
             return command;
@@ -184,6 +197,5 @@ namespace paramore.brighter.commandprocessor
                 .Where(method => method.GetParameters().Count() == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest))
                 .SingleOrDefault();
         }
-
     }
 }

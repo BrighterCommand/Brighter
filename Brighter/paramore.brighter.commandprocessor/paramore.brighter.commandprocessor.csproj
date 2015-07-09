@@ -59,6 +59,7 @@
     <Compile Include="eventsourcing\Handlers\CommandSourcingHandler.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="actions\DeferMessageAction.cs" />
+    <Compile Include="FallingBackEvent.cs" />
     <Compile Include="HandlerConfiguration.cs" />
     <Compile Include="IAmAChannel.cs" />
     <Compile Include="IAmAChannelFactory.cs" />
@@ -82,6 +83,7 @@
     <Compile Include="monitoring\Attributes\MonitorAttribute.cs" />
     <Compile Include="monitoring\Events\MonitorEvent.cs" />
     <Compile Include="monitoring\Handlers\MonitorHandler.cs" />
+    <Compile Include="PipelineContinuingEvent.cs" />
     <Compile Include="PolicyRegistry.cs" />
     <Compile Include="policy\Attributes\FallbackPolicyAttribute.cs" />
     <Compile Include="policy\Attributes\TimeoutPolicyAttribute.cs" />

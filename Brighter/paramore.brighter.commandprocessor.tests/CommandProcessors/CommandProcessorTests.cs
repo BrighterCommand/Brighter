@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FakeItEasy;
 using Machine.Specifications;
@@ -369,7 +370,85 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private It _should_call_the_post_validation_handler = () => MyLoggingHandler<MyCommand>.Shouldreceive(s_myCommand).ShouldBeTrue();
     }
 
+    [Subject(typeof(CommandProcessor))]
+    class When_sending_a_command_should_log_the_pipeline_execution
+    {
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyCommand s_myCommand = new MyCommand();
+        static ILog _logger;
 
+        private Establish _context = () =>
+        {
+            _logger = A.Fake<ILog>();
+            A.CallTo(_logger).WithReturnType<bool>().Returns(true);
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>();
+            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
+            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
+            container.Register<ILog>(_logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), _logger);
+        };
+
+        private Because send_the_command = () => s_commandProcessor.Send(s_myCommand);
+
+        private It should_log_passing_from_the_pre_decorator_to_the_handler = () => A.CallTo(_logger)
+            .Where(call => call.Arguments.Get<Func<string>>(1) != null
+                        && call.Arguments.Get<Func<string>>(1)() == "Passing request from {0} to {1}"
+                        && call.Arguments.Get<object[]>(3)[0].ToString() == "MyValidationHandler`1"
+                        && call.Arguments.Get<object[]>(3)[1].ToString() == "MyPreAndPostDecoratedHandler")
+            .MustHaveHappened();
+        private It should_log_passing_from_the_handler_to_the_post_decorator = () => A.CallTo(_logger)
+            .Where(call => call.Arguments.Get<Func<string>>(1) != null
+                        && call.Arguments.Get<Func<string>>(1)() == "Passing request from {0} to {1}"
+                        && call.Arguments.Get<object[]>(3)[0].ToString() == "MyPreAndPostDecoratedHandler"
+                        && call.Arguments.Get<object[]>(3)[1].ToString() == "MyLoggingHandler`1")
+            .MustHaveHappened();
+    }
+
+    [Subject(typeof (CommandProcessor))]
+    class When_publishing_an_event_should_log_the_pipeline_execution
+    {
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyEvent s_myCommand = new MyEvent();
+        static ILog _logger;
+
+        private Establish _context = () =>
+        {
+            _logger = A.Fake<ILog>();
+            A.CallTo(_logger).WithReturnType<bool>().Returns(true);
+            var registry = new SubscriberRegistry();
+            registry.Register<MyEvent, MyPreAndPostDecoratedEventHandler>();
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyEvent>, MyPreAndPostDecoratedEventHandler>();
+            container.Register<IHandleRequests<MyEvent>, MyValidationHandler<MyEvent>>();
+            container.Register<IHandleRequests<MyEvent>, MyLoggingHandler<MyEvent>>();
+            container.Register<ILog>(_logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), _logger);
+        };
+
+        private Because send_the_command = () => s_commandProcessor.Send(s_myCommand);
+
+        private It should_log_passing_from_the_pre_decorator_to_the_handler = () => A.CallTo(_logger)
+            .Where(call => call.Arguments.Get<Func<string>>(1) != null
+                        && call.Arguments.Get<Func<string>>(1)() == "Passing request from {0} to {1}"
+                        && call.Arguments.Get<object[]>(3)[0].ToString() == "MyValidationHandler`1"
+                        && call.Arguments.Get<object[]>(3)[1].ToString() == "MyPreAndPostDecoratedEventHandler")
+            .MustHaveHappened();
+        private It should_log_passing_from_the_handler_to_the_post_decorator = () => A.CallTo(_logger)
+            .Where(call => call.Arguments.Get<Func<string>>(1) != null
+                        && call.Arguments.Get<Func<string>>(1)() == "Passing request from {0} to {1}"
+                        && call.Arguments.Get<object[]>(3)[0].ToString() == "MyPreAndPostDecoratedEventHandler"
+                        && call.Arguments.Get<object[]>(3)[1].ToString() == "MyLoggingHandler`1")
+            .MustHaveHappened();
+    }
+
+    [Subject(typeof(CommandProcessor))]
     public class When_using_decoupled_invocation_messaging_gateway_throws_an_error_retry_n_times_then_break_circuit
     {
         private static CommandProcessor s_commandProcessor;
