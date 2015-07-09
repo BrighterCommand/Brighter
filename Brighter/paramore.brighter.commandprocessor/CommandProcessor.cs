@@ -193,7 +193,8 @@ namespace paramore.brighter.commandprocessor
                     throw new ArgumentException(string.Format("No command handler was found for the typeof command {0} - a command should have only one handler.", typeof(T)));
 
                 var handler = handlerChain.First();
-                handler.ContinuingPipeline += e => _logger.DebugFormat("Passing request from {0} to {1}", e.ThisHandler, e.NextHandler);
+                handler.ContinuingPipeline += e => 
+                    _logger.DebugFormat("Passing request from {0} to {1}", e.ThisHandler, e.NextHandler);
                 handler.Handle(command);
             }
         }
@@ -226,7 +227,8 @@ namespace paramore.brighter.commandprocessor
                 {
                     try
                     {
-                        handler.ContinuingPipeline += e => _logger.DebugFormat("Passing request from {0} to {1}", e.ThisHandler, e.NextHandler);
+                        handler.ContinuingPipeline += e => 
+                            _logger.DebugFormat("Passing request from {0} to {1}", e.ThisHandler, e.NextHandler);
                         handler.Handle(@event);
                     }
                     catch (Exception e)

@@ -125,6 +125,7 @@
     <Compile Include="CommandProcessors\TestDoubles\FakeMessageProducer.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeMessageStore.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyMonitoredHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyPreAndPostDecoratedEventHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyThrowingEventHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyObsoleteCommandHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyCommandMessageMapper.cs" />

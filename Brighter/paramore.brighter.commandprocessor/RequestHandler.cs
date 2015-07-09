@@ -72,7 +72,7 @@ namespace paramore.brighter.commandprocessor
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        [Obsolete("Use the parameterless constructor")]
+        [Obsolete("Use the parameterless constructor and your own logger")]
         protected RequestHandler(ILog logger)
         {
             this.logger = logger;
@@ -102,7 +102,11 @@ namespace paramore.brighter.commandprocessor
         public void SetSuccessor(IHandleRequests<TRequest> successor)
         {
             _successor = successor;
-            _successor.ContinuingPipeline += (e) => ContinuingPipeline(e);
+            // Don't replace this with a reference to the ContinuingPipeline method group.
+            // If someone adds another subscription to ContinuingPipeline,
+            // this subscription won't get updated.
+            // We have to get ContinuingPipeline from the closure to get around this
+            _successor.ContinuingPipeline += (e) => this.ContinuingPipeline(e);
         }
 
         /// <summary>
@@ -128,7 +132,7 @@ namespace paramore.brighter.commandprocessor
                 _successor.DescribePath(pathExplorer);
         }
 
-        public event Action<PipelineContinuingEvent> ContinuingPipeline;
+        public event Action<PipelineContinuingEvent> ContinuingPipeline = e => {};
 
         /// <summary>
         /// Handles the specified command.
@@ -191,6 +195,5 @@ namespace paramore.brighter.commandprocessor
                 .Where(method => method.GetParameters().Count() == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest))
                 .SingleOrDefault();
         }
-
     }
 }
