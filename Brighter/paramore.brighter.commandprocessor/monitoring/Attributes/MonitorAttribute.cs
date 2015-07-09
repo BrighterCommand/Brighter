@@ -38,11 +38,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Configuration;
+using paramore.brighter.commandprocessor.monitoring.Configuration;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
 
-/// <summary>
-/// The Attributes namespace.
-/// </summary>
 namespace paramore.brighter.commandprocessor.monitoring.Attributes
 {
     /// <summary>
@@ -50,18 +48,33 @@ namespace paramore.brighter.commandprocessor.monitoring.Attributes
     /// </summary>
     public class MonitorAttribute: RequestHandlerAttribute
     {
-        bool _monitoringEnabled = false;
+        private readonly string _handlerName;
+        readonly bool _monitoringEnabled = false;
+        private string _instanceName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandlerAttribute" /> class.
         /// </summary>
         /// <param name="step">The step.</param>
         /// <param name="timing">The timing.</param>
-        public MonitorAttribute(int step, HandlerTiming timing)
+        /// <param name="handlerType">The type of the monitored handler (used to extract the assembly qualified type name for instrumentation purposes)</param>
+        public MonitorAttribute(int step, HandlerTiming timing, Type handlerType)
             : base(step, timing)
         {
-            var monitoringSetting = ConfigurationManager.AppSettings["IsMonitoringEnabled"];
-            _monitoringEnabled = Convert.ToBoolean(monitoringSetting);
+            _handlerName = handlerType.AssemblyQualifiedName;
+            var monitoringSetting = MonitoringConfigurationSection.GetConfiguration();
+ 
+            _monitoringEnabled = monitoringSetting.Monitor.IsMonitoringEnabled;
+            _instanceName = monitoringSetting.Monitor.InstanceName;
+        }
+
+        /// <summary>
+        /// Initializers the parameters.
+        /// </summary>
+        /// <returns>System.Object[].</returns>
+        public override object[] InitializerParams()
+        {
+            return new object[] {_monitoringEnabled, _handlerName, _instanceName};
         }
 
         /// <summary>

@@ -22,23 +22,25 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.monitoring.Attributes;
-
-namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
+namespace paramore.brighter.commandprocessor.monitoring.Decorators
 {
-    internal class MyMonitoredHandler : RequestHandler<MyCommand>
+    public class ControlBusSender : IAmAControlBusSender
     {
-        public MyMonitoredHandler(ILog logger) : base(logger)
+        private readonly IAmACommandProcessor _commandProcessor;
+
+        public ControlBusSender(IAmACommandProcessor commandProcessor)
         {
+            _commandProcessor = commandProcessor;
         }
 
-        [Monitor(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandler))]
-        public override MyCommand Handle(MyCommand command)
+        /// <summary>
+        /// Posts the specified request.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="request">The request.</param>
+        public void Post<T>(T request) where T : class, IRequest
         {
-            return base.Handle(command);
+            _commandProcessor.Post(request);
         }
-
     }
 }
