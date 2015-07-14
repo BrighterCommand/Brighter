@@ -25,8 +25,9 @@ THE SOFTWARE. */
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Attributes;
+using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
+namespace paramore.commandprocessor.tests.Monitoring.TestDoubles
 {
     internal class MyMonitoredHandler : RequestHandler<MyCommand>
     {

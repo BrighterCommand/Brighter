@@ -26,6 +26,7 @@ using System;
 using log4net;
 using ManagementAndMonitoring.Ports.Commands;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.monitoring.Attributes;
 using ILog = paramore.brighter.commandprocessor.Logging.ILog;
 
 namespace ManagementAndMonitoring.Ports.CommandHandlers
@@ -34,6 +35,7 @@ namespace ManagementAndMonitoring.Ports.CommandHandlers
     {
         public GreetingCommandHandler(ILog logger) : base(logger) { }
 
+        [Monitor(step: 1, timing: HandlerTiming.Before, handlerType: typeof(GreetingCommandHandler))]
         public override GreetingCommand Handle(GreetingCommand command)
         {
             Console.WriteLine("Received Greeting. Message Follows");
