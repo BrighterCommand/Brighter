@@ -124,7 +124,6 @@
     <Compile Include="CommandProcessors\PipelineContextTests.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeMessageProducer.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeMessageStore.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyMonitoredHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyThrowingEventHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyObsoleteCommandHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyCommandMessageMapper.cs" />
@@ -189,6 +188,7 @@
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
     <Compile Include="MessagingGateway\TestDoubles\BrokerUnreachableRmqMessageConsumer.cs" />
     <Compile Include="Monitoring\HandlerMonitoringTests.cs" />
+    <Compile Include="Monitoring\TestDoubles\MyMonitoredHandler.cs" />
     <Compile Include="Monitoring\TestDoubles\SpyControlBusSender.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Timeout\Test Doubles\MyPassesTimeoutHandler.cs" />

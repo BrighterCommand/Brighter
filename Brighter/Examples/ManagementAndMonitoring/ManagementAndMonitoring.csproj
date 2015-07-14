@@ -35,6 +35,15 @@
     <Reference Include="log4net">
       <HintPath>..\..\packages\log4net-oldkey.1.2.13\lib\net40-full\log4net.dll</HintPath>
     </Reference>
+    <Reference Include="Machine.Specifications">
+      <HintPath>..\..\packages\Machine.Specifications.0.9.3\lib\net45\Machine.Specifications.dll</HintPath>
+    </Reference>
+    <Reference Include="Machine.Specifications.Clr4">
+      <HintPath>..\..\packages\Machine.Specifications.0.9.3\lib\net45\Machine.Specifications.Clr4.dll</HintPath>
+    </Reference>
+    <Reference Include="Machine.Specifications.Should">
+      <HintPath>..\..\packages\Machine.Specifications.Should.0.7.2\lib\net45\Machine.Specifications.Should.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
@@ -60,6 +69,7 @@
     <Compile Include="Adapters\ServiceHost\Program.cs" />
     <Compile Include="Adapters\ServiceHost\TinyIoCHandlerFactory.cs" />
     <Compile Include="Adapters\ServiceHost\TinyIoCMessageMapperFactory.cs" />
+    <Compile Include="Adapters\Tests\SerializationTests.cs" />
     <Compile Include="Ports\CommandHandlers\GreetingCommandHandler.cs" />
     <Compile Include="Ports\Commands\GreetingCommand.cs" />
     <Compile Include="Ports\Mappers\GreetingCommandMessageMapper.cs" />
