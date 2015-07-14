@@ -190,7 +190,7 @@ namespace paramore.brighter.commandprocessor
                 if (handlerCount > 1)
                     throw new ArgumentException(string.Format("More than one handler was found for the typeof command {0} - a command should only have one handler.", typeof(T)));
                 if (handlerCount == 0)
-                    throw new ArgumentException(string.Format("No command handler was found for the typeof command {0} - a command should have only one handler.", typeof(T)));
+                    throw new ArgumentException(string.Format("No command handler was found for the typeof command {0} - a command should have exactly one handler.", typeof(T)));
 
                 handlerChain.First().Handle(command);
             }
