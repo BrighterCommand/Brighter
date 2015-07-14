@@ -100,7 +100,7 @@ namespace paramore.brighter.commandprocessor
         public void Register<TRequest, TMessageMapper>() where TRequest : class, IRequest where TMessageMapper : class, IAmAMessageMapper<TRequest>
         {
             if (_messageMappers.ContainsKey(typeof(TRequest)))
-                throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registred per type", typeof(TRequest).Name));
+                throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", typeof(TRequest).Name));
 
             _messageMappers.Add(typeof(TRequest), typeof(TMessageMapper));
         }
