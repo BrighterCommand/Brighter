@@ -73,7 +73,7 @@ namespace Greetings.Adapters.ServiceHost
             var policyRegistry = new PolicyRegistry()
             {
                 {CommandProcessor.RETRYPOLICY, retryPolicy},
-                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+                //{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
             };
 
             //create message mappers

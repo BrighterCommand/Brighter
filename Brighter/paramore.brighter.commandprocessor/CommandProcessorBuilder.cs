@@ -3,8 +3,8 @@
 // Author           : ian
 // Created          : 07-01-2014
 //
-// Last Modified By : ian
-// Last Modified On : 07-29-2014
+// Last Modified By : toby
+// Last Modified On : 17-07-2015
 // ***********************************************************************
 //     Copyright (c) . All rights reserved.
 // </copyright>
@@ -35,6 +35,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.CodeDom;
+
 using paramore.brighter.commandprocessor.Logging;
 using Polly;
 
@@ -57,7 +59,7 @@ namespace paramore.brighter.commandprocessor
     ///             <see cref="PolicyRegistry"/> to provide the <see cref="IAmAPolicyRegistry"/>. Policies are expected to be Polly <see cref="!:https://github.com/michael-wolfenden/Polly"/> 
     ///             <see cref="Policy"/> references.
     ///             If you do not need any policies around quality of service (QoS) concerns - you do not have Work Queues and/or do not intend to use Polly Policies for 
-    ///             QoS concerns - you can use <see cref="NoPolicy"/> to indicate you do not need them.
+    ///             QoS concerns - you can use <see cref="DefaultPolicy"/> to indicate you do not need them or just want a simple retry.
     ///         </description>
     ///      </item>
     ///     <item>
@@ -100,7 +102,11 @@ namespace paramore.brighter.commandprocessor
         private int _messageStoreWriteTimeout;
         private int _messagingGatewaySendTimeout;
         private bool _useTaskQueues = false;
-        private CommandProcessorBuilder() { }
+
+        private CommandProcessorBuilder()
+        {
+            DefaultPolicy();
+        }
 
         /// <summary>
         /// Begins the Fluent Interface
@@ -129,18 +135,27 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="thePolicyRegistry">The policy registry.</param>
         /// <returns>INeedLogging.</returns>
+        /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required</exception>
+        /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required</exception>
         public INeedLogging Policies(IAmAPolicyRegistry thePolicyRegistry)
         {
+            if (!thePolicyRegistry.Has(CommandProcessor.RETRYPOLICY))
+                throw new ConfigurationException("The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
+                
+            if (!thePolicyRegistry.Has(CommandProcessor.CIRCUITBREAKER))
+                throw new ConfigurationException("The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
+            
             _policyRegistry = thePolicyRegistry;
             return this;
         }
 
         /// <summary>
-        /// Use this if you do not require policy (i.e. No Tasks Queues or QoS needs).
+        /// Use this if you do not require a policy and only want to retry once(i.e. No Tasks Queues or QoS needs).
         /// </summary>
         /// <returns>INeedLogging.</returns>
-        public INeedLogging NoPolicy()
+        public INeedLogging DefaultPolicy()
         {
+            _policyRegistry = new DefaultPolicy();
             return this;
         }
         /// <summary>
@@ -258,7 +273,7 @@ namespace paramore.brighter.commandprocessor
         /// Noes the policy.
         /// </summary>
         /// <returns>INeedLogging.</returns>
-        INeedLogging NoPolicy();
+        INeedLogging DefaultPolicy();
     }
 
     /// <summary>
