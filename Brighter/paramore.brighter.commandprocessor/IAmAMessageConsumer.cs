@@ -82,4 +82,15 @@ namespace paramore.brighter.commandprocessor
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         void Requeue(Message message, int delayMilliseconds);
     }
+
+    public interface IAmAMessageConsumerSupportingCache : IAmAMessageConsumer, IAmAMessageGatewaySupportingCache
+    {
+        /// <summary>
+        /// Receives the specified queue name.
+        /// </summary>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="noOfMessagesToCache">Number of cacheable messages.</param>
+        /// <returns>Message.</returns>
+        Message Receive(int timeoutInMilliseconds, int noOfMessagesToCache);
+    }
 }

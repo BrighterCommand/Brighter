@@ -52,6 +52,8 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
         private readonly bool _messageConsumerSupportsDelay;
+        private readonly bool _messageConsumerSupportsCache;
+        private int _numberOfMessagesToCache;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannel"/> class.
@@ -63,6 +65,7 @@ namespace paramore.brighter.commandprocessor
             _channelName = channelName;
             _messageConsumer = messageConsumer;
             _messageConsumerSupportsDelay = _messageConsumer is IAmAMessageConsumerSupportingDelay && (_messageConsumer as IAmAMessageGatewaySupportingDelay).DelaySupported;
+            _messageConsumerSupportsCache = _messageConsumer is IAmAMessageConsumerSupportingCache && (_messageConsumer as IAmAMessageGatewaySupportingCache).CacheSupported;
         }
 
         /// <summary>
@@ -81,8 +84,12 @@ namespace paramore.brighter.commandprocessor
             Message message;
             if (!_queue.TryDequeue(out message))
             {
-                message = _messageConsumer.Receive(timeoutinMilliseconds);
+                if (_messageConsumerSupportsDelay)
+                    message = (_messageConsumer as IAmAMessageConsumerSupportingCache).Receive(timeoutinMilliseconds, _numberOfMessagesToCache);
+                else
+                    message = _messageConsumer.Receive(timeoutinMilliseconds);
             }
+
             return message;
         }
 
@@ -125,6 +132,16 @@ namespace paramore.brighter.commandprocessor
                 (_messageConsumer as IAmAMessageConsumerSupportingDelay).Requeue(message, delayMilliseconds);
             else
                 _messageConsumer.Requeue(message);
+        }
+
+        public bool SupportsCaching()
+        {
+            return _messageConsumerSupportsCache;
+        }
+
+        public void SetCachedMessageCount(int count)
+        {
+            _numberOfMessagesToCache = count;
         }
 
         /// <summary>
