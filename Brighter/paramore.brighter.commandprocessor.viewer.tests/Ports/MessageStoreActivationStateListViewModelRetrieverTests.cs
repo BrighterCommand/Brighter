@@ -50,6 +50,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
     [Subject(typeof(MessageStoreActivationStateListViewModelRetriever))]
     public class MessageStoreActivationStateListViewModelRetrieverTests
     {
+        [Tags("Requires", new[] { "MsSql" })]
         public class When_retrieving_json_for_valid_list
         {
             private Establish _context = () =>

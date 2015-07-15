@@ -66,6 +66,8 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             {
             }
         }
+
+        [Tags("Requires", new[] { "MsSql" })]
         public class when_creating_a_sql_2008_message_store : when_creating_a_message_store_Base
         {
             private It should_create_expected_store = () => AssertStoreFromFactory();

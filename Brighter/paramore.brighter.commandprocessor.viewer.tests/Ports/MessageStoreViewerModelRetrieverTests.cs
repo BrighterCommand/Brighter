@@ -52,6 +52,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
     [Subject(typeof(MessageStoreViewerModelRetriever))]
     public class MessageStoreViewerModelRetrieverTests
     {
+        //[Tags("Requires", new[] { "RabbitMQ", "RabbitMQProducerReceiver" })]
         public class When_retrieving_json_for_valid_item
         {
             private Establish _context = () =>
