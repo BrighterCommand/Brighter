@@ -35,6 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Polly;
@@ -64,9 +65,20 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="policyName">Name of the policy.</param>
         /// <returns>Policy.</returns>
+        /// <exception cref="ArgumentException">There is no policy for policyName</exception>
         public Policy Get(string policyName)
         {
-            return _policies.ContainsKey(policyName) ? _policies[policyName] : null;
+            if (_policies.ContainsKey(policyName))
+            {
+                return _policies[policyName];
+            }
+
+            throw new ArgumentException(String.Format("There is no policy for {0}", policyName), policyName);
+        }
+
+        public bool Has(string policyName)
+        {
+            return _policies.ContainsKey(policyName);
         }
 
         /// <summary>

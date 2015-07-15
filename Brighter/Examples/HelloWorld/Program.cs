@@ -43,7 +43,7 @@ namespace HelloWorld
                      subscriberRegistry: registry,
                      handlerFactory: new SimpleHandlerFactory(logger)
                     ))
-                .NoPolicy()
+                .DefaultPolicy()
                 .Logger(logger)
                 .NoTaskQueues()
                 .RequestContextFactory(new InMemoryRequestContextFactory());
