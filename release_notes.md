@@ -6,14 +6,35 @@ When we push a collection of functionality it is available via [nuget.org](http:
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore), but not yet deployed to [nuget.org](http://www.nuget.org).
 
 ## Master ##
-1. Made CommandProcessor.Repost deprecated with the Obsolete attribute. We will probably drop this in the next release. We suggest that you use the message store directly to retrieve a message and then call Post.
-2. Added a message store write timeout and message gateway timeout on a post; perviously we wait indefinitely (bad Brighter team, no biscuit).
-3. Added a UseCommandSourcing attribute that stores commands to a command store. This is the Event Sourcing paradigm described by Martin Fowler in http://martinfowler.com/eaaDev/EventSourcing.html The term Command Sourcing refers to the fact that as described the pattern stores commands (instructions to change state) not events (the results of applying those commands).
-	1. This may result in a breaking change that the Id on IRequest requires a setter to allow it to be deserialized
-4. Removed release branch. We just tag a release on master now, so this only existed to support an older version of the library that was pre the tagging strategy. Removed now as confusing to new users of the library.
-5. Added an Event Store implementation of the Message Store.
-6. A connection can now be flagged as isDurable in the configuration. Choosing isDurable when using RMQ as the broker will create a durable channel (i.e. does not die if no one is consuming it, and thus continues to subscribe to messages that match it's topic). We think there are sufficient trade-offs with a message store that allows replay to make this setting false by default, but have configured to allow users to make this choice dependent on the characteristics of their consumers (i.e. sufficiently intermittend that messages would be lost).
-7. Dropped support for RavenDb as a message store, we feel EventStore covers this scenario better where non-relational stores are an option
+## Release 5 ##
+
+**Bug Fixes:**
+ - #100 `CommandProcessor.Post` fails with Object reference not set to an instance of an object.
+ - Fix RequeueMessage exhaustion to log ERROR.
+ - #101 Updated `Requeue` method to send a message to a specific queue as opposed to a topic.
+ -  Added a message store write timeout and message gateway timeout on a post; perviously we wait indefinitely (bad Brighter team, no biscuit).
+ - Replace `Successor` write-only property with `SetSuccessor` method.
+ - Message Viewer, fixed startup issues.
+ - Removed a few unused interfaces.
+ - Correct exceptions namespace to actions.
+
+**Features:**
+ - A connection can now be flagged as isDurable in the configuration. Choosing isDurable when using RMQ as the broker will create a durable channel (i.e. does not die if no one is consuming it, and thus continues to subscribe to messages that match it's topic). We think there are sufficient trade-offs with a message store that allows replay to make this setting false by default, but have configured to allow users to make this choice dependent on the characteristics of their consumers (i.e. sufficiently intermittend that messages would be lost).
+ - #92 Added [Event Store](https://geteventstore.com/ "Event Store") Message Store implementation
+ - #30 Changed RabbitMQ Messaging Gateway to support multiple performers per connection, fixing the pipeline errors from RabbitMQ Client
+ - Added a UseCommandSourcing attribute that stores commands to a command store. This is the Event Sourcing paradigm described by Martin Fowler in http://martinfowler.com/eaaDev/EventSourcing.html The term Command Sourcing refers to the fact that as described the pattern stores commands (instructions to change state) not events (the results of applying those commands).
+	- This may result in a breaking change that the Id on IRequest requires a setter to allow it to be deserialized
+ - Added MS SQL Command Store implementation
+ - Added monitoring attribute, which fires message onto control bus
+ - Cleaning up code so working with dnx and Portable will be easier
+ - Message Viewer, Add paging
+ - Update Code of Conduct to Contributor Covenant 1.1.0
+ - Add DDL scripts to help create SQL based schemes
+
+**Remove and Depreciated:**
+ - Flag the method `Repost` on `IAmACommandProcessor` as obsolete, We will probably drop this in the next release. We suggest that you use the message store directly to retrieve a message and then call Post.
+ - Dropped support for RavenDb as a message store, we feel EventStore covers this scenario better where non-relational stores are an option
+ - Removed release branch. We just tag a release on master now, so this only existed to support an older version of the library that was pre the tagging strategy. Removed now as confusing to new users of the library.
 
 ## Release 4.0.215 ##
 1. Fixed an issue where you could not have multiple UsePolicy or FallbackPolicy attributes on a single handler.#
