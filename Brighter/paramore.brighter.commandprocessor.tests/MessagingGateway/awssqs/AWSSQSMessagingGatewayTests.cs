@@ -16,12 +16,12 @@ using Message = paramore.brighter.commandprocessor.Message;
 
 namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
 {
-    [Subject("Messaging Gateway")]
-    [Tags("Requires", new[] { "AWSSDK", "AWSCredentials" })]
     public class AWSSQSMessagingGatewayTests
     {
         private static string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
 
+        [Subject("Messaging Gateway")]
+        [Tags("Requires", new[] { "AWSSDK", "AWSCredentials" })]
         public class When_posting_a_message_via_the_messaging_gateway
         {
             private Establish context = () =>
@@ -57,6 +57,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
             private static Amazon.SQS.Model.Message _listenedMessage;
         }
 
+        [Subject("Messaging Gateway")]
+        [Tags("Requires", new[] { "AWSSDK", "AWSCredentials" })]
         public class When_posting_a_message_via_the_messaging_gateway_and_sns_topic_does_not_exist
         {
             private Establish context = () =>
@@ -91,6 +93,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
             private static Topic _topic;
         }
 
+        [Subject("Messaging Gateway")]
+        [Tags("Requires", new[] { "AWSSDK", "AWSCredentials" })]
         public class when_reading_a_message_via_the_messaging_gateway
         {
             Establish context = () =>
@@ -131,6 +135,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
             private static Message receivedMessage;
         }
 
+        [Subject("Messaging Gateway")]
+        [Tags("Requires", new[] { "AWSSDK", "AWSCredentials" })]
         public class when_rejecting_a_message_through_gateway_with_requeue
         {
             Establish context = () =>
@@ -173,6 +179,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
             private static Message _listenedMessage;
         }
 
+        [Subject("Messaging Gateway")]
+        [Tags("Requires", new[] { "AWSSDK", "AWSCredentials" })]
         public class when_rejecting_a_message_through_gateway_without_requeue
         {
             Establish context = () =>
@@ -214,6 +222,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
             private static Message _listenedMessage;
         }
 
+        [Subject("Messaging Gateway")]
+        [Tags("Requires", new[] { "AWSSDK", "AWSCredentials" })]
         public class when_purging_the_queue
         {
             private Establish context = () =>
@@ -241,6 +251,8 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
             private static Message sentMessage;
         }
 
+        [Subject("Messaging Gateway")]
+        [Tags("Requires", new[] { "AWSSDK", "AWSCredentials" })]
         public class when_requeueing_a_message
         {
             private Establish context = () =>
