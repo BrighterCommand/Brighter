@@ -22,10 +22,24 @@ THE SOFTWARE. */
 
 #endregion
 
-public interface IAmAMessageGatewaySupportingDelay
+using System;
+using paramore.brighter.commandprocessor;
+using TinyIoC;
+
+namespace Greetings.Adapters.ServiceHost
 {
-    /// <summary>
-    /// Gets if the current provider configuration is able to support delayed delivery of messages.
-    /// </summary>
-    bool DelaySupported { get; }
+    public class TinyIoCMessageMapperFactory : IAmAMessageMapperFactory
+    {
+        private readonly TinyIoCContainer _container;
+
+        public TinyIoCMessageMapperFactory(TinyIoCContainer container)
+        {
+            _container = container;
+        }
+
+        public IAmAMessageMapper Create(Type messageMapperType)
+        {
+            return (IAmAMessageMapper)_container.Resolve(messageMapperType);
+        }
+    }
 }

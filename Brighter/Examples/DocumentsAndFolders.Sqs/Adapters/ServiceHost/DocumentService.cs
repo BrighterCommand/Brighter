@@ -23,47 +23,60 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+
+using DocumentsAndFolders.Sqs.Ports.Events;
+
+using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.CommandHandlers;
-using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
+
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 using paramore.brighter.serviceactivator;
+
 using Polly;
+
 using TinyIoC;
+
 using Topshelf;
 
-namespace Greetings.Adapters.ServiceHost
+namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
 {
-    internal class GreetingService : ServiceControl
+    internal class DocumentService : ServiceControl
     {
         private Dispatcher _dispatcher;
 
-        public GreetingService()
+        public DocumentService()
         {
             log4net.Config.XmlConfigurator.Configure();
+            
             //Create a logger
-            var logger = LogProvider.For<GreetingService>();
+            var logger = LogProvider.For<DocumentService>();
 
             var container = new TinyIoCContainer();
             container.Register<ILog>(logger);
 
             var handlerFactory = new TinyIocHandlerFactory(container);
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-            container.Register<IHandleRequests<GreetingCommand>, GreetingCommandHandler>();
+
+            container.Register<IHandleRequests<DocumentCreatedEvent>, DocumentCreatedEventHandler>();
+            container.Register<IHandleRequests<DocumentUpdatedEvent>, DocumentUpdatedEventHandler>();
+            container.Register<IHandleRequests<FolderCreatedEvent>, FolderCreatedEventHandler>();
 
             var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.Register<GreetingCommand, GreetingCommandHandler>();
+            subscriberRegistry.Register<DocumentCreatedEvent, DocumentCreatedEventHandler>();
+            subscriberRegistry.Register<DocumentUpdatedEvent, DocumentUpdatedEventHandler>();
+            subscriberRegistry.Register<FolderCreatedEvent, FolderCreatedEventHandler>();
 
             //create policies
             var retryPolicy = Policy
                 .Handle<Exception>()
                 .WaitAndRetry(new[]
                     {
-                        TimeSpan.FromMilliseconds(50),
-                        TimeSpan.FromMilliseconds(100),
-                        TimeSpan.FromMilliseconds(150)
+                        TimeSpan.FromMilliseconds(5000),
+                        TimeSpan.FromMilliseconds(10000),
+                        TimeSpan.FromMilliseconds(10000)
                     });
 
             var circuitBreakerPolicy = Policy
@@ -79,12 +92,14 @@ namespace Greetings.Adapters.ServiceHost
             //create message mappers
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
             {
-                {typeof(GreetingCommand), typeof(GreetingCommandMessageMapper)}
+                {typeof(FolderCreatedEvent), typeof(FolderCreatedEventMessageMapper)},
+                {typeof(DocumentCreatedEvent), typeof(DocumentCreatedEventMessageMapper)},
+                {typeof(DocumentUpdatedEvent), typeof(DocumentUpdatedEventMessageMapper)}
             };
+            
+            var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(logger);
+            var sqsMessageProducerFactory = new SqsMessageProducerFactory(logger);
 
-            //create the gateway
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger);
             var builder = DispatchBuilder
                 .With()
                 .Logger(logger)
@@ -97,7 +112,7 @@ namespace Greetings.Adapters.ServiceHost
                     .Build()
                  )
                  .MessageMappers(messageMapperRegistry)
-                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                 .ChannelFactory(new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory))
                  .ConnectionsFromConfiguration();
             _dispatcher = builder.Build();
         }

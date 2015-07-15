@@ -22,10 +22,34 @@ THE SOFTWARE. */
 
 #endregion
 
-public interface IAmAMessageGatewaySupportingDelay
+using System;
+using paramore.brighter.commandprocessor;
+using TinyIoC;
+
+namespace Greetings.Adapters.ServiceHost
 {
-    /// <summary>
-    /// Gets if the current provider configuration is able to support delayed delivery of messages.
-    /// </summary>
-    bool DelaySupported { get; }
+    public class TinyIocHandlerFactory : IAmAHandlerFactory
+    {
+        private readonly TinyIoCContainer _container;
+
+        public TinyIocHandlerFactory(TinyIoCContainer container)
+        {
+            _container = container;
+        }
+
+        public IHandleRequests Create(Type handlerType)
+        {
+            return (IHandleRequests)_container.Resolve(handlerType);
+        }
+
+        public void Release(IHandleRequests handler)
+        {
+            var disposable = handler as IDisposable;
+            if (disposable != null)
+            {
+                disposable.Dispose();
+            }
+            handler = null;
+        }
+    }
 }

@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,10 +22,26 @@ THE SOFTWARE. */
 
 #endregion
 
-public interface IAmAMessageGatewaySupportingDelay
+using System;
+
+using paramore.brighter.commandprocessor;
+
+namespace DocumentsAndFolders.Sqs.Ports.Events
 {
-    /// <summary>
-    /// Gets if the current provider configuration is able to support delayed delivery of messages.
-    /// </summary>
-    bool DelaySupported { get; }
+    public class DocumentCreatedEvent : Event
+    {
+        public DocumentCreatedEvent(Guid id, int documentId, string title, int folderId)
+            : base(id)
+        {
+            DocumentId = documentId;
+            Title = title;
+            FolderId = folderId;
+        }
+
+        public int DocumentId { get; set; }
+
+        public string Title { get; set; }
+
+        public int FolderId { get; set; }
+    }
 }
