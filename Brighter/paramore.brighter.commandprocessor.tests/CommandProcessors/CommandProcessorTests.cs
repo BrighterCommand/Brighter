@@ -105,7 +105,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
 
         private It _should_fail_because_multiple_receivers_found = () => s_exception.ShouldBeAssignableTo(typeof(ArgumentException));
-        private It _should_have_an_error_message_that_tells_you_why = () => s_exception.ShouldContainErrorMessage("No command handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should have only one handler.");
+        private It _should_have_an_error_message_that_tells_you_why = () => s_exception.ShouldContainErrorMessage("No command handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should have exactly one handler.");
     }
 
     [Subject("Basic event publishing")]
