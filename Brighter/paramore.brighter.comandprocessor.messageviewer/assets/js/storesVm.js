@@ -75,9 +75,9 @@ var storesVm = function () {
         $("#storeList").html(content);
 
         var listItems = "";
-        for (var i = 0; i < model.Stores.length; i++) {
-            listItems += "<option value='" + model.Stores[i].Name + "'>"
-                + model.Stores[i].Name + "</option>";
+        for (var i = 0; i < model.stores.length; i++) {
+            listItems += "<option value='" + model.stores[i].name + "'>"
+                + model.stores[i].name + "</option>";
         };
         $('#storeList').on('hidden.bs.collapse', function(e) {
             //var storeId = e.target.id;

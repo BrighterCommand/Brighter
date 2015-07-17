@@ -41,31 +41,31 @@ THE SOFTWARE. */
     <meta charset="utf-8" />
     <title>paramore Brighter Message Viewer</title>
     <script id="storeTemplate" type="text/template">
-        {{#Stores}}
+        {{#stores}}
         <div class="panel panel-default">
-            <a href="#store{{Name}}" data-parent="#storeList" data-toggle="collapse" class="accordion-toggle collapsed">
+            <a href="#store{{name}}" data-parent="#storeList" data-toggle="collapse" class="accordion-toggle collapsed">
                 <div class="panel-heading">
                     <h4 class="panel-title">
-                        <span class="circle">{{Name}}</span>
-                        <span id="storeStatus{{Name}}" class="pull-right label label-default">Ok</span>
+                        <span class="circle">{{name}}</span>
+                        <span id="storeStatus{{name}}" class="pull-right label label-default">Ok</span>
                     </h4>
                 </div>
             </a>
-            <div class="panel-collapse collapse" id="store{{Name}}">
+            <div class="panel-collapse collapse" id="store{{name}}">
                 <div class="panel-body">
                     <table class="table">
                         <thead>
                             <tr><td>Type</td><td>Full TypeName</td><td></td></tr>
                         </thead>
                         <tbody>
-                            <tr><td>{{StoreType}}</td><td>{{TypeName}}</td><td>{{TableName}}</td></tr>
-                            <tr colspan="3"><td>{{ConnectionString}}</td></tr>
+                            <tr><td>{{storeType}}</td><td>{{typeName}}</td><td>{{tableName}}</td></tr>
+                            <tr colspan="3"><td>{{connectionString}}</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-        {{/Stores}}
+        {{/stores}}
     </script>
     <script id="messageTemplate" type="text/template">
         <table class="table table-bordered table-striped table-condensed"
@@ -82,17 +82,17 @@ THE SOFTWARE. */
                 </tr>
             </thead>
             <tbody>
-                {{#Messages}}
+                {{#messages}}
                 <tr>
-                    <td>{{MessageId}}</td>
-                    <td>{{MessageType}}</td>
-                    <td>{{Topic}}</td>
-                    <td>{{Bag}}</td>
-                    <td>{{MessageBody}}</td>
-                    <td>{{HandledCount}}</td>
-                    <td><span title="{{TimeStamp}}">{{TimeStampUI}}</span></td>
+                    <td>{{messageId}}</td>
+                    <td>{{messageType}}</td>
+                    <td>{{topic}}</td>
+                    <td>{{bag}}</td>
+                    <td>{{messageBody}}</td>
+                    <td>{{handledCount}}</td>
+                    <td><span title="{{timeStamp}}">{{timeStampUI}}</span></td>
                 </tr>
-                {{/Messages}}
+                {{/messages}}
             </tbody>
         </table>
     </script>
@@ -144,7 +144,7 @@ THE SOFTWARE. */
 
         <link href="/Content/bootstrap-theme.css" rel="stylesheet" type='text/css' />
         <link href="/Content/bootstrap.css" rel="stylesheet" type='text/css' />
-        <script src="/Scripts/jquery-2.1.3.js" type="text/javascript"> </script>
+        <script src="/Scripts/jquery-2.1.4.min.js" type="text/javascript"> </script>
         <link rel="icon" type="image/vnd.microsoft.icon" href="/favicon.ico" />
         <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
         <script src="/scripts/bootstrap.min.js"></script>
