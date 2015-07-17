@@ -81,7 +81,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         };
     }
 
-    [Subject("Messaging Gateway")]
+    [Subject("Messaging Gateway Delayed")]
     [Tags("Requires", new[] { "RabbitMQ", "RabbitMQProducerReceiver", "RabbitMQDelayed" })]
     //[Ignore("This only works if RabbitMQ 3.5 w/plugin rabbitmq_delayed_message_exchange")]
     public class When_reading_a_delayed_message_via_the_messaging_gateway
