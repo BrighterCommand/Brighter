@@ -49,6 +49,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
     [Subject(typeof(MessageStoreActivationStateListViewModelRetriever))]
     public class MessageStoreActivationStateListViewModelRetrieverTests
     {
+        [Tags("Requires", new[] { "MsSql" })]
         public class When_retrieving_json_for_valid_list
         {
             private Establish _context = () =>
@@ -58,7 +59,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
                     MessageStoreActivationStateFactory.Create("sqlce", typeof(MsSqlMessageStore).FullName, "DataSource='test.sdf';", "table2"),
                     MessageStoreActivationStateFactory.Create("sql2008", typeof(MsSqlMessageStore).FullName, "Server=.;Database=aMessageStore;Trusted_Connection=True", "table1"),
                 };
-                var fakeStoreListProvider = new FakeMessageStoreActivationStateProvider(_ravenMessageStores.Union(_sqlMessageStores));
+                var fakeStoreListProvider = new FakeMessageStoreActivationStateProvider(_sqlMessageStores);
 
                 _messageStoreActivationStateListViewModelRetriever = new MessageStoreActivationStateListViewModelRetriever(fakeStoreListProvider);
             };
@@ -74,13 +75,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             {
                 var model = _result.Result;
                 AssertStoreItems(model, _sqlMessageStores);
-            };
-
-            private It should_return_RavenStores_in_ListModel = () =>
-            {
-                var model = _result.Result;
-                model.ShouldNotBeNull();
-                AssertStoreItems(model, _ravenMessageStores);
             };
 
             private static void AssertStoreItems(MessageStoreActivationStateListModel model, IEnumerable<MessageStoreActivationState> messageStoreListItems)
