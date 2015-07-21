@@ -1,10 +1,10 @@
 """
-File         : __main__.py
+File         : __init__.py
 Author           : ian
-Created          : 02-16-2015
+Created          : 06-20-2015
 
 Last Modified By : ian
-Last Modified On : 02-16-2015
+Last Modified On : 06-20-2015
 ***********************************************************************
 The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -27,33 +27,4 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
-
-Usage:
-  brightermgmnt.py stop <machineName> <serviceName>
-  brightermgmnt.py start <machineName> <serviceName>
-  brightermgmnt.py -h
-
-Options:
-  -h --help     Show this screen.
 """
-from .messaging import build_message
-from docopt import docopt
-from .controlbus import send
-from .configuration import configure
-
-
-def run(amqp_uri, exchange, cmdlne_arguments):
-    routing_key = cmdlne_arguments['<machineName>'] + "." + cmdlne_arguments['<serviceName>'] + "." + "configuration"
-    send(amqp_uri, exchange, build_message("stop"), routing_key)
-
-if __name__ == '__main__':
-    arguments = docopt(__doc__, version='Brighter Management v0.0')
-    exchange, amqp_uri = configure()
-    run(amqp_uri, exchange, arguments)
-
-
-
-
-
-
-
