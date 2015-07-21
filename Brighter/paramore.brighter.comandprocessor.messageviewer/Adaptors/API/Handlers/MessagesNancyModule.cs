@@ -48,7 +48,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
         public MessagesNancyModule(IMessageListViewModelRetriever messageListViewModelRetriever)
             : base("/messages")
         {
-            Get["/{storeName}/{pageNumber}"] = parameters =>
+            Get["/{storeName}/{pageNumber?1}"] = parameters =>
             {
                 var logger = LogProvider.GetLogger("MessagesNancyModule");
                 logger.Log(LogLevel.Debug, () => "GET on messages");

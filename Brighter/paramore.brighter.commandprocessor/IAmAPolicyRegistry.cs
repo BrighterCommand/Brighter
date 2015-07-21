@@ -61,5 +61,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="policyName">Name of the policy.</param>
         /// <returns>Policy.</returns>
         Policy Get(string policyName);
+        bool Has(string policyName);
     }
 }
