@@ -32,22 +32,46 @@ Usage:
   brightmntr.py [options]
 
 Options:
-  -b --batch    Don't accept command-line input; intended to send output to a file (or command).
-  -d --delay    Specific delay between refreshes (otherwise 50ms).
-  -n --num      Update display n times, then exit.
-  -s --service
+  -b --batch                            Don't accept command-line input; intended to send output to a file (or command).
+  -d SECONDS --delay=SECONDS            Specific delay between refreshes (otherwise 5 seconds).
+  -n TIMES --updates=TIMES              Update display n times, then exit.
+  -p PAGESIZE --pagesize=PAGESIZE       Try to show this number of items from the queue, when the interval is triggered
+  -s SERVICENAME --service=SERVICENAME  Filter output to this serviceName only
+  _m MACHINENAME --machine=MACHINENAME  Filter output to this machine only
   -h --help     Show this screen.
 
 
-Interactive Commands
-
 """
 
-from docopt import docopt
+import sys
 
+from docopt import docopt
+from time import sleep
+from threading import Thread
+
+
+def read_monitoring_messages():
+    # read the next batch number of monitoring messages from the control bus
+    # evaluate for color coding (error is red)
+    # print to stdout
+    for x in range(1, 100):
+        print(x, flush=True, end=" Monitoring message\n")
+        sleep(5)
 
 def run(cmdlne_arguments):
-    pass
+    # start a monitor output thread, this does the work, whilst the main thread just acts as a control
+    worker = Thread(target=read_monitoring_messages)
+    worker.daemon = True
+    worker.start()
+
+    # may need to demonize as the q ends up interrupting the messages
+    while True:
+        try:
+            # just sleep unless we receive an interrupt i.e. CTRL+C
+            sleep(1)
+        except KeyboardInterrupt:
+            sys.exit(1)
+
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='Brighter Management v0.0')

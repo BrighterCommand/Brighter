@@ -1,5 +1,5 @@
 Brighter Management Console
-=======================
+===========================
 This package is intended to support administering services built using Brighter.ServiceActivator. The goal is to allow you to start and stop consuming
 all the configured channels, and to start and stop individual channels, or even dynamically add new channels at run time. 
 
