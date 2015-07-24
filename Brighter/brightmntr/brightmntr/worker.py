@@ -1,10 +1,10 @@
 """
-File         : __init__.py
+File         : worker.py
 Author           : ian
 Created          : 06-20-2015
 
 Last Modified By : ian
-Last Modified On : 06-20-2015
+Last Modified On : 07-24-2015
 ***********************************************************************
 The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -27,43 +27,32 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
-
-Usage:
-  brightmntr.py [options]
-
-Options:
-  -b --batch                            Don't accept command-line input; intended to send output to a file (or command).
-  -d SECONDS --delay=SECONDS            Specific delay between refreshes (otherwise 5 seconds).
-  -n TIMES --updates=TIMES              Update display n times, then exit.
-  -p PAGESIZE --pagesize=PAGESIZE       Try to show this number of items from the queue, when the interval is triggered
-  -s SERVICENAME --service=SERVICENAME  Filter output to this serviceName only
-  _m MACHINENAME --machine=MACHINENAME  Filter output to this machine only
-  -h --help     Show this screen.
-
-
 """
 
-import sys
-from brightmntr.worker import Worker
-from docopt import docopt
-from time import sleep
+from threading import Thread
+from kombu import BrokerConnection, Queue
+from kombu.pools import producers
 
 
-def run(cmdlne_arguments):
-    # start a monitor output thread, this does the work, whilst the main thread just acts as a control
-    worker = Worker()
-    worker.run()
+class Worker(Thread):
 
-    # poll for keyboard input to allow the user to quit monitoring
-    while True:
-        try:
-            # just sleep unless we receive an interrupt i.e. CTRL+C
-            sleep(1)
-        except KeyboardInterrupt:
-            sys.exit(1)
+    def __init__(self, exchange, amqp_uri):
+        self.exchange = exchange, self.amqp_uri = amqp_uri
 
+    @staticmethod
+    def _read_monitoring_messages(self):
 
-if __name__ == '__main__':
-    arguments = docopt(__doc__, version='Brighter Management v0.0')
-    run(arguments)
+        # read the next batch num0ber of monitoring messages from the control bus
+        # evaluate for color coding (error is red)
+        # print to stdout
 
+        monitoring_queue = Queue('paramore.brighter.controlbus', exchange=exchange, routing_key=routing_key)
+
+        connection = BrokerConnection(hostname=destination)
+
+        with producers[connection].acquire(block=True) as producer:
+            print("Send message to broker {amqpuri} with routing key {routing_key}".format(amqpuri=destination, routing_key=routing_key))
+
+    def run(self):
+        self._read_monitoring_messages(self)
+        return
