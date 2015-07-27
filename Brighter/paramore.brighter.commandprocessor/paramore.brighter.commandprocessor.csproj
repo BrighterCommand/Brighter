@@ -79,6 +79,7 @@
     <Compile Include="InMemoryCommandStore.cs" />
     <Compile Include="monitoring\Configuration\MonitoringConfigurationSection.cs" />
     <Compile Include="monitoring\Decorators\ControlBusSender.cs" />
+    <Compile Include="monitoring\Mappers\MonitorEventMessageMapper.cs" />
     <Compile Include="OutputChannel.cs" />
     <Compile Include="InputChannel.cs" />
     <Compile Include="LifetimeScope.cs" />

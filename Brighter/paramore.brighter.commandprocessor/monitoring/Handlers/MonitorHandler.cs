@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Events;
 
@@ -65,11 +66,11 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         {
             if (_isMonitoringEnabled)
             {
-                _controlBusSender.Post(new MonitorEvent(_instanceName, MonitorEventType.EnterHandler, _handlerName, command, Clock.Now().GetValueOrDefault()));
+                _controlBusSender.Post(new MonitorEvent(_instanceName, MonitorEventType.EnterHandler, _handlerName, JsonConvert.SerializeObject(command), Clock.Now().GetValueOrDefault()));
 
                 base.Handle(command);
 
-                _controlBusSender.Post(new MonitorEvent(_instanceName, MonitorEventType.ExitHandler, _handlerName, command, Clock.Now().GetValueOrDefault()));
+                _controlBusSender.Post(new MonitorEvent(_instanceName, MonitorEventType.ExitHandler, _handlerName, JsonConvert.SerializeObject(command), Clock.Now().GetValueOrDefault()));
 
                 return command;
             }
