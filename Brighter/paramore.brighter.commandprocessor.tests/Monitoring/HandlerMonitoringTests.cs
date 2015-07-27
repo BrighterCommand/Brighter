@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using FakeItEasy;
 using Machine.Specifications;
+using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Events;
@@ -45,6 +46,7 @@ namespace paramore.commandprocessor.tests.Monitoring
         private static DateTime s_at;
         private static MonitorEvent beforeEvent;
         private static MonitorEvent afterEvent;
+        private static string s_originalRequestAsJson;
 
         private Establish _context = () =>
         {
@@ -64,6 +66,8 @@ namespace paramore.commandprocessor.tests.Monitoring
 
             s_command = new MyCommand();
 
+            s_originalRequestAsJson = JsonConvert.SerializeObject(s_command);
+
             s_at = DateTime.UtcNow;
             Clock.OverrideTime = s_at;
         };
@@ -78,17 +82,18 @@ namespace paramore.commandprocessor.tests.Monitoring
         private It _should_have_an_instance_name_before = () => beforeEvent.InstanceName.ShouldEqual("UnitTests"); //set in the config
         private It _should_post_the_event_type_to_the_control_bus_before = () => beforeEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
         private It _should_post_the_handler_name_to_the_control_bus_before = () => beforeEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
-        private It _should_include_the_underlying_request_details_before = () => beforeEvent.TargetHandlerRequest.ShouldNotBeNull();
+        private It _should_include_the_underlying_request_details_before = () => beforeEvent.TargetHandlerRequestJson.ShouldEqual(s_originalRequestAsJson);
         private It should_post_the_time_of_the_request_before = () => beforeEvent.EventTime.ShouldEqual(s_at);
         private It _should_have_an_instance_name_after = () => afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
         private It _should_post_the_event_type_to_the_control_bus_after= () => afterEvent.EventType.ShouldEqual(MonitorEventType.ExitHandler);
         private It _should_post_the_handler_name_to_the_control_bus_after = () => afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
-        private It _should_include_the_underlying_request_details_after = () => afterEvent.TargetHandlerRequest.ShouldNotBeNull();
+        private It _should_include_the_underlying_request_details_after = () => afterEvent.TargetHandlerRequestJson.ShouldEqual(s_originalRequestAsJson);
         private It should_post_the_time_of_the_request_after = () => afterEvent.EventTime.ShouldEqual(s_at);
 
         Cleanup _tearDown = () =>
         {
             Clock.Clear();
         };
+
     }
 }
