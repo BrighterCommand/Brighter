@@ -36,8 +36,11 @@ from kombu.pools import producers
 
 class Worker(Thread):
 
-    def __init__(self, exchange, amqp_uri):
-        self.exchange = exchange, self.amqp_uri = amqp_uri
+    def __init__(self, amqp_uri, exchange, routing_key):
+        self.exchange = exchange
+        self.routing_key = routing_key
+        self.amqp_uri = amqp_uri
+        self.monitoring_queue = Queue('paramore.brighter.controlbus', exchange=self.exchange, routing_key=self.routing_key)
 
     @staticmethod
     def _read_monitoring_messages(self):
@@ -46,13 +49,12 @@ class Worker(Thread):
         # evaluate for color coding (error is red)
         # print to stdout
 
-        monitoring_queue = Queue('paramore.brighter.controlbus', exchange=exchange, routing_key=routing_key)
 
         connection = BrokerConnection(hostname=destination)
 
         with producers[connection].acquire(block=True) as producer:
-            print("Send message to broker {amqpuri} with routing key {routing_key}".format(amqpuri=destination, routing_key=routing_key))
+            print("Send message to broker {amqpuri} with routing key {routing_key}".format(amqpuri=self.amqp_uri, routing_key=self.routing_key))
 
     def run(self):
-        self._read_monitoring_messages(self)
+        self._read_monitoring_messages()
         return
