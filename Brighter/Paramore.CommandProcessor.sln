@@ -52,6 +52,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentsAndFolders.Sqs", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentsAndFolders.Sqs.EventsGenerator", "Examples\DocumentsAndFolders.Sqs.EventsGenerator\DocumentsAndFolders.Sqs.EventsGenerator.csproj", "{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventSourcing", "Examples\EventSourcing\EventSourcing.csproj", "{EF185CD6-C3A6-452F-8143-CD35F93AEB22}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -262,6 +264,16 @@ Global
 		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Release|x86.ActiveCfg = Release|Any CPU
+		{EF185CD6-C3A6-452F-8143-CD35F93AEB22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF185CD6-C3A6-452F-8143-CD35F93AEB22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF185CD6-C3A6-452F-8143-CD35F93AEB22}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{EF185CD6-C3A6-452F-8143-CD35F93AEB22}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{EF185CD6-C3A6-452F-8143-CD35F93AEB22}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EF185CD6-C3A6-452F-8143-CD35F93AEB22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF185CD6-C3A6-452F-8143-CD35F93AEB22}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EF185CD6-C3A6-452F-8143-CD35F93AEB22}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{EF185CD6-C3A6-452F-8143-CD35F93AEB22}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{EF185CD6-C3A6-452F-8143-CD35F93AEB22}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -277,5 +289,6 @@ Global
 		{CC48B432-25E3-4497-B468-7719E2CF86E4} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{B75121F4-0181-4A8F-AE25-529D64B1F694} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
+		{EF185CD6-C3A6-452F-8143-CD35F93AEB22} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 	EndGlobalSection
 EndGlobal
