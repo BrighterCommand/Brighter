@@ -88,7 +88,6 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
             };
             Post["/{storeName}/repost/{msgList}"] = parameters =>
             {
-                var repostModel = this.Bind<RepostView>();
                 var handler = handlerFactory.GetHandler<RepostCommand>();
                 string ids = parameters.msgList;
                 var repostModelIds = ids.Split(',');
