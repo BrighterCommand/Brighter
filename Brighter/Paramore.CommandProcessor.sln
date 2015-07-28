@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
 EndProject
@@ -30,8 +30,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorld", "Examples\Hell
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.messagestore.mssql", "paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj", "{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.messaginggateway.restms", "paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj", "{C8BC2471-9D5C-4E94-81C8-036506F4EC34}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "Examples\Greetings\Greetings.csproj", "{A58FD535-81C2-4E96-87FC-DDC034E56EEE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskListUI", "Examples\TaskListUI\TaskListUI.csproj", "{23519DAF-76E5-4243-B231-5550F87698E8}"
@@ -43,14 +41,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.messageviewer", "paramore.brighter.comandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.csproj", "{C64FE82E-8512-422A-8832-7821EF448F2C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.commandstore.mssql", "paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj", "{DE5BA1BC-CF70-4465-9A23-7A28604A5949}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.messagestore.eventstore", "paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj", "{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "paramore.brighter.commandprocessor.messaginggateway.awssqs", "paramore.brighter.commandprocessor.messaginggateway.awssqs\paramore.brighter.commandprocessor.messaginggateway.awssqs.csproj", "{BD921F35-47C9-41BA-B1BC-AE9698869977}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentsAndFolders.Sqs", "Examples\DocumentsAndFolders.Sqs\DocumentsAndFolders.Sqs.csproj", "{B75121F4-0181-4A8F-AE25-529D64B1F694}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocumentsAndFolders.Sqs.EventsGenerator", "Examples\DocumentsAndFolders.Sqs.EventsGenerator\DocumentsAndFolders.Sqs.EventsGenerator.csproj", "{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -152,16 +142,6 @@ Global
 		{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}.Release|x86.ActiveCfg = Release|Any CPU
-		{C8BC2471-9D5C-4E94-81C8-036506F4EC34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C8BC2471-9D5C-4E94-81C8-036506F4EC34}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C8BC2471-9D5C-4E94-81C8-036506F4EC34}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{C8BC2471-9D5C-4E94-81C8-036506F4EC34}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{C8BC2471-9D5C-4E94-81C8-036506F4EC34}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{C8BC2471-9D5C-4E94-81C8-036506F4EC34}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C8BC2471-9D5C-4E94-81C8-036506F4EC34}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C8BC2471-9D5C-4E94-81C8-036506F4EC34}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{C8BC2471-9D5C-4E94-81C8-036506F4EC34}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{C8BC2471-9D5C-4E94-81C8-036506F4EC34}.Release|x86.ActiveCfg = Release|Any CPU
 		{A58FD535-81C2-4E96-87FC-DDC034E56EEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A58FD535-81C2-4E96-87FC-DDC034E56EEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A58FD535-81C2-4E96-87FC-DDC034E56EEE}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -222,46 +202,6 @@ Global
 		{DE5BA1BC-CF70-4465-9A23-7A28604A5949}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{DE5BA1BC-CF70-4465-9A23-7A28604A5949}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{DE5BA1BC-CF70-4465-9A23-7A28604A5949}.Release|x86.ActiveCfg = Release|Any CPU
-		{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{9FE83675-E4BD-42EA-AEA5-70F6BA0EB8FE}.Release|x86.ActiveCfg = Release|Any CPU
-		{BD921F35-47C9-41BA-B1BC-AE9698869977}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BD921F35-47C9-41BA-B1BC-AE9698869977}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BD921F35-47C9-41BA-B1BC-AE9698869977}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{BD921F35-47C9-41BA-B1BC-AE9698869977}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{BD921F35-47C9-41BA-B1BC-AE9698869977}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{BD921F35-47C9-41BA-B1BC-AE9698869977}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BD921F35-47C9-41BA-B1BC-AE9698869977}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BD921F35-47C9-41BA-B1BC-AE9698869977}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{BD921F35-47C9-41BA-B1BC-AE9698869977}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{BD921F35-47C9-41BA-B1BC-AE9698869977}.Release|x86.ActiveCfg = Release|Any CPU
-		{B75121F4-0181-4A8F-AE25-529D64B1F694}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B75121F4-0181-4A8F-AE25-529D64B1F694}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B75121F4-0181-4A8F-AE25-529D64B1F694}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{B75121F4-0181-4A8F-AE25-529D64B1F694}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{B75121F4-0181-4A8F-AE25-529D64B1F694}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{B75121F4-0181-4A8F-AE25-529D64B1F694}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B75121F4-0181-4A8F-AE25-529D64B1F694}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B75121F4-0181-4A8F-AE25-529D64B1F694}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{B75121F4-0181-4A8F-AE25-529D64B1F694}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{B75121F4-0181-4A8F-AE25-529D64B1F694}.Release|x86.ActiveCfg = Release|Any CPU
-		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -275,7 +215,5 @@ Global
 		{A58FD535-81C2-4E96-87FC-DDC034E56EEE} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{23519DAF-76E5-4243-B231-5550F87698E8} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{CC48B432-25E3-4497-B468-7719E2CF86E4} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
-		{B75121F4-0181-4A8F-AE25-529D64B1F694} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
-		{CCB66D33-E9EF-45AC-8F2E-7ABDC2D03C7C} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 	EndGlobalSection
 EndGlobal
