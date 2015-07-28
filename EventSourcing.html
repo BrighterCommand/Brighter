@@ -29,7 +29,7 @@
     </header>
     <section>
         <h1>Brighter</h1>
-        <h2>Event(Command) Sourcing</h2>
+        <h2>Event Sourcing</h2>
         <p>If we dispatch commands to a target handler, and have a pipeline which acts as a preprocessor one obvious orthogonal operation is to log our commands so that we can understand
          the commands that result in current system state. We can examine the logs, particularly if there is a problem, to understand what commands were sent to the application to create the current state.</p>
         <p>We can also infer that if the current application state is a function of those commands, then we could potentially recreate the same application state by replaying those commands.</p>
@@ -44,13 +44,83 @@
         your changes to the domain through a command dispatcher such as Brighter you can meet the requirements for Event Sourcing by persisting your commands in a way that facilitates querying
         or replay. As Brighter has a pipeline through it's command processor it is natural to simply add an attribute to the target handler that persists the command before it is applied to
         domain model. This is essentially a write-ahead log.</p>
-        <p>Martin lists some issues to consider: new features, defect fixes, and temporal logic. A particular issue is external gateways. Brighter can provide support for preventing messages flowing
-        via Task Queues during reprocessing if required but you have to manage other gateways yourself.</p>
+        <p>Martin lists some issues to consider: new features, defect fixes, and temporal logic. A particular issue is external gateways.</p>
         <h2>Command or Event Sourcing</h2>
         <p>One complaint about Martin's article is that a Command is the intent to change the system, but an event is the result of that change. Because this model records the change to state many
         people prefer to refer to this approach as Command Sourcing and reserve Event Sourcing for <a href="https://cqrs.wordpress.com/documents/events-as-storage-mechanism/">Greg Young's
         related idea</a> of storing the results of those commands, the changes that would be made to application state, so that those changes can be replayed instead of the commands,
-        that could have side affects. We don't explicity provide help for that approach.</p>
+        that could have side affects. We don't explicitly provide help for that approach.</p>
+        <p>For clarity we will use the term Command Sourcing for Brighter's support for Martin Fowler's description of  <a href="http://martinfowler.com/eaaDev/EventSourcing.html">Event Sourcing</a> </p>
+        <h2>Command Sourcing in Brighter</h2>
+        <p>The <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples/EventSourcing">EventSourcing</a> example in Brighter shows a version of the simple
+            <a href="HelloWorldExample.html">HelloWorld</a> application that shows how to use Command Sourcing.</p>
+        <p>Brighter supports Command Sourcing through the use of its <strong>UseCommandSourcingAttribute</strong>. By adding the attribute to a handler you gain support for logging that <strong>Command</strong> to a
+        <strong>Command Store</strong> A Command Store needs to implement <strong>IAmACommandStore</strong> and we provide an
+            <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/paramore.brighter.commandprocessor.commandstore.mssql">MSSQL Command Store</a> implementation. You can choose to persist the Command to
+        the Store before or after the handler. We recommend Before as this gives you the assurance that if writing the Command to the Store fails, the Handler will not run, meaning that your Store reflects your
+        application state.</p>
+        <p>The following code shows a handler marked up for Command Sourcing</p>
+ <pre><code>
+ internal class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
+ {
+    public GreetingCommandHandler(ILog logger) : base(logger) { }
+
+    [UseCommandSourcing(step: 1, timing: HandlerTiming.Before)]
+    public override GreetingCommand Handle(GreetingCommand command)
+    {
+        Console.WriteLine(&quot;Hello {0}&quot;, command.Name);
+        return base.Handle(command);
+    }
+ }
+ </code></pre>
+        <p>Inerrnally the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/monitoring/Handlers/MonitorHandler.cs">Monitor Handler</a> that Brighter
+            uses to write to the Command Store takes a reference to an <strong>IAmACommandStore</strong>, so you also need to configure your application to provide an implementation at runtime when you
+        provide instances of the Handler from your Handler Factory implementation. The example code relies on the TinyIoC Inversion of Control container to hookup the Handler and Command Store.</p>
+<pre><code>
+private static void Main(string[] args)
+{
+    var logger = LogProvider.For&lt;Program&gt;();
+
+    var dbPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), &quot;App_Data\\CommandStore.sdf&quot;);
+    var connectionString = &quot;DataSource=\&quot;&quot; + dbPath + &quot;\&quot;&quot;;
+    var configuration = new MsSqlCommandStoreConfiguration(connectionString, &quot;Commands&quot;, MsSqlCommandStoreConfiguration.DatabaseType.SqlCe);
+    var commandStore = new MsSqlCommandStore(configuration, logger);
+
+    var registry = new SubscriberRegistry();
+    registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
+
+    var tinyIoCContainer = new TinyIoCContainer();
+    tinyIoCContainer.Register&lt;IHandleRequests&lt;GreetingCommand&gt;, GreetingCommandHandler&gt;();
+    tinyIoCContainer.Register&lt;IAmACommandStore&gt;(commandStore);
+    tinyIoCContainer.Register&lt;ILog&gt;(logger);
+
+    var builder = CommandProcessorBuilder.With()
+        .Handlers(new HandlerConfiguration(
+            subscriberRegistry: registry,
+            handlerFactory: new TinyIocHandlerFactory(tinyIoCContainer)
+        ))
+        .DefaultPolicy()
+        .Logger(logger)
+        .NoTaskQueues()
+        .RequestContextFactory(new InMemoryRequestContextFactory());
+
+        var commandProcessor = builder.Build();
+
+        var greetingCommand = new GreetingCommand(&quot;Ian&quot;);
+
+        commandProcessor.Send(greetingCommand);
+
+        var retrievedCommand = commandStore.Get&lt;GreetingCommand&gt;(greetingCommand.Id).Result;
+
+        var commandAsJson = JsonConvert.SerializeObject(retrievedCommand);
+
+        Console.WriteLine(string.Format(&quot;Command retrieved from store: {0}&quot;, commandAsJson));
+
+        Console.ReadLine();
+}
+</code></pre>
+        <p>The example code also shows retrieving the command from the store, using the <strong>IAmACommandStore.Get</strong> method, passing in the Id of the Command.</p>
+        <p>The retrieved command could be replayed, although in this case we simply log it to the console. </p>
     </section>
     <footer>
         <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
