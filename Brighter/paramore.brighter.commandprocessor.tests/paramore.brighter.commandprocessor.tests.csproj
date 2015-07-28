@@ -183,13 +183,8 @@
     <Compile Include="MessageDispatch\TestDoubles\FailingEventMessageMapper.cs" />
     <Compile Include="MessageDispatch\TestDoubles\MyEventMessageMapper.cs" />
     <Compile Include="MessageDispatch\TestDoubles\SpyCommandProcessor.cs" />
-    <Compile Include="MessageStore\EventStore\EventStoreMessageStoreTests.cs" />
     <Compile Include="MessageStore\MsSql\SqlMessageStoreTests.cs" />
-    <Compile Include="MessagingGateway\awssqs\AWSSQSMessagingGatewayTests.cs" />
-    <Compile Include="MessagingGateway\awssqs\TestAWSQueueListener.cs" />
     <Compile Include="MessagingGateway\MessageChannelTests.cs" />
-    <Compile Include="MessagingGateway\restms\RestMSMessagingGatewayTests.cs" />
-    <Compile Include="MessagingGateway\restms\RestMSParserTests.cs" />
     <Compile Include="MessagingGateway\rmq\RMQMessagingGatewayTests.cs" />
     <Compile Include="MessagingGateway\TestDoubles\BrokerUnreachableRmqMessageConsumer.cs" />
     <Compile Include="Monitoring\HandlerMonitoringTests.cs" />
@@ -207,21 +202,9 @@
       <Project>{de5ba1bc-cf70-4465-9a23-7a28604a5949}</Project>
       <Name>paramore.brighter.commandprocessor.commandstore.mssql</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.csproj">
-      <Project>{9fe83675-e4bd-42ea-aea5-70f6ba0eb8fe}</Project>
-      <Name>paramore.brighter.commandprocessor.messagestore.eventstore</Name>
-    </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
       <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.awssqs\paramore.brighter.commandprocessor.messaginggateway.awssqs.csproj">
-      <Project>{bd921f35-47c9-41ba-b1bc-ae9698869977}</Project>
-      <Name>paramore.brighter.commandprocessor.messaginggateway.awssqs</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.restms\paramore.brighter.commandprocessor.messaginggateway.restms.csproj">
-      <Project>{c8bc2471-9d5c-4e94-81c8-036506f4ec34}</Project>
-      <Name>paramore.brighter.commandprocessor.messaginggateway.restms</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
       <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>
