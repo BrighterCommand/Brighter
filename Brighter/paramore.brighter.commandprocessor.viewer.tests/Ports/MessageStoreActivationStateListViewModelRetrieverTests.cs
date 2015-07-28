@@ -92,7 +92,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
             private static List<MessageStoreActivationState> _sqlMessageStores;
             private static MessageStoreActivationStateListViewModelRetriever _messageStoreActivationStateListViewModelRetriever;
-            private static List<MessageStoreActivationState> _ravenMessageStores;
             private static ViewModelRetrieverResult<MessageStoreActivationStateListModel, MessageStoreActivationStateListModelError> _result;
         }
 

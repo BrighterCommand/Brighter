@@ -99,8 +99,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
         }
 
         private byte[] _favicon;
-        private readonly DependencyResolver _dependencyResolver;
-
+        
         protected override byte[] FavIcon
         {
             get { return _favicon ?? (_favicon = LoadFavIcon()); }

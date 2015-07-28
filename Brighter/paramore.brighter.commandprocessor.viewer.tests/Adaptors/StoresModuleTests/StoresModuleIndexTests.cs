@@ -92,7 +92,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
 
             private static Browser _browser;
             protected static BrowserResponse _result;
-            private static List<Message> _messages;
         }
         
         public class When_retrieving_messages_with_store_when_config_unavailable

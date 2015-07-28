@@ -182,7 +182,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
                 _result.Error.ShouldEqual(MessageListModelError.StoreNotFound);
             };
 
-            private static IMessageStoreViewerFactory _viewerFactory;
             private static MessageListViewModelRetriever _messageListViewModelRetriever;
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
         }
@@ -209,7 +208,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
 
             private static MessageListViewModelRetriever _messageListViewModelRetriever;
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
-            private static IMessageStoreViewerFactory _viewerFactory;
         }
 
         public class When_fitlering_messages_with_store_that_cannot_get
@@ -236,7 +234,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
                 _result.Exception.ShouldBeOfExactType<AggregateException>();
             };
 
-            private static IMessageStoreViewerFactory _viewerFactory;
             private static MessageListViewModelRetriever _messageListViewModelRetriever;
         }
     }
