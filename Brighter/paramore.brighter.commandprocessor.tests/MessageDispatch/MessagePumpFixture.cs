@@ -28,7 +28,6 @@ using System.Threading.Tasks;
 using Machine.Specifications;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.TestHelpers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
