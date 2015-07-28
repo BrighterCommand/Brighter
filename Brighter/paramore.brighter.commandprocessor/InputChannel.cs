@@ -37,6 +37,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
@@ -126,7 +127,7 @@ namespace paramore.brighter.commandprocessor
         public void Requeue(Message message, int delayMilliseconds = 0)
         {
             if (delayMilliseconds > 0 && !_messageConsumerSupportsDelay)
-                Task.Delay(delayMilliseconds).Wait();
+                Thread.Sleep(delayMilliseconds);
 
             if (_messageConsumerSupportsDelay)
                 (_messageConsumer as IAmAMessageConsumerSupportingDelay).Requeue(message, delayMilliseconds);

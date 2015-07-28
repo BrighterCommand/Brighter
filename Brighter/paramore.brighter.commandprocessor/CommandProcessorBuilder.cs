@@ -38,7 +38,6 @@ THE SOFTWARE. */
 using System.CodeDom;
 
 using paramore.brighter.commandprocessor.Logging;
-using Polly;
 
 namespace paramore.brighter.commandprocessor
 {

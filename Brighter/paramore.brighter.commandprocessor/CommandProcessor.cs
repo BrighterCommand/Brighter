@@ -39,7 +39,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using paramore.brighter.commandprocessor.Logging;
-using Polly;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -265,10 +264,10 @@ namespace paramore.brighter.commandprocessor
              * see http://blogs.msdn.com/b/pfxteam/archive/2012/02/08/10265476.aspx
             */
             RetryAndBreakCircuit(() =>
-                {
-                    _messageStore.Add(message).Wait(_messageStoreWriteTimeout);
-                    _messagingGateway.Send(message).Wait(_messageGatewaySendTimeout);
-                });
+            {
+                _messageStore.Add(message);
+                _messagingGateway.Send(message).Wait(_messageGatewaySendTimeout);
+            });
         }
 
         /// <summary>
@@ -289,11 +288,8 @@ namespace paramore.brighter.commandprocessor
             */
             RetryAndBreakCircuit(() =>
                 {
-                    var task = _messageStore.Get(messageId);
-                    task.Wait();
-
-                    var message = task.Result;
-
+                    var message = _messageStore.Get(messageId);
+                    
                     if (message.Header.MessageType == MessageType.MT_NONE)
                     {
                         _logger.WarnFormat("Message {0} not found", requestedMessageid);

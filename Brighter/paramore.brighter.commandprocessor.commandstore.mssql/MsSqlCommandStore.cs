@@ -41,7 +41,6 @@ using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Data.SqlServerCe;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
 
@@ -75,7 +74,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         /// <param name="id">The identifier.</param>
         /// <param name="command">The command.</param>
         /// <returns>Task.</returns>
-        public async Task Add<T>(Guid id, T command) where T : class, IRequest
+        public void Add<T>(Guid id, T command) where T : class, IRequest
         {
             var sql = string.Format("insert into {0} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)", _configuration.MessageStoreTableName);
             var commandJson = JsonConvert.SerializeObject(command);
@@ -89,14 +88,14 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
 
             using (var connection = GetConnection())
             {
-                await connection.OpenAsync();
+                connection.Open();
                 var sqlcmd = connection.CreateCommand();
 
                 sqlcmd .CommandText = sql;
                 sqlcmd .Parameters.AddRange(parameters);
                 try
                 {
-                    await sqlcmd .ExecuteNonQueryAsync();
+                    sqlcmd.ExecuteNonQuery();
                 }
                 catch (SqlException sqlException)
                 {
@@ -127,7 +126,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <returns>T.</returns>
-        public async Task<T> Get<T>(Guid id) where T : class, IRequest, new()
+        public T Get<T>(Guid id) where T : class, IRequest, new()
         {
             var sql = string.Format("select * from {0} where CommandId = @commandId", _configuration.MessageStoreTableName);
             var parameters = new[]
@@ -135,11 +134,11 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 CreateSqlParameter("CommandId", id)
             };
 
-            var result = await ExecuteCommand(async command => ReadCommand<T>(await command.ExecuteReaderAsync()), sql, parameters);
+            var result = ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, parameters);
             return result;
         }
 
-        private async Task<T> ExecuteCommand<T>(Func<DbCommand, Task<T>> execute, string sql, params DbParameter[] parameters)
+        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, params DbParameter[] parameters)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -147,8 +146,8 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 command.CommandText = sql;
                 command.Parameters.AddRange(parameters);
 
-                await connection.OpenAsync();
-                T item = await execute(command);
+                connection.Open();
+                T item = execute(command);
                 return item;
             }
         }

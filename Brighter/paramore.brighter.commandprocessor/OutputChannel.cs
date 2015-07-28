@@ -37,6 +37,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
@@ -70,7 +71,7 @@ namespace paramore.brighter.commandprocessor
         public void Send(Message message, int delayMilliseconds = 0)
         {
             if (delayMilliseconds > 0 && !_messageProducerSupportsDelay)
-                Task.Delay(delayMilliseconds).Wait();
+                Thread.Sleep(delayMilliseconds);
 
             if (_messageProducerSupportsDelay)
                 (_messageProducer as IAmAMessageProducerSupportingDelay).Send(message, delayMilliseconds).Wait();

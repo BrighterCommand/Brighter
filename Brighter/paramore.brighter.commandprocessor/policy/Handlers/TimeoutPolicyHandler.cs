@@ -186,10 +186,10 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
             );
 
             // Wire up the logic for what happens when source task completes
-            task.ContinueWith((antecedent, state) =>
+            task.ContinueWith((antecedent) =>
                 {
                     // Recover our state data
-                    var tuple = (Tuple<Timer, TaskCompletionSource<TRequest>>)state;
+                    var tuple = Tuple.Create(timer, tcs);
 
                     // Cancel the Timer
                     tuple.Item1.Dispose();
@@ -197,7 +197,6 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
                     // Marshal results to proxy
                     MarshalTaskResults(antecedent, tuple.Item2);
                 },
-                Tuple.Create(timer, tcs),
                 CancellationToken.None,
                 TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default

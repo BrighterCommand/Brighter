@@ -37,7 +37,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -52,7 +51,7 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="command">The command.</param>
-        Task Add<T>(Guid id, T command) where T : class, IRequest;
+        void Add<T>(Guid id, T command) where T : class, IRequest;
 
         /// <summary>
         /// Finds the specified identifier.
@@ -60,6 +59,6 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <returns>T.</returns>
-        Task<T> Get<T>(Guid id) where T : class, IRequest, new();
+        T Get<T>(Guid id) where T : class, IRequest, new();
     }
 }

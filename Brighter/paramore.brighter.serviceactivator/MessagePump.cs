@@ -142,7 +142,7 @@ namespace paramore.brighter.serviceactivator
                 // empty queue
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
-                    Task.Delay(500).Wait();
+                    Thread.Sleep(500);
                     continue;
                 }
 

@@ -278,10 +278,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
             s_myCommand.Value = "Hello World";
             s_messageStore = A.Fake<IAmAMessageStore<Message>>();
-            var tcs = new TaskCompletionSource<object>();
-            tcs.SetResult(new object());
-            A.CallTo(() => s_messageStore.Add(A<Message>.Ignored)).Returns(tcs.Task);
-
+            
             s_messagingGateway = A.Fake<IAmAMessageProducer>();
             s_message = new Message(
                 header: new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),

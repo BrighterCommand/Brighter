@@ -79,7 +79,7 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
             //    await _commandStore.Add(command.Id, command);
             //}).ConfigureAwait(false);
 
-            _commandStore.Add(command.Id, command).Wait();
+            _commandStore.Add(command.Id, command);
 
             return base.Handle(command);
         }

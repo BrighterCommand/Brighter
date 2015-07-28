@@ -56,10 +56,10 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
             private Establish _context = () =>
             {
                 s_raisedCommand = new MyCommand() {Value = "Test"};
-                s_sqlCommandStore.Add<MyCommand>(s_raisedCommand .Id, s_raisedCommand ).Wait();
+                s_sqlCommandStore.Add<MyCommand>(s_raisedCommand .Id, s_raisedCommand );
             };
 
-            private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(s_raisedCommand.Id).Result; };
+            private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(s_raisedCommand.Id); };
 
             private It _should_read_the_command_from_the__sql_command_store = () => s_storedCommand.ShouldNotBeNull();
             private It _should_read_the_command_value = () => s_storedCommand.Value.ShouldEqual(s_raisedCommand.Value);
@@ -69,7 +69,7 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
 
         public class When_there_is_no_message_in_the_sql_command_store
         {
-            private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(Guid.NewGuid()).Result; };
+            private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(Guid.NewGuid()); };
 
             private It _should_return_an_empty_command_on_a_missing_command = () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
         }
@@ -81,10 +81,10 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
             private Establish _context = () =>
             {
                 s_raisedCommand = new MyCommand() { Value = "Test" };
-                s_sqlCommandStore.Add<MyCommand>(s_raisedCommand.Id, s_raisedCommand).Wait();
+                s_sqlCommandStore.Add<MyCommand>(s_raisedCommand.Id, s_raisedCommand);
             };
 
-            private Because _of = () => { s_exception = Catch.Exception(() => s_sqlCommandStore.Add(s_raisedCommand.Id, s_raisedCommand).Wait()); };
+            private Because _of = () => { s_exception = Catch.Exception(() => s_sqlCommandStore.Add(s_raisedCommand.Id, s_raisedCommand)); };
 
             private It _should_succeed_even_if_the_message_is_a_duplicate = () => s_exception.ShouldBeNull();
         }

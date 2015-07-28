@@ -55,12 +55,12 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <returns>Task.</returns>
-        Task Add(T message);
+        void Add(T message);
         /// <summary>
         /// Gets the specified message identifier.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        Task<Message> Get(Guid messageId);
+        Message Get(Guid messageId);
     }
 }
