@@ -311,9 +311,57 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private It _should_have_consumed_the_messages_in_the_event_channel = () => s_channel.Length.ShouldEqual(0);
         private It _should_have_a_running_state = () => s_dispatcher.State.ShouldEqual(DispatcherState.DS_RUNNING);
         private It _should_have_only_one_consumer = () => s_dispatcher.Consumers.Count.ShouldEqual(1);
+        private It _should_have_two_connections = () => s_dispatcher.Connections.Count().ShouldEqual(2);
     }
 
 
+    public class When_a_message_dispatcher_has_a_new_connection_added_while_running
+    {
+        private static Dispatcher s_dispatcher;
+        private static FakeChannel s_channel;
+        private static IAmACommandProcessor s_commandProcessor;
+        private static Connection s_connection;
+        private static Connection s_newConnection;
+
+        private Establish _context = () =>
+        {
+            s_channel = new FakeChannel();
+            s_commandProcessor = new SpyCommandProcessor();
+
+            var logger = LogProvider.For<Dispatcher>();
+
+            var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
+            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+
+            s_connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+            s_newConnection = new Connection(name: new ConnectionName("newTest"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+            s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { s_connection }, logger);
+
+            var @event = new MyEvent();
+            var message = new MyEventMessageMapper().MapToMessage(@event);
+            s_channel.Send(message);
+
+            s_dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+            s_dispatcher.Receive();
+        };
+
+
+        private Because _of = () =>
+        {
+            s_dispatcher.Open(s_newConnection);
+            var @event = new MyEvent();
+            var message = new MyEventMessageMapper().MapToMessage(@event);
+            s_channel.Send(message);
+            Task.Delay(1000).Wait();
+        };
+
+        private Cleanup _stop_dispatcher = () => s_dispatcher.End().Wait();
+
+        private It _should_have_consumed_the_messages_in_the_event_channel = () => s_channel.Length.ShouldEqual(0);
+        private It _should_have_a_running_state = () => s_dispatcher.State.ShouldEqual(DispatcherState.DS_RUNNING);
+        private It _should_have_only_one_consumer = () => s_dispatcher.Consumers.Count.ShouldEqual(2);
+        private It _should_have_two_connections = () => s_dispatcher.Connections.Count().ShouldEqual(2);
+    }
 
 
     public class When_building_a_dispatcher
