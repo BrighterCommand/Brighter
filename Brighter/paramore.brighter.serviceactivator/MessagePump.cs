@@ -303,12 +303,13 @@ namespace paramore.brighter.serviceactivator
 
                     if (Logger != null) 
                         Logger.ErrorFormat(
-                            "MessagePump: Have tried {2} times to handle this message {0}{4} from {3} on thread # {1}, dropping message", 
+                            "MessagePump: Have tried {2} times to handle this message {0}{4} from {3} on thread # {1}, dropping message. Message Body: {5}", 
                             message.Id, 
                             Thread.CurrentThread.ManagedThreadId, 
                             RequeueCount, 
                             Channel.Name,
-                            string.IsNullOrEmpty(originalMessageId) ? string.Empty : string.Format(" (original message id {0})", originalMessageId));
+                            string.IsNullOrEmpty(originalMessageId) ? string.Empty : string.Format(" (original message id {0})", originalMessageId),
+                            message.Body.Value);
 
                     AcknowledgeMessage(message);
                     return;
