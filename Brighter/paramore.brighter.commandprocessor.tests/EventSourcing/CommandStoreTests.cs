@@ -54,8 +54,7 @@ namespace paramore.commandprocessor.tests.EventSourcing
             container.Register<IAmACommandStore>(s_commandstore);
             container.Register<ILog>(logger);
 
-            s_command = new MyCommand();
-            s_command.Value = "My Test String";
+            s_command = new MyCommand {Value = "My Test String"};
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
