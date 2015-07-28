@@ -306,7 +306,12 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             Task.Delay(1000).Wait();
         };
 
-        private Cleanup _stop_dispatcher = () => s_dispatcher.End().Wait();
+        private Cleanup _stop_dispatcher = () =>
+        {
+            if (s_dispatcher != null)
+                if (s_dispatcher.State == DispatcherState.DS_RUNNING)
+                    s_dispatcher.End().Wait();
+        };
 
         private It _should_have_consumed_the_messages_in_the_event_channel = () => s_channel.Length.ShouldEqual(0);
         private It _should_have_a_running_state = () => s_dispatcher.State.ShouldEqual(DispatcherState.DS_RUNNING);
@@ -355,7 +360,12 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             Task.Delay(1000).Wait();
         };
 
-        private Cleanup _stop_dispatcher = () => s_dispatcher.End().Wait();
+        private Cleanup _stop_dispatcher = () =>
+        {
+            if (s_dispatcher != null) 
+                if (s_dispatcher.State == DispatcherState.DS_RUNNING) 
+                    s_dispatcher.End().Wait();
+        };
 
         private It _should_have_consumed_the_messages_in_the_event_channel = () => s_channel.Length.ShouldEqual(0);
         private It _should_have_a_running_state = () => s_dispatcher.State.ShouldEqual(DispatcherState.DS_RUNNING);
