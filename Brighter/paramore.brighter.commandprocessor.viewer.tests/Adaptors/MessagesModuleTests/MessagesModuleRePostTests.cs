@@ -38,8 +38,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Machine.Specifications;
+using Nancy;
 using Nancy.Testing;
-using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
@@ -61,9 +61,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.MessagesModul
                     new Message(new MessageHeader(Guid.NewGuid(), "MyTopic2", MessageType.MT_COMMAND),
                         new MessageBody(""))
                 };
-                idList = new RepostView();
-                //idList.Ids = _messages.Select(m => m.Id.ToString()).ToList();
-
+                idList =  string.Join(",", _messages.Select(m => m.Id.ToString()).ToArray());
                 var fakeHandlerFactory = new FakeHandlerFactory();
                 _fakeRepostHandler = new FakeRepostHandler();
                 fakeHandlerFactory.Add(_fakeRepostHandler);
@@ -87,16 +85,15 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.MessagesModul
             }
 
             private static string storeName = "testStore";
-            private static string uri = string.Format("/messages/{0}/repost", storeName);
 
-            private Because _of_POST = () => _result = _browser.Post(uri, with =>
-            {
-                with.Header("content-type", "application/json");
-                with.Body(JsonConvert.SerializeObject(idList));
-                with.HttpRequest();
-            });
+            private Because _of_POST = () => _result = _browser.Post(string.Format("/messages/{0}/repost/{1}", storeName, idList), 
+                with =>
+                {
+                    with.Header("content-type", "application/json");
+                    with.HttpRequest();
+                });
 
-            private It should_return_200_OK = () => _result.StatusCode.ShouldEqual(Nancy.HttpStatusCode.OK);
+            private It should_return_200_OK = () => _result.StatusCode.ShouldEqual(HttpStatusCode.OK);
             private It should_invoke_handler_from_factory = () => _fakeRepostHandler.WasHandled.ShouldBeTrue();
             private It should_invoke_handler_with_store_and_passed_ids = () =>
             {
@@ -109,9 +106,9 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.MessagesModul
 
             private static Browser _browser;
             protected static BrowserResponse _result;
-            private static RepostView idList;
             private static FakeRepostHandler _fakeRepostHandler;
             private static List<Message> _messages;
+            private static string idList="";
         }
     }
 }

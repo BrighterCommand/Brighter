@@ -4,11 +4,11 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
 {
     public class MessageViewerBrokerElement : ConfigurationElement
     {
-        [ConfigurationProperty("typeName", IsKey = true, IsRequired = true)]
-        public string TypeName
+        [ConfigurationProperty("assemblyQualifiedName", IsKey = true, IsRequired = true)]
+        public string AssemblyQualifiedName
         {
-            get { return (string)base["typeName"]; }
-            set { base["typeName"] = value; }
+            get { return (string)base["assemblyQualifiedName"]; }
+            set { base["assemblyQualifiedName"] = value; }
         }
     }
 }
