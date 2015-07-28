@@ -2,6 +2,8 @@
 [Brighter](http://iancooper.github.io/Paramore/Brighter.html)
 =================================
 
+**Note: this is a .Net 4, stripped-back implementation of Brighter for some legacy integration.  Use the [official](https://github.com/iancooper/Paramore) repo if you can!**
+
 |               |               |
 | ------------- | ------------- |
 |![canon] (https://openclipart.org/people/amilo/canon.svg)|Brighter is a command dispatcher, processor, and task queue. It can be used to implement the [Command Invoker] (http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker) pattern |
