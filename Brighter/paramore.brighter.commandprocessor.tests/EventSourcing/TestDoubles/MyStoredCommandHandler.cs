@@ -32,13 +32,11 @@ namespace paramore.commandprocessor.tests.EventSourcing.TestDoubles
     internal class MyStoredCommandHandler : RequestHandler<MyCommand>
     {
         private readonly ILog _logger;
-        private static MyCommand s_command;
 
         public MyStoredCommandHandler(ILog logger)
             : base(logger)
         {
             _logger = logger;
-            s_command = null;
         }
 
         [UseCommandSourcing(step: 1, timing: HandlerTiming.Before)]

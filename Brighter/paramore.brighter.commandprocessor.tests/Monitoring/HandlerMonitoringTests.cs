@@ -39,7 +39,6 @@ namespace paramore.commandprocessor.tests.Monitoring
     [Subject("Monitoring")]
     public class WhenMonitoringIsOnForAHandler
     {
-        private static MyMonitoredHandler s_handler;
         private static MyCommand s_command;
         private static IAmACommandProcessor s_commandProcessor;
         private static SpyControlBusSender s_controlBusSender;

@@ -89,7 +89,6 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
             private static Message _message;
             private static SqsMessageProducer _messageProducer;
             private static TestAWSQueueListener _queueListener;
-            private static string _listenedMessage;
             private static Topic _topic;
         }
 
@@ -175,7 +174,6 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
             private static IAmAMessageProducer sender;
             private static IAmAMessageConsumer receiver;
             private static Message message;
-            private static Message receivedMessage;
             private static Message _listenedMessage;
         }
 
@@ -218,7 +216,6 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
             private static IAmAMessageProducer sender;
             private static IAmAMessageConsumer receiver;
             private static Message message;
-            private static Message receivedMessage;
             private static Message _listenedMessage;
         }
 

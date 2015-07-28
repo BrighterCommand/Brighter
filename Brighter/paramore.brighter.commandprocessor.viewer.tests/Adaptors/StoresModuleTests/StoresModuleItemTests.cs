@@ -89,8 +89,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
 
             private static Browser _browser;
             protected static BrowserResponse _result;
-            private static List<Message> _messages;
-
         }
 
         public class When_retrieving_store_for_non_existent_store

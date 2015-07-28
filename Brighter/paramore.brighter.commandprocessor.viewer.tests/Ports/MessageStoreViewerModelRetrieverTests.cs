@@ -78,9 +78,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
                 model.Name.ShouldEqual(_messageStore.Name);
             };
             
-            private static List<MessageStoreActivationState> _messageStores;
             private static MessageStoreViewerModelRetriever _messageStoreViewerModelRetriever;
-            private static List<MessageStoreActivationState> _ravenMessageStores;
             private static ViewModelRetrieverResult<MessageStoreViewerModel, MessageStoreViewerModelError> _result;
             private static string _storeName = "storeItemtestStoreName";
             private static MessageStoreActivationState _messageStore;
@@ -106,8 +104,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             };
 
             private static MessageStoreViewerModelRetriever _messageStoreViewerModelRetriever;
-            private static List<MessageStoreActivationState> _sqlMessageStores;
-            private static List<MessageStoreActivationState> _ravenMessageStores;
             private static string _storeName = "invalidConfigStore";
             private static ViewModelRetrieverResult<MessageStoreViewerModel, MessageStoreViewerModelError> _result;
         }
@@ -135,8 +131,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
                 _result.Error.ShouldEqual(MessageStoreViewerModelError.StoreNotFound);
             };
 
-            private static IMessageStoreViewerFactory _viewerFactory;
-            private static MessageListViewModelRetriever _messageListViewModelRetriever;
             private static ViewModelRetrieverResult<MessageStoreViewerModel, MessageStoreViewerModelError> _result;
             private static MessageStoreViewerModelRetriever _messageStoreViewerModelRetriever;
         }
@@ -170,8 +164,6 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
                 _result.Exception.ShouldBeOfExactType<SystemException>();
             };
 
-            private static IMessageStoreViewerFactory _viewerFactory;
-            private static MessageListViewModelRetriever _messageListViewModelRetriever;
             private static MessageStoreViewerModelRetriever _messageStoreViewerModelRetriever;
         }
     }

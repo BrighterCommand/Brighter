@@ -139,8 +139,6 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
 
         public class when_there_are_multiple_messages_in_the_message_store_and_a_range_is_fetched
         {
-            private static Exception s_exception;
-
             private Establish _context = () =>
             {
                 s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
