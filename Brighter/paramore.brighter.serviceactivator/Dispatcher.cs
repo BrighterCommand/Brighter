@@ -135,7 +135,9 @@ namespace paramore.brighter.serviceactivator
         public void Open(Connection connection)
         {
             _logger.InfoFormat("Dispatcher: Opening connection {0}", connection.Name);
-            var addedConsumers = CreateConsumers(new List<Connection>() { connection });
+
+            AddConnectionToConnections(connection);
+            var addedConsumers = CreateConsumers(new[] { connection });
 
             switch (State)
             {
@@ -155,6 +157,14 @@ namespace paramore.brighter.serviceactivator
                     break;
                 default:
                     throw new InvalidOperationException("The dispatcher is not ready");
+            }
+        }
+
+        private void AddConnectionToConnections(Connection connection)
+        {
+            if (Connections.All(c => c.Name != connection.Name))
+            {
+                Connections = new List<Connection>(Connections) { connection };
             }
         }
 
