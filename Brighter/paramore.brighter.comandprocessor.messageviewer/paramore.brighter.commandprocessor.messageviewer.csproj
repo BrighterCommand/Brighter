@@ -78,9 +78,18 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerBrokerElement.cs" />
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerSection.cs" />
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerStoresElement.cs" />
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerStoresElementCollection.cs" />
+    <Compile Include="Adaptors\API\Resources\RepostView.cs" />
+    <Compile Include="Ports\Handlers\HandlerFactory.cs" />
+    <Compile Include="Ports\Handlers\IAmAMessageProducerFactoryProvider.cs" />
+    <Compile Include="Ports\Handlers\ICommand.cs" />
+    <Compile Include="Ports\Handlers\IHandleCommand.cs" />
+    <Compile Include="Ports\Handlers\IHandlerFactory.cs" />
+    <Compile Include="Ports\Handlers\MessageProducerFactoryProvider.cs" />
+    <Compile Include="Ports\Handlers\RepostCommandHandler.cs" />
     <Compile Include="Ports\ViewModelRetrievers\MessageStoreViewerModelRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\MessageStoreActivationStateListViewModelRetriever.cs" />
     <Compile Include="Ports\ViewModelRetrievers\MessageListViewModelRetriever.cs" />
@@ -109,7 +118,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="Content\bootstrap-theme.css.map" />
     <None Include="Content\bootstrap.css.map" />
     <None Include="fonts\glyphicons-halflings-regular.eot" />
@@ -118,15 +129,23 @@
     <None Include="fonts\glyphicons-halflings-regular.woff2" />
     <None Include="packages.config" />
     <None Include="read.md" />
-    <None Include="Scripts\jquery-2.1.3.min.map">
+    <EmbeddedResource Include="Scripts\jquery-2.1.3.min.map">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </EmbeddedResource>
     <None Include="Scripts\jquery-2.1.4.min.map" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
       <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.awssqs\paramore.brighter.commandprocessor.messaginggateway.awssqs.csproj">
+      <Project>{bd921f35-47c9-41ba-b1bc-ae9698869977}</Project>
+      <Name>paramore.brighter.commandprocessor.messaginggateway.awssqs</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
+      <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>
+      <Name>paramore.brighter.commandprocessor.messaginggateway.rmq</Name>
     </ProjectReference>
     <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
       <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
@@ -143,17 +162,17 @@
     <EmbeddedResource Include="assets\views\index.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <None Include="Scripts\jquery-2.1.3.intellisense.js">
+    <EmbeddedResource Include="Scripts\jquery-2.1.3.intellisense.js">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Scripts\jquery-2.1.3.js">
+    </EmbeddedResource>
+    <EmbeddedResource Include="Scripts\jquery-2.1.3.js">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Scripts\jquery-2.1.3.min.js">
+    </EmbeddedResource>
+    <EmbeddedResource Include="Scripts\jquery-2.1.3.min.js">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </EmbeddedResource>
     <EmbeddedResource Include="Scripts\mustache.js">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
@@ -177,26 +196,26 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Content\bootstrap-theme.css">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    <Content Include="Content\bootstrap-theme.css" />
+    <EmbeddedResource Include="Content\bootstrap-theme.min.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Content\bootstrap-theme.min.css" />
-    <EmbeddedResource Include="Content\bootstrap.css">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    <Content Include="Content\bootstrap.css" />
+    <EmbeddedResource Include="Content\bootstrap.min.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Content\bootstrap.min.css" />
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="Icon.png" />
-    <None Include="Scripts\bootstrap.js" />
+    <Content Include="Scripts\bootstrap.js" />
     <EmbeddedResource Include="Scripts\bootstrap.min.js">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <None Include="Scripts\jquery-2.1.4.intellisense.js" />
-    <None Include="Scripts\jquery-2.1.4.js" />
+    <Content Include="Scripts\jquery-2.1.4.intellisense.js" />
+    <Content Include="Scripts\jquery-2.1.4.js" />
     <EmbeddedResource Include="Scripts\jquery-2.1.4.min.js">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <None Include="Scripts\npm.js" />
+    <Content Include="Scripts\npm.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

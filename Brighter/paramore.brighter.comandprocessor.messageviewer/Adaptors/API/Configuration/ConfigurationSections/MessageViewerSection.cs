@@ -69,7 +69,12 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
         public MessageViewerStoresElementCollection Stores
         {
             get { return (MessageViewerStoresElementCollection)this["stores"]; }
-            //set { this[""] = value; }
+        }
+
+        [ConfigurationProperty("broker", IsRequired = false, IsDefaultCollection = false)]
+        public MessageViewerBrokerElement Broker
+        {
+            get { return (MessageViewerBrokerElement)this["broker"]; }
         }
 
         //<configuration>
@@ -81,6 +86,28 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
         //    <clear />
         //    <add name="Contoso" type="http://www.contoso.com" connectionstring="0" />
         //  </stores>
+        //  <broker
+        //      assemblyName="paramore.brighter.commandprocessor.messaginggateway.rmq"
+        //      factoryTypeName="paramore.brighter.commandprocessor.messaginggateway.rmq.RmqMessageProducerFactory">
+        //  </broker>
+        //+ would need
+        // <configSections>
+        //   <section name="rmqMessagingGateway" type="paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, paramore.brighter.commandprocessor.messaginggateway.rmq" allowLocation="true" allowDefinition="Everywhere" />
+        // </configSections>
+        // <rmqMessagingGateway>
+        //   <amqpUri uri="amqp://guest:guest@localhost:5672/%2f" />
+        //   <exchange name="paramore.brighter.exchange" />
+        // </rmqMessagingGateway>
+        //OR
+        //  <broker
+        //      assemblyName="paramore.brighter.commandprocessor.messaginggateway.awssqs"
+        //      factoryTypeName="paramore.brighter.commandprocessor.messaginggateway.awssqs.SqsMessageProducerFactory">
+        //  </broker>
+        //+ would need
+        // <configSections>
+        //     <section name="aws" type="Amazon.AWSSection, AWSSDK" />
+        // </configSections>
+        // <aws profileName="brighter.sqs.test" region="eu-west-1" />
         //</brighter.messageViewer> 
         //</configuration>
     }
