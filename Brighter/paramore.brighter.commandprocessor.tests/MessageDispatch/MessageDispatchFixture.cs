@@ -319,7 +319,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private It _should_have_two_connections = () => s_dispatcher.Connections.Count().ShouldEqual(2);
     }
 
-
     public class When_a_message_dispatcher_has_a_new_connection_added_while_running
     {
         private static Dispatcher s_dispatcher;
