@@ -210,12 +210,12 @@ namespace paramore.brighter.serviceactivator
                 {
                     if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
                     {
-                        State = DispatcherState.DS_RUNNING;
                         _logger.Info("Dispatcher: Dispatcher starting");
+                        State = DispatcherState.DS_RUNNING;
 
-                        Consumers.Each((consumer) => consumer.Open());
-
-                        Consumers.Select(consumer => consumer.Job).Each(job => _tasks.Add(job));
+                        var consumers = Consumers.ToArray();
+                        consumers.Each((consumer) => consumer.Open());
+                        consumers.Select(consumer => consumer.Job).Each(job => _tasks.Add(job));
 
                         _logger.InfoFormat("Dispatcher: Dispatcher starting {0} performers", _tasks.Count);
 
