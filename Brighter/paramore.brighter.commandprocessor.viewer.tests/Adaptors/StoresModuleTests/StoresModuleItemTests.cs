@@ -129,7 +129,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
                 with.HttpRequest();
             });
 
-            private Behaves_like<ModuleWithStoreNotViewerBehavior> storeWithoutViewer;
+            Behaves_like<ModuleWithStoreNotViewerBehavior> storeWithoutViewer;
 
             private static Browser _browser;
             protected static BrowserResponse _result;
@@ -174,7 +174,19 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
                 with.HttpRequest();
             });
 
-            Behaves_like<ModuleWithBadConfigBehavior> storeHasBadConfig;
+            private It should_return_500_Server_error =
+                () => _result.StatusCode.ShouldEqual(Nancy.HttpStatusCode.InternalServerError);
+
+            private It should_return_json = () => _result.ContentType.ShouldContain("application/json");
+
+            private It should_return_error = () =>
+            {
+                var serializer = new JavaScriptSerializer();
+                var model = serializer.Deserialize<MessageViewerError>(_result.Body.AsString());
+
+                model.ShouldNotBeNull();
+                model.Message.ShouldContain("Mis-configured");
+            };
 
             private static Browser _browser;
             protected static BrowserResponse _result;

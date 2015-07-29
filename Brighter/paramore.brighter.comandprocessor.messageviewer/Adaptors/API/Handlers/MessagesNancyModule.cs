@@ -42,6 +42,7 @@ using Nancy.ModelBinding;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
+using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
@@ -59,7 +60,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
 
                 string storeName = parameters.storeName;
                 int pageNumber = parameters.pageNumber;
-                var messageListModelResult = messageListViewModelRetriever.Get(storeName, pageNumber);
+                ViewModelRetrieverResult<MessageListModel, MessageListModelError> messageListModelResult = messageListViewModelRetriever.Get(storeName, pageNumber);
 
                 if (!messageListModelResult.IsError)
                 {

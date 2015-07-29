@@ -59,7 +59,7 @@ THE SOFTWARE. */
                         </thead>
                         <tbody>
                             <tr><td>{{storeType}}</td><td>{{typeName}}</td><td>{{tableName}}</td></tr>
-                            <tr colspan="3"><td>{{connectionString}}</td></tr>
+                            <tr><td colspan="3">{{connectionString}}</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -68,7 +68,7 @@ THE SOFTWARE. */
         {{/stores}}
     </script>
     <script id="messageTemplate" type="text/template">
-        <table class="table table-bordered table-striped table-condensed"
+        <table class="table table-bordered table-striped table-condensed table-hover"
            id="messageList">
             <thead>
                 <tr>
@@ -112,54 +112,32 @@ THE SOFTWARE. */
             <div>
                 <h3>Stores</h3>
                 <div id="storeList" class="panel-group">
-
                 </div>
             </div>
             <div>
-                <div id="messageContainer" >
+                <div id="messageContainer">
                     <h3>Messages</h3>
-                    <div>
-                        <div class="form-inline">
+                    <div class="row col-md-6">
+                        <div class="navbar-form form-inline">
                             <div class="form-group">
-                                <div class="input-group">
-                                    <div class="input-group">
-                                        <h5>
-                                            Search:<input id="messageSearchText" type="text" />
-                                        </h5>
-                                        <span class="input-group-btn">
-                                            <button type="button" id="messageSearchButton" class="btn btn-primary">Search</button>
-                                        </span>
-
-                                        <span class="input-group-btn">
-                                            <button type="button" id="messageClearButton" class="btn btn-default ">Clear</button>
-                                        </span>
-                                        <span>Current Page:<label id="pageNumber"></label></span>
-
-                                        <span class="input-group-btn" id="pageControlsPrevious">
-                                            <button type="button" id="pagePrevious" class="btn btn-info">Previous</button>
-                                        </span>
-                                        <span class="input-group-btn">
-                                            <button type="button" id="pageNext" class="btn btn-info">Next</button>
-                                        </span>
-                                    </div>
-                                </div>
+                                <input id="messageSearchText" type="text" class="form-control" placeholder="Search">
                             </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div id="pageControls">
-                        </div>
-                    </div>
-                    <div id="messageList" style="overflow-y:auto; height:800px;">
-                    </div>
-                    <div id="messageActionPanel">
-                        <h3>Message Actions</h3>
-                        <div>Selected #:<label id="messagesSelectedNumber"></label></div>
-                        <div>Selected Ids:<label id="messagesSelectedIds"></label></div>
-                        <div class="btn-toolbar">
-                            <button id="messageRepost" class="btn btn-warning">Re-Post</button>
-                        </div>
+                            <button type="button" id="messageSearchButton" class="btn btn-primary navbar-btn">Search</button>
+                            <button type="button" id="messageClearButton" class="btn btn-default navbar-btn">Clear</button>
 
+                            <span>&nbsp;&nbsp;Current Page:&nbsp;<label id="pageNumber" class="badge">1</label>&nbsp;&nbsp;</span>
+
+                            <button type="button" id="pagePrevious" class="btn btn-info navbar-btn">Previous</button>
+                            <button type="button" id="pageNext" class="btn btn-info navbar-btn">Next</button>
+                        </div>
+                    </div>
+                    <div class="row col-md-*">
+                        <div id="messageActionPanel" class="navbar-form form-inline">
+                            <button id="messageRepost" class="btn btn-warning navbar-btn">Re-Post</button>
+                            Selected <label id="messagesSelectedNumber"></label> Ids:<label id="messagesSelectedIds"></label>
+                        </div>
+                    </div>
+                    <div id="messageList" style="overflow-y: auto; height: 800px;">
                     </div>
                 </div>
             </div>

@@ -96,7 +96,6 @@
     <Compile Include="TestDoubles\FakeActivationListModelRetriever.cs" />
     <Compile Include="TestDoubles\FakeMessageStoreViewerModelRetriever.cs" />
     <Compile Include="Adaptors\StoresModuleTests\StoresModuleItemTests.cs" />
-    <Compile Include="TestBehaviours\ModuleWithBadConfigBehavior.cs" />
     <Compile Include="TestBehaviours\ModuleWithNoStoreConnectionBehavior.cs" />
     <Compile Include="TestBehaviours\ModuleWithStoreCantGetBehaviour.cs" />
     <Compile Include="TestBehaviours\ModuleWithStoreNotViewerBehavior.cs" />
