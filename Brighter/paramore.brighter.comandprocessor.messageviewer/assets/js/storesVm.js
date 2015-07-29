@@ -64,6 +64,10 @@ var storesVm = function () {
 
     var selectStore = function(storeName) {
         log("selected " + storeName);
+
+        $("#storeList .panel-primary").removeClass("panel-primary");
+        $("#store" + storeName).parent().addClass("panel-primary");
+
         seletedStoreName = storeName;
         messageModel.loadFirstPage(storeName);
         log("doneSelecting " + storeName);

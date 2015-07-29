@@ -37,7 +37,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Machine.Specifications;
-using Nancy.Json;
 using Nancy.Testing;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
@@ -82,8 +81,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.MessagesModul
             private It should_return_json = () => _result.ContentType.ShouldContain("application/json");
             private It should_return_MessageListModel = () =>
             {
-                var serializer = new JavaScriptSerializer();
-                var model = serializer.Deserialize<MessageListModel>(_result.Body.AsString());
+                var model = Newtonsoft.Json.JsonConvert.DeserializeObject<MessageListModel>(_result.Body.AsString());
                 model.ShouldNotBeNull();
             };
 

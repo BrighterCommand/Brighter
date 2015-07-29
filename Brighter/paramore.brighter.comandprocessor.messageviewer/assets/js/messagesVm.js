@@ -98,6 +98,7 @@ var messagesVm = function () {
     var hideMessageSpinner = function() {
     }
     var loadFirstPageInternal = function (storeName) {
+
         loadInternal(storeName, 1);
     }
     var loadInternal = function (storeName, pageNumber) {
@@ -154,22 +155,25 @@ var messagesVm = function () {
 
         hideMessageSpinner();
         $("#messageContainer").show();
-        $("#messageActionPanel").hide();
+        $("#messageActionPanel button").addClass("disabled");
         activateSearch();
         model = messageModel;
         var content = Mustache.to_html($("#messageTemplate").html(), messageModel);
         $("#messageList").html(content);
 
-        if (messageModel.MessageCount < pageSize) {
-            $("#pageControls").hide();
-        } else {
-            $("#pageControls").show();
-        }
         if (selectedPageNumber > 1) {
-            $("#pageControlsPrevious").show();
+            $("#pagePrevious").removeClass("disabled");
         } else {
-            $("#pageControlsPrevious").hide();
+            $("#pagePrevious").addClass("disabled");
         }
+        if (messageModel.messageCount <= pageSize && messageModel.messageCount >0) {
+            $("#pageNext").removeClass("disabled");
+        } else {
+            $("#pageNext").addClass("disabled");
+        }
+
+        $("#messagesSelectedNumber").text("");
+        $("#messagesSelectedIds").text("");
         $("#pageNumber").text(selectedPageNumber);
         $("#messageContainer td input.messageCheck").change(onMessageChecked);
         log("end load");
@@ -185,15 +189,14 @@ var messagesVm = function () {
         $("#messagesSelectedIds").text(messageIds.toString());
 
         if (checkedMessages.length > 0) {
-            $("#messageActionPanel").show();
+            $("#messageActionPanel button").removeClass("disabled");
         } else {
-            $("#messageActionPanel").hide();
+            $("#messageActionPanel button").addClass("disabled");
         }
     };
     var onSearchMessageLoad = function(messageModel) {
         onMessageLoad(messageModel);
         log("end search load");
-
     };
     var hideInternal = function() {
         $("#messageContainer").hide();

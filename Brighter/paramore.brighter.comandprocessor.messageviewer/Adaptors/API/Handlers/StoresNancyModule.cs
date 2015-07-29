@@ -39,6 +39,7 @@ using System;
 using Nancy;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
+using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
@@ -67,7 +68,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
                 switch (result.Error)
                 {
                     case (MessageStoreActivationStateListModelError.GetActivationStateFromConfigError):
-                        return Response.AsJson(new MessageViewerError("Misconfigured message viewer - unable to read config store"), HttpStatusCode.InternalServerError);
+                        return Response.AsJson(new MessageViewerError("Mis-configured message viewer - unable to read config store"), HttpStatusCode.InternalServerError);
                     default:
                         throw new SystemException("Code can't reach here");
                 }
@@ -99,7 +100,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
 
                     case (MessageStoreViewerModelError.GetActivationStateFromConfigError):
                         return Response.AsJson(new MessageViewerError(
-                            string.Format("Misconfigured Message Viewer, unable to retrieve detail for store {0}", storeName)), HttpStatusCode.InternalServerError);
+                            string.Format("Mis-configured Message Viewer, unable to retrieve detail for store {0}", storeName)), HttpStatusCode.InternalServerError);
                     default:
                         throw new SystemException("Code can't reach here");
                 }
@@ -111,7 +112,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers
                 string searchTerm = parameters.searchTerm;
                 _logger.Log(LogLevel.Debug, () => string.Format("SEARCH store {0} with '{1}'", messageStoreName, searchTerm));
 
-                var searchModelResult = messageSearchListItemRetriever.Filter(messageStoreName, searchTerm);
+                ViewModelRetrieverResult<MessageListModel, MessageListModelError> searchModelResult = messageSearchListItemRetriever.Filter(messageStoreName, searchTerm);
                 if (!searchModelResult.IsError)
                 {
                     return Response.AsJson(searchModelResult.Result);
