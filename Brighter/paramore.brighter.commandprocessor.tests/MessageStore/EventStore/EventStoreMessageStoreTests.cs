@@ -40,6 +40,7 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
 {
     public class EventStoreMessageStoreTests
     {
+        [Tags("Requires", new[] { "Waiting on EventStore release"})]
         public class when_there_is_no_message_in_the_message_store
         {
             private Because _of = () => s_messages = s_eventStoreMessageStore.Get(EmptyStreamName, 0, 1).Result;
@@ -49,6 +50,7 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
             private const string EmptyStreamName = "empty-123";
         }
 
+        [Tags("Requires", new[] { "Waiting on EventStore release" })]
         public class when_writing_messages_to_the_message_store
         {
             private Establish _context = () =>
@@ -67,6 +69,7 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
 
         }
 
+        [Tags("Requires", new[] { "Waiting on EventStore release" })]
         public class when_getting_messages_that_do_not_all_exist
         {
             private Establish _context = () =>
