@@ -42,7 +42,7 @@ var logger = function (logLine) {
 }
 
 $(document).ready(function () {
-    var baseUriDef = 'http://localhost:3579';
+    var baseUriDef = 'http://localhost:3579/';
     messagesVm.init(baseUriDef, logger);
     
     storesVm.init(baseUriDef, messagesVm, logger);

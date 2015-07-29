@@ -39,7 +39,6 @@ using Nancy.TinyIoc;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration
 {
@@ -58,11 +57,6 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
             container.Register(messageStore);
             container.Register(typeof (IMessageStoreActivationStateProvider), typeof (MessageStoreActivationStateProvider));
             container.Register(typeof (IMessageStoreViewerFactory), typeof (MessageStoreViewerFactory));
-            container.Register(typeof(IHandleCommand<RepostCommand>), typeof (RepostCommandHandler));
-
-            var factory= new HandlerFactory();
-            factory.Add(container.Resolve<RepostCommandHandler>());
-            container.Register<IHandlerFactory>(factory);
         }
     }
 }
