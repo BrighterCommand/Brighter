@@ -38,6 +38,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Linq;
 using Machine.Specifications;
+using Nancy;
 using Nancy.Json;
 using Nancy.Testing;
 using paramore.brighter.commandprocessor.messagestore.mssql;
@@ -45,7 +46,6 @@ using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
-using paramore.brighter.commandprocessor.viewer.tests.TestBehaviours;
 using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleTests2
@@ -78,7 +78,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
                 with.HttpRequest();
             });
 
-            private It should_return_200_OK = () => _result.StatusCode.ShouldEqual(Nancy.HttpStatusCode.OK);
+            private It should_return_200_OK = () => _result.StatusCode.ShouldEqual(HttpStatusCode.OK);
             private It should_return_json = () => _result.ContentType.ShouldContain("application/json");
 
             private It should_return_StoresListModel = () =>
@@ -114,7 +114,19 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
                 with.HttpRequest();
             });
 
-            private Behaves_like<ModuleWithBadConfigBehavior> storeHasBadConfig;
+            private It should_return_500_Server_error =
+                () => _result.StatusCode.ShouldEqual(HttpStatusCode.InternalServerError);
+
+            private It should_return_json = () => _result.ContentType.ShouldContain("application/json");
+
+            private It should_return_error = () =>
+            {
+                var serializer = new JavaScriptSerializer();
+                var model = serializer.Deserialize<MessageViewerError>(_result.Body.AsString());
+
+                model.ShouldNotBeNull();
+                model.Message.ShouldContain("Mis-configured");
+            };
 
             private static Browser _browser;
             protected static BrowserResponse _result;
