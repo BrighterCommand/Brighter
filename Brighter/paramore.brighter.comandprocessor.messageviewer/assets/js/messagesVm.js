@@ -55,7 +55,6 @@ var messagesVm = function () {
 
         $("#pagePrevious").click(onPagePrevious);
         $("#pageNext").click(onPageNext);
-        $("#messageRepost").click(onMessageRepost);
 
         hideMessageSpinner();
     };
@@ -86,7 +85,7 @@ var messagesVm = function () {
 
     var deactivateSearch = function () {
         $('#messageSearchButton').attr("disabled", true);
-        $('#messageClearButton').attr("disabled", "true");
+         $('#messageClearButton').attr("disabled", "true");
     };
     var activateSearch = function () {
         $('#messageSearchButton').attr("disabled", false);
@@ -117,28 +116,6 @@ var messagesVm = function () {
             });
         }
     };
-    var repostInternal = function (storeName, messageList) {
-        seletedStoreName = storeName;
-        if (storeName) {
-            showMessageSpinner();
-            deactivateSearch();
-            log("start repost");
-            $.ajax({
-                url: baseUri + "/messages/" + storeName + "/repost/" + messageList,
-                dataType: 'json',
-                type: 'POST',
-                data: messageList,
-                success: function (data) { loadFirstPageInternal(seletedStoreName); },
-                error: function (jqXhr, textStatus, errorThrown) {
-                    onMessageLoadError(jqXhr, textStatus, errorThrown);
-                }
-            });
-        }
-    };
-
-    var onMessageRepost = function () {
-        repostInternal(seletedStoreName, $("#messagesSelectedIds").text());
-    }
     var onPageNext = function () {
         selectedPageNumber++;
         loadInternal(seletedStoreName, selectedPageNumber);
@@ -154,7 +131,6 @@ var messagesVm = function () {
 
         hideMessageSpinner();
         $("#messageContainer").show();
-        $("#messageActionPanel").hide();
         activateSearch();
         model = messageModel;
         var content = Mustache.to_html($("#messageTemplate").html(), messageModel);
@@ -171,25 +147,10 @@ var messagesVm = function () {
             $("#pageControlsPrevious").hide();
         }
         $("#pageNumber").text(selectedPageNumber);
-        $("#messageContainer td input.messageCheck").change(onMessageChecked);
+
         log("end load");
     };
-    var onMessageChecked = function() {
-        var checkedMessages = $("#messageContainer td input.messageCheck").filter(":checked");
-        $("#messagesSelectedNumber").text(checkedMessages.length);
-
-        var messageIds = [];
-        checkedMessages.each(function (index,element) {
-            messageIds.push($(element).parents("tr").find(".messageId").text());
-        });
-        $("#messagesSelectedIds").text(messageIds.toString());
-
-        if (checkedMessages.length > 0) {
-            $("#messageActionPanel").show();
-        } else {
-            $("#messageActionPanel").hide();
-        }
-    };
+    
     var onSearchMessageLoad = function(messageModel) {
         onMessageLoad(messageModel);
         log("end search load");

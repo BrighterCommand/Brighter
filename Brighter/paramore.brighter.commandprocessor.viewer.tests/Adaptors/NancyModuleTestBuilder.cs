@@ -41,7 +41,6 @@ using Nancy.Testing;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Handlers;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
 using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
 using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
@@ -54,16 +53,8 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
             this ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator config,
             IMessageListViewModelRetriever messageListViewModelRetriever)
         {
-            config.MessagesModule(messageListViewModelRetriever, new FakeHandlerFactory());
-        }
-        public static void MessagesModule(
-            this ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator config,
-            IMessageListViewModelRetriever messageListViewModelRetriever,
-            IHandlerFactory handlerFactory)
-        {
             config.Module<MessagesNancyModule>();
             config.Dependencies<IMessageListViewModelRetriever>(messageListViewModelRetriever);
-            config.Dependencies<IHandlerFactory>(handlerFactory);
         }
         public static void StoresModule(
             this ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator config,

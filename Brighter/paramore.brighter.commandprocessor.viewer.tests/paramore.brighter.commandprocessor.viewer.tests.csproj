@@ -89,9 +89,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Adaptors\MessagesModuleTests\MessagesModuleFilterTests.cs" />
-    <Compile Include="Adaptors\MessagesModuleTests\MessagesModuleRePostTests.cs" />
-    <Compile Include="Ports\RepostCommandHandlerTests.cs" />
-    <Compile Include="TestDoubles\FakeHandlerFactory.cs" />
     <Compile Include="TestDoubles\FakeMessageStoreListCacheLoader.cs" />
     <Compile Include="TestDoubles\FakeActivationListModelRetriever.cs" />
     <Compile Include="TestDoubles\FakeMessageStoreViewerModelRetriever.cs" />
