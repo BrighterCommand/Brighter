@@ -62,6 +62,19 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
             }
         }
 
+        /// <summary>
+        /// Initialise the bootstrapper - can be used for adding pre/post hooks and
+        ///             any other initialisation tasks that aren't specifically container setup
+        ///             related
+        /// </summary>
+        /// <param name="container">Container instance for resolving types if required.</param>
+        protected override void ApplicationStartup(TinyIoCContainer container, IPipelines pipelines)
+        {
+            Nancy.Json.JsonSettings.MaxJsonLength = int.MaxValue;
+
+            base.ApplicationStartup(container, pipelines);
+        }
+
         protected override DiagnosticsConfiguration DiagnosticsConfiguration
         {
             get { return new DiagnosticsConfiguration{Password = "password"}; }
