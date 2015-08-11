@@ -121,8 +121,12 @@
     <None Include="app.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Content\bootstrap-theme.css.map" />
-    <None Include="Content\bootstrap.css.map" />
+    <EmbeddedResource Include="Content\bootstrap-theme.css.map">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Content\bootstrap.css.map">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
     <None Include="fonts\glyphicons-halflings-regular.eot" />
     <None Include="fonts\glyphicons-halflings-regular.ttf" />
     <None Include="fonts\glyphicons-halflings-regular.woff" />
@@ -196,26 +200,30 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Content\bootstrap-theme.css" />
-    <EmbeddedResource Include="Content\bootstrap-theme.min.css">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <EmbeddedResource Include="Content\bootstrap-theme.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <Content Include="Content\bootstrap.css" />
+    <EmbeddedResource Include="Content\bootstrap-theme.min.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Content\bootstrap.css">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
     <EmbeddedResource Include="Content\bootstrap.min.css">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
-    <Content Include="Icon.png" />
-    <Content Include="Scripts\bootstrap.js" />
+    <EmbeddedResource Include="Scripts\bootstrap.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
     <EmbeddedResource Include="Scripts\bootstrap.min.js">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
     <Content Include="Scripts\jquery-2.1.4.intellisense.js" />
     <Content Include="Scripts\jquery-2.1.4.js" />
     <EmbeddedResource Include="Scripts\jquery-2.1.4.min.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <Content Include="Scripts\npm.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
