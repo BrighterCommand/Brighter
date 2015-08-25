@@ -45,6 +45,29 @@
         <p>And create 3 different queues listening those SNS topics<br/><img src="images/AWSConsoleQueueList.png" /></p>
         <p>Once you have the topics and the queues, just update the app.config file's &lt;serviceActivatorConnections/&gt; section and put your queue urls.</p>
         <p>You also need to set your AWSSDK profile in app.config file's &lt;aws/&gt; section. To findout how to setup your credentials please check <a href="RunningUnderAWSSQSInfrastructure.html">Running Under AWS SQS Infrastructure</a> section.</p>
+        <h2>Configuring application</h2>
+        <p>To set up your application to use Brighter on SQS, you can use the following code.</p>
+        <pre><code>
+var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(logger);
+var sqsMessageProducerFactory = new SqsMessageProducerFactory(logger);
+
+var builder = DispatchBuilder
+    .With()
+    .Logger(logger)
+    .CommandProcessor(CommandProcessorBuilder.With()
+        .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+        .Policies(policyRegistry)
+        .Logger(logger)
+        .NoTaskQueues()
+        .RequestContextFactory(new InMemoryRequestContextFactory())
+        .Build()
+     )
+     .MessageMappers(messageMapperRegistry)
+     .ChannelFactory(new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory))
+     .ConnectionsFromConfiguration();
+_dispatcher = builder.Build();
+        </code></pre>
+        <p>For details, please check out the example project <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/DocumentsAndFolders.Sqs/Adapters/ServiceHost/DocumentService.cs">here</a></p>
         <h2>Publishing messages</h2>
         <p>To generate DocumentCreated, DocumentUpdated and FolderCreated events, you can use <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples/DocumentsAndFolders.Sqs.EventsGenerator" target="_blank">DocumentsAndFolders.Sqs.EventsGenerator</a></p>
         <p>This project is a console application which can create bulk events and post it to the SNS topics. The parameters are:</p>
