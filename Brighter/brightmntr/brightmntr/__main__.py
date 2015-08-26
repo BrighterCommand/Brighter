@@ -1,5 +1,5 @@
 """
-File         : __init__.py
+File         : __main__.py
 Author           : ian
 Created          : 06-20-2015
 
@@ -32,7 +32,6 @@ Usage:
   brightmntr.py [options]
 
 Options:
-  -b --batch                            Don't accept command-line input; intended to send output to a file (or command).
   -d SECONDS --delay=SECONDS            Specific delay between refreshes (otherwise 5 seconds).
   -n TIMES --updates=TIMES              Update display n times, then exit.
   -p PAGESIZE --pagesize=PAGESIZE       Try to show this number of items from the queue, when the interval is triggered
@@ -50,7 +49,7 @@ from time import sleep
 from .configuration import configure
 
 
-def run((amqp_uri, exchange, cmdlne_arguments):
+def run(amqp_uri, exchange, cmdlne_arguments):
     # start a monitor output thread, this does the work, whilst the main thread just acts as a control
 
     worker = Worker(amqp_uri, exchange, routing_key)
