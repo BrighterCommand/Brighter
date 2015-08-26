@@ -23,13 +23,17 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.IO;
+using System.Reflection;
 using ManagementAndMonitoring.Adapters.ServiceHost;
 using ManagementAndMonitoring.Ports.CommandHandlers;
 using ManagementAndMonitoring.Ports.Commands;
 using ManagementAndMonitoring.Ports.Mappers;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messagestore.mssql;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.commandprocessor.monitoring.Mappers;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
 using Polly;
@@ -110,6 +114,14 @@ namespace Greetings.Adapters.ServiceHost
                 .Dispatcher(_dispatcher)
                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory)) as ControlBusReceiverBuilder;
             _controlDispatcher = builder.Build();
+
+            container.Register<IAmAControlBusSender>(new ControlBusSenderFactory().Create(
+                new MsSqlMessageStore(new MsSqlMessageStoreConfiguration(
+                    "DataSource=\"" + Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\MessageStore.sdf") + "\"", "Messages", 
+                    MsSqlMessageStoreConfiguration.DatabaseType.SqlCe), 
+                    logger), 
+                new RmqMessageProducer(container.Resolve<ILog>()), 
+                logger));
         }
 
         public bool Start(HostControl hostControl)

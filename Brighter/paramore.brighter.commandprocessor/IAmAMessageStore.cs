@@ -44,7 +44,7 @@ namespace paramore.brighter.commandprocessor
     /// Interface IAmAMessageStore
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
     /// store the message into a Message Store to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
-    /// We provide an implementation of <see cref="IAmAMessageStore{T}"/> for Raven <see cref="RavenMessageStore"/>. Clients using other message stores should consider a Pull
+    /// We provide implementations of <see cref="IAmAMessageStore{T}"/> for Event Store and SQL. Clients using other message stores should consider a Pull
     /// request
     /// </summary>
     /// <typeparam name="T"></typeparam>

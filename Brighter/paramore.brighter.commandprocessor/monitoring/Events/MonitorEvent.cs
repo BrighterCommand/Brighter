@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace paramore.brighter.commandprocessor.monitoring.Events
 {
@@ -37,25 +39,26 @@ namespace paramore.brighter.commandprocessor.monitoring.Events
     public class MonitorEvent : Event
     {
         public Exception Exception { get; set; }
+        [JsonConverter(typeof(StringEnumConverter))]
         public MonitorEventType EventType { get; private set; }
         public DateTime EventTime { get; private set; }
         public string HandlerName { get; private set; }
         public string InstanceName { get; set; }
-        public string TargetHandlerRequestJson { get; private set; }
+        public string RequestBody { get; private set; }
 
         public MonitorEvent(
             string instanceName,
             MonitorEventType eventType, 
             string handlerName,
-            string targetHandlerRequestJson,
+            string requestBody,
             DateTime eventTime 
             )
-            :base(new Guid())
+            :base(Guid.NewGuid())
         {
             InstanceName = instanceName;
             EventType = eventType;
             HandlerName = handlerName;
-            TargetHandlerRequestJson = targetHandlerRequestJson;
+            RequestBody = requestBody;
             EventTime = eventTime;
         }
     }

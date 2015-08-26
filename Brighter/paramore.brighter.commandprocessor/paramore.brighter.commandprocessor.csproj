@@ -55,6 +55,8 @@
     <Compile Include="CommandProcessorBuilder.cs" />
     <Compile Include="ConfigurationException.cs" />
     <Compile Include="ChannelFailureException.cs" />
+    <Compile Include="ControlBusSender.cs" />
+    <Compile Include="ControlBusSenderFactory.cs" />
     <Compile Include="DefaultPolicy.cs" />
     <Compile Include="eventsourcing\Attributes\UseCommandSourcingAttribute.cs" />
     <Compile Include="eventsourcing\Handlers\CommandSourcingHandler.cs" />
@@ -65,6 +67,7 @@
     <Compile Include="IAmAChannelFactory.cs" />
     <Compile Include="IAmACommandStore.cs" />
     <Compile Include="IAmAControlBusSender.cs" />
+    <Compile Include="IAmAControlBusSenderFactory.cs" />
     <Compile Include="IAmAMessageGatewaySupportingCache.cs" />
     <Compile Include="IAmAMessageProducerFactory.cs" />
     <Compile Include="IAmAMessageConsumerFactory.cs" />
@@ -78,7 +81,6 @@
     <Compile Include="IAmAMessageConsumer.cs" />
     <Compile Include="InMemoryCommandStore.cs" />
     <Compile Include="monitoring\Configuration\MonitoringConfigurationSection.cs" />
-    <Compile Include="monitoring\Decorators\ControlBusSender.cs" />
     <Compile Include="monitoring\Mappers\MonitorEventMessageMapper.cs" />
     <Compile Include="OutputChannel.cs" />
     <Compile Include="InputChannel.cs" />
@@ -133,11 +135,13 @@
     <Compile Include="RequestLoggingAttribute.cs" />
     <Compile Include="RequestHandlers.cs" />
     <Compile Include="RequestLoggingHandler.cs" />
+    <Compile Include="SimpleMessageMapperFactory.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="paramore.brighter.commandprocessor.nuspec" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
