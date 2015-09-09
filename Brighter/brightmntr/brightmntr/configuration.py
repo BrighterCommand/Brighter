@@ -43,7 +43,8 @@ def configure():
 
     exchange = Exchange(exchange_name, exchange_type, durable=exchange_durability)
     amqp_uri = config['Broker']['amqpuri']
+    routing_key = config['Monitoring']['routingkey']
 
-    return exchange, amqp_uri
+    return exchange, amqp_uri, routing_key
 
 

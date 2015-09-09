@@ -30,8 +30,9 @@ THE SOFTWARE.
 """
 
 from threading import Thread
-from kombu import BrokerConnection, Queue
-from kombu.pools import producers
+from kombu import BrokerConnection, Consumer, Queue
+from kombu.pools import connections
+from datetime import datetime
 
 
 class Worker(Thread):
@@ -42,18 +43,21 @@ class Worker(Thread):
         self.amqp_uri = amqp_uri
         self.monitoring_queue = Queue('paramore.brighter.controlbus', exchange=self.exchange, routing_key=self.routing_key)
 
-    @staticmethod
     def _read_monitoring_messages(self):
 
         # read the next batch num0ber of monitoring messages from the control bus
         # evaluate for color coding (error is red)
         # print to stdout
 
+        connection = BrokerConnection(hostname=self.amqp_uri)
+        with connections[connection].acquire(block=True) as conn:
+            print('Got connection: %r' % (conn.as_uri(), ))
+            with Consumer(conn, [self.monitoring_queue], callbacks=[self.read_message], accept=['json', 'text/plain']):
+                conn.drain_events()
 
-        connection = BrokerConnection(hostname=destination)
-
-        with producers[connection].acquire(block=True) as producer:
-            print("Send message to broker {amqpuri} with routing key {routing_key}".format(amqpuri=self.amqp_uri, routing_key=self.routing_key))
+    @staticmethod
+    def read_message(body, message):
+        print("Monitoring event received at: ", datetime.utcnow().isoformat(), " Event:  ", body)
 
     def run(self):
         self._read_monitoring_messages()

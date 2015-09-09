@@ -49,7 +49,7 @@ from time import sleep
 from .configuration import configure
 
 
-def run(amqp_uri, exchange, cmdlne_arguments):
+def run(amqp_uri, exchange, routing_key, params):
     # start a monitor output thread, this does the work, whilst the main thread just acts as a control
 
     worker = Worker(amqp_uri, exchange, routing_key)
@@ -66,6 +66,6 @@ def run(amqp_uri, exchange, cmdlne_arguments):
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='Brighter Monitoring v0.0')
-    exchange, amqp_uri = configure()
-    run(amqp_uri, exchange, arguments)
+    exchange, amqp_uri, routing_key = configure()
+    run(amqp_uri, exchange, routing_key, arguments)
 

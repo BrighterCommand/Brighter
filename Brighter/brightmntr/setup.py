@@ -15,7 +15,7 @@ setup(
     url='https://github.com/iancooper/Paramore',
 
     packages=find_packages(),
-    install_requires=['ez_setup', 'docopt'],
+    install_requires=['ez_setup', 'docopt', 'kombu'],
     package_data={
         # If any package contains *.txt or *.rst files, include them:
         '': ['*.txt', '*.rst'],

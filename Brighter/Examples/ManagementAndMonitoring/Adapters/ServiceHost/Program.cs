@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using Greetings.Adapters.ServiceHost;
 using Topshelf;
 
 namespace ManagementAndMonitoring.Adapters.ServiceHost

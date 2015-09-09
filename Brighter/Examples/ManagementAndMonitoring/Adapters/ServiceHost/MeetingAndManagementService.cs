@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.Reflection;
-using ManagementAndMonitoring.Adapters.ServiceHost;
+using log4net.Config;
 using ManagementAndMonitoring.Ports.CommandHandlers;
 using ManagementAndMonitoring.Ports.Commands;
 using ManagementAndMonitoring.Ports.Mappers;
@@ -33,14 +33,13 @@ using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.brighter.commandprocessor.monitoring.Mappers;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
 using Polly;
 using TinyIoC;
 using Topshelf;
 
-namespace Greetings.Adapters.ServiceHost
+namespace ManagementAndMonitoring.Adapters.ServiceHost
 {
     internal class MeetingAndManagementService : ServiceControl
     {
@@ -49,7 +48,7 @@ namespace Greetings.Adapters.ServiceHost
 
         public MeetingAndManagementService()
         {
-            log4net.Config.XmlConfigurator.Configure();
+            XmlConfigurator.Configure();
             //Create a logger
             var logger = LogProvider.For<MeetingAndManagementService>();
 
@@ -92,6 +91,7 @@ namespace Greetings.Adapters.ServiceHost
             //create the gateway
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
             var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger);
+
             var builder = DispatchBuilder
                 .With()
                 .Logger(logger)
@@ -126,12 +126,14 @@ namespace Greetings.Adapters.ServiceHost
 
         public bool Start(HostControl hostControl)
         {
+            _controlDispatcher.Receive();
             _dispatcher.Receive();
             return true;
         }
 
         public bool Stop(HostControl hostControl)
         {
+            _controlDispatcher.End();   //Don't wait on the control bus, we are stopping so we don't want any more control messages, just terminate
             _dispatcher.End().Wait();
             _dispatcher = null;
             return false;
