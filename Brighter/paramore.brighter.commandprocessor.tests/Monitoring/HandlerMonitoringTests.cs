@@ -37,7 +37,7 @@ using TinyIoC;
 namespace paramore.commandprocessor.tests.Monitoring
 {
     [Subject("Monitoring")]
-    public class WhenMonitoringIsOnForAHandler
+    public class When_monitoring_is_on_for_a_handler
     {
         private static MyCommand s_command;
         private static IAmACommandProcessor s_commandProcessor;
@@ -95,4 +95,9 @@ namespace paramore.commandprocessor.tests.Monitoring
         };
 
     }
+
+
+    [Ignore("placeholder")]
+    [Subject("Monitoring")]
+    public class When_monitoring_we_should_record_but_rethrow_exceptions {}
 }

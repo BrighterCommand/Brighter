@@ -6,8 +6,6 @@ namespace paramore.brighter.commandprocessor.monitoring.Mappers
 {
     public class MonitorEventMessageMapper : IAmAMessageMapper<MonitorEvent>
     {
-        #region Implementation of IAmAMessageMapper<MonitorEvent>
-
         /// <summary>
         /// Maps to message.
         /// </summary>
@@ -30,7 +28,5 @@ namespace paramore.brighter.commandprocessor.monitoring.Mappers
         {
             return JsonConvert.DeserializeObject<MonitorEvent>(message.Body.Value);
         }
-
-        #endregion
     }
 }
