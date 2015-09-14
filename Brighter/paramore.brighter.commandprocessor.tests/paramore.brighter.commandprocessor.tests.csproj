@@ -195,6 +195,7 @@
     <Compile Include="MessagingGateway\TestDoubles\BrokerUnreachableRmqMessageConsumer.cs" />
     <Compile Include="Monitoring\HandlerMonitoringTests.cs" />
     <Compile Include="Monitoring\SerializationTests.cs" />
+    <Compile Include="Monitoring\TestDoubles\MyMonitoredHandlerThatThrows.cs" />
     <Compile Include="Monitoring\TestDoubles\MyMonitoredHandler.cs" />
     <Compile Include="Monitoring\TestDoubles\SpyControlBusSender.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

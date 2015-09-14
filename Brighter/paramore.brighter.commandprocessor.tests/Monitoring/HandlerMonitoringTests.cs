@@ -43,8 +43,8 @@ namespace paramore.commandprocessor.tests.Monitoring
         private static IAmACommandProcessor s_commandProcessor;
         private static SpyControlBusSender s_controlBusSender;
         private static DateTime s_at;
-        private static MonitorEvent beforeEvent;
-        private static MonitorEvent afterEvent;
+        private static MonitorEvent s_beforeEvent;
+        private static MonitorEvent s_afterEvent;
         private static string s_originalRequestAsJson;
 
         private Establish _context = () =>
@@ -74,20 +74,20 @@ namespace paramore.commandprocessor.tests.Monitoring
         private Because _of = () =>
         {
             s_commandProcessor.Send(s_command);
-            beforeEvent = s_controlBusSender.Observe<MonitorEvent>();
-            afterEvent = s_controlBusSender.Observe<MonitorEvent>();
+            s_beforeEvent = s_controlBusSender.Observe<MonitorEvent>();
+            s_afterEvent = s_controlBusSender.Observe<MonitorEvent>();
         };
 
-        private It _should_have_an_instance_name_before = () => beforeEvent.InstanceName.ShouldEqual("UnitTests"); //set in the config
-        private It _should_post_the_event_type_to_the_control_bus_before = () => beforeEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
-        private It _should_post_the_handler_name_to_the_control_bus_before = () => beforeEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
-        private It _should_include_the_underlying_request_details_before = () => beforeEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
-        private It should_post_the_time_of_the_request_before = () => beforeEvent.EventTime.ShouldEqual(s_at);
-        private It _should_have_an_instance_name_after = () => afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
-        private It _should_post_the_event_type_to_the_control_bus_after= () => afterEvent.EventType.ShouldEqual(MonitorEventType.ExitHandler);
-        private It _should_post_the_handler_name_to_the_control_bus_after = () => afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
-        private It _should_include_the_underlying_request_details_after = () => afterEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
-        private It should_post_the_time_of_the_request_after = () => afterEvent.EventTime.ShouldEqual(s_at);
+        private It _should_have_an_instance_name_before = () => s_beforeEvent.InstanceName.ShouldEqual("UnitTests"); //set in the config
+        private It _should_post_the_event_type_to_the_control_bus_before = () => s_beforeEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
+        private It _should_post_the_handler_name_to_the_control_bus_before = () => s_beforeEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_include_the_underlying_request_details_before = () => s_beforeEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
+        private It should_post_the_time_of_the_request_before = () => s_beforeEvent.EventTime.ShouldEqual(s_at);
+        private It _should_have_an_instance_name_after = () => s_afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
+        private It _should_post_the_event_type_to_the_control_bus_after= () => s_afterEvent.EventType.ShouldEqual(MonitorEventType.ExitHandler);
+        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_include_the_underlying_request_details_after = () => s_afterEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
+        private It should_post_the_time_of_the_request_after = () => s_afterEvent.EventTime.ShouldEqual(s_at);
 
         Cleanup _tearDown = () =>
         {
@@ -96,8 +96,54 @@ namespace paramore.commandprocessor.tests.Monitoring
 
     }
 
-
-    [Ignore("placeholder")]
     [Subject("Monitoring")]
-    public class When_monitoring_we_should_record_but_rethrow_exceptions {}
+    public class When_monitoring_we_should_record_but_rethrow_exceptions 
+    {
+        private static MyCommand s_command;
+        private static Exception s_thrownException;
+        private static SpyControlBusSender s_controlBusSender;
+        private static CommandProcessor s_commandProcessor;
+        private static MonitorEvent s_afterEvent;
+        private static string s_originalRequestAsJson;
+        private static DateTime s_at;
+
+        private Establish _context = () => 
+        {
+            var logger = A.Fake<ILog>();
+            s_controlBusSender = new SpyControlBusSender();
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, MyMonitoredHandlerThatThrows>();
+
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyMonitoredHandlerThatThrows>();
+            container.Register<IHandleRequests<MyCommand>, MonitorHandler<MyCommand>>();
+            container.Register<ILog>(logger);
+            container.Register<IAmAControlBusSender>(s_controlBusSender);
+
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+
+            s_command = new MyCommand();
+
+            s_originalRequestAsJson = JsonConvert.SerializeObject(s_command);
+
+            s_at = DateTime.UtcNow;
+            Clock.OverrideTime = s_at;
+        };
+
+        private Because _of = () =>
+        {
+            s_thrownException = Catch.Exception(() => s_commandProcessor.Send(s_command));
+            s_controlBusSender.Observe<MonitorEvent>(); //pop but don't inspect before
+            s_afterEvent = s_controlBusSender.Observe<MonitorEvent>();
+        };
+
+        private It _should_pass_through_the_exception_not_swallow = () => s_thrownException.ShouldNotBeNull();
+        private It _should_monitor_the_exception = () => s_afterEvent.Exception.ShouldBeOfExactType(typeof(ApplicationException));
+        private It _should_surface_the_error_message = () => s_afterEvent.Exception.Message.ShouldContain("monitored");
+        private It _should_have_an_instance_name_after = () => s_afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
+        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_include_the_underlying_request_details_after = () => s_afterEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
+        private It should_post_the_time_of_the_request_after = () => s_afterEvent.EventTime.ShouldEqual(s_at);
+    }
 }

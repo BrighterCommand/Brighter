@@ -29,7 +29,7 @@ THE SOFTWARE.
 ***********************************************************************
 
 Usage:
-  brightmntr.py [options]
+  brightmntr [options]
 
 Options:
   -d SECONDS --delay=SECONDS            Specific delay between refreshes (otherwise 5 seconds).
@@ -50,16 +50,22 @@ from .configuration import configure
 
 
 def run(amqp_uri, exchange, routing_key, params):
-    # start a monitor output thread, this does the work, whilst the main thread just acts as a control
+    # start a monitor output thread, this does the work, whilst the main thread just acts
+    # as a control thread to receive the  keyboard input
+    delay = 5
+    num_of_times = -1
 
     worker = Worker(amqp_uri, exchange, routing_key)
+    worker.frequency = -1 # configure the worker for times to run
+    worker.machine_filter = None # are we filtering to a machine
+    worker.service_filter = None
     worker.run()
 
     # poll for keyboard input to allow the user to quit monitoring
     while True:
         try:
             # just sleep unless we receive an interrupt i.e. CTRL+C
-            sleep(1)
+            sleep(delay)
         except KeyboardInterrupt:
             sys.exit(1)
 
