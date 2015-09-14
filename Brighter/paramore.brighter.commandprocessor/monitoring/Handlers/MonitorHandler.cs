@@ -66,13 +66,41 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         {
             if (_isMonitoringEnabled)
             {
-                _controlBusSender.Post(new MonitorEvent(_instanceName, MonitorEventType.EnterHandler, _handlerName, JsonConvert.SerializeObject(command), Clock.Now().GetValueOrDefault()));
+                try
+                {
+                    _controlBusSender.Post(
+                        new MonitorEvent(
+                            _instanceName, 
+                            MonitorEventType.EnterHandler, 
+                            _handlerName, 
+                            JsonConvert.SerializeObject(command), 
+                            Clock.Now().GetValueOrDefault()));
 
-                base.Handle(command);
+                    base.Handle(command);
 
-                _controlBusSender.Post(new MonitorEvent(_instanceName, MonitorEventType.ExitHandler, _handlerName, JsonConvert.SerializeObject(command), Clock.Now().GetValueOrDefault()));
+                    _controlBusSender.Post(
+                        new MonitorEvent(
+                            _instanceName, 
+                            MonitorEventType.ExitHandler, 
+                            _handlerName, 
+                            JsonConvert.SerializeObject(command), 
+                            Clock.Now().GetValueOrDefault()));
+                        
+                    return command;
+                }
+                catch (Exception e)
+                {
+                    _controlBusSender.Post(
+                        new MonitorEvent(
+                            _instanceName, 
+                            MonitorEventType.ExceptionThrown, 
+                            _handlerName, 
+                            JsonConvert.SerializeObject(command), 
+                            Clock.Now().GetValueOrDefault(),
+                            e));
+                    throw;
+                }
 
-                return command;
             }
 
             return base.Handle(command);

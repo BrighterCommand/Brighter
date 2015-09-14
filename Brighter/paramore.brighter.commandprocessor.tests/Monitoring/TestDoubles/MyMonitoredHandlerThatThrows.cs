@@ -23,45 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.monitoring.Attributes;
+using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.monitoring.Events
+namespace paramore.commandprocessor.tests.Monitoring.TestDoubles
 {
-    public enum MonitorEventType
+    internal class MyMonitoredHandlerThatThrows : RequestHandler<MyCommand>
     {
-        BrokenCircuit,
-        EnterHandler,
-        ExceptionThrown,
-        ExitHandler,
-    }
-
-    public class MonitorEvent : Event
-    {
-        public Exception Exception { get; set; }
-        [JsonConverter(typeof(StringEnumConverter))]
-        public MonitorEventType EventType { get; private set; }
-        public DateTime EventTime { get; private set; }
-        public string HandlerName { get; private set; }
-        public string InstanceName { get; set; }
-        public string RequestBody { get; private set; }
-
-        public MonitorEvent(
-            string instanceName,
-            MonitorEventType eventType, 
-            string handlerName,
-            string requestBody,
-            DateTime eventTime,
-            Exception exception = null
-            )
-            :base(Guid.NewGuid())
+        public MyMonitoredHandlerThatThrows (ILog logger) : base(logger)
         {
-            InstanceName = instanceName;
-            EventType = eventType;
-            HandlerName = handlerName;
-            RequestBody = requestBody;
-            EventTime = eventTime;
-            Exception = exception;
+        }
+
+        [Monitor(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandler))]
+        public override MyCommand Handle(MyCommand command)
+        {
+            throw new ApplicationException("I am an exception in a monitored pipeline");
         }
 
     }
