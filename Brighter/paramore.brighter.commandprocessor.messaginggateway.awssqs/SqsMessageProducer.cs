@@ -21,7 +21,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
             _logger = logger;
         }
 
-        public Task Send(Message message)
+        public void Send(Message message)
         {
             var messageString = JsonConvert.SerializeObject(message);
             _logger.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", message.Header.Topic, message.Id, messageString);
@@ -31,7 +31,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
                 var topicArn = EnsureTopic(message.Header.Topic, client);
 
                 var publishRequest = new PublishRequest(topicArn, messageString);
-                return client.PublishAsync(publishRequest);
+                client.PublishAsync(publishRequest).Wait();
             }
         }
 

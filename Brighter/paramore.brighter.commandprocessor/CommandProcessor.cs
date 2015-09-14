@@ -267,7 +267,7 @@ namespace paramore.brighter.commandprocessor
             RetryAndBreakCircuit(() =>
                 {
                     _messageStore.Add(message).Wait(_messageStoreWriteTimeout);
-                    _messagingGateway.Send(message).Wait(_messageGatewaySendTimeout);
+                    _messagingGateway.Send(message);
                 });
         }
 
@@ -300,7 +300,7 @@ namespace paramore.brighter.commandprocessor
                         return;
                     }
 
-                    _messagingGateway.Send(message).Wait();
+                    _messagingGateway.Send(message);
                 });
         }
 

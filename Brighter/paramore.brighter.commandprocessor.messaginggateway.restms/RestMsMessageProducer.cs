@@ -71,11 +71,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <returns>Task.</returns>
-        public Task Send(Message message)
+        public void Send(Message message)
         {
-            var tcs = new TaskCompletionSource<object>();
-
             try
             {
                 _feed.EnsureFeedExists(_domain.GetDomain());
@@ -84,18 +81,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             catch (RestMSClientException rmse)
             {
                 Logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
-                tcs.SetException(rmse);
                 throw;
             }
             catch (HttpRequestException he)
             {
                 Logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
-                tcs.SetException(he);
                 throw;
             }
-
-            tcs.SetResult(new object());
-            return tcs.Task;
         }
 
 
