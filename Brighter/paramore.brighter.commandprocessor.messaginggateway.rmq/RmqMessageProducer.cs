@@ -51,6 +51,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessageProducer : MessageGateway, IAmAMessageProducerSupportingDelay
     {
+        static object _lock = new object();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
@@ -61,26 +63,20 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <returns>Task.</returns>
-        public Task Send(Message message)
+        public void Send(Message message)
         {
-            return this.Send(message, 0);
+            this.Send(message, 0);
         }
 
         /// <summary>
         /// Send the specified message with specified delay
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        /// <returns>Task.</returns>
-        public Task Send(Message message, int delayMilliseconds)
+        public void Send(Message message, int delayMilliseconds)
         {
-            //RabbitMQ .NET Client does not have an async publish, so fake this for now as we want to support messaging frameworks that do have this option
-            var tcs = new TaskCompletionSource<object>();
-
             Logger.DebugFormat("RmqMessageProducer: Preparing  to sending message via exchange {0}", Configuration.Exchange.Name);
 
-            try
+            lock (_lock)
             {
                 EnsureChannel();
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name, Logger);
@@ -88,15 +84,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
                 Logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and message: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds);
             }
-            catch (Exception e)
-            {
-                if (Channel != null)
-                    tcs.SetException(e);
-                throw;
-            }
-
-            tcs.SetResult(new object());
-            return tcs.Task;
         }
     }
 }

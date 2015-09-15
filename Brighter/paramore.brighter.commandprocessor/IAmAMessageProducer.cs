@@ -57,8 +57,7 @@ namespace paramore.brighter.commandprocessor
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <returns>Task.</returns>
-        Task Send(Message message);
+        void Send(Message message);
     }
 
     /// <summary>
@@ -78,7 +77,6 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        /// <returns>Task.</returns>
-        Task Send(Message message, int delayMilliseconds);
+        void Send(Message message, int delayMilliseconds);
     }
 }

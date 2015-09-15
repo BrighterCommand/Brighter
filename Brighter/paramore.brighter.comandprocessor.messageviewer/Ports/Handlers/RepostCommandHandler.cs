@@ -35,7 +35,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
 
             foreach (var foundMessage in foundMessages)
             {
-                foundProducer.Send(foundMessage).Wait();
+                foundProducer.Send(foundMessage);
             }
         }
 
