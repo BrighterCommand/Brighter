@@ -51,30 +51,32 @@ namespace paramore.brighter.commandprocessor
     {
         private readonly Dictionary<Guid, CommandStoreItem> _commands = new Dictionary<Guid, CommandStoreItem>();
 
-        public Task Add<T>(Guid id, T command) where T : class, IRequest
+        /// <summary>
+        /// Adds the specified identifier.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="command">The command.</param>
+        /// <param name="timeoutInMilliseconds"></param>
+        public void Add<T>(T command, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<object>();
 
-            if (!_commands.ContainsKey(id))
+            if (!_commands.ContainsKey(command.Id))
             {
-                _commands.Add(id, new CommandStoreItem(typeof(T), string.Empty));
+                _commands.Add(command.Id, new CommandStoreItem(typeof(T), string.Empty));
             }
 
-            _commands[id].CommandBody = JsonConvert.SerializeObject(command);
-
-            tcs.SetResult(new object());
-            return tcs.Task;
+            _commands[command.Id].CommandBody = JsonConvert.SerializeObject(command);
         }
 
         /// <summary>
         /// Finds the command with the specified identifier.
         /// </summary>
         /// <param name="id">The identifier.</param>
+        /// <param name="timeoutInMilliseconds"></param>
         /// <returns>ICommand.</returns>
-        public Task<T> Get<T>(Guid id) where T:class, IRequest, new()
+        public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T:class, IRequest, new()
         {
-            var tcs = new TaskCompletionSource<T>();
-
             if (!_commands.ContainsKey(id))
                 return null;
 
@@ -82,9 +84,7 @@ namespace paramore.brighter.commandprocessor
             if (commandStoreItem.CommandType != typeof(T))
                 throw new TypeLoadException(string.Format("The type of item {0) is {1} not{2}", id, commandStoreItem.CommandType.Name, typeof(T).Name));
 
-            tcs.SetResult(JsonConvert.DeserializeObject<T>(commandStoreItem.CommandBody));
-
-            return tcs.Task;
+            return JsonConvert.DeserializeObject<T>(commandStoreItem.CommandBody);
         }
 
                 

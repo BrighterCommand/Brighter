@@ -70,7 +70,7 @@ namespace EventSourcing.Adapters.ServiceHost
 
             commandProcessor.Send(greetingCommand);
 
-            var retrievedCommand = commandStore.Get<GreetingCommand>(greetingCommand.Id).Result;
+            var retrievedCommand = commandStore.Get<GreetingCommand>(greetingCommand.Id);
 
             var commandAsJson = JsonConvert.SerializeObject(retrievedCommand);
 
