@@ -43,18 +43,14 @@ namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
 {
     internal class FakeMessageStoreViewerWithGetException : IAmAMessageStore<Message>, IAmAMessageStoreViewer<Message>
     {
-        public Task Add(Message message)
-        {
-            return Task.FromResult((object) null);
+        public void Add(Message message, int messageStoreTimeout = -1) {}
 
-        }
-
-        public Task<Message> Get(Guid messageId)
+        public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
             throw new AggregateException();
         }
 
-        public Task<IList<Message>> Get(int pageSize = 100, int pageNumber = 1)
+        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
         {
             throw new AggregateException();
         }

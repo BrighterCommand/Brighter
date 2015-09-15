@@ -59,10 +59,10 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
                 messageHeader.Bag.Add(key2, value2);
                 
                 s_messageEarliest = new Message(messageHeader, new MessageBody("message body"));
-                s_sqlMessageStore.Add(s_messageEarliest).Wait();
+                s_sqlMessageStore.Add(s_messageEarliest);
             };
 
-            private Because _of = () => { s_storedMessage = s_sqlMessageStore.Get(s_messageEarliest.Id).Result; };
+            private Because _of = () => { s_storedMessage = s_sqlMessageStore.Get(s_messageEarliest.Id); };
 
             private It _should_read_the_message_from_the__sql_message_store = () => s_storedMessage.Body.Value.ShouldEqual(s_messageEarliest.Body.Value);
             private It _should_read_the_message_header_type_from_the__sql_message_store = () => s_storedMessage.Header.MessageType.ShouldEqual(s_messageEarliest.Header.MessageType);
@@ -91,20 +91,20 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
             {
                 Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
                 s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
-                s_sqlMessageStore.Add(s_messageEarliest).Wait();
+                s_sqlMessageStore.Add(s_messageEarliest);
 
                 Clock.OverrideTime = DateTime.UtcNow.AddHours(-2);
                 
                 s_message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND), new MessageBody("Body2"));
-                s_sqlMessageStore.Add(s_message2).Wait();
+                s_sqlMessageStore.Add(s_message2);
 
                 Clock.OverrideTime = DateTime.UtcNow.AddHours(-1);
 
                 s_messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND), new MessageBody("Body3"));
-                s_sqlMessageStore.Add(s_messageLatest).Wait();
+                s_sqlMessageStore.Add(s_messageLatest);
             };
 
-            private Because _of = () => { s_retrievedMessages = s_sqlMessageStore.Get().Result; };
+            private Because _of = () => { s_retrievedMessages = s_sqlMessageStore.Get(); };
 
             private It _should_read_the_messages_from_the__message_store = () => s_retrievedMessages.Count().ShouldEqual(3);
             private It _should_read_last_message_first_from_the__message_store = () => s_retrievedMessages.First().Id.ShouldEqual(s_messageLatest.Id);
@@ -117,7 +117,7 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
         public class when_there_is_no_message_in_the_sql_message_store
         {
             private Establish _context = () => { s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body")); };
-            private Because _of = () => { s_storedMessage = s_sqlMessageStore.Get(s_messageEarliest.Id).Result; };
+            private Because _of = () => { s_storedMessage = s_sqlMessageStore.Get(s_messageEarliest.Id); };
             private It _should_return_a_empty_message = () => s_storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
         }
 
@@ -129,10 +129,10 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
             private Establish _context = () =>
             {
                 s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-                s_sqlMessageStore.Add(s_messageEarliest).Wait();
+                s_sqlMessageStore.Add(s_messageEarliest);
             };
 
-            private Because _of = () => { s_exception = Catch.Exception(() => s_sqlMessageStore.Add(s_messageEarliest).Wait()); };
+            private Because _of = () => { s_exception = Catch.Exception(() => s_sqlMessageStore.Add(s_messageEarliest)); };
 
             private It _should_ignore_the_duplcate_key_and_still_succeed = () => { s_exception.ShouldBeNull(); };
         }
@@ -144,12 +144,12 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
                 s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
                 s_message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
                 s_message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
-                s_sqlMessageStore.Add(s_messageEarliest).Wait();
-                s_sqlMessageStore.Add(s_message1).Wait();
-                s_sqlMessageStore.Add(s_message2).Wait();
+                s_sqlMessageStore.Add(s_messageEarliest);
+                s_sqlMessageStore.Add(s_message1);
+                s_sqlMessageStore.Add(s_message2);
             };
 
-            private Because _of = () => { messages = s_sqlMessageStore.Get(1, 3).Result; };
+            private Because _of = () => { messages = s_sqlMessageStore.Get(1, 3); };
 
             private It _should_not_fetch_null_messages = () => { messages.ShouldNotBeNull(); };
             private It _should_fetch_1_message = () => { messages.Count.ShouldEqual(1); };

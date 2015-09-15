@@ -42,13 +42,11 @@ namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
 {
     internal class FakeMessageStoreNotViewer : IAmAMessageStore<Message>
     {
-        public Task Add(Message message)
+        public void Add(Message message, int messageStoreTimeout = -1) {}
+
+        public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
-            return Task.FromResult((object) null);
-        }
-        public Task<Message> Get(Guid messageId)
-        {
-            return Task.FromResult((Message) null);
+            return null;
         }
     }
 }

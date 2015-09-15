@@ -123,16 +123,11 @@ namespace DocumentsAndFolders.Sqs.EventsGenerator
     public class FakeMessageStore : IAmAMessageStore<Message>
     {
         public bool MessageWasAdded { get; set; }
-        public Task Add(Message message)
+        public void Add(Message message, int messageStoreTimeout = -1)
         {
-            var tcs = new TaskCompletionSource<object>();
-
             MessageWasAdded = true;
-
-            tcs.SetResult(new object());
-            return tcs.Task;
         }
-        public Task<Message> Get(Guid messageId)
+        public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
             return null;
         }

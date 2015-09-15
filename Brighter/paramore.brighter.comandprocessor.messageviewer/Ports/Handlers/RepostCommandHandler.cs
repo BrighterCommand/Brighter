@@ -35,7 +35,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
 
             foreach (var foundMessage in foundMessages)
             {
-                foundProducer.Send(foundMessage).Wait();
+                foundProducer.Send(foundMessage);
             }
         }
 
@@ -72,7 +72,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
         {
             var foundMessages = new List<Message>(
                 command.MessageIds
-                    .Select(messageId => messageStore.Get(Guid.Parse(messageId)).Result)
+                    .Select(messageId => messageStore.Get(Guid.Parse(messageId)))
                     .Where(fm => fm != null));
             if (foundMessages.Count < command.MessageIds.Count)
             {

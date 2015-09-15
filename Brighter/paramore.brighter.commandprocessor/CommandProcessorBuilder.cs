@@ -235,9 +235,9 @@ namespace paramore.brighter.commandprocessor
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
                     messageStore: _messageStore,
-                    messagingGateway: _messagingGateway,
+                    messageProducer: _messagingGateway,
                     logger: _logger,
-                    messageStoreWriteTimeout: _messageStoreWriteTimeout,
+                    messageStoreTimeout: _messageStoreWriteTimeout,
                     messageGatewaySendTimeout: _messagingGatewaySendTimeout
                     );
             }

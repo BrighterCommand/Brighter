@@ -40,7 +40,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using EventStore.ClientAPI;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -75,7 +74,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         /// </summary>
         /// <param name="message">The message.</param>
         /// <returns>Task.</returns>
-        public Task Add(Message message)
+        public void Add(Message message, int messageStoreTimeout = -1)
         {
             _logger.DebugFormat("Adding message to Event Store Message Store: {0}", JsonConvert.SerializeObject(message));
             var eventBody = Encoding.UTF8.GetBytes(message.Body.Value);
@@ -93,7 +92,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
             var eventData = new[] { new EventData(message.Id, message.Header.Topic, true, eventBody, eventHeader) };
 
             var numberOfPreviousEvent = eventNumber - 1;
-            return _eventStore.AppendToStreamAsync(streamId, numberOfPreviousEvent, eventData);
+            _eventStore.AppendToStreamAsync(streamId, numberOfPreviousEvent, eventData).Wait();
         }
 
         private string ExtractStreamIdFromHeader(Dictionary<string, object> headerBag, Guid messageId)
@@ -125,7 +124,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public Task<Message> Get(Guid messageId)
+        public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
             throw new NotImplementedException();
         }
@@ -138,9 +137,9 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         /// <param name="fromEventNumber">The event number to start from (inclusive).</param>
         /// <param name="numberOfEvents">The number of events to return.</param>
         /// <returns></returns>
-        public async Task<IList<Message>> Get(string stream, int fromEventNumber, int numberOfEvents)
+        public IList<Message> Get(string stream, int fromEventNumber, int numberOfEvents)
         {
-            var eventStreamSlice = await _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, numberOfEvents, true);
+            var eventStreamSlice = _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, numberOfEvents, true).Result;
             return eventStreamSlice.Events.Select(e => ConvertEventToMessage(e.Event, stream)).ToList();
         }
 

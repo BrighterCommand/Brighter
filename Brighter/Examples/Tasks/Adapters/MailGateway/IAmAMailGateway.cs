@@ -29,6 +29,6 @@ namespace Tasks.Adapters.MailGateway
 {
     public interface IAmAMailGateway
     {
-        Task Send(TaskReminder reminder);
+        void Send(TaskReminder reminder);
     }
 }

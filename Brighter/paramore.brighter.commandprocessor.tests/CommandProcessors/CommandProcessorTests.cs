@@ -280,7 +280,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             s_messageStore = A.Fake<IAmAMessageStore<Message>>();
             var tcs = new TaskCompletionSource<object>();
             tcs.SetResult(new object());
-            A.CallTo(() => s_messageStore.Add(A<Message>.Ignored)).Returns(tcs.Task);
 
             s_messagingGateway = A.Fake<IAmAMessageProducer>();
             s_message = new Message(
@@ -295,7 +294,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            A.CallTo(() => s_messageStore.Get(s_message.Header.Id)).Returns(s_message);
             s_commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
@@ -303,6 +301,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 s_messageStore,
                 s_messagingGateway,
                 logger);
+
+            A.CallTo(() => s_messageStore.Get(A<Guid>.Ignored, A<int>.Ignored)).Returns(s_message);
         };
 
         private Because _of = () => s_commandProcessor.Repost(s_message.Header.Id);

@@ -40,7 +40,7 @@ namespace Tasks.Adapters.MailGateway
             _translator = translator;
         }
 
-        public Task Send(TaskReminder reminder)
+        public void Send(TaskReminder reminder)
         {
             var mail = _translator.Translate(reminder);
 
@@ -51,7 +51,7 @@ namespace Tasks.Adapters.MailGateway
 
             var api = Web.GetInstance(credentials);
 
-            return api.DeliverAsync(mail);
+            api.DeliverAsync(mail).Wait();
         }
     }
 }
