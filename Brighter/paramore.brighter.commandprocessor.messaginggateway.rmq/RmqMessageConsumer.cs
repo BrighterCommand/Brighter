@@ -50,7 +50,7 @@ using RabbitMQ.Client.Exceptions;
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     /// <summary>
-    /// Class ServerRequestHandler .
+    /// Class RmqMessageConsumer.
     /// The <see cref="RmqMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of 
     /// inter-process communication tasks from the server. It handles connection establishment, request reception and dispatching, 
     /// result sending, and error handling.

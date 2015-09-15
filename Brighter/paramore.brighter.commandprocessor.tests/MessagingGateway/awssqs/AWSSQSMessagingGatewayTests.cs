@@ -263,7 +263,6 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 requeuedMessage = receiver.Receive(1000);
                 requeuedMessage.Body.Value.ShouldEqual(receivedMessage.Body.Value);
                 requeuedMessage.Header.Bag["ReceiptHandle"].ToString().ShouldNotEqual(receivedReceiptHandle);
-
             };
 
             Cleanup the_queue = () => testQueueListener.DeleteMessage(requeuedMessage.Header.Bag["ReceiptHandle"].ToString());
