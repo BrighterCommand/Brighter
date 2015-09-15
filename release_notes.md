@@ -9,6 +9,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 **Bug fixes**:
  - Fixed issue #132: concurrent usages of the RabbitMQ messaging gateway would sometimes throw an exception
+ - Fixed issue #134: We no longer use async/await in the command processor. This caused issues with ASP.NET synchronization contexts, resulting in a deadlock when waiting on the thread that was also being used to run the completion. See http://blog.stephencleary.com/2012/07/dont-block-on-async-code.html We wil revisit async when we write *Async versions of the CommandProcesor APIs suitable for using in hosts that can run async code without deadlocking their synchronization context.
 
 
 ## Release 5 ##
