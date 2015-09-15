@@ -36,7 +36,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -54,13 +53,16 @@ namespace paramore.brighter.commandprocessor
         /// Adds the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="messageStoreTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <returns>Task.</returns>
-        Task Add(T message);
+        void Add(T message, int messageStoreTimeout = -1);
+
         /// <summary>
         /// Gets the specified message identifier.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
+        /// <param name="messageStoreTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        Task<Message> Get(Guid messageId);
+        Message Get(Guid messageId, int messageStoreTimeout = -1);
     }
 }

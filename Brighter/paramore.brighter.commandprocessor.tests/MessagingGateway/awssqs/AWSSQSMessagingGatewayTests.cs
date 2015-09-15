@@ -33,18 +33,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 _messageProducer = new SqsMessageProducer(logger);
             };
 
-            private Because of = async () =>
+            private Because of = () =>
             {
-                var task = _messageProducer.Send(_message);
-                
-                task.ContinueWith(
-                    x =>
-                    {
-                        if (x.IsCompleted)
-                        {
-                            _listenedMessage = _queueListener.Listen();
-                        }
-                    }).Wait();
+                _messageProducer.Send(_message);
+                _listenedMessage = _queueListener.Listen();
             };
 
             private It should_send_the_message_to_aws_sqs = () => _listenedMessage.Body.ShouldNotBeNull();
@@ -70,16 +62,11 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 _messageProducer = new SqsMessageProducer(logger);
             };
 
-            private Because of = async () =>
+            private Because of = () =>
             {
-                var task = _messageProducer.Send(_message);
+                _messageProducer.Send(_message);
 
-                task.ContinueWith(
-                    x =>
-                    {
-                        if (x.IsCompleted)
-                            _topic = _queueListener.CheckSnsTopic(_message.Header.Topic);
-                    }).Wait();
+                _topic = _queueListener.CheckSnsTopic(_message.Header.Topic);
             };
 
             It should_create_topic_and_send_the_message = () => _topic.ShouldNotBeNull();
@@ -110,12 +97,12 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 testQueueListener = new TestAWSQueueListener(queueUrl);
             };
 
-            Because of = () => sender.Send(sentMessage).ContinueWith(
-                x =>
-                {
-                    receivedMessage = receiver.Receive(2000);
-                    receiver.Acknowledge(receivedMessage);
-                }).Wait();
+            Because of = () =>
+            {
+                sender.Send(sentMessage);
+                receivedMessage = receiver.Receive(2000);
+                receiver.Acknowledge(receivedMessage);
+            };
 
             It should_send_a_message_via_sqs_with_the_matching_body = () => receivedMessage.Body.ShouldEqual(sentMessage.Body);
             It should_send_a_message_via_sqs_with_the_matching_header_handled_count = () => receivedMessage.Header.HandledCount.ShouldEqual(sentMessage.Header.HandledCount);
@@ -152,12 +139,9 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 testQueueListener = new TestAWSQueueListener(queueUrl);
 
 
-                var task = sender.Send(message);
+                sender.Send(message);
 
-                task.ContinueWith(x =>
-                {
-                    if (x.IsCompleted) _listenedMessage = receiver.Receive(1000);
-                }).Wait();
+                _listenedMessage = receiver.Receive(1000);
             };
 
             Because i_reject_the_message = () => receiver.Reject(_listenedMessage, true);
@@ -195,12 +179,9 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 testQueueListener = new TestAWSQueueListener(queueUrl);
 
 
-                var task = sender.Send(message);
+                sender.Send(message);
 
-                task.ContinueWith(x =>
-                {
-                    if (x.IsCompleted) _listenedMessage = receiver.Receive(1000);
-                }).Wait();
+                _listenedMessage = receiver.Receive(1000);
             };
 
             Because i_reject_the_message = () => receiver.Reject(_listenedMessage, false);
@@ -237,8 +218,11 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 testQueueListener = new TestAWSQueueListener(queueUrl);
             };
 
-            Because of = () => sender.Send(sentMessage).ContinueWith(
-                x => receiver.Purge()).Wait();
+            private Because of = () =>
+            {
+                sender.Send(sentMessage);
+                receiver.Purge();
+            };
 
             It should_clean_the_queue = () => testQueueListener.Listen().ShouldBeNull();
 
@@ -266,13 +250,13 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 testQueueListener = new TestAWSQueueListener(queueUrl);
             };
 
-            Because of = () => sender.Send(sentMessage).ContinueWith(
-                x =>
-                {
-                    receivedMessage = receiver.Receive(2000);
-                    receivedReceiptHandle = receivedMessage.Header.Bag["ReceiptHandle"].ToString();
-                    receiver.Requeue(receivedMessage);
-                }).Wait();
+            private Because of = () =>
+            {
+                sender.Send(sentMessage);
+                receivedMessage = receiver.Receive(2000);
+                receivedReceiptHandle = receivedMessage.Header.Bag["ReceiptHandle"].ToString();
+                receiver.Requeue(receivedMessage);
+            };
 
             It should_delete_the_original_message_and_create_new_message = () =>
             {

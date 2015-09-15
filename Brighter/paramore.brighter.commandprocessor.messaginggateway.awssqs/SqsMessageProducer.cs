@@ -1,13 +1,7 @@
 ﻿using System.Net;
-using System.Threading.Tasks;
-
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
-using Amazon.SQS;
-using Amazon.SQS.Model;
-
 using Newtonsoft.Json;
-
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
@@ -21,7 +15,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
             _logger = logger;
         }
 
-        public Task Send(Message message)
+        public void Send(Message message)
         {
             var messageString = JsonConvert.SerializeObject(message);
             _logger.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", message.Header.Topic, message.Id, messageString);
@@ -31,7 +25,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
                 var topicArn = EnsureTopic(message.Header.Topic, client);
 
                 var publishRequest = new PublishRequest(topicArn, messageString);
-                return client.PublishAsync(publishRequest);
+                client.Publish(publishRequest);
             }
         }
 

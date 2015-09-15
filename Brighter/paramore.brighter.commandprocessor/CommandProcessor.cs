@@ -56,10 +56,10 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmAPolicyRegistry _policyRegistry;
         private readonly ILog _logger;
-        private readonly int _messageStoreWriteTimeout;
+        private readonly int _messageStoreTimeout;
         private readonly int _messageGatewaySendTimeout;
         private IAmAMessageStore<Message> _messageStore;
-        private IAmAMessageProducer _messagingGateway;
+        private IAmAMessageProducer _messageProducer;
         private bool _disposed;
 
         /// <summary>
@@ -106,29 +106,29 @@ namespace paramore.brighter.commandprocessor
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="messageStore">The message store.</param>
-        /// <param name="messagingGateway">The messaging gateway.</param>
+        /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="logger">The logger.</param>
-        /// <param name="messageStoreWriteTimeout">How long should we wait to write to the message store</param>
+        /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
-            IAmAMessageProducer messagingGateway,
+            IAmAMessageProducer messageProducer,
             ILog logger,
-            int messageStoreWriteTimeout = 300,
+            int messageStoreTimeout = 300,
             int messageGatewaySendTimeout = 300
             )
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _logger = logger;
-            _messageStoreWriteTimeout = messageStoreWriteTimeout;
+            _messageStoreTimeout = messageStoreTimeout;
             _messageGatewaySendTimeout = messageGatewaySendTimeout;
             _mapperRegistry = mapperRegistry;
             _messageStore = messageStore;
-            _messagingGateway = messagingGateway;
+            _messageProducer = messageProducer;
         }
 
         /// <summary>
@@ -141,9 +141,9 @@ namespace paramore.brighter.commandprocessor
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="messageStore">The message store.</param>
-        /// <param name="messagingGateway">The messaging gateway.</param>
+        /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="logger">The logger.</param>
-        /// <param name="messageStoreWriteTimeout">How long should we wait to write to the message store</param>
+        /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
@@ -152,17 +152,17 @@ namespace paramore.brighter.commandprocessor
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
-            IAmAMessageProducer messagingGateway,
+            IAmAMessageProducer messageProducer,
             ILog logger,
-            int messageStoreWriteTimeout = 300,
+            int messageStoreTimeout = 300,
             int messageGatewaySendTimeout = 300
             )
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
         {
             _mapperRegistry = mapperRegistry;
             _messageStore = messageStore;
-            _messagingGateway = messagingGateway;
-            _messageStoreWriteTimeout = messageStoreWriteTimeout;
+            _messageProducer = messageProducer;
+            _messageStoreTimeout = messageStoreTimeout;
             _messageGatewaySendTimeout = messageGatewaySendTimeout;
         }
 
@@ -260,14 +260,10 @@ namespace paramore.brighter.commandprocessor
                 throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
 
             var message = messageMapper.MapToMessage(request);
-            /* 
-             * NOTE: Don't rewrite with await, compiles but Policy does not call await on the lambda so becomes fire and forget, 
-             * see http://blogs.msdn.com/b/pfxteam/archive/2012/02/08/10265476.aspx
-            */
             RetryAndBreakCircuit(() =>
                 {
-                    _messageStore.Add(message).Wait(_messageStoreWriteTimeout);
-                    _messagingGateway.Send(message).Wait(_messageGatewaySendTimeout);
+                    _messageStore.Add(message, _messageStoreTimeout);
+                    _messageProducer.Send(message);
                 });
         }
 
@@ -289,10 +285,7 @@ namespace paramore.brighter.commandprocessor
             */
             RetryAndBreakCircuit(() =>
                 {
-                    var task = _messageStore.Get(messageId);
-                    task.Wait();
-
-                    var message = task.Result;
+                    var message =_messageStore.Get(messageId, _messageStoreTimeout);
 
                     if (message.Header.MessageType == MessageType.MT_NONE)
                     {
@@ -300,7 +293,7 @@ namespace paramore.brighter.commandprocessor
                         return;
                     }
 
-                    _messagingGateway.Send(message).Wait();
+                    _messageProducer.Send(message);
                 });
         }
 
@@ -335,12 +328,12 @@ namespace paramore.brighter.commandprocessor
 
             if (disposing)
             {
-                if (_messagingGateway != null )
-                    _messagingGateway.Dispose();
+                if (_messageProducer != null )
+                    _messageProducer.Dispose();
             }
 
             _messageStore = null;
-            _messagingGateway = null; 
+            _messageProducer = null; 
 
             _disposed = true;
         } 

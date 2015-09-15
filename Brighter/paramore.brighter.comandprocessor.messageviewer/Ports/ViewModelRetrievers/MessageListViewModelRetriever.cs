@@ -71,7 +71,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrie
             if (foundViewer == null) return errorResult;
             try
             {
-                var messages = foundViewer.Get(pageSize, pageNumber).Result;
+                var messages = foundViewer.Get(pageSize, pageNumber);
                 var messageListModel = new MessageListModel(messages);
 
                 return new ViewModelRetrieverResult<MessageListModel, MessageListModelError>(messageListModel);
@@ -98,7 +98,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrie
                 IList<Message> messages;
                 do
                 {
-                    messages = foundViewer.Get(pageSize, pageNumber).Result;
+                    messages = foundViewer.Get(pageSize, pageNumber);
                     foundMessages.AddRange(messages.Where(m => m.Body.Value.Contains(searchTerm)
                                                                || m.Header.Topic.Contains(searchTerm)
                                                                || m.Header.Bag.Keys.Any(k => k.Contains(searchTerm))

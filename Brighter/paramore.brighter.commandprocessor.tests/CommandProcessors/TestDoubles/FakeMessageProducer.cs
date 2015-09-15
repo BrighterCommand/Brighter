@@ -42,13 +42,9 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         /// </summary>
         /// <param name="message">The message.</param>
         /// <returns>Task.</returns>
-        public Task Send(Message message)
+        public void Send(Message message)
         {
-            var tcs = new TaskCompletionSource<object>();
             MessageWasSent = true;
-
-            tcs.SetResult(new object());
-            return tcs.Task;
         }
     }
 
@@ -65,7 +61,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         /// </summary>
         /// <param name="message">The message.</param>
         /// <returns>Task.</returns>
-        public Task Send(Message message)
+        public void Send(Message message)
         {
             SentCalledCount++;
             throw new Exception();

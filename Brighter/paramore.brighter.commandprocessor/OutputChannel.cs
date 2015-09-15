@@ -73,9 +73,9 @@ namespace paramore.brighter.commandprocessor
                 Task.Delay(delayMilliseconds).Wait();
 
             if (_messageProducerSupportsDelay)
-                (_messageProducer as IAmAMessageProducerSupportingDelay).Send(message, delayMilliseconds).Wait();
+                (_messageProducer as IAmAMessageProducerSupportingDelay).SendWithDelay(message, delayMilliseconds);
             else
-                _messageProducer.Send(message).Wait();
+                _messageProducer.Send(message);
         }
 
         /// <summary>

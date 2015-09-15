@@ -38,27 +38,26 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
 {
     internal class FakeMessageStoreWithViewer : IAmAMessageStoreViewer<Message>, IAmAMessageStore<Message>
     {
         private readonly IList<Message> messages = new List<Message>();
-        public Task<IList<Message>> Get(int pageSize = 100, int pageNumber = 1)
-        {
-            return Task.FromResult(messages);
-        }
 
-        public Task Add(Message message)
+        public void Add(Message message, int messageStoreTimeout = -1)
         {
             messages.Add(message);
-            return Task.FromResult((object)null);
         }
 
-        public Task<Message> Get(Guid messageId)
+        public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
-            return Task.FromResult(messages.SingleOrDefault(m => m.Id == messageId));
+            return messages.SingleOrDefault(m => m.Id == messageId);
+        }
+
+        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
+        {
+            return messages;
         }
     }
 }

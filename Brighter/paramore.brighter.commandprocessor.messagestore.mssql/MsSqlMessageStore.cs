@@ -42,7 +42,6 @@ using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Data.SqlServerCe;
-using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using paramore.brighter.commandprocessor.Logging;
 
@@ -76,7 +75,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         /// </summary>
         /// <param name="message">The message.</param>
         /// <returns>Task.</returns>
-        public async Task Add(Message message)
+        public void Add(Message message, int messageStoreTimeout = -1)
         {
             var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)", _configuration.MessageStoreTableName);
             var bagJson = _javaScriptSerializer.Serialize(message.Header.Bag);
@@ -92,14 +91,14 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 
             using (var connection = GetConnection())
             {
-                await connection.OpenAsync();
+                connection.Open();
                 var command = connection.CreateCommand();
 
                 command.CommandText = sql;
                 command.Parameters.AddRange(parameters);
                 try
                 {
-                    await command.ExecuteNonQueryAsync();
+                    command.ExecuteNonQuery();
                 }
                 catch (SqlException sqlException)
                 {
@@ -153,7 +152,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public async Task<Message> Get(Guid messageId)
+        public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
             var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
             var parameters = new[]
@@ -161,8 +160,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                 CreateSqlParameter("MessageId", messageId)
             };
 
-            var result = await ExecuteCommand(async command => MapFunction(await command.ExecuteReaderAsync()), sql, parameters);
-            return result;
+            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, messageStoreTimeout, parameters);
         }
 
         private Message MapFunction(IDataReader dr)
@@ -209,7 +207,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             return new Message(header, body);
         }
 
-        private async Task<T> ExecuteCommand<T>(Func<DbCommand, Task<T>> execute, string sql, params DbParameter[] parameters)
+        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int messageStoreTimeout, params DbParameter[] parameters)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -217,8 +215,10 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                 command.CommandText = sql;
                 command.Parameters.AddRange(parameters);
 
-                await connection.OpenAsync();
-                T item = await execute(command);
+                if (messageStoreTimeout != -1) command.CommandTimeout = messageStoreTimeout;
+
+                connection.Open();
+                T item = execute(command);
                 return item;
             }
         }
@@ -229,16 +229,16 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <returns></returns>
-        public async Task<IList<Message>> Get(int pageSize = 100, int pageNumber = 1)
+        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
                 SetPagingCommandFor(command, _configuration, pageSize, pageNumber);
                 
-                await connection.OpenAsync();
+                connection.Open();
 
-                var dbDataReader = await command.ExecuteReaderAsync();
+                var dbDataReader = command.ExecuteReader();
 
                 var messages = new List<Message>();
                 while (dbDataReader.Read())

@@ -117,7 +117,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         private Because _of = () =>
         {
-            s_messageProducer.Send(s_message, 1000);
+            s_messageProducer.SendWithDelay(s_message, 1000);
 
             var immediateResult = s_client.Listen(waitForMilliseconds: 0, suppressDisposal: true);
             s_immediateReadIsNull = immediateResult == null;

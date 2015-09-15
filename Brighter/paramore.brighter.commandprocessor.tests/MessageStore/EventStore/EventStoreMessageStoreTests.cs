@@ -43,7 +43,7 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
         [Tags("Requires", new[] { "Waiting on EventStore release"})]
         public class when_there_is_no_message_in_the_message_store
         {
-            private Because _of = () => s_messages = s_eventStoreMessageStore.Get(EmptyStreamName, 0, 1).Result;
+            private Because _of = () => s_messages = s_eventStoreMessageStore.Get(EmptyStreamName, 0, 1);
 
             private It _returns_an_empty_list = () => s_messages.Count.ShouldEqual(0);
 
@@ -55,11 +55,11 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
         {
             private Establish _context = () =>
             {
-                s_eventStoreMessageStore.Add(s_message1).Wait();
-                s_eventStoreMessageStore.Add(s_message2).Wait();
+                s_eventStoreMessageStore.Add(s_message1);
+                s_eventStoreMessageStore.Add(s_message2);
             };
 
-            private Because _of = () => s_messages = s_eventStoreMessageStore.Get(StreamName, 0, 2).Result;
+            private Because _of = () => s_messages = s_eventStoreMessageStore.Get(StreamName, 0, 2);
 
             private It _gets_message1 =
                 () => s_messages.Count(m => MessagesEqualApartFromTimestamp(m, s_message1)).ShouldEqual(1);
@@ -74,11 +74,11 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
         {
             private Establish _context = () =>
             {
-                s_eventStoreMessageStore.Add(s_message1).Wait();
-                s_eventStoreMessageStore.Add(s_message2).Wait();
+                s_eventStoreMessageStore.Add(s_message1);
+                s_eventStoreMessageStore.Add(s_message2);
             };
 
-            private Because _of = () => s_messages = s_eventStoreMessageStore.Get(StreamName, 0, 3).Result;
+            private Because _of = () => s_messages = s_eventStoreMessageStore.Get(StreamName, 0, 3);
 
             private It _gets_two_messages = () => s_messages.Count.ShouldEqual(2);
         }
@@ -124,7 +124,7 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
 
             s_eventStore = EmbeddedEventStoreConnection.Create(s_eventStoreNode);
             s_eventStore.Connected += (sender, e) => { s_eventStoreClientConnected = true; };
-            s_eventStore.ConnectAsync();
+            s_eventStore.ConnectAsync().Wait();
 
             s_eventStoreMessageStore = new EventStoreMessageStore(s_eventStore, new LogProvider.NoOpLogger());
 
