@@ -71,8 +71,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <returns>Task.</returns>
-        public  void Send(Message message)
+        public void Send(Message message)
         {
             try
             {
