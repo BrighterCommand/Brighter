@@ -50,16 +50,17 @@ namespace paramore.brighter.commandprocessor
         /// Adds the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
         /// <param name="command">The command.</param>
-        Task Add<T>(Guid id, T command) where T : class, IRequest;
+        /// <param name="timeoutInMilliseconds"></param>
+        void Add<T>(T command, int timeoutInMilliseconds = -1) where T : class, IRequest;
 
         /// <summary>
         /// Finds the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="timeoutInMilliseconds"></param>
         /// <returns>T.</returns>
-        Task<T> Get<T>(Guid id) where T : class, IRequest, new();
+        T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new();
     }
 }

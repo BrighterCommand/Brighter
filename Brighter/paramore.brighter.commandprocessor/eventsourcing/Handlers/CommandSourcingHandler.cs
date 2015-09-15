@@ -70,7 +70,7 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
         {
             logger.DebugFormat("Writing command {0} to the Command Store", command.Id);
 
-            _commandStore.Add(command.Id, command).Wait();
+            _commandStore.Add(command);
 
             return base.Handle(command);
         }

@@ -68,6 +68,6 @@ namespace paramore.commandprocessor.tests.EventSourcing
              Task.Delay(500);
          };
 
-        private It should_store_the_command_to_the_command_store = () => s_commandstore.Get<MyCommand>(s_command.Id).Result.Value.ShouldEqual(s_command.Value);
+        private It should_store_the_command_to_the_command_store = () => s_commandstore.Get<MyCommand>(s_command.Id).Value.ShouldEqual(s_command.Value);
     }
 }
