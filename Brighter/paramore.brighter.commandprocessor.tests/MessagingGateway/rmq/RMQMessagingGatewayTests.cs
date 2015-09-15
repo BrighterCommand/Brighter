@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Machine.Specifications;
@@ -138,6 +139,41 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             s_messageProducer.Dispose();
         };
     }
+
+    [Subject("Messaging Gateway")]
+    [Tags("Requires", new[] { "RabbitMQ", "RabbitMQProducerReceiver" })]
+    public class When_multiple_threads_try_to_post_a_message_at_the_same_time
+    {
+        private static IAmAMessageProducer s_messageProducer;
+        private static Message s_message;
+        private static string s_messageBody;
+        private static IDictionary<string, object> s_messageHeaders;
+
+        private Establish _context = () =>
+        {
+            var logger = LogProvider.For<RmqMessageConsumer>();
+
+            s_message = new Message(header: new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
+
+            s_messageProducer = new RmqMessageProducer(logger);
+        };
+
+        private Because _of = () =>
+        {
+            Parallel.ForEach(Enumerable.Range(0, 10), _ =>
+            {
+                s_messageProducer.Send(s_message);
+            });
+        };
+
+        It _should_not_throw = () => { };
+
+        private Cleanup _tearDown = () =>
+        {
+            s_messageProducer.Dispose();
+        };
+    }
+
 
     internal class TestRMQListener
     {
