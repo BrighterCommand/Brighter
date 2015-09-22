@@ -223,7 +223,7 @@ namespace paramore.brighter.commandprocessor
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
                     requestContextFactory: _requestContextFactory,
-                    policyRegistry: _policyRegistry,
+                    policyRegistry: _policyRegistry,    
                     logger: _logger);
             }
             else

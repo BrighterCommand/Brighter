@@ -105,6 +105,10 @@
     <Compile Include="Ports\Commands\EditTaskCommand.cs" />
     <Compile Include="Ports\Commands\ICanBeValidated.cs" />
     <Compile Include="Ports\Commands\TaskReminderCommand.cs" />
+    <Compile Include="Ports\Events\TaskAddedEvent.cs" />
+    <Compile Include="Ports\Events\TaskCompletedEvent.cs" />
+    <Compile Include="Ports\Events\TaskEditedEvent.cs" />
+    <Compile Include="Ports\Events\TaskReminderSentEvent.cs" />
     <Compile Include="Ports\Handlers\AddTaskCommandHandler.cs" />
     <Compile Include="Ports\Handlers\CompleteTaskCommandHandler.cs" />
     <Compile Include="Ports\Handlers\EditTaskCommandHandler.cs" />

@@ -28,16 +28,20 @@ using paramore.brighter.commandprocessor.Logging;
 using Tasks.Adapters.MailGateway;
 using Tasks.Model;
 using Tasks.Ports.Commands;
+using Tasks.Ports.Events;
 
 namespace Tasks.Ports.Handlers
 {
     public class MailTaskReminderHandler : RequestHandler<TaskReminderCommand>
     {
         private readonly IAmAMailGateway _mailGateway;
+        private readonly IAmACommandProcessor _commandProcessor;
 
-        public MailTaskReminderHandler(IAmAMailGateway mailGateway, ILog logger) : base(logger)
+        public MailTaskReminderHandler(IAmAMailGateway mailGateway, ILog logger, IAmACommandProcessor commandProcessor)
+            : base(logger)
         {
             _mailGateway = mailGateway;
+            _commandProcessor = commandProcessor;
         }
 
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
@@ -45,12 +49,14 @@ namespace Tasks.Ports.Handlers
         [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
         public override TaskReminderCommand Handle(TaskReminderCommand taskReminderCommand)
         {
-            _mailGateway.Send(new TaskReminder(
-                taskName: new TaskName(taskReminderCommand.TaskName),
-                dueDate: taskReminderCommand.DueDate,
-                reminderTo: new EmailAddress(taskReminderCommand.Recipient),
-                copyReminderTo: new EmailAddress(taskReminderCommand.CopyTo)
-                ));
+            //_mailGateway.Send(new TaskReminder(
+            //    taskName: new TaskName(taskReminderCommand.TaskName),
+            //    dueDate: taskReminderCommand.DueDate,
+            //    reminderTo: new EmailAddress(taskReminderCommand.Recipient),
+            //    copyReminderTo: new EmailAddress(taskReminderCommand.CopyTo)
+            //    ));
+
+            _commandProcessor.Post(new TaskReminderSentEvent(taskReminderCommand.Id, taskReminderCommand.TaskId, taskReminderCommand.TaskName, taskReminderCommand.DueDate, taskReminderCommand.Recipient, taskReminderCommand.CopyTo));
 
             return base.Handle(taskReminderCommand);
         }
