@@ -20,6 +20,7 @@ namespace Tasklist.Adapters.API.Handlers
         public OperationResult Post(TaskReminderModel reminder)
         {
             var reminderCommand = new TaskReminderCommand(
+                taskId: reminder.TaskId,
                 taskName: reminder.TaskName,
                 dueDate: DateTime.Parse(reminder.DueDate),
                 recipient: reminder.Recipient,
