@@ -44,12 +44,13 @@ namespace Tasks.Ports
         {
             var data = JObject.Parse(message.Body.Value);
 
+            var taskId = (int) data.SelectToken("TaskId");
             var taskName = (string)data.SelectToken("TaskName");
             var dueDate = ConvertDeserializedDateToDateTime((JValue)data.SelectToken("DueDate"));
             var recipient = (string)data.SelectToken("Recipient");
             var copyTo = (string)data.SelectToken("CopyTo");
 
-            return new TaskReminderCommand(taskName, dueDate, recipient, copyTo);
+            return new TaskReminderCommand(taskId, taskName, dueDate, recipient, copyTo);
         }
 
         private static DateTime ConvertDeserializedDateToDateTime(JValue jvalue)
