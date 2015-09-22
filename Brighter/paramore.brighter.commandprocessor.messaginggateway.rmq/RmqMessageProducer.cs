@@ -76,13 +76,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>Task.</returns>
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
-            Logger.DebugFormat("RmqMessageProducer: Preparing  to sending message via exchange {0}", Configuration.Exchange.Name);
-
-            EnsureChannel();
-            var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name, Logger);
-            Logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, message.Body.Value, delayMilliseconds);
-            rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
-            Logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and message: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds);
+            lock (_lock)
+            {
+                Logger.DebugFormat("RmqMessageProducer: Preparing  to sending message via exchange {0}", Configuration.Exchange.Name);
+                EnsureChannel();
+                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Configuration.Exchange.Name, Logger);
+                Logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and body: {4}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, message.Body.Value, delayMilliseconds);
+                rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
+                Logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and message: {4} at {5}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds);
+            }
         }
     }
 }
