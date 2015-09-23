@@ -265,53 +265,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private It _should_send_a_message_via_the_messaging_gateway = () => s_fakeMessageProducer.MessageWasSent.ShouldBeTrue();
     }
 
-    public class When_resending_a_message_asynchronously
-    {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Message s_message;
-        private static IAmAMessageStore<Message> s_messageStore;
-        private static IAmAMessageProducer s_messagingGateway;
-
-        private Establish _context = () =>
-        {
-            var logger = A.Fake<ILog>();
-            s_myCommand.Value = "Hello World";
-            s_messageStore = A.Fake<IAmAMessageStore<Message>>();
-            var tcs = new TaskCompletionSource<object>();
-            tcs.SetResult(new object());
-
-            s_messagingGateway = A.Fake<IAmAMessageProducer>();
-            s_message = new Message(
-                header: new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
-                body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
-                );
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-
-            s_commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
-                new MessageMapperRegistry(new TinyIoCMessageMapperFactory(new TinyIoCContainer())),
-                s_messageStore,
-                s_messagingGateway,
-                logger);
-
-            A.CallTo(() => s_messageStore.Get(A<Guid>.Ignored, A<int>.Ignored)).Returns(s_message);
-        };
-
-        private Because _of = () => s_commandProcessor.Repost(s_message.Header.Id);
-
-        private Cleanup cleanup = () => s_commandProcessor.Dispose();
-
-        private It _should_send_a_message_via_the_messaging_gateway = () => A.CallTo(() => s_messagingGateway.Send(s_message)).MustHaveHappened();
-    }
-
     public class When_an_exception_is_thrown_terminate_the_pipeline
     {
         private static CommandProcessor s_commandProcessor;
