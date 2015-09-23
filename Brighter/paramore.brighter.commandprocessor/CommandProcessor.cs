@@ -267,36 +267,6 @@ namespace paramore.brighter.commandprocessor
                 });
         }
 
-        /// <summary>
-        /// Reposts the specified message identifier. It retrieves a message previously posted via Post, from the Message Store, and publishes it 
-        /// onto the Work Queue again.
-        /// Deprecated, we suggest using the message store interface directly instead.
-        /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        [ObsoleteAttribute]
-        public void Repost(Guid messageId)
-        {
-            var requestedMessageid = messageId; //avoid closure on this
-            _logger.InfoFormat("Resend of message: {0}", requestedMessageid);
-
-            /* 
-             * NOTE: Don't rewrite with await, compiles but Policy does not call await on the lambda so becomes fire and forget, 
-             * see http://blogs.msdn.com/b/pfxteam/archive/2012/02/08/10265476.aspx
-            */
-            RetryAndBreakCircuit(() =>
-                {
-                    var message =_messageStore.Get(messageId, _messageStoreTimeout);
-
-                    if (message.Header.MessageType == MessageType.MT_NONE)
-                    {
-                        _logger.WarnFormat("Message {0} not found", requestedMessageid);
-                        return;
-                    }
-
-                    _messageProducer.Send(message);
-                });
-        }
-
         private void RetryAndBreakCircuit(Action send)
         {
             CheckCircuit(() => Retry(send));
