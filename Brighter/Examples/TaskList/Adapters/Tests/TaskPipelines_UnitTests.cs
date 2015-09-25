@@ -64,6 +64,7 @@ namespace Tasklist.Adapters.Tests
             var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy } };
 
             s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
+            container.Register<IAmACommandProcessor>(s_commandProcessor);
 
             s_cmd = new AddTaskCommand("Test task", null);
         };
@@ -103,6 +104,7 @@ namespace Tasklist.Adapters.Tests
             var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy } };
 
             s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
+            container.Register<IAmACommandProcessor>(s_commandProcessor);
 
             s_cmd = new AddTaskCommand(null, "Test that we store a task");
         };
@@ -140,6 +142,7 @@ namespace Tasklist.Adapters.Tests
             var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy } };
 
             s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
+            container.Register<IAmACommandProcessor>(s_commandProcessor);
 
             s_cmd = new AddTaskCommand("Test task", "Test that we store a task", DateTime.Now);
         };
