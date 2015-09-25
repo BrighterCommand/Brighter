@@ -28,14 +28,14 @@
             success: function(data) { completeCb(data); }
         });
     };
-    var sendReminderInternal = function (dueDate, taskName, recipient, reminderCb) {
+    var sendReminderInternal = function (taskId, dueDate, taskName, recipient, reminderCb) {
         $.ajax({
             url: baseUri + '/reminders',
             dataType: 'text', //to process location, not json
             type: 'POST',
             success: function (data) { reminderCb(data); },
             contentType: "application/json",
-            data: '{"dueDate": "' + dueDate + '", "recipient": "' + recipient + '", "copyTo": "' + recipient + '", "taskName": "' + taskName + '"}'
+            data: '{"taskId": "' + taskId + '", "dueDate": "' + dueDate + '", "recipient": "' + recipient + '", "copyTo": "' + recipient + '", "taskName": "' + taskName + '"}'
         });
     }
     return {
@@ -65,8 +65,9 @@ var onReminderSendClick = function () {
     var dueDate = divForm.find("input[name=dueDate]").val();
     var taskName = divForm.find("input[name=taskName]").val();
     var recipient = divForm.find("input[name=recipient]").val();
+    var taskId = divForm.find("input[name=taskId]").val();
 
-    taskVm.sendReminder(dueDate, taskName, recipient, onReminderSentCb);
+    taskVm.sendReminder(taskId, dueDate, taskName, recipient, onReminderSentCb);
 }
 var onTaskLoad = function(tl) {
     tl.items.sort(taskSorter);

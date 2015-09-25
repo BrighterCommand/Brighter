@@ -28,16 +28,20 @@ using paramore.brighter.commandprocessor.policy.Attributes;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
 using Tasks.Ports.Commands;
+using Tasks.Ports.Events;
 
 namespace Tasks.Ports.Handlers
 {
     public class EditTaskCommandHandler : RequestHandler<EditTaskCommand>
     {
         private readonly ITasksDAO _tasksDAO;
+        private readonly IAmACommandProcessor _commandProcessor;
 
-        public EditTaskCommandHandler(ITasksDAO tasksDAO, ILog logger) : base(logger)
+        public EditTaskCommandHandler(ITasksDAO tasksDAO, ILog logger, IAmACommandProcessor commandProcessor)
+            : base(logger)
         {
             _tasksDAO = tasksDAO;
+            _commandProcessor = commandProcessor;
         }
 
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
@@ -56,6 +60,8 @@ namespace Tasks.Ports.Handlers
                 _tasksDAO.Update(task);
                 scope.Commit();
             }
+
+            _commandProcessor.Post(new TaskEditedEvent(editTaskCommand.Id, editTaskCommand.TaskId, editTaskCommand.TaskName, editTaskCommand.TaskDescription, editTaskCommand.TaskDueDate));
 
             return base.Handle(editTaskCommand);
         }

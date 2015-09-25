@@ -23,14 +23,17 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
 using Polly;
+using TaskMailer.Ports;
 using Tasks.Adapters.MailGateway;
 using Tasks.Ports;
 using Tasks.Ports.Commands;
+using Tasks.Ports.Events;
 using Tasks.Ports.Handlers;
 using TinyIoC;
 using Topshelf;
@@ -48,7 +51,7 @@ namespace TaskMailer.Adapters.ServiceHost
             var logger = LogProvider.For<TaskMailerService>();
 
             var container = new TinyIoCContainer();
-            container.Register<IAmAMessageMapper<TaskReminderCommand>, TaskReminderCommandMessageMapper>();
+            container.Register<IAmAMessageMapper<TaskReminderCommand>, Tasks.Ports.TaskReminderCommandMessageMapper>();
             container.Register<MailTaskReminderHandler, MailTaskReminderHandler>();
             container.Register<IAmAMailGateway, MailGateway>();
             container.Register<ILog>(logger);
@@ -80,19 +83,21 @@ namespace TaskMailer.Adapters.ServiceHost
                 {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
             };
 
+            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
+            {
+                {typeof (TaskReminderCommand), typeof (Tasks.Ports.TaskReminderCommandMessageMapper)},
+                {typeof (TaskReminderSentEvent), typeof (TaskMailer.Ports.TaskReminderSentEventMapper)}
+            };
+
             var commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                 .Policies(policyRegistry)
                 .Logger(logger)
-                .NoTaskQueues()
+                .TaskQueues(new MessagingConfiguration(new TemporaryMessageStore(), new RmqMessageProducer(logger), messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
-            //create message mappers
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-            {
-                {typeof (TaskReminderCommand), typeof(TaskReminderCommandMessageMapper)}
-            };
+            container.Register<IAmACommandProcessor>(commandProcessor);
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
             var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger);
@@ -123,6 +128,33 @@ namespace TaskMailer.Adapters.ServiceHost
         {
             if (_dispatcher != null)
                 _dispatcher.End().Wait();
+        }
+    }
+
+    internal class TemporaryMessageStore : IAmAMessageStore<Message>
+    {
+        private readonly ConcurrentDictionary<Guid, Message> _store;
+
+        public TemporaryMessageStore()
+        {
+            this._store = new ConcurrentDictionary<Guid, Message>();
+        }
+ 
+        public void Add(Message message, int messageStoreTimeout = -1)
+        {
+            this._store.AddOrUpdate(message.Id, message, (guid, oldMessage) => message);
+        }
+
+        public Message Get(Guid messageId, int messageStoreTimeout = -1)
+        {
+            Message message;
+
+            if (!this._store.TryGetValue(messageId, out message))
+            {
+                throw new ArgumentOutOfRangeException(messageId.ToString());
+            }
+
+            return message;
         }
     }
 }

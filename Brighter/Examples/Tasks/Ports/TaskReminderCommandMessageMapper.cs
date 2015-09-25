@@ -22,7 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using paramore.brighter.commandprocessor;
 using Tasks.Ports.Commands;
 
@@ -40,7 +42,36 @@ namespace Tasks.Ports
 
         public TaskReminderCommand MapToRequest(Message message)
         {
-            return JsonConvert.DeserializeObject<TaskReminderCommand>(message.Body.Value);
+            var data = JObject.Parse(message.Body.Value);
+
+            var taskId = (int) data.SelectToken("TaskId");
+            var taskName = (string)data.SelectToken("TaskName");
+            var dueDate = ConvertDeserializedDateToDateTime((JValue)data.SelectToken("DueDate"));
+            var recipient = (string)data.SelectToken("Recipient");
+            var copyTo = (string)data.SelectToken("CopyTo");
+
+            return new TaskReminderCommand(taskId, taskName, dueDate, recipient, copyTo);
+        }
+
+        private static DateTime ConvertDeserializedDateToDateTime(JValue jvalue)
+        {
+            DateTime dateTime;
+
+            if (jvalue.Value is string)
+            {
+                dateTime = DateTime.Parse(jvalue.Value as string);
+            }
+            else
+            {
+                dateTime = (DateTime)jvalue.Value;
+            }
+
+            if (dateTime.Kind != DateTimeKind.Utc)
+            {
+                dateTime = dateTime.ToUniversalTime();
+            }
+
+            return dateTime;
         }
     }
 }
