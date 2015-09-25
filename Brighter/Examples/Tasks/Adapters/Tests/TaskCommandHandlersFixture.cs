@@ -108,7 +108,7 @@ namespace Tasks.Adapters.Tests
         private It _should_update_the_task_with_the_new_task_name = () => s_taskToBeEdited.TaskName.ShouldEqual(NEW_TASK_NAME);
         private It _should_update_the_task_with_the_new_task_description = () => s_taskToBeEdited.TaskDescription.ShouldEqual(NEW_TASK_DESCRIPTION);
         private It _should_update_the_task_with_the_new_task_time = () => s_taskToBeEdited.DueDate.Value.ToShortDateString().ShouldEqual(s_NEW_TIME.ToShortDateString());
-        private It _should_post_event = () => A.CallTo(() => s_commandProcessor.Post(A<TaskCompletedEvent>._)).MustHaveHappened(Repeated.Exactly.Once);
+        private It _should_post_event = () => A.CallTo(() => s_commandProcessor.Post(A<TaskEditedEvent>._)).MustHaveHappened(Repeated.Exactly.Once);
     }
 
     [Subject(typeof(CompleteTaskCommandHandler))]
