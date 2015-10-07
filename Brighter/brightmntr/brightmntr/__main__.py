@@ -49,6 +49,7 @@ from .configuration import configure
 KEYBOARD_INTERRUPT_SLEEP = 3    # How long before checking for a keyhoard interrupt
 DELAY_BETWEEN_REFRESHES = 5     # How long to delay before polling for more input
 DISPLAY_N_TIMES = -1            # How many times to display messages, defaults to run forever
+PAGE_SIZE = 5
 
 def run(amqp_uri, exchange, routing_key, params):
     # start a monitor output thread, this does the work, whilst the main thread just acts
@@ -56,9 +57,9 @@ def run(amqp_uri, exchange, routing_key, params):
     updates = -1
 
     worker = Worker(amqp_uri, exchange, routing_key)
-    worker.delay_between_refreshes = DELAY_BETWEEN_REFRESHES
-    worker.limit = -1  # configure the worker for times to run
-    worker.page_size = 5
+    worker.delay_between_refreshes = params['--delay'] if params['--delay'] is not None else DELAY_BETWEEN_REFRESHES
+    worker.limit = params['--updates'] if params['--updates'] is not None else DISPLAY_N_TIMES
+    worker.page_size = params['--pagesize'] if params['--pagesize'] is not None else PAGE_SIZE
     worker.run()
 
     # poll for keyboard input to allow the user to quit monitoring
