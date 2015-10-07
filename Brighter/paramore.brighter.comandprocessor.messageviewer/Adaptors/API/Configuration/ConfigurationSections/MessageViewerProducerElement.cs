@@ -38,7 +38,7 @@ using System.Configuration;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration.ConfigurationSections
 {
-    public class MessageViewerBrokerElement : ConfigurationElement
+    public class MessageViewerProducerElement : ConfigurationElement
     {
         [ConfigurationProperty("assemblyQualifiedName", IsKey = true, IsRequired = true)]
         public string AssemblyQualifiedName

@@ -78,7 +78,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerBrokerElement.cs" />
+    <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerProducerElement.cs" />
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerSection.cs" />
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerStoresElement.cs" />
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerStoresElementCollection.cs" />
