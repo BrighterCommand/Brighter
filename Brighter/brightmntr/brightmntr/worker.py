@@ -38,6 +38,7 @@ from time import sleep
 
 DRAIN_EVENTS_TIMEOUT = 1  #How long before we timeout Kombu trying to read events from the queue
 
+
 class Worker(Thread):
 
     RETRY_OPTIONS = {
