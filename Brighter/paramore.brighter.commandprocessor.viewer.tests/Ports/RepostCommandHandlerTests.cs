@@ -60,7 +60,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
                 _command = new RepostCommand{MessageIds = new List<string>{_messageToRepost.Header.Id.ToString()}, StoreName = _storeName};
                 _fakeMessageProducer = new FakeMessageProducer();
-                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(new FakeMessageProducerFactory(_fakeMessageProducer)));
+                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(new FakeMessageProducerFactory(_fakeMessageProducer)), new MessageRecoverer());
             };
 
             private Because _of_Handle = () => _repostHandler.Handle(_command);
@@ -89,7 +89,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
                 _command = new RepostCommand { MessageIds = new List<string> { _messageToRepost.Id.ToString(), _messageToRepostMissing.Id.ToString() }, StoreName = _storeName };
                 _fakeMessageProducer = new FakeMessageProducer();
-                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(new FakeMessageProducerFactory(_fakeMessageProducer)));
+                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(new FakeMessageProducerFactory(_fakeMessageProducer)), new MessageRecoverer());
             };
 
             private Because _of_Handle = () => _ex = Catch.Exception(() => _repostHandler.Handle(_command));
@@ -118,7 +118,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
                 _command = new RepostCommand { MessageIds = new List<string> { Guid.NewGuid().ToString() }, StoreName = _storeName };
                 _fakeMessageProducer = new FakeMessageProducer();
-                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(new FakeMessageProducerFactory(_fakeMessageProducer)));
+                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(new FakeMessageProducerFactory(_fakeMessageProducer)), new MessageRecoverer());
             };
 
             private Because _of_Handle = () => _ex = Catch.Exception(() => _repostHandler.Handle(_command));
@@ -145,7 +145,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
                 _command = new RepostCommand { MessageIds = new List<string> { Guid.NewGuid().ToString() }, StoreName = _storeName };
                 _fakeMessageProducer = new FakeMessageProducer();
-                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(new FakeMessageProducerFactory(_fakeMessageProducer)));
+                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(new FakeMessageProducerFactory(_fakeMessageProducer)), new MessageRecoverer());
             };
 
             private Because _of_Handle = () => _ex = Catch.Exception(() => _repostHandler.Handle(_command));
@@ -174,7 +174,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
                 var fakeMessageStoreFactory = new FakeMessageStoreViewerFactory(fakeStore, _storeName);
 
                 _command = new RepostCommand { MessageIds = new List<string> { _messageToRepost.Header.Id.ToString() }, StoreName = _storeName };
-                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(null));
+                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(null), new MessageRecoverer());
             };
 
             private Because _of_Handle = () => _ex = Catch.Exception(() => _repostHandler.Handle(_command));
@@ -201,7 +201,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
                 var fakeMessageStoreFactory = new FakeMessageStoreViewerFactory(fakeStore, _storeName);
 
                 _command = new RepostCommand { MessageIds = new List<string> { _messageToRepost.Header.Id.ToString() }, StoreName = _storeName };
-                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(new FakeErrorProducingMessageProducerFactory()));
+                _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(new FakeErrorProducingMessageProducerFactory()), new MessageRecoverer());
             };
 
             private Because _of_Handle = () => _ex = Catch.Exception(() => _repostHandler.Handle(_command));

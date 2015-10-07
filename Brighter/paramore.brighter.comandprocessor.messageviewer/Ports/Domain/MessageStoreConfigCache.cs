@@ -33,43 +33,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
+using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration.ConfigurationSections;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
 {
-    public class MessageStoreActivationStateProvider : IMessageStoreActivationStateProvider
+    public interface IMessageStoreConfigCache
     {
-        private List<MessageStoreActivationState> _stores=null;
-        private readonly ILog _logger = LogProvider.GetLogger("MessageStoreActivationStateProvider");
+        IAmAMessageStore<Message> Get(MessageStoreConfig type);
+        void Set(MessageStoreType storeType, Func<MessageStoreConfig, IAmAMessageStore<Message>> storeCtor);
+    }
 
-        public IEnumerable<MessageStoreActivationState> Get()
+    public class MessageStoreConfigCache : IMessageStoreConfigCache
+    {
+        private readonly Dictionary<MessageStoreType, Func<MessageStoreConfig, IAmAMessageStore<Message>>> _storeCtorLookup = new Dictionary<MessageStoreType, Func<MessageStoreConfig, IAmAMessageStore<Message>>>();
+        private readonly Dictionary<string, IAmAMessageStore<Message>> _storesCreated = new Dictionary<string, IAmAMessageStore<Message>>();
+
+        public IAmAMessageStore<Message> Get(MessageStoreConfig messageStore)
         {
-            if (_stores == null)
+            if (!_storesCreated.ContainsKey(messageStore.Name))
             {
-                LoadStores();
+                _storesCreated.Add(messageStore.Name, _storeCtorLookup[messageStore.StoreType].Invoke(messageStore));
             }
-            return _stores;
+            return _storesCreated[messageStore.Name];
         }
 
-        private void LoadStores()
+        public void Set(MessageStoreType storeType, Func<MessageStoreConfig, IAmAMessageStore<Message>> storeCtor)
         {
-            _logger.Log(LogLevel.Debug, () => "Initialising MessageStoreActivationStateProvider. Checking config sections");
-
-            _stores = new List<MessageStoreActivationState>();
-            var configSection = MessageViewerSection.GetViewerSection;
-            foreach (object store in configSection.Stores)
-            {
-                var messageStore = store as MessageViewerStoresElement;
-                if (messageStore != null)
-                {
-                    var messageStoreListItem = new MessageStoreActivationState(messageStore);
-                    _stores.Add(messageStoreListItem);
-                }
-            }
+            _storeCtorLookup.Add(storeType, storeCtor);
         }
     }
 }
-

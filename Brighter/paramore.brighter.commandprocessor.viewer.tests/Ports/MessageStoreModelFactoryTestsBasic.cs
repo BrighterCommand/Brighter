@@ -51,27 +51,27 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
         public abstract class when_creating_a_message_store_Base
         {
             //TODO: as statics can't use abstract, I'd perfer something better!
-            protected when_creating_a_message_store_Base(MessageStoreActivationState item)
+            protected when_creating_a_message_store_Base(MessageStoreConfig item)
             {
-                MessageStoreActivationState = item;
+                MessageStoreConfig = item;
             }
             private Establish _context = () =>
             {
-                _provider = new FakeMessageStoreActivationStateProvider(MessageStoreActivationState);
+                _provider = new FakeMessageStoreConfigProvider(MessageStoreConfig);
             };
 
-            private Because _of = () => { _factory = new MessageStoreViewerFactory(_provider, new MessageStoreListCacheLoader(new MessageStoreActivationStateCache())); };
+            private Because _of = () => { _factory = new MessageStoreViewerFactory(_provider, new MessageStoreListCacheLoader(new MessageStoreConfigCache())); };
 
             private static MessageStoreViewerFactory _factory;
-            private static FakeMessageStoreActivationStateProvider _provider;
-            protected static MessageStoreActivationState MessageStoreActivationState;
+            private static FakeMessageStoreConfigProvider _provider;
+            protected static MessageStoreConfig MessageStoreConfig;
 
             protected static void AssertStoreFromFactory()
             {
                 try
                 {
-                    IAmAMessageStore<Message> messageStore = _factory.Connect(MessageStoreActivationState.Name);
-                    messageStore.GetType().FullName.ShouldEqual(MessageStoreActivationState.TypeName);
+                    IAmAMessageStore<Message> messageStore = _factory.Connect(MessageStoreConfig.Name);
+                    messageStore.GetType().FullName.ShouldEqual(MessageStoreConfig.TypeName);
                 }
                 catch (Exception e)
                 {
@@ -86,7 +86,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private It should_create_expected_store = () => AssertStoreFromFactory();
 
             public when_creating_a_sql_2008_message_store()
-                : base(MessageStoreActivationStateFactory.Create("sql2008", typeof(MsSqlMessageStore).FullName, 
+                : base(MessageStoreConfigFactory.Create("sql2008", typeof(MsSqlMessageStore).FullName, 
                     "Server=.;Database=aMessageStore;Trusted_Connection=True", "table1"))
             {
             }
@@ -96,7 +96,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private It should_create_expected_store = () => AssertStoreFromFactory();
 
             public when_creating_a_sql_ce_message_store()
-                : base(MessageStoreActivationStateFactory.Create("sqlce", typeof(MsSqlMessageStore).FullName,
+                : base(MessageStoreConfigFactory.Create("sqlce", typeof(MsSqlMessageStore).FullName,
                     "DataSource='test.sdf';", "table2"))
             {
             }

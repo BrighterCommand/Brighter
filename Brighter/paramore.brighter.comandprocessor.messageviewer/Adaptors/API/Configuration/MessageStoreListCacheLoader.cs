@@ -44,31 +44,31 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
 
     public interface IMessageStoreListCacheLoader
     {
-        IMessageStoreActivationStateCache Load();
+        IMessageStoreConfigCache Load();
     }
 
     public class MessageStoreListCacheLoader : IMessageStoreListCacheLoader
     {
         private ILog _logger = LogProvider.GetLogger("MessageStoreListCacheLoader");
-        private readonly IMessageStoreActivationStateCache _messageStoreActivationStateCache;
+        private readonly IMessageStoreConfigCache _messageStoreConfigCache;
 
-        public MessageStoreListCacheLoader(IMessageStoreActivationStateCache messageStoreActivationStateCache)
+        public MessageStoreListCacheLoader(IMessageStoreConfigCache messageStoreConfigCache)
         {
-            _messageStoreActivationStateCache= messageStoreActivationStateCache;
+            _messageStoreConfigCache= messageStoreConfigCache;
         }
 
-        public IMessageStoreActivationStateCache Load()
+        public IMessageStoreConfigCache Load()
         {
-            _messageStoreActivationStateCache.Set(MessageStoreType.SqlServer,
+            _messageStoreConfigCache.Set(MessageStoreType.SqlServer,
                 (storeConfig) => new MsSqlMessageStore(
                     new MsSqlMessageStoreConfiguration(storeConfig.ConnectionString, storeConfig.TableName,
                         MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer), _logger));
 
-            _messageStoreActivationStateCache.Set(MessageStoreType.SqlCe,
+            _messageStoreConfigCache.Set(MessageStoreType.SqlCe,
                 (storeConfig) => new MsSqlMessageStore(
                     new MsSqlMessageStoreConfiguration(storeConfig.ConnectionString, storeConfig.TableName,
                         MsSqlMessageStoreConfiguration.DatabaseType.SqlCe), _logger));
-            return _messageStoreActivationStateCache;
+            return _messageStoreConfigCache;
         }
     }
 }
