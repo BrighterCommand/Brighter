@@ -29,36 +29,76 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-from threading import Thread
+from threading import Thread, Event
 from kombu import BrokerConnection, Consumer, Queue
 from kombu.pools import connections
+from kombu import exceptions as kombu_exceptions
 from datetime import datetime
+from time import sleep
 
+DRAIN_EVENTS_TIMEOUT = 1  #How long before we timeout Kombu trying to read events from the queue
 
 class Worker(Thread):
 
+    RETRY_OPTIONS = {
+        'interval_start': 1,
+        'interval_step': 1,
+        'interval_max': 1,
+        'max_retries': 3,
+    }
+
     def __init__(self, amqp_uri, exchange, routing_key):
-        self.exchange = exchange
-        self.routing_key = routing_key
-        self.amqp_uri = amqp_uri
-        self.monitoring_queue = Queue('paramore.brighter.controlbus', exchange=self.exchange, routing_key=self.routing_key)
+        self._exchange = exchange
+        self._routing_key = routing_key
+        self._amqp_uri = amqp_uri
+        self.delay_between_refreshes = 5
+        self.limit = -1  # configure the worker for times to run
+        self.page_size = 5
+        self._monitoring_queue = Queue('paramore.brighter.controlbus', exchange=self._exchange, routing_key=self._routing_key)
+        self._running = Event()  # control access to te queue
+        self._ensure_options = self.RETRY_OPTIONS.copy()
 
     def _read_monitoring_messages(self):
 
-        # read the next batch num0ber of monitoring messages from the control bus
+        def _drain(cnx, timeout):
+            try:
+                cnx.drain_events(timeout=timeout)
+            except kombu_exceptions.TimeoutError:
+                pass
+
+        def _drain_errors(exc, interval):
+            print('Draining error: %s', exc)
+            print('Retry triggering in %s seconds', interval)
+
+        def _read_message(body, message):
+            print("Monitoring event received at: ", datetime.utcnow().isoformat(), " Event:  ", body)
+            message.ack()
+
+        # read the next batch number of monitoring messages from the control bus
         # evaluate for color coding (error is red)
         # print to stdout
 
-        connection = BrokerConnection(hostname=self.amqp_uri)
+        connection = BrokerConnection(hostname=self._amqp_uri)
         with connections[connection].acquire(block=True) as conn:
             print('Got connection: %r' % (conn.as_uri(), ))
-            with Consumer(conn, [self.monitoring_queue], callbacks=[self.read_message], accept=['json', 'text/plain']):
-                conn.drain_events()
-
-    @staticmethod
-    def read_message(body, message):
-        print("Monitoring event received at: ", datetime.utcnow().isoformat(), " Event:  ", body)
+            with Consumer(conn, [self._monitoring_queue], callbacks=[_read_message], accept=['json', 'text/plain']) as consumer:
+                self._running.set()
+                ensure_kwargs = self._ensure_options.copy()
+                ensure_kwargs['errback'] = _drain_errors
+                lines = 0
+                while self._running.is_set():
+                    # page size number before we sleep
+                    safe_drain = conn.ensure(consumer, _drain, **ensure_kwargs)
+                    safe_drain(conn, DRAIN_EVENTS_TIMEOUT)
+                    lines += 1
+                    if lines == self.page_size:
+                        sleep(self.delay_between_refreshes)
+                        lines = 0
 
     def run(self):
+
         self._read_monitoring_messages()
-        return
+
+    def stop(self):
+
+        self._running.clear()

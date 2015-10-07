@@ -35,9 +35,7 @@ Options:
   -d SECONDS --delay=SECONDS            Specific delay between refreshes (otherwise 5 seconds).
   -n TIMES --updates=TIMES              Update display n times, then exit.
   -p PAGESIZE --pagesize=PAGESIZE       Try to show this number of items from the queue, when the interval is triggered
-  -s SERVICENAME --service=SERVICENAME  Filter output to this serviceName only
-  _m MACHINENAME --machine=MACHINENAME  Filter output to this machine only
-  -h --help     Show this screen.
+  -h --help                             Show this screen.
 
 
 """
@@ -48,25 +46,28 @@ from docopt import docopt
 from time import sleep
 from .configuration import configure
 
+KEYBOARD_INTERRUPT_SLEEP = 3    # How long before checking for a keyhoard interrupt
+DELAY_BETWEEN_REFRESHES = 5     # How long to delay before polling for more input
+DISPLAY_N_TIMES = -1            # How many times to display messages, defaults to run forever
 
 def run(amqp_uri, exchange, routing_key, params):
     # start a monitor output thread, this does the work, whilst the main thread just acts
     # as a control thread to receive the  keyboard input
-    delay = 5
-    num_of_times = -1
+    updates = -1
 
     worker = Worker(amqp_uri, exchange, routing_key)
-    worker.frequency = -1 # configure the worker for times to run
-    worker.machine_filter = None # are we filtering to a machine
-    worker.service_filter = None
+    worker.delay_between_refreshes = DELAY_BETWEEN_REFRESHES
+    worker.limit = -1  # configure the worker for times to run
+    worker.page_size = 5
     worker.run()
 
     # poll for keyboard input to allow the user to quit monitoring
     while True:
         try:
             # just sleep unless we receive an interrupt i.e. CTRL+C
-            sleep(delay)
+            sleep(KEYBOARD_INTERRUPT_SLEEP)
         except KeyboardInterrupt:
+            worker.stop()
             sys.exit(1)
 
 
