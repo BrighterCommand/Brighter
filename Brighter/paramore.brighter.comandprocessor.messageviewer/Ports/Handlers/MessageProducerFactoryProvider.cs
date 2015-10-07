@@ -50,7 +50,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
         private IAmAMessageProducerFactory LoadProducer(ILog logger)
         {
             var configSection = MessageViewerSection.GetViewerSection;
-            var brokerSection = configSection.Broker;
+            var brokerSection = configSection.Producer;
 
             //ToDo: assume always needs a logger!!!
             //ToDo: factory or actual producer???
