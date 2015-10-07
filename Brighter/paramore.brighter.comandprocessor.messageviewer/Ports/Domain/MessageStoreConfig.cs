@@ -33,18 +33,50 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
+using System;
+using paramore.brighter.commandprocessor.messagestore.mssql;
+using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration.ConfigurationSections;
+
 namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
 {
-    public class MessageStoreActivationStateFactory
+    public class MessageStoreConfig 
     {
-        public static MessageStoreActivationState Create(string name, string type, string connectionString)
+        internal MessageStoreConfig(MessageViewerStoresElement messageStore)
+            : this(messageStore.Name, messageStore.Type, messageStore.ConnectionString, messageStore.TableName)
         {
-            return new MessageStoreActivationState(name, type, connectionString);
         }
 
-        public static MessageStoreActivationState Create(string name, string type, string connectionString, string tableName)
+        internal MessageStoreConfig(string name, string type, string connectionString, string tableName)
+            : this(name, type, connectionString)
         {
-            return new MessageStoreActivationState(name, type, connectionString, tableName);
+            TableName = tableName;
+        }
+
+        internal MessageStoreConfig(string name, string type, string connectionString)
+        {
+            Name = name;
+            TypeName = type;
+            ConnectionString = connectionString;
+            StoreType = MessageStoreTypeMapper.Map(TypeName, ConnectionString);
+        }
+
+        public MessageStoreType StoreType { get; private set; }
+        public string Name { get; set; }
+        public string TypeName { get; set; }
+        public string ConnectionString { get; set; }
+        public string TableName { get; set; }
+    }
+
+    public class MessageStoreTypeMapper
+    {
+        public static MessageStoreType Map(string typeName, string connectionString)
+        {
+            if (typeName == typeof(MsSqlMessageStore).FullName)
+            {
+                return connectionString.Contains("Server") ? MessageStoreType.SqlServer : MessageStoreType.SqlCe;
+            }
+            throw  new ArgumentException(string.Format("Do not recognise Messsage store type:{0} connection string:{1}", typeName, connectionString));
         }
     }
 }

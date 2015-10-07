@@ -101,7 +101,7 @@
     <Compile Include="TestBehaviours\ModuleWithStoreNotViewerBehavior.cs" />
     <Compile Include="TestDoubles\FakeMessageStoreNotViewer.cs" />
     <Compile Include="TestDoubles\FakeMessageStoreViewerWithGetException.cs" />
-    <Compile Include="TestDoubles\FakeMessageStoreActivationStateProviderExceptionOnGet.cs" />
+    <Compile Include="TestDoubles\FakeMessageStoreConfigProviderExceptionOnGet.cs" />
     <Compile Include="Ports\MessageListViewModelRetrieverTests\MessageListViewModelRetrieverFilterTests.cs" />
     <Compile Include="Ports\MessageStoreViewerModelRetrieverTests.cs" />
     <Compile Include="Ports\MessageStoreActivationStateListViewModelRetrieverTests.cs" />

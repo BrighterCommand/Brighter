@@ -34,49 +34,42 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using paramore.brighter.commandprocessor.messagestore.mssql;
+using System.Collections.Generic;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration.ConfigurationSections;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
 {
-    public class MessageStoreActivationState 
+    public class MessageStoreConfigProvider : IMessageStoreConfigProvider
     {
-        internal MessageStoreActivationState(MessageViewerStoresElement messageStore)
-            : this(messageStore.Name, messageStore.Type, messageStore.ConnectionString, messageStore.TableName)
-        {
-        }
+        private List<MessageStoreConfig> _stores=null;
+        private readonly ILog _logger = LogProvider.GetLogger("MessageStoreConfigProvider");
 
-        internal MessageStoreActivationState(string name, string type, string connectionString, string tableName)
-            : this(name, type, connectionString)
+        public IEnumerable<MessageStoreConfig> Get()
         {
-            TableName = tableName;
-        }
-
-        internal MessageStoreActivationState(string name, string type, string connectionString)
-        {
-            Name = name;
-            TypeName = type;
-            ConnectionString = connectionString;
-            StoreType = MessageStoreTypeMapper.Map(TypeName, ConnectionString);
-        }
-
-        public MessageStoreType StoreType { get; private set; }
-        public string Name { get; set; }
-        public string TypeName { get; set; }
-        public string ConnectionString { get; set; }
-        public string TableName { get; set; }
-    }
-
-    public class MessageStoreTypeMapper
-    {
-        public static MessageStoreType Map(string typeName, string connectionString)
-        {
-            if (typeName == typeof(MsSqlMessageStore).FullName)
+            if (_stores == null)
             {
-                return connectionString.Contains("Server") ? MessageStoreType.SqlServer : MessageStoreType.SqlCe;
+                LoadStores();
             }
-            throw  new ArgumentException(string.Format("Do not recognise Messsage store type:{0} connection string:{1}", typeName, connectionString));
+            return _stores;
+        }
+
+        private void LoadStores()
+        {
+            _logger.Log(LogLevel.Debug, () => "Initialising MessageStoreConfigProvider. Checking config sections");
+
+            _stores = new List<MessageStoreConfig>();
+            var configSection = MessageViewerSection.GetViewerSection;
+            foreach (object store in configSection.Stores)
+            {
+                var messageStore = store as MessageViewerStoresElement;
+                if (messageStore != null)
+                {
+                    var messageStoreListItem = new MessageStoreConfig(messageStore);
+                    _stores.Add(messageStoreListItem);
+                }
+            }
         }
     }
 }
+

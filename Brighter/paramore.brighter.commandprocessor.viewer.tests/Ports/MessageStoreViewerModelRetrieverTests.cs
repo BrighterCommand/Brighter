@@ -55,9 +55,9 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
         {
             private Establish _context = () =>
             {
-                _messageStore = MessageStoreActivationStateFactory.Create(_storeName, 
+                _messageStore = MessageStoreConfigFactory.Create(_storeName, 
                     typeof(MsSqlMessageStore).FullName, _storeName, "table2");
-                var fakeStoreListProvider = new FakeMessageStoreActivationStateProvider(_messageStore);
+                var fakeStoreListProvider = new FakeMessageStoreConfigProvider(_messageStore);
 
                 var fakeStore = new FakeMessageStoreWithViewer();
                 
@@ -81,14 +81,14 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private static MessageStoreViewerModelRetriever _messageStoreViewerModelRetriever;
             private static ViewModelRetrieverResult<MessageStoreViewerModel, MessageStoreViewerModelError> _result;
             private static string _storeName = "storeItemtestStoreName";
-            private static MessageStoreActivationState _messageStore;
+            private static MessageStoreConfig _messageStore;
         }
 
         public class When_retrieving_json_for_invalid_config 
         {
             private Establish _context = () =>
             {
-                var fakeStoreListProvider = new FakeMessageStoreActivationStateProviderExceptionOnGet();
+                var fakeStoreListProvider = new FakeMessageStoreConfigProviderExceptionOnGet();
                 var fakeMessageStoreFactory = new FakeMessageStoreViewerFactory(new FakeMessageStoreWithViewer(), _storeName);
 
                 _messageStoreViewerModelRetriever = new MessageStoreViewerModelRetriever(fakeMessageStoreFactory, fakeStoreListProvider);
@@ -112,9 +112,9 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
         {
             private Establish _context = () =>
             {
-                var _messageStore = MessageStoreActivationStateFactory.Create(storeName,
+                var _messageStore = MessageStoreConfigFactory.Create(storeName,
                       typeof(MsSqlMessageStore).FullName, "sqlConfig", "table2");
-                var fakeStoreListProvider = new FakeMessageStoreActivationStateProvider(_messageStore);
+                var fakeStoreListProvider = new FakeMessageStoreConfigProvider(_messageStore);
                 var fakeMessageStoreFactory = FakeMessageStoreViewerFactory.CreateEmptyFactory();
 
                 _messageStoreViewerModelRetriever = new MessageStoreViewerModelRetriever(fakeMessageStoreFactory, fakeStoreListProvider);
@@ -142,9 +142,9 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
             private Establish _context = () =>
             {
-                var _messageStore = MessageStoreActivationStateFactory.Create(storeName,
+                var _messageStore = MessageStoreConfigFactory.Create(storeName,
                       typeof(MsSqlMessageStore).FullName, "sqlConfig", "table2");
-                var fakeStoreListProvider = new FakeMessageStoreActivationStateProvider(_messageStore);
+                var fakeStoreListProvider = new FakeMessageStoreConfigProvider(_messageStore);
                 IMessageStoreListCacheLoader fakeCacheLoaderThatErrors = new FakeMessageStoreListCacheLoaderThatErrors();
                 var fakeMessageStoreFactory = new MessageStoreViewerFactory(fakeStoreListProvider, fakeCacheLoaderThatErrors);
                 
@@ -170,7 +170,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
     internal class FakeMessageStoreListCacheLoaderThatErrors : IMessageStoreListCacheLoader
     {
-        public IMessageStoreActivationStateCache Load()
+        public IMessageStoreConfigCache Load()
         {
             throw new SystemException();
         }
