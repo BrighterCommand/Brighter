@@ -78,7 +78,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
         }
 
         public static void StoresModule(this ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator config, 
-                IEnumerable<MessageStoreActivationState> stores)
+                IEnumerable<MessageStoreConfig> stores)
         {
             var listViewRetriever = new FakeActivationListModelRetriever(new MessageStoreActivationStateListModel(stores));
             var storeRetriever = new FakeMessageStoreViewerModelRetriever(new MessageStoreViewerModel(new FakeMessageStore(), stores.FirstOrDefault()));

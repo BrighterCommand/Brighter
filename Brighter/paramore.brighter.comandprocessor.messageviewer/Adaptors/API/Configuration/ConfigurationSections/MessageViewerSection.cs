@@ -71,10 +71,10 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
             get { return (MessageViewerStoresElementCollection)this["stores"]; }
         }
 
-        [ConfigurationProperty("broker", IsRequired = false, IsDefaultCollection = false)]
-        public MessageViewerBrokerElement Broker
+        [ConfigurationProperty("producer", IsRequired = false, IsDefaultCollection = false)]
+        public MessageViewerProducerElement Producer
         {
-            get { return (MessageViewerBrokerElement)this["broker"]; }
+            get { return (MessageViewerProducerElement)this["producer"]; }
         }
 
         //<configuration>

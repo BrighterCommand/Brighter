@@ -34,42 +34,17 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration.ConfigurationSections;
+using System.Configuration;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
+namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration.ConfigurationSections
 {
-    public class MessageStoreActivationStateProvider : IMessageStoreActivationStateProvider
+    public class MessageViewerProducerElement : ConfigurationElement
     {
-        private List<MessageStoreActivationState> _stores=null;
-        private readonly ILog _logger = LogProvider.GetLogger("MessageStoreActivationStateProvider");
-
-        public IEnumerable<MessageStoreActivationState> Get()
+        [ConfigurationProperty("assemblyQualifiedName", IsKey = true, IsRequired = true)]
+        public string AssemblyQualifiedName
         {
-            if (_stores == null)
-            {
-                LoadStores();
-            }
-            return _stores;
-        }
-
-        private void LoadStores()
-        {
-            _logger.Log(LogLevel.Debug, () => "Initialising MessageStoreActivationStateProvider. Checking config sections");
-
-            _stores = new List<MessageStoreActivationState>();
-            var configSection = MessageViewerSection.GetViewerSection;
-            foreach (object store in configSection.Stores)
-            {
-                var messageStore = store as MessageViewerStoresElement;
-                if (messageStore != null)
-                {
-                    var messageStoreListItem = new MessageStoreActivationState(messageStore);
-                    _stores.Add(messageStoreListItem);
-                }
-            }
+            get { return (string)base["assemblyQualifiedName"]; }
+            set { base["assemblyQualifiedName"] = value; }
         }
     }
 }
-

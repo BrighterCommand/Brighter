@@ -1,6 +1,6 @@
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
-// Author           : ianp
+// Author           : ian
 // Created          : 25-03-2014
 //
 // Last Modified By : ian
@@ -35,30 +35,36 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources
+namespace paramore.brighter.commandprocessor
 {
-    public class MessageStoreViewerModel
+    public class MessageRecoverer : IAmAMessageRecoverer
     {
-        public MessageStoreViewerModel(IAmAMessageStore<Message> connectedStore, MessageStoreConfig foundState)
+        public void Repost(List<string> messageIds, IAmAMessageStore<Message> messageStore, IAmAMessageProducer messageProducer)
         {
-            Name = foundState.Name;
-            StoreType = foundState.StoreType;
-            TypeName = foundState.TypeName;
-            ConnectionString = foundState.ConnectionString;
-            TableName = foundState.TableName;
-            //TODO: ++ double something with connectedStore
+            var foundMessages = GetMessagesFromStore(messageStore, messageIds);
+            foreach (var foundMessage in foundMessages)
+            {
+                messageProducer.Send(foundMessage);
+            }
         }
 
-        public MessageStoreViewerModel()
+        private static IEnumerable<Message> GetMessagesFromStore(IAmAMessageStore<Message> messageStore, IReadOnlyCollection<string> messageIds)
         {
-        }
+            IEnumerable<Message> foundMessages = messageIds 
+                .Select(messageId => messageStore.Get(Guid.Parse(messageId)))
+                .Where(fm => fm != null)
+                .ToList();
 
-        public MessageStoreType StoreType { get; private set; }
-        public string Name { get; set; }
-        public string TypeName { get; set; }
-        public string ConnectionString { get; set; }
-        public string TableName { get; set; }
+            if (foundMessages.Count() < messageIds.Count)
+            {
+                throw new SystemException("Cannot find messages " +
+                                          string.Join(",", messageIds.Where(id => foundMessages.All(fm => fm.Id.ToString() != id.ToString())).ToArray()));
+            }
+            return foundMessages;
+        }
     }
 }

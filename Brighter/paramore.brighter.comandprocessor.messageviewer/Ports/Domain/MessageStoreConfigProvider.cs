@@ -1,6 +1,6 @@
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
-// Author           : ianp
+// Author           : ian
 // Created          : 25-03-2014
 //
 // Last Modified By : ian
@@ -10,7 +10,6 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -35,30 +34,42 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
+using System.Collections.Generic;
+using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration.ConfigurationSections;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources
+namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
 {
-    public class MessageStoreViewerModel
+    public class MessageStoreConfigProvider : IMessageStoreConfigProvider
     {
-        public MessageStoreViewerModel(IAmAMessageStore<Message> connectedStore, MessageStoreConfig foundState)
+        private List<MessageStoreConfig> _stores=null;
+        private readonly ILog _logger = LogProvider.GetLogger("MessageStoreConfigProvider");
+
+        public IEnumerable<MessageStoreConfig> Get()
         {
-            Name = foundState.Name;
-            StoreType = foundState.StoreType;
-            TypeName = foundState.TypeName;
-            ConnectionString = foundState.ConnectionString;
-            TableName = foundState.TableName;
-            //TODO: ++ double something with connectedStore
+            if (_stores == null)
+            {
+                LoadStores();
+            }
+            return _stores;
         }
 
-        public MessageStoreViewerModel()
+        private void LoadStores()
         {
-        }
+            _logger.Log(LogLevel.Debug, () => "Initialising MessageStoreConfigProvider. Checking config sections");
 
-        public MessageStoreType StoreType { get; private set; }
-        public string Name { get; set; }
-        public string TypeName { get; set; }
-        public string ConnectionString { get; set; }
-        public string TableName { get; set; }
+            _stores = new List<MessageStoreConfig>();
+            var configSection = MessageViewerSection.GetViewerSection;
+            foreach (object store in configSection.Stores)
+            {
+                var messageStore = store as MessageViewerStoresElement;
+                if (messageStore != null)
+                {
+                    var messageStoreListItem = new MessageStoreConfig(messageStore);
+                    _stores.Add(messageStoreListItem);
+                }
+            }
+        }
     }
 }
+

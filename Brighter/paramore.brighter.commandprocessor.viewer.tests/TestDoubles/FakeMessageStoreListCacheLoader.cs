@@ -43,22 +43,22 @@ namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
 {
     internal class FakeMessageStoreListCacheLoader : IMessageStoreListCacheLoader
     {
-        private readonly IMessageStoreActivationStateCache _messageStoreActivationStateCache;
+        private readonly IMessageStoreConfigCache _messageStoreConfigCache;
         public Dictionary<MessageStoreType, int> ctorCalled = new Dictionary<MessageStoreType, int>();
 
-        public FakeMessageStoreListCacheLoader(IMessageStoreActivationStateCache messageStoreActivationStateCache)
+        public FakeMessageStoreListCacheLoader(IMessageStoreConfigCache messageStoreConfigCache)
         {
-            _messageStoreActivationStateCache = messageStoreActivationStateCache;
+            _messageStoreConfigCache = messageStoreConfigCache;
         }
 
-        public IMessageStoreActivationStateCache Load()
+        public IMessageStoreConfigCache Load()
         {
-            return _messageStoreActivationStateCache;
+            return _messageStoreConfigCache;
         }
 
         public void Setup(MessageStoreType type, FakeMessageStoreWithViewer fakeMessageStoreWithViewer)
         {
-            _messageStoreActivationStateCache.Set(type, msli =>
+            _messageStoreConfigCache.Set(type, msli =>
             {
                 if (!ctorCalled.ContainsKey(type))
                 {

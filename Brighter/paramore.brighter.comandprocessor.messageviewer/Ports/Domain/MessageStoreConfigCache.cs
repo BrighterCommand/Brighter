@@ -33,50 +33,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
 using System;
-using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration.ConfigurationSections;
+using System.Collections.Generic;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
 {
-    public class MessageStoreActivationState 
+    public interface IMessageStoreConfigCache
     {
-        internal MessageStoreActivationState(MessageViewerStoresElement messageStore)
-            : this(messageStore.Name, messageStore.Type, messageStore.ConnectionString, messageStore.TableName)
-        {
-        }
-
-        internal MessageStoreActivationState(string name, string type, string connectionString, string tableName)
-            : this(name, type, connectionString)
-        {
-            TableName = tableName;
-        }
-
-        internal MessageStoreActivationState(string name, string type, string connectionString)
-        {
-            Name = name;
-            TypeName = type;
-            ConnectionString = connectionString;
-            StoreType = MessageStoreTypeMapper.Map(TypeName, ConnectionString);
-        }
-
-        public MessageStoreType StoreType { get; private set; }
-        public string Name { get; set; }
-        public string TypeName { get; set; }
-        public string ConnectionString { get; set; }
-        public string TableName { get; set; }
+        IAmAMessageStore<Message> Get(MessageStoreConfig type);
+        void Set(MessageStoreType storeType, Func<MessageStoreConfig, IAmAMessageStore<Message>> storeCtor);
     }
 
-    public class MessageStoreTypeMapper
+    public class MessageStoreConfigCache : IMessageStoreConfigCache
     {
-        public static MessageStoreType Map(string typeName, string connectionString)
+        private readonly Dictionary<MessageStoreType, Func<MessageStoreConfig, IAmAMessageStore<Message>>> _storeCtorLookup = new Dictionary<MessageStoreType, Func<MessageStoreConfig, IAmAMessageStore<Message>>>();
+        private readonly Dictionary<string, IAmAMessageStore<Message>> _storesCreated = new Dictionary<string, IAmAMessageStore<Message>>();
+
+        public IAmAMessageStore<Message> Get(MessageStoreConfig messageStore)
         {
-            if (typeName == typeof(MsSqlMessageStore).FullName)
+            if (!_storesCreated.ContainsKey(messageStore.Name))
             {
-                return connectionString.Contains("Server") ? MessageStoreType.SqlServer : MessageStoreType.SqlCe;
+                _storesCreated.Add(messageStore.Name, _storeCtorLookup[messageStore.StoreType].Invoke(messageStore));
             }
-            throw  new ArgumentException(string.Format("Do not recognise Messsage store type:{0} connection string:{1}", typeName, connectionString));
+            return _storesCreated[messageStore.Name];
+        }
+
+        public void Set(MessageStoreType storeType, Func<MessageStoreConfig, IAmAMessageStore<Message>> storeCtor)
+        {
+            _storeCtorLookup.Add(storeType, storeCtor);
         }
     }
 }

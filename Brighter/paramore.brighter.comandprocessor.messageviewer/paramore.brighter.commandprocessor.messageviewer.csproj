@@ -78,7 +78,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerBrokerElement.cs" />
+    <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerProducerElement.cs" />
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerSection.cs" />
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerStoresElement.cs" />
     <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerStoresElementCollection.cs" />
@@ -96,18 +96,18 @@
     <Compile Include="Adaptors\API\Resources\MessageStoreViewerModel.cs" />
     <Compile Include="Ports\Domain\MessageStoreViewerService.cs" />
     <Compile Include="Ports\Domain\ViewModelRetrieverResult.cs" />
-    <Compile Include="Ports\Domain\MessageStoreActivationStateCache.cs" />
+    <Compile Include="Ports\Domain\MessageStoreConfigCache.cs" />
     <Compile Include="Adaptors\API\Configuration\MessageStoreListCacheLoader.cs" />
-    <Compile Include="Ports\Domain\MessageStoreActivationStateFactory.cs" />
+    <Compile Include="Ports\Domain\MessageStoreConfigFactory.cs" />
     <Compile Include="Ports\Domain\MessageStoreViewerFactory.cs" />
     <Compile Include="Adaptors\API\Resources\MessageViewerError.cs" />
     <Compile Include="Adaptors\API\Configuration\DependencyResolver.cs" />
     <Compile Include="Adaptors\API\Resources\MessageItemModel.cs" />
-    <Compile Include="Ports\Domain\MessageStoreActivateState.cs" />
-    <Compile Include="Ports\Domain\MessageStoreActivationStateProvider.cs" />
+    <Compile Include="Ports\Domain\MessageStoreConfig.cs" />
+    <Compile Include="Ports\Domain\MessageStoreConfigProvider.cs" />
     <Compile Include="Adaptors\API\Configuration\NancyBootstrapper.cs" />
     <Compile Include="Adaptors\API\Configuration\NancySelfHost.cs" />
-    <Compile Include="Ports\Domain\IMessageStoreActivationStateProvider.cs" />
+    <Compile Include="Ports\Domain\IMessageStoreConfigProvider.cs" />
     <Compile Include="Adaptors\API\Resources\MessageStoreActivationStateModel.cs" />
     <Compile Include="Adaptors\API\Resources\MessageStoreActivationStateListModel.cs" />
     <Compile Include="Adaptors\API\Handlers\StoresNancyModule.cs" />

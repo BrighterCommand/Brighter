@@ -53,14 +53,14 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
             private Because _of = () => exception = Catch.Exception(() =>
             {
-                MessageStoreActivationState = MessageStoreActivationStateFactory.Create("sqlce", typeof(Array).FullName,
+                MessageStoreConfig = MessageStoreConfigFactory.Create("sqlce", typeof(Array).FullName,
                     "notValid", "table2");
-                _provider = new FakeMessageStoreActivationStateProvider(MessageStoreActivationState);
+                _provider = new FakeMessageStoreConfigProvider(MessageStoreConfig);
             });
 
             private It should_throw_argument_exception = () => exception.ShouldBeOfExactType<ArgumentException>();
-            private static FakeMessageStoreActivationStateProvider _provider;
-            protected static MessageStoreActivationState MessageStoreActivationState;
+            private static FakeMessageStoreConfigProvider _provider;
+            protected static MessageStoreConfig MessageStoreConfig;
             private static Exception exception;
         }
 
@@ -69,12 +69,12 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private Establish _context = () =>
             {
                 storeName = "sqlce-1";
-                _provider = FakeMessageStoreActivationStateProvider.CreateEmpty();
-                _provider.Add(MessageStoreActivationStateFactory.Create(storeName, typeof(MsSqlMessageStore).FullName,
+                _provider = FakeMessageStoreConfigProvider.CreateEmpty();
+                _provider.Add(MessageStoreConfigFactory.Create(storeName, typeof(MsSqlMessageStore).FullName,
                     "DataSource='test-1.sdf';", "table-1"));
-                _provider.Add(MessageStoreActivationStateFactory.Create("sqlce-2", typeof(MsSqlMessageStore).FullName,
+                _provider.Add(MessageStoreConfigFactory.Create("sqlce-2", typeof(MsSqlMessageStore).FullName,
                     "DataSource='test-2.sdf';", "table-2"));
-                var messageStoreListCache = new MessageStoreActivationStateCache();
+                var messageStoreListCache = new MessageStoreConfigCache();
                 _fakeMessageStoreListCacheLoader = new FakeMessageStoreListCacheLoader(messageStoreListCache);
                 _fakeMessageStoreListCacheLoader.Setup(MessageStoreType.SqlCe, new FakeMessageStoreWithViewer());
                 _factory = new MessageStoreViewerFactory(_provider, _fakeMessageStoreListCacheLoader);                
@@ -86,8 +86,8 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             });
 
             private It should_throw_argument_exception = () => exception.ShouldBeNull();
-            private static FakeMessageStoreActivationStateProvider _provider;
-            protected static MessageStoreActivationState MessageStoreActivationState;
+            private static FakeMessageStoreConfigProvider _provider;
+            protected static MessageStoreConfig MessageStoreConfig;
             private static Exception exception;
             private static FakeMessageStoreListCacheLoader _fakeMessageStoreListCacheLoader;
             private static MessageStoreViewerFactory _factory;
@@ -100,11 +100,11 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private Establish _context = () =>
             {
                 storeName = "sqlce";
-                var messageStoreListItem = MessageStoreActivationStateFactory.Create(storeName, typeof(MsSqlMessageStore).FullName,
+                var messageStoreListItem = MessageStoreConfigFactory.Create(storeName, typeof(MsSqlMessageStore).FullName,
                     "DataSource='test.sdf';", "table2");
-                _provider = new FakeMessageStoreActivationStateProvider(messageStoreListItem);
+                _provider = new FakeMessageStoreConfigProvider(messageStoreListItem);
 
-                var messageStoreListCache = new MessageStoreActivationStateCache();
+                var messageStoreListCache = new MessageStoreConfigCache();
                 _fakeMessageStoreListCacheLoader = new FakeMessageStoreListCacheLoader(messageStoreListCache);
                 _fakeMessageStoreListCacheLoader.Setup(MessageStoreType.SqlCe, new FakeMessageStoreWithViewer());
                 _factory = new MessageStoreViewerFactory(_provider, _fakeMessageStoreListCacheLoader);
@@ -116,7 +116,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
                 _fakeMessageStoreListCacheLoader.ctorCalled[MessageStoreType.SqlCe].ShouldEqual(1);
 
             private static MessageStoreViewerFactory _factory;
-            private static FakeMessageStoreActivationStateProvider _provider;
+            private static FakeMessageStoreConfigProvider _provider;
             private static string storeName;
             private static FakeMessageStoreListCacheLoader _fakeMessageStoreListCacheLoader;
         }

@@ -47,15 +47,15 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
 
     public class MessageStoreViewerFactory : IMessageStoreViewerFactory
     {
-        private readonly IMessageStoreActivationStateProvider _messageStoreActivationStateProvider;
+        private readonly IMessageStoreConfigProvider _messageStoreConfigProvider;
         private readonly IMessageStoreListCacheLoader _messageStoreListCache;
         private readonly ILog _logger = LogProvider.GetLogger("MessageStoreViewerFactory");
-        private IMessageStoreActivationStateCache _messageStoreList;
+        private IMessageStoreConfigCache _messageStoreList;
 
-        public MessageStoreViewerFactory(IMessageStoreActivationStateProvider messageStoreActivationStateProvider, 
+        public MessageStoreViewerFactory(IMessageStoreConfigProvider messageStoreConfigProvider, 
             IMessageStoreListCacheLoader messageStoreListCache)
         {
-            _messageStoreActivationStateProvider = messageStoreActivationStateProvider;
+            _messageStoreConfigProvider = messageStoreConfigProvider;
             _logger.Log(LogLevel.Debug, () => "Loading store from cache");
             _messageStoreListCache = messageStoreListCache;
         }
@@ -66,8 +66,8 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
             {
                 _messageStoreList = _messageStoreListCache.Load();
             }
-            var stores = _messageStoreActivationStateProvider.Get();
-            MessageStoreActivationState foundStore = stores.Single(s => s.Name == messageStoreName);
+            var stores = _messageStoreConfigProvider.Get();
+            MessageStoreConfig foundStore = stores.Single(s => s.Name == messageStoreName);
 
             return _messageStoreList.Get(foundStore);
         }
