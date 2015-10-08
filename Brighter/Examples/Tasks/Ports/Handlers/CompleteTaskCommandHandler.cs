@@ -29,16 +29,20 @@ using paramore.brighter.commandprocessor.policy.Attributes;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
 using Tasks.Ports.Commands;
+using Tasks.Ports.Events;
 
 namespace Tasks.Ports.Handlers
 {
     public class CompleteTaskCommandHandler : RequestHandler<CompleteTaskCommand>
     {
         private readonly ITasksDAO _tasksDAO;
+        private readonly IAmACommandProcessor _commandProcessor;
 
-        public CompleteTaskCommandHandler(ITasksDAO tasksDAO, ILog logger) : base(logger)
+        public CompleteTaskCommandHandler(ITasksDAO tasksDAO, ILog logger, IAmACommandProcessor commandProcessor)
+            : base(logger)
         {
             _tasksDAO = tasksDAO;
+            _commandProcessor = commandProcessor;
         }
 
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
@@ -60,6 +64,9 @@ namespace Tasks.Ports.Handlers
                     throw new ArgumentOutOfRangeException("completeTaskCommand", completeTaskCommand, "Could not find the task to complete");
                 }
             }
+
+            _commandProcessor.Post(new TaskCompletedEvent(completeTaskCommand.Id, completeTaskCommand.TaskId, completeTaskCommand.CompletionDate));
+
             return base.Handle(completeTaskCommand);
         }
     }

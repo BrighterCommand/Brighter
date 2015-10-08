@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.Logging;
@@ -33,6 +34,7 @@ using Tasks.Ports.Commands;
 using Tasks.Ports.Handlers;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
+using Tasks.Ports.Events;
 
 namespace Tasklist.Adapters.Tests
 {
@@ -53,6 +55,9 @@ namespace Tasklist.Adapters.Tests
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
 
+            var messageMapperRegistry = new MessageMapperRegistry(new TinyIoCMessageMapperFactory(container));
+            messageMapperRegistry.Add(typeof(TaskAddedEvent), typeof(TaskAddedEventTestMapper));
+
             s_requestContext = new RequestContext();
 
             var logger = A.Fake<ILog>();
@@ -60,9 +65,11 @@ namespace Tasklist.Adapters.Tests
             A.CallTo(() => requestContextFactory.Create()).Returns(s_requestContext);
 
             var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
-            var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy } };
+            var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+            var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
 
-            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger);
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, messageMapperRegistry, new TestMessageStore(), new TestMessageProducer(), logger);
+            container.Register<IAmACommandProcessor>(s_commandProcessor);
 
             s_cmd = new AddTaskCommand("New Task", "Test that we store a task", DateTime.Now.AddDays(3));
 
@@ -79,6 +86,57 @@ namespace Tasklist.Adapters.Tests
         private static Task FindTaskinDb()
         {
             return new TasksDAO().FindByName(s_cmd.TaskName);
+        }
+    }
+
+    public class TaskAddedEventTestMapper : IAmAMessageMapper<TaskAddedEvent>
+    {
+        public Message MapToMessage(TaskAddedEvent request)
+        {
+            return new Message();
+        }
+
+        public TaskAddedEvent MapToRequest(Message message)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal class TestMessageStore : IAmAMessageStore<Message>
+    {
+        private readonly ConcurrentDictionary<Guid, Message> _store;
+
+        public TestMessageStore()
+        {
+            this._store = new ConcurrentDictionary<Guid, Message>();
+        }
+
+        public void Add(Message message, int messageStoreTimeout = -1)
+        {
+            this._store.AddOrUpdate(message.Id, message, (guid, oldMessage) => message);
+        }
+
+        public Message Get(Guid messageId, int messageStoreTimeout = -1)
+        {
+            Message message;
+
+            if (!this._store.TryGetValue(messageId, out message))
+            {
+                throw new ArgumentOutOfRangeException(messageId.ToString());
+            }
+
+            return message;
+        }
+    }
+
+    internal class TestMessageProducer : IAmAMessageProducer
+    {
+        public void Dispose()
+        {
+        }
+
+        public void Send(Message message)
+        {
         }
     }
 }

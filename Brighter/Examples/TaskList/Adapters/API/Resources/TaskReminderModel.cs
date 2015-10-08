@@ -6,6 +6,8 @@ namespace Tasklist.Adapters.API.Resources
     [DataContract, XmlRoot]
     public class TaskReminderModel
     {
+        [DataMember(Name = "taskId"), XmlElement(ElementName = "taskId")]
+        public int TaskId { get; set; }
         [DataMember(Name = "copyTo"), XmlElement(ElementName = "copyTo")]
         public string CopyTo { get; set; }
         [DataMember(Name = "dueDate"), XmlElement(ElementName = "dueDate")]
