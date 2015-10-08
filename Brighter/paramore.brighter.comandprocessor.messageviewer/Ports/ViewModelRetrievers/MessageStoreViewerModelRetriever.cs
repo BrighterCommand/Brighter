@@ -50,20 +50,20 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrie
     public class MessageStoreViewerModelRetriever : IMessageStoreViewerModelRetriever
     {
         private readonly IMessageStoreViewerFactory _storeViewerFactory;
-        private readonly IMessageStoreActivationStateProvider _activationStateProvider;
+        private readonly IMessageStoreConfigProvider _configProvider;
 
         public MessageStoreViewerModelRetriever(IMessageStoreViewerFactory storeViewerFactory,
-            IMessageStoreActivationStateProvider activationStateProvider)
+            IMessageStoreConfigProvider configProvider)
         {
             _storeViewerFactory = storeViewerFactory;
-            _activationStateProvider = activationStateProvider;
+            _configProvider = configProvider;
         }
 
         public ViewModelRetrieverResult<MessageStoreViewerModel, MessageStoreViewerModelError> Get(string storeName)
         {
             try
             {
-                IEnumerable<MessageStoreActivationState> activationStates = _activationStateProvider.Get();
+                IEnumerable<MessageStoreConfig> activationStates = _configProvider.Get();
                 var foundState = activationStates.SingleOrDefault(msAs => msAs.Name == storeName);
 
                 if (foundState != null)

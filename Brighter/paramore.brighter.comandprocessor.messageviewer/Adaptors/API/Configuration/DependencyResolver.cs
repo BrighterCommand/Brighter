@@ -56,9 +56,10 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
                         "messages", MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer), logger);
 
             container.Register(messageStore);
-            container.Register(typeof (IMessageStoreActivationStateProvider), typeof (MessageStoreActivationStateProvider));
+            container.Register(typeof (IMessageStoreConfigProvider), typeof (MessageStoreConfigProvider));
             container.Register(typeof (IMessageStoreViewerFactory), typeof (MessageStoreViewerFactory));
             container.Register(typeof(IHandleCommand<RepostCommand>), typeof (RepostCommandHandler));
+            container.Register(typeof (IAmAMessageRecoverer), typeof (MessageRecoverer));
 
             var factory= new HandlerFactory();
             factory.Add(container.Resolve<RepostCommandHandler>());

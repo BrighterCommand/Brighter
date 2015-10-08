@@ -41,34 +41,34 @@ using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
 {
-    public class FakeMessageStoreActivationStateProvider : IMessageStoreActivationStateProvider
+    public class FakeMessageStoreConfigProvider : IMessageStoreConfigProvider
     {
-        readonly List<MessageStoreActivationState> _stores = new List<MessageStoreActivationState>();
+        readonly List<MessageStoreConfig> _stores = new List<MessageStoreConfig>();
 
-        public FakeMessageStoreActivationStateProvider(MessageStoreActivationState messageStore)
+        public FakeMessageStoreConfigProvider(MessageStoreConfig messageStore)
         {
             Add(messageStore);
         }
 
-        public static FakeMessageStoreActivationStateProvider CreateEmpty()
+        public static FakeMessageStoreConfigProvider CreateEmpty()
         {
-            return new FakeMessageStoreActivationStateProvider();
+            return new FakeMessageStoreConfigProvider();
         }
-        protected FakeMessageStoreActivationStateProvider()
+        protected FakeMessageStoreConfigProvider()
         {
         }
 
-        public FakeMessageStoreActivationStateProvider(IEnumerable<MessageStoreActivationState> messageStores)
+        public FakeMessageStoreConfigProvider(IEnumerable<MessageStoreConfig> messageStores)
         {
             _stores.AddRange(messageStores);
         }
 
-        public void Add(MessageStoreActivationState messageStoreDetails)
+        public void Add(MessageStoreConfig messageStoreDetails)
         {
             _stores.Add(messageStoreDetails);
         }
 
-        public virtual IEnumerable<MessageStoreActivationState> Get()
+        public virtual IEnumerable<MessageStoreConfig> Get()
         {
             return _stores;
         }
