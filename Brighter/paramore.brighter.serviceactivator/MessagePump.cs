@@ -169,7 +169,7 @@ namespace paramore.brighter.serviceactivator
                 try
                 {
                     var request = TranslateMessage(message);
-                    DispatchRequest(message.Header.MessageType, request);
+                    DispatchRequest(request);
                 }
                 catch (ConfigurationException configurationException)
                 {
@@ -232,24 +232,18 @@ namespace paramore.brighter.serviceactivator
             return RequeueCount != -1;
         }
 
-        private void DispatchRequest(MessageType messageType, TRequest request)
+        private void DispatchRequest(TRequest request)
         {
             if (Logger != null) Logger.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
-            switch (messageType)
+            if (typeof(TRequest).IsSubclassOf(typeof (Event)))
             {
-                case MessageType.MT_COMMAND:
-                    {
-                        _commandProcessor.Send(request);
-                        break;
-                    }
-                case MessageType.MT_DOCUMENT:
-                case MessageType.MT_EVENT:
-                    {
-                        _commandProcessor.Publish(request);
-                        break;
-                    }
+                _commandProcessor.Publish(request as Event);
+                return;
             }
+
+            //or default
+            _commandProcessor.Send(request as Command);
         }
 
         private Tuple<bool, bool> HandleProcessingException(AggregateException aggregateException)
