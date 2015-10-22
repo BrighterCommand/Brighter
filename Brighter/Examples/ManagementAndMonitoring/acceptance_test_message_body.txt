@@ -1,1 +1,1 @@
-"{"Greeting":"Hello World","Id":"60457970-6fe6-482e-aad4-8e802652136c"}"
+{"Greeting":"Hello World","Id":"60457970-6fe6-482e-aad4-8e802652136c"}

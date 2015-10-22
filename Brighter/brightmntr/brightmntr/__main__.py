@@ -33,8 +33,8 @@ Usage:
 
 Options:
   -d SECONDS --delay=SECONDS            Specific delay between refreshes (otherwise 5 seconds).
-  -n TIMES --updates=TIMES              Update display n times, then exit.
-  -p PAGESIZE --pagesize=PAGESIZE       Try to show this number of items from the queue, when the interval is triggered
+  -n TIMES --updates=TIMES              Update display n times, then exit. Defaults 1o -1, no limit.
+  -p PAGESIZE --pagesize=PAGESIZE       Try to show this number of items from the queue, then pause for delay seconds, defaults to 5 items
   -h --help                             Show this screen.
 
 
@@ -54,7 +54,6 @@ PAGE_SIZE = 5
 def run(amqp_uri, exchange, routing_key, params):
     # start a monitor output thread, this does the work, whilst the main thread just acts
     # as a control thread to receive the  keyboard input
-    updates = -1
 
     worker = Worker(amqp_uri, exchange, routing_key)
     worker.delay_between_refreshes = params['--delay'] if params['--delay'] is not None else DELAY_BETWEEN_REFRESHES

@@ -87,14 +87,19 @@ class Worker(Thread):
                 ensure_kwargs = self._ensure_options.copy()
                 ensure_kwargs['errback'] = _drain_errors
                 lines = 0
+                updates = 0
                 while self._running.is_set():
                     # page size number before we sleep
                     safe_drain = conn.ensure(consumer, _drain, **ensure_kwargs)
                     safe_drain(conn, DRAIN_EVENTS_TIMEOUT)
                     lines += 1
                     if lines == self.page_size:
-                        sleep(self.delay_between_refreshes)
-                        lines = 0
+                        if self.limit != -1 and updates > self.limit:
+                            self._running.clear()
+                        else:
+                            sleep(self.delay_between_refreshes)
+                            lines = 0
+                            updates += 1
 
     def run(self):
 
