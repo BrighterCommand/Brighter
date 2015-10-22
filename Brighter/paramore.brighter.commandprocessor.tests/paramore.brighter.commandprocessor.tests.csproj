@@ -123,6 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppConfig.cs" />
+    <Compile Include="CommandProcessors\CommandProcessorBuilderTests.cs" />
     <Compile Include="CommandProcessors\PipelineTests.cs" />
     <Compile Include="CommandProcessors\CommandProcessorTests.cs" />
     <Compile Include="CommandProcessors\PipelineContextTests.cs" />

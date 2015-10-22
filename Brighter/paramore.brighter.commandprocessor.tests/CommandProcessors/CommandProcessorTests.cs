@@ -322,7 +322,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private It _should_call_the_post_validation_handler = () => MyLoggingHandler<MyCommand>.Shouldreceive(s_myCommand).ShouldBeTrue();
     }
 
-
     public class When_using_decoupled_invocation_messaging_gateway_throws_an_error_retry_n_times_then_break_circuit
     {
         private static CommandProcessor s_commandProcessor;
