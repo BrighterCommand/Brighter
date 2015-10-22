@@ -71,6 +71,15 @@ namespace paramore.brighter.commandprocessor
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
+        protected RequestHandler() : this(LogProvider.GetCurrentClassLogger())
+        {
+        }
+        
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        [Obsolete("Use default ctor and rely on LibLog")]
         protected RequestHandler(ILog logger)
         {
             this.logger = logger;

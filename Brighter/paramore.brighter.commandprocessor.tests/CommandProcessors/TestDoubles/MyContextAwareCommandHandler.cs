@@ -29,9 +29,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     internal class MyContextAwareCommandHandler : RequestHandler<MyCommand>
     {
-        public MyContextAwareCommandHandler(ILog logger) : base(logger)
-        { }
-
         public static string TestString { get; set; }
 
         public override MyCommand Handle(MyCommand command)
