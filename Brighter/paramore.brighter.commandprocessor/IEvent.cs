@@ -1,15 +1,16 @@
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
-// Created          : 25-03-2014
+// Created          : 07-01-2014
 //
 // Last Modified By : ian
-// Last Modified On : 25-03-2014
+// Last Modified On : 07-01-2014
 // ***********************************************************************
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -34,42 +35,14 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration.ConfigurationSections;
-
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
+namespace paramore.brighter.commandprocessor
 {
-    public class MessageStoreActivationStateProvider : IMessageStoreActivationStateProvider
+    /// <summary>
+    /// Class Event
+    /// An event is an indicator to interested parties that 'something has happened'. We expect zero to many receivers as it is one-to-many communication i.e. publish-subscribe
+    /// An event is usually fire-and-forget, because we do not know it is received.
+    /// </summary>
+    public interface IEvent : IRequest
     {
-        private List<MessageStoreActivationState> _stores=null;
-        private readonly ILog _logger = LogProvider.GetLogger("MessageStoreActivationStateProvider");
-
-        public IEnumerable<MessageStoreActivationState> Get()
-        {
-            if (_stores == null)
-            {
-                LoadStores();
-            }
-            return _stores;
-        }
-
-        private void LoadStores()
-        {
-            _logger.Log(LogLevel.Debug, () => "Initialising MessageStoreActivationStateProvider. Checking config sections");
-
-            _stores = new List<MessageStoreActivationState>();
-            var configSection = MessageViewerSection.GetViewerSection;
-            foreach (object store in configSection.Stores)
-            {
-                var messageStore = store as MessageViewerStoresElement;
-                if (messageStore != null)
-                {
-                    var messageStoreListItem = new MessageStoreActivationState(messageStore);
-                    _stores.Add(messageStoreListItem);
-                }
-            }
-        }
     }
 }
-

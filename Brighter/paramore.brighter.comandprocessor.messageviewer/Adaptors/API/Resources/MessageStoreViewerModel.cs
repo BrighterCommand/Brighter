@@ -41,7 +41,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resource
 {
     public class MessageStoreViewerModel
     {
-        public MessageStoreViewerModel(IAmAMessageStore<Message> connectedStore, MessageStoreActivationState foundState)
+        public MessageStoreViewerModel(IAmAMessageStore<Message> connectedStore, MessageStoreConfig foundState)
         {
             Name = foundState.Name;
             StoreType = foundState.StoreType;

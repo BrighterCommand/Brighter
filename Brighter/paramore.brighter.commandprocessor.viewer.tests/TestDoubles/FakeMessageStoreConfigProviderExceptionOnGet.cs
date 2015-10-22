@@ -41,13 +41,13 @@ using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
 {
-    public class FakeMessageStoreActivationStateProviderExceptionOnGet : FakeMessageStoreActivationStateProvider
+    public class FakeMessageStoreConfigProviderExceptionOnGet : FakeMessageStoreConfigProvider
     {
-        public FakeMessageStoreActivationStateProviderExceptionOnGet() : base()
+        public FakeMessageStoreConfigProviderExceptionOnGet() : base()
         {
         }
 
-        public override IEnumerable<MessageStoreActivationState> Get()
+        public override IEnumerable<MessageStoreConfig> Get()
         {
             throw new Exception("Fake exception on GET");
         }

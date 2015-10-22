@@ -1,6 +1,41 @@
+// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 25-03-2014
+//
+// Last Modified By : ian
+// Last Modified On : 25-03-2014
+// ***********************************************************************
+//     Copyright (c) . All rights reserved.
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 
@@ -17,29 +52,28 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
         private readonly IMessageStoreViewerFactory _messageStoreViewerFactory;
         private readonly IMessageProducerFactoryProvider _messageProducerFactoryProvider;
         private readonly ILog _logger = LogProvider.GetLogger("RepostCommandHandler");
+        private readonly IAmAMessageRecoverer _messageRecoverer;
 
         public RepostCommandHandler(IMessageStoreViewerFactory messageStoreViewerFactory,
-                                    IMessageProducerFactoryProvider messageProducerFactoryProvider)
+                                    IMessageProducerFactoryProvider messageProducerFactoryProvider, 
+                                    IAmAMessageRecoverer messageRecoverer)
         {
             _messageStoreViewerFactory = messageStoreViewerFactory;
             _messageProducerFactoryProvider = messageProducerFactoryProvider;
+            _messageRecoverer = messageRecoverer;
         }
 
         /// <exception cref="SystemException">Store not found / Mis-configured viewer broker</exception>
         public void Handle(RepostCommand command)
         {
             CheckMessageIds(command);            
-            var messageStore = GetMessageStore(command);
-            var foundMessages = GetMessagesFromStore(command, messageStore);
-            var foundProducer = GetMessageProducer(_messageProducerFactoryProvider);
+            var messageStore = GetMessageStoreFromConfig(command);
+            var foundProducer = GetMessageProducerFromConfig(_messageProducerFactoryProvider);
 
-            foreach (var foundMessage in foundMessages)
-            {
-                foundProducer.Send(foundMessage);
-            }
+            _messageRecoverer.Repost(command.MessageIds, messageStore, foundProducer);
         }
 
-        private IAmAMessageProducer GetMessageProducer(IMessageProducerFactoryProvider messageProducerFactoryProvider)
+        private IAmAMessageProducer GetMessageProducerFromConfig(IMessageProducerFactoryProvider messageProducerFactoryProvider)
         {
             var messageProducerFactory = messageProducerFactoryProvider.Get(_logger);
             if (messageProducerFactory == null)
@@ -68,21 +102,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
             return messageProducer;
         }
 
-        private static List<Message> GetMessagesFromStore(RepostCommand command, IAmAMessageStore<Message> messageStore)
-        {
-            var foundMessages = new List<Message>(
-                command.MessageIds
-                    .Select(messageId => messageStore.Get(Guid.Parse(messageId)))
-                    .Where(fm => fm != null));
-            if (foundMessages.Count < command.MessageIds.Count)
-            {
-                throw new SystemException("Cannot find messages " +
-                    string.Join(",", command.MessageIds.Where(id => foundMessages.All(fm => fm.Id.ToString() != id.ToString())).ToArray()));
-            }
-            return foundMessages;
-        }
-
-        private IAmAMessageStore<Message> GetMessageStore(RepostCommand command)
+        private IAmAMessageStore<Message> GetMessageStoreFromConfig(RepostCommand command)
         {
             IAmAMessageStore<Message> messageStore = _messageStoreViewerFactory.Connect(command.StoreName);
             if (messageStore == null)

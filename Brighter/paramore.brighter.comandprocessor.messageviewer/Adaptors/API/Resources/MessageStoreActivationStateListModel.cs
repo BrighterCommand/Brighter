@@ -44,7 +44,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resource
     public class MessageStoreActivationStateListModel
     {
         public MessageStoreActivationStateListModel(){}
-        public MessageStoreActivationStateListModel(IEnumerable<MessageStoreActivationState> stores) : this()
+        public MessageStoreActivationStateListModel(IEnumerable<MessageStoreConfig> stores) : this()
         {
             Stores = stores.Select(s => new MessageStoreActivationStateModel(s));
         }
