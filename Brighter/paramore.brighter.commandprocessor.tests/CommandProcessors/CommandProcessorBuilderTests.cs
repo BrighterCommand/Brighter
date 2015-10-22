@@ -89,6 +89,34 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private It _should_no_log = () => FakeLogProvider.LoggedMessages.ShouldBeEmpty();
     }
 
+    [Subject("Test Builder and LibLog with no logger")]
+    public class When_building_a_command_processor_with_null_logger
+    {
+        private static CommandProcessor s_commandProcessor;
+        private static readonly MyLogWritingCommand s_myCommand = new MyLogWritingCommand();
+        private static string handlerLogMessage = "testLogMessage";
+        private static FakeLogProvider _customProvider;
+
+        private Establish _context = () =>
+        {
+            _customProvider = new FakeLogProvider();
+            var registry = new SubscriberRegistry();
+            registry.Register<MyLogWritingCommand, MyLogWritingCommandHandler>();
+            var handlerFactory = new TestHandlerFactory<MyLogWritingCommand, MyLogWritingCommandHandler>(() => new MyLogWritingCommandHandler(handlerLogMessage));
+
+            s_commandProcessor = CommandProcessorBuilder.With()
+                .Handlers(new HandlerConfiguration(registry, handlerFactory))
+                .DefaultPolicy()
+                .DefaultLogger()
+                .NoTaskQueues()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
+        };
+
+        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+
+        private It _should_no_log = () => FakeLogProvider.LoggedMessages.ShouldBeEmpty();
+    }
     internal class MyLogWritingCommandHandler : RequestHandler<MyLogWritingCommand>
     {
         private readonly string _handlerLogMessage;
