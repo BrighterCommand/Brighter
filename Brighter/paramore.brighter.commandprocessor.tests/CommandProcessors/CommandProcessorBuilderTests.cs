@@ -29,7 +29,7 @@ using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.CommandProcessors
+namespace paramore.commandprocessor.tests.CommandProcessorBuilderTests
 {
     [Subject("Test Builder and LibLog with default handler ctor")]
     public class When_building_a_command_processor_with_a_logProvider
@@ -66,11 +66,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private static CommandProcessor s_commandProcessor;
         private static readonly MyLogWritingCommand s_myCommand = new MyLogWritingCommand();
         private static string handlerLogMessage = "testLogMessage";
-        private static FakeLogProvider _customProvider;
+        private static Exception s_exception;
 
         private Establish _context = () =>
         {
-            _customProvider = new FakeLogProvider();
             var registry = new SubscriberRegistry();
             registry.Register<MyLogWritingCommand, MyLogWritingCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyLogWritingCommand, MyLogWritingCommandHandler>(() => new MyLogWritingCommandHandler(handlerLogMessage));
@@ -84,9 +83,9 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .Build();
         };
 
-        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
 
-        private It _should_no_log = () => FakeLogProvider.LoggedMessages.ShouldBeEmpty();
+        private It _should_not_error = () => s_exception.ShouldBeNull();
     }
 
     [Subject("Test Builder and LibLog with no logger")]
@@ -95,11 +94,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private static CommandProcessor s_commandProcessor;
         private static readonly MyLogWritingCommand s_myCommand = new MyLogWritingCommand();
         private static string handlerLogMessage = "testLogMessage";
-        private static FakeLogProvider _customProvider;
+        private static Exception s_exception;
 
         private Establish _context = () =>
         {
-            _customProvider = new FakeLogProvider();
             var registry = new SubscriberRegistry();
             registry.Register<MyLogWritingCommand, MyLogWritingCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyLogWritingCommand, MyLogWritingCommandHandler>(() => new MyLogWritingCommandHandler(handlerLogMessage));
@@ -113,9 +111,9 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 .Build();
         };
 
-        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
 
-        private It _should_no_log = () => FakeLogProvider.LoggedMessages.ShouldBeEmpty();
+        private It _should_not_error = () => s_exception.ShouldBeNull();
     }
     internal class MyLogWritingCommandHandler : RequestHandler<MyLogWritingCommand>
     {
