@@ -35,37 +35,14 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmACommandProcessor
-    /// Paramore.Brighter.CommandProcessor provides the default implementation of this interface <see cref="CommandProcessor"/> and it is unlikely you need
-    /// to override this for anything other than testing purposes. The usual need is that in a <see cref="RequestHandler{T}"/> you intend to publish an  
-    /// <see cref="Event"/> to indicate the handler has completed to other components. In this case your tests should only verify that the correct 
-    /// event was raised by listening to <see cref="Publish{T}"/> calls on this interface, using a mocking framework of your choice or bespoke
-    /// Test Double.
+    /// Class Event
+    /// An event is an indicator to interested parties that 'something has happened'. We expect zero to many receivers as it is one-to-many communication i.e. publish-subscribe
+    /// An event is usually fire-and-forget, because we do not know it is received.
     /// </summary>
-    public interface IAmACommandProcessor
+    public interface IEvent : IRequest
     {
-        /// <summary>
-        /// Sends the specified command.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="command">The command.</param>
-        void Send<T>(T command) where T : class, ICommand;
-        /// <summary>
-        /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="event">The event.</param>
-        void Publish<T>(T @event) where T : class, IEvent;
-        /// <summary>
-        /// Posts the specified request.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="request">The request.</param>
-        void Post<T>(T request) where T : class, IRequest;
     }
 }
