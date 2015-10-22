@@ -23,18 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     internal class MyUnusedCommandHandler : RequestHandler<MyCommand>
     {
         private static MyCommand s_command;
-
-        public MyUnusedCommandHandler(ILog logger) : base(logger)
-        {
-            s_command = null;
-        }
 
         [MyAbortingHandlerAttribute(step: 1, timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)

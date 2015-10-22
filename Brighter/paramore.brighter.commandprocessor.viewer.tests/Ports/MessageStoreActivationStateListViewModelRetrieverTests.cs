@@ -54,12 +54,12 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
         {
             private Establish _context = () =>
             {
-                _sqlMessageStores = new List<MessageStoreActivationState>
+                _sqlMessageStores = new List<MessageStoreConfig>
                 {
-                    MessageStoreActivationStateFactory.Create("sqlce", typeof(MsSqlMessageStore).FullName, "DataSource='test.sdf';", "table2"),
-                    MessageStoreActivationStateFactory.Create("sql2008", typeof(MsSqlMessageStore).FullName, "Server=.;Database=aMessageStore;Trusted_Connection=True", "table1"),
+                    MessageStoreConfigFactory.Create("sqlce", typeof(MsSqlMessageStore).FullName, "DataSource='test.sdf';", "table2"),
+                    MessageStoreConfigFactory.Create("sql2008", typeof(MsSqlMessageStore).FullName, "Server=.;Database=aMessageStore;Trusted_Connection=True", "table1"),
                 };
-                var fakeStoreListProvider = new FakeMessageStoreActivationStateProvider(_sqlMessageStores);
+                var fakeStoreListProvider = new FakeMessageStoreConfigProvider(_sqlMessageStores);
 
                 _messageStoreActivationStateListViewModelRetriever = new MessageStoreActivationStateListViewModelRetriever(fakeStoreListProvider);
             };
@@ -77,7 +77,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
                 AssertStoreItems(model, _sqlMessageStores);
             };
 
-            private static void AssertStoreItems(MessageStoreActivationStateListModel model, IEnumerable<MessageStoreActivationState> messageStoreListItems)
+            private static void AssertStoreItems(MessageStoreActivationStateListModel model, IEnumerable<MessageStoreConfig> messageStoreListItems)
             {
                 foreach (var messageStoreListItem in messageStoreListItems)
                 {
@@ -90,7 +90,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
                 }
             }
 
-            private static List<MessageStoreActivationState> _sqlMessageStores;
+            private static List<MessageStoreConfig> _sqlMessageStores;
             private static MessageStoreActivationStateListViewModelRetriever _messageStoreActivationStateListViewModelRetriever;
             private static ViewModelRetrieverResult<MessageStoreActivationStateListModel, MessageStoreActivationStateListModelError> _result;
         }
@@ -99,7 +99,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
         {
             private Establish _context = () =>
             {
-                var fakeStoreListProvider = new FakeMessageStoreActivationStateProviderExceptionOnGet();
+                var fakeStoreListProvider = new FakeMessageStoreConfigProviderExceptionOnGet();
                 _messageStoreActivationStateListViewModelRetriever = new MessageStoreActivationStateListViewModelRetriever(fakeStoreListProvider);
             };
 

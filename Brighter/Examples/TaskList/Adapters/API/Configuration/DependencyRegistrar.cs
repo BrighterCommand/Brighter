@@ -29,10 +29,12 @@ using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using Polly;
+using Tasklist.Adapters.MessageMappers;
 using Tasklist.Ports.ViewModelRetrievers;
 using Tasks.Adapters.DataAccess;
 using Tasks.Ports;
 using Tasks.Ports.Commands;
+using Tasks.Ports.Events;
 using Tasks.Ports.Handlers;
 
 using TinyIoC;
@@ -78,6 +80,11 @@ namespace Tasklist.Adapters.API.Configuration
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory);
             messageMapperRegistry.Add(typeof(TaskReminderCommand), typeof(TaskReminderCommandMessageMapper));
+            messageMapperRegistry.Add(typeof(TaskAddedEvent), typeof(TaskAddedEventMapper));
+            messageMapperRegistry.Add(typeof(TaskEditedEvent), typeof(TaskEditedEventMapper));
+            messageMapperRegistry.Add(typeof(TaskCompletedEvent), typeof(TaskCompletedEventMapper));
+            messageMapperRegistry.Add(typeof(TaskReminderSentEvent), typeof(TaskReminderSentEventMapper));
+
            
             var gateway = new RmqMessageProducer(logger);
             IAmAMessageStore<Message> sqlMessageStore = new MsSqlMessageStore(new MsSqlMessageStoreConfiguration("Server=.;Database=brighterMessageStore;Trusted_Connection=True", "messages", MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer), logger);
@@ -89,6 +96,8 @@ namespace Tasklist.Adapters.API.Configuration
                     .TaskQueues(new MessagingConfiguration(sqlMessageStore, gateway, messageMapperRegistry))
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build();
+
+            container.Register<IAmACommandProcessor>(commandProcessor);
 
             return commandProcessor;
         }

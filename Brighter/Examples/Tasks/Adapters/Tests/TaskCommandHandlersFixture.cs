@@ -23,13 +23,16 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Machine.Specifications;
+using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using Tasks.Adapters.DataAccess;
-using Tasks.Model;
 using Tasks.Ports.Commands;
+using Tasks.Ports.Events;
 using Tasks.Ports.Handlers;
+using Task = Tasks.Model.Task;
 
 namespace Tasks.Adapters.Tests
 {
@@ -43,6 +46,7 @@ namespace Tasks.Adapters.Tests
         private const string TASK_NAME = "Test task";
         private const string TASK_DESCRIPTION = "Test that we store a task";
         private static readonly DateTime s_NOW = DateTime.Now;
+        private static IAmACommandProcessor s_commandProcessor;
 
         private Establish _context = () =>
         {
@@ -52,7 +56,9 @@ namespace Tasks.Adapters.Tests
 
             s_cmd = new AddTaskCommand(TASK_NAME, TASK_DESCRIPTION, s_NOW);
 
-            s_handler = new AddTaskCommandHandler(s_tasksDAO, logger);
+            s_commandProcessor = A.Fake<IAmACommandProcessor>();
+
+            s_handler = new AddTaskCommandHandler(s_tasksDAO, logger, s_commandProcessor);
         };
 
         private Because _of = () =>
@@ -76,6 +82,7 @@ namespace Tasks.Adapters.Tests
         private const string NEW_TASK_NAME = "New Test Task";
         private const string NEW_TASK_DESCRIPTION = "New Test that we store a Task";
         private static readonly DateTime s_NEW_TIME = DateTime.Now.AddDays(1);
+        private static IAmACommandProcessor s_commandProcessor;
 
         private Establish _context = () =>
         {
@@ -87,7 +94,9 @@ namespace Tasks.Adapters.Tests
 
             s_cmd = new EditTaskCommand(s_taskToBeEdited.Id, NEW_TASK_NAME, NEW_TASK_DESCRIPTION, s_NEW_TIME);
 
-            s_handler = new EditTaskCommandHandler(s_tasksDAO, logger);
+            s_commandProcessor = A.Fake<IAmACommandProcessor>();
+
+            s_handler = new EditTaskCommandHandler(s_tasksDAO, logger, s_commandProcessor);
         };
 
         private Because _of = () =>
@@ -99,6 +108,7 @@ namespace Tasks.Adapters.Tests
         private It _should_update_the_task_with_the_new_task_name = () => s_taskToBeEdited.TaskName.ShouldEqual(NEW_TASK_NAME);
         private It _should_update_the_task_with_the_new_task_description = () => s_taskToBeEdited.TaskDescription.ShouldEqual(NEW_TASK_DESCRIPTION);
         private It _should_update_the_task_with_the_new_task_time = () => s_taskToBeEdited.DueDate.Value.ToShortDateString().ShouldEqual(s_NEW_TIME.ToShortDateString());
+        private It _should_post_event = () => A.CallTo(() => s_commandProcessor.Post(A<TaskEditedEvent>._)).MustHaveHappened(Repeated.Exactly.Once);
     }
 
     [Subject(typeof(CompleteTaskCommandHandler))]
@@ -109,6 +119,7 @@ namespace Tasks.Adapters.Tests
         private static ITasksDAO s_tasksDAO;
         private static Task s_taskToBeCompleted;
         private static readonly DateTime s_COMPLETION_DATE = DateTime.Now.AddDays(-1);
+        private static IAmACommandProcessor s_commandProcessor;
 
         private Establish _context = () =>
         {
@@ -120,7 +131,9 @@ namespace Tasks.Adapters.Tests
 
             s_cmd = new CompleteTaskCommand(s_taskToBeCompleted.Id, s_COMPLETION_DATE);
 
-            s_handler = new CompleteTaskCommandHandler(s_tasksDAO, logger);
+            s_commandProcessor = A.Fake<IAmACommandProcessor>();
+
+            s_handler = new CompleteTaskCommandHandler(s_tasksDAO, logger, s_commandProcessor);
         };
 
         private Because _of = () =>
@@ -130,6 +143,7 @@ namespace Tasks.Adapters.Tests
         };
 
         private It _should_update_the_tasks_completed_date = () => s_taskToBeCompleted.CompletionDate.Value.ToShortDateString().ShouldEqual(s_COMPLETION_DATE.ToShortDateString());
+        private It _should_post_event = () => A.CallTo(() => s_commandProcessor.Post(A<TaskCompletedEvent>._)).MustHaveHappened(Repeated.Exactly.Once);
     }
 
     [Subject(typeof(CompleteTaskCommandHandler))]
@@ -141,6 +155,7 @@ namespace Tasks.Adapters.Tests
         private const int TASK_ID = 1;
         private static readonly DateTime s_COMPLETION_DATE = DateTime.Now.AddDays(-1);
         private static Exception s_exception;
+        private static IAmACommandProcessor s_commandProcessor;
 
         private Establish _context = () =>
         {
@@ -149,11 +164,16 @@ namespace Tasks.Adapters.Tests
             s_tasksDAO.Clear();
             s_cmd = new CompleteTaskCommand(TASK_ID, s_COMPLETION_DATE);
 
-            s_handler = new CompleteTaskCommandHandler(s_tasksDAO, logger);
+            s_commandProcessor = A.Fake<IAmACommandProcessor>();
+
+            A.CallTo(() => s_commandProcessor.Post(A<TaskCompletedEvent>._));
+
+            s_handler = new CompleteTaskCommandHandler(s_tasksDAO, logger, s_commandProcessor);
         };
 
         private Because _of = () => s_exception = Catch.Exception(() => s_handler.Handle(s_cmd));
 
         private It _should_fail = () => s_exception.ShouldBeAssignableTo<ArgumentOutOfRangeException>();
+        private It _should_not_post_event = () => A.CallTo(() => s_commandProcessor.Post(A<TaskCompletedEvent>._)).MustNotHaveHappened();
     }
 }

@@ -29,6 +29,7 @@ namespace Tasks.Ports.Commands
 {
     public class TaskReminderCommand : Command
     {
+        public int TaskId { get; private set; }
         public string TaskName { get; private set; }
         public DateTime DueDate { get; private set; }
         public string Recipient { get; private set; }
@@ -36,9 +37,10 @@ namespace Tasks.Ports.Commands
 
         public TaskReminderCommand() : base(Guid.Empty) { }
 
-        public TaskReminderCommand(string taskName, DateTime dueDate, string recipient, string copyTo)
+        public TaskReminderCommand(int taskId, string taskName, DateTime dueDate, string recipient, string copyTo)
             : base(Guid.NewGuid())
         {
+            TaskId = taskId;
             TaskName = taskName;
             DueDate = dueDate;
             Recipient = recipient;

@@ -31,8 +31,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
     {
         private static MyCommand s_command;
 
-        public MyCommandHandler(ILog logger)
-            : base(logger)
+        public MyCommandHandler(ILog logger): base(logger)
         {
             s_command = null;
         }

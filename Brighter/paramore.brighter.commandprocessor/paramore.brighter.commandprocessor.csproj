@@ -73,13 +73,16 @@
     <Compile Include="IAmAMessageConsumerFactory.cs" />
     <Compile Include="IAmAMessageGatewaySupportingDelay.cs" />
     <Compile Include="IAmAMessageMapperFactory.cs" />
+    <Compile Include="IAmAMessageRecoverer.cs" />
     <Compile Include="IAmAMessageStoreViewer.cs" />
     <Compile Include="IAmAnInputChannel.cs" />
     <Compile Include="IAmAnOutputChannel.cs" />
     <Compile Include="IAmAPolicyRegistry.cs" />
     <Compile Include="IAmAMessageProducer.cs" />
     <Compile Include="IAmAMessageConsumer.cs" />
+    <Compile Include="IEvent.cs" />
     <Compile Include="InMemoryCommandStore.cs" />
+    <Compile Include="MessageRecovery.cs" />
     <Compile Include="monitoring\Configuration\MonitoringConfigurationSection.cs" />
     <Compile Include="monitoring\Mappers\MonitorEventMessageMapper.cs" />
     <Compile Include="OutputChannel.cs" />

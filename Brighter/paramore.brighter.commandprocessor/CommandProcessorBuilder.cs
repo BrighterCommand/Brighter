@@ -35,6 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.CodeDom;
 
 using paramore.brighter.commandprocessor.Logging;
@@ -158,15 +159,37 @@ namespace paramore.brighter.commandprocessor
             _policyRegistry = new DefaultPolicy();
             return this;
         }
+
         /// <summary>
         /// Use the specified logger.
         /// </summary>
         /// <param name="logger">The logger.</param>
         /// <returns>INeedMessaging.</returns>
+        [Obsolete("Use ILogProvider to specify logger")]
         public INeedMessaging Logger(ILog logger)
         {
             _logger = logger;
             return this;
+        }
+
+        /// <summary>
+        /// Used to set the LogLib LogProvider used throughout Brighter
+        /// </summary>
+        /// <param name="logProvider"></param>
+        /// <returns></returns>
+        public INeedMessaging Logger(ILogProvider logProvider)
+        {
+            LogProvider.SetCurrentLogProvider(logProvider);
+            return Logger(LogProvider.For<CommandProcessorBuilder>());
+        }
+        
+        /// <summary>
+        /// User to specify NoOp (null) logger
+        /// </summary>
+        /// <returns></returns>
+        public INeedMessaging NullLogger()
+        {
+            return Logger(new LogProvider.NoOpLogger());
         }
 
         /// <summary>
@@ -223,7 +246,7 @@ namespace paramore.brighter.commandprocessor
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
                     requestContextFactory: _requestContextFactory,
-                    policyRegistry: _policyRegistry,
+                    policyRegistry: _policyRegistry,    
                     logger: _logger);
             }
             else
@@ -286,7 +309,10 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="logger">The logger.</param>
         /// <returns>INeedMessaging.</returns>
+        [Obsolete]
         INeedMessaging Logger(ILog logger);
+        INeedMessaging Logger(ILogProvider logger);
+        INeedMessaging NullLogger();
     }
 
     /// <summary>

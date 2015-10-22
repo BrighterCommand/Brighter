@@ -236,17 +236,26 @@ namespace paramore.brighter.serviceactivator
         {
             if (Logger != null) Logger.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
+            if (messageType == MessageType.MT_COMMAND && request is IEvent)
+            {
+                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type IEvent", request.Id, MessageType.MT_COMMAND));
+            }
+            if (messageType == MessageType.MT_EVENT && request is ICommand)
+            {
+                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type ICommand", request.Id, MessageType.MT_EVENT));
+            }
+
             switch (messageType)
             {
                 case MessageType.MT_COMMAND:
                     {
-                        _commandProcessor.Send(request);
+                        _commandProcessor.Send((ICommand)request);
                         break;
                     }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                     {
-                        _commandProcessor.Publish(request);
+                        _commandProcessor.Publish((IEvent)request);
                         break;
                     }
             }

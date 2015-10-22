@@ -33,34 +33,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-using System;
-using System.Collections.Generic;
-
 namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
 {
-    public interface IMessageStoreActivationStateCache
+    public class MessageStoreConfigFactory
     {
-        IAmAMessageStore<Message> Get(MessageStoreActivationState type);
-        void Set(MessageStoreType storeType, Func<MessageStoreActivationState, IAmAMessageStore<Message>> storeCtor);
-    }
-
-    public class MessageStoreActivationStateCache : IMessageStoreActivationStateCache
-    {
-        private readonly Dictionary<MessageStoreType, Func<MessageStoreActivationState, IAmAMessageStore<Message>>> _storeCtorLookup = new Dictionary<MessageStoreType, Func<MessageStoreActivationState, IAmAMessageStore<Message>>>();
-        private readonly Dictionary<string, IAmAMessageStore<Message>> _storesCreated = new Dictionary<string, IAmAMessageStore<Message>>();
-
-        public IAmAMessageStore<Message> Get(MessageStoreActivationState messageStore)
+        public static MessageStoreConfig Create(string name, string type, string connectionString)
         {
-            if (!_storesCreated.ContainsKey(messageStore.Name))
-            {
-                _storesCreated.Add(messageStore.Name, _storeCtorLookup[messageStore.StoreType].Invoke(messageStore));
-            }
-            return _storesCreated[messageStore.Name];
+            return new MessageStoreConfig(name, type, connectionString);
         }
 
-        public void Set(MessageStoreType storeType, Func<MessageStoreActivationState, IAmAMessageStore<Message>> storeCtor)
+        public static MessageStoreConfig Create(string name, string type, string connectionString, string tableName)
         {
-            _storeCtorLookup.Add(storeType, storeCtor);
+            return new MessageStoreConfig(name, type, connectionString, tableName);
         }
     }
 }

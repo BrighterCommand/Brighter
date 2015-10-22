@@ -69,7 +69,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyContextAwareCommandHandler>();
-            var handlerFactory = new TestHandlerFactory<MyCommand, MyContextAwareCommandHandler>(() => new MyContextAwareCommandHandler(logger));
+            var handlerFactory = new TestHandlerFactory<MyCommand, MyContextAwareCommandHandler>(() => new MyContextAwareCommandHandler());
             s_request_context = new RequestContext();
             s_myCommand = new MyCommand();
             MyContextAwareCommandHandler.TestString = null;

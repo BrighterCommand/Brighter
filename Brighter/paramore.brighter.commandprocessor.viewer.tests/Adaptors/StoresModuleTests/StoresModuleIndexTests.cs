@@ -61,11 +61,11 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
             {
                 _browser = new Browser(new ConfigurableBootstrapper(with =>
                 {
-                    var stores = new List<MessageStoreActivationState>
+                    var stores = new List<MessageStoreConfig>
                     {
-                        MessageStoreActivationStateFactory.Create("store1", typeof (MsSqlMessageStore).FullName, "conn1",
+                        MessageStoreConfigFactory.Create("store1", typeof (MsSqlMessageStore).FullName, "conn1",
                             "table1"),
-                        MessageStoreActivationStateFactory.Create("store1", typeof (MsSqlMessageStore).FullName, "conn1",
+                        MessageStoreConfigFactory.Create("store1", typeof (MsSqlMessageStore).FullName, "conn1",
                             "table1")
                     };
                     with.StoresModule(stores);

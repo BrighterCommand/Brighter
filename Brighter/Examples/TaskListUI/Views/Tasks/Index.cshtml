@@ -30,6 +30,7 @@
                     <input type="email" name="recipient" class="emailAddress" placeholder="email to send reminder to"/>
                     <input type="hidden" name="dueDate" value="{{dueDate}} " />
                     <input type="hidden" name="taskName" value="{{name}} "/>
+                    <input type="hidden" name="taskId" value="{{id}}" />
                     <button class="mailFormSubmit">Send</button>
                 </div>
             </div>
@@ -47,7 +48,7 @@
     </section>
 </div>
 
-<script src="~/Scripts/jquery-2.1.3.min.js"></script>
+<script src="~/Scripts/jquery-2.1.4.min.js"></script>
 <script src="~/Scripts/mustache.js"></script>
 <script src="~/Scripts/bootstrap.min.js"></script>
 <script src="~/app/app.js"></script>
