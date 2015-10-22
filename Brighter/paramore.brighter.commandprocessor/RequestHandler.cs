@@ -77,9 +77,10 @@ namespace paramore.brighter.commandprocessor
         
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
+        /// Generally you can should prefer the default constructor, and we will grab the logger from your log provider rather than take a direct dependency.
+        /// This can be helpful for testing.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        [Obsolete("Use default ctor and rely on LibLog")]
         protected RequestHandler(ILog logger)
         {
             this.logger = logger;
