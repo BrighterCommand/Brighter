@@ -187,7 +187,7 @@ namespace paramore.brighter.commandprocessor
         /// User to specify no logger
         /// </summary>
         /// <returns></returns>
-        public INeedMessaging NoLogger()
+        public INeedMessaging DefaultLogger()
         {
             return Logger(new LogProvider.NoOpLogger());
         }
@@ -312,7 +312,7 @@ namespace paramore.brighter.commandprocessor
         [Obsolete]
         INeedMessaging Logger(ILog logger);
         INeedMessaging Logger(ILogProvider logger);
-        INeedMessaging NoLogger();
+        INeedMessaging DefaultLogger();
     }
 
     /// <summary>

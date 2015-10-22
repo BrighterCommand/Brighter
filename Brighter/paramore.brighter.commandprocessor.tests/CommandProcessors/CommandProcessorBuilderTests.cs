@@ -78,7 +78,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             s_commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(registry, handlerFactory))
                 .DefaultPolicy()
-                .NoLogger()
+                .DefaultLogger()
                 .NoTaskQueues()
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
