@@ -101,8 +101,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;
         private static SpyCommandProcessor s_commandProcessor;
-        private static MyEvent s_event;
-        private static MyCommand s_command;
+        private static MyCommand s_command = new MyCommand();
 
         private Establish _context = () =>
         {
@@ -110,8 +109,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             s_channel = new FakeChannel();
             var mapper = new MyCommandMessageMapper();
             s_messagePump = new MessagePump<MyCommand>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
-
-            s_event = new MyEvent();
 
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_command)));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_command)));
@@ -133,19 +130,19 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private static IAmAMessagePump s_messagePump;
         private static FailingChannel s_channel;
         private static SpyCommandProcessor s_commandProcessor;
-        private static MyEvent s_event;
+        private static MyCommand s_command;
 
         private Establish _context = () =>
         {
             s_commandProcessor = new SpyCommandProcessor();
             s_channel = new FailingChannel { NumberOfRetries = 4 };
-            var mapper = new MyEventMessageMapper();
-            s_messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
+            var mapper = new MyCommandMessageMapper();
+            s_messagePump = new MessagePump<MyCommand>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
 
-            s_event = new MyEvent();
+            s_command = new MyCommand();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_event)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_command)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_command)));
             s_channel.Send(message1);
             s_channel.Send(message2);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
@@ -155,7 +152,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private Because _of = () => s_messagePump.Run();
 
         private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.SendHappened.ShouldBeTrue();
-        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.PublishHappened.ShouldBeTrue();
     }
 
     public class When_a_channel_failure_exception_is_thrown_for_event_should_retry_until_connection_re_established
@@ -174,7 +170,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
             s_event = new MyEvent();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_event)));
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
             s_channel.Send(message1);
             s_channel.Send(message2);
@@ -184,7 +180,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         private Because _of = () => s_messagePump.Run();
 
-        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.SendHappened.ShouldBeTrue();
         private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.PublishHappened.ShouldBeTrue();
     }
     public class When_a_requeue_count_threshold_for_events_has_been_reached

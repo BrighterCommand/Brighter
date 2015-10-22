@@ -169,7 +169,7 @@ namespace paramore.brighter.serviceactivator
                 try
                 {
                     var request = TranslateMessage(message);
-                    DispatchRequest(request);
+                    DispatchRequest(message.Header.MessageType, request);
                 }
                 catch (ConfigurationException configurationException)
                 {
@@ -232,18 +232,33 @@ namespace paramore.brighter.serviceactivator
             return RequeueCount != -1;
         }
 
-        private void DispatchRequest(TRequest request)
+        private void DispatchRequest(MessageType messageType, TRequest request)
         {
             if (Logger != null) Logger.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
-            if (typeof(TRequest).IsSubclassOf(typeof (Event)))
+            if (messageType == MessageType.MT_COMMAND && request is IEvent)
             {
-                _commandProcessor.Publish(request as Event);
-                return;
+                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type IEvent", request.Id, MessageType.MT_COMMAND));
+            }
+            if (messageType == MessageType.MT_EVENT && request is ICommand)
+            {
+                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type ICommand", request.Id, MessageType.MT_EVENT));
             }
 
-            //or default
-            _commandProcessor.Send(request as Command);
+            switch (messageType)
+            {
+                case MessageType.MT_COMMAND:
+                    {
+                        _commandProcessor.Send((ICommand)request);
+                        break;
+                    }
+                case MessageType.MT_DOCUMENT:
+                case MessageType.MT_EVENT:
+                    {
+                        _commandProcessor.Publish((IEvent)request);
+                        break;
+                    }
+            }
         }
 
         private Tuple<bool, bool> HandleProcessingException(AggregateException aggregateException)
