@@ -35,6 +35,7 @@ from kombu.pools import connections
 from kombu import exceptions as kombu_exceptions
 from datetime import datetime
 from time import sleep
+import logging
 
 DRAIN_EVENTS_TIMEOUT = 1  #How long before we timeout Kombu trying to read events from the queue
 
@@ -48,7 +49,7 @@ class Worker(Thread):
         'max_retries': 3,
     }
 
-    def __init__(self, amqp_uri, exchange, routing_key):
+    def __init__(self, amqp_uri, exchange, routing_key, logger=None):
         self._exchange = exchange
         self._routing_key = routing_key
         self._amqp_uri = amqp_uri
@@ -58,6 +59,7 @@ class Worker(Thread):
         self._monitoring_queue = Queue('paramore.brighter.controlbus', exchange=self._exchange, routing_key=self._routing_key)
         self._running = Event()  # control access to te queue
         self._ensure_options = self.RETRY_OPTIONS.copy()
+        self._logger = logger or logging.getLogger(__name__)
 
     def _read_monitoring_messages(self):
 
@@ -68,11 +70,10 @@ class Worker(Thread):
                 pass
 
         def _drain_errors(exc, interval):
-            print('Draining error: %s', exc)
-            print('Retry triggering in %s seconds', interval)
+            self._logger.error('Draining error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)
 
         def _read_message(body, message):
-            print("Monitoring event received at: ", datetime.utcnow().isoformat(), " Event:  ", body)
+            self._logger.debug("Monitoring event received at: ", datetime.utcnow().isoformat(), " Event:  ", body)
             message.ack()
 
         # read the next batch number of monitoring messages from the control bus
@@ -81,7 +82,7 @@ class Worker(Thread):
 
         connection = BrokerConnection(hostname=self._amqp_uri)
         with connections[connection].acquire(block=True) as conn:
-            print('Got connection: %r' % (conn.as_uri(), ))
+            self._logger.debug('Got connection: %s', conn.as_uri())
             with Consumer(conn, [self._monitoring_queue], callbacks=[_read_message], accept=['json', 'text/plain']) as consumer:
                 self._running.set()
                 ensure_kwargs = self._ensure_options.copy()

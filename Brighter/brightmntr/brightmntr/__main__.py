@@ -51,6 +51,7 @@ DELAY_BETWEEN_REFRESHES = 5     # How long to delay before polling for more inpu
 DISPLAY_N_TIMES = -1            # How many times to display messages, defaults to run forever
 PAGE_SIZE = 5
 
+
 def run(amqp_uri, exchange, routing_key, params):
     # start a monitor output thread, this does the work, whilst the main thread just acts
     # as a control thread to receive the  keyboard input
