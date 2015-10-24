@@ -249,13 +249,13 @@ namespace paramore.brighter.serviceactivator
             {
                 case MessageType.MT_COMMAND:
                     {
-                        _commandProcessor.Send((ICommand)request);
+                        _commandProcessor.Send(request);
                         break;
                     }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                     {
-                        _commandProcessor.Publish((IEvent)request);
+                        _commandProcessor.Publish(request);
                         break;
                     }
             }

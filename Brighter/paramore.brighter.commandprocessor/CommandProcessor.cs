@@ -174,7 +174,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="command">The command.</param>
         /// <exception cref="System.ArgumentException">
         /// </exception>
-        public void Send<T>(T command) where T : class, ICommand
+        public void Send<T>(T command) where T : class, IRequest
         {
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _logger))
             {
@@ -205,7 +205,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
-        public void Publish<T>(T @event) where T : class, IEvent
+        public void Publish<T>(T @event) where T : class, IRequest
         {
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _logger))
             {

@@ -45,7 +45,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
-        public virtual void Send<T>(T command) where T : class, ICommand
+        public virtual void Send<T>(T command) where T : class, IRequest
         {
             _requests.Enqueue(command);
             SendHappened = true;
@@ -56,7 +56,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
-        public virtual void Publish<T>(T @event) where T : class, IEvent
+        public virtual void Publish<T>(T @event) where T : class, IRequest
         {
             _requests.Enqueue(@event);
             PublishHappened = true;
