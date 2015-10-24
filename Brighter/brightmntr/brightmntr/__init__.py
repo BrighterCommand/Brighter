@@ -28,3 +28,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
+
+import logging
+
+logging.basicConfig(format='%(asctime)s %(message)s',filename='brightmntr.log', filemode='w', level=logging.DEBUG)
+

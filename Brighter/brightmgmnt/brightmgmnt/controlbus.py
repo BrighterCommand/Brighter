@@ -30,23 +30,50 @@ THE SOFTWARE.
 """
 
 from kombu import BrokerConnection, Queue
-from kombu.pools import producers
+from kombu.pools import connections
 
 
-def send(destination, exchange, message, routing_key):
+class Publisher:
 
-    print("Connect to broker {amqpuri}".format(amqpuri=destination))
-    firehose_queue = Queue('paramore.brighter.controlbus', exchange=exchange, routing_key=routing_key)
+    RETRY_OPTIONS = {
+        'interval_start': 1,
+        'interval_step': 1,
+        'interval_max': 1,
+        'max_retries': 3,
+    }
 
-    connection = BrokerConnection(hostname=destination)
+    def __init__(self, destination, exchange):
+        self._ensure_options = self.RETRY_OPTIONS.copy()
+        self._amqp_uri = destination
+        self._cnx = BrokerConnection(hostname=self._amqp_uri)
+        self._exchange = exchange
 
-    with producers[connection].acquire(block=True) as producer:
-        print("Send message to broker {amqpuri} with routing key {routing_key}".format(amqpuri=destination, routing_key=routing_key))
-        producer.publish(message,
-                         exchange=exchange,
-                         serializer='json',
-                         routing_key=routing_key,
-                         declare=[exchange, firehose_queue])
+    def send(self, message, routing_key):
+
+        def _create_queue(routing_key, exchange):
+
+            # We don't publish over a queue, so this is optional, it just creates a consuming channel which consumers
+            # can read from. The advantage of declaring it now is that we ensure messages won't be lost if no consumers
+            # are currently running.
+
+            return Queue('paramore.brighter.controlbus', exchange=exchange, routing_key=routing_key)
+
+        def _publish(sender, key):
+            print("Send message to broker {amqpuri} with routing key {routing_key}".format(amqpuri=destination, routing_key=key))
+            queue = _create_queue(key, self._exchange)
+            sender.publish(message, exchange=self._exchange, serializer='json', routing_key=key, declare=[self._exchange, queue])
+
+        def _error_callback(e, interval):
+            print('Publishing error: {e}. Will retry in {interval} seconds', e, interval)
+
+        print("Connect to broker {amqpuri}".format(amqpuri=self._amqp_uri))
+
+        with connections[self._cnx].acquire(block=True) as conn:
+            with conn.Producer() as producer:
+                ensure_kwargs = self._ensure_options.copy()
+                ensure_kwargs['errback'] = _error_callback
+                safe_publish = conn.ensure(producer, _publish, **ensure_kwargs)
+                safe_publish(producer, routing_key)
 
 
 
