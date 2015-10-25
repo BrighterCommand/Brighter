@@ -61,6 +61,14 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         /// Initializes a new instance of the <see cref="T:System.Object" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
+        public MsSqlCommandStore(MsSqlCommandStoreConfiguration configuration) 
+            :this(configuration, LogProvider.GetCurrentClassLogger())
+        {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="T:System.Object" /> class.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
         /// <param name="log">The log.</param>
         public MsSqlCommandStore(MsSqlCommandStoreConfiguration configuration, ILog log)
         {

@@ -16,6 +16,14 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
+        public FallbackPolicyHandler() 
+            : this(LogProvider.GetCurrentClassLogger()) 
+        {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
+        /// Use this if you need to inject a logger, for testing
+        /// </summary>
         /// <param name="logger">The logger.</param>
         public FallbackPolicyHandler(ILog logger) : base(logger) {}
 

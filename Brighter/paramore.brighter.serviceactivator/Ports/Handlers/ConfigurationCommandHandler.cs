@@ -52,9 +52,18 @@ namespace paramore.brighter.serviceactivator.Ports.Handlers
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationCommandHandler" /> class.
         /// </summary>
-        /// <param name="logger">The logger.</param>
         /// <param name="dispatcher"></param>
-        public ConfigurationCommandHandler(ILog logger, IDispatcher dispatcher) : base(logger)
+        public ConfigurationCommandHandler(IDispatcher dispatcher)
+            : this(dispatcher, LogProvider.GetCurrentClassLogger()) 
+        {}
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConfigurationCommandHandler" /> class.
+        /// </summary>
+        /// <param name="dispatcher"></param>
+        /// <param name="logger">The logger.</param>
+        public ConfigurationCommandHandler(IDispatcher dispatcher, ILog logger) : base(logger)
         {
             _dispatcher = dispatcher;
         }

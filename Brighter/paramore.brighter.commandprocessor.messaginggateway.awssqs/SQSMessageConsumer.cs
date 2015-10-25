@@ -1,24 +1,53 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor.messaginggateway.awssqs
+// Author           : ian
+// Created          : 08-17-2015
+//
+// Last Modified By : ian
+// Last Modified On : 10-25-2015
+// ***********************************************************************
+// <copyright file="SqsMessageConsumer.cs" company="">
+//     Copyright ©  2015
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 
+using System;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-
 using Newtonsoft.Json;
-
 using paramore.brighter.commandprocessor.Logging;
-
-using TimeSpan = System.TimeSpan;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
 {
+    /// <summary>
+    /// Class SqsMessageConsumer.
+    /// </summary>
     public class SqsMessageConsumer : IAmAMessageConsumerSupportingDelay, IAmAMessageConsumerSupportingCache
     {
+        /// <summary>
+        /// The _logger
+        /// </summary>
         private readonly ILog _logger;
+        /// <summary>
+        /// The _queue URL
+        /// </summary>
         private readonly string _queueUrl;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqsMessageConsumer"/> class.
+        /// </summary>
+        /// <param name="queueUrl">The queue URL.</param>
+        public SqsMessageConsumer(string queueUrl)
+            : this(queueUrl, LogProvider.GetCurrentClassLogger())
+        {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqsMessageConsumer"/> class.
+        /// Use this if you need to inject the logger, for example for testing
+        /// </summary>
+        /// <param name="queueUrl">The queue URL.</param>
+        /// <param name="logger">The logger.</param>
         public SqsMessageConsumer(string queueUrl, ILog logger)
         {
             _logger = logger;
@@ -27,15 +56,34 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
             CacheSupported = true;
         }
 
+        /// <summary>
+        /// Gets if the current provider configuration is able to support delayed delivery of messages.
+        /// </summary>
+        /// <value><c>true</c> if [delay supported]; otherwise, <c>false</c>.</value>
         public bool DelaySupported { get; private set; }
 
+        /// <summary>
+        /// Gets if the current provider configuration is able to support cached retrieval of messages.
+        /// </summary>
+        /// <value><c>true</c> if [cache supported]; otherwise, <c>false</c>.</value>
         public bool CacheSupported { get; private set; }
 
+        /// <summary>
+        /// Receives the specified queue name.
+        /// </summary>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <returns>Message.</returns>
         public Message Receive(int timeoutInMilliseconds)
         {
             return Receive(timeoutInMilliseconds, 1);
         }
 
+        /// <summary>
+        /// Receives the specified queue name.
+        /// </summary>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="noOfMessagesToCache">Number of cacheable messages.</param>
+        /// <returns>Message.</returns>
         public Message Receive(int timeoutInMilliseconds, int noOfMessagesToCache)
         {
             _logger.DebugFormat("SqsMessageConsumer: Preparing to retrieve next message from queue {0}", _queueUrl);
@@ -60,6 +108,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
             return message;
         }
 
+        /// <summary>
+        /// Acknowledges the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
             if(!message.Header.Bag.ContainsKey("ReceiptHandle"))
@@ -83,6 +135,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
             }
         }
 
+        /// <summary>
+        /// Rejects the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         public void Reject(Message message, bool requeue)
         {
             if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
@@ -115,6 +172,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
             }
         }
 
+        /// <summary>
+        /// Purges the specified queue name.
+        /// </summary>
         public void Purge()
         {
             try
@@ -135,11 +195,20 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
             }
         }
 
+        /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void Requeue(Message message)
         {
             Requeue(message, 0);
         }
 
+        /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         public void Requeue(Message message, int delayMilliseconds)
         {
             try
@@ -168,6 +237,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
             }
         }
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
         public void Dispose()
         {
             

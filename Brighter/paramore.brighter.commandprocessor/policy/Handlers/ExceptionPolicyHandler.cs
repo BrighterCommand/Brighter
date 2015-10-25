@@ -60,6 +60,14 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// <summary>
         /// Initializes a new instance of the <see cref="ExceptionPolicyHandler{TRequest}"/> class.
         /// </summary>
+        public ExceptionPolicyHandler()
+            : this(LogProvider.GetCurrentClassLogger())
+        {}
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExceptionPolicyHandler{TRequest}"/> class.
+        /// </summary>
         /// <param name="logger">The logger.</param>
         public ExceptionPolicyHandler(ILog logger) : base(logger)
         { }

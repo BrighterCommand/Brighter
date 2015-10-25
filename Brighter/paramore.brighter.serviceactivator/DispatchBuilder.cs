@@ -49,7 +49,7 @@ namespace paramore.brighter.serviceactivator
     /// progressive interfaces to manage the requirements for a complete Dispatcher via Intellisense in the IDE. The intent is to make it easier to
     /// recognize those dependencies that you need to configure
     /// </summary>
-    public class DispatchBuilder : INeedALogger, INeedACommandProcessor, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfConnections, IAmADispatchBuilder
+    public class DispatchBuilder : INeedACommandProcessor, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfConnections, IAmADispatchBuilder
     {
         private IAmAChannelFactory _channelFactory;
         private IEnumerable<Connection> _connections;
@@ -63,21 +63,9 @@ namespace paramore.brighter.serviceactivator
         /// Begins the fluent interface 
         /// </summary>
         /// <returns>INeedALogger.</returns>
-        public static INeedALogger With()
+        public static INeedACommandProcessor With()
         {
             return new DispatchBuilder();
-        }
-
-
-        /// <summary>
-        /// The logger to use to report from the Dispatcher.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        /// <returns>INeedACommandProcessor.</returns>
-        public INeedACommandProcessor Logger(ILog logger)
-        {
-            _logger = logger;
-            return this;
         }
 
         /// <summary>
@@ -160,18 +148,6 @@ namespace paramore.brighter.serviceactivator
     }
 
     #region Progressive Interfaces
-    /// <summary>
-    /// Interface INeedALogger
-    /// </summary>
-    public interface INeedALogger
-    {
-        /// <summary>
-        /// The logger to use to report from the Dispatcher.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        /// <returns>INeedACommandProcessor.</returns>
-        INeedACommandProcessor Logger(ILog logger);
-    }
 
     /// <summary>
     /// Interface INeedACommandProcessor

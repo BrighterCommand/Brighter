@@ -47,7 +47,6 @@ namespace paramore.commandprocessor.tests.ControlBus
 
             s_busReceiverBuilder = ControlBusReceiverBuilder
                 .With()
-                .Logger(logger)
                 .Dispatcher(s_dispatcher)
                 .ChannelFactory(new InMemoryChannelFactory()) as ControlBusReceiverBuilder;
         };
@@ -74,7 +73,6 @@ namespace paramore.commandprocessor.tests.ControlBus
 
             s_busReceiverBuilder = (ControlBusReceiverBuilder) ControlBusReceiverBuilder
                 .With()
-                .Logger(logger)
                 .Dispatcher(s_dispatcher)
                 .ChannelFactory(new InMemoryChannelFactory());
 

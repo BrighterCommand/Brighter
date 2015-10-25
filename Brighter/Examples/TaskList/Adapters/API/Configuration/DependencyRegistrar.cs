@@ -92,7 +92,6 @@ namespace Tasklist.Adapters.API.Configuration
                 CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                     .Policies(policyRegistry)
-                    .Logger(logger)
                     .TaskQueues(new MessagingConfiguration(sqlMessageStore, gateway, messageMapperRegistry))
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build();

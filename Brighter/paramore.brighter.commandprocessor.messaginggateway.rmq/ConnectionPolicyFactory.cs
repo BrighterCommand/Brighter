@@ -56,6 +56,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="ConnectionPolicyFactory"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
+        public ConnectionPolicyFactory()
+           : this(LogProvider.GetCurrentClassLogger())
+        {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConnectionPolicyFactory"/> class. 
+        /// Use if you need to inject a test logger
+        /// </summary>
+        /// <param name="logger">The logger.</param>
         public ConnectionPolicyFactory(ILog logger)
         {
             _logger = logger;
@@ -74,7 +83,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     {
                         if (exception is BrokerUnreachableException)
                         {
-                            logger.WarnException(
+                            _logger.WarnException(
                                 "RMQMessagingGateway: BrokerUnreachableException error on connecting to queue {0} exchange {1} on connection {2}. Will retry {3} times",
                                 exception,
                                 context["queueName"],

@@ -60,6 +60,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="routingKey">The routing key.</param>
+        public RestMsMessageConsumer(string queueName, string routingKey) 
+            :this(queueName, routingKey, LogProvider.GetCurrentClassLogger())
+        {}
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMsMessageConsumer"/> class.
+        /// Use this if you need to override the logger, for example in a test
+        /// </summary>
+        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="routingKey">The routing key.</param>
         /// <param name="logger">The logger.</param>
         public RestMsMessageConsumer(string queueName, string routingKey, ILog logger)
             : base(logger)

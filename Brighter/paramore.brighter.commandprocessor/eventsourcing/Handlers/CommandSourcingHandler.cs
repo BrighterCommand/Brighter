@@ -55,6 +55,15 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}" /> class.
         /// </summary>
         /// <param name="commandStore">The store for commands that pass into the system</param>
+        public CommandSourcingHandler(IAmACommandStore commandStore)
+            : this(commandStore, LogProvider.GetCurrentClassLogger())
+        {}
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}" /> class.
+        /// </summary>
+        /// <param name="commandStore">The store for commands that pass into the system</param>
         /// <param name="logger">The logger.</param>
         public CommandSourcingHandler(IAmACommandStore commandStore, ILog logger) : base(logger)
         {

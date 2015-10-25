@@ -92,7 +92,6 @@ namespace TaskMailer.Adapters.ServiceHost
             var commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                 .Policies(policyRegistry)
-                .Logger(logger)
                 .TaskQueues(new MessagingConfiguration(new TemporaryMessageStore(), new RmqMessageProducer(logger), messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
@@ -103,7 +102,6 @@ namespace TaskMailer.Adapters.ServiceHost
             var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger);
 
             _dispatcher = DispatchBuilder.With()
-                .Logger(logger)
                 .CommandProcessor(commandProcessor)
                 .MessageMappers(messageMapperRegistry)
                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))

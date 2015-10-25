@@ -38,7 +38,7 @@ namespace paramore.brighter.serviceactivator.controlbus
     /// <summary>
     /// Class ControlBusBuilder.
     /// </summary>
-    public class ControlBusReceiverBuilder : INeedALogger, INeedADispatcher, INeedAChannelFactory, IAmADispatchBuilder
+    public class ControlBusReceiverBuilder : INeedADispatcher, INeedAChannelFactory, IAmADispatchBuilder
     {
         /// <summary>
         /// The configuration
@@ -63,18 +63,6 @@ namespace paramore.brighter.serviceactivator.controlbus
         public IAmADispatchBuilder ChannelFactory(IAmAChannelFactory channelFactory)
         {
             _channelFactory = channelFactory;
-            return this;
-        }
-
-
-        /// <summary>
-        /// The logger to use to report from the Dispatcher.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        /// <returns>INeedACommandProcessor.</returns>
-        public INeedADispatcher Logger(ILog logger)
-        {
-            _logger = logger;
             return this;
         }
 
@@ -154,7 +142,6 @@ namespace paramore.brighter.serviceactivator.controlbus
             var commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher, _logger)))
                 .Policies(policyRegistry)
-                .Logger(_logger)
                 .NoTaskQueues()
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
@@ -162,7 +149,6 @@ namespace paramore.brighter.serviceactivator.controlbus
 
             return DispatchBuilder
                 .With()
-                .Logger(_logger)
                 .CommandProcessor(commandProcessor)
                 .MessageMappers(new MessageMapperRegistry(new ControlBusMessageMapperFactory()))
                 .ChannelFactory(_channelFactory)
@@ -174,23 +160,10 @@ namespace paramore.brighter.serviceactivator.controlbus
         /// Withes this instance.
         /// </summary>
         /// <returns>INeedALogger.</returns>
-        public static INeedALogger With()
+        public static INeedADispatcher With()
         {
             return new ControlBusReceiverBuilder();
         }
-    }
-
-    /// <summary>
-    /// Interface INeedALogger
-    /// </summary>
-    public interface INeedALogger
-    {
-        /// <summary>
-        /// The logger to use to report from the Dispatcher.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        /// <returns>INeedACommandProcessor.</returns>
-        INeedADispatcher Logger(ILog logger);
     }
 
     /// <summary>

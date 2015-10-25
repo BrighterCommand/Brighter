@@ -94,11 +94,9 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
 
             var builder = DispatchBuilder
                 .With()
-                .Logger(logger)
                 .CommandProcessor(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                     .Policies(policyRegistry)
-                    .Logger(logger)
                     .NoTaskQueues()
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
@@ -110,7 +108,6 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
 
             var controlBusBuilder = ControlBusReceiverBuilder
                 .With()
-                .Logger(logger)
                 .Dispatcher(_dispatcher)
                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory)) as ControlBusReceiverBuilder;
             _controlDispatcher = builder.Build();
@@ -120,8 +117,7 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
                     "DataSource=\"" + Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\MessageStore.sdf") + "\"", "Messages", 
                     MsSqlMessageStoreConfiguration.DatabaseType.SqlCe), 
                     logger), 
-                new RmqMessageProducer(container.Resolve<ILog>()), 
-                logger));
+                new RmqMessageProducer(container.Resolve<ILog>())));
         }
 
         public bool Start(HostControl hostControl)

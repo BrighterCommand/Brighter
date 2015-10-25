@@ -44,7 +44,6 @@ namespace HelloWorld
                      handlerFactory: new SimpleHandlerFactory(logger)
                     ))
                 .DefaultPolicy()
-                .Logger(logger)
                 .NoTaskQueues()
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 

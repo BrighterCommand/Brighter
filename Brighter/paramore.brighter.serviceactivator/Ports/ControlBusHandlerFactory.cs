@@ -1,4 +1,6 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator.Ports.Handlers;
@@ -9,6 +11,11 @@ namespace paramore.brighter.serviceactivator.Ports
     {
         private readonly IDispatcher _worker;
         private readonly ILog _logger;
+
+        public ControlBusHandlerFactory(IDispatcher worker) 
+            : this(worker, LogProvider.GetCurrentClassLogger())
+        {}
+
 
         public ControlBusHandlerFactory(IDispatcher worker, ILog logger)
         {
@@ -25,7 +32,7 @@ namespace paramore.brighter.serviceactivator.Ports
         {
             if (handlerType == typeof(ConfigurationCommandHandler))
             {
-                return new  ConfigurationCommandHandler(_logger, _worker);               
+                return new  ConfigurationCommandHandler(_worker, _logger);               
             }
 
             throw new ArgumentOutOfRangeException("handlerType");

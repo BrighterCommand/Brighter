@@ -48,7 +48,11 @@ namespace paramore.brighter.commandprocessor
         private readonly ILog _logger;
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
 
-        public LifetimeScope(IAmAHandlerFactory handlerFactory, ILog logger = null)
+        public LifetimeScope(IAmAHandlerFactory handlerFactory) 
+            :this(handlerFactory, LogProvider.GetCurrentClassLogger())
+        {}
+
+        public LifetimeScope(IAmAHandlerFactory handlerFactory, ILog logger)
         {
             _handlerFactory = handlerFactory;
             _logger = logger;

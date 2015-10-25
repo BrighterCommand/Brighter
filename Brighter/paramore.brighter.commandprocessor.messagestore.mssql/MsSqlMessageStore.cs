@@ -62,6 +62,15 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         /// Initializes a new instance of the <see cref="MsSqlMessageStore"/> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
+        public MsSqlMessageStore(MsSqlMessageStoreConfiguration configuration) 
+            :this(configuration, LogProvider.GetCurrentClassLogger())
+        {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MsSqlMessageStore"/> class.
+        /// Use this constructor if you need to pass in the logger
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
         /// <param name="log">The log.</param>
         public MsSqlMessageStore(MsSqlMessageStoreConfiguration configuration, ILog log)
         {
