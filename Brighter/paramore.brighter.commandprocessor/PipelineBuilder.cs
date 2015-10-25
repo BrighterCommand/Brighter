@@ -50,6 +50,11 @@ namespace paramore.brighter.commandprocessor
         private readonly Interpreter<TRequest> _interpreter;
         private readonly IAmALifetime _instanceScope;
 
+        internal PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory) 
+            :this(registry, handlerFactory, LogProvider.GetCurrentClassLogger())
+        {}
+
+
         internal PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory, ILog logger)
         {
             _handlerFactory = handlerFactory;

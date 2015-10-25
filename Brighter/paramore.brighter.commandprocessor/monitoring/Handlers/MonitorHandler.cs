@@ -39,9 +39,17 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
-        /// <param name="logger">The logger</param>
         /// <param name="controlBusSender">The control bus command processor, to post over</param>
-        public MonitorHandler(ILog logger, IAmAControlBusSender controlBusSender) : base(logger)
+        public MonitorHandler(IAmAControlBusSender controlBusSender)
+            : this(controlBusSender, LogProvider.GetCurrentClassLogger()) {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
+        /// Use this instance if you need to inject a logger, for example for testing
+        /// </summary>
+        /// <param name="controlBusSender">The control bus command processor, to post over</param>
+        /// <param name="logger">The logger</param>
+        public MonitorHandler(IAmAControlBusSender controlBusSender, ILog logger) : base(logger)
         {
             _controlBusSender = controlBusSender;
         }

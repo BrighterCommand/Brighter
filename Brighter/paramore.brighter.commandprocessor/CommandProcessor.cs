@@ -88,6 +88,23 @@ namespace paramore.brighter.commandprocessor
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
+            IAmAPolicyRegistry policyRegistry)
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger())
+        {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// Use this constructor when no task queue support is required, and you want to inject a test logger
+        /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry.</param>
+        /// <param name="handlerFactory">The handler factory.</param>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="logger">The logger.</param>
+        public CommandProcessor(
+            IAmASubscriberRegistry subscriberRegistry,
+            IAmAHandlerFactory handlerFactory,
+            IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             ILog logger)
         {
@@ -101,6 +118,28 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
         /// Use this constructor when only task queue support is required
+        /// </summary>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="mapperRegistry">The mapper registry.</param>
+        /// <param name="messageStore">The message store.</param>
+        /// <param name="messageProducer">The messaging gateway.</param>
+        /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
+        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
+        public CommandProcessor(
+            IAmARequestContextFactory requestContextFactory,
+            IAmAPolicyRegistry policyRegistry,
+            IAmAMessageMapperRegistry mapperRegistry,
+            IAmAMessageStore<Message> messageStore,
+            IAmAMessageProducer messageProducer,
+            int messageStoreTimeout = 300,
+            int messageGatewaySendTimeout = 300
+            ) : this(requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.GetCurrentClassLogger(), messageStoreTimeout, messageGatewaySendTimeout) 
+        {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// Use this constructor when only task queue support is required, and you wish to inject a test logger
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
@@ -134,6 +173,34 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
         /// Use this constructor when both task queue and command processor support is required
+        /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry.</param>
+        /// <param name="handlerFactory">The handler factory.</param>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="mapperRegistry">The mapper registry.</param>
+        /// <param name="messageStore">The message store.</param>
+        /// <param name="messageProducer">The messaging gateway.</param>
+        /// <param name="logger">The logger.</param>
+        /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
+        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
+        public CommandProcessor(
+            IAmASubscriberRegistry subscriberRegistry,
+            IAmAHandlerFactory handlerFactory,
+            IAmARequestContextFactory requestContextFactory,
+            IAmAPolicyRegistry policyRegistry,
+            IAmAMessageMapperRegistry mapperRegistry,
+            IAmAMessageStore<Message> messageStore,
+            IAmAMessageProducer messageProducer,
+            int messageStoreTimeout = 300,
+            int messageGatewaySendTimeout = 300
+            )
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger()) {}
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// Use this constructor when both task queue and command processor support is required, and you want to inject a test logger
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>

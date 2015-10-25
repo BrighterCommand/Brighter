@@ -90,8 +90,27 @@ namespace paramore.brighter.serviceactivator
         /// <param name="commandProcessor">The command processor.</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="connections">The connections.</param>
+        public Dispatcher(
+            IAmACommandProcessor commandProcessor, 
+            IAmAMessageMapperRegistry messageMapperRegistry,
+            IEnumerable<Connection> connections)
+            :this(commandProcessor, messageMapperRegistry, connections, LogProvider.GetCurrentClassLogger())
+        {}
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Dispatcher"/> class.
+        /// Use this if you need to inject a logger, for example for testing
+        /// </summary>
+        /// <param name="commandProcessor">The command processor.</param>
+        /// <param name="messageMapperRegistry">The message mapper registry.</param>
+        /// <param name="connections">The connections.</param>
         /// <param name="logger">The logger.</param>
-        public Dispatcher(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, IEnumerable<Connection> connections, ILog logger)
+        public Dispatcher(
+            IAmACommandProcessor commandProcessor, 
+            IAmAMessageMapperRegistry messageMapperRegistry, 
+            IEnumerable<Connection> connections,
+            ILog logger)
         {
             CommandProcessor = commandProcessor;
             _messageMapperRegistry = messageMapperRegistry;

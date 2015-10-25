@@ -59,6 +59,15 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         /// Initializes a new instance of the <see cref="EventStoreMessageStore"/> class.
         /// </summary>
         /// <param name="eventStore">The active connection to an Event Store instance.</param>
+        public EventStoreMessageStore(IEventStoreConnection eventStore) 
+            : this(eventStore, LogProvider.GetCurrentClassLogger()) 
+        {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventStoreMessageStore"/> class.
+        /// Use this constructor if you need to inject the logger, for example for testing
+        /// </summary>
+        /// <param name="eventStore">The active connection to an Event Store instance.</param>
         /// <param name="logger">The logger.</param>
         public EventStoreMessageStore(IEventStoreConnection eventStore, ILog logger)
         {

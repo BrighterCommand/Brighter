@@ -56,6 +56,22 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// or
         /// exchangeName
         /// </exception>
+        public RmqMessagePublisher(IModel channel, string exchangeName) 
+            : this(channel, exchangeName, LogProvider.GetCurrentClassLogger())
+        {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RmqMessagePublisher"/> class.
+        /// Use this if you need to inject the logger for tests
+        /// </summary>
+        /// <param name="channel">The channel.</param>
+        /// <param name="exchangeName">Name of the exchange.</param>
+        /// <param name="logger">The logger to use</param>
+        /// <exception cref="System.ArgumentNullException">
+        /// channel
+        /// or
+        /// exchangeName
+        /// </exception>
         public RmqMessagePublisher(IModel channel, string exchangeName, ILog logger)
         {
             if (channel == null)

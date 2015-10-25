@@ -55,7 +55,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="logger">The logger to use</param>
         /// <param name="messageStore">The message store for outgoing messages to the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
-        public IAmAControlBusSender Create(IAmAMessageStore<Message> messageStore, IAmAMessageProducer gateway, ILog logger)
+        public IAmAControlBusSender Create(IAmAMessageStore<Message> messageStore, IAmAMessageProducer gateway)
         {
             var mapper = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MonitorEventMessageMapper()));
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
@@ -63,7 +63,6 @@ namespace paramore.brighter.commandprocessor
             return new ControlBusSender(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration())
                     .DefaultPolicy()
-                    .Logger(logger)
                     .TaskQueues(new MessagingConfiguration(messageStore, gateway, mapper))
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()

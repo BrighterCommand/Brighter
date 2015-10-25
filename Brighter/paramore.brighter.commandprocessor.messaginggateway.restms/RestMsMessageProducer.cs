@@ -60,6 +60,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMsMessageProducer"/> class.
         /// </summary>
+        public RestMsMessageProducer()
+            : this(LogProvider.GetCurrentClassLogger()) 
+        {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RestMsMessageProducer"/> class.
+        /// Use this if you need to inject the logger, for example for testing
+        /// </summary>
         /// <param name="logger">The logger.</param>
         public RestMsMessageProducer(ILog logger) : base(logger)
         {

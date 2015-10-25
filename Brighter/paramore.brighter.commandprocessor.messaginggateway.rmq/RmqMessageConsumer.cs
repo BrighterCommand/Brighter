@@ -74,6 +74,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="routingKey">The routing key.</param>
         /// <param name="isDurable"></param>
         /// <param name="logger">The logger.</param>
+        public RmqMessageConsumer(string queueName, string routingKey, bool isDurable) 
+            : this(queueName, routingKey, isDurable, LogProvider.GetCurrentClassLogger()) {}
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessageGateway" /> class.
+        /// Use this if you need to override the logger in tests.
+        /// </summary>
+        /// <param name="queueName">The queue name.</param>
+        /// <param name="routingKey">The routing key.</param>
+        /// <param name="isDurable"></param>
+        /// <param name="logger">The logger.</param>
         public RmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger) : base(logger)
         {
             _queueName = queueName;

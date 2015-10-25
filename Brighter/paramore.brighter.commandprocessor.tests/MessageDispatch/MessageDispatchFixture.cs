@@ -397,16 +397,13 @@ namespace paramore.commandprocessor.tests.MessageDispatch
                     .Handle<Exception>()
                     .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-                //var gateway = new RmqMessageConsumer(logger);
                 var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
                 var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger);
 
                 s_builder = DispatchBuilder.With()
-                             .Logger(logger)
                              .CommandProcessor(CommandProcessorBuilder.With()
                                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer())))
                                 .Policies(new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } })
-                                .Logger(logger)
                                 .NoTaskQueues()
                                  .RequestContextFactory(new InMemoryRequestContextFactory())
                                 .Build()

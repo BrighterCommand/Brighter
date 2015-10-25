@@ -49,6 +49,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
         /// </summary>
+        public RmqMessageProducerFactory()
+            :this(LogProvider.GetCurrentClassLogger())
+        {}
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
+        /// </summary>
         /// <param name="logger">The logger.</param>
         public RmqMessageProducerFactory(ILog logger)
         {

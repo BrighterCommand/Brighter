@@ -65,6 +65,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="MessageGateway"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
+        public MessageGateway()
+         : this(LogProvider.GetCurrentClassLogger())
+        {}
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessageGateway"/> class.
+        /// Use if you need to inject a test logger
+        /// </summary>
+        /// <param name="logger">The logger.</param>
         public MessageGateway(ILog logger)
         {
             Logger = logger;

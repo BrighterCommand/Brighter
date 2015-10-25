@@ -70,10 +70,9 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
-        /// <param name="logger">The logger.</param>
-        protected RequestHandler() : this(LogProvider.GetCurrentClassLogger())
-        {
-        }
+        protected RequestHandler() 
+            : this(LogProvider.GetCurrentClassLogger())
+        {}
         
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.

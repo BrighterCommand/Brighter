@@ -90,7 +90,7 @@ namespace paramore.brighter.commandprocessor
     ///     </item>
     /// </list> 
     /// </summary>
-    public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedLogging, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
+    public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
         private ILog _logger;
         private IAmAMessageStore<Message> _messageStore;
@@ -138,7 +138,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>INeedLogging.</returns>
         /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required</exception>
         /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required</exception>
-        public INeedLogging Policies(IAmAPolicyRegistry thePolicyRegistry)
+        public INeedMessaging Policies(IAmAPolicyRegistry thePolicyRegistry)
         {
             if (!thePolicyRegistry.Has(CommandProcessor.RETRYPOLICY))
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
@@ -154,42 +154,10 @@ namespace paramore.brighter.commandprocessor
         /// Use this if you do not require a policy and only want to retry once(i.e. No Tasks Queues or QoS needs).
         /// </summary>
         /// <returns>INeedLogging.</returns>
-        public INeedLogging DefaultPolicy()
+        public INeedMessaging DefaultPolicy()
         {
             _policyRegistry = new DefaultPolicy();
             return this;
-        }
-
-        /// <summary>
-        /// Use the specified logger.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        /// <returns>INeedMessaging.</returns>
-        [Obsolete("Use ILogProvider to specify logger")]
-        public INeedMessaging Logger(ILog logger)
-        {
-            _logger = logger;
-            return this;
-        }
-
-        /// <summary>
-        /// Used to set the LogLib LogProvider used throughout Brighter
-        /// </summary>
-        /// <param name="logProvider"></param>
-        /// <returns></returns>
-        public INeedMessaging Logger(ILogProvider logProvider)
-        {
-            LogProvider.SetCurrentLogProvider(logProvider);
-            return Logger(LogProvider.For<CommandProcessorBuilder>());
-        }
-        
-        /// <summary>
-        /// User to specify NoOp (null) logger
-        /// </summary>
-        /// <returns></returns>
-        public INeedMessaging NullLogger()
-        {
-            return Logger(new LogProvider.NoOpLogger());
         }
 
         /// <summary>
@@ -246,8 +214,7 @@ namespace paramore.brighter.commandprocessor
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
                     requestContextFactory: _requestContextFactory,
-                    policyRegistry: _policyRegistry,    
-                    logger: _logger);
+                    policyRegistry: _policyRegistry);
             }
             else
             {
@@ -259,7 +226,6 @@ namespace paramore.brighter.commandprocessor
                     mapperRegistry: _messageMapperRegistry,
                     messageStore: _messageStore,
                     messageProducer: _messagingGateway,
-                    logger: _logger,
                     messageStoreTimeout: _messageStoreWriteTimeout,
                     messageGatewaySendTimeout: _messagingGatewaySendTimeout
                     );
@@ -291,30 +257,15 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <returns>INeedLogging.</returns>
-        INeedLogging Policies(IAmAPolicyRegistry policyRegistry);
+        INeedMessaging Policies(IAmAPolicyRegistry policyRegistry);
         /// <summary>
         /// Noes the policy.
         /// </summary>
         /// <returns>INeedLogging.</returns>
-        INeedLogging DefaultPolicy();
+        INeedMessaging DefaultPolicy();
     }
 
-    /// <summary>
-    /// Interface INeedLogging{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-    /// </summary>
-    public interface INeedLogging
-    {
-        /// <summary>
-        /// Loggers the specified logger.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        /// <returns>INeedMessaging.</returns>
-        [Obsolete]
-        INeedMessaging Logger(ILog logger);
-        INeedMessaging Logger(ILogProvider logger);
-        INeedMessaging NullLogger();
-    }
-
+  
     /// <summary>
     /// Interface INeedMessaging{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
     /// </summary>

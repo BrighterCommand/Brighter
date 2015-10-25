@@ -42,7 +42,7 @@ namespace paramore.commandprocessor.tests.ControlBus
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
 
-            s_configurationCommandHandler = new ConfigurationCommandHandler(logger, s_dispatcher);
+            s_configurationCommandHandler = new ConfigurationCommandHandler(s_dispatcher, logger);
 
             s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPALL);
         };
@@ -63,7 +63,7 @@ namespace paramore.commandprocessor.tests.ControlBus
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
 
-            s_configurationCommandHandler = new ConfigurationCommandHandler(logger, s_dispatcher);
+            s_configurationCommandHandler = new ConfigurationCommandHandler(s_dispatcher, logger);
 
             s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL);
         };
@@ -85,7 +85,7 @@ namespace paramore.commandprocessor.tests.ControlBus
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
 
-            s_configurationCommandHandler = new ConfigurationCommandHandler(logger, s_dispatcher);
+            s_configurationCommandHandler = new ConfigurationCommandHandler(s_dispatcher, logger);
 
             s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPCHANNEL) {ConnectionName = CONNECTION_NAME};
         };
@@ -107,7 +107,7 @@ namespace paramore.commandprocessor.tests.ControlBus
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
 
-            s_configurationCommandHandler = new ConfigurationCommandHandler(logger, s_dispatcher);
+            s_configurationCommandHandler = new ConfigurationCommandHandler(s_dispatcher, logger);
 
             s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTCHANNEL) {ConnectionName = CONNECTION_NAME};
         };

@@ -60,7 +60,6 @@ namespace EventSourcing.Adapters.ServiceHost
                      handlerFactory: new TinyIocHandlerFactory(tinyIoCContainer)
                     ))
                 .DefaultPolicy()
-                .Logger(logger)
                 .NoTaskQueues()
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 

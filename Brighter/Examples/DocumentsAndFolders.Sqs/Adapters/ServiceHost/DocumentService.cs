@@ -102,11 +102,9 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
 
             var builder = DispatchBuilder
                 .With()
-                .Logger(logger)
                 .CommandProcessor(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                     .Policies(policyRegistry)
-                    .Logger(logger)
                     .NoTaskQueues()
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()

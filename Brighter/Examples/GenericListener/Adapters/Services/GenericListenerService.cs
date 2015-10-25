@@ -117,11 +117,9 @@ namespace GenericListener.Adapters.Services
             var logger = LogProvider.GetLogger("Brighter");
 
             return DispatchBuilder.With()
-                .Logger(logger)
                 .CommandProcessor(CommandProcessorBuilder.With()
                     .Handlers(handlers.Handlers)
                     .Policies(policy)
-                    .Logger(logger)
                     .NoTaskQueues()
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build())

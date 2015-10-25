@@ -123,10 +123,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppConfig.cs" />
-    <Compile Include="CommandProcessors\CommandProcessorBuilderTests.cs" />
-    <Compile Include="CommandProcessors\PipelineTests.cs" />
-    <Compile Include="CommandProcessors\CommandProcessorTests.cs" />
-    <Compile Include="CommandProcessors\PipelineContextTests.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyLogWritingCommand.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyLogWritingCommandHandler.cs" />
+    <Compile Include="CommandProcessors\When_building_a_command_processor_with_a_logProvider.cs" />
+    <Compile Include="CommandProcessors\FakeLogProvider.cs" />
+    <Compile Include="CommandProcessors\When_Finding_A_Handler_For_A_Command.cs" />
+    <Compile Include="CommandProcessors\When_sending_a_command_to_the_processor.cs" />
+    <Compile Include="CommandProcessors\When_Building_A_Handler_For_A_Command.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\FakeErroringMessageProducer.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeMessageProducer.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeMessageStore.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyThrowingEventHandler.cs" />
@@ -161,6 +165,23 @@
     <Compile Include="CommandProcessors\TestDoubles\TestMessageMapperFactory.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TinyIocHandlerFactory.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TinyIoCMessageMapperFactory.cs" />
+    <Compile Include="CommandProcessors\When_an_exception_is_thrown_terminate_the_pipeline.cs" />
+    <Compile Include="CommandProcessors\When_A_Handler_Is_Part_of_A_Pipeline.cs" />
+    <Compile Include="CommandProcessors\When_Building_A_Pipeline_Allow_ForiegnAttribues.cs" />
+    <Compile Include="CommandProcessors\When_Building_A_Pipeline_Allow_Pre_And_Post_Tasks.cs" />
+    <Compile Include="CommandProcessors\When_Building_A_Pipeline_Preserve_The_Order.cs" />
+    <Compile Include="CommandProcessors\When_Finding_A_Hander_That_Has_Dependencies.cs" />
+    <Compile Include="CommandProcessors\When_publishing_an_event_to_the_processor.cs" />
+    <Compile Include="CommandProcessors\When_publishing_to_multiple_subscribers_should_aggregate_exceptions.cs" />
+    <Compile Include="CommandProcessors\When_putting_a_variable_into_the_bag_should_be_accessible_in_the_handler.cs" />
+    <Compile Include="CommandProcessors\When_there_are_multiple_possible_command_handlers.cs" />
+    <Compile Include="CommandProcessors\When_there_are_multiple_subscribers.cs" />
+    <Compile Include="CommandProcessors\When_there_are_no_command_handlers.cs" />
+    <Compile Include="CommandProcessors\When_there_are_no_failures_execute_all_the_steps_in_the_pipeline.cs" />
+    <Compile Include="CommandProcessors\When_there_are_no_subscribers.cs" />
+    <Compile Include="CommandProcessors\When_using_decoupled_invocation_messaging_gateway_throws_an_error_retry_n_times_then_break_circuit.cs" />
+    <Compile Include="CommandProcessors\When_using_decoupled_invocation_to_send_a_message_asynchronously.cs" />
+    <Compile Include="CommandProcessors\When_we_have_exercised_the_pipeline_cleanup_its_handlers.cs" />
     <Compile Include="CommandStore\MsSsql\SqlCommandStoreTests.cs" />
     <Compile Include="ControlBus\ConfigurationCommandTests.cs" />
     <Compile Include="ControlBus\ControlBusBuilderTests.cs" />

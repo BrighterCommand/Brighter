@@ -54,6 +54,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="logger">The logger to use</param>
         /// <param name="messageStore">The message store to record outbound messages on the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
-        IAmAControlBusSender Create(IAmAMessageStore<Message> messageStore, IAmAMessageProducer gateway, ILog logger);
+        IAmAControlBusSender Create(IAmAMessageStore<Message> messageStore, IAmAMessageProducer gateway);
     }
 }
