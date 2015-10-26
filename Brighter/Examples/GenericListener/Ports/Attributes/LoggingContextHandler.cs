@@ -1,4 +1,6 @@
 ﻿using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.logging;
+using paramore.brighter.commandprocessor.logging.Attributes;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace GenericListener.Ports.Attributes

@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.logging;
+using paramore.brighter.commandprocessor.logging.Attributes;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using paramore.brighter.commandprocessor.Logging;
 using Tasks.Adapters.MailGateway;

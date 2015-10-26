@@ -82,6 +82,8 @@
     <Compile Include="IAmAMessageConsumer.cs" />
     <Compile Include="IEvent.cs" />
     <Compile Include="InMemoryCommandStore.cs" />
+    <Compile Include="logging\Attributes\RequestLoggingAttribute.cs" />
+    <Compile Include="logging\Handlers\RequestLoggingHandler.cs" />
     <Compile Include="MessageRecovery.cs" />
     <Compile Include="monitoring\Configuration\MonitoringConfigurationSection.cs" />
     <Compile Include="monitoring\Mappers\MonitorEventMessageMapper.cs" />
@@ -135,9 +137,7 @@
     <Compile Include="RequestContext.cs" />
     <Compile Include="RequestHandler.cs" />
     <Compile Include="RequestHandlerAttribute.cs" />
-    <Compile Include="RequestLoggingAttribute.cs" />
     <Compile Include="RequestHandlers.cs" />
-    <Compile Include="RequestLoggingHandler.cs" />
     <Compile Include="SimpleMessageMapperFactory.cs" />
   </ItemGroup>
   <ItemGroup>

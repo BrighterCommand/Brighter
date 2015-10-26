@@ -23,7 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.logging;
+using paramore.brighter.commandprocessor.logging.Attributes;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
