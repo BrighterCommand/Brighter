@@ -40,6 +40,12 @@ namespace Tasks.Ports.Handlers
         private readonly IAmACommandProcessor _commandProcessor;
 
         public EditTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor)
+            :this(tasksDAO, commandProcessor, LogProvider.GetCurrentClassLogger())
+        {}
+
+
+        public EditTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor, ILog logger)
+            :base(logger)
         {
             _tasksDAO = tasksDAO;
             _commandProcessor = commandProcessor;
