@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
@@ -38,8 +37,7 @@ namespace Tasks.Ports.Handlers
         private readonly ITasksDAO _tasksDAO;
         private readonly IAmACommandProcessor _commandProcessor;
 
-        public CompleteTaskCommandHandler(ITasksDAO tasksDAO, ILog logger, IAmACommandProcessor commandProcessor)
-            : base(logger)
+        public CompleteTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor)
         {
             _tasksDAO = tasksDAO;
             _commandProcessor = commandProcessor;

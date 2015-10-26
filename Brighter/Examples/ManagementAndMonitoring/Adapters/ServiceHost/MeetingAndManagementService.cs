@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.Reflection;
-using log4net.Config;
 using ManagementAndMonitoring.Ports.CommandHandlers;
 using ManagementAndMonitoring.Ports.Commands;
 using ManagementAndMonitoring.Ports.Mappers;
@@ -44,16 +43,14 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
     internal class MeetingAndManagementService : ServiceControl
     {
         private Dispatcher _dispatcher;
-        private Dispatcher _controlDispatcher;
+        private readonly Dispatcher _controlDispatcher;
 
         public MeetingAndManagementService()
         {
-            XmlConfigurator.Configure();
-            //Create a logger
-            var logger = LogProvider.For<MeetingAndManagementService>();
+
+            log4net.Config.XmlConfigurator.Configure();
 
             var container = new TinyIoCContainer();
-            container.Register<ILog>(logger);
 
             var handlerFactory = new TinyIocHandlerFactory(container);
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
@@ -89,8 +86,8 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
             };
 
             //create the gateway
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger);
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory();
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory();
 
             var builder = DispatchBuilder
                 .With()
@@ -113,10 +110,11 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
             _controlDispatcher = builder.Build();
 
             container.Register<IAmAControlBusSender>(new ControlBusSenderFactory().Create(
-                new MsSqlMessageStore(new MsSqlMessageStoreConfiguration(
+                new MsSqlMessageStore(
+                    new MsSqlMessageStoreConfiguration(
                     "DataSource=\"" + Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\MessageStore.sdf") + "\"", "Messages", 
-                    MsSqlMessageStoreConfiguration.DatabaseType.SqlCe), 
-                    logger), 
+                    MsSqlMessageStoreConfiguration.DatabaseType.SqlCe)
+                    ), 
                 new RmqMessageProducer(container.Resolve<ILog>())));
         }
 

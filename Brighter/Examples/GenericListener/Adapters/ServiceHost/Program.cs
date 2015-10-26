@@ -26,7 +26,7 @@ namespace GenericListener.Adapters.ServiceHost
     /// deal with the majority of event objects.
     /// 
     /// In the instance where a custom version of a mapper and/or handler is required for a particular 
-    /// object type, or type for which it's derived from, this solution somewhat cruedly aims to hoist 
+    /// object type, or type for which it's derived from, this solution somewhat crudely aims to hoist 
     /// those accordingly.
     /// 
     /// public class MyEvent : Event(StoredEvent) {}
@@ -47,7 +47,7 @@ namespace GenericListener.Adapters.ServiceHost
     /// Thus to listen to an additional event;
     /// 
     /// 1. Add connection to <serviceActivatorConnections /> with DataType (e.g. MySuperEvent)
-    /// 2. Add class in an inheritence chain that suits (e.g. public class MySuperEvent : MyEvent {})
+    /// 2. Add class in an inheritance chain that suits (e.g. public class MySuperEvent : MyEvent {})
     /// 3. Optionally add MyEventMapper<T> (if not exists) or MySuperEventMapper : IAmMessageMapper<MySuperEvent> {}
     /// 4. Optionally add MyEventHandler<T> (if not exists) or MySuperEventHandler : IHandleRequests<MySuperEvent> {}
     /// </summary>

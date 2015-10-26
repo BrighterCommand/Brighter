@@ -10,7 +10,6 @@ namespace GenericListener.Ports.Handlers.Tasks
         private readonly ITaskReminderSentEventIndexer _indexer;
 
         public TaskReminderSentEventHandler(ITaskReminderSentEventIndexer indexer)
-            : base(LogProvider.For<TaskReminderSentEventHandler>())
         {
             _indexer = indexer;
         }

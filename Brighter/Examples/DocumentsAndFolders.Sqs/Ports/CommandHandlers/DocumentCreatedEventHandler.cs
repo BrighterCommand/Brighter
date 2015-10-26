@@ -35,8 +35,6 @@ namespace Greetings.Ports.CommandHandlers
 {
     public class DocumentCreatedEventHandler : RequestHandler<DocumentCreatedEvent>
     {
-        public DocumentCreatedEventHandler(ILog logger) : base(logger) { }
-
         public override DocumentCreatedEvent Handle(DocumentCreatedEvent @event)
         {
 

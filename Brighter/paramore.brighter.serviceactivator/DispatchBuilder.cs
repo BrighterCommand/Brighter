@@ -53,7 +53,6 @@ namespace paramore.brighter.serviceactivator
     {
         private IAmAChannelFactory _channelFactory;
         private IEnumerable<Connection> _connections;
-        private ILog _logger;
         private CommandProcessor _commandProcessor;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private DispatchBuilder() { }
@@ -143,7 +142,7 @@ namespace paramore.brighter.serviceactivator
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
-            return new Dispatcher(_commandProcessor, _messageMapperRegistry, _connections, _logger);
+            return new Dispatcher(_commandProcessor, _messageMapperRegistry, _connections);
         }
     }
 

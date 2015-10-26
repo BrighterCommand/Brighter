@@ -26,14 +26,11 @@ using System;
 using EventSourcing.Ports.Commands;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.eventsourcing.Attributes;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace EventSourcing.Ports.CommandHandlers
 {
     internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
     {
-        public GreetingCommandHandler(ILog logger) : base(logger) { }
-
         [UseCommandSourcing(step: 1, timing: HandlerTiming.Before)]
         public override GreetingCommand Handle(GreetingCommand command)
         {

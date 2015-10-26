@@ -76,7 +76,6 @@
     <Compile Include="Adapters\ServiceHost\TinyIoCHandlerFactory.cs" />
     <Compile Include="Adapters\ServiceHost\TinyIoCMessageMapperFactory.cs" />
     <Compile Include="GlobalSuppressions.cs" />
-    <Compile Include="Ports\TaskReminderCommandMessageMapper.cs" />
     <Compile Include="Ports\TaskReminderSentEventMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TinyIoC.cs" />

@@ -58,7 +58,7 @@ namespace Tasks.Adapters.Tests
 
             s_commandProcessor = A.Fake<IAmACommandProcessor>();
 
-            s_handler = new AddTaskCommandHandler(s_tasksDAO, logger, s_commandProcessor);
+            s_handler = new AddTaskCommandHandler(s_tasksDAO, s_commandProcessor);
         };
 
         private Because _of = () =>
@@ -96,7 +96,7 @@ namespace Tasks.Adapters.Tests
 
             s_commandProcessor = A.Fake<IAmACommandProcessor>();
 
-            s_handler = new EditTaskCommandHandler(s_tasksDAO, logger, s_commandProcessor);
+            s_handler = new EditTaskCommandHandler(s_tasksDAO, s_commandProcessor);
         };
 
         private Because _of = () =>
@@ -133,7 +133,7 @@ namespace Tasks.Adapters.Tests
 
             s_commandProcessor = A.Fake<IAmACommandProcessor>();
 
-            s_handler = new CompleteTaskCommandHandler(s_tasksDAO, logger, s_commandProcessor);
+            s_handler = new CompleteTaskCommandHandler(s_tasksDAO, s_commandProcessor);
         };
 
         private Because _of = () =>
@@ -168,7 +168,7 @@ namespace Tasks.Adapters.Tests
 
             A.CallTo(() => s_commandProcessor.Post(A<TaskCompletedEvent>._));
 
-            s_handler = new CompleteTaskCommandHandler(s_tasksDAO, logger, s_commandProcessor);
+            s_handler = new CompleteTaskCommandHandler(s_tasksDAO, s_commandProcessor);
         };
 
         private Because _of = () => s_exception = Catch.Exception(() => s_handler.Handle(s_cmd));

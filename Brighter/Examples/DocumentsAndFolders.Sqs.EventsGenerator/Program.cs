@@ -104,17 +104,15 @@ namespace DocumentsAndFolders.Sqs.EventsGenerator
             };
 
 
-            var logger = LogProvider.For<Program>();
             
-            
-            var sqsMessageProducer = new SqsMessageProducer(logger);
+            var sqsMessageProducer = new SqsMessageProducer();
             var processor = new CommandProcessor(
                 null,
                 policyRegistry,
                 messageMapperRegistry,
                 new FakeMessageStore(),
-                sqsMessageProducer,
-                logger);
+                sqsMessageProducer
+                );
 
             return processor;
         }

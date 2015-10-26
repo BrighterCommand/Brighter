@@ -10,8 +10,6 @@ namespace Greetings.Ports.CommandHandlers
 {
     public class FolderCreatedEventHandler : RequestHandler<FolderCreatedEvent>
     {
-        public FolderCreatedEventHandler(ILog logger) : base(logger) { }
-
         public override FolderCreatedEvent Handle(FolderCreatedEvent @event)
         {
             Console.WriteLine("Received FolderCreatedEvent");

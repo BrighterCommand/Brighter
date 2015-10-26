@@ -48,13 +48,10 @@ namespace TaskMailer.Adapters.ServiceHost
         {
             log4net.Config.XmlConfigurator.Configure();
 
-            var logger = LogProvider.For<TaskMailerService>();
-
             var container = new TinyIoCContainer();
             container.Register<IAmAMessageMapper<TaskReminderCommand>, Tasks.Ports.TaskReminderCommandMessageMapper>();
             container.Register<MailTaskReminderHandler, MailTaskReminderHandler>();
             container.Register<IAmAMailGateway, MailGateway>();
-            container.Register<ILog>(logger);
             container.Register<IAmAMailTranslator, MailTranslator>();
 
             var handlerFactory = new TinyIocHandlerFactory(container);
@@ -92,14 +89,14 @@ namespace TaskMailer.Adapters.ServiceHost
             var commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                 .Policies(policyRegistry)
-                .TaskQueues(new MessagingConfiguration(new TemporaryMessageStore(), new RmqMessageProducer(logger), messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration(new TemporaryMessageStore(), new RmqMessageProducer(), messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
             container.Register<IAmACommandProcessor>(commandProcessor);
 
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger);
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory();
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory();
 
             _dispatcher = DispatchBuilder.With()
                 .CommandProcessor(commandProcessor)

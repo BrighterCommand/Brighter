@@ -37,8 +37,7 @@ namespace Tasks.Ports.Handlers
         private readonly ITasksDAO _tasksDAO;
         private readonly IAmACommandProcessor _commandProcessor;
 
-        public EditTaskCommandHandler(ITasksDAO tasksDAO, ILog logger, IAmACommandProcessor commandProcessor)
-            : base(logger)
+        public EditTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor)
         {
             _tasksDAO = tasksDAO;
             _commandProcessor = commandProcessor;
