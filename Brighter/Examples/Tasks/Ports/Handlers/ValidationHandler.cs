@@ -32,6 +32,14 @@ namespace Tasks.Ports.Handlers
     public class ValidationHandler<TRequest> : RequestHandler<TRequest>
         where TRequest : class, IRequest, ICanBeValidated
     {
+        public ValidationHandler()
+            : this(LogProvider.GetCurrentClassLogger())
+        {}
+
+        public ValidationHandler(ILog logger)
+            :base(logger)
+        {}
+
         public override TRequest Handle(TRequest command)
         {
             if (!((ICanBeValidated)command).IsValid())

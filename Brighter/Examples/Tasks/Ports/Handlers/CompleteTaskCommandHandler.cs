@@ -26,6 +26,7 @@ using System;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.logging;
 using paramore.brighter.commandprocessor.logging.Attributes;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
@@ -40,6 +41,11 @@ namespace Tasks.Ports.Handlers
         private readonly IAmACommandProcessor _commandProcessor;
 
         public CompleteTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor)
+            :this(tasksDAO, commandProcessor, LogProvider.GetCurrentClassLogger())
+        {}
+
+        public CompleteTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor, ILog logger)
+             :base(logger)
         {
             _tasksDAO = tasksDAO;
             _commandProcessor = commandProcessor;

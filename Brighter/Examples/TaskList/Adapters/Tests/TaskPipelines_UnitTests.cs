@@ -47,13 +47,15 @@ namespace Tasklist.Adapters.Tests
 
         private Establish _context = () =>
         {
-            LogProvider.SetCurrentLogProvider(null);
+            var logger = A.Fake<ILog>();
             s_tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => s_tasksDAO.Add(A<Task>.Ignored));
 
             var container = new TinyIoCContainer();
             container.Register<ITasksDAO, ITasksDAO>(s_tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
+            container.Register<ILog>(logger);
+
             var handlerFactory = new TinyIocHandlerFactory(container);
 
             var subscriberRegistry = new SubscriberRegistry();
@@ -85,13 +87,15 @@ namespace Tasklist.Adapters.Tests
 
         private Establish _context = () =>
         {
-            LogProvider.SetCurrentLogProvider(null);
+            var logger = A.Fake<ILog>();
             s_tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => s_tasksDAO.Add(A<Task>.Ignored));
 
             var container = new TinyIoCContainer();
             container.Register<ITasksDAO, ITasksDAO>(s_tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
+            container.Register<ILog>(logger);
+
             var handlerFactory = new TinyIocHandlerFactory(container);
 
             var subscriberRegistry = new SubscriberRegistry();
@@ -121,13 +125,15 @@ namespace Tasklist.Adapters.Tests
 
         private Establish _context = () =>
         {
-            LogProvider.SetCurrentLogProvider(null);
+            var logger = A.Fake<ILog>();
             s_tasksDAO = new TasksDAO();
             s_tasksDAO.Clear();
 
             var container = new TinyIoCContainer();
             container.Register<ITasksDAO, ITasksDAO>(s_tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
+            container.Register<ILog>(logger);
+
             var handlerFactory = new TinyIocHandlerFactory(container);
 
             var messageMapperRegistry = new MessageMapperRegistry(new TinyIoCMessageMapperFactory(container));

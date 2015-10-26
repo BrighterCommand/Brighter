@@ -46,10 +46,12 @@ namespace Tasklist.Adapters.Tests
 
         private Establish _context = () =>
         {
-            LogProvider.SetCurrentLogProvider(null);
+            var logger = A.Fake<ILog>();
             var container = new TinyIoCContainer();
             container.Register<ITasksDAO, TasksDAO>();
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
+            container.Register<ILog>(logger);
+
             var handlerFactory = new TinyIocHandlerFactory(container);
 
             var subscriberRegistry = new SubscriberRegistry();
