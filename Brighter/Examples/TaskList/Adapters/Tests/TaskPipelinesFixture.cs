@@ -49,18 +49,18 @@ namespace Tasklist.Adapters.Tests
             var container = new TinyIoCContainer();
             container.Register<ITasksDAO, TasksDAO>();
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
-            container.Register<ILog, ILog>(A.Fake<ILog>());
             var handlerFactory = new TinyIocHandlerFactory(container);
 
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<AddTaskCommand, AddTaskCommandHandler>();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new TinyIoCMessageMapperFactory(container));
-            messageMapperRegistry.Add(typeof(TaskAddedEvent), typeof(TaskAddedEventTestMapper));
+            var messageMapperRegistry = new MessageMapperRegistry(new TinyIoCMessageMapperFactory(container))
+            {
+                {typeof (TaskAddedEvent), typeof (TaskAddedEventTestMapper)}
+            };
 
             s_requestContext = new RequestContext();
 
-            var logger = A.Fake<ILog>();
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
             A.CallTo(() => requestContextFactory.Create()).Returns(s_requestContext);
 
@@ -68,7 +68,7 @@ namespace Tasklist.Adapters.Tests
             var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
             var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
 
-            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, messageMapperRegistry, new TestMessageStore(), new TestMessageProducer(), logger);
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, messageMapperRegistry, new TestMessageStore(), new TestMessageProducer());
             container.Register<IAmACommandProcessor>(s_commandProcessor);
 
             s_cmd = new AddTaskCommand("New Task", "Test that we store a task", DateTime.Now.AddDays(3));

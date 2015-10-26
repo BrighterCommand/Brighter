@@ -38,11 +38,8 @@ THE SOFTWARE. */
 using System;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.policy.Attributes;
-using paramore.brighter.commandprocessor.policy.Handlers;
-using Polly.CircuitBreaker;
 
-namespace paramore.brighter.commandprocessor
+namespace paramore.brighter.commandprocessor.logging.Handlers
 {
     /// <summary>
     /// Class RequestLoggingHandler.
@@ -53,6 +50,14 @@ namespace paramore.brighter.commandprocessor
     public class RequestLoggingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         private HandlerTiming _timing;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestLoggingHandler{TRequest}"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        public RequestLoggingHandler()
+            : this(LogProvider.GetCurrentClassLogger())
+        { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestLoggingHandler{TRequest}"/> class.

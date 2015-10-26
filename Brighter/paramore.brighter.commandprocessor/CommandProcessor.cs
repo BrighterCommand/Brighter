@@ -195,7 +195,7 @@ namespace paramore.brighter.commandprocessor
             int messageStoreTimeout = 300,
             int messageGatewaySendTimeout = 300
             )
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger()) {}
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.GetCurrentClassLogger()) {}
 
 
         /// <summary>
