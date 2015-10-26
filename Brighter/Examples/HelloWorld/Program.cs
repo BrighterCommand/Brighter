@@ -32,8 +32,6 @@ namespace HelloWorld
     {
         private static void Main(string[] args)
         {
-            var logger = LogProvider.For<Program>();
-
             var registry = new SubscriberRegistry();
             registry.Register<GreetingCommand, GreetingCommandHandler>();
 
@@ -41,7 +39,7 @@ namespace HelloWorld
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(
                      subscriberRegistry: registry,
-                     handlerFactory: new SimpleHandlerFactory(logger)
+                     handlerFactory: new SimpleHandlerFactory()
                     ))
                 .DefaultPolicy()
                 .NoTaskQueues()
@@ -56,16 +54,9 @@ namespace HelloWorld
 
         internal class SimpleHandlerFactory : IAmAHandlerFactory
         {
-            private readonly ILog _logger;
-
-            public SimpleHandlerFactory(ILog logger)
-            {
-                _logger = logger;
-            }
-
             public IHandleRequests Create(Type handlerType)
             {
-                return new GreetingCommandHandler(_logger);
+                return new GreetingCommandHandler();
             }
 
             public void Release(IHandleRequests handler)

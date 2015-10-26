@@ -46,7 +46,6 @@ namespace GenericListener.Adapters.Services
 
             _dispatcher = BuildDispatcher(config);
 
-            _container.Register<ILog>(LogProvider.For<GenericListenerService>());
             _container.Register<IAmACommandProcessor>(_dispatcher.CommandProcessor);
 
             _dispatcher.Receive();

@@ -47,15 +47,13 @@ namespace Tasklist.Adapters.API.Configuration
 
         public void Initialise()
         {
-            var logger = LogProvider.GetLogger("TaskList");
             var container = new TinyIoCContainer();
-            container.Register<ILog, ILog>(logger);
 
-            var commandProcessor = CommandProcessorRegistrar(container, logger);
+            var commandProcessor = CommandProcessorRegistrar(container);
             OpenRastaRegistrar(commandProcessor);
         }
 
-        private CommandProcessor CommandProcessorRegistrar(TinyIoCContainer container, ILog logger)
+        private CommandProcessor CommandProcessorRegistrar(TinyIoCContainer container)
         {
             //Database dao
             container.Register<ITasksDAO, TasksDAO>().AsSingleton();
@@ -86,8 +84,8 @@ namespace Tasklist.Adapters.API.Configuration
             messageMapperRegistry.Add(typeof(TaskReminderSentEvent), typeof(TaskReminderSentEventMapper));
 
            
-            var gateway = new RmqMessageProducer(logger);
-            IAmAMessageStore<Message> sqlMessageStore = new MsSqlMessageStore(new MsSqlMessageStoreConfiguration("Server=.;Database=brighterMessageStore;Trusted_Connection=True", "messages", MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer), logger);
+            var gateway = new RmqMessageProducer();
+            IAmAMessageStore<Message> sqlMessageStore = new MsSqlMessageStore(new MsSqlMessageStoreConfiguration("Server=.;Database=brighterMessageStore;Trusted_Connection=True", "messages", MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer));
             var commandProcessor =
                 CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))

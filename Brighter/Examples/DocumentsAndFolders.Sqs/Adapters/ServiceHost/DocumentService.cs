@@ -51,11 +51,8 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
         {
             log4net.Config.XmlConfigurator.Configure();
             
-            //Create a logger
-            var logger = LogProvider.For<DocumentService>();
 
             var container = new TinyIoCContainer();
-            container.Register<ILog>(logger);
 
             var handlerFactory = new TinyIocHandlerFactory(container);
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
@@ -97,8 +94,8 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
                 {typeof(DocumentUpdatedEvent), typeof(DocumentUpdatedEventMessageMapper)}
             };
             
-            var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(logger);
-            var sqsMessageProducerFactory = new SqsMessageProducerFactory(logger);
+            var sqsMessageConsumerFactory = new SqsMessageConsumerFactory();
+            var sqsMessageProducerFactory = new SqsMessageProducerFactory();
 
             var builder = DispatchBuilder
                 .With()

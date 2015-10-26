@@ -39,12 +39,10 @@ namespace EventSourcing.Adapters.ServiceHost
     {
         private static void Main(string[] args)
         {
-            var logger = LogProvider.For<Program>();
-
             var dbPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\CommandStore.sdf");
             var connectionString = "DataSource=\"" + dbPath + "\"";
             var configuration = new MsSqlCommandStoreConfiguration(connectionString, "Commands", MsSqlCommandStoreConfiguration.DatabaseType.SqlCe);
-            var commandStore = new MsSqlCommandStore(configuration, logger);
+            var commandStore = new MsSqlCommandStore(configuration);
 
             var registry = new SubscriberRegistry();
             registry.Register<GreetingCommand, GreetingCommandHandler>();
@@ -52,7 +50,6 @@ namespace EventSourcing.Adapters.ServiceHost
             var tinyIoCContainer = new TinyIoCContainer();
             tinyIoCContainer.Register<IHandleRequests<GreetingCommand>, GreetingCommandHandler>();
             tinyIoCContainer.Register<IAmACommandStore>(commandStore);
-            tinyIoCContainer.Register<ILog>(logger);
 
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(

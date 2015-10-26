@@ -33,8 +33,6 @@ namespace ManagementAndMonitoring.Ports.CommandHandlers
 {
     internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
     {
-        public GreetingCommandHandler(ILog logger) : base(logger) { }
-
         [Monitor(step: 1, timing: HandlerTiming.Before, handlerType: typeof(GreetingCommandHandler))]
         public override GreetingCommand Handle(GreetingCommand command)
         {

@@ -27,7 +27,6 @@ using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
 using Polly;
@@ -43,11 +42,8 @@ namespace Greetings.Adapters.ServiceHost
         public GreetingService()
         {
             log4net.Config.XmlConfigurator.Configure();
-            //Create a logger
-            var logger = LogProvider.For<GreetingService>();
 
             var container = new TinyIoCContainer();
-            container.Register<ILog>(logger);
 
             var handlerFactory = new TinyIocHandlerFactory(container);
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
@@ -73,7 +69,7 @@ namespace Greetings.Adapters.ServiceHost
             var policyRegistry = new PolicyRegistry()
             {
                 {CommandProcessor.RETRYPOLICY, retryPolicy},
-                //{CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
             };
 
             //create message mappers
@@ -83,8 +79,8 @@ namespace Greetings.Adapters.ServiceHost
             };
 
             //create the gateway
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger);
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory();
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory();
             var builder = DispatchBuilder
                 .With()
                 .CommandProcessor(CommandProcessorBuilder.With()

@@ -10,7 +10,6 @@ namespace GenericListener.Ports.Handlers
         private readonly IGenericFeedEventIndexer<T> _indexer;
 
         public GenericHandler(IGenericFeedEventIndexer<T> indexer)
-            : base(LogProvider.For<T>())
         {
             _indexer = indexer;
         }

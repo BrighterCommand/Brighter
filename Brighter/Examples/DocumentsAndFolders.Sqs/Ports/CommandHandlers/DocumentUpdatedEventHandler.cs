@@ -12,8 +12,6 @@ namespace Greetings.Ports.CommandHandlers
 {
     public class DocumentUpdatedEventHandler : RequestHandler<DocumentUpdatedEvent>
     {
-        public DocumentUpdatedEventHandler(ILog logger) : base(logger) { }
-
         public override DocumentUpdatedEvent Handle(DocumentUpdatedEvent @event)
         {
             Console.WriteLine("Received DocumentUpdatedEvent");
