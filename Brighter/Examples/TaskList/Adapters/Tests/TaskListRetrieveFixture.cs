@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Machine.Specifications;
+using paramore.brighter.commandprocessor.Logging;
 using Tasklist.Adapters.API.Resources;
 using Tasklist.Ports.ViewModelRetrievers;
 using Tasks.Adapters.DataAccess;
@@ -47,6 +48,7 @@ namespace Tasklist.Adapters.Tests
 
         private Establish _context = () =>
             {
+                LogProvider.SetCurrentLogProvider(null);
                 s_dao = new TasksDAO();
                 s_dao.Clear();
                 s_newTask = new Task(taskName: taskName, taskDecription: taskDescription, dueDate: s_dueDate);

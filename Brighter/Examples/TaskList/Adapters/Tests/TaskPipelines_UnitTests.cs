@@ -47,15 +47,13 @@ namespace Tasklist.Adapters.Tests
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
+            LogProvider.SetCurrentLogProvider(null);
             s_tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => s_tasksDAO.Add(A<Task>.Ignored));
-            var log = A.Fake<ILog>();
 
             var container = new TinyIoCContainer();
             container.Register<ITasksDAO, ITasksDAO>(s_tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
-            container.Register<ILog, ILog>(log);
             var handlerFactory = new TinyIocHandlerFactory(container);
 
             var subscriberRegistry = new SubscriberRegistry();
@@ -64,7 +62,7 @@ namespace Tasklist.Adapters.Tests
             var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
             var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy } };
 
-            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
             container.Register<IAmACommandProcessor>(s_commandProcessor);
 
             s_cmd = new AddTaskCommand("Test task", null);
@@ -87,15 +85,13 @@ namespace Tasklist.Adapters.Tests
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
+            LogProvider.SetCurrentLogProvider(null);
             s_tasksDAO = A.Fake<ITasksDAO>();
             A.CallTo(() => s_tasksDAO.Add(A<Task>.Ignored));
-            var log = A.Fake<ILog>();
 
             var container = new TinyIoCContainer();
             container.Register<ITasksDAO, ITasksDAO>(s_tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
-            container.Register<ILog, ILog>(log);
             var handlerFactory = new TinyIocHandlerFactory(container);
 
             var subscriberRegistry = new SubscriberRegistry();
@@ -104,7 +100,7 @@ namespace Tasklist.Adapters.Tests
             var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
             var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy } };
 
-            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
             container.Register<IAmACommandProcessor>(s_commandProcessor);
 
             s_cmd = new AddTaskCommand(null, "Test that we store a task");
@@ -125,15 +121,13 @@ namespace Tasklist.Adapters.Tests
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
+            LogProvider.SetCurrentLogProvider(null);
             s_tasksDAO = new TasksDAO();
             s_tasksDAO.Clear();
-            var log = A.Fake<ILog>();
 
             var container = new TinyIoCContainer();
             container.Register<ITasksDAO, ITasksDAO>(s_tasksDAO);
             container.Register<IHandleRequests<AddTaskCommand>, AddTaskCommandHandler>();
-            container.Register<ILog, ILog>(log);
             var handlerFactory = new TinyIocHandlerFactory(container);
 
             var messageMapperRegistry = new MessageMapperRegistry(new TinyIoCMessageMapperFactory(container));
@@ -146,7 +140,7 @@ namespace Tasklist.Adapters.Tests
             var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
             var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
 
-            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, messageMapperRegistry, new TestMessageStore(), new TestMessageProducer(), logger);
+            s_commandProcessor = new CommandProcessor(subscriberRegistry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, messageMapperRegistry, new TestMessageStore(), new TestMessageProducer());
             container.Register<IAmACommandProcessor>(s_commandProcessor);
 
             s_cmd = new AddTaskCommand("Test task", "Test that we store a task", DateTime.Now);
