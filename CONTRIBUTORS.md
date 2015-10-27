@@ -22,7 +22,9 @@ Paramore contributors (sorted alphabeticaly)
   * Committer
 
 **[Eddie Li](https://github.com/xiaodili)**
-
+  * Various fixes  
+  
+**[Rudy Alvarez] (https://github.com/rudygt)**
   * Various fixes  
    
 **[Solveig Oskarsdottir] (https://github.com/solveigo)**
