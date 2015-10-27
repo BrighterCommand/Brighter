@@ -38,7 +38,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         private It _should_throw_an_aggregate_exception = () => s_exception.ShouldBeOfExactType(typeof(AggregateException));
         private It _should_have_an_inner_exception_from_the_handler = () => ((AggregateException)s_exception).InnerException.ShouldBeOfExactType(typeof(InvalidOperationException));
-        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
+        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.ShouldReceive(s_myEvent).ShouldBeTrue();
         private It _should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
     }
 }
