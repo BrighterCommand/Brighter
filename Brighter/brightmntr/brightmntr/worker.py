@@ -73,8 +73,10 @@ class Worker(Thread):
             self._logger.error('Draining error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)
 
         def _read_message(body, message):
-            self._logger.debug("Monitoring event received at: ", datetime.utcnow().isoformat(), " Event:  ", body)
-            print("{time}: {event} \n").format(time=datetime.utcnow().isoformat(), event=body)
+            self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), message.headers, message.payload)
+            now = datetime.utcnow().isoformat()
+            activity = body
+            print("{time}: {event} \n".format(time=now, event=activity))
             message.ack()
 
         # read the next batch number of monitoring messages from the control bus
