@@ -24,12 +24,14 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-
+using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.TestHelpers;
+using paramore.commandprocessor.tests.CommandProcessors;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
@@ -63,6 +65,64 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private It _should_convert_the_message_into_an_event = () => (s_commandProcessor.Observe<MyEvent>()).ShouldEqual(s_event);
         private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
     }
+
+    public class When_a_message_is_dispatched_it_should_reach_a_handler
+    {
+        private static IAmAMessagePump s_messagePump;
+        private static FakeChannel s_channel;
+        private static IAmACommandProcessor s_commandProcessor;
+        private static MyEvent s_event;
+
+        private Establish _context = () =>
+        {
+            var logger = A.Fake<ILog>();
+            var subscriberRegistry = new SubscriberRegistry();
+            subscriberRegistry.Register<MyEvent, MyEventHandler>();
+
+            s_commandProcessor = new CommandProcessor(
+                subscriberRegistry,
+                new CheapHandlerFactory(), 
+                new InMemoryRequestContextFactory(), 
+                new PolicyRegistry(), 
+                logger);
+
+            s_channel = new FakeChannel();
+            var mapper = new MyEventMessageMapper();
+            s_messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000 };
+
+            s_event = new MyEvent();
+
+            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
+            s_channel.Send(message);
+            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            s_channel.Send(quitMessage);
+        };
+        
+        private Because _of = () => s_messagePump.Run();
+
+        private It _should_dispatch_the_message_to_a_handler = () => MyEventHandler.ShouldReceive(s_event).ShouldBeTrue();
+
+        internal class CheapHandlerFactory : IAmAHandlerFactory
+        {
+            public IHandleRequests Create(Type handlerType)
+            {
+                var logger = A.Fake<ILog>();
+                if (handlerType == typeof(MyEventHandler))
+                {
+                    return new MyEventHandler(logger);
+                }
+                return null;
+            }
+
+            public void Release(IHandleRequests handler)
+            {
+                var disposable = handler as IDisposable;
+                if (disposable != null)
+                    disposable.Dispose();
+            }
+        }
+    }
+
 
     public class When_a_requeue_of_event_exception_is_thrown
     {
@@ -389,7 +449,4 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private It should_have_acknowledge_the_3_messages = () => s_channel.AcknowledgeCount.ShouldEqual(3);
         private It should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
     }
-
-
-
 }

@@ -35,7 +35,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Publish(s_myEvent));
 
         private It _should_not_throw_an_exception = () => s_exception.ShouldBeNull();
-        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
+        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.ShouldReceive(s_myEvent).ShouldBeTrue();
         private It _should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
     }
 }

@@ -24,6 +24,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         };
 
         private Because _of = () => s_commandProcessor.Publish(s_myEvent);
-        private It _should_publish_the_command_to_the_event_handlers = () => MyEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
+        private It _should_publish_the_command_to_the_event_handlers = () => MyEventHandler.ShouldReceive(s_myEvent).ShouldBeTrue();
     }
 }
