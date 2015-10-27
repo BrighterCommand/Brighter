@@ -115,7 +115,7 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
                     "DataSource=\"" + Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\MessageStore.sdf") + "\"", "Messages", 
                     MsSqlMessageStoreConfiguration.DatabaseType.SqlCe)
                     ), 
-                new RmqMessageProducer(container.Resolve<ILog>())));
+                new RmqMessageProducer()));
         }
 
         public bool Start(HostControl hostControl)
