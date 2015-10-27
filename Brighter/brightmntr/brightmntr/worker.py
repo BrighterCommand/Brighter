@@ -76,7 +76,7 @@ class Worker(Thread):
             self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), message.headers, message.payload)
             now = datetime.utcnow().isoformat()
             activity = body
-            print("{time}: {event} \n".format(time=now, event=activity))
+            print("{time}: {event}".format(time=now, event=activity))
             message.ack()
 
         # read the next batch number of monitoring messages from the control bus
