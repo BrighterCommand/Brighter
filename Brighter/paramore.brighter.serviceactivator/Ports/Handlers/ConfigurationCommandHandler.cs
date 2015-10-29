@@ -78,7 +78,7 @@ namespace paramore.brighter.serviceactivator.Ports.Handlers
             switch (command.Type)
             {
                 case ConfigurationCommandType.CM_STOPALL:
-                    _dispatcher.End();
+                    _dispatcher.End().Wait();
                     break;
                 case ConfigurationCommandType.CM_STARTALL:
                     _dispatcher.Receive();

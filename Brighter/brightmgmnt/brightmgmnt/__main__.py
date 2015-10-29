@@ -1,4 +1,4 @@
-e"""
+"""
 File         : __main__.py
 Author           : ian
 Created          : 02-16-2015
@@ -29,26 +29,28 @@ THE SOFTWARE.
 ***********************************************************************
 
 Usage:
-  brightermgmnt.py stop <machineName> <serviceName>
-  brightermgmnt.py start <machineName> <serviceName>
-  brightermgmnt.py -h
+  brightermgmnt.py [options] start <machineName> <serviceName>
+  brightermgmnt.py [options] stop <machineName> <serviceName>
 
 Options:
-  -h --help     Show this screen.
+  -h --help                         Show this screen.
+  -c CHANNEL --channelName=CHANNEL  The channel to start or stop
 """
+
 from .messaging import build_message
 from docopt import docopt
-from .controlbus import send
-from .configuration import configure
+from .publisher import Publisher
+from .configuration import configure, parse_arguments
 
 
-def run(amqp_uri, exchange, cmdlne_arguments):
-    routing_key = cmdlne_arguments['<machineName>'] + "." + cmdlne_arguments['<serviceName>'] + "." + "configuration"
-    send(amqp_uri, exchange, build_message("stop"), routing_key)
+def run(uri, xchng, key, cmd, chnl):
+    sender = Publisher(uri, xchng)
+    sender.send(build_message(cmd, chnl), key)
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='Brighter Management v0.0')
     exchange, amqp_uri = configure()
+    routing_key, command, channel = parse_arguments(arguments)
     run(amqp_uri, exchange, arguments)
 
 
