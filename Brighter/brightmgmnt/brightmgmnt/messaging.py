@@ -28,20 +28,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
-from enum import Enum
+import uuid
+
+command_to_value_map = {"stop": 0, "start": 1}
 
 
-def build_message(command):
-    pass
+def build_message(command, channel):
+
+    def _parse_command(cmd, chan):
+        val = command_to_value_map.get(cmd)
+        if chan is not None:
+            val += 2
+        return val
+
+    return dict([("Type", _parse_command(command, channel)), ("ConnectionName", channel), {"Id": uuid.uuid4()}])
 
 
-class ConfigurationCommandType(Enum):
-    """
-        It is worth noting that these values much match those in Paramore\Brighter\paramore.brighter.serviceactivator\Ports\Commands\ConfigurationCommand.cs
-        otherwise the sent message and the received message will not agree on the code.
-        We could fix this to parse a string.
-    """
-    CM_STOPALL = 0
-    CM_STARTALL = 1
-    CM_STOPCHANNEL = 2
-    CM_STARTCHANNEL = 3

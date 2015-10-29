@@ -31,6 +31,7 @@ THE SOFTWARE.
 
 from kombu import BrokerConnection, Queue
 from kombu.pools import connections
+import logging
 
 
 class Publisher:
@@ -42,11 +43,12 @@ class Publisher:
         'max_retries': 3,
     }
 
-    def __init__(self, destination, exchange):
+    def __init__(self, destination, exchange, logger=None):
         self._ensure_options = self.RETRY_OPTIONS.copy()
         self._amqp_uri = destination
         self._cnx = BrokerConnection(hostname=self._amqp_uri)
         self._exchange = exchange
+        self._logger = logger or logging.getLogger(__name__)
 
     def send(self, message, routing_key):
 
