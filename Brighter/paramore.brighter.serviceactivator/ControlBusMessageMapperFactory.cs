@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.serviceactivator.Ports.Mappers;
 
 namespace paramore.brighter.serviceactivator.controlbus
 {
@@ -36,7 +37,11 @@ namespace paramore.brighter.serviceactivator.controlbus
         /// <returns>IAmAMessageMapper.</returns>
         public IAmAMessageMapper Create(Type messageMapperType)
         {
-            throw new NotImplementedException();
+            if (messageMapperType == typeof (ConfigurationCommandMessageMapper))
+            {
+                return new ConfigurationCommandMessageMapper();
+            }
+            throw new ConfigurationException(string.Format("Message Mapper for type {0} not registered with ControBusMessageMapperFactory", messageMapperType.FullName));
         }
     }
 }

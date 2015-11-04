@@ -37,7 +37,7 @@ Options:
   -c CHANNEL --channelName=CHANNEL  The channel to start or stop
 """
 
-from .messaging import build_message
+from .messaging import build_message_body, build_message_header
 from docopt import docopt
 from .publisher import Publisher
 from .configuration import configure, parse_arguments
@@ -45,13 +45,13 @@ from .configuration import configure, parse_arguments
 
 def run(uri, xchng, key, cmd, chnl):
     sender = Publisher(uri, xchng)
-    sender.send(build_message(cmd, chnl), key)
+    sender.send(build_message_header(), build_message_body(cmd, chnl), key)
 
 if __name__ == '__main__':
     arguments = docopt(__doc__, version='Brighter Management v0.0')
     exchange, amqp_uri = configure()
     routing_key, command, channel = parse_arguments(arguments)
-    run(amqp_uri, exchange, arguments)
+    run(amqp_uri, exchange, routing_key, command, channel)
 
 
 

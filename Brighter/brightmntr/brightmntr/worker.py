@@ -58,7 +58,6 @@ class Worker(Thread):
         self.page_size = 5
         self._monitoring_queue = Queue('paramore.brighter.controlbus', exchange=self._exchange, routing_key=self._routing_key)
         self._running = Event()  # control access to te queue
-        self._ensure_options = self.RETRY_OPTIONS.copy()
         self._logger = logger or logging.getLogger(__name__)
 
     def _read_monitoring_messages(self):
@@ -88,7 +87,7 @@ class Worker(Thread):
             self._logger.debug('Got connection: %s', conn.as_uri())
             with Consumer(conn, [self._monitoring_queue], callbacks=[_read_message], accept=['json', 'text/plain']) as consumer:
                 self._running.set()
-                ensure_kwargs = self._ensure_options.copy()
+                ensure_kwargs = self.RETRY_OPTIONS.copy()
                 ensure_kwargs['errback'] = _drain_errors
                 lines = 0
                 updates = 0

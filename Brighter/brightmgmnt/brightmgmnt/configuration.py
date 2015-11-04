@@ -50,7 +50,7 @@ def configure():
 def parse_arguments(arguments):
     routing_key = arguments['<machineName>'] + "." + arguments['<serviceName>'] + "." + "configuration"
     command = 'stop' if arguments['stop'] == True else 'start'
-    channel = arguments['--channelName'] if arguments['channelName'] else None
+    channel = arguments['--channelName'] if arguments['--channelName'] else None
 
     return routing_key, command, channel
 

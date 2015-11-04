@@ -44,13 +44,12 @@ class Publisher:
     }
 
     def __init__(self, destination, exchange, logger=None):
-        self._ensure_options = self.RETRY_OPTIONS.copy()
         self._amqp_uri = destination
         self._cnx = BrokerConnection(hostname=self._amqp_uri)
         self._exchange = exchange
         self._logger = logger or logging.getLogger(__name__)
 
-    def send(self, message, routing_key):
+    def send(self, header, message, routing_key):
 
         def _create_queue(routing_key, exchange):
 
@@ -61,9 +60,9 @@ class Publisher:
             return Queue('paramore.brighter.controlbus', exchange=exchange, routing_key=routing_key)
 
         def _publish(sender, key):
-            print("Send message to broker {amqpuri} with routing key {routing_key}".format(amqpuri=destination, routing_key=key))
+            print("Send message {body} to broker {amqpuri} with routing key {routing_key}".format(body=message, amqpuri=self._amqp_uri, routing_key=key))
             queue = _create_queue(key, self._exchange)
-            sender.publish(message, exchange=self._exchange, serializer='json', routing_key=key, declare=[self._exchange, queue])
+            sender.publish(message, headers=header, exchange=self._exchange, serializer='json', routing_key=key, declare=[self._exchange, queue])
 
         def _error_callback(e, interval):
             print('Publishing error: {e}. Will retry in {interval} seconds', e, interval)
@@ -72,7 +71,7 @@ class Publisher:
 
         with connections[self._cnx].acquire(block=True) as conn:
             with conn.Producer() as producer:
-                ensure_kwargs = self._ensure_options.copy()
+                ensure_kwargs = self.RETRY_OPTIONS.copy()
                 ensure_kwargs['errback'] = _error_callback
                 safe_publish = conn.ensure(producer, _publish, **ensure_kwargs)
                 safe_publish(producer, routing_key)

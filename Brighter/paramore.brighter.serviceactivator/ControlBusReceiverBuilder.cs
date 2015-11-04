@@ -29,6 +29,7 @@ using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator.Ports;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Handlers;
+using paramore.brighter.serviceactivator.Ports.Mappers;
 using paramore.brighter.serviceactivator.ServiceActivatorConfiguration;
 using Polly;
 
@@ -91,7 +92,7 @@ namespace paramore.brighter.serviceactivator.controlbus
                 ChannelName = CONFIGURATION,
                 ConnectionName = CONFIGURATION,
                 IsDurable = true,
-                DataType = typeof(ConfigurationCommand).AssemblyQualifiedName,
+                DataType = typeof(ConfigurationCommand).FullName,
                 RoutingKey = hostName + "." + CONFIGURATION,
             };
             connections.Add(configurationElement);
@@ -101,7 +102,7 @@ namespace paramore.brighter.serviceactivator.controlbus
                 ChannelName = HEARTBEAT,
                 ConnectionName = HEARTBEAT,
                 IsDurable = false,
-                DataType = typeof(HeartBeatCommand).AssemblyQualifiedName,
+                DataType = typeof(HeartBeatCommand).FullName,
                 RoutingKey = hostName + "." + HEARTBEAT,
             };
             connections.Add(heartbeatElement);
@@ -138,6 +139,8 @@ namespace paramore.brighter.serviceactivator.controlbus
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
             
+            var messageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
+            messageMapperRegistry.Register<ConfigurationCommand, ConfigurationCommandMessageMapper>();
 
             var commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher, _logger)))
@@ -146,11 +149,10 @@ namespace paramore.brighter.serviceactivator.controlbus
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
-
             return DispatchBuilder
                 .With()
                 .CommandProcessor(commandProcessor)
-                .MessageMappers(new MessageMapperRegistry(new ControlBusMessageMapperFactory()))
+                .MessageMappers(messageMapperRegistry)
                 .ChannelFactory(_channelFactory)
                 .ConnectionsFromElements(connections)
                 .Build();
