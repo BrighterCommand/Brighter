@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
@@ -64,8 +65,19 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
 
         public static Type GetType(string typeName)
         {
-            var dataType = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(typeName)).FirstOrDefault(type => type != null);
-            return dataType;
+            try
+            {
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                var doesAssemblyHaveAMatchingType = assemblies.Select(a => a.GetType(typeName));
+                var matchingTypes = doesAssemblyHaveAMatchingType.Where(type => type != null).Select(type => type);
+                var match = matchingTypes.First();
+                return match;
+            }
+            catch (Exception e)
+            {
+                throw new ConfigurationException("Data Type for Connection cannot be found in the component", e);
+            }
+  
         }
     }
 }

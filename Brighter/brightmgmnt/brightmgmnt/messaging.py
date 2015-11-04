@@ -33,7 +33,7 @@ import uuid
 command_to_value_map = {"stop": 0, "start": 1}
 
 
-def build_message(command, channel):
+def build_message_body(command, channel):
 
     def _parse_command(cmd, chan):
         val = command_to_value_map.get(cmd)
@@ -41,6 +41,11 @@ def build_message(command, channel):
             val += 2
         return val
 
-    return dict([("Type", _parse_command(command, channel)), ("ConnectionName", channel), {"Id": uuid.uuid4()}])
+    return dict([("Type", _parse_command(command, channel)), ("ConnectionName", channel), ("Id", str(uuid.uuid4()))])
+
+
+def build_message_header():
+
+    return dict([("MessageType", 1)])
 
 

@@ -65,7 +65,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Adapters\ServiceHost\MeetingAndManagementService.cs" />
+    <Compile Include="Adapters\ServiceHost\ManagementAndMonitoringService.cs" />
     <Compile Include="Adapters\ServiceHost\Program.cs" />
     <Compile Include="Adapters\ServiceHost\TinyIoCHandlerFactory.cs" />
     <Compile Include="Adapters\ServiceHost\TinyIoCMessageMapperFactory.cs" />

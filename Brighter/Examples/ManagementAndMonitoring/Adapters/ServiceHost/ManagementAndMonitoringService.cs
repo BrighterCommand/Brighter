@@ -29,7 +29,6 @@ using ManagementAndMonitoring.Ports.CommandHandlers;
 using ManagementAndMonitoring.Ports.Commands;
 using ManagementAndMonitoring.Ports.Mappers;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
@@ -40,12 +39,12 @@ using Topshelf;
 
 namespace ManagementAndMonitoring.Adapters.ServiceHost
 {
-    internal class MeetingAndManagementService : ServiceControl
+    internal class ManagementAndMonitoringService : ServiceControl
     {
         private Dispatcher _dispatcher;
         private readonly Dispatcher _controlDispatcher;
 
-        public MeetingAndManagementService()
+        public ManagementAndMonitoringService()
         {
 
             log4net.Config.XmlConfigurator.Configure();
@@ -100,14 +99,14 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
                  )
                  .MessageMappers(messageMapperRegistry)
                  .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
-                 .ConnectionsFromConfiguration();
+                 .ConnectionsFromConfiguration();    
             _dispatcher = builder.Build();
 
             var controlBusBuilder = ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(_dispatcher)
                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory)) as ControlBusReceiverBuilder;
-            _controlDispatcher = builder.Build();
+            _controlDispatcher = controlBusBuilder.Build(Environment.MachineName + "." + "ManagementAndMonitoring");
 
             container.Register<IAmAControlBusSender>(new ControlBusSenderFactory().Create(
                 new MsSqlMessageStore(

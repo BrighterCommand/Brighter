@@ -23,11 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using log4net;
 using ManagementAndMonitoring.Ports.Commands;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.monitoring.Attributes;
-using ILog = paramore.brighter.commandprocessor.Logging.ILog;
 
 namespace ManagementAndMonitoring.Ports.CommandHandlers
 {
