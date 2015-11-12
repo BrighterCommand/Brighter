@@ -55,7 +55,7 @@ var builder = CommandProcessorBuilder.With()
             subscriberRegistry: registry,
             handlerFactory: new SimpleHandlerFactory(logger)
         ))
-    .NoPolicy()
+    .DefaultPolicy()
     .Logger(logger)
     .NoTaskQueues()
     .RequestContextFactory(new InMemoryRequestContextFactory());
@@ -196,7 +196,7 @@ class Program
                     subscriberRegistry: registry,
                     handlerFactory: new SimpleHandlerFactory(logger)
                 ))
-            .NoPolicy()
+            .DefaultPolicy()
             .Logger(logger)
             .NoTaskQueues()
             .RequestContextFactory(new InMemoryRequestContextFactory());
