@@ -50,8 +50,6 @@ class GreetingCommand : IRequest
         <pre><code>
 class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
 {
-    public GreetingCommandHandler(ILog logger) : base(logger) {}
-
     public override GreetingCommand Handle(GreetingCommand command)
     {
         Console.WriteLine("Hello {0}", command.Name);

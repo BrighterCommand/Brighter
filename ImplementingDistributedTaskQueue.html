@@ -131,6 +131,10 @@ public class MailTaskReminderHandler : RequestHandler&lt;TaskReminderCommand&gt;
 {
     private readonly IAmAMailGateway _mailGateway;
 
+    public MailTaskReminderHandler(IAmAMailGateway mailGateway, IAmACommandProcessor commandProcessor)
+        : this(mailGateway, commandProcessor, LogProvider.GetCurrentClassLogger())
+        {}
+
     public MailTaskReminderHandler(IAmAMailGateway mailGateway, ILog logger) : base(logger)
     {
         _mailGateway = mailGateway;

@@ -59,9 +59,6 @@
         <pre><code>
 public class MyFallbackProtectedHandler: RequestHandler&lt;MyCommand&gt;
 {
-    public MyFallbackProtectedHandler(ILog logger) : base(logger)
-    { }
-
     [FallbackPolicy(backstop: false, circuitBreaker: true, step: 1)]
     [UsePolicy(&quot;MyCircuitBreakerStrategy&quot;, step: 2)]
     [UsePolicy(&quot;MyRetryStrategy&quot;, step: 3)]

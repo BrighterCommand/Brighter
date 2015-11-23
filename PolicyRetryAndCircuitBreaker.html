@@ -40,9 +40,6 @@
         <pre><code>
 internal class MyQoSProtectedHandler : RequestHandler&lt;MyCommand&gt;
 {
-    public MyQoSProtectedHandler(ILog logger) : base(logger)
-    { }
-
     static MyQoSProtectedHandler()
     {
         ReceivedCommand = false;
@@ -92,9 +89,9 @@ public class EditTaskCommandHandler : RequestHandler&lt;EditTaskCommand&gt;
 {
     private readonly ITasksDAO _tasksDAO;
 
-    public EditTaskCommandHandler(ITasksDAO tasksDAO, ILog logger) : base(logger)
+    public EditTaskCommandHandler(ITasksDAO tasksDAO)
     {
-    _tasksDAO = tasksDAO;
+        _tasksDAO = tasksDAO;
     }
 
     [RequestLogging(step: 1, timing: HandlerTiming.Before)]

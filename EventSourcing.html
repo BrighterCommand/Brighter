@@ -63,8 +63,6 @@
  <pre><code>
  internal class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
  {
-    public GreetingCommandHandler(ILog logger) : base(logger) { }
-
     [UseCommandSourcing(step: 1, timing: HandlerTiming.Before)]
     public override GreetingCommand Handle(GreetingCommand command)
     {
@@ -79,12 +77,10 @@
 <pre><code>
 private static void Main(string[] args)
 {
-    var logger = LogProvider.For&lt;Program&gt;();
-
     var dbPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), &quot;App_Data\\CommandStore.sdf&quot;);
     var connectionString = &quot;DataSource=\&quot;&quot; + dbPath + &quot;\&quot;&quot;;
     var configuration = new MsSqlCommandStoreConfiguration(connectionString, &quot;Commands&quot;, MsSqlCommandStoreConfiguration.DatabaseType.SqlCe);
-    var commandStore = new MsSqlCommandStore(configuration, logger);
+    var commandStore = new MsSqlCommandStore(configuration);
 
     var registry = new SubscriberRegistry();
     registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
@@ -92,7 +88,6 @@ private static void Main(string[] args)
     var tinyIoCContainer = new TinyIoCContainer();
     tinyIoCContainer.Register&lt;IHandleRequests&lt;GreetingCommand&gt;, GreetingCommandHandler&gt;();
     tinyIoCContainer.Register&lt;IAmACommandStore&gt;(commandStore);
-    tinyIoCContainer.Register&lt;ILog&gt;(logger);
 
     var builder = CommandProcessorBuilder.With()
         .Handlers(new HandlerConfiguration(
@@ -100,7 +95,6 @@ private static void Main(string[] args)
             handlerFactory: new TinyIocHandlerFactory(tinyIoCContainer)
         ))
         .DefaultPolicy()
-        .Logger(logger)
         .NoTaskQueues()
         .RequestContextFactory(new InMemoryRequestContextFactory());
 

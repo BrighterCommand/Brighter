@@ -46,8 +46,6 @@
         <h3>Step Three</h3>
         <p>Add the following code to the Main class:</p>
          <pre><code>
-var logger = LogProvider.For&lt;Program&gt;();
-
 var registry = new SubscriberRegistry();
 
 var builder = CommandProcessorBuilder.With()
@@ -56,7 +54,6 @@ var builder = CommandProcessorBuilder.With()
             handlerFactory: new SimpleHandlerFactory(logger)
         ))
     .DefaultPolicy()
-    .Logger(logger)
     .NoTaskQueues()
     .RequestContextFactory(new InMemoryRequestContextFactory());
 
@@ -90,13 +87,6 @@ var commandProcessor = builder.Build();
         <pre><code>
 internal class SimpleHandlerFactory : IAmAHandlerFactory
 {
-    private readonly ILog logger;
-
-    public SimpleHandlerFactory(ILog logger)
-    {
-        this.logger = logger;
-    }
-
     public IHandleRequests Create(Type handlerType)
     {
         //TODO: Create an instance of the request type
@@ -108,7 +98,6 @@ internal class SimpleHandlerFactory : IAmAHandlerFactory
 }
         </code></pre>
         <p>When we create a command processor we need the registry of subscribers to message types, and the factory for creating those handlers, that we discussed above.</p>
-        <p> We also require a logger, which will give you diagnostic information about the processing of a message.</p>
         <p> Finally we want to give it a request context - a data structure passed to each handler in the chain, with global information including a property bag.
             Unless you have a need to override it, just use the default <strong>InMemoryRequestContextFactory</strong> to provide instances of a suitable context (overriding this is an advanced option
             - particularly useful for testing).</p>
@@ -141,8 +130,6 @@ internal class SimpleHandlerFactory : IAmAHandlerFactory
          <pre><code>
  class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
  {
-    public GreetingCommandHandler(ILog logger) : base(logger) {}
-
     public override GreetingCommand Handle(GreetingCommand command)
     {
         Console.WriteLine("Hello {0}", command.Name);
@@ -169,7 +156,7 @@ registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
         <pre><code>
 public IHandleRequests Create(Type handlerType)
 {
-    return new GreetingCommandHandler(logger);
+    return new GreetingCommandHandler();
 }
         </code></pre>
         <h3>Step Five</h3>
@@ -197,7 +184,6 @@ class Program
                     handlerFactory: new SimpleHandlerFactory(logger)
                 ))
             .DefaultPolicy()
-            .Logger(logger)
             .NoTaskQueues()
             .RequestContextFactory(new InMemoryRequestContextFactory());
 
@@ -208,16 +194,9 @@ class Program
 
     internal class SimpleHandlerFactory : IAmAHandlerFactory
     {
-        private readonly ILog logger;
-
-        public SimpleHandlerFactory(ILog logger)
-        {
-            this.logger = logger;
-        }
-
         public IHandleRequests Create(Type handlerType)
         {
-            return new GreetingCommandHandler(logger);
+            return new GreetingCommandHandler();
         }
 
         public void Release(IHandleRequests handler)
@@ -240,8 +219,6 @@ class GreetingCommand : IRequest
 
 class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
 {
-    public GreetingCommandHandler(ILog logger) : base(logger) {}
-
     public override GreetingCommand Handle(GreetingCommand command)
     {
         Console.WriteLine("Hello {0}", command.Name);

@@ -42,7 +42,6 @@
             <li>You need to provide a <strong>Subscriber Registry</strong> with all of the <strong>Command</strong>s or <strong>Event</strong>s you wish to handle, mapped to their <strong>Request Handlers</strong>.</li>
             <li>You need to provide a <strong>Handler Factory</strong> to create your Handlers</li>
             <li>You need to provide a <strong>Policy Registry</strong> if you intend to use <a href="https://github.com/michael-wolfenden/Polly">Polly</a> to support Retry and Circuit-Breaker.</li>
-            <li>You need to provide an logger to map to <a href="https://github.com/damianh/LibLog">LibLog</a>'s ILog</li>
             <li>You need to provide a <strong>Request Context Factory</strong></li>
         </ul>
         <h3>Subscriber Registry</h3>
@@ -118,8 +117,6 @@ public override TaskReminderCommand Handle(TaskReminderCommand command)
     return base.Handle(command);
 }
         </code></pre>
-        <h3>Logger</h3>
-        <p>We use <a href="https://github.com/damianh/LibLog">LibLog</a> so that we do not have to depend on a given logging library. You need to add a logger (as per the instructions for LibLog)</p>
         <h3>Request Context Factory</h3>
         <p>You need to provide a factory to give us instances of a <a href="UsingTheContextBag.html">Context</a>. If you have no implementation to use, just use the default
             <strong>InMemoryRequestContextFactory</strong></p>
@@ -131,7 +128,6 @@ var commandProcessor =
 CommandProcessorBuilder.With()
     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
     .Policies(policyRegistry)
-    .Logger(logger)
     .NoTaskQueues()
     .RequestContextFactory(new InMemoryRequestContextFactory())
     .Build();

@@ -83,10 +83,6 @@ namespace paramore.brighter.commandprocessor
     {
         private HandlerTiming _timing;
 
-        public RequestLoggingHandler(ILog logger)
-        : base(logger)
-        { }
-
         public override void InitializeFromAttributeParams(
             params object[] initializerList
         )
@@ -121,8 +117,6 @@ namespace paramore.brighter.commandprocessor
         <pre><code>
 class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
 {
-    public GreetingCommandHandler(ILog logger) : base(logger) {}
-
     [RequestLogging(step: 1, timing: HandlerTiming.Before)]
     public override GreetingCommand Handle(GreetingCommand command)
     {

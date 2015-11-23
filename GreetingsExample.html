@@ -150,11 +150,8 @@ namespace Greetings.Adapters.ServiceHost
         public GreetingService()
         {
             log4net.Config.XmlConfigurator.Configure();
-            //Create a logger
-            var logger = LogProvider.For&lt;GreetingService>();
 
             var container = new TinyIoCContainer();
-            container.Register&lt;ILog>(logger);
 
             var handlerFactory = new TinyIocHandlerFactory(container);
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
@@ -193,11 +190,9 @@ namespace Greetings.Adapters.ServiceHost
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
             var builder = DispatchBuilder
                 .With()
-                .Logger(logger)
                 .CommandProcessor(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                     .Policies(policyRegistry)
-                    .Logger(logger)
                     .NoTaskQueues()
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
@@ -382,8 +377,6 @@ namespace Greetings.Ports.CommandHandlers
 {
     internal class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
     {
-        public GreetingCommandHandler(ILog logger) : base(logger) { }
-
         public override GreetingCommand Handle(GreetingCommand command)
         {
             Console.WriteLine("Received Greeting. Message Follows");
