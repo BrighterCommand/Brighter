@@ -1,12 +1,13 @@
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
-// Created          : 07-01-2014
+// Created          : 12-02-2015
 //
 // Last Modified By : ian
-// Last Modified On : 07-10-2014
+// Last Modified On : 12-02-2015
 // ***********************************************************************
-//     Copyright (c) . All rights reserved.
+// <copyright file="IAmACallback.cs" company="Ian Cooper">
+//     Copyright \u00A9  2014 Ian Cooper
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
@@ -35,29 +36,26 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
+using System;
 
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Any pipeline has a request context that allows you to flow information between instances of <see cref="IHandleRequests"/>
-    /// The default in-memory <see cref="RequestContext"/> created by an <see cref="InMemoryRequestContextFactory"/> is suitable for most purposes
-    /// and this interface is mainly provided for testing
+    /// Intended for use with request-response messaging scenarios, where an asynchonous handler is expected to post a reply back over a
+    /// private queue to a caller
     /// </summary>
-    public interface IRequestContext
+    public interface IAmACallback
     {
         /// <summary>
-        /// Gets the bag.
+        /// Who do we reply to
         /// </summary>
-        /// <value>The bag.</value>
-        Dictionary<string, object> Bag { get; }
-        
-        /// <summary>
-        /// Gets the policies.
-        /// </summary>
-        /// <value>The policies.</value>
-        IAmAPolicyRegistry Policies { get; }
+        /// <value>The routing key.</value>
+        string RoutingKey { get; }
 
-        IAmACallback Callback { get; set; } 
+        /// <summary>
+        /// How does the sender match our response to their request
+        /// </summary>
+        /// <value>The correlation identifier.</value>
+        Guid CorrelationId { get; }
     }
 }

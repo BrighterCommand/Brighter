@@ -53,6 +53,7 @@ namespace paramore.brighter.commandprocessor
         public RequestContext()
         {
             Bag = new Dictionary<string, object>();
+            Callback = null;
         }
 
         /// <summary>
@@ -65,5 +66,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <value>The policies.</value>
         public IAmAPolicyRegistry Policies { get; set; }
+
+        public IAmACallback Callback { get; set; }
     }
 }

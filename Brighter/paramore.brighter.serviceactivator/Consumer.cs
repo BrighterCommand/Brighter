@@ -65,7 +65,7 @@ namespace paramore.brighter.serviceactivator
     /// Waited on by callers. Shut closes the message pump.
     /// 
     /// </summary>
-    public class Consumer : IDisposable, IEquatable<Consumer>
+    public class Consumer : IAmAConsumer, IEquatable<Consumer>
     {
         /// <summary>
         /// Gets or sets the name.

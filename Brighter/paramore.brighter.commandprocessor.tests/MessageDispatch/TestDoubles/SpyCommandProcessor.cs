@@ -30,15 +30,19 @@ using paramore.brighter.commandprocessor.actions;
 
 namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
 {
+    enum CommandType
+    {
+        Send,
+        Publish,
+        Post
+    }
+
     internal class SpyCommandProcessor : IAmACommandProcessor
     {
-        readonly Queue<IRequest> _requests = new Queue<IRequest>();
-
-        public bool SendHappened { get; private set; }
-        public bool PublishHappened { get; private set; }
-        public bool PostHappened { get; set; }
-        public bool RepostHappened { get; set; }
-
+        private readonly Queue<IRequest> _requests = new Queue<IRequest>();
+        private readonly IList<CommandType> _commands = new List<CommandType>();
+        public string Topic { get; private set; }
+        public IList<CommandType> Commands { get { return _commands; } }
 
         /// <summary>
         /// Sends the specified command.
@@ -48,7 +52,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         public virtual void Send<T>(T command) where T : class, IRequest
         {
             _requests.Enqueue(command);
-            SendHappened = true;
+            _commands.Add(CommandType.Send);
         }
 
         /// <summary>
@@ -59,7 +63,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         public virtual void Publish<T>(T @event) where T : class, IRequest
         {
             _requests.Enqueue(@event);
-            PublishHappened = true;
+            _commands.Add(CommandType.Publish);
         }
 
         /// <summary>
@@ -70,7 +74,14 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         public virtual void Post<T>(T request) where T : class, IRequest
         {
             _requests.Enqueue(request);
-            PostHappened = true;
+            _commands.Add(CommandType.Post);
+        }
+
+        public void Post<T>(string topic, Guid correlationId, T request) where T : class, IRequest
+        {
+            _requests.Enqueue(request);
+            _commands.Add(CommandType.Post);
+            Topic = topic;
         }
 
         public virtual T Observe<T>() where T : class, IRequest
@@ -102,12 +113,9 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
             base.Publish(@event);
             PublishCount++;
 
-            var exceptions = new List<Exception>();
-            exceptions.Add(new DeferMessageAction());
+            var exceptions = new List<Exception> {new DeferMessageAction()};
+
             throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
-
-
-            throw new DeferMessageAction();
         }
     }
 }

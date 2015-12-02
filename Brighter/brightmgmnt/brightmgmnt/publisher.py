@@ -51,23 +51,27 @@ class Publisher:
 
     def send(self, header, message, routing_key):
 
-        def _create_queue(routing_key, exchange):
+        # we want to expose our logger to the functions defined in inner scope, so put it in their outer scope
+
+        logger = self._logger
+
+        def _create_queue(key, exchange):
 
             # We don't publish over a queue, so this is optional, it just creates a consuming channel which consumers
             # can read from. The advantage of declaring it now is that we ensure messages won't be lost if no consumers
             # are currently running.
-
-            return Queue('paramore.brighter.controlbus', exchange=exchange, routing_key=routing_key)
+            print("Creating queue for key {key}".format(key=key))
+            return Queue(key, exchange=exchange, routing_key=key)
 
         def _publish(sender, key):
-            print("Send message {body} to broker {amqpuri} with routing key {routing_key}".format(body=message, amqpuri=self._amqp_uri, routing_key=key))
+            logger.debug("Send message {body} to broker {amqpuri} with routing key {routing_key}".format(body=message, amqpuri=self._amqp_uri, routing_key=key))
             queue = _create_queue(key, self._exchange)
             sender.publish(message, headers=header, exchange=self._exchange, serializer='json', routing_key=key, declare=[self._exchange, queue])
 
         def _error_callback(e, interval):
-            print('Publishing error: {e}. Will retry in {interval} seconds', e, interval)
+            logger.debug('Publishing error: {e}. Will retry in {interval} seconds', e, interval)
 
-        print("Connect to broker {amqpuri}".format(amqpuri=self._amqp_uri))
+        self._logger.debug("Connect to broker {amqpuri}".format(amqpuri=self._amqp_uri))
 
         with connections[self._cnx].acquire(block=True) as conn:
             with conn.Producer() as producer:

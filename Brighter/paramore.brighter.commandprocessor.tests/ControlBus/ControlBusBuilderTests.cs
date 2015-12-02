@@ -39,6 +39,7 @@ namespace paramore.commandprocessor.tests.ControlBus
         private static Dispatcher s_controlBus;
         private static ControlBusReceiverBuilder s_busReceiverBuilder;
         private static IDispatcher s_dispatcher;
+        private static string s_hostName = "tests";
 
         private Establish _context = () =>
         {
@@ -51,10 +52,10 @@ namespace paramore.commandprocessor.tests.ControlBus
                 .ChannelFactory(new InMemoryChannelFactory()) as ControlBusReceiverBuilder;
         };
 
-        private Because _of = () => s_controlBus = s_busReceiverBuilder.Build("tests");
+        private Because _of = () => s_controlBus = s_busReceiverBuilder.Build(s_hostName);
 
-        private It _should_have_a_configuration_channel = () => s_controlBus.Connections.Any(cn => cn.Name == ControlBusReceiverBuilder.CONFIGURATION).ShouldBeTrue();
-        private It _should_have_a_heartbeat_channel = () => s_controlBus.Connections.Any(cn => cn.Name == ControlBusReceiverBuilder.HEARTBEAT).ShouldBeTrue();
+        private It _should_have_a_configuration_channel = () => s_controlBus.Connections.Any(cn => cn.Name == s_hostName  + "." + ControlBusReceiverBuilder.CONFIGURATION).ShouldBeTrue();
+        private It _should_have_a_heartbeat_channel = () => s_controlBus.Connections.Any(cn => cn.Name == s_hostName + "." + ControlBusReceiverBuilder.HEARTBEAT).ShouldBeTrue();
         private It _should_have_a_command_processor = () => s_controlBus.CommandProcessor.ShouldNotBeNull();
     }
 

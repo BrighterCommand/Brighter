@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Packages\LibLog.4.2\LibLog.cs" />
+    <Compile Include="Callback.cs" />
     <Compile Include="ChannelName.cs" />
     <Compile Include="Clock.cs" />
     <Compile Include="CommandProcessorBuilder.cs" />
@@ -63,6 +64,7 @@
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="actions\DeferMessageAction.cs" />
     <Compile Include="HandlerConfiguration.cs" />
+    <Compile Include="IAmACallback.cs" />
     <Compile Include="IAmAChannel.cs" />
     <Compile Include="IAmAChannelFactory.cs" />
     <Compile Include="IAmACommandStore.cs" />

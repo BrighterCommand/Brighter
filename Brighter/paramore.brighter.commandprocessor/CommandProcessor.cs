@@ -334,6 +334,36 @@ namespace paramore.brighter.commandprocessor
                 });
         }
 
+        /// <summary>
+        /// Posts the specified request, using the specified topic in the Message Header.
+        /// Normally the Message Mapper sets this value, you only need to use this
+        /// override if you are trying to implement request-reply and the caller provides
+        /// a specific topic to reply on.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="topic">The override of the topic (used for routing)</param>
+        /// <param name="correlationId"></param>
+        /// <param name="request">The request.</param>
+        /// <exception cref="System.ArgumentOutOfRangeException"></exception>
+        public void Post<T>(string topic, Guid correlationId, T request) where T : class, IRequest
+        {
+            _logger.InfoFormat("Decoupled invocation of request: {0}", request.Id);
+
+            var messageMapper = _mapperRegistry.Get<T>();
+            if (messageMapper == null)
+                throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
+
+            var message = messageMapper.MapToMessage(request);
+            message.Header.Topic = topic;
+            message.Header.CorrelationId = correlationId;
+
+            RetryAndBreakCircuit(() =>
+            {
+                _messageStore.Add(message, _messageStoreTimeout);
+                _messageProducer.Send(message);
+            });
+        }
+
         private void RetryAndBreakCircuit(Action send)
         {
             CheckCircuit(() => Retry(send));
