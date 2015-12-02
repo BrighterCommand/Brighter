@@ -35,6 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace paramore.brighter.serviceactivator
@@ -47,6 +48,19 @@ namespace paramore.brighter.serviceactivator
     /// </summary>
     public interface IDispatcher
     {
+        /// <summary>
+        /// Gets the <see cref="Consumer"/>s
+        /// </summary>
+        /// <value>The consumers.</value>
+        IList<IAmAConsumer> Consumers { get; }
+
+        /// <summary>
+        /// Gets or sets the name for this dispatcher instance.
+        /// Used when communicating with this instance via the Control Bus
+        /// </summary>
+        /// <value>The name of the host.</value>
+        HostName HostName { get; set; }
+
         /// <summary>
         /// Ends this instance.
         /// </summary>

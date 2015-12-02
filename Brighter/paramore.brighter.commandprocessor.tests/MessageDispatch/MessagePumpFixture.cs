@@ -61,7 +61,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         private Because _of = () => s_messagePump.Run();
 
-        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.PublishHappened.ShouldBeTrue();
+        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.Commands[0].ShouldEqual(CommandType.Publish);
         private It _should_convert_the_message_into_an_event = () => (s_commandProcessor.Observe<MyEvent>()).ShouldEqual(s_event);
         private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
     }
@@ -151,7 +151,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         private Because _of = () => s_messagePump.Run();
 
-        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.PublishHappened.ShouldBeTrue();
+        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.Commands[0].ShouldEqual(CommandType.Publish);
         private It _should_requeue_the_messages = () => s_channel.Length.ShouldEqual(2);
         private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
     }
@@ -180,7 +180,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         private Because _of = () => s_messagePump.Run();
 
-        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.SendHappened.ShouldBeTrue();
+        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.Commands[0].ShouldEqual(CommandType.Send);
         private It _should_requeue_the_messages = () => s_channel.Length.ShouldEqual(2);
         private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
     }
@@ -211,7 +211,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         private Because _of = () => s_messagePump.Run();
 
-        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.SendHappened.ShouldBeTrue();
+        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.Commands[0].ShouldEqual(CommandType.Send);
     }
 
     public class When_a_channel_failure_exception_is_thrown_for_event_should_retry_until_connection_re_established
@@ -240,7 +240,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         private Because _of = () => s_messagePump.Run();
 
-        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.PublishHappened.ShouldBeTrue();
+        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.Commands[0].ShouldEqual(CommandType.Publish);
     }
     public class When_a_requeue_count_threshold_for_events_has_been_reached
     {
@@ -275,7 +275,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             Task.WaitAll(new[] { task });
         };
 
-        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.PublishHappened.ShouldBeTrue();
+        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.Commands[0].ShouldEqual(CommandType.Publish);
         private It _should_have_been_handled_6_times_via_publish = () => s_commandProcessor.PublishCount.ShouldEqual(6);
         private It _should_requeue_the_messages = () => s_channel.Length.ShouldEqual(0);
         private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
@@ -314,7 +314,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             Task.WaitAll(new[] { task });
         };
 
-        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.SendHappened.ShouldBeTrue();
+        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.Commands[0].ShouldEqual(CommandType.Send);
         private It _should_have_been_handled_6_times_via_send = () => s_commandProcessor.SendCount.ShouldEqual(6);
         private It _should_requeue_the_messages = () => s_channel.Length.ShouldEqual(0);
         private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();

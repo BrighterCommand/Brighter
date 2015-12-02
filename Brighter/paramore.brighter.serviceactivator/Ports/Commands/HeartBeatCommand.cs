@@ -6,7 +6,7 @@
 // Last Modified By : ian
 // Last Modified On : 02-26-2015
 // ***********************************************************************
-// <copyright file="HeartBeatCommand.cs" company="">
+// <copyright file="HeartbeatCommand.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -42,14 +42,14 @@ using paramore.brighter.commandprocessor;
 namespace paramore.brighter.serviceactivator.Ports.Commands
 {
     /// <summary>
-    /// Class HeartBeatCommand.
+    /// Class HeartbeatCommand.
     /// </summary>
-    public class HeartBeatCommand : Command
+    public class HeartbeatCommand : Command
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Command" /> class.
         /// </summary>
-        public HeartBeatCommand() : base(Guid.NewGuid())
+        public HeartbeatCommand() : base(Guid.NewGuid())
         {
         }
     }

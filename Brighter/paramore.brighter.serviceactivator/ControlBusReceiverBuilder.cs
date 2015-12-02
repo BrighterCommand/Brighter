@@ -50,7 +50,6 @@ namespace paramore.brighter.serviceactivator.controlbus
         /// </summary>
         public const string HEARTBEAT = "heartbeat";
 
-        private ILog _logger;
         private IAmAChannelFactory _channelFactory;
         private IDispatcher _dispatcher;
 
@@ -89,8 +88,8 @@ namespace paramore.brighter.serviceactivator.controlbus
 
             var configurationElement = new ConnectionElement
             {
-                ChannelName = CONFIGURATION,
-                ConnectionName = CONFIGURATION,
+                ChannelName = hostName  + "." + CONFIGURATION,
+                ConnectionName = hostName  + "." + CONFIGURATION,
                 IsDurable = true,
                 DataType = typeof(ConfigurationCommand).FullName,
                 RoutingKey = hostName + "." + CONFIGURATION,
@@ -99,10 +98,10 @@ namespace paramore.brighter.serviceactivator.controlbus
 
             var heartbeatElement = new ConnectionElement
             {
-                ChannelName = HEARTBEAT,
-                ConnectionName = HEARTBEAT,
+                ChannelName = hostName  + "." + HEARTBEAT,
+                ConnectionName = hostName  + "." + HEARTBEAT,
                 IsDurable = false,
-                DataType = typeof(HeartBeatCommand).FullName,
+                DataType = typeof(HeartbeatCommand).FullName,
                 RoutingKey = hostName + "." + HEARTBEAT,
             };
             connections.Add(heartbeatElement);
@@ -143,7 +142,7 @@ namespace paramore.brighter.serviceactivator.controlbus
             messageMapperRegistry.Register<ConfigurationCommand, ConfigurationCommandMessageMapper>();
 
             var commandProcessor = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher, _logger)))
+                .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher)))
                 .Policies(policyRegistry)
                 .NoTaskQueues()
                 .RequestContextFactory(new InMemoryRequestContextFactory())

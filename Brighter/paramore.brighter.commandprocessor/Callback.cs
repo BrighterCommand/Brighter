@@ -1,12 +1,19 @@
-"""
-File         :messaging.py
-Author           : ian
-Created          : 02-16-2015
+﻿// ***********************************************************************
+// Assembly         : paramore.brighter.commandprocessor
+// Author           : ian
+// Created          : 12-02-2015
+//
+// Last Modified By : ian
+// Last Modified On : 12-02-2015
+// ***********************************************************************
+// <copyright file="Callback.cs" company="Ian Cooper">
+//     Copyright \u00A9  2014 Ian Cooper
+// </copyright>
+// <summary></summary>
+// ***********************************************************************
 
-Last Modified By : ian
-Last Modified On : 02-16-2015
-***********************************************************************
-The MIT License (MIT)
+#region Licence
+/* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,27 +32,26 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-***********************************************************************
-"""
-import uuid
+THE SOFTWARE. */
 
-command_to_value_map = {"stop": 0, "start": 1}
+#endregion
 
+using System;
 
-def build_message_body(command, channel):
+namespace paramore.brighter.commandprocessor
+{
+    /// <summary>
+    /// Class Callback.
+    /// </summary>
+    class Callback : IAmACallback
+    {
+        public Callback(string routingKey, Guid correlationId)
+        {
+            RoutingKey = routingKey;
+            CorrelationId = correlationId;
+        }
 
-    def _parse_command(cmd, chan):
-        val = command_to_value_map.get(cmd)
-        if chan is not None:
-            val += 2
-        return val
-
-    return dict([("Type", _parse_command(command, channel)), ("ConnectionName", channel), ("Id", str(uuid.uuid4()))])
-
-
-def build_message_header():
-
-    return dict([("MessageType", "1")])
-
-
+        public string RoutingKey { get; private set; }
+        public Guid CorrelationId { get; private set; }
+    }
+}

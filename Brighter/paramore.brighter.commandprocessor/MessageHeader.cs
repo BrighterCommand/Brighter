@@ -90,7 +90,7 @@ namespace paramore.brighter.commandprocessor
         /// Gets the topic.
         /// </summary>
         /// <value>The topic.</value>
-        public string Topic { get; private set; }
+        public string Topic { get; set; }
         /// <summary>
         /// Gets the type of the message. Used for routing the message to a handler
         /// </summary>
@@ -109,6 +109,13 @@ namespace paramore.brighter.commandprocessor
         /// Gets the number of milliseconds the message was instructed to be delayed for
         /// </summary>
         public int DelayedMilliseconds { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the correlation identifier. Used when doing Request-Reply instead of publish-subscribe,
+        /// allows the originator to match responses to requests
+        /// </summary>
+        /// <value>The correlation identifier.</value>
+        public Guid CorrelationId { get; set; }
 
         public MessageHeader()
         {
@@ -129,6 +136,7 @@ namespace paramore.brighter.commandprocessor
             TimeStamp = RoundToSeconds(Clock.Now().Value);
             HandledCount = 0;
             DelayedMilliseconds = 0;
+            CorrelationId = Guid.Empty;
         }
 
         public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp)

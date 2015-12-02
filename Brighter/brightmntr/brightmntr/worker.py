@@ -56,7 +56,7 @@ class Worker(Thread):
         self.delay_between_refreshes = 5
         self.limit = -1  # configure the worker for times to run
         self.page_size = 5
-        self._monitoring_queue = Queue('paramore.brighter.controlbus', exchange=self._exchange, routing_key=self._routing_key)
+        self._monitoring_queue = Queue('paramore.brighter.controlbus.monitoring', exchange=self._exchange, routing_key=self._routing_key)
         self._running = Event()  # control access to te queue
         self._logger = logger or logging.getLogger(__name__)
 

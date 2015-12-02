@@ -187,6 +187,7 @@
     <Compile Include="ControlBus\ControlBusBuilderTests.cs" />
     <Compile Include="ControlBus\ControlBusSenderFactoryTests.cs" />
     <Compile Include="ControlBus\ControlBusMessageMapperTests.cs" />
+    <Compile Include="ControlBus\HeartbeatCommandTests.cs" />
     <Compile Include="EventSourcing\CommandStoreTests.cs" />
     <Compile Include="EventSourcing\TestDoubles\MyStoredCommandHandler.cs" />
     <Compile Include="ExceptionPolicy\FallbackSupportTests.cs" />
@@ -272,6 +273,9 @@
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ControlBus\TestDoubles\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\EventStore.Client.Embedded.3.0.2\build\EventStore.Client.Embedded.targets" Condition="Exists('..\packages\EventStore.Client.Embedded.3.0.2\build\EventStore.Client.Embedded.targets')" />

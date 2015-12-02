@@ -76,7 +76,14 @@ namespace paramore.brighter.serviceactivator
         /// Gets the <see cref="Consumer"/>s
         /// </summary>
         /// <value>The consumers.</value>
-        public IList<Consumer> Consumers { get; private set; }
+        public IList<IAmAConsumer> Consumers { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the name for this dispatcher instance.
+        /// Used when communicating with this instance via the Control Bus
+        /// </summary>
+        /// <value>The name of the host.</value>
+        public HostName HostName { get; set; }
 
         /// <summary>
         /// Gets the state of the <see cref="Dispatcher"/>
@@ -118,7 +125,7 @@ namespace paramore.brighter.serviceactivator
             _logger = logger;
             State = DispatcherState.DS_NOTREADY;
 
-            Consumers = new SynchronizedCollection<Consumer>();
+            Consumers = new SynchronizedCollection<IAmAConsumer>();
 
             State = DispatcherState.DS_AWAITING;
         }
