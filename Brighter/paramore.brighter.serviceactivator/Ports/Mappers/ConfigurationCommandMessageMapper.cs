@@ -11,7 +11,7 @@ namespace paramore.brighter.serviceactivator.Ports.Mappers
         {
             var topic = System.Environment.MachineName + Assembly.GetExecutingAssembly().GetName();
 
-            var header = new MessageHeader(messageId: request.Id, topic: topic, messageType: MessageType.MT_EVENT);
+            var header = new MessageHeader(messageId: request.Id, topic: topic, messageType: MessageType.MT_COMMAND);
             var body = new MessageBody(JsonConvert.SerializeObject(request));
             var message = new Message(header, body);
             return message;

@@ -55,7 +55,16 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         void Send<T>(T command) where T : class, IRequest;
-        
+
+        /// <summary>
+        /// The RequestContext flows down the pipeline. We may wish to initialize the context, in which the request runs.
+        /// When the pipeline is built, the contextInitializer function is run to populate the context.
+        /// You may call contextInitializer multiple times. We build a list of contextInitializer calls, and run all of the 
+        /// outstanding calls at the next Send, Publish or Post.
+        /// </summary>
+        /// <param name="contextInitializer">The context initializer.</param>
+        void SetCallContext(Action<RequestContext> contextInitializer);
+
         /// <summary>
         /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
         /// </summary>
@@ -72,14 +81,11 @@ namespace paramore.brighter.commandprocessor
 
         /// <summary>
         /// Posts the specified request, using the specified topic in the Message Header.
-        /// Normally the Message Mapper sets this value, you only need to use this 
-        /// override if you are trying to implement request-reply and the caller provides
-        /// a specific topic to reply on.
+        /// Intended for use with Request-Reply scenarios instead of Publish-Subscribe scenarios
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="topic"> The override of the topic (used for routing) </param>
-        /// <param name="correlationId"></param>
+        /// <param name="replyAddress">The address to reply to this message on. Topic should identify a private channel for responses, correlationId how you will match to sent message</param>
         /// <param name="request">The request.</param>
-        void Post<T>(string topic, Guid correlationId, T request) where T : class, IRequest;
+        void Post<T>(ReplyAddress replyAddress, T request) where T : class, IRequest;
     }
 }

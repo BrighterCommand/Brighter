@@ -169,7 +169,7 @@ namespace paramore.brighter.serviceactivator
                 try
                 {
                     var request = TranslateMessage(message);
-                    DispatchRequest(message.Header.MessageType, request);
+                    DispatchRequest(message.Header, request);
                 }
                 catch (ConfigurationException configurationException)
                 {
@@ -232,20 +232,25 @@ namespace paramore.brighter.serviceactivator
             return RequeueCount != -1;
         }
 
-        private void DispatchRequest(MessageType messageType, TRequest request)
+        private void DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
             if (Logger != null) Logger.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
-            if (messageType == MessageType.MT_COMMAND && request is IEvent)
+            if (messageHeader.MessageType == MessageType.MT_COMMAND && request is IEvent)
             {
                 throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type IEvent", request.Id, MessageType.MT_COMMAND));
             }
-            if (messageType == MessageType.MT_EVENT && request is ICommand)
+            if (messageHeader.MessageType == MessageType.MT_EVENT && request is ICommand)
             {
                 throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type ICommand", request.Id, MessageType.MT_EVENT));
             }
 
-            switch (messageType)
+            if (!string.IsNullOrEmpty(messageHeader.ReplyTo))
+            {
+                _commandProcessor.SetCallContext(cntx => cntx.Callback = new Callback(messageHeader.ReplyTo, messageHeader.CorrelationId));
+            }
+
+            switch (messageHeader.MessageType)
             {
                 case MessageType.MT_COMMAND:
                     {
