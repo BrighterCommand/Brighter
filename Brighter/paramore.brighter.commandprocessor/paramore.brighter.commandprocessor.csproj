@@ -104,6 +104,7 @@
     <Compile Include="policy\Handlers\ExceptionPolicyHandler.cs" />
     <Compile Include="policy\Handlers\FallbackPolicyHandler.cs" />
     <Compile Include="policy\Handlers\TimeoutPolicyHandler.cs" />
+    <Compile Include="ReplyAddress.cs" />
     <Compile Include="SubscriberRegistry.cs" />
     <Compile Include="IAmAHandlerFactory.cs" />
     <Compile Include="IAmASubscriberRegistry.cs" />

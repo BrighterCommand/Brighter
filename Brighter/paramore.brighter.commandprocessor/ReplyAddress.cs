@@ -6,7 +6,7 @@
 // Last Modified By : ian
 // Last Modified On : 12-02-2015
 // ***********************************************************************
-// <copyright file="Callback.cs" company="Ian Cooper">
+// <copyright file="ReplyAddress.cs" company="Ian Cooper">
 //     Copyright \u00A9  2014 Ian Cooper
 // </copyright>
 // <summary></summary>
@@ -14,7 +14,7 @@
 
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -41,17 +41,31 @@ using System;
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class Callback.
+    /// Class ReplyAddress.
     /// </summary>
-    public class Callback : IAmACallback
+    public class ReplyAddress
     {
-        public Callback(string routingKey, Guid correlationId)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ReplyAddress"/> class.
+        /// </summary>
+        /// <param name="topic">The topic.</param>
+        /// <param name="correlationId">The correlation identifier.</param>
+        public ReplyAddress(string topic, Guid correlationId)
         {
-            RoutingKey = routingKey;
+            Topic = topic;
             CorrelationId = correlationId;
         }
 
-        public string RoutingKey { get; private set; }
+        /// <summary>
+        /// Gets the topic.
+        /// </summary>
+        /// <value>The topic.</value>
+        public string Topic { get; private set; }
+
+        /// <summary>
+        /// Gets the correlation identifier.
+        /// </summary>
+        /// <value>The correlation identifier.</value>
         public Guid CorrelationId { get; private set; }
     }
 }

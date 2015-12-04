@@ -57,7 +57,6 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAPolicyRegistry _policyRegistry;
         private readonly ILog _logger;
         private readonly int _messageStoreTimeout;
-        private readonly int _messageGatewaySendTimeout;
         private IAmAMessageStore<Message> _messageStore;
         private IAmAMessageProducer _messageProducer;
         private bool _disposed;
@@ -132,9 +131,8 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
-            int messageStoreTimeout = 300,
-            int messageGatewaySendTimeout = 300
-            ) : this(requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.GetCurrentClassLogger(), messageStoreTimeout, messageGatewaySendTimeout) 
+            int messageStoreTimeout = 300
+            ) : this(requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.GetCurrentClassLogger(), messageStoreTimeout) 
         {}
 
         /// <summary>
@@ -156,15 +154,13 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
             ILog logger,
-            int messageStoreTimeout = 300,
-            int messageGatewaySendTimeout = 300
+            int messageStoreTimeout = 300
             )
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _logger = logger;
             _messageStoreTimeout = messageStoreTimeout;
-            _messageGatewaySendTimeout = messageGatewaySendTimeout;
             _mapperRegistry = mapperRegistry;
             _messageStore = messageStore;
             _messageProducer = messageProducer;
@@ -230,7 +226,6 @@ namespace paramore.brighter.commandprocessor
             _messageStore = messageStore;
             _messageProducer = messageProducer;
             _messageStoreTimeout = messageStoreTimeout;
-            _messageGatewaySendTimeout = messageGatewaySendTimeout;
         }
 
 
@@ -243,25 +238,41 @@ namespace paramore.brighter.commandprocessor
         /// </exception>
         public void Send<T>(T command) where T : class, IRequest
         {
+            var requestContext = _requestContextFactory.Create();
+            requestContext.Policies = _policyRegistry;
+
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _logger))
             {
-                var requestContext = _requestContextFactory.Create();
-                requestContext.Policies = _policyRegistry;
-
                 _logger.InfoFormat("Building send pipeline for command: {0}", command.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 var handlerCount = handlerChain.Count();
 
-                _logger.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id);
+                _logger.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof (T), command.Id);
                 if (handlerCount > 1)
-                    throw new ArgumentException(string.Format("More than one handler was found for the typeof command {0} - a command should only have one handler.", typeof(T)));
+                    throw new ArgumentException(
+                        string.Format(
+                            "More than one handler was found for the typeof command {0} - a command should only have one handler.",
+                            typeof (T)));
                 if (handlerCount == 0)
-                    throw new ArgumentException(string.Format("No command handler was found for the typeof command {0} - a command should have exactly one handler.", typeof(T)));
+                    throw new ArgumentException(
+                        string.Format(
+                            "No command handler was found for the typeof command {0} - a command should have exactly one handler.",
+                            typeof (T)));
 
                 handlerChain.First().Handle(command);
             }
         }
+
+        /// <summary>
+        /// The RequestContext flows down the pipeline. We may wish to initialize the context, in which the request runs.
+        /// When the pipeline is built, the contextInitializer function is run to populate the context.
+        /// You may call contextInitializer multiple times. We build a list of contextInitializer calls, and run all of the
+        /// outstanding calls at the next Send, Publish or Post.
+        /// </summary>
+        /// <param name="contextInitializer">The context initializer.</param>
+        public void SetCallContext(Action<RequestContext> contextInitializer)
+        { }
 
         /// <summary>
         /// Publishes the specified event. We expect zero or more handlers. The events are handled synchronously, in turn
@@ -336,26 +347,26 @@ namespace paramore.brighter.commandprocessor
 
         /// <summary>
         /// Posts the specified request, using the specified topic in the Message Header.
-        /// Normally the Message Mapper sets this value, you only need to use this
-        /// override if you are trying to implement request-reply and the caller provides
-        /// a specific topic to reply on.
+        /// Intended for use with Request-Reply scenarios instead of Publish-Subscribe scenarios
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="topic">The override of the topic (used for routing)</param>
-        /// <param name="correlationId"></param>
+        /// <param name="replyTo">Contains the topic used for routing the reply and the correlation id used by the sender to match response</param>
         /// <param name="request">The request.</param>
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
-        public void Post<T>(string topic, Guid correlationId, T request) where T : class, IRequest
+        public void Post<T>(ReplyAddress replyTo, T request) where T : class, IRequest
         {
             _logger.InfoFormat("Decoupled invocation of request: {0}", request.Id);
+
+            if (request is IEvent)
+                throw new ArgumentException("A Post that expects a Reply, should be a Command and not an Event", "request");
 
             var messageMapper = _mapperRegistry.Get<T>();
             if (messageMapper == null)
                 throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
 
             var message = messageMapper.MapToMessage(request);
-            message.Header.Topic = topic;
-            message.Header.CorrelationId = correlationId;
+            message.Header.Topic = replyTo.Topic;
+            message.Header.CorrelationId = replyTo.CorrelationId;
 
             RetryAndBreakCircuit(() =>
             {

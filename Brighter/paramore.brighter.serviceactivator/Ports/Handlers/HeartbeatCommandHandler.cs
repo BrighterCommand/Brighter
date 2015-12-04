@@ -28,7 +28,7 @@ namespace paramore.brighter.serviceactivator.Ports.Handlers
             var topic = Context.Callback.RoutingKey;
             var correlationId = Context.Callback.CorrelationId;
 
-            _commandProcessor.Post(topic, correlationId, heartbeat);
+            _commandProcessor.Post(new ReplyAddress(topic, correlationId), heartbeat);
 
             return base.Handle(command);
         }

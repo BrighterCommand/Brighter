@@ -111,11 +111,19 @@ namespace paramore.brighter.commandprocessor
         public int DelayedMilliseconds { get; private set; }
 
         /// <summary>
-        /// Gets or sets the correlation identifier. Used when doing Request-Reply instead of publish-subscribe,
+        /// Gets or sets the correlation identifier. Used when doing Request-Reply instead of Publish-Subscribe,
         /// allows the originator to match responses to requests
         /// </summary>
         /// <value>The correlation identifier.</value>
         public Guid CorrelationId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the reply to topic. Used when doing Request-Reply instead of Publish-Subscribe to identify
+        /// the queue that the sender is listening on. Usually a sender listens on a private queue, so that they
+        /// do not have to filter replies intended for other listeners.
+        /// </summary>
+        /// <value>The reply to.</value>
+        public string ReplyTo { get; set; }
 
         public MessageHeader()
         {

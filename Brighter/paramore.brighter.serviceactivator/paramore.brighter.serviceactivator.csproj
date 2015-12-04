@@ -68,6 +68,7 @@
     <Compile Include="Ports\Handlers\ConfigurationCommandHandler.cs" />
     <Compile Include="Ports\Handlers\HeartbeatCommandHandler.cs" />
     <Compile Include="Ports\Mappers\ConfigurationCommandMessageMapper.cs" />
+    <Compile Include="Ports\Mappers\HeartbeatCommandMessageMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServiceActivatorConfiguration\ConnectionElement.cs" />
     <Compile Include="ServiceActivatorConfiguration\ConnectionElements.cs" />
