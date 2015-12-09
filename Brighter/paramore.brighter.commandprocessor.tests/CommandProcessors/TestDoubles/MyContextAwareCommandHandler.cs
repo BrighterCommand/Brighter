@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {

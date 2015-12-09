@@ -41,12 +41,9 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
     {
         private readonly Queue<IRequest> _requests = new Queue<IRequest>();
         private readonly IList<CommandType> _commands = new List<CommandType>();
-        private readonly RequestContext _context = new RequestContext();
-        private readonly IList<Action<RequestContext>> _contextInitializers = new List<Action<RequestContext>>(); 
         public string Topic { get; private set; }
         public IList<CommandType> Commands { get { return _commands; } }
         public object CorrelationId { get; private set; }
-        public RequestContext Context { get { return _context; } }
 
         /// <summary>
         /// Sends the specified command.
@@ -55,14 +52,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         /// <param name="command">The command.</param>
         public virtual void Send<T>(T command) where T : class, IRequest
         {
-            _contextInitializers.Each(ci => ci(Context));
             _requests.Enqueue(command);
             _commands.Add(CommandType.Send);
-        }
-
-        public void SetCallContext(Action<RequestContext> contextInitializer)
-        {
-            _contextInitializers.Add(contextInitializer);
         }
 
         /// <summary>
@@ -72,7 +63,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         /// <param name="event">The event.</param>
         public virtual void Publish<T>(T @event) where T : class, IRequest
         {
-            _contextInitializers.Each(ci => ci(Context));
             _requests.Enqueue(@event);
             _commands.Add(CommandType.Publish);
         }
@@ -84,14 +74,12 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         /// <param name="request">The request.</param>
         public virtual void Post<T>(T request) where T : class, IRequest
         {
-            _contextInitializers.Each(ci => ci(Context));
             _requests.Enqueue(request);
             _commands.Add(CommandType.Post);
         }
 
         public void Post<T>(ReplyAddress replyAddress, T request) where T : class, IRequest
         {
-            _contextInitializers.Each(ci => ci(Context));
             _requests.Enqueue(request);
             _commands.Add(CommandType.Post);
             Topic = replyAddress.Topic;

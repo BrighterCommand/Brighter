@@ -265,16 +265,6 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
-        /// The RequestContext flows down the pipeline. We may wish to initialize the context, in which the request runs.
-        /// When the pipeline is built, the contextInitializer function is run to populate the context.
-        /// You may call contextInitializer multiple times. We build a list of contextInitializer calls, and run all of the
-        /// outstanding calls at the next Send, Publish or Post.
-        /// </summary>
-        /// <param name="contextInitializer">The context initializer.</param>
-        public void SetCallContext(Action<RequestContext> contextInitializer)
-        { }
-
-        /// <summary>
         /// Publishes the specified event. We expect zero or more handlers. The events are handled synchronously, in turn
         /// Because any pipeline might throw, yet we want to execute the remaining handler chains,  we catch exceptions on any publisher
         /// instead of stopping at the first failure and then we throw an AggregateException if any of the handlers failed, 
@@ -285,11 +275,11 @@ namespace paramore.brighter.commandprocessor
         /// <param name="event">The event.</param>
         public void Publish<T>(T @event) where T : class, IRequest
         {
+            var requestContext = _requestContextFactory.Create();
+            requestContext.Policies = _policyRegistry;
+
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _logger))
             {
-                var requestContext = _requestContextFactory.Create();
-                requestContext.Policies = _policyRegistry;
-
                 _logger.InfoFormat("Building send pipeline for event: {0}", @event.Id);
                 var handlerChain = builder.Build(requestContext);
 

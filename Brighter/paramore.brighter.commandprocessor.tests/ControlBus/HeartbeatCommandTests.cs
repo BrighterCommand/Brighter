@@ -43,7 +43,7 @@ namespace paramore.commandprocessor.tests.ControlBus
         private static readonly SpyCommandProcessor s_spyCommandProcessor = new SpyCommandProcessor();
         private static readonly Guid s_CorrelationId = Guid.NewGuid();
         private static HeartbeatCommandHandler s_handler;
-        private static HeartbeatCommand s_heartbeatCommand;
+        private static HeartbeatRequest s_heartbeatRequest;
         private static string s_hostName;
         private static IAmAConsumer s_firstConsumer;
         private static IAmAConsumer s_secondConsumer;
@@ -67,22 +67,23 @@ namespace paramore.commandprocessor.tests.ControlBus
             A.CallTo(() => dispatcher.HostName).Returns(hostName);
             s_hostName = hostName;
 
-            s_handler = new HeartbeatCommandHandler(logger, s_spyCommandProcessor, dispatcher)
-            {
-                Context = new RequestContext() {Callback = new Callback(TEST_ROUTING_KEY, s_CorrelationId)}
-            };
+            s_heartbeatRequest = new HeartbeatRequest(new ReplyAddress(TEST_ROUTING_KEY, s_CorrelationId));
+
+            s_handler = new HeartbeatCommandHandler(logger, s_spyCommandProcessor, dispatcher);
 
         };
 
-        private Because of = () => s_handler.Handle(s_heartbeatCommand);
+        private Because of = () => s_handler.Handle(s_heartbeatRequest);
 
         private It _should_post_back_a_heartbeat_response = () => s_spyCommandProcessor.Commands.ShouldContain(ct => ct == CommandType.Post);
 
         private It _should_have_diagnostic_information_in_the_response = () =>
         {
-            var heartbeatEvent = s_spyCommandProcessor.Observe<HeartbeatEvent>();
+            var heartbeatEvent = s_spyCommandProcessor.Observe<HeartbeatReply>();
             heartbeatEvent.ShouldMatch(
                 hb => hb.HostName == s_hostName
+                && hb.SendersAddress.Topic == TEST_ROUTING_KEY 
+                && hb.SendersAddress.CorrelationId == s_CorrelationId 
                 && hb.Consumers[0].ConnectionName == TEST_FIRST_CONNECTION_NAME 
                 && hb.Consumers[0].State == ConsumerState.Open
                 && hb.Consumers[1].ConnectionName == TEST_SECOND_CONNECTION_NAME

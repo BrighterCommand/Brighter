@@ -1,19 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.serviceactivator.Ports.Commands
 {
-    public class HeartbeatEvent : Event
+    public class HeartbeatReply : Reply
     {
-        public HeartbeatEvent(string hostName)
-            :this(Guid.NewGuid())
+        public HeartbeatReply(string hostName, ReplyAddress sendersAddress)
+            :base(sendersAddress)
         {
             HostName = hostName;
             Consumers = new List<RunningConsumer>();
         }
 
-        public HeartbeatEvent(Guid id) : base(id) {}
         public string HostName { get; private set; }
         public IList<RunningConsumer> Consumers { get; private set; }
     }

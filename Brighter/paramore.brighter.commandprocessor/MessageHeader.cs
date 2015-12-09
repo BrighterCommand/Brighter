@@ -135,7 +135,9 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageId">The message identifier.</param>
         /// <param name="topic">The topic.</param>
         /// <param name="messageType">Type of the message.</param>
-        public MessageHeader(Guid messageId, string topic, MessageType messageType)
+        /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
+        /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, string replyTo = null, Guid? correlationId = null)
         {
             Id = messageId;
             Topic = topic;
@@ -144,21 +146,23 @@ namespace paramore.brighter.commandprocessor
             TimeStamp = RoundToSeconds(Clock.Now().Value);
             HandledCount = 0;
             DelayedMilliseconds = 0;
-            CorrelationId = Guid.Empty;
+            CorrelationId = correlationId.HasValue ? correlationId.Value : Guid.Empty ;
+            ReplyTo = replyTo;
         }
 
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp)
-            : this(messageId, topic, messageType)
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, string replyTo = null, Guid? correlationId = null)
+            : this(messageId, topic, messageType, replyTo, correlationId)
         {
             TimeStamp = RoundToSeconds(timeStamp);
         }
 
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, int handledCount, int delayedMilliseconds)
-            : this(messageId, topic, messageType, timeStamp)
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, int handledCount, int delayedMilliseconds, string replyTo = null, Guid? correlationId = null)
+            : this(messageId, topic, messageType, timeStamp, replyTo, correlationId)
         {
             HandledCount = handledCount;
             DelayedMilliseconds = delayedMilliseconds;
         }
+
 
         //AMQP spec says:
         // 4.2.5.4 Timestamps

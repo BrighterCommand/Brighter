@@ -450,42 +450,4 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private It should_have_acknowledge_the_3_messages = () => s_channel.AcknowledgeCount.ShouldEqual(3);
         private It should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
     }
-
-    public class When_reading_a_message_from_a_channel_that_has_a_replyto_header
-    {
-        private static IAmAMessagePump s_messagePump;
-        private static FakeChannel s_channel;
-        private static SpyCommandProcessor s_commandProcessor;
-        private static HeartbeatCommand s_command;
-        private static readonly Guid s_correlationId = Guid.NewGuid();
-        private const string SENDER_TOPIC = "Test.Sender";
-
-        private Establish _context = () =>
-        {
-            s_commandProcessor = new SpyCommandProcessor();
-            s_channel = new FakeChannel();
-            var mapper = new HeartbeatCommandMessageMapper();
-            s_messagePump = new MessagePump<HeartbeatCommand>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000 };
-
-            var header = new MessageHeader(Guid.NewGuid(), "Heartbeat", MessageType.MT_COMMAND)
-            {
-                ReplyTo = SENDER_TOPIC,
-                CorrelationId = s_correlationId
-            };
-
-            s_command = new HeartbeatCommand();
-
-            var message = new Message(header, new MessageBody(JsonConvert.SerializeObject(s_command)));
-            s_channel.Send(message);
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            s_channel.Send(quitMessage);
-        };
-
-        private Because _of = () => s_messagePump.Run();
-
-        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.Commands[0].ShouldEqual(CommandType.Send);
-        private It _should_convert_the_message_into_a_command = () => s_commandProcessor.Observe<HeartbeatCommand>().ShouldNotBeNull();
-        private It _should_set_the_callback_context = () => s_commandProcessor.Context.ShouldMatch(ctx => ctx.Callback.RoutingKey == SENDER_TOPIC && ctx.Callback.CorrelationId == s_correlationId);
-        private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
-    }
 }
