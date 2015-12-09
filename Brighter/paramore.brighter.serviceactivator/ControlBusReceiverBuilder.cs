@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator.Ports;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Handlers;
@@ -101,7 +100,7 @@ namespace paramore.brighter.serviceactivator.controlbus
                 ChannelName = hostName  + "." + HEARTBEAT,
                 ConnectionName = hostName  + "." + HEARTBEAT,
                 IsDurable = false,
-                DataType = typeof(HeartbeatCommand).FullName,
+                DataType = typeof(HeartbeatRequest).FullName,
                 RoutingKey = hostName + "." + HEARTBEAT,
             };
             connections.Add(heartbeatElement);

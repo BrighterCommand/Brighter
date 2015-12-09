@@ -57,7 +57,5 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <value>The policies.</value>
         IAmAPolicyRegistry Policies { get; }
-
-        IAmACallback Callback { get; set; } 
     }
 }

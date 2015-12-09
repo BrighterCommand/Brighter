@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.serviceactivator.Ports.Commands;
@@ -9,7 +10,7 @@ namespace paramore.brighter.serviceactivator.Ports.Mappers
     {
         public Message MapToMessage(ConfigurationCommand request)
         {
-            var topic = System.Environment.MachineName + Assembly.GetExecutingAssembly().GetName();
+            var topic = Environment.MachineName + Assembly.GetExecutingAssembly().GetName();
 
             var header = new MessageHeader(messageId: request.Id, topic: topic, messageType: MessageType.MT_COMMAND);
             var body = new MessageBody(JsonConvert.SerializeObject(request));

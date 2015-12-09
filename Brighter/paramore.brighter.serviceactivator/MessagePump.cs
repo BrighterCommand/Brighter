@@ -39,9 +39,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.actions;
-using ConfigurationException = paramore.brighter.commandprocessor.ConfigurationException;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.serviceactivator
 {
@@ -243,11 +242,6 @@ namespace paramore.brighter.serviceactivator
             if (messageHeader.MessageType == MessageType.MT_EVENT && request is ICommand)
             {
                 throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type ICommand", request.Id, MessageType.MT_EVENT));
-            }
-
-            if (!string.IsNullOrEmpty(messageHeader.ReplyTo))
-            {
-                _commandProcessor.SetCallContext(cntx => cntx.Callback = new Callback(messageHeader.ReplyTo, messageHeader.CorrelationId));
             }
 
             switch (messageHeader.MessageType)
