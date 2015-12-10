@@ -1,6 +1,7 @@
 ﻿using System;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Mappers;
 
@@ -92,9 +93,8 @@ namespace paramore.commandprocessor.tests.ControlBus
                 messageId: Guid.NewGuid(),
                 topic: "Heartbeat",
                 messageType: MessageType.MT_COMMAND,
-                timeStamp:DateTime.UtcNow,
-                replyTo:TOPIC,
-                correlationId: s_correlationId);
+                timeStamp: DateTime.UtcNow,
+                correlationId: s_correlationId, replyTo: TOPIC);
 
             var body = String.Format("\"Id\": \"{0}\"", s_commandId);
             var messageBody = new MessageBody("{" + body + "}");
@@ -114,8 +114,64 @@ namespace paramore.commandprocessor.tests.ControlBus
         private static IAmAMessageMapper<HeartbeatReply> s_mapper;
         private static Message s_message;
         private static HeartbeatReply s_request;
+        private const string TOPIC = "test.topic";
+        private static readonly Guid s_correlationId = Guid.NewGuid();
+        private static RunningConsumer s_firstConsumer;
+        private static RunningConsumer s_secondConsumer;
+
+        private Establish _context = () =>
+        {
+            s_mapper = new HeartbeatReplyMessageMapper();
+            s_request = new HeartbeatReply("Test.Hostname", new ReplyAddress(TOPIC, s_correlationId));
+            s_firstConsumer = new RunningConsumer(new ConnectionName("Test.Connection"), ConsumerState.Open);
+            s_request.Consumers.Add(s_firstConsumer);
+            s_secondConsumer = new RunningConsumer(new ConnectionName("More.Consumers"),ConsumerState.Shut );
+            s_request.Consumers.Add(s_secondConsumer);
+        };
 
         private Because _of = () => s_message = s_mapper.MapToMessage(s_request);
+
+        private It _should_put_the_reply_to_as_the_topic = () => s_message.Header.Topic.ShouldEqual(TOPIC);
+        private It _should_put_the_correlation_id_in_the_header = () => s_message.Header.CorrelationId.ShouldEqual(s_correlationId);
+        private It _should_put_the_connections_into_the_body = () =>
+        {
+            s_message.Body.ShouldMatch(body => body.Value.Contains("\"ConnectionName\": \"Test.Connection\""));
+            s_message.Body.ShouldMatch(body => body.Value.Contains("\"State\": 1"));
+            s_message.Body.ShouldMatch(body => body.Value.Contains("\"ConnectionName\": \"More.Consumers\""));
+            s_message.Body.ShouldMatch(body => body.Value.Contains("\"State\": 0"));
+        };
+
+        private It _should_put_the_hostname_in_the_message_body = () => s_message.Body.ShouldMatch(body => body.Value.Contains("\"HostName\": \"Test.Hostname\""));
+    }
+
+    public class When_maping_from_a_message_to_a_heartbeat_reply
+    {
+        private static IAmAMessageMapper<HeartbeatReply> s_mapper;
+        private static Message s_message;
+        private static HeartbeatReply s_request;
+        private const string MESSAGE_BODY = "{\r\n  \"HostName\": \"Test.Hostname\",\r\n  \"Consumers\": [\r\n    {\r\n      \"ConnectionName\": \"Test.Connection\",\r\n      \"State\": 1\r\n    },\r\n    {\r\n      \"ConnectionName\": \"More.Consumers\",\r\n      \"State\": 0\r\n    }\r\n  ]\r\n}";
+        private const string TOPIC = "test.topic";
+        private static readonly Guid s_correlationId = Guid.NewGuid();
+
+        private Establish _context = () =>
+        {
+            s_mapper = new HeartbeatReplyMessageMapper();
+            var header = new MessageHeader(messageId: Guid.NewGuid(), topic: TOPIC, messageType: MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow, correlationId: s_correlationId);
+            var body = new MessageBody(MESSAGE_BODY);
+            s_message = new Message(header, body);
+        };
+
+        private Because _of = () => s_request = s_mapper.MapToRequest(s_message);
+
+        private It _should_set_the_sender_address_topic = () => s_request.SendersAddress.Topic.ShouldEqual(TOPIC);
+        private It _should_set_the_sender_correlation_id = () => s_request.SendersAddress.CorrelationId.ShouldEqual(s_correlationId);
+        private It _should_set_the_hostName = () => s_request.HostName.ShouldEqual("Test.Hostname");
+        private It _should_contain_the_consumers = () =>
+        {
+            s_request.Consumers.ShouldContain(rc => rc.ConnectionName == "Test.Connection" && rc.State == ConsumerState.Open);
+            s_request.Consumers.ShouldContain(rc => rc.ConnectionName == "More.Consumers" && rc.State == ConsumerState.Shut);
+        };
+
 
     }
 }

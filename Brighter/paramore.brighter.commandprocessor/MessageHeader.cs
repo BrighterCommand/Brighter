@@ -135,9 +135,9 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageId">The message identifier.</param>
         /// <param name="topic">The topic.</param>
         /// <param name="messageType">Type of the message.</param>
-        /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
         /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, string replyTo = null, Guid? correlationId = null)
+        /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, Guid? correlationId = null, string replyTo = null)
         {
             Id = messageId;
             Topic = topic;
@@ -150,14 +150,14 @@ namespace paramore.brighter.commandprocessor
             ReplyTo = replyTo;
         }
 
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, string replyTo = null, Guid? correlationId = null)
-            : this(messageId, topic, messageType, replyTo, correlationId)
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, Guid? correlationId = null, string replyTo = null)
+            : this(messageId, topic, messageType, correlationId, replyTo)
         {
             TimeStamp = RoundToSeconds(timeStamp);
         }
 
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, int handledCount, int delayedMilliseconds, string replyTo = null, Guid? correlationId = null)
-            : this(messageId, topic, messageType, timeStamp, replyTo, correlationId)
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, int handledCount, int delayedMilliseconds, Guid? correlationId = null, string replyTo = null)
+            : this(messageId, topic, messageType, timeStamp, correlationId, replyTo)
         {
             HandledCount = handledCount;
             DelayedMilliseconds = delayedMilliseconds;
