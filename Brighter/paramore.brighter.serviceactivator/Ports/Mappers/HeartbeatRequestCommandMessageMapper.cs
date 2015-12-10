@@ -9,10 +9,13 @@ namespace paramore.brighter.serviceactivator.Ports.Mappers
     {
         public Message MapToMessage(HeartbeatRequest request)
         {
-            var header = new MessageHeader(messageId: request.Id, topic: "Heartbeat",
-                messageType: MessageType.MT_COMMAND, replyTo: request.ReplyAddress.Topic,
-                correlationId: request.ReplyAddress.CorrelationId);
-            var json = JObject.FromObject(new JObject(new JProperty("Id", request.Id)));
+            var header = new MessageHeader(
+                messageId: request.Id, 
+                topic: "Heartbeat", 
+                messageType: MessageType.MT_COMMAND,
+                correlationId: request.ReplyAddress.CorrelationId, replyTo: request.ReplyAddress.Topic);
+
+            var json = new JObject(new JProperty("Id", request.Id));
             var body = new MessageBody(json.ToString());
             var message = new Message(header, body);
             return message;
