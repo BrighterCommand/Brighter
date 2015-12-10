@@ -105,7 +105,7 @@ namespace paramore.commandprocessor.tests.ControlBus
 
         private It _should_put_the_message_reply_topic_into_the_address = () => s_request.ReplyAddress.Topic.ShouldEqual(TOPIC);
         private It _should_put_the_message_correlation_id_into_the_address = () => s_request.ReplyAddress.CorrelationId.ShouldEqual(s_correlationId);
-        private It _should_set_the_id_of_the_request = () => s_request.Id.ShouldEqual(s_message.Id);
+        private It _should_set_the_id_of_the_request = () => s_request.Id.ShouldEqual(s_commandId);
 
     }
 
