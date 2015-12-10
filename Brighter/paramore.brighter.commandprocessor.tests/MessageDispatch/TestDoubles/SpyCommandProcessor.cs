@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Machine.Specifications.Utility;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.actions;
 
@@ -41,9 +40,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
     {
         private readonly Queue<IRequest> _requests = new Queue<IRequest>();
         private readonly IList<CommandType> _commands = new List<CommandType>();
-        public string Topic { get; private set; }
         public IList<CommandType> Commands { get { return _commands; } }
-        public object CorrelationId { get; private set; }
 
         /// <summary>
         /// Sends the specified command.
@@ -76,14 +73,6 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         {
             _requests.Enqueue(request);
             _commands.Add(CommandType.Post);
-        }
-
-        public void Post<T>(ReplyAddress replyAddress, T request) where T : class, IRequest
-        {
-            _requests.Enqueue(request);
-            _commands.Add(CommandType.Post);
-            Topic = replyAddress.Topic;
-            CorrelationId = replyAddress.CorrelationId;
         }
 
         public virtual T Observe<T>() where T : class, IRequest

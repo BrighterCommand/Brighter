@@ -89,7 +89,5 @@ namespace paramore.commandprocessor.tests.ControlBus
                 && hb.Consumers[1].ConnectionName == TEST_SECOND_CONNECTION_NAME
                 && hb.Consumers[1].State == ConsumerState.Shut);
         };
-
-        private It _should_post_back_to_a_reply_to_queue_from_the_originating_message = () => s_spyCommandProcessor.Topic.ShouldEqual(TEST_ROUTING_KEY);
     }
 }
