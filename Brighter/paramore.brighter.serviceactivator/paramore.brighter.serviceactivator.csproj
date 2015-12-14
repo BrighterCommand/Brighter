@@ -70,9 +70,9 @@
     <Compile Include="Ports\Commands\HeartbeatReply.cs" />
     <Compile Include="Ports\ControlBusHandlerFactory.cs" />
     <Compile Include="Ports\Handlers\ConfigurationCommandHandler.cs" />
-    <Compile Include="Ports\Handlers\HeartbeatCommandHandler.cs" />
+    <Compile Include="Ports\Handlers\HeartbeatRequestCommandHandler.cs" />
     <Compile Include="Ports\ConfigurationCommandMessageMapper.cs" />
-    <Compile Include="Ports\Mappers\HeartbeatReplyMessageMapper.cs" />
+    <Compile Include="Ports\Mappers\HeartbeatReplyCommandMessageMapper.cs" />
     <Compile Include="Ports\Mappers\HeartbeatRequestCommandMessageMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServiceActivatorConfiguration\ConnectionElement.cs" />

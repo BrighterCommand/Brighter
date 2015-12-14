@@ -136,9 +136,12 @@ namespace paramore.brighter.serviceactivator.controlbus
 
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
+            subscriberRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandHandler>();
             
             var messageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
             messageMapperRegistry.Register<ConfigurationCommand, ConfigurationCommandMessageMapper>();
+            messageMapperRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandMessageMapper>();
+            messageMapperRegistry.Register<HeartbeatReply, HeartbeatReplyCommandMessageMapper>();
 
             var commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher)))

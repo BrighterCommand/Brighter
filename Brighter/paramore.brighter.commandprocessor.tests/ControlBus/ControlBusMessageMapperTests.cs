@@ -121,7 +121,7 @@ namespace paramore.commandprocessor.tests.ControlBus
 
         private Establish _context = () =>
         {
-            s_mapper = new HeartbeatReplyMessageMapper();
+            s_mapper = new HeartbeatReplyCommandMessageMapper();
             s_request = new HeartbeatReply("Test.Hostname", new ReplyAddress(TOPIC, s_correlationId));
             s_firstConsumer = new RunningConsumer(new ConnectionName("Test.Connection"), ConsumerState.Open);
             s_request.Consumers.Add(s_firstConsumer);
@@ -155,7 +155,7 @@ namespace paramore.commandprocessor.tests.ControlBus
 
         private Establish _context = () =>
         {
-            s_mapper = new HeartbeatReplyMessageMapper();
+            s_mapper = new HeartbeatReplyCommandMessageMapper();
             var header = new MessageHeader(messageId: Guid.NewGuid(), topic: TOPIC, messageType: MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow, correlationId: s_correlationId);
             var body = new MessageBody(MESSAGE_BODY);
             s_message = new Message(header, body);
