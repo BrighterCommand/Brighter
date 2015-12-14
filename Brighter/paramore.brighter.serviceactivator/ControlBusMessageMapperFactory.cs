@@ -41,6 +41,14 @@ namespace paramore.brighter.serviceactivator.controlbus
             {
                 return new ConfigurationCommandMessageMapper();
             }
+            else if (messageMapperType == typeof (HeartbeatRequestCommandMessageMapper))
+            {
+                return new HeartbeatRequestCommandMessageMapper();
+            }
+            else if (messageMapperType == typeof (HeartbeatReplyCommandMessageMapper))
+            {
+                return new HeartbeatReplyCommandMessageMapper();
+            }
             throw new ConfigurationException(string.Format("Message Mapper for type {0} not registered with ControBusMessageMapperFactory", messageMapperType.FullName));
         }
     }

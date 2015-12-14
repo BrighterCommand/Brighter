@@ -42,7 +42,7 @@ namespace paramore.commandprocessor.tests.ControlBus
         private const string TEST_ROUTING_KEY = "test.routing.key";
         private static readonly SpyCommandProcessor s_spyCommandProcessor = new SpyCommandProcessor();
         private static readonly Guid s_CorrelationId = Guid.NewGuid();
-        private static HeartbeatCommandHandler s_handler;
+        private static HeartbeatRequestCommandHandler s_handler;
         private static HeartbeatRequest s_heartbeatRequest;
         private static string s_hostName;
         private static IAmAConsumer s_firstConsumer;
@@ -69,7 +69,7 @@ namespace paramore.commandprocessor.tests.ControlBus
 
             s_heartbeatRequest = new HeartbeatRequest(new ReplyAddress(TEST_ROUTING_KEY, s_CorrelationId));
 
-            s_handler = new HeartbeatCommandHandler(logger, s_spyCommandProcessor, dispatcher);
+            s_handler = new HeartbeatRequestCommandHandler(logger, s_spyCommandProcessor, dispatcher);
 
         };
 
