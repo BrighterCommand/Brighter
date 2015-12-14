@@ -20,6 +20,9 @@ Paramore contributors (sorted alphabeticaly)
   * Significant work on RabbitMQ Gateway and Service Activator reliability
   * Build and Packaging
   * Committer
+   
+** [Fred Hoogduin] (https://github.com/Red-F)**
+  * Various fixes
 
 **[Eddie Li](https://github.com/xiaodili)**
   * Various fixes  
