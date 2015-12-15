@@ -7,18 +7,20 @@ namespace paramore.brighter.serviceactivator.Ports
 {
     internal class ControlBusHandlerFactory : IAmAHandlerFactory
     {
+        private readonly Func<IAmACommandProcessor> _commandProcessorFactory;
         private readonly IDispatcher _worker;
         private readonly ILog _logger;
 
-        public ControlBusHandlerFactory(IDispatcher worker) 
-            : this(worker, LogProvider.GetCurrentClassLogger())
-        {}
+        public ControlBusHandlerFactory(IDispatcher worker, Func<IAmACommandProcessor> commandProcessorFactory) 
+            : this(worker, LogProvider.GetCurrentClassLogger(), commandProcessorFactory)
+        {
+        }
 
-
-        public ControlBusHandlerFactory(IDispatcher worker, ILog logger)
+        public ControlBusHandlerFactory(IDispatcher worker, ILog logger, Func<IAmACommandProcessor> commandProcessorFactory)
         {
             _worker = worker;
             _logger = logger;
+            _commandProcessorFactory = commandProcessorFactory;
         }
 
         /// <summary>
@@ -31,6 +33,10 @@ namespace paramore.brighter.serviceactivator.Ports
             if (handlerType == typeof(ConfigurationCommandHandler))
             {
                 return new  ConfigurationCommandHandler(_worker, _logger);               
+            }
+            else if (handlerType == typeof (HeartbeatRequestCommandHandler))
+            {
+                return new HeartbeatRequestCommandHandler(_commandProcessorFactory(), _worker);
             }
 
             throw new ArgumentOutOfRangeException("handlerType");
