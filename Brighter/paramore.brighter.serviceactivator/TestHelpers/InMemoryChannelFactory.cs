@@ -39,7 +39,7 @@ namespace paramore.brighter.serviceactivator.TestHelpers
             return _channel;
         }
 
-        public IAmAnOutputChannel CreateOutputChannel(string routingKey)
+        public IAmAnOutputChannel CreateOutputChannel()
         {
             return _channel;
         }

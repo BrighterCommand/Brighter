@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor
         /// Gets the messaging gateway.
         /// </summary>
         /// <value>The messaging gateway.</value>
-        public IAmAMessageProducer MessagingGateway { get; private set; }
+        public IAmAMessageProducer MessageProducer { get; private set; }
         /// <summary>
         /// Gets the message mapper registry.
         /// </summary>
@@ -66,20 +66,20 @@ namespace paramore.brighter.commandprocessor
         /// Initializes a new instance of the <see cref="MessagingConfiguration"/> class.
         /// </summary>
         /// <param name="messageStore">The message store.</param>
-        /// <param name="messagingGateway">The messaging gateway.</param>
+        /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="messageStoreWriteTimeout">How long to wait when writing to the message store</param>
         /// <param name="messagingGatewaySendTimeout">How long to wait when sending via the gateway</param>
         public MessagingConfiguration(
             IAmAMessageStore<Message> messageStore,
-            IAmAMessageProducer messagingGateway,
+            IAmAMessageProducer messageProducer,
             IAmAMessageMapperRegistry messageMapperRegistry,
             int messageStoreWriteTimeout = 300,
             int messagingGatewaySendTimeout = 300
             )
         {
             MessageStore = messageStore;
-            MessagingGateway = messagingGateway;
+            MessageProducer = messageProducer;
             MessageMapperRegistry = messageMapperRegistry;
             MessageStoreWriteTimeout = messageStoreWriteTimeout;
             MessagingGatewaySendTimeout = messagingGatewaySendTimeout;

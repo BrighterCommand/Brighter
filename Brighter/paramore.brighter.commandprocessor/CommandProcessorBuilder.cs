@@ -172,7 +172,7 @@ namespace paramore.brighter.commandprocessor
         {
             _useTaskQueues = true;
             _messageStore = configuration.MessageStore;
-            _messagingGateway = configuration.MessagingGateway;
+            _messagingGateway = configuration.MessageProducer;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _messageStoreWriteTimeout = configuration.MessageStoreWriteTimeout;
             _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;

@@ -38,7 +38,7 @@ namespace paramore.brighter.serviceactivator.controlbus
     /// <summary>
     /// Class ControlBusBuilder.
     /// </summary>
-    public class ControlBusReceiverBuilder : INeedADispatcher, INeedAChannelFactory, IAmADispatchBuilder
+    public class ControlBusReceiverBuilder : INeedADispatcher, INeedAMessageProducerFactory, INeedAChannelFactory, IAmADispatchBuilder
     {
         /// <summary>
         /// The configuration
@@ -51,6 +51,34 @@ namespace paramore.brighter.serviceactivator.controlbus
 
         private IAmAChannelFactory _channelFactory;
         private IDispatcher _dispatcher;
+        private IAmAMessageProducerFactory _producerFactory;
+
+        /// <summary>
+        /// We need a dispatcher to pull messages off the control bus and dispatch them out to control bus handlers.
+        /// This may use the same broker we use for application messages, but we might choose to use a different
+        /// broker so that we do not create additional load on the application message broker, or because we are concerned
+        /// that application load could hinder monitoring
+        /// </summary>
+        /// <param name="dispatcher">The dispatcher.</param>
+        /// <returns>paramore.brighter.serviceactivator.controlbus.INeedAChannelFactory .</returns>
+        public INeedAMessageProducerFactory Dispatcher(IDispatcher dispatcher)
+        {
+            _dispatcher = dispatcher;
+            return this;
+        }
+
+        /// <summary>
+        /// The Control Bus may use a Request-Reply pattern over a Publish-Subscribe pattern, frr example a Heartbear ot Trace
+        /// Message. To enable us to reply we need to have an <see cref="IAmAMessageProducer"/> instance that lets us respond to
+        /// the sender (over the control bus).
+        /// </summary>
+        /// <param name="producerFactory"></param>
+        /// <returns></returns>
+        public INeedAChannelFactory ProducerFactory(IAmAMessageProducerFactory producerFactory)
+        {
+            _producerFactory = producerFactory;
+            return this;
+        }
 
         /// <summary>
         /// The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP
@@ -65,10 +93,14 @@ namespace paramore.brighter.serviceactivator.controlbus
             return this;
         }
 
-        public INeedAChannelFactory Dispatcher(IDispatcher dispatcher)
+
+        /// <summary>
+        /// Begins the progressive interface.
+        /// </summary>
+        /// <returns>INeedALogger.</returns>
+        public static INeedADispatcher With()
         {
-            _dispatcher = dispatcher;
-            return this;
+            return new ControlBusReceiverBuilder();
         }
 
         /// <summary>
@@ -138,35 +170,48 @@ namespace paramore.brighter.serviceactivator.controlbus
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
             subscriberRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandHandler>();
             
-            var messageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
-            messageMapperRegistry.Register<ConfigurationCommand, ConfigurationCommandMessageMapper>();
-            messageMapperRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandMessageMapper>();
-            messageMapperRegistry.Register<HeartbeatReply, HeartbeatReplyCommandMessageMapper>();
+            var incomingMessageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
+            incomingMessageMapperRegistry.Register<ConfigurationCommand, ConfigurationCommandMessageMapper>();
+            incomingMessageMapperRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandMessageMapper>();
+
+            var outgoingMessageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
+            outgoingMessageMapperRegistry.Register<HeartbeatReply, HeartbeatReplyCommandMessageMapper>();
+
+
+            var messageStore = new SinkMessageStore();
 
             CommandProcessor commandProcessor = null;
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher, () => commandProcessor)))
-                .Policies(policyRegistry)
-                .NoTaskQueues()
+                .DefaultPolicy()
+                .TaskQueues(new MessagingConfiguration(messageStore, _producerFactory.Create(), outgoingMessageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
             return DispatchBuilder
                 .With()
                 .CommandProcessor(commandProcessor)
-                .MessageMappers(messageMapperRegistry)
+                .MessageMappers(incomingMessageMapperRegistry)
                 .ChannelFactory(_channelFactory)
                 .ConnectionsFromElements(connections)
                 .Build();
         }
 
+
         /// <summary>
-        /// Withes this instance.
+        /// We do not track outgoing control bus messages - so this acts as a sink for such messages
         /// </summary>
-        /// <returns>INeedALogger.</returns>
-        public static INeedADispatcher With()
+        private class SinkMessageStore : IAmAMessageStore<Message>
         {
-            return new ControlBusReceiverBuilder();
+            public void Add(Message message, int messageStoreTimeout = -1)
+            {
+                //discard message
+            }
+
+            public Message Get(Guid messageId, int messageStoreTimeout = -1)
+            {
+                 return null;
+            }
         }
     }
 
@@ -181,9 +226,13 @@ namespace paramore.brighter.serviceactivator.controlbus
         /// </summary>
         /// <param name="dispatcher">The dispatcher.</param>
         /// <returns>INeedAChannelFactory.</returns>
-        INeedAChannelFactory Dispatcher(IDispatcher dispatcher);
+        INeedAMessageProducerFactory Dispatcher(IDispatcher dispatcher);
     }
 
+    public interface INeedAMessageProducerFactory
+    {
+        INeedAChannelFactory ProducerFactory(IAmAMessageProducerFactory producerFactory);
+    }
 
     /// <summary>
     /// Interface INeedAChannelFactory

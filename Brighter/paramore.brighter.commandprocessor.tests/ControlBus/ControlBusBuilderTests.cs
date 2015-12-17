@@ -26,11 +26,13 @@ using System;
 using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
+using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.TestHelpers;
+using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.ControlBus
 {
@@ -45,10 +47,14 @@ namespace paramore.commandprocessor.tests.ControlBus
         {
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
+            var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
+
+            A.CallTo(() => messageProducerFactory.Create()).Returns(new FakeMessageProducer());
 
             s_busReceiverBuilder = ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(s_dispatcher)
+                .ProducerFactory(messageProducerFactory)
                 .ChannelFactory(new InMemoryChannelFactory()) as ControlBusReceiverBuilder;
         };
 
@@ -71,10 +77,12 @@ namespace paramore.commandprocessor.tests.ControlBus
         {
             var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
+            var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
 
             s_busReceiverBuilder = (ControlBusReceiverBuilder) ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(s_dispatcher)
+                .ProducerFactory(messageProducerFactory)
                 .ChannelFactory(new InMemoryChannelFactory());
 
             s_controlBus = s_busReceiverBuilder.Build("tests");

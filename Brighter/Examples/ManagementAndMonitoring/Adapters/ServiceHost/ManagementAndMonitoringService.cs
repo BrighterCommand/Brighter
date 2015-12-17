@@ -105,6 +105,7 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
             var controlBusBuilder = ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(_dispatcher)
+                .ProducerFactory(rmqMessageProducerFactory)
                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory)) as ControlBusReceiverBuilder;
             _controlDispatcher = controlBusBuilder.Build(Environment.MachineName + "." + "ManagementAndMonitoring");
 

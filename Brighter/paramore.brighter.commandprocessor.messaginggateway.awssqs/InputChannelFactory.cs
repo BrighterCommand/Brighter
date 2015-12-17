@@ -28,7 +28,7 @@
             return new InputChannel(channelName, _messageConsumerFactory.Create(channelName, routingKey, isDurable));
         }
 
-        public IAmAnOutputChannel CreateOutputChannel(string routingKey)
+        public IAmAnOutputChannel CreateOutputChannel()
         {
             return new OutputChannel(_messageProducerFactory.Create());
         }
