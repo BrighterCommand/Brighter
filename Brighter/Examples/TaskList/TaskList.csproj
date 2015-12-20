@@ -22,6 +22,7 @@
     <TargetFrameworkProfile />
     <NuGetPackageImportStamp>39eff615</NuGetPackageImportStamp>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <UseGlobalApplicationHostFile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -48,12 +49,12 @@
       <HintPath>..\..\packages\FakeItEasy.1.25.3\lib\net40\FakeItEasy.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="FluentAssertions, Version=3.5.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\FluentAssertions.3.5.0\lib\net45\FluentAssertions.dll</HintPath>
+    <Reference Include="FluentAssertions, Version=4.1.1.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\FluentAssertions.4.1.1\lib\net45\FluentAssertions.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="FluentAssertions.Core, Version=3.5.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\FluentAssertions.3.5.0\lib\net45\FluentAssertions.Core.dll</HintPath>
+    <Reference Include="FluentAssertions.Core, Version=4.1.1.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\FluentAssertions.4.1.1\lib\net45\FluentAssertions.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
@@ -68,9 +69,9 @@
       <HintPath>..\..\packages\Machine.Specifications.0.9.3\lib\net45\Machine.Specifications.Clr4.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Machine.Specifications.Should, Version=0.7.2.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Machine.Specifications.Should.0.7.2\lib\net45\Machine.Specifications.Should.dll</HintPath>
+    <Reference Include="Machine.Specifications.Should, Version=0.8.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Machine.Specifications.Should.0.8.0\lib\net45\Machine.Specifications.Should.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -83,8 +84,8 @@
     <Reference Include="OpenRasta.Hosting.AspNet">
       <HintPath>Libs\OpenRasta\OpenRasta.Hosting.AspNet.dll</HintPath>
     </Reference>
-    <Reference Include="Polly, Version=2.2.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Polly.2.2.3\lib\net45\Polly.dll</HintPath>
+    <Reference Include="Polly, Version=2.2.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Polly.2.2.4\lib\net45\Polly.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Simple.Data, Version=0.19.0.0, Culture=neutral, processorArchitecture=MSIL">
