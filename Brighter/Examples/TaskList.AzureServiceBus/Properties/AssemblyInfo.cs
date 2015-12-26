@@ -27,11 +27,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("paramore.brighter.commandprocessor.messaginggateway.azureservicebus")]
+[assembly: AssemblyTitle("TaskList.AzureServiceBus")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Yiannis Triantafyllopoulos")]
-[assembly: AssemblyProduct("paramore.brighter.commandprocessor.messaginggateway.azureservicebus")]
+[assembly: AssemblyProduct("TaskList.AzureServiceBus")]
 [assembly: AssemblyCopyright("Copyright © Yiannis Triantafyllopoulos 2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -42,7 +42,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("254ce3eb-8e8a-4d27-aedc-45325bf0814b")]
+[assembly: Guid("510310ee-28c4-4aea-aacb-63411b4a7338")]
 
 // Version information for an assembly consists of the following four values:
 //

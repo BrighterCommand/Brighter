@@ -215,6 +215,26 @@
             <param name="browserContext">An closure for providing browser context for the request.</param>
             <returns>An <see cref="T:Nancy.Testing.BrowserResponse"/> instance of the executed request.</returns>
         </member>
+        <member name="M:Nancy.Testing.Browser.HandleRequest(System.String,Nancy.Url,System.Action{Nancy.Testing.BrowserContext})">
+            <summary>
+            Performs a request of the HTTP <paramref name="method"/>, on the given <paramref name="url"/>, using the
+            provided <paramref name="browserContext"/> configuration.
+            </summary>
+            <param name="method">HTTP method to send the request as.</param>
+            <param name="url">The URl of the request.</param>
+            <param name="browserContext">An closure for providing browser context for the request.</param>
+            <returns>An <see cref="T:Nancy.Testing.BrowserResponse"/> instance of the executed request.</returns>
+        </member>
+        <member name="M:Nancy.Testing.Browser.HandleRequest(System.String,System.String,System.Action{Nancy.Testing.BrowserContext})">
+            <summary>
+            Performs a request of the HTTP <paramref name="method"/>, on the given <paramref name="path"/>, using the
+            provided <paramref name="browserContext"/> configuration.
+            </summary>
+            <param name="method">HTTP method to send the request as.</param>
+            <param name="path">The path that is being requested.</param>
+            <param name="browserContext">An closure for providing browser context for the request.</param>
+            <returns>An <see cref="T:Nancy.Testing.BrowserResponse"/> instance of the executed request.</returns>
+        </member>
         <member name="T:Nancy.Testing.BrowserContext">
             <summary>
             Defines the context that a <see cref="T:Nancy.Testing.Browser"/> instance should run under.
@@ -597,6 +617,12 @@
             Wrapper for the HTTP response body that is used by the <see cref="T:Nancy.Testing.BrowserResponse"/> class.
             </summary>
         </member>
+        <member name="M:Nancy.Testing.BrowserResponseBodyWrapper.#ctor(Nancy.Response)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Nancy.Testing.BrowserResponseBodyWrapper"/> class.
+            </summary>
+            <param name="response">The <see cref="T:Nancy.Response"/> to wrap.</param>
+        </member>
         <member name="M:Nancy.Testing.BrowserResponseBodyWrapper.GetEnumerator">
             <summary>
             Returns an enumerator that iterates through the collection.
@@ -608,6 +634,12 @@
             Returns an enumerator that iterates through a collection.
             </summary>
             <returns>An <see cref="T:System.Collections.Generic.IEnumerator`1"/> object that can be used to iterate through the collection.</returns>
+        </member>
+        <member name="P:Nancy.Testing.BrowserResponseBodyWrapper.ContentType">
+            <summary>
+            Gets the content type of the wrapped response.
+            </summary>
+            <returns>A string containing the content type.</returns>
         </member>
         <member name="P:Nancy.Testing.BrowserResponseBodyWrapper.Item(System.String)">
             <summary>
@@ -678,7 +710,7 @@
             </summary>
             <param name="response">The <see cref="T:Nancy.Testing.BrowserResponse"/> that the assert should be made on.</param>
             <param name="location">The location that should have been redirected to.</param>
-            <param name="stringComparer">The string comparer that should be used by the assertion. The default value is <see cref="F:System.StringComparison.InvariantCulture"/>.</param>
+            <param name="stringComparer">The string comparer that should be used by the assertion. The default value is <see cref="F:System.StringComparison.Ordinal"/>.</param>
         </member>
         <member name="T:Nancy.Testing.StaticConfigurationContext">
             <summary>
@@ -811,6 +843,24 @@
             Initializes a new instance of the <see cref="T:Nancy.Testing.ConfigurableBootstrapper"/> class.
             </summary>
             <param name="configuration">The configuration that should be used by the bootstrapper.</param>
+        </member>
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ApplicationStartup(Nancy.TinyIoc.TinyIoCContainer,Nancy.Bootstrapper.IPipelines)">
+            <summary>
+            Initialise the bootstrapper - can be used for adding pre/post hooks and
+            any other initialisation tasks that aren't specifically container setup
+            related
+            </summary>
+            <param name="container">Container instance for resolving types if required.</param>
+        </member>
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.RequestStartup(Nancy.TinyIoc.TinyIoCContainer,Nancy.Bootstrapper.IPipelines,Nancy.NancyContext)">
+            <summary>
+            Initialise the request - can be used for adding pre/post hooks and
+            any other per-request initialisation tasks that aren't specifically container setup
+            related
+            </summary>
+            <param name="container">Container</param>
+            <param name="pipelines">Current pipelines</param>
+            <param name="context">Current context</param>
         </member>
         <member name="M:Nancy.Testing.ConfigurableBootstrapper.GetAllModules(Nancy.NancyContext)">
             <summary>
@@ -961,6 +1011,11 @@
             Gets all startup tasks
             </summary>
         </member>
+        <member name="P:Nancy.Testing.ConfigurableBootstrapper.RequestStartupTasks">
+            <summary>
+            Gets all request startup tasks
+            </summary>
+        </member>
         <member name="P:Nancy.Testing.ConfigurableBootstrapper.RootPathProvider">
             <summary>
             Gets the root path provider
@@ -1055,20 +1110,6 @@
             <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
             <remarks>This method will register the instance for all the interfaces it implements and the type itself.</remarks>
         </member>
-        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.Dependency``1(System.Object)">
-            <summary>
-            Configures the bootstrapper to register the specified type as a dependency.
-            </summary>
-            <typeparam name="T">The type that the dependencies should be registered as.</typeparam>
-            <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
-        </member>
-        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.Dependencies(System.Object[])">
-            <summary>
-            Configures the bootstrapper to register the specified instances as a dependencies.
-            </summary>
-            <param name="dependencies">The instances of the dependencies that should be registered with the bootstrapper.</param>
-            <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
-        </member>
         <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.MappedDependencies``2(System.Collections.Generic.IEnumerable{System.Tuple{``0,``1}})">
             <summary>
             Configures the bootstrapper to register the specified types and instances as a dependencies.
@@ -1076,7 +1117,7 @@
             <param name="dependencies">An array of maps between the interfaces and instances that should be registered with the bootstrapper.</param>
             <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
         </member>
-        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.Dependencies``1(System.Object[])">
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.Dependencies``1(``0[])">
             <summary>
             Configures the bootstrapper to register the specified instances as a dependencies.
             </summary>
@@ -1260,7 +1301,7 @@
             <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
         </member>
         <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.RootPathProvider(Nancy.IRootPathProvider)">
-            <summary> 
+            <summary>
             Configures the bootstrapper to use the provided instance of <see cref="T:Nancy.IRootPathProvider"/>.
             </summary>
             <param name="rootPathProvider">The <see cref="T:Nancy.IRootPathProvider"/> instance that should be used by the bootstrapper.</param>
@@ -1691,6 +1732,70 @@
             Configures the bootstrapper to create an <see cref="T:Nancy.Responses.Negotiation.IResponseNegotiator"/> instance of the specified type.
             </summary>
             <typeparam name="T">The type of the <see cref="T:Nancy.Responses.Negotiation.IResponseNegotiator"/> that the bootstrapper should use.</typeparam>
+            <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
+        </member>
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.ApplicationStartupTask``1">
+            <summary>
+            Configures the bootstrapper to use the provided instance of <see cref="T:Nancy.Bootstrapper.IApplicationStartup"/>.
+            </summary>
+            <typeparam name="T">The type of the <see cref="T:Nancy.Bootstrapper.IApplicationStartup"/> that the bootstrapper should use.</typeparam>
+            <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
+        </member>
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.ApplicationStartupTasks(System.Type[])">
+            <summary>
+            Configures the bootstrapper to use the provided <see cref="T:Nancy.Bootstrapper.IApplicationStartup"/> types.
+            </summary>
+            <param name="applicationStartupTypes">The <see cref="T:Nancy.Bootstrapper.IApplicationStartup"/> types that should be used by the bootstrapper.</param>
+            <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
+        </member>
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.RequestStartupTask``1">
+            <summary>
+            Configures the bootstrapper to use the provided instance of <see cref="T:Nancy.Bootstrapper.IRequestStartup"/>.
+            </summary>
+            <typeparam name="T">The type of the <see cref="T:Nancy.Bootstrapper.IApplicationStartup"/> that the bootstrapper should use.</typeparam>
+            <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
+        </member>
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.RequestStartupTasks(System.Type[])">
+            <summary>
+            Configures the bootstrapper to use the provided <see cref="T:Nancy.Bootstrapper.IRequestStartup"/> types.
+            </summary>
+            <param name="requestStartupTypes">The <see cref="T:Nancy.Bootstrapper.IRequestStartup"/> types that should be used by the bootstrapper.</param>
+            <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
+        </member>
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.DisableAutoApplicationStartupRegistration">
+            <summary>
+            Disables automatic registration of user-defined <see cref="T:Nancy.Bootstrapper.IApplicationStartup"/> instances. It
+            will not prevent auto-registration of implementations bundled with Nancy.
+            </summary>
+            <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
+        </member>
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.DisableAutoRequestStartupRegistration">
+            <summary>
+            Disables automatic registration of user-defined <see cref="T:Nancy.Bootstrapper.IRequestStartup"/> instances. It
+            will not prevent auto-registration of implementations bundled with Nancy.
+            </summary>
+            <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
+        </member>
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.ApplicationStartup(System.Action{Nancy.TinyIoc.TinyIoCContainer,Nancy.Bootstrapper.IPipelines})">
+            <summary>
+            Adds a hook to the application startup pipeline. This can be called multiple times to add
+            more hooks.
+            </summary>
+            <param name="action">The pipeline hook.</param>
+            <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
+        </member>
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.RequestStartup(System.Action{Nancy.TinyIoc.TinyIoCContainer,Nancy.Bootstrapper.IPipelines,Nancy.NancyContext})">
+            <summary>
+            Adds a hook to the request startup pipeline. This can be called multiple times to add
+            more hooks.
+            </summary>
+            <param name="action">The pipeline hook.</param>
+            <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
+        </member>
+        <member name="M:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator.DisableAutoRegistrations">
+            <summary>
+            Disables registrations performed by <see cref="T:Nancy.Bootstrapper.IRegistrations"/> instances.
+            </summary>
             <returns>A reference to the current <see cref="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator"/>.</returns>
         </member>
         <member name="T:Nancy.Testing.ConfigurableBootstrapper.ConfigurableModuleCatalog">
