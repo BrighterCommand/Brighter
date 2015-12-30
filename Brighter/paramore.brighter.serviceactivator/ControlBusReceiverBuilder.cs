@@ -177,14 +177,20 @@ namespace paramore.brighter.serviceactivator.controlbus
             var outgoingMessageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
             outgoingMessageMapperRegistry.Register<HeartbeatReply, HeartbeatReplyCommandMessageMapper>();
 
+            //TODO: It doesn't feel quite right that we have to pass this in for both dispatcher channel factory and task queue configuration
+            //as we should be over same broker. But, so far, refactoring either ends up exposing properties of the channel factory, which we don't want
+            //or stalling on the need for channel factory to be broker defined. It is possible the fix is to drop channel factory in favour of passing
+            //in producer and sender. But that's a breaking change to the builder, so contemplating for now. 
+
+            var producer = _producerFactory.Create();
 
             var messageStore = new SinkMessageStore();
 
             CommandProcessor commandProcessor = null;
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher, () => commandProcessor)))
-                .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(messageStore, _producerFactory.Create(), outgoingMessageMapperRegistry))
+                .Policies(policyRegistry: policyRegistry)
+                .TaskQueues(new MessagingConfiguration(messageStore, producer, outgoingMessageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
