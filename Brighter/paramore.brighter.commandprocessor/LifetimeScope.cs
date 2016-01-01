@@ -36,6 +36,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.Logging;
@@ -47,27 +48,49 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAHandlerFactory _handlerFactory;
         private readonly ILog _logger;
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
+        private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
+        private readonly IAmAnAsyncHandlerFactory _asyncHandlerFactory;
 
         public LifetimeScope(IAmAHandlerFactory handlerFactory) 
-            :this(handlerFactory, LogProvider.GetCurrentClassLogger())
+            :this(handlerFactory, null, LogProvider.GetCurrentClassLogger())
         {}
 
-        public LifetimeScope(IAmAHandlerFactory handlerFactory, ILog logger)
+        public LifetimeScope(IAmAnAsyncHandlerFactory asyncHandlerFactory) 
+            :this(null, asyncHandlerFactory, LogProvider.GetCurrentClassLogger())
+        {}
+
+        public LifetimeScope(IAmAHandlerFactory handlerFactory, IAmAnAsyncHandlerFactory asyncHandlerFactory) 
+            :this(handlerFactory, asyncHandlerFactory, LogProvider.GetCurrentClassLogger())
+        {}
+
+        public LifetimeScope(IAmAHandlerFactory handlerFactory, IAmAnAsyncHandlerFactory asyncHandlerFactory, ILog logger)
         {
             _handlerFactory = handlerFactory;
+            _asyncHandlerFactory = asyncHandlerFactory;
             _logger = logger;
         }
 
         public int TrackedItemCount
         {
-            get { return _trackedObjects.Count; }
+            get { return _trackedObjects.Count + _trackedAsyncObjects.Count; }
         }
 
         public void Add(IHandleRequests instance)
         {
+            if (_handlerFactory == null)
+                throw new ArgumentException("An instance of an handler can not be added without a HandlerFactory.");
             _trackedObjects.Add(instance);
             if (_logger != null)
                 _logger.DebugFormat("Tracking instance {0} of type {1}", instance.GetHashCode(), instance.GetType());
+        }
+
+        public void Add(IHandleRequestsAsync instance)
+        {
+            if (_asyncHandlerFactory == null)
+                throw new ArgumentException("An instance of an async handler can not be added without an AsyncHandlerFactory.");
+            _trackedAsyncObjects.Add(instance);
+            if (_logger != null)
+                _logger.DebugFormat("Tracking async handler instance {0} of type {1}", instance.GetHashCode(), instance.GetType());
         }
 
         public void Dispose()
@@ -80,8 +103,17 @@ namespace paramore.brighter.commandprocessor
                     _logger.DebugFormat("Releasing handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
+            _trackedAsyncObjects.Each(trackedItem =>
+            {
+                //free disposable items
+                _asyncHandlerFactory.Release(trackedItem);
+                if (_logger != null)
+                    _logger.DebugFormat("Releasing async handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType());
+            });
+
             //clear our tracking
             _trackedObjects.Clear();
+            _trackedAsyncObjects.Clear();
         }
     }
 }

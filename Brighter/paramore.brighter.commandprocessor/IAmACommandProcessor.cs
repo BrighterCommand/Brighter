@@ -35,7 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -55,6 +55,14 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         void Send<T>(T command) where T : class, IRequest;
+
+        /// <summary>
+        /// Awaitably sends the specified command.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="command">The command.</param>
+        /// <returns>awaitable <see cref="Task"/>.</returns>
+        Task SendAsync<T>(T command) where T : class, IRequest;
 
         /// <summary>
         /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining

@@ -49,6 +49,7 @@ namespace paramore.brighter.commandprocessor
         private readonly ILog _logger;
         private readonly Interpreter<TRequest> _interpreter;
         private readonly IAmALifetime _instanceScope;
+        private readonly IAmAnAsyncHandlerFactory _asyncHandlerFactory;
 
         internal PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory) 
             :this(registry, handlerFactory, LogProvider.GetCurrentClassLogger())
@@ -61,6 +62,18 @@ namespace paramore.brighter.commandprocessor
             _logger = logger;
             _instanceScope = new LifetimeScope(handlerFactory);
             _interpreter = new Interpreter<TRequest>(registry, handlerFactory);
+        }
+
+        internal PipelineBuilder(IAmASubscriberRegistry registry, IAmAnAsyncHandlerFactory asyncHandlerFactory)
+            : this(registry, asyncHandlerFactory, LogProvider.GetCurrentClassLogger())
+        { }
+
+        public PipelineBuilder(IAmASubscriberRegistry registry, IAmAnAsyncHandlerFactory asyncHandlerFactory, ILog logger)
+        {
+            _asyncHandlerFactory = asyncHandlerFactory;
+            _logger = logger;
+            _instanceScope = new LifetimeScope(asyncHandlerFactory);
+            _interpreter = new Interpreter<TRequest>(registry, asyncHandlerFactory);
         }
 
         public Pipelines<TRequest> Build(IRequestContext requestContext)
@@ -125,7 +138,71 @@ namespace paramore.brighter.commandprocessor
             return lastInPipeline;
         }
 
+        public AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext)
+        {
+            var handlers = _interpreter.GetAsyncHandlers(typeof(TRequest));
+
+            var pipelines = new AsyncPipelines<TRequest>();
+            handlers.Each(handler => pipelines.Add(BuildAsyncPipeline(handler, requestContext)));
+
+            pipelines.Each(handler => handler.AddToLifetime(_instanceScope));
+
+            return pipelines;
+        }
+
+        private IHandleRequestsAsync<TRequest> BuildAsyncPipeline(AsyncRequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
+        {
+            implicitHandler.Context = requestContext;
+
+            var preAttributes =
+                implicitHandler.FindHandlerMethod()
+                .GetOtherAsyncHandlersInPipeline()
+                .Where(attribute => attribute.Timing == HandlerTiming.Before)
+                .OrderByDescending(attribute => attribute.Step);
+
+            var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext);
+
+            var postAttributes =
+                implicitHandler.FindHandlerMethod()
+                .GetOtherAsyncHandlersInPipeline()
+                .Where(attribute => attribute.Timing == HandlerTiming.After)
+                .OrderByDescending(attribute => attribute.Step);
+
+            AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext);
+            _logger.DebugFormat("New handler pipeline created: {0}", TracePipeline(firstInPipeline));
+            return firstInPipeline;
+        }
+
+        private void AppendToAsyncPipeline(IEnumerable<AsyncRequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> implicitHandler, IRequestContext requestContext)
+        {
+            IHandleRequestsAsync<TRequest> lastInPipeline = implicitHandler;
+            attributes.Each(attribute =>
+            {
+                var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext).CreateAsyncRequestHandler();
+                lastInPipeline.SetSuccessor(decorator);
+                lastInPipeline = decorator;
+            });
+        }
+
+        private IHandleRequestsAsync<TRequest> PushOntoAsyncPipeline(IEnumerable<AsyncRequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> lastInPipeline, IRequestContext requestContext)
+        {
+            attributes.Each(attribute =>
+            {
+                var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext).CreateAsyncRequestHandler();
+                decorator.SetSuccessor(lastInPipeline);
+                lastInPipeline = decorator;
+            });
+            return lastInPipeline;
+        }
+
         private PipelineTracer TracePipeline(IHandleRequests<TRequest> firstInPipeline)
+        {
+            var pipelineTracer = new PipelineTracer();
+            firstInPipeline.DescribePath(pipelineTracer);
+            return pipelineTracer;
+        }
+
+        private PipelineTracer TracePipeline(IHandleRequestsAsync<TRequest> firstInPipeline)
         {
             var pipelineTracer = new PipelineTracer();
             firstInPipeline.DescribePath(pipelineTracer);

@@ -52,6 +52,7 @@ namespace paramore.brighter.commandprocessor
     {
         private readonly IAmASubscriberRegistry _registry;
         private readonly IAmAHandlerFactory _handlerFactory;
+        private readonly IAmAnAsyncHandlerFactory _asyncHandlerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Interpreter{TRequest}"/> class.
@@ -59,9 +60,32 @@ namespace paramore.brighter.commandprocessor
         /// <param name="registry">The registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
         internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory)
+            : this(registry, handlerFactory, null)
         {
             _registry = registry;
             _handlerFactory = handlerFactory;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Interpreter{TRequest}"/> class.
+        /// </summary>
+        /// <param name="registry">The registry.</param>
+        /// <param name="asyncHandlerFactory">The async handler factory.</param>
+        internal Interpreter(IAmASubscriberRegistry registry, IAmAnAsyncHandlerFactory asyncHandlerFactory)
+            : this(registry, null, asyncHandlerFactory)
+        { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Interpreter{TRequest}"/> class.
+        /// </summary>
+        /// <param name="registry">The registry.</param>
+        /// <param name="handlerFactory">The handler factory.</param>
+        /// <param name="asyncHandlerFactory">The async handler factory.</param>
+        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory, IAmAnAsyncHandlerFactory asyncHandlerFactory)
+        {
+            _registry = registry;
+            _handlerFactory = handlerFactory;
+            _asyncHandlerFactory = asyncHandlerFactory;
         }
 
         /// <summary>
@@ -71,7 +95,24 @@ namespace paramore.brighter.commandprocessor
         /// <returns>IEnumerable&lt;RequestHandler&lt;TRequest&gt;&gt;.</returns>
         internal IEnumerable<RequestHandler<TRequest>> GetHandlers(Type requestType)
         {
-            return new RequestHandlers<TRequest>(_registry.Get<TRequest>().Select(handlerType => _handlerFactory.Create(handlerType)).Cast<IHandleRequests<TRequest>>());
+            return new RequestHandlers<TRequest>(
+                _registry.Get<TRequest>()
+                    .Select(handlerType => _handlerFactory.Create(handlerType))
+                    .Cast<IHandleRequests<TRequest>>());
         }
+
+        /// <summary>
+        /// Gets the async handlers.
+        /// </summary>
+        /// <param name="requestType">Type of the request.</param>
+        /// <returns><see cref="IEnumerable{AsyncRequestHandler}"/>.</returns>
+        internal IEnumerable<AsyncRequestHandler<TRequest>> GetAsyncHandlers(Type requestType)
+        {
+            return new AsyncRequestHandlers<TRequest>(
+                _registry.Get<TRequest>()
+                    .Select(handlerType => _asyncHandlerFactory.Create(handlerType))
+                    .Cast<IHandleRequestsAsync<TRequest>>());
+        }
+
     }
 }
