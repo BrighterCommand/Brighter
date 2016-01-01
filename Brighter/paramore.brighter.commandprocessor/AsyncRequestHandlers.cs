@@ -1,11 +1,13 @@
 ﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
-// Author           : ian
-// Created          : 07-02-2014
+// Author           : Fred
+// Created          : 2015-12-21
+//                    Based on RequestHandlers.cs
 //
-// Last Modified By : ian
-// Last Modified On : 07-10-2014
+// Last Modified By : Fred
+// Last Modified On : 2015-12-21
 // ***********************************************************************
+// <copyright file="Pipelines.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -35,27 +37,30 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace paramore.brighter.commandprocessor
 {
-    /// <summary>
-    /// Interface IAmALifetime
-    /// Used to manage the lifetime of objects created for the request handling pipeline
-    /// <see cref="LifetimeScope"/> for default implementation.
-    /// </summary>
-    public interface IAmALifetime : IDisposable
+    internal class AsyncRequestHandlers<TRequest> : IEnumerable<AsyncRequestHandler<TRequest>>
+        where TRequest : class, IRequest
     {
-        /// <summary>
-        /// Adds the specified instance.
-        /// </summary>
-        /// <param name="instance">The instance.</param>
-        void Add(IHandleRequests instance);
+        private readonly IEnumerable<object> _handlers;
 
-        /// <summary>
-        /// Adds the specified instance of an async handler.
-        /// </summary>
-        /// <param name="instance">The instance.</param>
-        void Add(IHandleRequestsAsync instance);
+        internal AsyncRequestHandlers(IEnumerable<object> handlers)
+        {
+            _handlers = handlers;
+        }
+
+        public IEnumerator<AsyncRequestHandler<TRequest>> GetEnumerator()
+        {
+            return _handlers.Cast<AsyncRequestHandler<TRequest>>().GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
     }
 }

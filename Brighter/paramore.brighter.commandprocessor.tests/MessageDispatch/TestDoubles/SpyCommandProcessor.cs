@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.actions;
 
@@ -33,7 +34,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
     {
         Send,
         Publish,
-        Post
+        Post,
+        SendAsync
     }
 
     internal class SpyCommandProcessor : IAmACommandProcessor
@@ -51,6 +53,19 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         {
             _requests.Enqueue(command);
             _commands.Add(CommandType.Send);
+        }
+
+        /// <summary>
+        /// Awaitably sends the specified command.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="command">The command.</param>
+        /// <returns>awaitable <see cref="Task"/>.</returns>
+        public virtual async Task SendAsync<T>(T command) where T : class, IRequest
+        {
+            _requests.Enqueue(command);
+            _commands.Add(CommandType.SendAsync);
+            await Task.Delay(0);
         }
 
         /// <summary>

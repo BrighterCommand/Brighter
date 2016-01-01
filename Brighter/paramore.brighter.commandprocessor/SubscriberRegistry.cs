@@ -72,6 +72,16 @@ namespace paramore.brighter.commandprocessor
             Add(typeof(TRequest), typeof(TImplementation));
         }
 
+        /// <summary>
+        /// Registers this instance.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the t request.</typeparam>
+        /// <typeparam name="TImplementation">The type of the t implementation.</typeparam>
+        public void RegisterAsync<TRequest, TImplementation>() where TRequest : class, IRequest where TImplementation : class, IHandleRequestsAsync<TRequest>
+        {
+            Add(typeof(TRequest), typeof(TImplementation));
+        }
+
         public void Add(Type requestType, Type handlerType)
         {
             var observed = _observers.ContainsKey(requestType);
