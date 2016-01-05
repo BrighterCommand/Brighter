@@ -92,13 +92,13 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
-        private ILog _logger;
         private IAmAMessageStore<Message> _messageStore;
         private IAmAMessageProducer _messagingGateway;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
         private IAmAHandlerFactory _handlerFactory;
+        private IAmAnAsyncHandlerFactory _asyncHandlerFactory;
         private IAmAPolicyRegistry _policyRegistry;
         private int _messageStoreWriteTimeout;
         private int _messagingGatewaySendTimeout;
@@ -127,6 +127,7 @@ namespace paramore.brighter.commandprocessor
         {
             _registry = handlerConfiguration.SubscriberRegistry;
             _handlerFactory = handlerConfiguration.HandlerFactory;
+            _asyncHandlerFactory = handlerConfiguration.AsyncHandlerFactory;
             return this;
         }
 
@@ -213,6 +214,7 @@ namespace paramore.brighter.commandprocessor
                     
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
+                    asyncHandlerFactory: _asyncHandlerFactory,
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry);
             }

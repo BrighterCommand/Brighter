@@ -1,10 +1,11 @@
 ﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
-// Author           : ian
-// Created          : 07-02-2014
+// Author           : Fred
+// Created          : 2015-12-21
+//                    Based on Pipelines.cs
 //
-// Last Modified By : ian
-// Last Modified On : 07-10-2014
+// Last Modified By : Fred
+// Last Modified On : 2015-12-21
 // ***********************************************************************
 //     Copyright (c) . All rights reserved.
 // </copyright>
@@ -35,27 +36,28 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace paramore.brighter.commandprocessor
 {
-    /// <summary>
-    /// Interface IAmALifetime
-    /// Used to manage the lifetime of objects created for the request handling pipeline
-    /// <see cref="LifetimeScope"/> for default implementation.
-    /// </summary>
-    public interface IAmALifetime : IDisposable
+    internal class AsyncPipelines<TRequest> : IEnumerable<IHandleRequestsAsync<TRequest>> where TRequest : class, IRequest
     {
-        /// <summary>
-        /// Adds the specified instance.
-        /// </summary>
-        /// <param name="instance">The instance.</param>
-        void Add(IHandleRequests instance);
+        private readonly List<IHandleRequestsAsync<TRequest>> _filters = new List<IHandleRequestsAsync<TRequest>>();
 
-        /// <summary>
-        /// Adds the specified instance of an async handler.
-        /// </summary>
-        /// <param name="instance">The instance.</param>
-        void Add(IHandleRequestsAsync instance);
+        public IEnumerator<IHandleRequestsAsync<TRequest>> GetEnumerator()
+        {
+            return _filters.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        public void Add(IHandleRequestsAsync<TRequest> handler)
+        {
+            _filters.Add(handler);
+        }
     }
 }

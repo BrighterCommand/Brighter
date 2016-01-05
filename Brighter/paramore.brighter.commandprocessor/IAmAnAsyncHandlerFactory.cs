@@ -1,10 +1,11 @@
 ﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
-// Author           : ian
-// Created          : 07-02-2014
+// Author           : Fred
+// Created          : 2015-12-21
+//                    Based on IAnAHandlerFactory.cs
 //
-// Last Modified By : ian
-// Last Modified On : 07-10-2014
+// Last Modified By : Fred
+// Last Modified On : 2015-12-21
 // ***********************************************************************
 //     Copyright (c) . All rights reserved.
 // </copyright>
@@ -40,22 +41,24 @@ using System;
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmALifetime
-    /// Used to manage the lifetime of objects created for the request handling pipeline
-    /// <see cref="LifetimeScope"/> for default implementation.
+    /// Interface IAmAnAysyncHandlerFactory
+    /// We do not know how to create instances of <see cref="IHandleRequestsAsync"/> implemented by your application, but need to create instances to instantiate a pipeline.
+    /// To achieve this we require clients of the Paramore.Brighter.CommandProcessor library need to implement <see cref="IAmAnAsyncHandlerFactory"/> to provide 
+    /// instances of their <see cref="IHandleRequestsAsync"/> types. You need to provide a Handler Factory to support all <see cref="IHandleRequestsAsync"/> registered 
+    /// with <see cref="IAmASubscriberRegistry"/>. Typically you would use an IoC container to implement the Handler Factory.
     /// </summary>
-    public interface IAmALifetime : IDisposable
+    public interface IAmAnAsyncHandlerFactory
     {
         /// <summary>
-        /// Adds the specified instance.
+        /// Creates the specified async handler type.
         /// </summary>
-        /// <param name="instance">The instance.</param>
-        void Add(IHandleRequests instance);
-
+        /// <param name="handlerType">Type of the handler.</param>
+        /// <returns>IHandleRequestsAsync.</returns>
+        IHandleRequestsAsync Create(Type handlerType);
         /// <summary>
-        /// Adds the specified instance of an async handler.
+        /// Releases the specified async handler.
         /// </summary>
-        /// <param name="instance">The instance.</param>
-        void Add(IHandleRequestsAsync instance);
+        /// <param name="handler">The handler.</param>
+        void Release(IHandleRequestsAsync handler);
     }
 }
