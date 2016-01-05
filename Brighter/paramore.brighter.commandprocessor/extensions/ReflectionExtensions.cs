@@ -40,5 +40,15 @@ namespace paramore.brighter.commandprocessor.extensions
                      .Cast<RequestHandlerAttribute>()
                      .ToList();
         }
+
+        internal static IEnumerable<AsyncRequestHandlerAttribute> GetOtherAsyncHandlersInPipeline(this MethodInfo targetMethod)
+        {
+            var customAttributes = targetMethod.GetCustomAttributes(true);
+            return customAttributes
+                     .Select(attr => (Attribute)attr)
+                     .Where(a => a.GetType().GetTypeInfo().BaseType == typeof(AsyncRequestHandlerAttribute))
+                     .Cast<AsyncRequestHandlerAttribute>()
+                     .ToList();
+        }
     }
 }

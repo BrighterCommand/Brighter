@@ -38,6 +38,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using paramore.brighter.commandprocessor.Logging;
 using Polly;
 
@@ -53,6 +54,7 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
         private readonly IAmAHandlerFactory _handlerFactory;
+        private readonly IAmAnAsyncHandlerFactory _asyncHandlerFactory;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmAPolicyRegistry _policyRegistry;
         private readonly ILog _logger;
@@ -80,9 +82,26 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
+        /// <param name="asyncHandlerFactory">The async handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="logger">The logger.</param>
+        public CommandProcessor(
+            IAmASubscriberRegistry subscriberRegistry,
+            IAmAHandlerFactory handlerFactory,
+            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmARequestContextFactory requestContextFactory,
+            IAmAPolicyRegistry policyRegistry)
+            : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger())
+        {}
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// Use this constructor when no task queue support is required
+        /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry.</param>
+        /// <param name="handlerFactory">The handler factory.</param>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -116,6 +135,48 @@ namespace paramore.brighter.commandprocessor
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// Use this constructor when no task queue support is required and only async handlers are used
+        /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry.</param>
+        /// <param name="asyncHandlerFactory">The async handler factory.</param>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
+        public CommandProcessor(
+            IAmASubscriberRegistry subscriberRegistry,
+            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmARequestContextFactory requestContextFactory,
+            IAmAPolicyRegistry policyRegistry)
+            : this(subscriberRegistry, null, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger())
+        { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// Use this constructor when no task queue support is required, and you want to inject a test logger
+        /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry.</param>
+        /// <param name="handlerFactory">The handler factory.</param>
+        /// <param name="asyncHandlerFactory">The async handler factory.</param>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="logger">The logger.</param>
+        public CommandProcessor(
+            IAmASubscriberRegistry subscriberRegistry,
+            IAmAHandlerFactory handlerFactory,
+            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmARequestContextFactory requestContextFactory,
+            IAmAPolicyRegistry policyRegistry,
+            ILog logger)
+        {
+            _subscriberRegistry = subscriberRegistry;
+            _handlerFactory = handlerFactory;
+            _asyncHandlerFactory = asyncHandlerFactory;
+            _requestContextFactory = requestContextFactory;
+            _policyRegistry = policyRegistry;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
         /// Use this constructor when only task queue support is required
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
@@ -124,7 +185,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageStore">The message store.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
@@ -146,7 +206,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="logger">The logger.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
@@ -177,7 +236,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="messageStore">The message store.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
-        /// <param name="logger">The logger.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
@@ -238,6 +296,9 @@ namespace paramore.brighter.commandprocessor
         /// </exception>
         public void Send<T>(T command) where T : class, IRequest
         {
+            if (_handlerFactory == null)
+                throw new InvalidOperationException("No handler factory defined.");
+
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
 
@@ -265,6 +326,43 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
+        /// Awaitably sends the specified command.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="command">The command.</param>
+        /// <returns>awaitable <see cref="Task"/>.</returns>
+        public async Task SendAsync<T>(T command) where T : class, IRequest
+        {
+            if (_asyncHandlerFactory == null)
+                throw new InvalidOperationException("No async handler factory defined.");
+
+            var requestContext = _requestContextFactory.Create();
+            requestContext.Policies = _policyRegistry;
+
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _logger))
+            {
+                _logger.InfoFormat("Building send async pipeline for command: {0}", command.Id);
+                var handlerChain = builder.BuildAsync(requestContext);
+
+                var handlerCount = handlerChain.Count();
+
+                _logger.InfoFormat("Found {0} async pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id);
+                if (handlerCount > 1)
+                    throw new ArgumentException(
+                        string.Format(
+                            "More than one async handler was found for the typeof command {0} - a command should only have one handler.",
+                            typeof(T)));
+                if (handlerCount == 0)
+                    throw new ArgumentException(
+                        string.Format(
+                            "No command async handler was found for the typeof command {0} - a command should have exactly one handler.",
+                            typeof(T)));
+
+                await handlerChain.First().HandleAsync(command);
+            }
+        }
+
+        /// <summary>
         /// Publishes the specified event. We expect zero or more handlers. The events are handled synchronously, in turn
         /// Because any pipeline might throw, yet we want to execute the remaining handler chains,  we catch exceptions on any publisher
         /// instead of stopping at the first failure and then we throw an AggregateException if any of the handlers failed, 
@@ -275,6 +373,9 @@ namespace paramore.brighter.commandprocessor
         /// <param name="event">The event.</param>
         public void Publish<T>(T @event) where T : class, IRequest
         {
+            if (_handlerFactory == null)
+                throw new InvalidOperationException("No handler factory defined.");
+
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
 

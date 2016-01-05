@@ -50,6 +50,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Packages\LibLog.4.2\LibLog.cs" />
+    <Compile Include="AsyncHandlerFactory.cs" />
+    <Compile Include="AsyncPipelines.cs" />
+    <Compile Include="AsyncRequestHandler.cs" />
+    <Compile Include="AsyncRequestHandlerAttribute.cs" />
+    <Compile Include="AsyncRequestHandlers.cs" />
     <Compile Include="ChannelName.cs" />
     <Compile Include="Clock.cs" />
     <Compile Include="CommandProcessorBuilder.cs" />
@@ -81,6 +86,8 @@
     <Compile Include="IAmAMessageProducer.cs" />
     <Compile Include="IAmAMessageConsumer.cs" />
     <Compile Include="IEvent.cs" />
+    <Compile Include="IHandleRequestsAsync.cs" />
+    <Compile Include="IAmAnAsyncHandlerFactory.cs" />
     <Compile Include="InMemoryCommandStore.cs" />
     <Compile Include="logging\Attributes\RequestLoggingAttribute.cs" />
     <Compile Include="logging\Handlers\RequestLoggingHandler.cs" />
