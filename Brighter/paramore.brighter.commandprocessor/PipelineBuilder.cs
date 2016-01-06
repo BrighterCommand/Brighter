@@ -122,9 +122,19 @@ namespace paramore.brighter.commandprocessor
             IHandleRequests<TRequest> lastInPipeline = implicitHandler;
             attributes.Each((attribute) =>
             {
-                var decorator = new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
-                lastInPipeline.SetSuccessor(decorator);
-                lastInPipeline = decorator;
+                var handlerType = attribute.GetHandlerType();
+                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequests)))
+                {
+                    var decorator =
+                        new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
+                    lastInPipeline.SetSuccessor(decorator);
+                    lastInPipeline = decorator;
+                }
+                else
+                {
+                    var message = string.Format("All handlers in an async pipeline must derive from IHandleRequests. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
+                    throw new ConfigurationException(message);
+                }
             });
         }
 
@@ -132,9 +142,19 @@ namespace paramore.brighter.commandprocessor
         {
             attributes.Each((attribute) =>
             {
-                var decorator = new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
-                decorator.SetSuccessor(lastInPipeline);
-                lastInPipeline = decorator;
+                var handlerType = attribute.GetHandlerType();
+                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequests)))
+                {
+                    var decorator =
+                        new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
+                    decorator.SetSuccessor(lastInPipeline);
+                    lastInPipeline = decorator;
+                }
+                else
+                {
+                    var message = string.Format("All handlers in an async pipeline must derive from IHandleRequests. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
+                    throw new ConfigurationException(message);
+                }
             });
             return lastInPipeline;
         }
@@ -179,9 +199,17 @@ namespace paramore.brighter.commandprocessor
             IHandleRequestsAsync<TRequest> lastInPipeline = implicitHandler;
             attributes.Each(attribute =>
             {
-                var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext).CreateAsyncRequestHandler();
-                lastInPipeline.SetSuccessor(decorator);
-                lastInPipeline = decorator;
+                var handlerType = attribute.GetHandlerType();
+                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
+                {   var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext).CreateAsyncRequestHandler();
+                    lastInPipeline.SetSuccessor(decorator);
+                    lastInPipeline = decorator;
+                }
+                else
+                {
+                    var message = string.Format("All handlers in an async pipeline must derive from IHandleRequestsAsync. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
+                    throw new ConfigurationException(message);
+                }
             });
         }
 
@@ -190,7 +218,7 @@ namespace paramore.brighter.commandprocessor
             attributes.Each(attribute =>
             {
                 var handlerType = attribute.GetHandlerType();
-                if (handlerType.IsSubclassOf(typeof(IHandleRequestsAsync)))
+                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
                 {
                     var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext) .CreateAsyncRequestHandler();
                     decorator.SetSuccessor(lastInPipeline);
