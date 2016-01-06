@@ -3,10 +3,11 @@ Paramore contributors (sorted alphabeticaly)
 
 **[Ian Battersby](https://github.com/ianbattersby)**
 * Documentation fixes & general code tidying
+* Delayed Queueing
 
 **[Ian Cooper](https://github.com/iancooper)**
 
-  * Wrote first version of Command Processor, Policy, RavenDb Message Store, RMQ gateway, RestMS Core, RestMS Server, RestMS Gateway and ServiceActivator
+  * Wrote first version of Command Processor, Policy, RavenDb Message Store, RMQ gateway, RestMS Core, RestMS Server, RestMS Gateway and ServiceActivator, Control Bus
   * Various fixes
   * Project Technical Lead
   * Committer
@@ -23,6 +24,7 @@ Paramore contributors (sorted alphabeticaly)
    
 **[Fred Hoogduin](https://github.com/Red-F)**
   * Various fixes
+  * *Async methods on Command Processor
 
 **[Eddie Li](https://github.com/xiaodili)**
   * Various fixes  
