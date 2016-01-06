@@ -16,6 +16,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 	- In Test code you should inject the ILog using a fake logger. We don't recommend testing log output, its an implementation detail, unless its an important part of your acceptance criteria for that behaviour.
 	- This means that your production code should not need to take a direct dependency on Paramore's ILog implementation.
 	- This is a BREAKING CHANGE because we remove the ability to inject the constructor via the *Builder objects, so as to remove the temptation to do that when you should rely on the LibLog framework to wrap your current logger.
+- Added support for SendAsync and PublishAsync to an IHandleRequestsAsync pipeline
 
 
 ## Release 5 ##
