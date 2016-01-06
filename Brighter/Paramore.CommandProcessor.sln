@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Examples", "Examples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
 EndProject
@@ -61,6 +61,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskList.AzureServiceBus", "Examples\TaskList.AzureServiceBus\TaskList.AzureServiceBus.csproj", "{44116EA2-4ABF-47CF-81E5-2B312390CDB8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorldAsync", "Examples\HelloWorldAsync\HelloWorldAsync.csproj", "{D7D027C1-8C8B-4334-A695-7B0D139B44CD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloAsyncListeners", "Examples\HelloAsyncListeners\HelloAsyncListeners.csproj", "{095F3821-87D1-480A-B44C-691AA9805D29}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -324,6 +326,16 @@ Global
 		{D7D027C1-8C8B-4334-A695-7B0D139B44CD}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{D7D027C1-8C8B-4334-A695-7B0D139B44CD}.Release|x86.ActiveCfg = Release|Any CPU
 		{D7D027C1-8C8B-4334-A695-7B0D139B44CD}.Release|x86.Build.0 = Release|Any CPU
+		{095F3821-87D1-480A-B44C-691AA9805D29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{095F3821-87D1-480A-B44C-691AA9805D29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{095F3821-87D1-480A-B44C-691AA9805D29}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{095F3821-87D1-480A-B44C-691AA9805D29}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{095F3821-87D1-480A-B44C-691AA9805D29}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{095F3821-87D1-480A-B44C-691AA9805D29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{095F3821-87D1-480A-B44C-691AA9805D29}.Release|Any CPU.Build.0 = Release|Any CPU
+		{095F3821-87D1-480A-B44C-691AA9805D29}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{095F3821-87D1-480A-B44C-691AA9805D29}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{095F3821-87D1-480A-B44C-691AA9805D29}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -343,5 +355,6 @@ Global
 		{CAE808DF-01DB-4411-B66A-73C6F1DCF7AA} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{44116EA2-4ABF-47CF-81E5-2B312390CDB8} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{D7D027C1-8C8B-4334-A695-7B0D139B44CD} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
+		{095F3821-87D1-480A-B44C-691AA9805D29} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 	EndGlobalSection
 EndGlobal
