@@ -156,7 +156,7 @@ namespace paramore.brighter.commandprocessor
 
             var preAttributes =
                 implicitHandler.FindHandlerMethod()
-                .GetOtherAsyncHandlersInPipeline()
+                .GetOtherHandlersInPipeline()
                 .Where(attribute => attribute.Timing == HandlerTiming.Before)
                 .OrderByDescending(attribute => attribute.Step);
 
@@ -164,7 +164,7 @@ namespace paramore.brighter.commandprocessor
 
             var postAttributes =
                 implicitHandler.FindHandlerMethod()
-                .GetOtherAsyncHandlersInPipeline()
+                .GetOtherHandlersInPipeline()
                 .Where(attribute => attribute.Timing == HandlerTiming.After)
                 .OrderByDescending(attribute => attribute.Step);
 
@@ -173,7 +173,7 @@ namespace paramore.brighter.commandprocessor
             return firstInPipeline;
         }
 
-        private void AppendToAsyncPipeline(IEnumerable<AsyncRequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> implicitHandler, IRequestContext requestContext)
+        private void AppendToAsyncPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> implicitHandler, IRequestContext requestContext)
         {
             IHandleRequestsAsync<TRequest> lastInPipeline = implicitHandler;
             attributes.Each(attribute =>
@@ -184,7 +184,7 @@ namespace paramore.brighter.commandprocessor
             });
         }
 
-        private IHandleRequestsAsync<TRequest> PushOntoAsyncPipeline(IEnumerable<AsyncRequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> lastInPipeline, IRequestContext requestContext)
+        private IHandleRequestsAsync<TRequest> PushOntoAsyncPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> lastInPipeline, IRequestContext requestContext)
         {
             attributes.Each(attribute =>
             {

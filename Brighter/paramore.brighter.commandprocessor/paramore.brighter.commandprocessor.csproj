@@ -53,7 +53,6 @@
     <Compile Include="AsyncHandlerFactory.cs" />
     <Compile Include="AsyncPipelines.cs" />
     <Compile Include="AsyncRequestHandler.cs" />
-    <Compile Include="AsyncRequestHandlerAttribute.cs" />
     <Compile Include="AsyncRequestHandlers.cs" />
     <Compile Include="ChannelName.cs" />
     <Compile Include="Clock.cs" />

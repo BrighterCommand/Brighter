@@ -46,7 +46,7 @@ namespace paramore.brighter.commandprocessor
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     internal class AsyncHandlerFactory<TRequest> where TRequest : class, IRequest
     {
-        private readonly AsyncRequestHandlerAttribute _attribute;
+        private readonly RequestHandlerAttribute _attribute;
         private readonly IAmAnAsyncHandlerFactory _factory;
         private readonly Type _messageType;
         private readonly IRequestContext _requestContext;
@@ -57,7 +57,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="attribute">The attribute.</param>
         /// <param name="factory">The async handler factory.</param>
         /// <param name="requestContext">The request context.</param>
-        public AsyncHandlerFactory(AsyncRequestHandlerAttribute attribute, IAmAnAsyncHandlerFactory factory, IRequestContext requestContext)
+        public AsyncHandlerFactory(RequestHandlerAttribute attribute, IAmAnAsyncHandlerFactory factory, IRequestContext requestContext)
         {
             _attribute = attribute;
             _factory = factory;
@@ -73,7 +73,7 @@ namespace paramore.brighter.commandprocessor
         {
             var handlerType = _attribute.GetHandlerType().MakeGenericType(_messageType);
             var handler = (IHandleRequestsAsync<TRequest>)_factory.Create(handlerType);
-            //Lod the context befor the initializer - in case we want to use the context from within the initializer
+            //Lod the context before the initializer - in case we want to use the context from within the initializer
             handler.Context = _requestContext;
             handler.InitializeFromAttributeParams(_attribute.InitializerParams());
             return handler;

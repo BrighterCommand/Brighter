@@ -126,11 +126,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppConfig.cs" />
+    <Compile Include="CommandProcessors\MyLoggingHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeLogProvider.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyAsyncCommandHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyImplicitHandlerAsync.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyLoggingHandlerAsyncAttribute.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyLogWritingCommand.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyLogWritingCommandHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TestAsyncHandlerFactory.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\TinyIocHandlerFactoryAsync.cs" />
     <Compile Include="CommandProcessors\When_A_Handler_Is_Part_Of_An_Async_Pipeline.cs" />
     <Compile Include="CommandProcessors\When_Building_A_Command_Processor_With_A_LogProvider.cs" />
     <Compile Include="CommandProcessors\When_Building_A_Handler_For_An_Async_Command.cs" />

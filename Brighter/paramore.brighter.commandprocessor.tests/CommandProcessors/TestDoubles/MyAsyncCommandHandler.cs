@@ -13,10 +13,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
             s_command = null;
         }
 
-        public override Task<MyCommand> HandleAsync(MyCommand command)
+        public override async Task<MyCommand> HandleAsync(MyCommand command)
         {
             LogCommand(command);
-            return base.HandleAsync(command);
+            return await base.HandleAsync(command);
         }
 
         public static bool ShouldReceive(MyCommand expectedCommand)
