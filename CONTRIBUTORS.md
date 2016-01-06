@@ -3,6 +3,7 @@ Paramore contributors (sorted alphabeticaly)
 
 **[Ian Battersby](https://github.com/ianbattersby)**
 * Documentation fixes & general code tidying
+* Delayed Queueing
 
 **[Ian Cooper](https://github.com/iancooper)**
 
