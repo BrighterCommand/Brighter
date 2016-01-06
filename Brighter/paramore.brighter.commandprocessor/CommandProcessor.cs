@@ -408,6 +408,50 @@ namespace paramore.brighter.commandprocessor
             }
         }
 
+        /// <summary>
+        /// Publishes the specified event with async/await. We expect zero or more handlers. The events are handled synchronously and concurrently
+        /// Because any pipeline might throw, yet we want to execute the remaining handler chains,  we catch exceptions on any publisher
+        /// instead of stopping at the first failure and then we throw an AggregateException if any of the handlers failed, 
+        /// with the InnerExceptions property containing the failures.
+        /// It is up the implementer of the handler that throws to take steps to make it easy to identify the handler that threw.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="event">The event.</param>
+        public async Task PublishAsync<T>(T @event) where T : class, IRequest
+        {
+            if (_asyncHandlerFactory == null)
+                throw new InvalidOperationException("No async handler factory defined.");
+
+            var requestContext = _requestContextFactory.Create();
+            requestContext.Policies = _policyRegistry;
+
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _logger))
+            {
+                _logger.InfoFormat("Building send async pipeline for event: {0}", @event.Id);
+                var handlerChain = builder.BuildAsync(requestContext);
+
+                var handlerCount = handlerChain.Count();
+
+                _logger.InfoFormat("Found {0} async pipelines for event: {1}", handlerCount, @event.Id);
+
+                var eventTasks = handlerChain.Select(handleRequests => handleRequests.HandleAsync(@event)).Cast<Task>().ToList();
+                // Whenall will aggregate individual exceptions, and await will raise it when all tasks have completed
+                try
+                {
+                    await Task.WhenAll(eventTasks);
+                }
+                catch (Exception)
+                {
+                    var exceptions = new List<Exception>();
+                    foreach (var task in eventTasks.Where(task => task.IsFaulted))
+                    {
+                        if (task.Exception != null) exceptions.AddRange(task.Exception.InnerExceptions);
+                        else exceptions.Add(task.Exception);
+                    }
+                    throw new AggregateException("Failed to async publish to one more handlers successfully, see inner exceptions for details", exceptions);
+                }
+            }
+        }
 
         /// <summary>
         /// Posts the specified request. The message is placed on a task queue and into a message store for reposting in the event of failure.
