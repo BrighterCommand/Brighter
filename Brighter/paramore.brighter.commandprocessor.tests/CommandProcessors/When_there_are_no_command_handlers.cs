@@ -9,7 +9,7 @@ using TinyIoC;
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
     [Subject("Commands should have at least one handler")]
-    public class When_there_are_no_command_handlers
+    public class When_There_Are_No_Command_Handlers
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

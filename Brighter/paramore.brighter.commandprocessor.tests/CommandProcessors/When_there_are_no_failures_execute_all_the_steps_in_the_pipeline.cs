@@ -7,7 +7,7 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
-    public class When_there_are_no_failures_execute_all_the_steps_in_the_pipeline
+    public class When_There_Are_No_Failures_Execute_All_The_Steps_In_The_Pipeline
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

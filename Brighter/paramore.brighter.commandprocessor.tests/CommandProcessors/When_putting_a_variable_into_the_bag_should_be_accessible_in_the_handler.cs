@@ -7,7 +7,7 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
     [Subject(typeof(PipelineBuilder<>))]
-    public class When_putting_a_variable_into_the_bag_should_be_accessible_in_the_handler
+    public class When_Putting_A_Variable_Into_The_Bag_Should_Be_Accessible_In_The_Handler
     {
         private const string I_AM_A_TEST_OF_THE_CONTEXT_BAG = "I am a test of the context bag";
         private static RequestContext s_request_context;

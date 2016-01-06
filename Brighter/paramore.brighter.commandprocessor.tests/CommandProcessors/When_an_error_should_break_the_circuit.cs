@@ -10,7 +10,7 @@ using Polly.CircuitBreaker;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
-    public class When_using_decoupled_invocation_messaging_gateway_throws_an_error_retry_n_times_then_break_circuit
+    public class When_An_Error_Should_Break_The_Circuit
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

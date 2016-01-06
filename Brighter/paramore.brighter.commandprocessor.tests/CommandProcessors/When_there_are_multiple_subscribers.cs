@@ -9,7 +9,7 @@ using TinyIoC;
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
     [Subject("An event with multiple subscribers")]
-    public class When_there_are_multiple_subscribers
+    public class When_There_Are_Multiple_Subscribers
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyEvent s_myEvent = new MyEvent();

@@ -9,7 +9,7 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
     [Subject(typeof(PipelineBuilder<>))]
-    public class When_we_have_exercised_the_pipeline_cleanup_its_handlers
+    public class When_We_Have_Exercised_The_Pipeline_Cleanup_Its_Handlers
     {
         private static PipelineBuilder<MyCommand> s_pipeline_Builder;
         private static string s_released;

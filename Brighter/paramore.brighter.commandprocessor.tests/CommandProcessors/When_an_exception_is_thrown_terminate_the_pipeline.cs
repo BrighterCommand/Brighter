@@ -8,7 +8,7 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
-    public class When_an_exception_is_thrown_terminate_the_pipeline
+    public class When_An_Exception_Is_Thrown_Terminate_The_Pipeline
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

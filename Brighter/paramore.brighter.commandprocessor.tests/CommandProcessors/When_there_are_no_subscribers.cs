@@ -8,7 +8,7 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
     [Subject("An event may have no subscribers")]
-    public class When_there_are_no_subscribers
+    public class When_There_Are_No_Subscribers
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyEvent s_myEvent = new MyEvent();

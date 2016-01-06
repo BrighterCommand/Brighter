@@ -1,9 +1,9 @@
-#region Licence
+Ôªø#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright ¬© 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the ìSoftwareî), to deal
+of this software and associated documentation files (the ‚ÄúSoftware‚Äù), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -12,7 +12,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED ìAS ISî, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED ‚ÄúAS IS‚Äù, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
@@ -30,27 +31,27 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
-    [Subject("Basic send of a command")]
-    public class When_Sending_A_Command_To_The_Processor
+    [Subject(typeof(PipelineBuilder<>))]
+    public class When_Building_A_Handler_For_An_Async_Command
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
+        private static PipelineBuilder<MyCommand> s_chain_Builder;
+        private static IHandleRequestsAsync<MyCommand> s_chain_Of_Responsibility;
+        private static RequestContext s_request_context;
 
         private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyCommandHandler>();
-            var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
+            registry.RegisterAsync<MyCommand, MyAsyncCommandHandler>();
+            var handlerFactory = new TestAsyncHandlerFactory<MyCommand, MyAsyncCommandHandler>(() => new MyAsyncCommandHandler(logger));
+            s_request_context = new RequestContext();
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_chain_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+        private Because _of = () => s_chain_Of_Responsibility = s_chain_Builder.BuildAsync(s_request_context).First();
 
-        private It _should_send_the_command_to_the_command_handler = () => MyCommandHandler.ShouldReceive(s_myCommand).ShouldBeTrue();
+        private It _should_have_set_the_context_on_the_handler = () => s_chain_Of_Responsibility.Context.ShouldNotBeNull();
+        private It _should_use_the_context_that_we_passed_in = () => s_chain_Of_Responsibility.Context.ShouldBeTheSameAs(s_request_context);
     }
 }
-
-

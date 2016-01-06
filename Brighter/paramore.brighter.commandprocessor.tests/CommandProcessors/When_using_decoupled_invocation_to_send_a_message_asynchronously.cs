@@ -9,7 +9,7 @@ using Polly;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
-    public class When_using_decoupled_invocation_to_send_a_message_asynchronously
+    public class When_Using_Decoupled_Invocation_To_Send_A_Message_Asynchronously
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

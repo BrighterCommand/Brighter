@@ -30,7 +30,7 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
     [Subject("Test Builder and LibLog with default handler ctor")]
-    public class When_building_a_command_processor_with_a_logProvider
+    public class When_Building_A_Command_Processor_With_A_LogProvider
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyLogWritingCommand s_myCommand = new MyLogWritingCommand();
