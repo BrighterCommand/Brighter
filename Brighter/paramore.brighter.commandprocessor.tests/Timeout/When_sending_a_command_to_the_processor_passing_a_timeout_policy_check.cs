@@ -22,9 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Linq;
-
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
@@ -37,46 +34,6 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.tests.Timeout
 {
-    [Subject("Basic policy on a handler")]
-    [Tags("Requires", new[] { "Fails on AppVeyor" })]
-    public class When_sending_a_command_to_the_processor_failing_a_timeout_policy_check
-    {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static AggregateException s_thrownException;
-
-        private Establish _context = () =>
-        {
-            var logger = A.Fake<ILog>();
-
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyFailsDueToTimeoutHandler>();
-
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<ILog>(logger);
-            container.Register<IHandleRequests<MyCommand>, MyFailsDueToTimeoutHandler>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, TimeoutPolicyHandler<MyCommand>>().AsSingleton();
-
-            MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = false;
-            MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted = true;
-
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
-        };
-
-        //We have to catch the final exception that bubbles out after retry
-        private Because _of = () =>
-        {
-            s_thrownException = (AggregateException)Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
-        };
-
-        private It _should_throw_a_timeout_exception = () => s_thrownException.Flatten().InnerExceptions.First().ShouldBeOfExactType<TimeoutException>();
-        private It _should_signal_that_a_timeout_occured_and_handler_should_be_cancelled = () => MyFailsDueToTimeoutHandlerStateTracker.WasCancelled.ShouldBeTrue();
-        private It _should_not_run_to_completion = () => MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted.ShouldBeFalse();
-    }
-
-
-
     [Subject("Basic policy on a handler")]
     public class When_sending_a_command_to_the_processor_passing_a_timeout_policy_check
     {

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using paramore.brighter.commandprocessor.Logging;
 
-namespace paramore.commandprocessor.tests.CommandProcessors
+namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     internal class FakeLogProvider : ILogProvider
     {

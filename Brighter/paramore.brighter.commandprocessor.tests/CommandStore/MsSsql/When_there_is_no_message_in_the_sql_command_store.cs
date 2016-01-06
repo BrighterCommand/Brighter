@@ -32,7 +32,7 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandStore.MsSsql
 {
-    public class SqlCommandStoreTests
+    public class When_there_is_no_message_in_the_sql_command_store
     {
         private const string TestDbPath = "test.sdf";
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
@@ -41,53 +41,18 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
         private static MyCommand s_raisedCommand;
         private static MyCommand s_storedCommand;
 
-
         private Establish _context = () =>
         {
             CleanUpDb();
             CreateTestDb();
 
             s_sqlCommandStore = new MsSqlCommandStore(new MsSqlCommandStoreConfiguration(ConnectionString, TableName, MsSqlCommandStoreConfiguration.DatabaseType.SqlCe),
-                    new LogProvider.NoOpLogger());
+                new LogProvider.NoOpLogger());
         };
 
-        public class When_writing_a_message_to_the_command_store
-        {
-            private Establish _context = () =>
-            {
-                s_raisedCommand = new MyCommand() {Value = "Test"};
-                s_sqlCommandStore.Add<MyCommand>(s_raisedCommand);
-            };
+        private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(Guid.NewGuid()); };
 
-            private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(s_raisedCommand.Id); };
-
-            private It _should_read_the_command_from_the__sql_command_store = () => s_storedCommand.ShouldNotBeNull();
-            private It _should_read_the_command_value = () => s_storedCommand.Value.ShouldEqual(s_raisedCommand.Value);
-            private It _should_read_the_command_id = () => s_storedCommand.Id.ShouldEqual(s_raisedCommand.Id);
-
-        }
-
-        public class When_there_is_no_message_in_the_sql_command_store
-        {
-            private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(Guid.NewGuid()); };
-
-            private It _should_return_an_empty_command_on_a_missing_command = () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
-        }
-
-        public class When_the_message_is_already_in_the_command_store
-        {
-            private static Exception s_exception;
-
-            private Establish _context = () =>
-            {
-                s_raisedCommand = new MyCommand() { Value = "Test" };
-                s_sqlCommandStore.Add<MyCommand>(s_raisedCommand);
-            };
-
-            private Because _of = () => { s_exception = Catch.Exception(() => s_sqlCommandStore.Add(s_raisedCommand)); };
-
-            private It _should_succeed_even_if_the_message_is_a_duplicate = () => s_exception.ShouldBeNull();
-        }
+        private It _should_return_an_empty_command_on_a_missing_command = () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
 
         private Cleanup _cleanup = () => CleanUpDb();
 

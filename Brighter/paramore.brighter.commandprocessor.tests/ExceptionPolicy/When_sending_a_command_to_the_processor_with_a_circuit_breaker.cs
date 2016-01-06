@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using FluentAssertions;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
@@ -37,100 +36,6 @@ using paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles;
 
 namespace paramore.commandprocessor.tests.ExceptionPolicy
 {
-    [Subject("Basic policy on a handler")]
-    public class When_sending_a_command_to_the_processor_with_a_retry_policy_check
-    {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static int s_retryCount;
-
-        private Establish _context = () =>
-        {
-            var logger = A.Fake<ILog>();
-
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyFailsWithDivideByZeroHandler>();
-
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog>(logger);
-
-            var policyRegistry = new PolicyRegistry();
-
-            var policy = Policy
-                .Handle<DivideByZeroException>()
-                .WaitAndRetry(new[]
-                {
-                    1.Seconds(),
-                    2.Seconds(),
-                    3.Seconds()
-                }, (exception, timeSpan) =>
-                {
-                    s_retryCount++;
-                });
-            policyRegistry.Add("MyDivideByZeroPolicy", policy);
-
-            MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
-
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
-        };
-
-        //We have to catch the final exception that bubbles out after retry
-        private Because _of = () => Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
-
-        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.ShouldReceive(s_myCommand).ShouldBeTrue();
-        private It _should_retry_three_times = () => s_retryCount.ShouldEqual(3);
-    }
-
-    [Subject("Basic policy on a handler")]
-    public class When_sending_a_command_to_the_processor_passes_policy_check
-    {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static int s_retryCount;
-
-        private Establish _context = () =>
-        {
-            var logger = A.Fake<ILog>();
-
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyDoesNotFailPolicyHandler>();
-
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler>("MyDoesNotFailPolicyHandler");
-            container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>("MyExceptionPolicyHandler");
-            container.Register<ILog>(logger);
-
-            var policyRegistry = new PolicyRegistry();
-
-            var policy = Policy
-                .Handle<DivideByZeroException>()
-                .WaitAndRetry(new[]
-                {
-                    1.Seconds(),
-                    2.Seconds(),
-                    3.Seconds()
-                }, (exception, timeSpan) =>
-                {
-                    s_retryCount++;
-                });
-            policyRegistry.Add("MyDivideByZeroPolicy", policy);
-
-            MyDoesNotFailPolicyHandler.ReceivedCommand = false;
-
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
-        };
-
-        //We have to catch the final exception that bubbles out after retry
-        private Because _of = () => s_commandProcessor.Send(s_myCommand);
-
-        private It _should_send_the_command_to_the_command_handler = () => MyDoesNotFailPolicyHandler.Shouldreceive(s_myCommand).ShouldBeTrue();
-        private It _should_not_retry = () => s_retryCount.ShouldEqual(0);
-    }
-
     [Subject("Basic policy on a handler")]
     public class When_sending_a_command_to_the_processor_with_a_circuit_breaker
     {
