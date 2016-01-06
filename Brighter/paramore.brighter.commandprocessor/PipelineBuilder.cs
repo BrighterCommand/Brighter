@@ -36,6 +36,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using paramore.brighter.commandprocessor.extensions;
@@ -188,9 +189,18 @@ namespace paramore.brighter.commandprocessor
         {
             attributes.Each(attribute =>
             {
-                var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext).CreateAsyncRequestHandler();
-                decorator.SetSuccessor(lastInPipeline);
-                lastInPipeline = decorator;
+                var handlerType = attribute.GetHandlerType();
+                if (handlerType.IsSubclassOf(typeof(IHandleRequestsAsync)))
+                {
+                    var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext) .CreateAsyncRequestHandler();
+                    decorator.SetSuccessor(lastInPipeline);
+                    lastInPipeline = decorator;
+                }
+                else
+                {
+                    var message = string.Format("All handlers in an async pipeline must derive from IHandleRequestsAsync. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
+                    throw new ConfigurationException(message);
+                }
             });
             return lastInPipeline;
         }
