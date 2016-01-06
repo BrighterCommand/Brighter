@@ -35,7 +35,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         Send,
         Publish,
         Post,
-        SendAsync
+        SendAsync,
+        PublishAsync
     }
 
     internal class SpyCommandProcessor : IAmACommandProcessor
@@ -77,6 +78,18 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         {
             _requests.Enqueue(@event);
             _commands.Add(CommandType.Publish);
+        }
+
+        /// <summary>
+        /// Awaitably publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="event">The event.</param>
+        public virtual async Task PublishAsync<T>(T @event) where T : class, IRequest
+        {
+            _requests.Enqueue(@event);
+            _commands.Add(CommandType.PublishAsync);
+            await Task.Delay(0);
         }
 
         /// <summary>
