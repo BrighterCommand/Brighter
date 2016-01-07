@@ -1,9 +1,9 @@
-#region Licence
+Ôªø#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright ¬© 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the ìSoftwareî), to deal
+of this software and associated documentation files (the ‚ÄúSoftware‚Äù), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -12,7 +12,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED ìAS ISî, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED ‚ÄúAS IS‚Äù, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -33,31 +33,31 @@ using TinyIoC;
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
     [Subject(typeof(PipelineBuilder<>))]
-    public class When_Building_A_Pipeline_Preserve_The_Order
+    public class When_Building_An_Async_Pipeline_Preserve_The_Order
     {
         private static PipelineBuilder<MyCommand> s_pipeline_Builder;
-        private static IHandleRequests<MyCommand> s_pipeline;
+        private static IHandleRequestsAsync<MyCommand> s_pipeline;
 
         private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyDoubleDecoratedHandler>();
+            registry.RegisterAsync<MyCommand, MyDoubleDecoratedHandlerAsync>();
 
             var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyDoubleDecoratedHandler>();
-            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
-            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
+            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
+            container.Register<IHandleRequestsAsync<MyCommand>, MyDoubleDecoratedHandlerAsync>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyValidationHandlerAsync<MyCommand>>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
             container.Register<ILog>(logger);
 
             s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        private Because _of = () => s_pipeline = s_pipeline_Builder.Build(new RequestContext()).First();
+        private Because _of = () => s_pipeline = s_pipeline_Builder.BuildAsync(new RequestContext()).First();
 
-        private It _should_add_handlers_in_the_correct_sequence_into_the_chain = () => PipelineTracer().ToString().ShouldEqual("MyLoggingHandler`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
+        private It _should_add_handlers_in_the_correct_sequence_into_the_chain = () => PipelineTracer().ToString().ShouldEqual("MyLoggingHandlerAsync`1|MyValidationHandlerAsync`1|MyDoubleDecoratedHandlerAsync|");
 
         private static PipelineTracer PipelineTracer()
         {
