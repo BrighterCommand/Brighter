@@ -213,6 +213,7 @@
     <Compile Include="CommandProcessors\When_Putting_A_Variable_Into_The_Bag_Should_Be_Accessible_In_The_Handler.cs" />
     <Compile Include="CommandProcessors\When_Sending_A_Command_To_The_Processor_Async.cs" />
     <Compile Include="CommandProcessors\When_There_Are_Multiple_Possible_Command_Handlers.cs" />
+    <Compile Include="CommandProcessors\When_There_Are_Multiple_Possible_Command_Handlers_Async.cs" />
     <Compile Include="CommandProcessors\When_There_Are_Multiple_Subscribers.cs" />
     <Compile Include="CommandProcessors\When_There_Are_No_Command_Handlers.cs" />
     <Compile Include="CommandProcessors\When_There_Are_No_Failures_Execute_All_The_Steps_In_The_Pipeline.cs" />
