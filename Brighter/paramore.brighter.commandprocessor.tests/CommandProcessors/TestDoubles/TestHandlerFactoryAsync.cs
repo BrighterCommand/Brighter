@@ -27,11 +27,11 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    class TestAsyncHandlerFactory<TRequest, TRequestHandler> : IAmAnAsyncHandlerFactory where TRequest : class, IRequest where TRequestHandler : class, IHandleRequestsAsync<TRequest>
+    class TestHandlerFactoryAsync<TRequest, TRequestHandler> : IAmAnAsyncHandlerFactory where TRequest : class, IRequest where TRequestHandler : class, IHandleRequestsAsync<TRequest>
     {
         private readonly Func<TRequestHandler> _factoryMethod;
 
-        public TestAsyncHandlerFactory(Func<TRequestHandler> factoryMethod)
+        public TestHandlerFactoryAsync(Func<TRequestHandler> factoryMethod)
         {
             _factoryMethod = factoryMethod;
         }

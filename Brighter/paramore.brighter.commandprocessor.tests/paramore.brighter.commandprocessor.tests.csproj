@@ -88,6 +88,18 @@
       <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Nito.AsyncEx, Version=3.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Nito.AsyncEx.3.0.1\lib\net45\Nito.AsyncEx.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Nito.AsyncEx.Concurrent, Version=3.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Nito.AsyncEx.3.0.1\lib\net45\Nito.AsyncEx.Concurrent.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Nito.AsyncEx.Enlightenment, Version=3.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Nito.AsyncEx.3.0.1\lib\net45\Nito.AsyncEx.Enlightenment.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Owin">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
     </Reference>
@@ -127,7 +139,7 @@
   <ItemGroup>
     <Compile Include="AppConfig.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeLogProvider.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\MyAsyncCommandHandler.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyCommandHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyDoubleDecoratedHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyMixedImplicitHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyImplicitHandlerAsync.cs" />
@@ -142,7 +154,7 @@
     <Compile Include="CommandProcessors\TestDoubles\MyPreValidationHandlerAsyncAttribute.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyValidationHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyValidationHandlerAsyncAttribute.cs" />
-    <Compile Include="CommandProcessors\TestDoubles\TestAsyncHandlerFactory.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\TestHandlerFactoryAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TinyIocHandlerFactoryAsync.cs" />
     <Compile Include="CommandProcessors\When_A_Handler_Is_Part_Of_An_Async_Pipeline.cs" />
     <Compile Include="CommandProcessors\When_Building_An_Async_Pipeline_Allow_ForiegnAttribues.cs" />
@@ -199,6 +211,7 @@
     <Compile Include="CommandProcessors\When_Publishing_An_Event_To_The_Processor.cs" />
     <Compile Include="CommandProcessors\When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions.cs" />
     <Compile Include="CommandProcessors\When_Putting_A_Variable_Into_The_Bag_Should_Be_Accessible_In_The_Handler.cs" />
+    <Compile Include="CommandProcessors\When_Sending_A_Command_To_The_Processor_Async.cs" />
     <Compile Include="CommandProcessors\When_There_Are_Multiple_Possible_Command_Handlers.cs" />
     <Compile Include="CommandProcessors\When_There_Are_Multiple_Subscribers.cs" />
     <Compile Include="CommandProcessors\When_There_Are_No_Command_Handlers.cs" />

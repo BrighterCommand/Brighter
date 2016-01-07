@@ -30,7 +30,7 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
-    [Subject("Basic send of a command")]
+    [Subject(typeof(CommandProcessor))]
     public class When_Sending_A_Command_To_The_Processor
     {
         private static CommandProcessor s_commandProcessor;

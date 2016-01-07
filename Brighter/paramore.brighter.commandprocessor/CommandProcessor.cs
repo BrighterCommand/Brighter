@@ -112,6 +112,22 @@ namespace paramore.brighter.commandprocessor
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// Use this constructor when no task queue support is required and only async handlers are used
+        /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry.</param>
+        /// <param name="asyncHandlerFactory">The async handler factory.</param>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
+        public CommandProcessor(
+            IAmASubscriberRegistry subscriberRegistry,
+            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmARequestContextFactory requestContextFactory,
+            IAmAPolicyRegistry policyRegistry)
+            : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger())
+        { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
         /// Use this constructor when no task queue support is required, and you want to inject a test logger
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
@@ -133,6 +149,7 @@ namespace paramore.brighter.commandprocessor
             _logger = logger;
         }
 
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
         /// Use this constructor when no task queue support is required and only async handlers are used
@@ -145,9 +162,15 @@ namespace paramore.brighter.commandprocessor
             IAmASubscriberRegistry subscriberRegistry,
             IAmAnAsyncHandlerFactory asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry)
-            : this(subscriberRegistry, null, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger())
-        { }
+            IAmAPolicyRegistry policyRegistry,
+            ILog logger)
+        {
+            _subscriberRegistry = subscriberRegistry;
+            _asyncHandlerFactory = asyncHandlerFactory;
+            _requestContextFactory = requestContextFactory;
+            _policyRegistry = policyRegistry;
+            _logger = logger;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.

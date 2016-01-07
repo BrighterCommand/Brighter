@@ -4,11 +4,11 @@ using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class MyAsyncCommandHandler : AsyncRequestHandler<MyCommand>
+    internal class MyCommandHandlerAsync : AsyncRequestHandler<MyCommand>
     {
         private static MyCommand s_command;
 
-        public MyAsyncCommandHandler (ILog logger): base(logger)
+        public MyCommandHandlerAsync (ILog logger): base(logger)
         {
             s_command = null;
         }
