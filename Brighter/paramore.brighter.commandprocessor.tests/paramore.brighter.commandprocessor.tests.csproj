@@ -136,6 +136,7 @@
     <Compile Include="CommandProcessors\TestDoubles\MyLogWritingCommand.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyLogWritingCommandHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyMixedImplicitHandlerAsync.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyObsoleteCommandHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyPostLoggingHandlerAsyncAttribute.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyPreAndPostDecoratedHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyPreValidationHandlerAsyncAttribute.cs" />
@@ -144,6 +145,7 @@
     <Compile Include="CommandProcessors\TestDoubles\TestAsyncHandlerFactory.cs" />
     <Compile Include="CommandProcessors\TestDoubles\TinyIocHandlerFactoryAsync.cs" />
     <Compile Include="CommandProcessors\When_A_Handler_Is_Part_Of_An_Async_Pipeline.cs" />
+    <Compile Include="CommandProcessors\When_Building_An_Async_Pipeline_Allow_ForiegnAttribues.cs" />
     <Compile Include="CommandProcessors\When_Building_An_Async_Pipeline_Allow_Pre_And_Post_Tasks.cs" />
     <Compile Include="CommandProcessors\When_Building_An_Async_Pipeline_Preserve_The_Order.cs" />
     <Compile Include="CommandProcessors\When_Building_An_Async_Pipeline_That_Has_Sync_Handlers.cs" />
