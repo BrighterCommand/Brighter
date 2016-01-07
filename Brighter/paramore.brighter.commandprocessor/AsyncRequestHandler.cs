@@ -54,7 +54,7 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// The logger
         /// </summary>
-        protected readonly ILog Logger;
+        protected readonly ILog logger;
 
 
         private IHandleRequestsAsync<TRequest> _successor;
@@ -75,7 +75,7 @@ namespace paramore.brighter.commandprocessor
         protected AsyncRequestHandler(ILog logger)
         {
             ContinueOnCapturedContext = false;
-            this.Logger = logger;
+            this.logger = logger;
         }
 
         /// <summary>
@@ -143,7 +143,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                Logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
+                logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
                 return await _successor.HandleAsync(command).ConfigureAwait(ContinueOnCapturedContext);
             }
 
@@ -173,7 +173,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                Logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
+                logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
                 return await _successor.FallbackAsync(command).ConfigureAwait(ContinueOnCapturedContext);
             }
             return command;
