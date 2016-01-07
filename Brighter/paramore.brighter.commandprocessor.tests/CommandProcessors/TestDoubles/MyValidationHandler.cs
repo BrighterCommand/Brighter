@@ -42,7 +42,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
             return base.Handle(command);
         }
 
-        public static bool Shouldreceive(TRequest expectedCommand)
+        public static bool ShouldReceive(TRequest expectedCommand)
         {
             return (s_command != null);
         }
