@@ -219,6 +219,7 @@
     <Compile Include="CommandProcessors\When_There_Are_Multiple_Subscribers.cs" />
     <Compile Include="CommandProcessors\When_There_Are_Multiple_Subscribers_Async.cs" />
     <Compile Include="CommandProcessors\When_There_Are_No_Command_Handlers.cs" />
+    <Compile Include="CommandProcessors\When_There_Are_No_Command_Handlers_Async.cs" />
     <Compile Include="CommandProcessors\When_There_Are_No_Failures_Execute_All_The_Steps_In_The_Pipeline.cs" />
     <Compile Include="CommandProcessors\When_There_Are_No_Subscribers.cs" />
     <Compile Include="CommandProcessors\When_An_Error_Should_Break_The_Circuit.cs" />
