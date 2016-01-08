@@ -141,6 +141,7 @@
     <Compile Include="CommandProcessors\TestDoubles\FakeLogProvider.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyCommandHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyDoubleDecoratedHandlerAsync.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyEventHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyMixedImplicitHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyImplicitHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyLoggingHandlerAsync.cs" />
@@ -149,6 +150,7 @@
     <Compile Include="CommandProcessors\TestDoubles\MyLogWritingCommandHandler.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyMixedImplicitHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyObsoleteCommandHandlerAsync.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyOtherEventHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyPostLoggingHandlerAsyncAttribute.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyPreAndPostDecoratedHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyPreValidationHandlerAsyncAttribute.cs" />
@@ -215,6 +217,7 @@
     <Compile Include="CommandProcessors\When_There_Are_Multiple_Possible_Command_Handlers.cs" />
     <Compile Include="CommandProcessors\When_There_Are_Multiple_Possible_Command_Handlers_Async.cs" />
     <Compile Include="CommandProcessors\When_There_Are_Multiple_Subscribers.cs" />
+    <Compile Include="CommandProcessors\When_There_Are_Multiple_Subscribers_Async.cs" />
     <Compile Include="CommandProcessors\When_There_Are_No_Command_Handlers.cs" />
     <Compile Include="CommandProcessors\When_There_Are_No_Failures_Execute_All_The_Steps_In_The_Pipeline.cs" />
     <Compile Include="CommandProcessors\When_There_Are_No_Subscribers.cs" />
