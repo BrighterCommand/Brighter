@@ -330,23 +330,12 @@ namespace paramore.brighter.commandprocessor
                 _logger.InfoFormat("Building send pipeline for command: {0}", command.Id);
                 var handlerChain = builder.Build(requestContext);
 
-                var handlerCount = handlerChain.Count();
-
-                _logger.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof (T), command.Id);
-                if (handlerCount > 1)
-                    throw new ArgumentException(
-                        string.Format(
-                            "More than one handler was found for the typeof command {0} - a command should only have one handler.",
-                            typeof (T)));
-                if (handlerCount == 0)
-                    throw new ArgumentException(
-                        string.Format(
-                            "No command handler was found for the typeof command {0} - a command should have exactly one handler.",
-                            typeof (T)));
+                AssertValidSendPipeline(command, handlerChain.Count());
 
                 handlerChain.First().Handle(command);
             }
         }
+
 
         /// <summary>
         /// Awaitably sends the specified command.
@@ -367,19 +356,7 @@ namespace paramore.brighter.commandprocessor
                 _logger.InfoFormat("Building send async pipeline for command: {0}", command.Id);
                 var handlerChain = builder.BuildAsync(requestContext);
 
-                var handlerCount = handlerChain.Count();
-
-                _logger.InfoFormat("Found {0} async pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id);
-                if (handlerCount > 1)
-                    throw new ArgumentException(
-                        string.Format(
-                            "More than one async handler was found for the typeof command {0} - a command should only have one handler.",
-                            typeof(T)));
-                if (handlerCount == 0)
-                    throw new ArgumentException(
-                        string.Format(
-                            "No command async handler was found for the typeof command {0} - a command should have exactly one handler.",
-                            typeof(T)));
+                AssertValidSendPipeline(command, handlerChain.Count());
 
                 await handlerChain.First().HandleAsync(command);
             }
@@ -533,21 +510,6 @@ namespace paramore.brighter.commandprocessor
             });
         }
 
-        private void RetryAndBreakCircuit(Action send)
-        {
-            CheckCircuit(() => Retry(send));
-        }
-
-        private void CheckCircuit(Action send)
-        {
-            _policyRegistry.Get(CIRCUITBREAKER).Execute(send);
-        }
-
-        private void Retry(Action send)
-        {
-            _policyRegistry.Get(RETRYPOLICY).Execute(send);
-        }
-
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
@@ -573,5 +535,35 @@ namespace paramore.brighter.commandprocessor
 
             _disposed = true;
         } 
-    }
+        private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
+        {
+            _logger.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof (T), command.Id);
+            if (handlerCount > 1)
+                throw new ArgumentException(
+                    string.Format(
+                        "More than one handler was found for the typeof command {0} - a command should only have one handler.",
+                        typeof (T)));
+            if (handlerCount == 0)
+                throw new ArgumentException(
+                    string.Format(
+                        "No command handler was found for the typeof command {0} - a command should have exactly one handler.",
+                        typeof (T)));
+        }
+
+        private void CheckCircuit(Action send)
+        {
+            _policyRegistry.Get(CIRCUITBREAKER).Execute(send);
+        }
+
+        private void RetryAndBreakCircuit(Action send)
+        {
+            CheckCircuit(() => Retry(send));
+        }
+
+        private void Retry(Action send)
+        {
+            _policyRegistry.Get(RETRYPOLICY).Execute(send);
+        }
+
+   }
 }

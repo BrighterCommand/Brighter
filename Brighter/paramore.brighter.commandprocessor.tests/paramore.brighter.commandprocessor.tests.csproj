@@ -223,6 +223,7 @@
     <Compile Include="CommandProcessors\When_There_Are_No_Failures_Execute_All_The_Steps_In_The_Pipeline.cs" />
     <Compile Include="CommandProcessors\When_There_Are_No_Subscribers.cs" />
     <Compile Include="CommandProcessors\When_An_Error_Should_Break_The_Circuit.cs" />
+    <Compile Include="CommandProcessors\When_There_Are_No_Subscribers_Async.cs" />
     <Compile Include="CommandProcessors\When_Using_Decoupled_Invocation_To_Send_A_Message_Asynchronously.cs" />
     <Compile Include="CommandProcessors\When_We_Have_Exercised_The_Pipeline_Cleanup_Its_Handlers.cs" />
     <Compile Include="CommandStore\MsSsql\When_the_message_is_already_in_the_command_store.cs" />

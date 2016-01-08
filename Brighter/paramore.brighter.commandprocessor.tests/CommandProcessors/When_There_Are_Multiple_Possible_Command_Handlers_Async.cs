@@ -62,7 +62,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private Because _of = () => s_exception = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_myCommand)));
 
         private It _should_fail_because_multiple_receivers_found = () => s_exception.ShouldBeAssignableTo(typeof(ArgumentException));
-        private It _should_have_an_error_message_that_tells_you_why = () => s_exception.ShouldContainErrorMessage("More than one async handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.");
+        private It _should_have_an_error_message_that_tells_you_why = () => s_exception.ShouldContainErrorMessage("More than one handler was found for the typeof command paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.");
 
     }
 }
