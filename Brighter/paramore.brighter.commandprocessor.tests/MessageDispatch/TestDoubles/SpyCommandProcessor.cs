@@ -36,7 +36,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         Publish,
         Post,
         SendAsync,
-        PublishAsync
+        PublishAsync,
+        PostAsync
     }
 
     internal class SpyCommandProcessor : IAmACommandProcessor
@@ -75,6 +76,20 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         {
             _requests.Enqueue(request);
             _commands.Add(CommandType.Post);
+        }
+
+        /// <summary>
+        /// Posts the specified request with async/await support.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="request">The request.</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <returns>awaitable <see cref="Task"/>.</returns>
+        public virtual async Task PostAsync<T>(T request, bool continueOnCapturedContext = false) where T : class, IRequest
+        {
+            _requests.Enqueue(request);
+            _commands.Add(CommandType.Post);
+            await Task.Delay(0);
         }
 
         public virtual T Observe<T>() where T : class, IRequest

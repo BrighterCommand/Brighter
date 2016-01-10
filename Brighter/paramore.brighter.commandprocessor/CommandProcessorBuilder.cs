@@ -93,7 +93,9 @@ namespace paramore.brighter.commandprocessor
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
         private IAmAMessageStore<Message> _messageStore;
+        private IAmAnAsyncMessageStore<Message> _asyncMessageStore;
         private IAmAMessageProducer _messagingGateway;
+        private IAmAnAsyncMessageProducer _asyncMessagingGateway;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
@@ -173,7 +175,9 @@ namespace paramore.brighter.commandprocessor
         {
             _useTaskQueues = true;
             _messageStore = configuration.MessageStore;
+            _asyncMessageStore = configuration.AsyncMessageStore;
             _messagingGateway = configuration.MessageProducer;
+            _asyncMessagingGateway = configuration.AsyncMessageProducer;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _messageStoreWriteTimeout = configuration.MessageStoreWriteTimeout;
             _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;
@@ -223,11 +227,14 @@ namespace paramore.brighter.commandprocessor
                 return new CommandProcessor(
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
+                    asyncHandlerFactory: _asyncHandlerFactory,
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
                     messageStore: _messageStore,
+                    asyncMessageStore: _asyncMessageStore,
                     messageProducer: _messagingGateway,
+                    asyncMessageProducer: _asyncMessagingGateway,
                     messageStoreTimeout: _messageStoreWriteTimeout,
                     messageGatewaySendTimeout: _messagingGatewaySendTimeout
                     );

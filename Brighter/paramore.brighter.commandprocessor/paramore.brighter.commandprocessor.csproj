@@ -82,6 +82,8 @@
     <Compile Include="IAmAMessageRecoverer.cs" />
     <Compile Include="IAmAMessageStoreViewer.cs" />
     <Compile Include="IAmAnAsyncCommandStore.cs" />
+    <Compile Include="IAmAnAsyncMessageProducer.cs" />
+    <Compile Include="IAmAnAsyncMessageStore.cs" />
     <Compile Include="IAmAnInputChannel.cs" />
     <Compile Include="IAmAnOutputChannel.cs" />
     <Compile Include="IAmAPolicyRegistry.cs" />
