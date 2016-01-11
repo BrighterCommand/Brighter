@@ -30,14 +30,14 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     internal class MyDoubleDecoratedHandlerAsync: AsyncRequestHandler<MyCommand>
     {
-        public MyDoubleDecoratedHandlerAsync(ILog logger) : base(logger)
+        public MyDoubleDecoratedHandlerAsync(ILog logger) : base(false, logger)
         { }
 
         [MyValidationHandlerAsync(step: 2)]
         [MyLoggingHandlerAsync(step: 1)]
         public override async Task<MyCommand> HandleAsync(MyCommand command)
         {
-            return await base.HandleAsync(command);
+            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
         }
     }
 }

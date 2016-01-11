@@ -50,17 +50,27 @@ namespace paramore.brighter.commandprocessor
 {
     public abstract class AsyncRequestHandler<TRequest> : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
     {
+
         /// <summary>
         /// The logger
         /// </summary>
-        protected readonly ILog logger;
+        protected readonly ILog Logger;
+
+        /// <summary>
+        /// If false we use a thread from the thread pool to run any continuation, if true we use the originating thread.
+        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
+        /// or access the Result or otherwise block. You may need the orginating thread if you need to access thread specific storage
+        /// such as HTTPContext 
+        /// </summary>
+        protected readonly bool ContinueOnCapturedContext;
+
         private IHandleRequestsAsync<TRequest> _successor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncRequestHandler{TRequest}"/> class.
         /// </summary>
-        protected AsyncRequestHandler() 
-            : this(LogProvider.GetCurrentClassLogger())
+        protected AsyncRequestHandler(bool continueOnCapturedContext = false) 
+            : this(continueOnCapturedContext, LogProvider.GetCurrentClassLogger())
         { }
 
         /// <summary>
@@ -68,10 +78,12 @@ namespace paramore.brighter.commandprocessor
         /// Generally you can should prefer the default constructor, and we will grab the logger from your log provider rather than take a direct dependency.
         /// This can be helpful for testing.
         /// </summary>
+        /// <param name="continueOnCapturedContext"></param>
         /// <param name="logger">The logger.</param>
-        protected AsyncRequestHandler(ILog logger)
+        protected AsyncRequestHandler(bool continueOnCapturedContext, ILog logger)
         {
-            this.logger = logger;
+            ContinueOnCapturedContext = continueOnCapturedContext;
+            this.Logger = logger;
         }
 
         /// <summary>
@@ -130,8 +142,8 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
-                return await _successor.HandleAsync(command);
+                Logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
+                return await _successor.HandleAsync(command).ConfigureAwait(ContinueOnCapturedContext);
             }
 
             return command;
@@ -160,8 +172,8 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
-                return await _successor.FallbackAsync(command);
+                Logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
+                return await _successor.FallbackAsync(command).ConfigureAwait(ContinueOnCapturedContext);
             }
             return command;
         }

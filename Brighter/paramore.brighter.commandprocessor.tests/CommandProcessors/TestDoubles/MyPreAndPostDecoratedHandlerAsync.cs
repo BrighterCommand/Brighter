@@ -35,7 +35,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         public static bool DisposeWasCalled { get; set; }
 
         public MyPreAndPostDecoratedHandlerAsync(ILog logger)
-            : base(logger)
+            : base(false, logger)
         {
             s_command = null;
             DisposeWasCalled = false;
@@ -46,7 +46,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         public override async Task<MyCommand> HandleAsync(MyCommand command)
         {
             LogCommand(command);
-            return await base.HandleAsync(command);
+            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
         public static bool ShouldReceive(MyCommand expectedCommand)

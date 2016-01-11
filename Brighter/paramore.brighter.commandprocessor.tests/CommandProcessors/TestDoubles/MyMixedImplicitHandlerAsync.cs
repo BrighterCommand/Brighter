@@ -30,13 +30,13 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     internal class MyMixedImplicitHandlerAsync : AsyncRequestHandler<MyCommand>
     {
-        public MyMixedImplicitHandlerAsync(ILog logger) : base(logger)
+        public MyMixedImplicitHandlerAsync(ILog logger) : base(false, logger)
         { }
 
         [MyLoggingHandler(step: 1)]
         public override async Task<MyCommand> HandleAsync(MyCommand command)
         {
-            return await base.HandleAsync(command);
+            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
         }
     }
 }

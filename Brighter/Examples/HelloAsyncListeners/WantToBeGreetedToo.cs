@@ -22,7 +22,7 @@ namespace HelloAsyncListeners
             Console.WriteLine(result.Success ? "Want-to-be-greeted-too has public IP addres is {0}" : "Call to IpFy API failed : {0}",
                 result.Message);
 
-            return await base.HandleAsync(@event);
+            return await base.HandleAsync(@event).ConfigureAwait(base.ContinueOnCapturedContext);
         }
     }
 }

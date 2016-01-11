@@ -66,7 +66,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         {
             _requests.Enqueue(command);
             _commands.Add(CommandType.SendAsync);
-            await Task.Delay(0);
+            await Task.Delay(0).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         {
             _requests.Enqueue(@event);
             _commands.Add(CommandType.PublishAsync);
-            await Task.Delay(0);
+            await Task.Delay(0).ConfigureAwait(false);
         }
 
         /// <summary>

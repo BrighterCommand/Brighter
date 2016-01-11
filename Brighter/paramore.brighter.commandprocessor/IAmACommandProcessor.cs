@@ -76,6 +76,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
+        /// <returns>awaitable <see cref="Task"/>.</returns>
         Task PublishAsync<T>(T @event) where T : class, IRequest;
 
         /// <summary>

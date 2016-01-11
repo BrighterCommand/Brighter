@@ -10,7 +10,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         private static MyCommand s_command;
 
         public MyObsoleteCommandHandlerAsync (ILog logger)
-            : base(logger)
+            : base(false, logger)
         {
             s_command = null;
         }
@@ -21,7 +21,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         public override async Task<MyCommand> HandleAsync(MyCommand command)
         {
             LogCommand(command);
-            return await base.HandleAsync(command);
+            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
         public static bool Shouldreceive(MyCommand expectedCommand)

@@ -33,7 +33,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         private static TRequest s_command;
 
         public MyValidationHandlerAsync(ILog logger)
-            : base(logger)
+            : base(false, logger)
         {
             s_command = null;
         }
@@ -41,7 +41,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         public override async Task<TRequest> HandleAsync(TRequest command)
         {
             LogCommand(command);
-            return await base.HandleAsync(command);
+            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
         public static bool ShouldReceive(TRequest expectedCommand)

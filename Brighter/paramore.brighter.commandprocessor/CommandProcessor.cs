@@ -358,7 +358,7 @@ namespace paramore.brighter.commandprocessor
 
                 AssertValidSendPipeline(command, handlerChain.Count());
 
-                await handlerChain.First().HandleAsync(command);
+                await handlerChain.First().HandleAsync(command).ConfigureAwait(continueOnCapturedContext:false);
             }
         }
 
@@ -417,6 +417,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
+        /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task PublishAsync<T>(T @event) where T : class, IRequest
         {
             if (_asyncHandlerFactory == null)
@@ -438,7 +439,7 @@ namespace paramore.brighter.commandprocessor
                 // Whenall will aggregate individual exceptions, and await will raise it when all tasks have completed
                 try
                 {
-                    await Task.WhenAll(eventTasks);
+                    await Task.WhenAll(eventTasks).ConfigureAwait(continueOnCapturedContext:false);
                 }
                 catch (Exception)
                 {

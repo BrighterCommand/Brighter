@@ -34,7 +34,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         private TRequest _command;
         public static bool DisposeWasCalled { get; set; }
 
-        public MyLoggingHandlerAsync(ILog logger) : base(logger)
+        public MyLoggingHandlerAsync(ILog logger) : base(false, logger)
         {
             _command = null;
             DisposeWasCalled = false;
@@ -43,7 +43,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         public override async Task<TRequest> HandleAsync(TRequest command)
         {
             LogCommand(command);
-            return await base.HandleAsync(command);
+            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
         public static bool Shouldreceive(TRequest expectedCommand)
