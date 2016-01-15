@@ -33,7 +33,8 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.tests.ExceptionPolicy
 {
-    public class When_raising_an_exception_on_a_handler_that_supports_fallback
+    [Subject(typeof(ExceptionPolicyHandler<>))]
+    public class When_Raising_An_Exception_Can_Fallback
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

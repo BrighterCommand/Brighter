@@ -45,58 +45,32 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         private readonly IList<CommandType> _commands = new List<CommandType>();
         public IList<CommandType> Commands { get { return _commands; } }
 
-        /// <summary>
-        /// Sends the specified command.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="command">The command.</param>
         public virtual void Send<T>(T command) where T : class, IRequest
         {
             _requests.Enqueue(command);
             _commands.Add(CommandType.Send);
         }
 
-        /// <summary>
-        /// Awaitably sends the specified command.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="command">The command.</param>
-        /// <returns>awaitable <see cref="Task"/>.</returns>
-        public virtual async Task SendAsync<T>(T command) where T : class, IRequest
+        public virtual async Task SendAsync<T>(T command, bool continueOnCapturedContext = false) where T : class, IRequest
         {
             _requests.Enqueue(command);
             _commands.Add(CommandType.SendAsync);
             await Task.Delay(0).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="event">The event.</param>
         public virtual void Publish<T>(T @event) where T : class, IRequest
         {
             _requests.Enqueue(@event);
             _commands.Add(CommandType.Publish);
         }
 
-        /// <summary>
-        /// Awaitably publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="event">The event.</param>
-        public virtual async Task PublishAsync<T>(T @event) where T : class, IRequest
+        public virtual async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false) where T : class, IRequest
         {
             _requests.Enqueue(@event);
             _commands.Add(CommandType.PublishAsync);
             await Task.Delay(0).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// Posts the specified request.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="request">The request.</param>
         public virtual void Post<T>(T request) where T : class, IRequest
         {
             _requests.Enqueue(request);

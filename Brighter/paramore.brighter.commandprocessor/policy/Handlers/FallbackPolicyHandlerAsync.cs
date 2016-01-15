@@ -23,24 +23,26 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using paramore.brighter.commandprocessor.Logging;
 using Polly.CircuitBreaker;
 
 namespace paramore.brighter.commandprocessor.policy.Handlers
 {
-    public class FallbackPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
+    public class FallbackPolicyHandlerAsync<TRequest> : AsyncRequestHandler<TRequest> where TRequest : class, IRequest
     {
         /// <summary>
         /// The Key to the <see cref="IHandleRequests{TRequest}.Context"/> bag item that contains the exception initiating the fallback
         /// </summary>
         public const string CAUSE_OF_FALLBACK_EXCEPTION = "Fallback_Exception_Cause";
 
-        private Func<TRequest, TRequest> _exceptionHandlerFunc;
+        private Func<TRequest, Task<TRequest>> _exceptionHandlerFunc;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
-        public FallbackPolicyHandler() 
+        public FallbackPolicyHandlerAsync() 
             : this(LogProvider.GetCurrentClassLogger()) 
         {}
 
@@ -49,9 +51,7 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// Use this if you need to inject a logger, for testing
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public FallbackPolicyHandler(ILog logger) : base(logger) {}
-
-        #region Overrides of RequestHandler<TRequest>
+        public FallbackPolicyHandlerAsync(ILog logger) : base(logger) {}
 
         /// <summary>
         /// Initializes from attribute parameters.
@@ -76,9 +76,6 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
             }
         }
 
-
-        #endregion
-
         /// <summary>
         /// Catches any <see cref="Exception"/>s occurring in the pipeline and calls <see cref="IHandleRequests{TRequest}.Fallback"/> to allow handlers in the chain a chance to provide a fallback on failure
         /// The original exception is stored in the <see cref="IHandleRequests{TRequest}.Context"/> under the key <see cref="FallbackPolicyHandler{TRequest}.CAUSE_OF_FALLBACK_EXCEPTION"/> for probing
@@ -86,40 +83,43 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// </summary>
         /// <param name="command">The command.</param>
         /// <returns>TRequest.</returns>
-        public override TRequest Handle(TRequest command)
+        public override async Task<TRequest> HandleAsync(TRequest command)
         {
-            return _exceptionHandlerFunc(command);
+            return await _exceptionHandlerFunc(command);
         }
 
-        private TRequest CatchAll(TRequest command)
+        private async Task<TRequest> CatchAll(TRequest command)
         {
             try
             {
-                return base.Handle(command);
+                return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
             }
             catch (Exception exception)
             {
                 Context.Bag.Add(CAUSE_OF_FALLBACK_EXCEPTION, exception);
-                return base.Fallback(command);
             }
+            return await base.FallbackAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
-        private TRequest CatchBrokenCircuit(TRequest command)
+        private async Task<TRequest> CatchBrokenCircuit(TRequest command)
         {
             try
             {
-                return base.Handle(command);
+                return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
             }
             catch (BrokenCircuitException brokenCircuitExceptionexception)
             {
                 Context.Bag.Add(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception);
-                return base.Fallback(command);
             }
+            return await base.FallbackAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
-        private TRequest CatchNone(TRequest command)
+        private async Task<TRequest> CatchNone(TRequest command)
         {
-            return command;
+            var tcs = new TaskCompletionSource<TRequest>();
+            tcs.SetResult(command);
+            return await tcs.Task.ConfigureAwait(base.ContinueOnCapturedContext);
         }
     }
+
 }

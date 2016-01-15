@@ -49,7 +49,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             s_chain_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        private Because _of = () => s_chain_Of_Responsibility = s_chain_Builder.BuildAsync(s_request_context).First();
+        private Because _of = () => s_chain_Of_Responsibility = s_chain_Builder.BuildAsync(s_request_context, false).First();
 
         private It _should_have_set_the_context_on_the_handler = () => s_chain_Of_Responsibility.Context.ShouldNotBeNull();
         private It _should_use_the_context_that_we_passed_in = () => s_chain_Of_Responsibility.Context.ShouldBeTheSameAs(s_request_context);

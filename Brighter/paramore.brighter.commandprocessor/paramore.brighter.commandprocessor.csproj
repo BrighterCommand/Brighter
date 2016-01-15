@@ -102,11 +102,15 @@
     <Compile Include="monitoring\Events\MonitorEvent.cs" />
     <Compile Include="monitoring\Handlers\MonitorHandler.cs" />
     <Compile Include="PolicyRegistry.cs" />
+    <Compile Include="policy\Attributes\FallbackPolicyAsyncAttribute.cs" />
     <Compile Include="policy\Attributes\FallbackPolicyAttribute.cs" />
     <Compile Include="policy\Attributes\TimeoutPolicyAttribute.cs" />
+    <Compile Include="policy\Attributes\UsePolicyAsyncAttribute.cs" />
     <Compile Include="policy\Attributes\UsePolicyAtttribute.cs" />
     <Compile Include="policy\Handlers\ExceptionPolicyHandler.cs" />
+    <Compile Include="policy\Handlers\ExceptionPolicyHandlerAsync.cs" />
     <Compile Include="policy\Handlers\FallbackPolicyHandler.cs" />
+    <Compile Include="policy\Handlers\FallbackPolicyHandlerAsync.cs" />
     <Compile Include="policy\Handlers\TimeoutPolicyHandler.cs" />
     <Compile Include="Reply.cs" />
     <Compile Include="ReplyAddress.cs" />

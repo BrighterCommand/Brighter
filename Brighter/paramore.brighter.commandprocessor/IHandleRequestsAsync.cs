@@ -56,12 +56,22 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <value>The context.</value>
         IRequestContext Context { get; set; }
+
+        /// <summary>
+        /// If false we use a thread from the thread pool to run any continuation, if true we use the originating thread.
+        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
+        /// or access the Result or otherwise block. You may need the orginating thread if you need to access thread specific storage
+        /// such as HTTPContext 
+        /// </summary>
+        bool ContinueOnCapturedContext { get; set; }
+
         /// <summary>
         /// Describes the path. To support pipeline tracing. Generally return the name of this handler to <see cref="IAmAPipelineTracer"/>,
         ///  or other information to determine the path a request will take
         /// </summary>
         /// <param name="pathExplorer">The path explorer.</param>
         void DescribePath(IAmAPipelineTracer pathExplorer);
+
         /// <summary>
         /// Initializes from the <see cref="RequestHandlerAttribute"/> attribute parameters. Use when you need to provide parameter information from the
         /// attribute to the handler. Note that the attribute implementation might include types other than primitives that you intend to pass across, but
@@ -71,6 +81,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
         void InitializeFromAttributeParams(params object[] initializerList);
+
         /// <summary>
         /// Gets the name of the Handler. Useful for diagnostic purposes
         /// </summary>

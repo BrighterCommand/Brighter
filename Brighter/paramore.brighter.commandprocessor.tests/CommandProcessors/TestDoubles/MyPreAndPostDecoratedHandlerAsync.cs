@@ -35,7 +35,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         public static bool DisposeWasCalled { get; set; }
 
         public MyPreAndPostDecoratedHandlerAsync(ILog logger)
-            : base(false, logger)
+            : base(logger)
         {
             s_command = null;
             DisposeWasCalled = false;

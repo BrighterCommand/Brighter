@@ -54,7 +54,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        private Because _of = () => s_pipeline = s_pipeline_Builder.BuildAsync(new RequestContext()).First();
+        private Because _of = () => s_pipeline = s_pipeline_Builder.BuildAsync(new RequestContext(), false).First();
 
         private It _should_include_my_command_handler_filter_in_the_chain = () => TracePipeline().ToString().Contains("MyImplicitHandlerAsync").ShouldBeTrue();
         private It _should_include_my_logging_handler_in_the_chain = () => TracePipeline().ToString().Contains("MyLoggingHandlerAsync").ShouldBeTrue();

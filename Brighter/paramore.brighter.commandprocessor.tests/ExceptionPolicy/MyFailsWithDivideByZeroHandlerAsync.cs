@@ -22,22 +22,37 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.policy.Attributes;
+using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
+namespace paramore.commandprocessor.tests.ExceptionPolicy
 {
-    internal class MyDoubleDecoratedHandlerAsync: AsyncRequestHandler<MyCommand>
+    internal class MyFailsWithDivideByZeroHandlerAsync : AsyncRequestHandler<MyCommand>
     {
-        public MyDoubleDecoratedHandlerAsync(ILog logger) : base(logger)
+        public MyFailsWithDivideByZeroHandlerAsync(ILog logger) : base(logger)
         { }
 
-        [MyValidationHandlerAsync(step: 2)]
-        [MyLoggingHandlerAsync(step: 1)]
+        public static bool ReceivedCommand { get; set; }
+
+        static MyFailsWithDivideByZeroHandlerAsync()
+        {
+            ReceivedCommand = false;
+        }
+
+        [UsePolicyAsync(policy: "MyDivideByZeroPolicy", step: 1)]
         public override async Task<MyCommand> HandleAsync(MyCommand command)
         {
-            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+            ReceivedCommand = true;
+            throw new DivideByZeroException();
+        }
+
+        public static bool ShouldReceive(MyCommand myCommand)
+        {
+            return ReceivedCommand;
         }
     }
 }

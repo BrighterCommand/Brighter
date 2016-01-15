@@ -30,7 +30,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     internal class MyMixedImplicitHandlerAsync : AsyncRequestHandler<MyCommand>
     {
-        public MyMixedImplicitHandlerAsync(ILog logger) : base(false, logger)
+        public MyMixedImplicitHandlerAsync(ILog logger) : base(logger)
         { }
 
         [MyLoggingHandler(step: 1)]

@@ -33,7 +33,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         private static MyEvent s_receivedEvent;
 
         public MyOtherEventHandlerAsync(ILog logger)
-            : base(false, logger)
+            : base(logger)
         {
             s_receivedEvent = null;
         }

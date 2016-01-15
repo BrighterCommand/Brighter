@@ -8,7 +8,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
     {
         private static MyCommand s_command;
 
-        public MyCommandHandlerAsync (ILog logger): base(false, logger)
+        public MyCommandHandlerAsync (ILog logger): base(logger)
         {
             s_command = null;
         }

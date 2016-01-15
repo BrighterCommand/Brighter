@@ -1,18 +1,4 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
-// Author           : ian
-// Created          : 02-26-2015
-//
-// Last Modified By : ian
-// Last Modified On : 02-26-2015
-// ***********************************************************************
-// <copyright file="FallbackPolicyAttribute.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -45,10 +31,10 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
     /// Class FallbackPolicyAttribute.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public class FallbackPolicyAttribute : RequestHandlerAttribute
+    public class FallbackPolicyAsyncAttribute : RequestHandlerAttribute
     {
-        readonly bool _backstop;
-        readonly bool _circuitBreaker;
+        private readonly bool _backstop;
+        private readonly bool _circuitBreaker;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandlerAttribute" /> class.
@@ -57,13 +43,16 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
         /// <param name="circuitBreaker">if set to <c>true</c> [circuit breaker].</param>
         /// <param name="step">The step.</param>
         /// <param name="timing">The timing.</param>
-        public FallbackPolicyAttribute(bool backstop, bool circuitBreaker, int step, HandlerTiming timing = HandlerTiming.Before) : base(step, timing)
+        public FallbackPolicyAsyncAttribute(
+            bool backstop, 
+            bool circuitBreaker, 
+            int step, 
+            HandlerTiming timing = HandlerTiming.Before) 
+            : base(step, timing)
         {
             _backstop = backstop;
             _circuitBreaker = circuitBreaker;
         }
-
-        #region Overrides of RequestHandlerAttribute
 
         /// <summary>
         /// Initializers the parameters.
@@ -74,16 +63,13 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
            return new object[] {_backstop, _circuitBreaker};
         }
 
-        #endregion
-
         /// <summary>
         /// Gets the type of the handler.
         /// </summary>
         /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
-            return typeof (FallbackPolicyHandler<>);
+            return typeof (FallbackPolicyHandlerAsync<>);
         }
 
-    }
-}
+    }}

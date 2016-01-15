@@ -1,13 +1,13 @@
 ﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
-// Created          : 02-26-2015
+// Created          : 01-12-2016
 //
 // Last Modified By : ian
-// Last Modified On : 02-26-2015
+// Last Modified On : 01-12-2016
 // ***********************************************************************
-// <copyright file="FallbackPolicyAttribute.cs" company="">
-//     Copyright (c) . All rights reserved.
+// <copyright file="UsePolicyAsyncAttribute.cs" company="Ian Cooper">
+//     Copyright \u00A9  2014 Ian Cooper
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
@@ -42,28 +42,27 @@ using paramore.brighter.commandprocessor.policy.Handlers;
 namespace paramore.brighter.commandprocessor.policy.Attributes
 {
     /// <summary>
-    /// Class FallbackPolicyAttribute.
+    /// Class UsePolicyAttribute.
+    /// This attribute supports the use of <a href="https://github.com/michael-wolfenden/Polly">Polly</a> to provide quality of service around exceptions
+    /// thrown from subsequent steps in the handler pipeline. A Polly Policy can be used to support a Retry or Circuit Breaker approach to exception handling
+    /// Policies used by the attribute are identified by a string based key, which is used as a lookup into an <see cref="IAmAPolicyRegistry" /> and it is
+    /// assumed that you have registered required policies with a Policy Registry such as <see cref="PolicyRegistry" /> and configured that as a
+    /// dependency of the <see cref="CommandProcessor" /> using the <see cref="CommandProcessorBuilder" />
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public class FallbackPolicyAttribute : RequestHandlerAttribute
+    public class UsePolicyAsyncAttribute : RequestHandlerAttribute
     {
-        readonly bool _backstop;
-        readonly bool _circuitBreaker;
+        private readonly string _policy;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandlerAttribute" /> class.
+        /// Initializes a new instance of the <see cref="UsePolicyAsyncAttribute" /> class.
         /// </summary>
-        /// <param name="backstop">if set to <c>true</c> [backstop].</param>
-        /// <param name="circuitBreaker">if set to <c>true</c> [circuit breaker].</param>
+        /// <param name="policy">The policy key, used as a lookup into an <see cref="IAmAPolicyRegistry" />.</param>
         /// <param name="step">The step.</param>
-        /// <param name="timing">The timing.</param>
-        public FallbackPolicyAttribute(bool backstop, bool circuitBreaker, int step, HandlerTiming timing = HandlerTiming.Before) : base(step, timing)
+        public UsePolicyAsyncAttribute(string policy, int step) : base(step, HandlerTiming.Before)
         {
-            _backstop = backstop;
-            _circuitBreaker = circuitBreaker;
+            _policy = policy;
         }
-
-        #region Overrides of RequestHandlerAttribute
 
         /// <summary>
         /// Initializers the parameters.
@@ -71,10 +70,8 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
         /// <returns>System.Object[].</returns>
         public override object[] InitializerParams()
         {
-           return new object[] {_backstop, _circuitBreaker};
+            return new object[] { _policy};
         }
-
-        #endregion
 
         /// <summary>
         /// Gets the type of the handler.
@@ -82,8 +79,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
         /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
-            return typeof (FallbackPolicyHandler<>);
+            return typeof(ExceptionPolicyHandlerAsync<>);
         }
-
     }
 }

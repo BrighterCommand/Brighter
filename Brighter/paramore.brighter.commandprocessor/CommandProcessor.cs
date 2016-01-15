@@ -342,8 +342,9 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread when continuing or a thread-pool thead. Defaults to false</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task SendAsync<T>(T command) where T : class, IRequest
+        public async Task SendAsync<T>(T command, bool continueOnCapturedContext = false) where T : class, IRequest
         {
             if (_asyncHandlerFactory == null)
                 throw new InvalidOperationException("No async handler factory defined.");
@@ -354,7 +355,7 @@ namespace paramore.brighter.commandprocessor
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _logger))
             {
                 _logger.InfoFormat("Building send async pipeline for command: {0}", command.Id);
-                var handlerChain = builder.BuildAsync(requestContext);
+                var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
 
@@ -417,8 +418,9 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread when continuing or a thread-pool thead. Defaults to false</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task PublishAsync<T>(T @event) where T : class, IRequest
+        public async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false) where T : class, IRequest
         {
             if (_asyncHandlerFactory == null)
                 throw new InvalidOperationException("No async handler factory defined.");
@@ -429,7 +431,7 @@ namespace paramore.brighter.commandprocessor
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _logger))
             {
                 _logger.InfoFormat("Building send async pipeline for event: {0}", @event.Id);
-                var handlerChain = builder.BuildAsync(requestContext);
+                var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
                 var handlerCount = handlerChain.Count();
 

@@ -34,7 +34,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         private TRequest _command;
         public static bool DisposeWasCalled { get; set; }
 
-        public MyLoggingHandlerAsync(ILog logger) : base(false, logger)
+        public MyLoggingHandlerAsync(ILog logger) : base(logger)
         {
             _command = null;
             DisposeWasCalled = false;

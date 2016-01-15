@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
@@ -34,35 +33,36 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.tests.ExceptionPolicy
 {
-    public class When_raising_an_exception_on_a_handler_that_only_supports_fallback_for_broken_exception
+    [Subject(typeof(ExceptionPolicyHandler<>))]
+    public class When_Raising_An_Exception_Run_Fallback_Chain
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Exception s_exception;
 
         private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyFailsWithUnsupportedExceptionForFallback>();
+            registry.Register<MyCommand, MyFailsWithFallbackMultipleHandlers>();
             var policyRegistry = new PolicyRegistry();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyFailsWithUnsupportedExceptionForFallback>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyFailsWithFallbackMultipleHandlers>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, FallbackPolicyHandler<MyCommand>>().AsSingleton();
             container.Register<ILog>(logger);
 
 
-            MyFailsWithFallbackDivideByZeroHandler.ReceivedCommand = false;
+            MyFailsWithFallbackMultipleHandlers.ReceivedCommand = false;
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
         };
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
+        private Because _of = () => s_commandProcessor.Send(s_myCommand);
 
-        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithUnsupportedExceptionForFallback.ShouldReceive(s_myCommand);
-        private It _should_bubble_out_the_exception = () => s_exception.ShouldNotBeNull();
+        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithFallbackMultipleHandlers.ShouldReceive(s_myCommand);
+        private It _should_call_the_fallback_chain = () => MyFailsWithFallbackMultipleHandlers.ShouldFallback(s_myCommand);
+        private It _should_set_the_exeception_into_context = () => MyFailsWithFallbackMultipleHandlers.ShouldSetException(s_myCommand);
     }
 }

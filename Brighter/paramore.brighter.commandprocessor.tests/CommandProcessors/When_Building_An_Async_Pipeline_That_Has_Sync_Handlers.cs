@@ -32,7 +32,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_pipeline = s_pipeline_Builder.BuildAsync(new RequestContext()).First());
+        private Because _of = () => s_exception = Catch.Exception(() => s_pipeline = s_pipeline_Builder.BuildAsync(new RequestContext(), false).First());
 
         private It _should_throw_an_exception = () => s_exception.ShouldNotBeNull();
         private It _should_throw_a_configuration_exception_for_a_mixed_pipeline = () => s_exception.ShouldBeOfExactType(typeof (ConfigurationException));

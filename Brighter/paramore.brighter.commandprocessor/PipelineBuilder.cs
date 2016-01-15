@@ -159,21 +159,22 @@ namespace paramore.brighter.commandprocessor
             return lastInPipeline;
         }
 
-        public AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext)
+        public AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext, bool continueOnCapturedContext)
         {
             var handlers = _interpreter.GetAsyncHandlers(typeof(TRequest));
 
             var pipelines = new AsyncPipelines<TRequest>();
-            handlers.Each(handler => pipelines.Add(BuildAsyncPipeline(handler, requestContext)));
+            handlers.Each(handler => pipelines.Add(BuildAsyncPipeline(handler, requestContext, continueOnCapturedContext)));
 
             pipelines.Each(handler => handler.AddToLifetime(_instanceScope));
 
             return pipelines;
         }
 
-        private IHandleRequestsAsync<TRequest> BuildAsyncPipeline(AsyncRequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
+        private IHandleRequestsAsync<TRequest> BuildAsyncPipeline(AsyncRequestHandler<TRequest> implicitHandler, IRequestContext requestContext, bool continueOnCapturedContext)
         {
             implicitHandler.Context = requestContext;
+            implicitHandler.ContinueOnCapturedContext = continueOnCapturedContext;
 
             var preAttributes =
                 implicitHandler.FindHandlerMethod()
@@ -181,7 +182,7 @@ namespace paramore.brighter.commandprocessor
                 .Where(attribute => attribute.Timing == HandlerTiming.Before)
                 .OrderByDescending(attribute => attribute.Step);
 
-            var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext);
+            var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, continueOnCapturedContext);
 
             var postAttributes =
                 implicitHandler.FindHandlerMethod()
@@ -213,7 +214,7 @@ namespace paramore.brighter.commandprocessor
             });
         }
 
-        private IHandleRequestsAsync<TRequest> PushOntoAsyncPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> lastInPipeline, IRequestContext requestContext)
+        private IHandleRequestsAsync<TRequest> PushOntoAsyncPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> lastInPipeline, IRequestContext requestContext, bool continueOnCapturedContext)
         {
             attributes.Each(attribute =>
             {
@@ -221,6 +222,7 @@ namespace paramore.brighter.commandprocessor
                 if (handlerType.GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
                 {
                     var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext) .CreateAsyncRequestHandler();
+                    decorator.ContinueOnCapturedContext = continueOnCapturedContext;
                     decorator.SetSuccessor(lastInPipeline);
                     lastInPipeline = decorator;
                 }

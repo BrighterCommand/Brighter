@@ -33,7 +33,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         private static TRequest s_command;
 
         public MyValidationHandlerAsync(ILog logger)
-            : base(false, logger)
+            : base(logger)
         {
             s_command = null;
         }

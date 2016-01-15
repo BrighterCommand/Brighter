@@ -10,7 +10,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         private static MyCommand s_command;
 
         public MyObsoleteCommandHandlerAsync (ILog logger)
-            : base(false, logger)
+            : base(logger)
         {
             s_command = null;
         }

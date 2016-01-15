@@ -56,21 +56,14 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         protected readonly ILog Logger;
 
-        /// <summary>
-        /// If false we use a thread from the thread pool to run any continuation, if true we use the originating thread.
-        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
-        /// or access the Result or otherwise block. You may need the orginating thread if you need to access thread specific storage
-        /// such as HTTPContext 
-        /// </summary>
-        protected readonly bool ContinueOnCapturedContext;
 
         private IHandleRequestsAsync<TRequest> _successor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncRequestHandler{TRequest}"/> class.
         /// </summary>
-        protected AsyncRequestHandler(bool continueOnCapturedContext = false) 
-            : this(continueOnCapturedContext, LogProvider.GetCurrentClassLogger())
+        protected AsyncRequestHandler() 
+            : this(LogProvider.GetCurrentClassLogger())
         { }
 
         /// <summary>
@@ -78,11 +71,10 @@ namespace paramore.brighter.commandprocessor
         /// Generally you can should prefer the default constructor, and we will grab the logger from your log provider rather than take a direct dependency.
         /// This can be helpful for testing.
         /// </summary>
-        /// <param name="continueOnCapturedContext"></param>
         /// <param name="logger">The logger.</param>
-        protected AsyncRequestHandler(bool continueOnCapturedContext, ILog logger)
+        protected AsyncRequestHandler(ILog logger)
         {
-            ContinueOnCapturedContext = continueOnCapturedContext;
+            ContinueOnCapturedContext = false;
             this.Logger = logger;
         }
 
@@ -91,6 +83,15 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <value>The context.</value>
         public IRequestContext Context { get; set; }
+
+        /// <summary>
+        /// If false we use a thread from the thread pool to run any continuation, if true we use the originating thread.
+        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
+        /// or access the Result or otherwise block. You may need the orginating thread if you need to access thread specific storage
+        /// such as HTTPContext 
+        /// </summary>
+        /// 
+        public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
         /// Gets the name.

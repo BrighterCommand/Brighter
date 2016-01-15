@@ -61,8 +61,9 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread when continuing or a thread-pool thead. Defaults to false</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task SendAsync<T>(T command) where T : class, IRequest;
+        Task SendAsync<T>(T command, bool continueOnCapturedContext = false) where T : class, IRequest;
 
         /// <summary>
         /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
@@ -76,8 +77,9 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread when continuing or a thread-pool thead. Defaults to false</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task PublishAsync<T>(T @event) where T : class, IRequest;
+        Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false) where T : class, IRequest;
 
         /// <summary>
         /// Posts the specified request.
