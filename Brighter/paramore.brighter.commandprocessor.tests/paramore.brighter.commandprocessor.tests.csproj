@@ -259,6 +259,7 @@
     <Compile Include="ExceptionPolicy\When_Raising_An_Exception_Can_Fallback.cs" />
     <Compile Include="ExceptionPolicy\When_Raising_A_Broken_Circuit_Exception_Can_Fallback.cs" />
     <Compile Include="ExceptionPolicy\When_Sending_A_Command_That_Passes_Policy_Check.cs" />
+    <Compile Include="ExceptionPolicy\When_Sending_A_Command_That_Repeatedely_Fails_Break_The_Circuit_Async.cs" />
     <Compile Include="ExceptionPolicy\When_Sending_A_Command_That_Should_Retry_Failure.cs" />
     <Compile Include="ExceptionPolicy\When_Sending_A_Command_That_Should_Retry_Failure_Async.cs" />
     <Compile Include="GlobalSuppressions.cs" />
