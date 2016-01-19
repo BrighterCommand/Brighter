@@ -26,6 +26,7 @@ using System.Threading.Tasks;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.eventsourcing.Handlers;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using paramore.commandprocessor.tests.EventSourcing.TestDoubles;
@@ -33,7 +34,8 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.tests.EventSourcing
 {
-    public class When_handling_a_command_with_a_command_store_enabled
+    [Subject(typeof(CommandSourcingHandler<>))]
+    public class When_Handling_A_Command_With_A_Command_Store_Enabled
     {
         private static MyCommand s_command;
         private static IAmACommandStore s_commandstore;
@@ -60,13 +62,7 @@ namespace paramore.commandprocessor.tests.EventSourcing
 
         };
 
-        private Because of = () =>
-         {
-             s_commandProcessor.Send(s_command);
-
-             //we need to wait for the command store, which is asynchronous to complete writing
-             Task.Delay(500);
-         };
+        private Because of = () => s_commandProcessor.Send(s_command);
 
         private It should_store_the_command_to_the_command_store = () => s_commandstore.Get<MyCommand>(s_command.Id).Value.ShouldEqual(s_command.Value);
     }

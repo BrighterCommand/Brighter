@@ -32,7 +32,7 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandStore.MsSsql
 {
-    public class When_there_is_no_message_in_the_sql_command_store
+    public class When_There_Is_No_Message_In_The_Sql_Command_Store
     {
         private const string TestDbPath = "test.sdf";
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
