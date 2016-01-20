@@ -33,7 +33,7 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_reading_a_message_from_a_channel_pump_out_to_command_processor
+    public class When_Reading_A_Message_From_A_Channel_Pump_Out_To_Command_Processor
     {
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;

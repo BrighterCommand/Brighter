@@ -35,7 +35,8 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_a_message_is_dispatched_it_should_reach_a_handler
+    [Subject(typeof(MessagePump<>))]
+    public class When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler
     {
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;

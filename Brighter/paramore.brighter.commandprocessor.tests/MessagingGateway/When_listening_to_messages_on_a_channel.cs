@@ -29,7 +29,8 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.MessagingGateway
 {
-    public class When_listening_to_messages_on_a_channel
+    [Subject(typeof(InputChannel))]
+    public class When_Listening_To_Messages_On_A_Channel
     {
         private static IAmAnInputChannel s_channel;
         private static IAmAMessageConsumer s_gateway;

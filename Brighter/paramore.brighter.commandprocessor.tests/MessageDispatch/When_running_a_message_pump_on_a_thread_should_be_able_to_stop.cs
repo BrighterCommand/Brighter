@@ -36,7 +36,7 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_running_a_message_pump_on_a_thread_should_be_able_to_stop
+    public class When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop
     {
         private static Performer s_performer;
         private static SpyCommandProcessor s_commandProcessor;

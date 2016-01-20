@@ -32,7 +32,8 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_a_channel_failure_exception_is_thrown_for_event_should_retry_until_connection_re_established
+    [Subject(typeof(MessagePump<>))]
+    public class When_A_Channel_Failure_Exception_Is_Thrown_For_Event_Should_Retry_Until_Connection_Re_established
     {
         private static IAmAMessagePump s_messagePump;
         private static FailingChannel s_channel;

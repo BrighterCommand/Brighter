@@ -6,7 +6,8 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.MessagingGateway
 {
-    public class When_requeuing_a_message_with_supported_but_disabled_delay
+    [Subject(typeof(InputChannel))]
+    public class When_Requeuing_A_Message_With_Supported_But_Disabled_Delay
     {
         private static IAmAnInputChannel s_channel;
         private static IAmAMessageConsumerSupportingDelay s_gateway;

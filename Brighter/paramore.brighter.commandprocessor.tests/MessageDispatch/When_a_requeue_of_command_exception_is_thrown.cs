@@ -33,7 +33,8 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_a_requeue_of_command_exception_is_thrown
+    [Subject(typeof(MessagePump<>))]
+    public class When_A_Requeue_Of_Command_Exception_Is_Thrown
     {
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;

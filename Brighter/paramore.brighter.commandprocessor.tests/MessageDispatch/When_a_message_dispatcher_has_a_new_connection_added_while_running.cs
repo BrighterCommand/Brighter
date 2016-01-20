@@ -35,7 +35,8 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_a_message_dispatcher_has_a_new_connection_added_while_running
+    [Subject(typeof(Dispatcher))]
+    public class When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running
     {
         private static Dispatcher s_dispatcher;
         private static FakeChannel s_channel;

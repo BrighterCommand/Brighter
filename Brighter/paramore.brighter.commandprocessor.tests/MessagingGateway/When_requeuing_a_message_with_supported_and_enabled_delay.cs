@@ -30,7 +30,8 @@ using System.Diagnostics;
 
 namespace paramore.commandprocessor.tests.MessagingGateway
 {
-    public class When_requeuing_a_message_with_supported_and_enabled_delay
+    [Subject(typeof(InputChannel))]
+    public class When_Requeuing_A_Message_With_Supported_And_Enabled_Delay
     {
         private static IAmAnInputChannel s_channel;
         private static IAmAMessageConsumerSupportingDelay s_gateway;

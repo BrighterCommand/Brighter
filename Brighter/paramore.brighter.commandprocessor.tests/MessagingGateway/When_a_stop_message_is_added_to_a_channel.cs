@@ -29,7 +29,8 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.MessagingGateway
 {
-    public class When_a_stop_message_is_added_to_a_channel
+    [Subject(typeof(InputChannel))]
+    public class When_A_Stop_Message_Is_Added_To_A_Channel
     {
         private static IAmAnInputChannel s_channel;
         private static IAmAMessageConsumer s_gateway;

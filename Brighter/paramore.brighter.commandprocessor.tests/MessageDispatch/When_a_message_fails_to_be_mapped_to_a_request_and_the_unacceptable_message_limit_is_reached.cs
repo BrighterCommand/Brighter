@@ -32,7 +32,8 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_a_message_fails_to_be_mapped_to_a_request_and_the_unacceptable_message_limit_is_reached
+    [Subject(typeof(MessagePump<>))]
+    public class When_A_Message_Fails_To_Be_Mapped_To_A_Request_And_The_Unacceptable_Message_Limit_Is_Reached
     {
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;

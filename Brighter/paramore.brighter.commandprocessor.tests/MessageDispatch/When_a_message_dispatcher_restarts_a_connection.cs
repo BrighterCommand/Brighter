@@ -34,7 +34,8 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_a_message_dispatcher_restarts_a_connection
+    [Subject(typeof(Dispatcher))]
+    public class When_A_Message_Dispatcher_Restarts_A_Connection
     {
         private static Dispatcher s_dispatcher;
         private static FakeChannel s_channel;

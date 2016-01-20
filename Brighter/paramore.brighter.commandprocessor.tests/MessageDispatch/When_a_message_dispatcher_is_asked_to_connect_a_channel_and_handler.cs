@@ -34,7 +34,8 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler
+    [Subject(typeof(Dispatcher))]
+    public class When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler
     {
         private static Dispatcher s_dispatcher;
         private static FakeChannel s_channel;

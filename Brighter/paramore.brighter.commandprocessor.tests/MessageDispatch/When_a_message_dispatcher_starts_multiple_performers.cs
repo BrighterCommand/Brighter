@@ -34,6 +34,7 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
+    [Subject(typeof(Dispatcher))]
     public class WhenAMessageDispatcherStartsMultiplePerformers
     {
         private static Dispatcher s_dispatcher;

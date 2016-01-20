@@ -29,7 +29,8 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.MessagingGateway
 {
-    public class When_acknowledge_is_called_on_a_channel
+    [Subject(typeof(InputChannel))]
+    public class When_Acknowledge_Is_Called_On_A_Channel
     {
         private static IAmAnInputChannel s_channel;
         private static IAmAMessageConsumer s_gateway;

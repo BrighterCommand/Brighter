@@ -34,7 +34,8 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_a_requeue_count_threshold_for_commands_has_been_reached
+    [Subject(typeof(MessagePump<>))]
+    public class When_A_Requeue_Count_Threshold_For_Commands_Has_Been_Reached
     {
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;

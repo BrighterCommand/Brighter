@@ -28,7 +28,8 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.MessagingGateway
 {
-    public class When_disposing_input_channel
+    [Subject(typeof(InputChannel))]
+    public class When_Disposing_Input_Channel
     {
         private static IAmAnInputChannel s_channel;
         private static IAmAMessageConsumer s_messageConsumer;

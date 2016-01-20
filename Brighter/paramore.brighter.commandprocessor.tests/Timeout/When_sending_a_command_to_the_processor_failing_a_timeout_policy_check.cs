@@ -34,9 +34,9 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.tests.Timeout
 {
-    [Subject("Basic policy on a handler")]
+    [Subject(typeof(TimeoutPolicyHandler<>))]
     [Tags("Requires", new[] { "Fails on AppVeyor" })]
-    public class When_sending_a_command_to_the_processor_failing_a_timeout_policy_check
+    public class When_Sending_A_Command_To_The_Processor_Failing_A_Timeout_Policy_Check
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

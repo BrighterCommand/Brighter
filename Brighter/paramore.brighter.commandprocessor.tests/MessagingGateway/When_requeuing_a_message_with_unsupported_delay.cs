@@ -30,7 +30,8 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.MessagingGateway
 {
-    public class When_requeuing_a_message_with_unsupported_delay
+    [Subject(typeof(InputChannel))]
+    public class When_Requeuing_A_Message_With_Unsupported_Delay
     {
         private static IAmAnInputChannel s_channel;
         private static IAmAMessageConsumer s_gateway;

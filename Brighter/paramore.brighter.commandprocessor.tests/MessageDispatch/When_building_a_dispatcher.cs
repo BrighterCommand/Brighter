@@ -36,7 +36,8 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_building_a_dispatcher
+    [Subject(typeof(DispatchBuilder))]
+    public class When_Building_A_Dispatcher
     {
         private static IAmADispatchBuilder s_builder;
         private static Dispatcher s_dispatcher;

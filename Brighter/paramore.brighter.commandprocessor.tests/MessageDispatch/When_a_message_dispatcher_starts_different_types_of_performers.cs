@@ -36,7 +36,8 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_a_message_dispatcher_starts_different_types_of_performers
+    [Subject(typeof(Dispatcher))]
+    public class When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers
     {
         private static Dispatcher s_dispatcher;
         private static FakeChannel s_eventChannel;

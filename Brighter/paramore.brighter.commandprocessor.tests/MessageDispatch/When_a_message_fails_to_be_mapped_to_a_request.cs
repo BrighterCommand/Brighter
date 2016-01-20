@@ -8,7 +8,8 @@ using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    public class When_a_message_fails_to_be_mapped_to_a_request
+    [Subject(typeof(MessagePump<>))]
+    public class When_A_Message_Fails_To_Be_Mapped_To_A_Request
     {
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;

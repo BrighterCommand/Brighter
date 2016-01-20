@@ -38,7 +38,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     </connections>
     */
 
-    public class When_configuring_a_message_dispatcher
+    public class When_Configuring_A_Message_Dispatcher
     {
         private static IEnumerable<ConnectionElement> s_connectionElements;
         private static IEnumerable<Connection> s_connections;
