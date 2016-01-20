@@ -61,7 +61,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
-        /// <param name="continueOnCapturedContext">Should we use the calling thread when continuing or a thread-pool thead. Defaults to false</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         Task SendAsync<T>(T command, bool continueOnCapturedContext = false) where T : class, IRequest;
 
@@ -77,7 +77,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
-        /// <param name="continueOnCapturedContext">Should we use the calling thread when continuing or a thread-pool thead. Defaults to false</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false) where T : class, IRequest;
 
@@ -87,5 +87,14 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="request">The request.</param>
         void Post<T>(T request) where T : class, IRequest;
+
+        /// <summary>
+        /// Posts the specified request with async/await support.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="request">The request.</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <returns>awaitable <see cref="Task"/>.</returns>
+        Task PostAsync<T>(T request, bool continueOnCapturedContext = false) where T : class, IRequest;
     }
 }

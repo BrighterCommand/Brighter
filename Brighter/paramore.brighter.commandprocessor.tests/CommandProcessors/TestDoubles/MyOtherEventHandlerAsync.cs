@@ -41,6 +41,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         public override async Task<MyEvent> HandleAsync(MyEvent command)
         {
             LogEvent(command);
+            await Task.Delay(0);
             return command;
         }
 

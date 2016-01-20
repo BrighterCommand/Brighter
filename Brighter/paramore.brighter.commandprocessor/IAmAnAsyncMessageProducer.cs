@@ -1,4 +1,4 @@
-// ***********************************************************************
+Ôªø// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-29-2014
@@ -13,11 +13,12 @@
 // ***********************************************************************
 
 #region Licence
+
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright ¬© 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the ìSoftwareî), to deal
+of this software and associated documentation files (the ‚ÄúSoftware‚Äù), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -26,7 +27,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED ìAS ISî, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED ‚ÄúAS IS‚Äù, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -36,13 +37,13 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
     /// Interface IAmASendMessageGateway
-    /// Abstracts away the Application Layer used to push messages onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+    /// Abstracts away the Application Layer used to push messages with async/await support onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     /// Usually clients do not need to instantiate as access is via an <see cref="IAmAChannel"/> derived class.
     /// We provide the following default gateway applications
     /// <list type="bullet">
@@ -50,18 +51,18 @@ namespace paramore.brighter.commandprocessor
     /// <item>RESTML</item>
     /// </list>
     /// </summary>
-    public interface IAmAMessageProducer : IMessageProducer
+    public interface IAmAnAsyncMessageProducer : IMessageProducer
     {
         /// <summary>
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        void Send(Message message);
+        Task SendAsync(Message message);
     }
 
     /// <summary>
     /// Interface IAmAMessageProducerSupportingDelay
-    /// Abstracts away the Application Layer used to push messages onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+    /// Abstracts away the Application Layer used to push messages with async/await support onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     /// Usually clients do not need to instantiate as access is via an <see cref="IAmAChannel"/> derived class.
     /// We provide the following default gateway applications
     /// <list type="bullet">
@@ -69,13 +70,13 @@ namespace paramore.brighter.commandprocessor
     /// <item>RESTML</item>
     /// </list>
     /// </summary>
-    public interface IAmAMessageProducerSupportingDelay : IAmAMessageProducer, IAmAMessageGatewaySupportingDelay
+    public interface IAmAnAsyncMessageProducerSupportingDelay : IAmAnAsyncMessageProducer, IAmAMessageGatewaySupportingDelay
     {
         /// <summary>
         /// Send the specified message with specified delay
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        void SendWithDelay(Message message, int delayMilliseconds = 0);
+        Task SendWithDelay(Message message, int delayMilliseconds = 0);
     }
 }

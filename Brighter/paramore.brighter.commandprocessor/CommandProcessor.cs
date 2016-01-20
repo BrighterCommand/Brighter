@@ -59,8 +59,8 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAPolicyRegistry _policyRegistry;
         private readonly ILog _logger;
         private readonly int _messageStoreTimeout;
-        private IAmAMessageStore<Message> _messageStore;
-        private IAmAMessageProducer _messageProducer;
+        private IMessageStore<Message> _messageStore;
+        private IMessageProducer _messageProducer;
         private bool _disposed;
 
         /// <summary>
@@ -158,6 +158,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="asyncHandlerFactory">The async handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="logger">The logger.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAnAsyncHandlerFactory asyncHandlerFactory,
@@ -233,8 +234,8 @@ namespace paramore.brighter.commandprocessor
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStore<Message> messageStore,
-            IAmAMessageProducer messageProducer,
+            IMessageStore<Message> messageStore,
+            IMessageProducer messageProducer,
             ILog logger,
             int messageStoreTimeout = 300
             )
@@ -244,7 +245,11 @@ namespace paramore.brighter.commandprocessor
             _logger = logger;
             _messageStoreTimeout = messageStoreTimeout;
             _mapperRegistry = mapperRegistry;
+            if (!(messageStore is IAmAMessageStore<Message> || messageStore is IAmAnAsyncMessageStore<Message>))
+                throw new ArgumentException("MessageStore needs to implement IAmAMessageStore, IAmAnAsyncMessageStore or both.");
             _messageStore = messageStore;
+            if (!(messageProducer is IAmAMessageProducer || messageProducer is IAmAMessageProducer))
+                throw new ArgumentException("MessageProducer needs to implement IAmAMessageProducer, IAmAMessageProducer or both.");
             _messageProducer = messageProducer;
         }
 
@@ -295,8 +300,8 @@ namespace paramore.brighter.commandprocessor
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStore<Message> messageStore,
-            IAmAMessageProducer messageProducer,
+            IMessageStore<Message> messageStore,
+            IMessageProducer messageProducer,
             ILog logger,
             int messageStoreTimeout = 300,
             int messageGatewaySendTimeout = 300
@@ -304,7 +309,11 @@ namespace paramore.brighter.commandprocessor
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
         {
             _mapperRegistry = mapperRegistry;
+            if (!(messageStore is IAmAMessageStore<Message> || messageStore is IAmAnAsyncMessageStore<Message>))
+                throw new ArgumentException("MessageStore needs to implement IAmAMessageStore, IAmAnAsyncMessageStore or both.");
             _messageStore = messageStore;
+            if (!(messageProducer is IAmAMessageProducer || messageProducer is IAmAMessageProducer))
+                throw new ArgumentException("MessageProducer needs to implement IAmAMessageProducer, IAmAMessageProducer or both.");
             _messageProducer = messageProducer;
             _messageStoreTimeout = messageStoreTimeout;
         }
@@ -342,7 +351,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
-        /// <param name="continueOnCapturedContext">Should we use the calling thread when continuing or a thread-pool thead. Defaults to false</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task SendAsync<T>(T command, bool continueOnCapturedContext = false) where T : class, IRequest
         {
@@ -418,7 +427,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
-        /// <param name="continueOnCapturedContext">Should we use the calling thread when continuing or a thread-pool thead. Defaults to false</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false) where T : class, IRequest
         {
@@ -470,17 +479,60 @@ namespace paramore.brighter.commandprocessor
         public void Post<T>(T request) where T : class, IRequest
         {
             _logger.InfoFormat("Decoupled invocation of request: {0}", request.Id);
+            var theMessageStore = _messageStore as IAmAMessageStore<Message>;
+            if (theMessageStore == null)
+                throw new ArgumentException("MessageStore does not implement IAmAMessageStore");
+            var theMessageProducer = _messageProducer as IAmAMessageProducer;
+            if (theMessageProducer == null)
+                throw new ArgumentException("MessageProducer does not implement IAmAMessageProducer");
 
             var messageMapper = _mapperRegistry.Get<T>();
             if (messageMapper == null)
                 throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
 
             var message = messageMapper.MapToMessage(request);
+
             RetryAndBreakCircuit(() =>
                 {
-                    _messageStore.Add(message, _messageStoreTimeout);
-                    _messageProducer.Send(message);
+                    theMessageStore.Add(message, _messageStoreTimeout);
+                    theMessageProducer.Send(message);
                 });
+        }
+
+        /// <summary>
+        /// Posts the specified request with async/await support. The message is placed on a task queue and into a message store for reposting in the event of failure.
+        /// You will need to configure a service that reads from the task queue to process the message
+        /// Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
+        /// and then Sends or Publishes the message to a <see cref="CommandProcessor"/> within that service. The decision to <see cref="Send{T}"/> or <see cref="Publish{T}"/> is based on the
+        /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}(T)"/> or a
+        /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}(T)"/>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="request">The request.</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <exception cref="System.ArgumentOutOfRangeException"></exception>
+        /// <returns>awaitable <see cref="Task"/>.</returns>
+        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false) where T : class, IRequest
+        {
+            _logger.InfoFormat("Async decoupled invocation of request: {0}", request.Id);
+            var theMessageStore = _messageStore as IAmAnAsyncMessageStore<Message>;
+            if (theMessageStore == null)
+                throw new ArgumentException("MessageStore does not implement IAmAnAsyncMessageStore");
+            var theMessageProducer = _messageProducer as IAmAnAsyncMessageProducer;
+            if (theMessageProducer == null)
+                throw new ArgumentException("MessageProducer does not implement IAmAnAsyncMessageProducer");
+
+            var messageMapper = _mapperRegistry.Get<T>();
+            if (messageMapper == null)
+                throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
+
+            var message = messageMapper.MapToMessage(request);
+            await RetryAndBreakCircuitAsync(async () =>
+            {
+                await theMessageStore.AddAsync(message, _messageStoreTimeout);
+                await theMessageProducer.SendAsync(message);
+            });
+            await Task.Delay(0);
         }
 
         /// <summary>
@@ -494,6 +546,12 @@ namespace paramore.brighter.commandprocessor
         public void Post<T>(ReplyAddress replyTo, T request) where T : class, IRequest
         {
             _logger.InfoFormat("Decoupled invocation of request: {0}", request.Id);
+            var theMessageStore = _messageStore as IAmAMessageStore<Message>;
+            if (theMessageStore == null)
+                throw new ArgumentException("MessageStore does not implement IAmAMessageStore");
+            var theMessageProducer = _messageProducer as IAmAMessageProducer;
+            if (theMessageProducer == null)
+                throw new ArgumentException("MessageProducer does not implement IAmAMessageProducer");
 
             if (request is IEvent)
                 throw new ArgumentException("A Post that expects a Reply, should be a Command and not an Event", "request");
@@ -508,8 +566,45 @@ namespace paramore.brighter.commandprocessor
 
             RetryAndBreakCircuit(() =>
             {
-                _messageStore.Add(message, _messageStoreTimeout);
-                _messageProducer.Send(message);
+                theMessageStore.Add(message, _messageStoreTimeout);
+                theMessageProducer.Send(message);
+            });
+        }
+
+        /// <summary>
+        /// Posts the specified request, using the specified topic in the Message Header.
+        /// Intended for use with Request-Reply scenarios instead of Publish-Subscribe scenarios
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="replyTo">Contains the topic used for routing the reply and the correlation id used by the sender to match response</param>
+        /// <param name="request">The request.</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <exception cref="System.ArgumentOutOfRangeException"></exception>
+        public async Task PostAsync<T>(ReplyAddress replyTo, T request, bool continueOnCapturedContext = false) where T : class, IRequest
+        {
+            _logger.InfoFormat("Decoupled invocation of request: {0}", request.Id);
+            var theMessageStore = _messageStore as IAmAnAsyncMessageStore<Message>;
+            if (theMessageStore == null)
+                throw new ArgumentException("MessageStore does not implement IAmAnAsyncMessageStore");
+            var theMessageProducer = _messageProducer as IAmAnAsyncMessageProducer;
+            if (theMessageProducer == null)
+                throw new ArgumentException("MessageProducer does not implement IAmAnAsyncMessageProducer");
+
+            if (request is IEvent)
+                throw new ArgumentException("A Post that expects a Reply, should be a Command and not an Event", "request");
+
+            var messageMapper = _mapperRegistry.Get<T>();
+            if (messageMapper == null)
+                throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
+
+            var message = messageMapper.MapToMessage(request);
+            message.Header.Topic = replyTo.Topic;
+            message.Header.CorrelationId = replyTo.CorrelationId;
+
+            await RetryAndBreakCircuitAsync(async () =>
+            {
+                await theMessageStore.AddAsync(message, _messageStoreTimeout);
+                await theMessageProducer.SendAsync(message);
             });
         }
 
@@ -568,5 +663,19 @@ namespace paramore.brighter.commandprocessor
             _policyRegistry.Get(RETRYPOLICY).Execute(send);
         }
 
-   }
+        private async Task RetryAsync(Func<Task> send)
+        {
+            await _policyRegistry.Get(RETRYPOLICY).Execute(send);
+        }
+
+        private async Task CheckCircuitAsync(Func<Task> send)
+        {
+            await _policyRegistry.Get(CIRCUITBREAKER).Execute(send);
+        }
+
+        private async Task RetryAndBreakCircuitAsync(Func<Task> send)
+        {
+            await CheckCircuitAsync(() => RetryAsync(send));
+        }
+    }
 }

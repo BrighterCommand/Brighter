@@ -51,6 +51,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles
         public override async Task<MyCommand> HandleAsync(MyCommand command)
         {
             ReceivedCommand = true;
+            await Task.Delay(0);
             throw new DivideByZeroException();
         }
 
