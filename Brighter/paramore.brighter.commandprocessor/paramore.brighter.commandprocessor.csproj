@@ -91,9 +91,9 @@
     <Compile Include="IHandleRequestsAsync.cs" />
     <Compile Include="IAmAnAsyncHandlerFactory.cs" />
     <Compile Include="InMemoryCommandStore.cs" />
-    <Compile Include="logging\Attributes\AsyncRequestLoggingAttribute.cs" />
+    <Compile Include="logging\Attributes\RequestLoggingAsyncAttribute.cs" />
     <Compile Include="logging\Attributes\RequestLoggingAttribute.cs" />
-    <Compile Include="logging\Handlers\AsyncRequestLoggingHandler.cs" />
+    <Compile Include="logging\Handlers\RequestLoggingHandlerAsync.cs" />
     <Compile Include="logging\Handlers\RequestLoggingHandler.cs" />
     <Compile Include="MessageRecovery.cs" />
     <Compile Include="monitoring\Attributes\AsyncMonitorAttribute.cs" />

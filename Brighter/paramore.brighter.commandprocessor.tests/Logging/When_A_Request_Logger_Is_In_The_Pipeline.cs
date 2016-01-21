@@ -12,7 +12,6 @@ namespace paramore.commandprocessor.tests.Logging
     [Subject(typeof(RequestLoggingHandler<>))]
     public class When_A_Request_Logger_Is_In_The_Pipeline
     {
-        private static MyLoggedHandler s_myLoggedHandler;
         private static SpyLog s_logger;
         private static MyCommand s_myCommand;
         private static IAmACommandProcessor s_commandProcessor;
@@ -20,7 +19,6 @@ namespace paramore.commandprocessor.tests.Logging
         private Establish _context = () =>
         {
             s_logger = new SpyLog();
-            s_myLoggedHandler= new MyLoggedHandler(s_logger);
             s_myCommand = new MyCommand();
 
             var registry = new SubscriberRegistry();

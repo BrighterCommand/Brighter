@@ -266,8 +266,10 @@
     <Compile Include="ExceptionPolicy\When_Sending_A_Command_That_Should_Retry_Failure_Async.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Logging\TestDoubles\MyLoggedHandler.cs" />
+    <Compile Include="Logging\TestDoubles\MyLoggedHandlerAsync.cs" />
     <Compile Include="Logging\TestDoubles\SpyLog.cs" />
     <Compile Include="Logging\When_A_Request_Logger_Is_In_The_Pipeline.cs" />
+    <Compile Include="Logging\When_A_Request_Logger_Is_In_The_Pipeline_Async.cs" />
     <Compile Include="MessageDispatch\When_An_Unacceptable_Message_Is_Recieved.cs" />
     <Compile Include="MessageDispatch\When_An_Unacceptable_Message_Limit_Is_Reached.cs" />
     <Compile Include="MessageDispatch\When_A_Channel_Failure_Exception_Is_Thrown_For_Command_Should_Retry_Until_Connection_Re_established.cs" />
