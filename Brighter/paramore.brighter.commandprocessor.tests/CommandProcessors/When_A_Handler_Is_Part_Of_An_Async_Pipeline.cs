@@ -43,12 +43,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyImplicitHandlerAsync>();
+            registry.RegisterAsync<MyCommand, MyImplicitHandlerRequestHandlerAsync>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyImplicitHandlerAsync>();
-            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyImplicitHandlerRequestHandlerAsync>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerRequestHandlerAsync<MyCommand>>();
             container.Register<ILog>(logger);
 
             s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);

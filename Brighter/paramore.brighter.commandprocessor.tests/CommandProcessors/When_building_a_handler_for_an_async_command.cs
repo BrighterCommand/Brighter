@@ -42,8 +42,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
-            var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync(logger));
+            registry.RegisterAsync<MyCommand, MyCommandHandlerRequestHandlerAsync>();
+            var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerRequestHandlerAsync>(() => new MyCommandHandlerRequestHandlerAsync(logger));
             s_request_context = new RequestContext();
 
             s_chain_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);

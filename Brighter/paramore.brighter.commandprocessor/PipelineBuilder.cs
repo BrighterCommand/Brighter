@@ -171,7 +171,7 @@ namespace paramore.brighter.commandprocessor
             return pipelines;
         }
 
-        private IHandleRequestsAsync<TRequest> BuildAsyncPipeline(AsyncRequestHandler<TRequest> implicitHandler, IRequestContext requestContext, bool continueOnCapturedContext)
+        private IHandleRequestsAsync<TRequest> BuildAsyncPipeline(RequestHandlerAsync<TRequest> implicitHandler, IRequestContext requestContext, bool continueOnCapturedContext)
         {
             implicitHandler.Context = requestContext;
             implicitHandler.ContinueOnCapturedContext = continueOnCapturedContext;

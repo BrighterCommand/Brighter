@@ -44,7 +44,7 @@ namespace paramore.brighter.commandprocessor
     /// Interface IHandleRequests
     /// A target of the <see cref="CommandProcessor"/> either as the target of the Command Dispatcher to provide the domain logic required to handle the <see cref="Command"/>
     /// or <see cref="Event"/> or as an orthogonal handler used as part of the Command Processor pipeline.
-    /// We recommend deriving your concrete handler from <see cref="AsyncRequestHandler{T}"/> instead of implementing the interface as it provides boilerplate
+    /// We recommend deriving your concrete handler from <see cref="RequestHandlerAsync{TRequest}"/> instead of implementing the interface as it provides boilerplate
     /// code for calling the next handler in sequence in the pipeline and describing the path
     /// The <see cref="IHandleRequestsAsync"/> interface contains a contract not dependant on the <see cref="IRequest"/> and is useful when you need to deal with a handler
     /// without knowing the specific <see cref="IRequest"/> type, but most implementations should use <see cref="IHandleRequestsAsync{T}"/> directly
@@ -99,11 +99,11 @@ namespace paramore.brighter.commandprocessor
     /// Interface IHandleRequests
     /// A target of the <see cref="CommandProcessor"/> either as the target of the Command Dispatcher to provide the domain logic required to handle the <see cref="Command"/>
     /// or <see cref="Event"/> or as an orthogonal handler used as part of the Command Processor pipeline.
-    /// We recommend deriving your concrete handler from <see cref="AsyncRequestHandler{T}"/> instead of implementing the interface as it provides boilerplate
+    /// We recommend deriving your concrete handler from <see cref="RequestHandlerAsync{TRequest}"/> instead of implementing the interface as it provides boilerplate
     /// code for calling the next handler in sequence in the pipeline and describing the path.
     /// It derives from <see cref="IHandleRequestsAsync"/> which provides functionality that is not dependant on <see cref="IRequest"/>. This simplifies some tasks that do not know
     /// the specific type of the <see cref="IRequest"/>
-    /// Implementors should use on class to implement both <see cref="IHandleRequestsAsync{T}"/> and <see cref="IHandleRequestsAsync"/> as per <see cref="AsyncRequestHandler{T}"/>
+    /// Implementors should use on class to implement both <see cref="IHandleRequestsAsync{T}"/> and <see cref="IHandleRequestsAsync"/> as per <see cref="RequestHandlerAsync{TRequest}"/>
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public interface IHandleRequestsAsync<TRequest> : IHandleRequestsAsync where TRequest : class, IRequest

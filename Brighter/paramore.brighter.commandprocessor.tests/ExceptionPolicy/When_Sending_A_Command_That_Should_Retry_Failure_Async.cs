@@ -25,12 +25,12 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyFailsWithFallbackDivideByZeroHandlerAsync>();
+            registry.RegisterAsync<MyCommand, MyFailsWithFallbackDivideByZeroHandlerRequestHandlerAsync>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyFailsWithFallbackDivideByZeroHandlerAsync>().AsSingleton();
-            container.Register<IHandleRequestsAsync<MyCommand>, ExceptionPolicyHandlerAsync<MyCommand>>().AsSingleton();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyFailsWithFallbackDivideByZeroHandlerRequestHandlerAsync>().AsSingleton();
+            container.Register<IHandleRequestsAsync<MyCommand>, ExceptionPolicyHandlerRequestHandlerAsync<MyCommand>>().AsSingleton();
             container.Register<ILog>(logger);
 
             var policyRegistry = new PolicyRegistry();
@@ -48,7 +48,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
                 });
             policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
-            MyFailsWithFallbackDivideByZeroHandlerAsync.ReceivedCommand = false;
+            MyFailsWithFallbackDivideByZeroHandlerRequestHandlerAsync.ReceivedCommand = false;
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
         };
@@ -56,7 +56,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
         //We have to catch the final exception that bubbles out after retry
         private Because _of = () => Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_myCommand)));
 
-        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithFallbackDivideByZeroHandlerAsync.ShouldReceive(s_myCommand).ShouldBeTrue();
+        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithFallbackDivideByZeroHandlerRequestHandlerAsync.ShouldReceive(s_myCommand).ShouldBeTrue();
         private It _should_retry_three_times = () => s_retryCount.ShouldEqual(3);
     }
 }

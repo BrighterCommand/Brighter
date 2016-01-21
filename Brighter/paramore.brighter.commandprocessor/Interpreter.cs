@@ -103,7 +103,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="requestType">Type of the request.</param>
         /// <returns><see cref="IEnumerable{AsyncRequestHandler}"/>.</returns>
-        internal IEnumerable<AsyncRequestHandler<TRequest>> GetAsyncHandlers(Type requestType)
+        internal IEnumerable<RequestHandlerAsync<TRequest>> GetAsyncHandlers(Type requestType)
         {
             return new AsyncRequestHandlers<TRequest>(
                 _registry.Get<TRequest>()

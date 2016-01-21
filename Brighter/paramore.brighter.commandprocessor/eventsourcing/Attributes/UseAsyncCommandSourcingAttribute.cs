@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Attributes
         /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
-            return typeof (AsyncCommandSourcingHandler<>);
+            return typeof (RequestHandlerAsyncCommandSourcingHandler<>);
         }
     }
 }

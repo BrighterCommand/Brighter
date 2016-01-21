@@ -4,7 +4,7 @@ using paramore.brighter.commandprocessor;
 
 namespace HelloAsyncListeners
 {
-    public class WantToBeGreetedToo : AsyncRequestHandler<GreetingEvent>
+    public class WantToBeGreetedToo : RequestHandlerAsync<GreetingEvent>
     {
         public override async Task<GreetingEvent> HandleAsync(GreetingEvent @event)
         {

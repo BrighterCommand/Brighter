@@ -19,13 +19,13 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyPreAndPostDecoratedHandlerAsync>();
+            registry.RegisterAsync<MyCommand, MyPreAndPostDecoratedHandlerRequestHandlerAsync>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyPreAndPostDecoratedHandlerAsync>();
-            container.Register<IHandleRequestsAsync<MyCommand>, MyValidationHandlerAsync<MyCommand>>();
-            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyPreAndPostDecoratedHandlerRequestHandlerAsync>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyValidationHandlerRequestHandlerAsync<MyCommand>>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerRequestHandlerAsync<MyCommand>>();
             container.Register<ILog>(logger);
 
             s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);

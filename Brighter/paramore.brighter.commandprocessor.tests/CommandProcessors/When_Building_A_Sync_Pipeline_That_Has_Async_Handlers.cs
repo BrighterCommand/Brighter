@@ -26,7 +26,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyMixedImplicitHandler>();
-            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerRequestHandlerAsync<MyCommand>>();
             container.Register<ILog>(logger);
 
             s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
@@ -36,6 +36,6 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         private It _should_throw_an_exception = () => s_exception.ShouldNotBeNull();
         private It _should_throw_a_configuration_exception_for_a_mixed_pipeline = () => s_exception.ShouldBeOfExactType(typeof (ConfigurationException));
-        private It _should_include_the_erroneous_handler_name_in_the_exception = () => s_exception.Message.ShouldContain(typeof (MyLoggingHandlerAsync<>).Name);
+        private It _should_include_the_erroneous_handler_name_in_the_exception = () => s_exception.Message.ShouldContain(typeof (MyLoggingHandlerRequestHandlerAsync<>).Name);
     }
 }

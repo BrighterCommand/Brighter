@@ -45,13 +45,13 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
-            registry.RegisterAsync<MyEvent, MyOtherEventHandlerAsync>();
+            registry.RegisterAsync<MyEvent, MyEventHandlerRequestHandlerAsync>();
+            registry.RegisterAsync<MyEvent, MyOtherEventHandlerRequestHandlerAsync>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyEvent>, MyEventHandlerAsync>("MyEventHandlerAsync");
-            container.Register<IHandleRequestsAsync<MyEvent>, MyOtherEventHandlerAsync>("MyOtherHandlerAsync");
+            container.Register<IHandleRequestsAsync<MyEvent>, MyEventHandlerRequestHandlerAsync>("MyEventHandlerAsync");
+            container.Register<IHandleRequestsAsync<MyEvent>, MyOtherEventHandlerRequestHandlerAsync>("MyOtherHandlerAsync");
             container.Register<ILog>(logger);
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
@@ -61,7 +61,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         private Because _of = () => s_exception = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.PublishAsync(s_myEvent)));
 
         private It _should_not_throw_an_exception = () => s_exception.ShouldBeNull();
-        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandlerAsync.ShouldReceive(s_myEvent).ShouldBeTrue();
-        private It _should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandlerAsync.ShouldReceive(s_myEvent).ShouldBeTrue();
+        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandlerRequestHandlerAsync.ShouldReceive(s_myEvent).ShouldBeTrue();
+        private It _should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandlerRequestHandlerAsync.ShouldReceive(s_myEvent).ShouldBeTrue();
     }
 }

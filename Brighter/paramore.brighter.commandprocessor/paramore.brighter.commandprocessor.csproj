@@ -52,7 +52,7 @@
     <Compile Include="App_Packages\LibLog.4.2\LibLog.cs" />
     <Compile Include="AsyncHandlerFactory.cs" />
     <Compile Include="AsyncPipelines.cs" />
-    <Compile Include="AsyncRequestHandler.cs" />
+    <Compile Include="RequestHandlerAsync.cs" />
     <Compile Include="AsyncRequestHandlers.cs" />
     <Compile Include="ChannelName.cs" />
     <Compile Include="Clock.cs" />
@@ -64,7 +64,7 @@
     <Compile Include="DefaultPolicy.cs" />
     <Compile Include="eventsourcing\Attributes\UseAsyncCommandSourcingAttribute.cs" />
     <Compile Include="eventsourcing\Attributes\UseCommandSourcingAttribute.cs" />
-    <Compile Include="eventsourcing\Handlers\AsyncCommandSourcingHandler.cs" />
+    <Compile Include="eventsourcing\Handlers\RequestHandlerAsyncCommandSourcingHandler.cs" />
     <Compile Include="eventsourcing\Handlers\CommandSourcingHandler.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="actions\DeferMessageAction.cs" />
@@ -93,12 +93,12 @@
     <Compile Include="InMemoryCommandStore.cs" />
     <Compile Include="logging\Attributes\RequestLoggingAsyncAttribute.cs" />
     <Compile Include="logging\Attributes\RequestLoggingAttribute.cs" />
-    <Compile Include="logging\Handlers\RequestLoggingHandlerAsync.cs" />
+    <Compile Include="logging\Handlers\RequestLoggingHandlerRequestHandlerAsync.cs" />
     <Compile Include="logging\Handlers\RequestLoggingHandler.cs" />
     <Compile Include="MessageRecovery.cs" />
     <Compile Include="monitoring\Attributes\AsyncMonitorAttribute.cs" />
     <Compile Include="monitoring\Configuration\MonitoringConfigurationSection.cs" />
-    <Compile Include="monitoring\Handlers\AsyncMonitorHandler.cs" />
+    <Compile Include="monitoring\Handlers\RequestHandlerAsyncMonitorHandler.cs" />
     <Compile Include="monitoring\Mappers\MonitorEventMessageMapper.cs" />
     <Compile Include="OutputChannel.cs" />
     <Compile Include="InputChannel.cs" />
@@ -115,9 +115,9 @@
     <Compile Include="policy\Attributes\UsePolicyAsyncAttribute.cs" />
     <Compile Include="policy\Attributes\UsePolicyAtttribute.cs" />
     <Compile Include="policy\Handlers\ExceptionPolicyHandler.cs" />
-    <Compile Include="policy\Handlers\ExceptionPolicyHandlerAsync.cs" />
+    <Compile Include="policy\Handlers\ExceptionPolicyHandlerRequestHandlerAsync.cs" />
     <Compile Include="policy\Handlers\FallbackPolicyHandler.cs" />
-    <Compile Include="policy\Handlers\FallbackPolicyHandlerAsync.cs" />
+    <Compile Include="policy\Handlers\FallbackPolicyHandlerRequestHandlerAsync.cs" />
     <Compile Include="policy\Handlers\TimeoutPolicyHandler.cs" />
     <Compile Include="Reply.cs" />
     <Compile Include="ReplyAddress.cs" />

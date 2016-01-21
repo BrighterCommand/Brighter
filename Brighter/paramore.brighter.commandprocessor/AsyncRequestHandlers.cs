@@ -43,7 +43,7 @@ using System.Linq;
 
 namespace paramore.brighter.commandprocessor
 {
-    internal class AsyncRequestHandlers<TRequest> : IEnumerable<AsyncRequestHandler<TRequest>>
+    internal class AsyncRequestHandlers<TRequest> : IEnumerable<RequestHandlerAsync<TRequest>>
         where TRequest : class, IRequest
     {
         private readonly IEnumerable<object> _handlers;
@@ -53,9 +53,9 @@ namespace paramore.brighter.commandprocessor
             _handlers = handlers;
         }
 
-        public IEnumerator<AsyncRequestHandler<TRequest>> GetEnumerator()
+        public IEnumerator<RequestHandlerAsync<TRequest>> GetEnumerator()
         {
-            return _handlers.Cast<AsyncRequestHandler<TRequest>>().GetEnumerator();
+            return _handlers.Cast<RequestHandlerAsync<TRequest>>().GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
