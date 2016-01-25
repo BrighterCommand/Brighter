@@ -43,7 +43,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
         {
             var logger = A.Fake<ILog>();
             var registry = new SubscriberRegistry();
-            var handlerFactory = new TestHandlerFactoryAsync<MyEvent, MyEventHandlerRequestHandlerAsync>(() => new MyEventHandlerRequestHandlerAsync(logger));
+            var handlerFactory = new TestHandlerFactoryAsync<MyEvent, MyEventHandlerAsync>(() => new MyEventHandlerAsync(logger));
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };

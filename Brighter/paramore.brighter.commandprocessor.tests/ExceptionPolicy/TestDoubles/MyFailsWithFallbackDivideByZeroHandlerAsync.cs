@@ -32,16 +32,16 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles
 {
-    internal class MyFailsWithFallbackDivideByZeroHandlerRequestHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal class MyFailsWithFallbackDivideByZeroHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        public MyFailsWithFallbackDivideByZeroHandlerRequestHandlerAsync(ILog logger) : base(logger)
+        public MyFailsWithFallbackDivideByZeroHandlerAsync(ILog logger) : base(logger)
         { }
 
         public static bool FallbackCalled { get; set; }
         public static bool ReceivedCommand { get; set; }
         public static bool SetException { get; set; }
 
-        static MyFailsWithFallbackDivideByZeroHandlerRequestHandlerAsync()
+        static MyFailsWithFallbackDivideByZeroHandlerAsync()
         {
             ReceivedCommand = false;
         }

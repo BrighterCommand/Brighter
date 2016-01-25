@@ -12,7 +12,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 
         public override Type GetHandlerType()
         {
-            return typeof(MyValidationHandlerRequestHandlerAsync<>);
+            return typeof(MyValidationHandlerAsync<>);
         }
     }
 }

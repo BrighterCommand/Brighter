@@ -51,11 +51,11 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyFailsWithDivideByZeroHandlerRequestHandlerAsync>();
+            registry.RegisterAsync<MyCommand, MyFailsWithDivideByZeroHandlerAsync>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyFailsWithDivideByZeroHandlerRequestHandlerAsync>().AsSingleton();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyFailsWithDivideByZeroHandlerAsync>().AsSingleton();
             container.Register<IHandleRequestsAsync<MyCommand>, ExceptionPolicyHandlerRequestHandlerAsync<MyCommand>>().AsSingleton();
             container.Register<ILog>(logger);
 
@@ -67,7 +67,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
 
             policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
-            MyFailsWithDivideByZeroHandlerRequestHandlerAsync.ReceivedCommand = false;
+            MyFailsWithDivideByZeroHandlerAsync.ReceivedCommand = false;
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
         };
@@ -82,7 +82,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
                 s_thirdException = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_myCommand)));
             };
 
-        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandlerRequestHandlerAsync.ShouldReceive(s_myCommand).ShouldBeTrue();
+        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandlerAsync.ShouldReceive(s_myCommand).ShouldBeTrue();
         private It _should_bubble_up_the_first_exception = () => s_firstException.ShouldBeOfExactType<DivideByZeroException>();
         private It _should_bubble_up_the_second_exception = () => s_secondException.ShouldBeOfExactType<DivideByZeroException>();
         private It _should_break_the_circuit_after_two_fails = () => s_thirdException.ShouldBeOfExactType<BrokenCircuitException>();

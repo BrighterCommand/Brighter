@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,21 +22,46 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class MyMixedImplicitHandlerRequestHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal class MyPreAndPostDecoratedHandlerAsync : RequestHandlerAsync<MyCommand>, IDisposable
     {
-        public MyMixedImplicitHandlerRequestHandlerAsync(ILog logger) : base(logger)
-        { }
+        private static MyCommand s_command;
+        public static bool DisposeWasCalled { get; set; }
 
-        [MyLoggingHandler(step: 1)]
+        public MyPreAndPostDecoratedHandlerAsync(ILog logger)
+            : base(logger)
+        {
+            s_command = null;
+            DisposeWasCalled = false;
+        }
+
+        [MyPreValidationHandlerAsync(step: 2, timing: HandlerTiming.Before)]
+        [MyPostLoggingHandlerAsync(step: 1, timing: HandlerTiming.After)]
         public override async Task<MyCommand> HandleAsync(MyCommand command)
         {
+            LogCommand(command);
             return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+        }
+
+        public static bool ShouldReceive(MyCommand expectedCommand)
+        {
+            return (s_command != null) && (expectedCommand.Id == s_command.Id);
+        }
+
+        private void LogCommand(MyCommand request)
+        {
+            s_command = request;
+        }
+
+        public void Dispose()
+        {
+            DisposeWasCalled = true;
         }
     }
 }

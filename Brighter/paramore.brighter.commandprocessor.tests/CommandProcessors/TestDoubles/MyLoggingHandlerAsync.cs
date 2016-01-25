@@ -26,33 +26,39 @@ using System;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.policy.Attributes;
-using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.ExceptionPolicy
+namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class MyFailsWithDivideByZeroHandlerRequestHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal class MyLoggingHandlerAsync<TRequest>: RequestHandlerAsync<TRequest>, IDisposable where TRequest : class, IRequest
     {
-        public MyFailsWithDivideByZeroHandlerRequestHandlerAsync(ILog logger) : base(logger)
-        { }
+        private TRequest _command;
+        public static bool DisposeWasCalled { get; set; }
 
-        public static bool ReceivedCommand { get; set; }
-
-        static MyFailsWithDivideByZeroHandlerRequestHandlerAsync()
+        public MyLoggingHandlerAsync(ILog logger) : base(logger)
         {
-            ReceivedCommand = false;
+            _command = null;
+            DisposeWasCalled = false;
         }
 
-        [UsePolicyAsync(policy: "MyDivideByZeroPolicy", step: 1)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command)
+        public override async Task<TRequest> HandleAsync(TRequest command)
         {
-            ReceivedCommand = true;
-            throw new DivideByZeroException();
+            LogCommand(command);
+            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
-        public static bool ShouldReceive(MyCommand myCommand)
+        public static bool Shouldreceive(TRequest expectedCommand)
         {
-            return ReceivedCommand;
+            return (expectedCommand != null);
+        }
+
+        private void LogCommand(TRequest request)
+        {
+            _command = request;
+        }
+
+        public void Dispose()
+        {
+            DisposeWasCalled = true;
         }
     }
 }

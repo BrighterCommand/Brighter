@@ -22,9 +22,9 @@ namespace paramore.commandprocessor.tests.Logging
             s_myCommand = new MyCommand();
 
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyLoggedHandlerRequestHandlerAsync>();
+            registry.RegisterAsync<MyCommand, MyLoggedHandlerAsync>();
             var container = new TinyIoCContainer();
-            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggedHandlerRequestHandlerAsync>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggedHandlerAsync>();
             container.Register<IHandleRequestsAsync<MyCommand>, RequestLoggingHandlerRequestHandlerAsync<MyCommand>>();
             container.Register<ILog>(s_logger);
            

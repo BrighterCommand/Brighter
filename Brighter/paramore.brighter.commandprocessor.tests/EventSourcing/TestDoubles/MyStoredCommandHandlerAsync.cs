@@ -6,11 +6,11 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.EventSourcing.TestDoubles
 {
-    internal class MyStoredCommandHandlerRequestHandlerAsync : RequestHandlerAsync<MyCommand> 
+    internal class MyStoredCommandHandlerAsync : RequestHandlerAsync<MyCommand> 
     {
         private readonly ILog _logger;
 
-        public MyStoredCommandHandlerRequestHandlerAsync(ILog logger)
+        public MyStoredCommandHandlerAsync(ILog logger)
             : base(logger)
         {
             _logger = logger;

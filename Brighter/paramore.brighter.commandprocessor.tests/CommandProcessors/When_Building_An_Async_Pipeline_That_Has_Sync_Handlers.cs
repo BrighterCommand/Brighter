@@ -21,11 +21,11 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyMixedImplicitHandlerRequestHandlerAsync>();
+            registry.RegisterAsync<MyCommand, MyMixedImplicitHandlerAsync>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyMixedImplicitHandlerRequestHandlerAsync>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyMixedImplicitHandlerAsync>();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
             container.Register<ILog>(logger);
 

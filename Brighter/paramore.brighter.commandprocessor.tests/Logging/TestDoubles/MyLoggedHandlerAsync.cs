@@ -6,9 +6,9 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.Logging.TestDoubles
 {
-    class MyLoggedHandlerRequestHandlerAsync : RequestHandlerAsync<MyCommand>
+    class MyLoggedHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        public MyLoggedHandlerRequestHandlerAsync(ILog logger)
+        public MyLoggedHandlerAsync(ILog logger)
             : base(logger)
         {}
 

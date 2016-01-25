@@ -22,36 +22,37 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.policy.Attributes;
+using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
+namespace paramore.commandprocessor.tests.ExceptionPolicy
 {
-    internal class MyEventHandlerRequestHandlerAsync : RequestHandlerAsync<MyEvent>
+    internal class MyFailsWithDivideByZeroHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        private static MyEvent s_receivedEvent;
+        public MyFailsWithDivideByZeroHandlerAsync(ILog logger) : base(logger)
+        { }
 
+        public static bool ReceivedCommand { get; set; }
 
-        public MyEventHandlerRequestHandlerAsync (ILog logger) : base(logger)
+        static MyFailsWithDivideByZeroHandlerAsync()
         {
-            s_receivedEvent = null;
+            ReceivedCommand = false;
         }
 
-        public override async Task<MyEvent> HandleAsync(MyEvent command)
+        [UsePolicyAsync(policy: "MyDivideByZeroPolicy", step: 1)]
+        public override async Task<MyCommand> HandleAsync(MyCommand command)
         {
-            LogEvent(command);
-            return command;
+            ReceivedCommand = true;
+            throw new DivideByZeroException();
         }
 
-        private static void LogEvent(MyEvent @event)
+        public static bool ShouldReceive(MyCommand myCommand)
         {
-            s_receivedEvent = @event;
-        }
-
-        public static bool ShouldReceive(MyEvent myEvent)
-        {
-            return s_receivedEvent.Id == myEvent.Id;
+            return ReceivedCommand;
         }
     }
 }

@@ -25,11 +25,11 @@ namespace paramore.commandprocessor.tests.EventSourcing
             s_commandStore = new InMemoryCommandStore();
 
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyStoredCommandHandlerRequestHandlerAsync>();
+            registry.RegisterAsync<MyCommand, MyStoredCommandHandlerAsync>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandHandlerRequestHandlerAsync>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandHandlerAsync>();
             container.Register<IAmAnAsyncCommandStore>(s_commandStore);
             container.Register<ILog>(logger);
 

@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -28,15 +28,30 @@ using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class MyImplicitHandlerRequestHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal class MyValidationHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {
-        public MyImplicitHandlerRequestHandlerAsync(ILog logger) : base(logger)
-        { }
+        private static TRequest s_command;
 
-        [MyLoggingHandlerAsync(step: 1)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command)
+        public MyValidationHandlerAsync(ILog logger)
+            : base(logger)
         {
+            s_command = null;
+        }
+
+        public override async Task<TRequest> HandleAsync(TRequest command)
+        {
+            LogCommand(command);
             return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+        }
+
+        public static bool ShouldReceive(TRequest expectedCommand)
+        {
+            return (s_command != null);
+        }
+
+        private void LogCommand(TRequest request)
+        {
+            s_command = request;
         }
     }
 }

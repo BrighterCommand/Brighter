@@ -45,14 +45,14 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyCommandHandlerRequestHandlerAsync>();
-            registry.RegisterAsync<MyCommand, MyImplicitHandlerRequestHandlerAsync>();
+            registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
+            registry.RegisterAsync<MyCommand, MyImplicitHandlerAsync>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyCommandHandlerRequestHandlerAsync>("DefaultHandler");
-            container.Register<IHandleRequestsAsync<MyCommand>, MyImplicitHandlerRequestHandlerAsync>("ImplicitHandler");
-            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerRequestHandlerAsync<MyCommand>>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyCommandHandlerAsync>("DefaultHandler");
+            container.Register<IHandleRequestsAsync<MyCommand>, MyImplicitHandlerAsync>("ImplicitHandler");
+            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
             container.Register<ILog>(logger);
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);

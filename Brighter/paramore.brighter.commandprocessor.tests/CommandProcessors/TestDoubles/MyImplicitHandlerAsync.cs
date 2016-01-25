@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,43 +22,21 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class MyLoggingHandlerRequestHandlerAsync<TRequest>: RequestHandlerAsync<TRequest>, IDisposable where TRequest : class, IRequest
+    internal class MyImplicitHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        private TRequest _command;
-        public static bool DisposeWasCalled { get; set; }
+        public MyImplicitHandlerAsync(ILog logger) : base(logger)
+        { }
 
-        public MyLoggingHandlerRequestHandlerAsync(ILog logger) : base(logger)
+        [MyLoggingHandlerAsync(step: 1)]
+        public override async Task<MyCommand> HandleAsync(MyCommand command)
         {
-            _command = null;
-            DisposeWasCalled = false;
-        }
-
-        public override async Task<TRequest> HandleAsync(TRequest command)
-        {
-            LogCommand(command);
             return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
-        }
-
-        public static bool Shouldreceive(TRequest expectedCommand)
-        {
-            return (expectedCommand != null);
-        }
-
-        private void LogCommand(TRequest request)
-        {
-            _command = request;
-        }
-
-        public void Dispose()
-        {
-            DisposeWasCalled = true;
         }
     }
 }

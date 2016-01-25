@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -28,30 +28,15 @@ using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class MyOtherEventHandlerRequestHandlerAsync : RequestHandlerAsync<MyEvent>
+    internal class MyMixedImplicitHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        private static MyEvent s_receivedEvent;
+        public MyMixedImplicitHandlerAsync(ILog logger) : base(logger)
+        { }
 
-        public MyOtherEventHandlerRequestHandlerAsync(ILog logger)
-            : base(logger)
+        [MyLoggingHandler(step: 1)]
+        public override async Task<MyCommand> HandleAsync(MyCommand command)
         {
-            s_receivedEvent = null;
-        }
-
-        public override async Task<MyEvent> HandleAsync(MyEvent command)
-        {
-            LogEvent(command);
-            return command;
-        }
-
-        private static void LogEvent(MyEvent @event)
-        {
-            s_receivedEvent = @event;
-        }
-
-        public static bool ShouldReceive(MyEvent myEvent)
-        {
-            return s_receivedEvent.Id == myEvent.Id;
+            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
         }
     }
 }

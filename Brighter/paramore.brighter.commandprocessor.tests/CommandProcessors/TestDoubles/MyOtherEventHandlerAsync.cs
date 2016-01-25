@@ -28,16 +28,30 @@ using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class MyDoubleDecoratedHandlerRequestHandlerAsync: RequestHandlerAsync<MyCommand>
+    internal class MyOtherEventHandlerAsync : RequestHandlerAsync<MyEvent>
     {
-        public MyDoubleDecoratedHandlerRequestHandlerAsync(ILog logger) : base(logger)
-        { }
+        private static MyEvent s_receivedEvent;
 
-        [MyValidationHandlerAsync(step: 2)]
-        [MyLoggingHandlerAsync(step: 1)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command)
+        public MyOtherEventHandlerAsync(ILog logger)
+            : base(logger)
         {
-            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+            s_receivedEvent = null;
+        }
+
+        public override async Task<MyEvent> HandleAsync(MyEvent command)
+        {
+            LogEvent(command);
+            return command;
+        }
+
+        private static void LogEvent(MyEvent @event)
+        {
+            s_receivedEvent = @event;
+        }
+
+        public static bool ShouldReceive(MyEvent myEvent)
+        {
+            return s_receivedEvent.Id == myEvent.Id;
         }
     }
 }
