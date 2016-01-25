@@ -327,7 +327,7 @@ namespace paramore.brighter.commandprocessor
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _logger))
             {
-                _logger.InfoFormat("Building send pipeline for command: {0}", command.Id);
+                _logger.InfoFormat("Building send pipeline for command: {0} {1}", command.GetType(), command.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -354,7 +354,7 @@ namespace paramore.brighter.commandprocessor
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _logger))
             {
-                _logger.InfoFormat("Building send async pipeline for command: {0}", command.Id);
+                _logger.InfoFormat("Building send async pipeline for command: {0} {1}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -382,12 +382,12 @@ namespace paramore.brighter.commandprocessor
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _logger))
             {
-                _logger.InfoFormat("Building send pipeline for event: {0}", @event.Id);
+                _logger.InfoFormat("Building send pipeline for event: {0} {1}", @event.GetType(),  @event.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 var handlerCount = handlerChain.Count();
 
-                _logger.InfoFormat("Found {0} pipelines for event: {1}", handlerCount, @event.Id);
+                _logger.InfoFormat("Found {0} pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new List<Exception>();
                 foreach (var handleRequests in handlerChain)
@@ -430,12 +430,12 @@ namespace paramore.brighter.commandprocessor
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _logger))
             {
-                _logger.InfoFormat("Building send async pipeline for event: {0}", @event.Id);
+                _logger.InfoFormat("Building send async pipeline for event: {0} {1}", @event.GetType(), @event.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
                 var handlerCount = handlerChain.Count();
-
-                _logger.InfoFormat("Found {0} async pipelines for event: {1}", handlerCount, @event.Id);
+                
+                _logger.InfoFormat("Found {0} async pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
 
                 var eventTasks = handlerChain.Select(handleRequests => handleRequests.HandleAsync(@event)).Cast<Task>().ToList();
                 // Whenall will aggregate individual exceptions, and await will raise it when all tasks have completed
@@ -469,7 +469,7 @@ namespace paramore.brighter.commandprocessor
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(T request) where T : class, IRequest
         {
-            _logger.InfoFormat("Decoupled invocation of request: {0}", request.Id);
+            _logger.InfoFormat("Decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
 
             var messageMapper = _mapperRegistry.Get<T>();
             if (messageMapper == null)
@@ -493,7 +493,7 @@ namespace paramore.brighter.commandprocessor
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(ReplyAddress replyTo, T request) where T : class, IRequest
         {
-            _logger.InfoFormat("Decoupled invocation of request: {0}", request.Id);
+            _logger.InfoFormat("Decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
 
             if (request is IEvent)
                 throw new ArgumentException("A Post that expects a Reply, should be a Command and not an Event", "request");

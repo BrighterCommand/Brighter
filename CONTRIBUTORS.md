@@ -1,6 +1,9 @@
 Paramore contributors (sorted alphabeticaly)
 ============================================
 
+**[Rudy Alvarez] (https://github.com/rudygt)**
+  * Various fixes  
+
 **[Ian Battersby](https://github.com/ianbattersby)**
 * Documentation fixes & general code tidying
 * Delayed Queueing
@@ -29,8 +32,8 @@ Paramore contributors (sorted alphabeticaly)
 **[Eddie Li](https://github.com/xiaodili)**
   * Various fixes  
   
-**[Rudy Alvarez] (https://github.com/rudygt)**
-  * Various fixes  
+**[Olivier Kouamé](https://github.com/okouam)**
+ * Various fixes
    
 **[Solveig Oskarsdottir] (https://github.com/solveigo)**
  * QA of Brighter
