@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 
@@ -30,16 +31,16 @@ namespace HelloWorldAsync
 {
     internal class GreetingCommandRequestHandlerAsyncHandler : RequestHandlerAsync<GreetingCommand>
     {
-        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command)
+        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken? ct = null)
         {
             var api = new IpFyApi(new Uri("https://api.ipify.org"));
 
-            var result = await api.GetAsync();
+            var result = await api.GetAsync(ct);
 
             Console.WriteLine("Hello {0}", command.Name);
             Console.WriteLine(result.Success ? "Your public IP addres is {0}" : "Call to IpFy API failed : {0}",
                 result.Message);
-            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
         }
     }
 }

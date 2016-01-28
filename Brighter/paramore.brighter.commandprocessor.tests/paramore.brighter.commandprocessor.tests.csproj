@@ -139,6 +139,7 @@
   <ItemGroup>
     <Compile Include="AppConfig.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeLogProvider.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyCancellableCommandHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyCommandHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyDoubleDecoratedHandlerAsync.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyEventHandlerAsync.cs" />
@@ -166,6 +167,7 @@
     <Compile Include="CommandProcessors\When_Building_A_Command_Processor_With_A_LogProvider.cs" />
     <Compile Include="CommandProcessors\When_Building_A_Handler_For_An_Async_Command.cs" />
     <Compile Include="CommandProcessors\When_Building_A_Sync_Pipeline_That_Has_Async_Handlers.cs" />
+    <Compile Include="CommandProcessors\When_Cancelling_An_Async_Command.cs" />
     <Compile Include="CommandProcessors\When_Finding_A_Handler_For_A_Command.cs" />
     <Compile Include="CommandProcessors\When_Sending_A_Command_To_The_Processor.cs" />
     <Compile Include="CommandProcessors\When_Building_A_Handler_For_A_Command.cs" />

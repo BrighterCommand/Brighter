@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -44,8 +45,13 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
         }
 
         [UsePolicyAsync(policy: "MyDivideByZeroPolicy", step: 1)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
+            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            {
+                return command;
+            }
+
             ReceivedCommand = true;
             await Task.Delay(0);
             throw new DivideByZeroException();

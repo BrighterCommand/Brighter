@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -43,10 +44,15 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 
         [MyPreValidationHandlerAsync(step: 2, timing: HandlerTiming.Before)]
         [MyPostLoggingHandlerAsync(step: 1, timing: HandlerTiming.After)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
+            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            {
+                return command;
+            }
+
             LogCommand(command);
-            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
         public static bool ShouldReceive(MyCommand expectedCommand)

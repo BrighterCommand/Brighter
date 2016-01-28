@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.actions;
@@ -52,7 +53,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
             _commands.Add(CommandType.Send);
         }
 
-        public virtual async Task SendAsync<T>(T command, bool continueOnCapturedContext = false) where T : class, IRequest
+        public virtual async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
         {
             _requests.Enqueue(command);
             _commands.Add(CommandType.SendAsync);
@@ -65,7 +66,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
             _commands.Add(CommandType.Publish);
         }
 
-        public virtual async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false) where T : class, IRequest
+        public virtual async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
         {
             _requests.Enqueue(@event);
             _commands.Add(CommandType.PublishAsync);
@@ -85,7 +86,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         /// <param name="request">The request.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public virtual async Task PostAsync<T>(T request, bool continueOnCapturedContext = false) where T : class, IRequest
+        public virtual async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
         {
             _requests.Enqueue(request);
             _commands.Add(CommandType.Post);

@@ -35,6 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
@@ -62,8 +63,9 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task SendAsync<T>(T command, bool continueOnCapturedContext = false) where T : class, IRequest;
+        Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest;
 
         /// <summary>
         /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
@@ -78,8 +80,9 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false) where T : class, IRequest;
+        Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest;
 
         /// <summary>
         /// Posts the specified request.
@@ -94,7 +97,8 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="request">The request.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task PostAsync<T>(T request, bool continueOnCapturedContext = false) where T : class, IRequest;
+        Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest;
     }
 }

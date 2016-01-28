@@ -190,8 +190,7 @@ namespace paramore.brighter.commandprocessor
             var methods = GetType().GetMethods();
             return methods
                 .Where(method => method.Name == "Handle")
-                .Where(method => method.GetParameters().Count() == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest))
-                .SingleOrDefault();
+                .SingleOrDefault(method => method.GetParameters().Count() == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest));
         }
 
     }

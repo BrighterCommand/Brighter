@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor.Logging;
 using Polly.CircuitBreaker;
@@ -37,7 +38,7 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// </summary>
         public const string CAUSE_OF_FALLBACK_EXCEPTION = "Fallback_Exception_Cause";
 
-        private Func<TRequest, Task<TRequest>> _exceptionHandlerFunc;
+        private Func<TRequest, CancellationToken?, Task<TRequest>> _exceptionHandlerFunc;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
@@ -82,42 +83,51 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// by handlers in the pipeline called on fallback
         /// </summary>
         /// <param name="command">The command.</param>
+        /// <param name="ct">Allow the sender to cancel the request</param>
         /// <returns>TRequest.</returns>
-        public override async Task<TRequest> HandleAsync(TRequest command)
+        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken? ct = null)
         {
-            return await _exceptionHandlerFunc(command);
+            return await _exceptionHandlerFunc(command, ct);
         }
 
-        private async Task<TRequest> CatchAll(TRequest command)
+        private async Task<TRequest> CatchAll(TRequest command, CancellationToken? ct = null)
         {
             try
             {
-                return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+                return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
             }
             catch (Exception exception)
             {
                 Context.Bag.Add(CAUSE_OF_FALLBACK_EXCEPTION, exception);
             }
-            return await base.FallbackAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await base.FallbackAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
-        private async Task<TRequest> CatchBrokenCircuit(TRequest command)
+        private async Task<TRequest> CatchBrokenCircuit(TRequest command, CancellationToken? ct = null)
         {
             try
             {
-                return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+                return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
             }
             catch (BrokenCircuitException brokenCircuitExceptionexception)
             {
                 Context.Bag.Add(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception);
             }
-            return await base.FallbackAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await base.FallbackAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
-        private async Task<TRequest> CatchNone(TRequest command)
+        private async Task<TRequest> CatchNone(TRequest command, CancellationToken? ct = null)
         {
             var tcs = new TaskCompletionSource<TRequest>();
-            tcs.SetResult(command);
+            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            {
+                tcs.SetCanceled();
+            }
+            else
+            {
+                tcs.SetResult(command);
+                
+            }
             return await tcs.Task.ConfigureAwait(base.ContinueOnCapturedContext);
         }
     }

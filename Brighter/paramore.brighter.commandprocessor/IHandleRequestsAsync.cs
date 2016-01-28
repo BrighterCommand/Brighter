@@ -36,6 +36,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
@@ -112,8 +113,9 @@ namespace paramore.brighter.commandprocessor
         /// Handles the specified command.
         /// </summary>
         /// <param name="request">The request.</param>
+        /// <param name="ct">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        Task<TRequest> HandleAsync(TRequest request);
+        Task<TRequest> HandleAsync(TRequest request, CancellationToken? ct = null);
 
 
         /// <summary>
@@ -121,8 +123,9 @@ namespace paramore.brighter.commandprocessor
         /// This allows for graceful  degradation.  
         /// </summary>
         /// <param name="request">The request.</param>
+        /// <param name="ct">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        Task<TRequest> FallbackAsync(TRequest request);
+        Task<TRequest> FallbackAsync(TRequest request, CancellationToken? ct = null);
 
         /// <summary>
         /// Sets the successor.

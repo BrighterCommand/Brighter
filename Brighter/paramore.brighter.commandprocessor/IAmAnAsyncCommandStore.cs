@@ -38,6 +38,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
@@ -53,8 +54,9 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         /// <param name="timeoutInMilliseconds"></param>
+        /// <param name="ct">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync<T>(T command, int timeoutInMilliseconds = -1) where T : class, IRequest;
+        Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken? ct = null) where T : class, IRequest;
 
         /// <summary>
         /// Awaitably finds the specified identifier.
@@ -62,9 +64,10 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="timeoutInMilliseconds"></param>
+        /// <param name="ct">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns><see cref="Task{T}"/>.</returns>
-        Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new();
-
+        Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken? ct = null) where T : class, IRequest, new();
+        
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 

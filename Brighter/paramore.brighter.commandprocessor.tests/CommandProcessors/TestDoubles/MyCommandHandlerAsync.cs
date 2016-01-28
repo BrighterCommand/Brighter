@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 
@@ -13,10 +14,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
             s_command = null;
         }
 
-        public override async Task<MyCommand> HandleAsync(MyCommand command)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
             LogCommand(command);
-            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
         public static bool ShouldReceive(MyCommand expectedCommand)

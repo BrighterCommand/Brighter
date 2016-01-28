@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -34,9 +35,9 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         { }
 
         [MyLoggingHandlerAsync(step: 1)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
-            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
         }
     }
 }

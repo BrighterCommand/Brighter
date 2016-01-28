@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -48,19 +49,30 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles
 
         [FallbackPolicyAsync(backstop: true, circuitBreaker: false, step: 1)]
         [UsePolicyAsync("MyDivideByZeroPolicy", step:2)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
+            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            {
+                return command;
+            }
+
+
             ReceivedCommand = true;
             await Task.Delay(0);
             throw new DivideByZeroException();
         }
 
-        public override async Task<MyCommand> FallbackAsync(MyCommand command)
+        public override async Task<MyCommand> FallbackAsync(MyCommand command, CancellationToken? ct = null)
         {
+            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            {
+                return command;
+            }
+
             FallbackCalled = true;
             if (Context.Bag.ContainsKey(FallbackPolicyHandler<MyCommand>.CAUSE_OF_FALLBACK_EXCEPTION))
                 SetException = true;
-            return await base.FallbackAsync(command);
+            return await base.FallbackAsync(command, ct);
         }
 
         public static bool ShouldFallback(MyCommand command)

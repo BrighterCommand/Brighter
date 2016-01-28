@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
@@ -71,44 +72,55 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// Awaitably handles the specified command.
         /// </summary>
         /// <param name="command">The command.</param>
+        /// <param name="ct">Allow the caller to cancel the operation (optional)</param>
         /// <returns><see cref="Task"/>.</returns>
-        public override async Task<T> HandleAsync(T command)
+        public override async Task<T> HandleAsync(T command, CancellationToken? ct)
         {
-            if (!_isMonitoringEnabled) return await base.HandleAsync(command).ConfigureAwait(ContinueOnCapturedContext);
+            if (!_isMonitoringEnabled) return await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
             try
             {
-                _controlBusSender.Post(
-                    new MonitorEvent(
-                        _instanceName,
-                        MonitorEventType.EnterHandler,
-                        _handlerName,
-                        JsonConvert.SerializeObject(command),
-                        Clock.Now().GetValueOrDefault()));
-
-                await base.HandleAsync(command).ConfigureAwait(ContinueOnCapturedContext);
-
                 // Todo FHo: await PostAsync to maximise benefits?
-                _controlBusSender.Post(
-                    new MonitorEvent(
-                        _instanceName,
-                        MonitorEventType.ExitHandler,
-                        _handlerName,
-                        JsonConvert.SerializeObject(command),
-                        Clock.Now().GetValueOrDefault()));
+
+                if (ct.HasValue && !ct.Value.IsCancellationRequested)
+                {
+                    _controlBusSender.Post(
+                        new MonitorEvent(
+                            _instanceName,
+                            MonitorEventType.EnterHandler,
+                            _handlerName,
+                            JsonConvert.SerializeObject(command),
+                            Clock.Now().GetValueOrDefault()));
+                }
+
+                await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
+
+
+                if (ct.HasValue && !ct.Value.IsCancellationRequested)
+                {
+                    _controlBusSender.Post(
+                        new MonitorEvent(
+                            _instanceName,
+                            MonitorEventType.ExitHandler,
+                            _handlerName,
+                            JsonConvert.SerializeObject(command),
+                            Clock.Now().GetValueOrDefault()));
+                }
 
                 return command;
             }
             catch (Exception e)
             {
-                // Todo FHo: await PostAsync to maximise benefits?
-                _controlBusSender.Post(
-                    new MonitorEvent(
-                        _instanceName,
-                        MonitorEventType.ExceptionThrown,
-                        _handlerName,
-                        JsonConvert.SerializeObject(command),
-                        Clock.Now().GetValueOrDefault(),
-                        e));
+                if (ct.HasValue && !ct.Value.IsCancellationRequested)
+                {
+                    _controlBusSender.Post(
+                        new MonitorEvent(
+                            _instanceName,
+                            MonitorEventType.ExceptionThrown,
+                            _handlerName,
+                            JsonConvert.SerializeObject(command),
+                            Clock.Now().GetValueOrDefault(),
+                            e));
+                }
                 throw;
             }
         }

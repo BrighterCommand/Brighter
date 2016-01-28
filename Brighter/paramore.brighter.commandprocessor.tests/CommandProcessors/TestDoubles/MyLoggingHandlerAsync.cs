@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -40,10 +41,15 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
             DisposeWasCalled = false;
         }
 
-        public override async Task<TRequest> HandleAsync(TRequest command)
+        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken? ct = null)
         {
+            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            {
+                return command;
+            }
+
             LogCommand(command);
-            return await base.HandleAsync(command).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
         }
 
         public static bool Shouldreceive(TRequest expectedCommand)

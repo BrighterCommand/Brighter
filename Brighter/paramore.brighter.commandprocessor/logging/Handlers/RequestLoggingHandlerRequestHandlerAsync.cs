@@ -36,6 +36,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
@@ -83,10 +84,10 @@ namespace paramore.brighter.commandprocessor.logging.Handlers
         /// </summary>
         /// <param name="command">The command.</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        public override async Task<TRequest> HandleAsync(TRequest command)
+        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken? ct = null)
         {
             LogCommand(command);
-            return await base.HandleAsync(command).ConfigureAwait(ContinueOnCapturedContext);
+            return await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         /// <summary>
@@ -107,11 +108,12 @@ namespace paramore.brighter.commandprocessor.logging.Handlers
         /// and call the <see cref="RequestHandlerAsync{TRequest}"/>'s <see cref="RequestHandlerAsync{TRequest}.FallbackAsync"/> method
         /// </summary>
         /// <param name="command">The command.</param>
+        /// <param name="ct">Allows the sender to cancel the request. Optional.</param>
         /// <returns>TRequest.</returns>
-        public override async Task<TRequest> FallbackAsync(TRequest command)
+        public override async Task<TRequest> FallbackAsync(TRequest command, CancellationToken? ct = null)
         {
             LogFailure(command);
-            return await base.FallbackAsync(command).ConfigureAwait(ContinueOnCapturedContext);
+            return await base.FallbackAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         private void LogCommand(TRequest request)

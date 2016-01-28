@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.logging.Attributes;
 using paramore.brighter.commandprocessor.Logging;
@@ -13,9 +14,9 @@ namespace paramore.commandprocessor.tests.Logging.TestDoubles
         {}
 
         [RequestLoggingAsync(step:0, timing: HandlerTiming.Before)]
-        public override Task<MyCommand> HandleAsync(MyCommand command)
+        public override Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
-            return base.HandleAsync(command);
+            return base.HandleAsync(command, ct);
         }
     }
 }

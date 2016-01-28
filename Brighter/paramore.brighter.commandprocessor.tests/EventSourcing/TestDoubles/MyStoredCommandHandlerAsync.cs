@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.eventsourcing.Attributes;
@@ -17,9 +18,9 @@ namespace paramore.commandprocessor.tests.EventSourcing.TestDoubles
         }
 
         [UseAsyncCommandSourcing(step: 1, timing: HandlerTiming.Before)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
-            return await base.HandleAsync(command);
+            return await base.HandleAsync(command, ct);
         }
 
     }

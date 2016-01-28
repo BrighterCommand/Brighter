@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -38,8 +39,12 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
             s_receivedEvent = null;
         }
 
-        public override async Task<MyEvent> HandleAsync(MyEvent command)
+        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken? ct = null)
         {
+            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            {
+                return command;
+            }
             LogEvent(command);
             await Task.Delay(0);
             return command;

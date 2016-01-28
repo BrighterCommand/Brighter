@@ -37,6 +37,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
@@ -56,15 +57,17 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="messageStoreTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync(T message, int messageStoreTimeout = -1);
+        Task AddAsync(T message, int messageStoreTimeout = -1, CancellationToken? ct = null);
 
         /// <summary>
         /// Awaitable Get the specified message identifier.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="messageStoreTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
+        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
-        Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1);
+        Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken? ct = null);
     }
 }

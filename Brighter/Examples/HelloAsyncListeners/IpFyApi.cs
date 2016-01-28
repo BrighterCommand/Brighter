@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HelloAsyncListeners
@@ -26,14 +27,14 @@ namespace HelloAsyncListeners
             _endpoint = endpoint;
         }
 
-        public async Task<IpFyApiResult> GetAsync()
+        public async Task<IpFyApiResult> GetAsync(CancellationToken? ct = null)
         {
             using (var client = new HttpClient())
             {
                 client.BaseAddress = _endpoint;
                 client.DefaultRequestHeaders.Clear();
 
-                var response = await client.GetAsync("");
+                var response = await client.GetAsync("", ct ?? CancellationToken.None);
                 string result;
                 if (response.IsSuccessStatusCode)
                     result = await response.Content.ReadAsStringAsync();

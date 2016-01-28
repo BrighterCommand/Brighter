@@ -39,6 +39,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
@@ -84,14 +85,21 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <returns><see cref="Task" />.</returns>
+        /// <param name="ct"></param>
+        /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Task AddAsync<T>(T command, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken? ct = null) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<object>();
 
+            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            {
+                tcs.SetCanceled();
+                return tcs.Task;
+            }
+
             Add(command, timeoutInMilliseconds);
-                
+            
             tcs.SetResult(new object());
             return tcs.Task;
         }
@@ -117,18 +125,25 @@ namespace paramore.brighter.commandprocessor
             return JsonConvert.DeserializeObject<T>(commandStoreItem.CommandBody);
         }
 
-
         /// <summary>
         /// Awaitably finds the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="ct"></param>
         /// <returns><see cref="Task{T}" />.</returns>
+        /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
+        public Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken? ct = null) where T : class, IRequest, new()
         {
             var tcs = new TaskCompletionSource<T>();
+
+            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            {
+                tcs.SetCanceled();
+                return tcs.Task;
+            }
 
             var command = Get<T>(id, timeoutInMilliseconds);
                 
