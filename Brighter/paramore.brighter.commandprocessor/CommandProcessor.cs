@@ -61,7 +61,7 @@ namespace paramore.brighter.commandprocessor
         private readonly ILog _logger;
         private readonly int _messageStoreTimeout;
         private readonly IAmAMessageStore<Message> _messageStore;
-        private readonly IAmAnAsyncMessageStore<Message> _asyncMessageStore;
+        private readonly IAmAMessageStoreAsync<Message> _asyncMessageStore;
         // the following are not readonly to allow setting them to null on dispose
         private IAmAMessageProducer _messageProducer;
         private IAmAnAsyncMessageProducer _asyncMessageProducer;
@@ -237,7 +237,7 @@ namespace paramore.brighter.commandprocessor
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAnAsyncMessageStore<Message> asyncMessageStore,
+            IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAnAsyncMessageProducer asyncMessageProducer,
             int messageStoreTimeout = 300
             )
@@ -291,7 +291,7 @@ namespace paramore.brighter.commandprocessor
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAnAsyncMessageStore<Message> asyncMessageStore,
+            IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAnAsyncMessageProducer asyncMessageProducer,
             ILog logger,
             int messageStoreTimeout = 300
@@ -351,7 +351,7 @@ namespace paramore.brighter.commandprocessor
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAnAsyncMessageStore<Message> asyncMessageStore,
+            IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAnAsyncMessageProducer asyncMessageProducer,
             int messageStoreTimeout = 300,
             int messageGatewaySendTimeout = 300
@@ -415,7 +415,7 @@ namespace paramore.brighter.commandprocessor
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAnAsyncMessageStore<Message> asyncMessageStore,
+            IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAnAsyncMessageProducer asyncMessageProducer,
             ILog logger,
             int messageStoreTimeout = 300,
@@ -453,7 +453,7 @@ namespace paramore.brighter.commandprocessor
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
-            IAmAnAsyncMessageStore<Message> asyncMessageStore,
+            IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducer messageProducer,
             IAmAnAsyncMessageProducer asyncMessageProducer,
             int messageStoreTimeout = 300,
@@ -490,7 +490,7 @@ namespace paramore.brighter.commandprocessor
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
-            IAmAnAsyncMessageStore<Message> asyncMessageStore,
+            IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducer messageProducer,
             IAmAnAsyncMessageProducer asyncMessageProducer,
             ILog logger,

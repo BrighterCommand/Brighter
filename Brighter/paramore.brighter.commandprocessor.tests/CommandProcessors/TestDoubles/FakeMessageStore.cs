@@ -43,7 +43,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
             return null;
         }
 
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
+        public IEnumerable<Message> Get(int pageSize = 100, int pageNumber = 1)
         {
             throw new NotImplementedException();
         }

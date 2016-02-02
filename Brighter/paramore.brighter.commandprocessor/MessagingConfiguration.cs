@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor
         /// Gets the message store that supports async/await.
         /// </summary>
         /// <value>The message store.</value>
-        public IAmAnAsyncMessageStore<Message> AsyncMessageStore { get; private set; }
+        public IAmAMessageStoreAsync<Message> AsyncMessageStore { get; private set; }
         /// <summary>
         /// Gets the messaging gateway.
         /// </summary>
@@ -104,7 +104,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageStoreWriteTimeout">How long to wait when writing to the message store</param>
         /// <param name="messagingGatewaySendTimeout">How long to wait when sending via the gateway</param>
         public MessagingConfiguration(
-            IAmAnAsyncMessageStore<Message> asyncMessageStore,
+            IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAnAsyncMessageProducer asyncmessageProducer,
             IAmAMessageMapperRegistry messageMapperRegistry,
             int messageStoreWriteTimeout = 300,
@@ -130,7 +130,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messagingGatewaySendTimeout">How long to wait when sending via the gateway</param>
         public MessagingConfiguration(
             IAmAMessageStore<Message> messageStore,
-            IAmAnAsyncMessageStore<Message> asyncMessageStore,
+            IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducer messageProducer,
             IAmAnAsyncMessageProducer asyncmessageProducer,
             IAmAMessageMapperRegistry messageMapperRegistry,

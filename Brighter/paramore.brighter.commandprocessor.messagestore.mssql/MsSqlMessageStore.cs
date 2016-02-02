@@ -53,8 +53,8 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
     /// <summary>
     ///     Class MsSqlMessageStore.
     /// </summary>
-    public class MsSqlMessageStore : IAmAMessageStore<Message>, IAmAnAsyncMessageStore<Message>,
-        IAmAMessageStoreViewer<Message>
+    public class MsSqlMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreAsync<Message>,
+        IAmAMessageStoreViewer<Message>, IAmAMessageStoreViewerAsync<Message>
     {
         private const int MsSqlDuplicateKeyError = 2601;
         private const int SqlCeDuplicateKeyError = 25016;
@@ -87,6 +87,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         ///     Adds the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="messageStoreTimeout"></param>
         /// <returns>Task.</returns>
         public void Add(Message message, int messageStoreTimeout = -1)
         {
@@ -128,33 +129,6 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             }
         }
 
-        private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters)
-        {
-            var command = connection.CreateCommand();
-            var sql =
-                string.Format(
-                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
-                    _configuration.MessageStoreTableName);
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-            return command;
-        }
-
-        private DbParameter[] InitAddDbParameters(Message message)
-        {
-            var bagJson = _javaScriptSerializer.Serialize(message.Header.Bag);
-            var parameters = new[]
-            {
-                CreateSqlParameter("MessageId", message.Id),
-                CreateSqlParameter("MessageType", message.Header.MessageType.ToString()),
-                CreateSqlParameter("Topic", message.Header.Topic),
-                CreateSqlParameter("Timestamp", message.Header.TimeStamp),
-                CreateSqlParameter("HeaderBag", bagJson),
-                CreateSqlParameter("Body", message.Body.Value)
-            };
-            return parameters;
-        }
-
         /// <summary>
         ///     Gets the specified message identifier.
         /// </summary>
@@ -172,32 +146,6 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, messageStoreTimeout, parameters);
         }
 
-        /// <summary>
-        ///     Returns all messages in the store
-        /// </summary>
-        /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
-        /// <param name="pageNumber">Page number of results to return (default = 1)</param>
-        /// <returns></returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
-        {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
-            {
-                SetPagingCommandFor(command, _configuration, pageSize, pageNumber);
-
-                connection.Open();
-
-                var dbDataReader = command.ExecuteReader();
-
-                var messages = new List<Message>();
-                while (dbDataReader.Read())
-                {
-                    messages.Add(MapAMessage(dbDataReader));
-                }
-                return messages;
-            }
-        }
-
         public async Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken? ct = null)
         {
             var parameters = InitAddDbParameters(message);
@@ -209,7 +157,9 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 
                 try
                 {
-                    await command.ExecuteNonQueryAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
+                    await
+                        command.ExecuteNonQueryAsync(ct ?? CancellationToken.None)
+                            .ConfigureAwait(ContinueOnCapturedContext);
                 }
                 catch (SqlException sqlException)
                 {
@@ -248,6 +198,13 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         /// </summary>
         public bool ContinueOnCapturedContext { get; set; }
 
+        /// <summary>
+        /// get as an asynchronous operation.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
+        /// <param name="messageStoreTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
+        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns><see cref="Task{Message}" />.</returns>
         public async Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken? ct = null)
         {
             var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
@@ -272,6 +229,58 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                         )
                         .ConfigureAwait(ContinueOnCapturedContext);
             return result;
+        }
+
+        /// <summary>
+        ///     Returns all messages in the store
+        /// </summary>
+        /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
+        /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+        /// <returns></returns>
+        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
+        {
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                SetPagingCommandFor(command, _configuration, pageSize, pageNumber);
+
+                connection.Open();
+
+                var dbDataReader = command.ExecuteReader();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
+        }
+
+        /// <summary>
+        ///     Returns all messages in the store
+        /// </summary>
+        /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
+        /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+        /// <returns></returns>
+        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,CancellationToken? ct = null)
+        {
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                SetPagingCommandFor(command, _configuration, pageSize, pageNumber);
+
+                await connection.OpenAsync().ConfigureAwait(ContinueOnCapturedContext);
+
+                var dbDataReader = await command.ExecuteReaderAsync();
+
+                var messages = new List<Message>();
+                while (await dbDataReader.ReadAsync(ct ?? CancellationToken.None))
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
         }
 
         private DbParameter CreateSqlParameter(string parameterName, object value)
@@ -333,6 +342,33 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                     return new SqlCeConnection(_configuration.ConnectionString);
             }
             return null;
+        }
+
+        private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters)
+        {
+            var command = connection.CreateCommand();
+            var sql =
+                string.Format(
+                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
+                    _configuration.MessageStoreTableName);
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+            return command;
+        }
+
+        private DbParameter[] InitAddDbParameters(Message message)
+        {
+            var bagJson = _javaScriptSerializer.Serialize(message.Header.Bag);
+            var parameters = new[]
+            {
+                CreateSqlParameter("MessageId", message.Id),
+                CreateSqlParameter("MessageType", message.Header.MessageType.ToString()),
+                CreateSqlParameter("Topic", message.Header.Topic),
+                CreateSqlParameter("Timestamp", message.Header.TimeStamp),
+                CreateSqlParameter("HeaderBag", bagJson),
+                CreateSqlParameter("Body", message.Body.Value)
+            };
+            return parameters;
         }
 
         private Message MapAMessage(IDataReader dr)

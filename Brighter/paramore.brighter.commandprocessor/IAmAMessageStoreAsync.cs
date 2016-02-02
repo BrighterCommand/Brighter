@@ -46,11 +46,11 @@ namespace paramore.brighter.commandprocessor
     /// Interface IAmAnAsyncMessageStore
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
     /// store the message into a Message Store to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
-    /// We provide implementations of <see cref="paramore.brighter.commandprocessor.IAmAnAsyncMessageStore{T}"/> for Event Store and SQL. Clients using other message stores should consider a Pull
+    /// We provide implementations of <see cref="IAmAMessageStoreAsync{T}"/> for Event Store and SQL. Clients using other message stores should consider a Pull
     /// request
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public interface IAmAnAsyncMessageStore<in T> where T : Message
+    public interface IAmAMessageStoreAsync<in T> where T : Message
     {
         /// <summary>
         /// Awaitable add the specified message.

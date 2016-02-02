@@ -95,7 +95,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrie
             var foundMessages = new List<Message>();
             try
             {
-                IList<Message> messages;
+                IEnumerable<Message> messages;
                 do
                 {
                     messages = foundViewer.Get(pageSize, pageNumber);
@@ -106,7 +106,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrie
                                                                || m.Header.TimeStamp.ToString().Contains(searchTerm)));
 
                     pageNumber++;
-                } while (messages.Count == pageSize);
+                } while (messages.Count() == pageSize);
 
                 return new ViewModelRetrieverResult<MessageListModel, MessageListModelError>(new MessageListModel(foundMessages));
             }

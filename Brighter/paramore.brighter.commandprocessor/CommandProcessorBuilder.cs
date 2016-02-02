@@ -93,7 +93,7 @@ namespace paramore.brighter.commandprocessor
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
         private IAmAMessageStore<Message> _messageStore;
-        private IAmAnAsyncMessageStore<Message> _asyncMessageStore;
+        private IAmAMessageStoreAsync<Message> _asyncMessageStore;
         private IAmAMessageProducer _messagingGateway;
         private IAmAnAsyncMessageProducer _asyncMessagingGateway;
         private IAmAMessageMapperRegistry _messageMapperRegistry;

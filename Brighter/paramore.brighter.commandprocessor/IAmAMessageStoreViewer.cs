@@ -56,7 +56,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="pageSize">number of items on the page, default is 100</param>
         /// <param name="pageNumber">page number of results to return, default is first</param>
         /// <returns></returns>
-        IList<Message> Get(int pageSize = 100, int pageNumber = 1);
+        IList<T> Get(int pageSize = 100, int pageNumber = 1);
     }
 
     public enum MessageStoreType

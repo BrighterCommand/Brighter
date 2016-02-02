@@ -305,6 +305,7 @@
     <Compile Include="MessageStore\MsSql\When_Writing_A_Message_To_The_Message_Store.cs" />
     <Compile Include="MessageStore\MsSql\When_Writing_A_Message_To_The_Message_Store_Async.cs" />
     <Compile Include="MessageStore\MsSql\When_Writing_Messages_To_The_Message_Store.cs" />
+    <Compile Include="MessageStore\MsSql\When_Wrting_Messages_To_The_Message_Store_Async.cs" />
     <Compile Include="MessagingGateway\awssqs\AWSSQSMessagingGatewayTests.cs" />
     <Compile Include="MessagingGateway\awssqs\TestAWSQueueListener.cs" />
     <Compile Include="MessagingGateway\When_Requeuing_A_Message_With_Supported_And_Enabled_Delay.cs" />
