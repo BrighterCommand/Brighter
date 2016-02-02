@@ -16,7 +16,7 @@ namespace GenericListener.Ports.Handlers
 
         public override T Handle(T command)
         {
-            logger.InfoFormat("Received {1} {0}", command.Id, typeof(T).FullName);
+            Logger.InfoFormat("Received {1} {0}", command.Id, typeof(T).FullName);
 
             _indexer.Index(command);
 

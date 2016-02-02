@@ -16,7 +16,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         public override MyLogWritingCommand Handle(MyLogWritingCommand command)
         {
             s_command = command;
-            logger.Log(LogLevel.Debug, () => _handlerLogMessage);
+            Logger.Log(LogLevel.Debug, () => _handlerLogMessage);
 
             return base.Handle(command);
         }

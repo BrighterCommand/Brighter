@@ -64,7 +64,7 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// The logger
         /// </summary>
-        protected readonly ILog logger;
+        protected readonly ILog Logger;
         private IHandleRequests<TRequest> _successor;
 
         /// <summary>
@@ -82,7 +82,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="logger">The logger.</param>
         protected RequestHandler(ILog logger)
         {
-            this.logger = logger;
+            this.Logger = logger;
         }
 
         /// <summary>
@@ -141,7 +141,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
+                Logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
                 return _successor.Handle(command);
             }
 
@@ -171,7 +171,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
+                Logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
                 return _successor.Fallback(command);
             }
             return command;

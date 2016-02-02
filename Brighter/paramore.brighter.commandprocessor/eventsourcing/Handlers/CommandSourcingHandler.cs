@@ -77,7 +77,7 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
         public override T Handle(T command) 
         {
-            logger.DebugFormat("Writing command {0} to the Command Store", command.Id);
+            Logger.DebugFormat("Writing command {0} to the Command Store", command.Id);
 
             _commandStore.Add(command);
 

@@ -13,6 +13,7 @@
 // ***********************************************************************
 
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -49,25 +50,24 @@ using paramore.brighter.commandprocessor.Logging;
 namespace paramore.brighter.commandprocessor.commandstore.mssql
 {
     /// <summary>
-    /// Class MsSqlCommandStore.
+    ///     Class MsSqlCommandStore.
     /// </summary>
     public class MsSqlCommandStore : IAmACommandStore, IAmAnAsyncCommandStore
     {
-        private readonly MsSqlCommandStoreConfiguration _configuration;
-        private readonly ILog _log;
         private const int MsSqlDuplicateKeyError = 2601;
         private const int SqlCeDuplicateKeyError = 25016;
+        private readonly MsSqlCommandStoreConfiguration _configuration;
+        private readonly ILog _log;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MsSqlCommandStore" /> class.
+        ///     Initializes a new instance of the <see cref="MsSqlCommandStore" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MsSqlCommandStore(MsSqlCommandStoreConfiguration configuration) 
-            :this(configuration, LogProvider.GetCurrentClassLogger())
-        {}
+        public MsSqlCommandStore(MsSqlCommandStoreConfiguration configuration)
+            : this(configuration, LogProvider.GetCurrentClassLogger()) {}
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MsSqlCommandStore" /> class.
+        ///     Initializes a new instance of the <see cref="MsSqlCommandStore" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="log">The log.</param>
@@ -79,7 +79,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         }
 
         /// <summary>
-        /// Adds the specified identifier.
+        ///     Adds the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
@@ -95,30 +95,55 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 var sqlcmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
                 try
                 {
-                    sqlcmd .ExecuteNonQuery();
+                    sqlcmd.ExecuteNonQuery();
                 }
                 catch (SqlException sqlException)
                 {
                     if (sqlException.Number != MsSqlDuplicateKeyError) throw;
-                    _log.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing", command.Id);
+                    _log.WarnFormat(
+                        "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                        command.Id);
                 }
                 catch (SqlCeException sqlCeException)
                 {
                     if (sqlCeException.NativeError != SqlCeDuplicateKeyError) throw;
-                    _log.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing", command.Id);
+                    _log.WarnFormat(
+                        "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                        command.Id);
                 }
             }
         }
 
         /// <summary>
-        /// Awaitably adds the specified identifier.
+        ///     Finds the specified identifier.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The identifier.</param>
+        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
+        /// <returns>T.</returns>
+        public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
+        {
+            var sql = string.Format("select * from {0} where CommandId = @commandId",
+                _configuration.MessageStoreTableName);
+            var parameters = new[]
+            {
+                CreateSqlParameter("CommandId", id)
+            };
+
+            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, timeoutInMilliseconds,
+                parameters);
+        }
+
+        /// <summary>
+        ///     Awaitably adds the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="ct">Allow the sender to cancel the request, optional</param>
-        /// <returns><see cref="Task"/>.</returns>
-        public async Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken? ct = null) where T : class, IRequest
+        /// <returns><see cref="Task" />.</returns>
+        public async Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken? ct = null)
+            where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command);
 
@@ -128,48 +153,47 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 var sqlcmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
                 try
                 {
-                    await sqlcmd .ExecuteNonQueryAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
+                    await
+                        sqlcmd.ExecuteNonQueryAsync(ct ?? CancellationToken.None)
+                            .ConfigureAwait(ContinueOnCapturedContext);
                 }
                 catch (SqlException sqlException)
                 {
                     if (sqlException.Number != MsSqlDuplicateKeyError) throw;
-                    _log.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing", command.Id);
+                    _log.WarnFormat(
+                        "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                        command.Id);
                 }
                 catch (SqlCeException sqlCeException)
                 {
                     if (sqlCeException.NativeError != SqlCeDuplicateKeyError) throw;
-                    _log.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing", command.Id);
+                    _log.WarnFormat(
+                        "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                        command.Id);
                 }
             }
         }
 
         /// <summary>
-        /// Finds the specified identifier.
+        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
+        ///     synchronization context.
+        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
+        ///     or access the Result or otherwise block. You may need the orginating synchronization context if you need to access
+        ///     thread specific storage
+        ///     such as HTTPContext
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <returns>T.</returns>
-        public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
-        {
-            var sql = string.Format("select * from {0} where CommandId = @commandId", _configuration.MessageStoreTableName);
-            var parameters = new[]
-            {
-                CreateSqlParameter("CommandId", id)
-            };
-
-            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, timeoutInMilliseconds, parameters);
-        }
+        public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
-        /// Awaitably finds the specified identifier.
+        ///     Awaitably finds the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="ct">Allow the sender to cancel the request</param>
-        /// <returns><see cref="Task{T}"/>.</returns>
-        public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken? ct = null) where T : class, IRequest, new()
+        /// <returns><see cref="Task{T}" />.</returns>
+        public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken? ct = null)
+            where T : class, IRequest, new()
         {
             var sql = string.Format("select * from {0} where CommandId = @commandId",
                 _configuration.MessageStoreTableName);
@@ -180,25 +204,34 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
             var result =
                 await
                     ExecuteCommandAsync(
-                        async command => ReadCommand<T>(await command.ExecuteReaderAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext)), 
+                        async command =>
+                            ReadCommand<T>(
+                                await
+                                    command.ExecuteReaderAsync(ct ?? CancellationToken.None)
+                                        .ConfigureAwait(ContinueOnCapturedContext)),
                         sql,
-                        timeoutInMilliseconds, 
-                        ct, 
+                        timeoutInMilliseconds,
+                        ct,
                         parameters
-                    )
-                    .ConfigureAwait(ContinueOnCapturedContext);
+                        )
+                        .ConfigureAwait(ContinueOnCapturedContext);
             return result;
         }
 
-        /// <summary>
-        /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
-        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
-        /// or access the Result or otherwise block. You may need the orginating synchronization context if you need to access thread specific storage
-        /// such as HTTPContext 
-        /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }
+        private DbParameter CreateSqlParameter(string parameterName, object value)
+        {
+            switch (_configuration.Type)
+            {
+                case MsSqlCommandStoreConfiguration.DatabaseType.MsSqlServer:
+                    return new SqlParameter(parameterName, value);
+                case MsSqlCommandStoreConfiguration.DatabaseType.SqlCe:
+                    return new SqlCeParameter(parameterName, value);
+            }
+            return null;
+        }
 
-        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds, params DbParameter[] parameters)
+        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,
+            params DbParameter[] parameters)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -208,14 +241,14 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 command.Parameters.AddRange(parameters);
 
                 connection.Open();
-                T item = execute(command);
+                var item = execute(command);
                 return item;
             }
         }
 
         private async Task<T> ExecuteCommandAsync<T>(
-            Func<DbCommand, Task<T>> execute, 
-            string sql, 
+            Func<DbCommand, Task<T>> execute,
+            string sql,
             int timeoutInMilliseconds,
             CancellationToken? ct = null,
             params DbParameter[] parameters)
@@ -228,9 +261,36 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 command.Parameters.AddRange(parameters);
 
                 await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
-                T item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
+                var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 return item;
             }
+        }
+
+        private DbConnection GetConnection()
+        {
+            switch (_configuration.Type)
+            {
+                case MsSqlCommandStoreConfiguration.DatabaseType.MsSqlServer:
+                    return new SqlConnection(_configuration.ConnectionString);
+                case MsSqlCommandStoreConfiguration.DatabaseType.SqlCe:
+                    return new SqlCeConnection(_configuration.ConnectionString);
+            }
+            return null;
+        }
+
+        private DbCommand InitAddDbCommand(int timeoutInMilliseconds, DbConnection connection, DbParameter[] parameters)
+        {
+            var sqlAdd =
+                string.Format(
+                    "insert into {0} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)",
+                    _configuration.MessageStoreTableName);
+
+            var sqlcmd = connection.CreateCommand();
+            if (timeoutInMilliseconds != -1) sqlcmd.CommandTimeout = timeoutInMilliseconds;
+
+            sqlcmd.CommandText = sqlAdd;
+            sqlcmd.Parameters.AddRange(parameters);
+            return sqlcmd;
         }
 
         private DbParameter[] InitAddDbParameters<T>(T command) where T : class, IRequest
@@ -246,42 +306,6 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
             return parameters;
         }
 
-        private DbCommand InitAddDbCommand(int timeoutInMilliseconds, DbConnection connection, DbParameter[] parameters)
-        {
-            var sqlAdd = string.Format("insert into {0} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)", _configuration.MessageStoreTableName);
-
-            var sqlcmd = connection.CreateCommand();
-            if (timeoutInMilliseconds != -1) sqlcmd.CommandTimeout = timeoutInMilliseconds;
-
-            sqlcmd.CommandText = sqlAdd;
-            sqlcmd.Parameters.AddRange(parameters);
-            return sqlcmd;
-        }
-
-        private DbParameter CreateSqlParameter(string parameterName, object value)
-        {
-            switch (_configuration.Type)
-            {
-                case MsSqlCommandStoreConfiguration.DatabaseType.MsSqlServer:
-                    return new SqlParameter(parameterName, value);
-                case MsSqlCommandStoreConfiguration.DatabaseType.SqlCe:
-                    return new SqlCeParameter(parameterName, value);
-            }
-            return null;
-        }
-
-        private DbConnection GetConnection()
-        {
-            switch (_configuration.Type)
-            {
-                case MsSqlCommandStoreConfiguration.DatabaseType.MsSqlServer:
-                    return new SqlConnection(_configuration.ConnectionString);
-                case MsSqlCommandStoreConfiguration.DatabaseType.SqlCe:
-                    return new SqlCeConnection(_configuration.ConnectionString);
-            }
-            return null;
-        }
-
         private TResult ReadCommand<TResult>(IDataReader dr) where TResult : class, IRequest, new()
         {
             if (dr.Read())
@@ -290,7 +314,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 return JsonConvert.DeserializeObject<TResult>(body);
             }
 
-            return new TResult { Id = Guid.Empty };
+            return new TResult {Id = Guid.Empty};
         }
     }
 }

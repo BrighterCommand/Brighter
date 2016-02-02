@@ -16,7 +16,7 @@ namespace GenericListener.Ports.Handlers.Tasks
 
         public override TaskReminderSentEvent Handle(TaskReminderSentEvent command)
         {
-            logger.InfoFormat("Received TaskReminderSentEvent {0}", command.Id);
+            Logger.InfoFormat("Received TaskReminderSentEvent {0}", command.Id);
 
             _indexer.Index(command);
 
