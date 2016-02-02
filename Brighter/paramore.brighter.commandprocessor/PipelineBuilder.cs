@@ -44,7 +44,8 @@ using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor
 {
-    internal class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest> where TRequest : class, IRequest
+    internal class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>
+        where TRequest : class, IRequest
     {
         private readonly IAmAHandlerFactory _handlerFactory;
         private readonly ILog _logger;
