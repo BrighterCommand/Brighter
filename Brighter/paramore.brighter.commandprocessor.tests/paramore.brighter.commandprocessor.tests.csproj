@@ -300,8 +300,11 @@
     <Compile Include="MessageDispatch\When_Reading_A_Message_From_A_Channel_Pump_Out_To_Command_Processor.cs" />
     <Compile Include="MessageStore\EventStore\EventStoreMessageStoreTests.cs" />
     <Compile Include="MessageStore\MsSql\When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched.cs" />
+    <Compile Include="MessageStore\MsSql\When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched_Async.cs" />
     <Compile Include="MessageStore\MsSql\When_There_Is_No_Message_In_The_Sql_Message_Store.cs" />
+    <Compile Include="MessageStore\MsSql\When_There_Is_No_Message_In_The_Sql_Message_Store_Async.cs" />
     <Compile Include="MessageStore\MsSql\When_The_Message_Is_Already_In_The_Message_Store.cs" />
+    <Compile Include="MessageStore\MsSql\When_The_Message_Is_Already_In_The_Message_Store_Async.cs" />
     <Compile Include="MessageStore\MsSql\When_Writing_A_Message_To_The_Message_Store.cs" />
     <Compile Include="MessageStore\MsSql\When_Writing_A_Message_To_The_Message_Store_Async.cs" />
     <Compile Include="MessageStore\MsSql\When_Writing_Messages_To_The_Message_Store.cs" />

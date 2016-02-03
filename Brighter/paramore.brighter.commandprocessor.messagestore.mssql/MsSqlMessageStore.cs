@@ -258,7 +258,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         }
 
         /// <summary>
-        ///     Returns all messages in the store
+        /// Returns all messages in the store
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
