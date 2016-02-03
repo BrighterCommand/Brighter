@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using EventStore.ClientAPI;
 using EventStore.ClientAPI.Embedded;
@@ -38,72 +37,20 @@ using paramore.brighter.commandprocessor.messagestore.eventstore;
 
 namespace paramore.commandprocessor.tests.MessageStore.EventStore
 {
-    public class EventStoreMessageStoreTests
+    [Tags("Requires", new[] {"Waiting on EventStore release"})]
+    [Subject(typeof(EventStoreMessageStore))]
+    public class When_Getting_Messages_That_Do_Not_All_Exist
     {
-        [Tags("Requires", new[] { "Waiting on EventStore release"})]
-        public class when_there_is_no_message_in_the_message_store
-        {
-            private Because _of = () => s_messages = s_eventStoreMessageStore.Get(EmptyStreamName, 0, 1);
-
-            private It _returns_an_empty_list = () => s_messages.Count.ShouldEqual(0);
-
-            private const string EmptyStreamName = "empty-123";
-        }
-
-        [Tags("Requires", new[] { "Waiting on EventStore release" })]
-        public class when_writing_messages_to_the_message_store
-        {
-            private Establish _context = () =>
-            {
-                s_eventStoreMessageStore.Add(s_message1);
-                s_eventStoreMessageStore.Add(s_message2);
-            };
-
-            private Because _of = () => s_messages = s_eventStoreMessageStore.Get(StreamName, 0, 2);
-
-            private It _gets_message1 =
-                () => s_messages.Count(m => MessagesEqualApartFromTimestamp(m, s_message1)).ShouldEqual(1);
-
-            private It _gets_message2 = 
-                () => s_messages.Count(m => MessagesEqualApartFromTimestamp(m, s_message2)).ShouldEqual(1);
-
-        }
-
-        [Tags("Requires", new[] { "Waiting on EventStore release" })]
-        public class when_getting_messages_that_do_not_all_exist
-        {
-            private Establish _context = () =>
-            {
-                s_eventStoreMessageStore.Add(s_message1);
-                s_eventStoreMessageStore.Add(s_message2);
-            };
-
-            private Because _of = () => s_messages = s_eventStoreMessageStore.Get(StreamName, 0, 3);
-
-            private It _gets_two_messages = () => s_messages.Count.ShouldEqual(2);
-        }
-
-        private static bool MessagesEqualApartFromTimestamp(Message m1, Message m2)
-        {
-            var bodysAreEqual = m1.Body.Equals(m2.Body);
-            var headersAreEqual = m1.Id == m2.Id
-                               && m1.Header.Topic == m2.Header.Topic
-                               && m1.Header.MessageType == m2.Header.MessageType
-                               && m1.Header.HandledCount == m2.Header.HandledCount
-                               && HeaderBagsHaveTheSameContents(m1, m2);
-            return bodysAreEqual && headersAreEqual;
-        }
-
-        private static bool HeaderBagsHaveTheSameContents(Message m1, Message m2)
-        {
-            foreach (var kvp in m1.Header.Bag)
-            {
-                object secondValue;
-                if (!m2.Header.Bag.TryGetValue(kvp.Key, out secondValue)) return false;
-                if (secondValue.ToString() != kvp.Value.ToString()) return false;
-            }
-            return m1.Header.Bag.Count == m2.Header.Bag.Count;
-        }
+        private static IList<Message> s_messages;
+        private static Message s_message1;
+        private static Message s_message2;
+        private const string StreamName = "stream-123";
+        private static ClusterVNode s_eventStoreNode;
+        private static IEventStoreConnection s_eventStore;
+        private static bool s_eventStoreNodeStarted;
+        private static bool s_eventStoreClientConnected;
+        private static EventStoreMessageStore s_eventStoreMessageStore;
+        private const string EmptyStreamName = "empty-123";
 
         private Establish _context = () =>
         {
@@ -119,7 +66,8 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
                 .WithExternalHttpOn(noneIp)
                 .WithInternalHttpOn(noneIp)
                 .Build();
-            s_eventStoreNode.NodeStatusChanged += (sender, e) => { if (e.NewVNodeState == VNodeState.Master) s_eventStoreNodeStarted = true; };
+            s_eventStoreNode.NodeStatusChanged +=
+                (sender, e) => { if (e.NewVNodeState == VNodeState.Master) s_eventStoreNodeStarted = true; };
             s_eventStoreNode.Start();
 
             s_eventStore = EmbeddedEventStoreConnection.Create(s_eventStoreNode);
@@ -132,7 +80,18 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
             s_message2 = CreateMessage(1);
 
             EnsureEventStoreNodeHasStartedAndTheClientHasConnected();
+
+            s_eventStoreMessageStore.Add(s_message1);
+            s_eventStoreMessageStore.Add(s_message2);
         };
+
+        private Cleanup _stop_event_store = () =>
+        {
+            s_eventStore.Close();
+            s_eventStoreNode.Stop();
+        };
+
+        private It _gets_two_messages = () => s_messages.Count.ShouldEqual(2);
 
         private static Message CreateMessage(int eventNumber)
         {
@@ -156,21 +115,5 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
                 }
             }
         }
-
-        private Cleanup _stop_event_store = () =>
-        {
-            s_eventStore.Close();
-            s_eventStoreNode.Stop();
-        };
-
-        private static IList<Message> s_messages;
-        private static Message s_message1;
-        private static Message s_message2;
-        private const string StreamName = "stream-123";
-        private static ClusterVNode s_eventStoreNode;
-        private static IEventStoreConnection s_eventStore;
-        private static bool s_eventStoreNodeStarted;
-        private static bool s_eventStoreClientConnected;
-        private static EventStoreMessageStore s_eventStoreMessageStore;
     }
 }

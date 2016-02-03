@@ -4,7 +4,7 @@ using TinyIoC;
 
 namespace HelloAsyncListeners
 {
-    internal class TinyIocHandlerFactory : IAmAnAsyncHandlerFactory
+    internal class TinyIocHandlerFactory : IAmAHandlerFactoryAsync
     {
         private readonly TinyIoCContainer _container;
 
@@ -23,7 +23,7 @@ namespace HelloAsyncListeners
             }
         }
 
-        IHandleRequestsAsync IAmAnAsyncHandlerFactory.Create(Type handlerType)
+        IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType)
         {
             return (IHandleRequestsAsync)_container.Resolve(handlerType);
         }

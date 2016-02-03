@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
     /// <summary>
     ///     Class MsSqlCommandStore.
     /// </summary>
-    public class MsSqlCommandStore : IAmACommandStore, IAmAnAsyncCommandStore
+    public class MsSqlCommandStore : IAmACommandStore, IAmACommandStoreAsync
     {
         private const int MsSqlDuplicateKeyError = 2601;
         private const int SqlCeDuplicateKeyError = 25016;

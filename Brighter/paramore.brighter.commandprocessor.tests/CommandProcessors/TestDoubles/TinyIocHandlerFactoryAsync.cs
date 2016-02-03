@@ -28,7 +28,7 @@ using TinyIoC;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    internal class TinyIocHandlerFactoryAsync: IAmAnAsyncHandlerFactory
+    internal class TinyIocHandlerFactoryAsync: IAmAHandlerFactoryAsync
     {
         private readonly TinyIoCContainer _container;
 

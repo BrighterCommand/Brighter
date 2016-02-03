@@ -1,4 +1,4 @@
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-01-2014
@@ -55,7 +55,7 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
         private readonly IAmAHandlerFactory _handlerFactory;
-        private readonly IAmAnAsyncHandlerFactory _asyncHandlerFactory;
+        private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmAPolicyRegistry _policyRegistry;
         private readonly ILog _logger;
@@ -64,7 +64,7 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAMessageStoreAsync<Message> _asyncMessageStore;
         // the following are not readonly to allow setting them to null on dispose
         private IAmAMessageProducer _messageProducer;
-        private IAmAnAsyncMessageProducer _asyncMessageProducer;
+        private IAmAMessageProducerAsync _asyncMessageProducer;
         private bool _disposed;
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace paramore.brighter.commandprocessor
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
-            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry)
             : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger())
@@ -124,7 +124,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="policyRegistry">The policy registry.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
-            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry)
             : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger())
@@ -165,7 +165,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="logger">The logger.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
-            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             ILog logger)
@@ -190,7 +190,7 @@ namespace paramore.brighter.commandprocessor
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
-            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             ILog logger)
@@ -238,7 +238,7 @@ namespace paramore.brighter.commandprocessor
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
-            IAmAnAsyncMessageProducer asyncMessageProducer,
+            IAmAMessageProducerAsync asyncMessageProducer,
             int messageStoreTimeout = 300
             )
             : this(
@@ -292,7 +292,7 @@ namespace paramore.brighter.commandprocessor
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
-            IAmAnAsyncMessageProducer asyncMessageProducer,
+            IAmAMessageProducerAsync asyncMessageProducer,
             ILog logger,
             int messageStoreTimeout = 300
             )
@@ -347,12 +347,12 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
-            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
-            IAmAnAsyncMessageProducer asyncMessageProducer,
+            IAmAMessageProducerAsync asyncMessageProducer,
             int messageStoreTimeout = 300,
             int messageGatewaySendTimeout = 300
             )
@@ -411,12 +411,12 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
-            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
-            IAmAnAsyncMessageProducer asyncMessageProducer,
+            IAmAMessageProducerAsync asyncMessageProducer,
             ILog logger,
             int messageStoreTimeout = 300,
             int messageGatewaySendTimeout = 300
@@ -448,14 +448,14 @@ namespace paramore.brighter.commandprocessor
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
-            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducer messageProducer,
-            IAmAnAsyncMessageProducer asyncMessageProducer,
+            IAmAMessageProducerAsync asyncMessageProducer,
             int messageStoreTimeout = 300,
             int messageGatewaySendTimeout = 300
             )
@@ -485,14 +485,14 @@ namespace paramore.brighter.commandprocessor
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
-            IAmAnAsyncHandlerFactory asyncHandlerFactory,
+            IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducer messageProducer,
-            IAmAnAsyncMessageProducer asyncMessageProducer,
+            IAmAMessageProducerAsync asyncMessageProducer,
             ILog logger,
             int messageStoreTimeout = 300,
             int messageGatewaySendTimeout = 300

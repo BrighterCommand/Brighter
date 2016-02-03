@@ -49,21 +49,21 @@ namespace paramore.brighter.commandprocessor
         private readonly ILog _logger;
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
         private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
-        private readonly IAmAnAsyncHandlerFactory _asyncHandlerFactory;
+        private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
         public LifetimeScope(IAmAHandlerFactory handlerFactory) 
             :this(handlerFactory, null, LogProvider.GetCurrentClassLogger())
         {}
 
-        public LifetimeScope(IAmAnAsyncHandlerFactory asyncHandlerFactory) 
+        public LifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory) 
             :this(null, asyncHandlerFactory, LogProvider.GetCurrentClassLogger())
         {}
 
-        public LifetimeScope(IAmAHandlerFactory handlerFactory, IAmAnAsyncHandlerFactory asyncHandlerFactory) 
+        public LifetimeScope(IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync asyncHandlerFactory) 
             :this(handlerFactory, asyncHandlerFactory, LogProvider.GetCurrentClassLogger())
         {}
 
-        public LifetimeScope(IAmAHandlerFactory handlerFactory, IAmAnAsyncHandlerFactory asyncHandlerFactory, ILog logger)
+        public LifetimeScope(IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync asyncHandlerFactory, ILog logger)
         {
             _handlerFactory = handlerFactory;
             _asyncHandlerFactory = asyncHandlerFactory;

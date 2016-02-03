@@ -82,8 +82,8 @@
     <Compile Include="IAmAMessageMapperFactory.cs" />
     <Compile Include="IAmAMessageRecoverer.cs" />
     <Compile Include="IAmAMessageStoreViewer.cs" />
-    <Compile Include="IAmAnAsyncCommandStore.cs" />
-    <Compile Include="IAmAnAsyncMessageProducer.cs" />
+    <Compile Include="IAmACommandStoreAsync.cs" />
+    <Compile Include="IAmAMessageProducerAsync.cs" />
     <Compile Include="IAmAMessageStoreAsync.cs" />
     <Compile Include="IAmAnInputChannel.cs" />
     <Compile Include="IAmAnOutputChannel.cs" />
@@ -92,7 +92,7 @@
     <Compile Include="IAmAMessageConsumer.cs" />
     <Compile Include="IEvent.cs" />
     <Compile Include="IHandleRequestsAsync.cs" />
-    <Compile Include="IAmAnAsyncHandlerFactory.cs" />
+    <Compile Include="IAmAHandlerFactoryAsync.cs" />
     <Compile Include="InMemoryCommandStore.cs" />
     <Compile Include="logging\Attributes\RequestLoggingAsyncAttribute.cs" />
     <Compile Include="logging\Attributes\RequestLoggingAttribute.cs" />

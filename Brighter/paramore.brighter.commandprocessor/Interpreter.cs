@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor
     {
         private readonly IAmASubscriberRegistry _registry;
         private readonly IAmAHandlerFactory _handlerFactory;
-        private readonly IAmAnAsyncHandlerFactory _asyncHandlerFactory;
+        private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Interpreter{TRequest}"/> class.
@@ -68,7 +68,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="registry">The registry.</param>
         /// <param name="asyncHandlerFactory">The async handler factory.</param>
-        internal Interpreter(IAmASubscriberRegistry registry, IAmAnAsyncHandlerFactory asyncHandlerFactory)
+        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactoryAsync asyncHandlerFactory)
             : this(registry, null, asyncHandlerFactory)
         { }
 
@@ -78,7 +78,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="registry">The registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="asyncHandlerFactory">The async handler factory.</param>
-        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory, IAmAnAsyncHandlerFactory asyncHandlerFactory)
+        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync asyncHandlerFactory)
         {
             _registry = registry;
             _handlerFactory = handlerFactory;

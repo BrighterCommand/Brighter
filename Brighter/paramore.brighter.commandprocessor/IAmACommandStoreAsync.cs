@@ -46,7 +46,7 @@ namespace paramore.brighter.commandprocessor
     /// <summary>
     /// Interface IAmAnAsyncCommandStore
     /// </summary>
-    public interface IAmAnAsyncCommandStore
+    public interface IAmACommandStoreAsync
     {
         /// <summary>
         /// Awaitably adds the specified identifier.

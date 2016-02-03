@@ -56,7 +56,7 @@ namespace paramore.brighter.commandprocessor
         /// Gets the async handler factory.
         /// </summary>
         /// <value>The handler factory.</value>
-        public IAmAnAsyncHandlerFactory AsyncHandlerFactory { get; private set; }
+        public IAmAHandlerFactoryAsync AsyncHandlerFactory { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HandlerConfiguration"/> class.
@@ -80,7 +80,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="asyncHandlerFactory">The async handler factory.</param>
-        public HandlerConfiguration(IAmASubscriberRegistry subscriberRegistry, IAmAnAsyncHandlerFactory asyncHandlerFactory)
+        public HandlerConfiguration(IAmASubscriberRegistry subscriberRegistry, IAmAHandlerFactoryAsync asyncHandlerFactory)
         {
             SubscriberRegistry = subscriberRegistry;
             AsyncHandlerFactory = asyncHandlerFactory;
@@ -95,7 +95,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="asyncHandlerFactory">The async handler factory.</param>
-        public HandlerConfiguration(IAmASubscriberRegistry subscriberRegistry, IAmAHandlerFactory handlerFactory, IAmAnAsyncHandlerFactory asyncHandlerFactory)
+        public HandlerConfiguration(IAmASubscriberRegistry subscriberRegistry, IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync asyncHandlerFactory)
         {
             SubscriberRegistry = subscriberRegistry;
             HandlerFactory = handlerFactory;

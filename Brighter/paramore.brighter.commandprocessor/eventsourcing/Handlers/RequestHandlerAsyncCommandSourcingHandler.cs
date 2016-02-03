@@ -48,13 +48,13 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
     /// <typeparam name="T"></typeparam>
     public class RequestHandlerAsyncCommandSourcingHandler<T> : RequestHandlerAsync<T> where T : class, IRequest
     {
-        private readonly IAmAnAsyncCommandStore _commandStore;
+        private readonly IAmACommandStoreAsync _commandStore;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandlerAsyncCommandSourcingHandler{T}" /> class.
         /// </summary>
         /// <param name="commandStore">The store for commands that pass into the system</param>
-        public RequestHandlerAsyncCommandSourcingHandler(IAmAnAsyncCommandStore commandStore)
+        public RequestHandlerAsyncCommandSourcingHandler(IAmACommandStoreAsync commandStore)
             : this(commandStore, LogProvider.GetCurrentClassLogger())
         { }
 
@@ -64,7 +64,7 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
         /// </summary>
         /// <param name="commandStore">The store for commands that pass into the system</param>
         /// <param name="logger">The logger.</param>
-        public RequestHandlerAsyncCommandSourcingHandler(IAmAnAsyncCommandStore commandStore, ILog logger) : base(logger)
+        public RequestHandlerAsyncCommandSourcingHandler(IAmACommandStoreAsync commandStore, ILog logger) : base(logger)
         {
             _commandStore = commandStore;
         }

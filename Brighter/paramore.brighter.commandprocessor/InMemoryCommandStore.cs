@@ -50,7 +50,7 @@ namespace paramore.brighter.commandprocessor
     /// Class InMemoryCommandStore.
     /// This is mainly intended to support developer tests where a persistent command store is not needed
     /// </summary>
-    public class InMemoryCommandStore : IAmACommandStore, IAmAnAsyncCommandStore
+    public class InMemoryCommandStore : IAmACommandStore, IAmACommandStoreAsync
     {
         private readonly Dictionary<Guid, CommandStoreItem> _commands = new Dictionary<Guid, CommandStoreItem>();
 

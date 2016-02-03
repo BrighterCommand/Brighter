@@ -58,13 +58,13 @@ namespace HelloWorldAsync
             Console.ReadLine();
         }
 
-        internal class SimpleAsyncHandlerFactory : IAmAnAsyncHandlerFactory
+        internal class SimpleAsyncHandlerFactory : IAmAHandlerFactoryAsync
         {
             public void Release(IHandleRequestsAsync handler)
             {
             }
 
-            IHandleRequestsAsync IAmAnAsyncHandlerFactory.Create(Type handlerType)
+            IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType)
             {
                 return new GreetingCommandRequestHandlerAsyncHandler();
             }

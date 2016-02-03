@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor
     /// <item>RESTML</item>
     /// </list>
     /// </summary>
-    public interface IAmAnAsyncMessageProducer : IDisposable
+    public interface IAmAMessageProducerAsync : IDisposable
     {
         /// <summary>
         /// Sends the specified message.
@@ -71,7 +71,7 @@ namespace paramore.brighter.commandprocessor
     /// <item>RESTML</item>
     /// </list>
     /// </summary>
-    public interface IAmAnAsyncMessageProducerSupportingDelay : IAmAnAsyncMessageProducer, IAmAMessageGatewaySupportingDelay
+    public interface IAmAnAsyncMessageProducerSupportingDelay : IAmAMessageProducerAsync, IAmAMessageGatewaySupportingDelay
     {
         /// <summary>
         /// Send the specified message with specified delay

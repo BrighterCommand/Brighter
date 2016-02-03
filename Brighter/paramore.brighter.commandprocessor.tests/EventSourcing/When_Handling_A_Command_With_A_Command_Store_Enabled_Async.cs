@@ -15,7 +15,7 @@ namespace paramore.commandprocessor.tests.EventSourcing
     public class When_Handling_A_Command_With_A_Command_Store_Enabled_Async
     {
         private static MyCommand s_command;
-        private static IAmAnAsyncCommandStore s_commandStore;
+        private static IAmACommandStoreAsync s_commandStore;
         private static IAmACommandProcessor s_commandProcessor;
 
         private Establish context = () =>
@@ -30,7 +30,7 @@ namespace paramore.commandprocessor.tests.EventSourcing
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandHandlerAsync>();
-            container.Register<IAmAnAsyncCommandStore>(s_commandStore);
+            container.Register<IAmACommandStoreAsync>(s_commandStore);
             container.Register<ILog>(logger);
 
             s_command = new MyCommand {Value = "My Test String"};

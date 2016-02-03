@@ -95,12 +95,12 @@ namespace paramore.brighter.commandprocessor
         private IAmAMessageStore<Message> _messageStore;
         private IAmAMessageStoreAsync<Message> _asyncMessageStore;
         private IAmAMessageProducer _messagingGateway;
-        private IAmAnAsyncMessageProducer _asyncMessagingGateway;
+        private IAmAMessageProducerAsync _asyncMessagingGateway;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
         private IAmAHandlerFactory _handlerFactory;
-        private IAmAnAsyncHandlerFactory _asyncHandlerFactory;
+        private IAmAHandlerFactoryAsync _asyncHandlerFactory;
         private IAmAPolicyRegistry _policyRegistry;
         private int _messageStoreWriteTimeout;
         private int _messagingGatewaySendTimeout;

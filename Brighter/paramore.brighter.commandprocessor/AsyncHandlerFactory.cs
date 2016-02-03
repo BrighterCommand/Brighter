@@ -47,7 +47,7 @@ namespace paramore.brighter.commandprocessor
     internal class AsyncHandlerFactory<TRequest> where TRequest : class, IRequest
     {
         private readonly RequestHandlerAttribute _attribute;
-        private readonly IAmAnAsyncHandlerFactory _factory;
+        private readonly IAmAHandlerFactoryAsync _factory;
         private readonly Type _messageType;
         private readonly IRequestContext _requestContext;
 
@@ -57,7 +57,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="attribute">The attribute.</param>
         /// <param name="factory">The async handler factory.</param>
         /// <param name="requestContext">The request context.</param>
-        public AsyncHandlerFactory(RequestHandlerAttribute attribute, IAmAnAsyncHandlerFactory factory, IRequestContext requestContext)
+        public AsyncHandlerFactory(RequestHandlerAttribute attribute, IAmAHandlerFactoryAsync factory, IRequestContext requestContext)
         {
             _attribute = attribute;
             _factory = factory;
