@@ -31,19 +31,16 @@ using EventStore.ClientAPI.Embedded;
 using EventStore.Core;
 using EventStore.Core.Data;
 using Machine.Specifications;
+using Nito.AsyncEx;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.eventstore;
 
 namespace paramore.commandprocessor.tests.MessageStore.EventStore
 {
-    [Tags("Requires", new[] {"Waiting on EventStore release"})]
-    [Subject(typeof(EventStoreMessageStore))]
-    public class When_Getting_Messages_That_Do_Not_All_Exist
+    public class When_There_Is_No_Message_In_The_Message_Store_Async
     {
         private static IList<Message> s_messages;
-        private static Message s_message1;
-        private static Message s_message2;
         private const string StreamName = "stream-123";
         private static ClusterVNode s_eventStoreNode;
         private static IEventStoreConnection s_eventStore;
@@ -76,13 +73,7 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
 
             s_eventStoreMessageStore = new EventStoreMessageStore(s_eventStore, new LogProvider.NoOpLogger());
 
-            s_message1 = CreateMessage(0);
-            s_message2 = CreateMessage(1);
-
             EnsureEventStoreNodeHasStartedAndTheClientHasConnected();
-
-            s_eventStoreMessageStore.Add(s_message1);
-            s_eventStoreMessageStore.Add(s_message2);
         };
 
         private Cleanup _stop_event_store = () =>
@@ -91,17 +82,9 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
             s_eventStoreNode.Stop();
         };
 
-        private It _gets_two_messages = () => s_messages.Count.ShouldEqual(2);
+        private Because _of = () => AsyncContext.Run(async () => s_messages = await s_eventStoreMessageStore.GetAsync(EmptyStreamName, 0, 1));
 
-        private static Message CreateMessage(int eventNumber)
-        {
-            var body = new MessageBody("{companyId:123}");
-            var header = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
-            header.Bag.Add("impersonatorId", 123);
-            header.Bag.Add("eventNumber", eventNumber);
-            header.Bag.Add("streamId", StreamName);
-            return new Message(header, body);
-        }
+        private It _returns_an_empty_list = () => s_messages.Count.ShouldEqual(0);
 
         private static void EnsureEventStoreNodeHasStartedAndTheClientHasConnected()
         {
@@ -115,5 +98,7 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
                 }
             }
         }
+
+
     }
 }
