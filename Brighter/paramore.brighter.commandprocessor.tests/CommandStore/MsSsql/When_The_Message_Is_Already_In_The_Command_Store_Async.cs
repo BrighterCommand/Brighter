@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -26,13 +26,14 @@ using System;
 using System.Data.SqlServerCe;
 using System.IO;
 using Machine.Specifications;
+using Nito.AsyncEx;
 using paramore.brighter.commandprocessor.commandstore.mssql;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandStore.MsSsql
 {
-    public class When_The_Message_Is_Already_In_The_Command_Store
+    internal class When_The_Message_Is_Already_In_The_Command_Store_Async
     {
         private const string TestDbPath = "test.sdf";
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
@@ -46,13 +47,22 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
             CleanUpDb();
             CreateTestDb();
 
-            s_sqlCommandStore = new MsSqlCommandStore(new MsSqlCommandStoreConfiguration(ConnectionString, TableName, MsSqlCommandStoreConfiguration.DatabaseType.SqlCe),
+            s_sqlCommandStore =
+                new MsSqlCommandStore(
+                    new MsSqlCommandStoreConfiguration(ConnectionString, TableName,
+                        MsSqlCommandStoreConfiguration.DatabaseType.SqlCe),
                     new LogProvider.NoOpLogger());
-            s_raisedCommand = new MyCommand() { Value = "Test" };
-            s_sqlCommandStore.Add<MyCommand>(s_raisedCommand);
+            s_raisedCommand = new MyCommand() {Value = "Test"};
+            AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync<MyCommand>(s_raisedCommand));
         };
 
-        private Because _of = () => { s_exception = Catch.Exception(() => s_sqlCommandStore.Add(s_raisedCommand)); };
+        private Because _of =
+            () =>
+            {
+                s_exception =
+                    Catch.Exception(
+                        () => AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync(s_raisedCommand)));
+            };
 
         private It _should_succeed_even_if_the_message_is_a_duplicate = () => s_exception.ShouldBeNull();
 
