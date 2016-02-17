@@ -1,6 +1,13 @@
-﻿#region Licence
-/* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+"""
+File         : command_processor.py
+Author           : ian
+Created          : 02-15-2016
+
+Last Modified By : ian
+Last Modified On : 02-15-2016
+***********************************************************************
+The MIT License (MIT)
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -18,24 +25,7 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
+THE SOFTWARE.
+***********************************************************************
+"""
 
-#endregion
-
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-namespace paramore.brighter.commandprocessor.extensions
-{
-    public static class EnumerationExtensions
-    {
-        public static void Each<T>(this IEnumerable<T> collection, Action<T> doThis)
-        {
-            foreach (var item in collection)
-            {
-                doThis(item);
-            }
-        }
-    }
-}

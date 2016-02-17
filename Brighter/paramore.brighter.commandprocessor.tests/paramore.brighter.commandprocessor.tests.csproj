@@ -138,7 +138,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppConfig.cs" />
+    <Compile Include="CommandProcessors\TestDoubles\MyThrowingEventHandlerAsync.cs" />
+    <Compile Include="CommandProcessors\When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async.cs" />
     <Compile Include="CommandProcessors\When_There_Is_No_Handler_Factory_On_A_Publish.cs" />
+    <Compile Include="CommandProcessors\When_There_Is_No_Handler_Factory_On_A_Publish_Async.cs" />
     <Compile Include="CommandProcessors\When_There_Is_No_Handler_Factory_On_A_Send_Async.cs" />
     <Compile Include="CommandProcessors\TestDoubles\FakeLogProvider.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyCancellableCommandHandlerAsync.cs" />

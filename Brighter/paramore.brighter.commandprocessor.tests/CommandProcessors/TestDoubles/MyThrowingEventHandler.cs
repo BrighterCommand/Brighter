@@ -50,7 +50,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
             s_receivedEvent = @event;
         }
 
-        public static bool Shouldreceive(MyEvent myEvent)
+        public static bool ShouldReceive(MyEvent myEvent)
         {
             return s_receivedEvent.Id == myEvent.Id;
         }

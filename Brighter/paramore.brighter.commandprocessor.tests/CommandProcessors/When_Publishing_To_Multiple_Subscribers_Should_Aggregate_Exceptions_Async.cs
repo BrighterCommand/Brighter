@@ -25,14 +25,15 @@ THE SOFTWARE. */
 using System;
 using FakeItEasy;
 using Machine.Specifications;
+using Nito.AsyncEx;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
+using TinyIoC;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
-    [Subject("Basic event publishing")]
-    public class When_There_Is_No_Handler_Factory_On_A_Publish
+    public class When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyEvent s_myEvent = new MyEvent();
@@ -43,12 +44,25 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
+            registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
+            registry.RegisterAsync<MyEvent, MyOtherEventHandlerAsync>();
+            registry.RegisterAsync<MyEvent, MyThrowingEventHandlerAsync>();
 
-            s_commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory) null, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            var container = new TinyIoCContainer();
+            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
+            container.Register<IHandleRequestsAsync<MyEvent>, MyEventHandlerAsync>("MyEventHandler");
+            container.Register<IHandleRequestsAsync<MyEvent>, MyOtherEventHandlerAsync>("MyOtherHandler");
+            container.Register<IHandleRequestsAsync<MyEvent>, MyThrowingEventHandlerAsync>("MyThrowingHandler");
+            container.Register<ILog>(logger);
+
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Publish(s_myEvent));
+        private Because _of = () => s_exception = Catch.Exception(() => AsyncContext.Run( async () => await s_commandProcessor.PublishAsync(s_myEvent)));
 
-        It _should_throw_an_invalid_operation_exception = () => s_exception.ShouldBeOfExactType<InvalidOperationException>();
+        private It _should_throw_an_aggregate_exception = () => s_exception.ShouldBeOfExactType(typeof(AggregateException));
+        private It _should_have_an_inner_exception_from_the_handler = () => ((AggregateException)s_exception).InnerException.ShouldBeOfExactType(typeof(InvalidOperationException));
+        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandlerAsync.ShouldReceive(s_myEvent).ShouldBeTrue();
+        private It _should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandlerAsync.ShouldReceive(s_myEvent).ShouldBeTrue();
     }
 }

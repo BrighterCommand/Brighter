@@ -36,10 +36,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.Logging;
 using Polly;
 
@@ -557,7 +559,7 @@ namespace paramore.brighter.commandprocessor
 
                 AssertValidSendPipeline(command, handlerChain.Count());
 
-                await handlerChain.First().HandleAsync(command, ct).ConfigureAwait(continueOnCapturedContext:false);
+                await handlerChain.First().HandleAsync(command, ct).ConfigureAwait(continueOnCapturedContext);
             }
         }
 
@@ -624,6 +626,8 @@ namespace paramore.brighter.commandprocessor
             if (_asyncHandlerFactory == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
+            var tcs = new TaskCompletionSource<T>();
+
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
 
@@ -636,21 +640,26 @@ namespace paramore.brighter.commandprocessor
                 
                 _logger.InfoFormat("Found {0} async pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
 
-                var eventTasks = handlerChain.Select(handleRequests => handleRequests.HandleAsync(@event, ct)).Cast<Task>().ToList();
-                // Whenall will aggregate individual exceptions, and await will raise it when all tasks have completed
-                try
+                var exceptions = new ConcurrentBag<Exception>();
+
+                foreach(var handler in handlerChain)
                 {
-                    await Task.WhenAll(eventTasks).ConfigureAwait(continueOnCapturedContext:false);
-                }
-                catch (Exception)
-                {
-                    var exceptions = new List<Exception>();
-                    foreach (var task in eventTasks.Where(task => task.IsFaulted))
+                    try
                     {
-                        if (task.Exception != null) exceptions.AddRange(task.Exception.InnerExceptions);
-                        else exceptions.Add(task.Exception);
+                        await handler.HandleAsync(@event, ct);
                     }
-                    throw new AggregateException("Failed to async publish to one more handlers successfully, see inner exceptions for details", exceptions);
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                    }
+                };
+
+
+                if (exceptions.Count > 0)
+                {
+                    throw new AggregateException(
+                        "Failed to async publish to one more handlers successfully, see inner exceptions for details",
+                        exceptions);
                 }
             }
         }

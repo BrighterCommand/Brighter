@@ -23,32 +23,38 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
-using Machine.Specifications;
+using System.Threading;
+using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.CommandProcessors
+
+namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    [Subject("Basic event publishing")]
-    public class When_There_Is_No_Handler_Factory_On_A_Publish
+    internal class MyThrowingEventHandlerAsync : RequestHandlerAsync<MyEvent>
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyEvent s_myEvent = new MyEvent();
-        private static Exception s_exception;
+        private static MyEvent s_receivedEvent;
 
-        private Establish _context = () =>
+        public MyThrowingEventHandlerAsync (ILog logger) : base(logger)
         {
-            var logger = A.Fake<ILog>();
+            s_receivedEvent = null;
+        }
 
-            var registry = new SubscriberRegistry();
+        public override Task<MyEvent> HandleAsync(MyEvent command, CancellationToken? ct = null)
+        {
+            LogEvent(command);
 
-            s_commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory) null, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
-        };
+            throw new InvalidOperationException();
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Publish(s_myEvent));
+        private static void LogEvent(MyEvent @event)
+        {
+            s_receivedEvent = @event;
+        }
 
-        It _should_throw_an_invalid_operation_exception = () => s_exception.ShouldBeOfExactType<InvalidOperationException>();
+        public static bool ShouldReceive(MyEvent myEvent)
+        {
+            return s_receivedEvent.Id == myEvent.Id;
+        }
     }
 }

@@ -25,14 +25,14 @@ THE SOFTWARE. */
 using System;
 using FakeItEasy;
 using Machine.Specifications;
+using Nito.AsyncEx;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
-    [Subject("Basic event publishing")]
-    public class When_There_Is_No_Handler_Factory_On_A_Publish
+    class When_There_Is_No_Handler_Factory_On_A_Publish_Async
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyEvent s_myEvent = new MyEvent();
@@ -44,10 +44,10 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             var registry = new SubscriberRegistry();
 
-            s_commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory) null, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactoryAsync) null, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
         };
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Publish(s_myEvent));
+        private Because _of = () => s_exception = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.PublishAsync(s_myEvent)));
 
         It _should_throw_an_invalid_operation_exception = () => s_exception.ShouldBeOfExactType<InvalidOperationException>();
     }
