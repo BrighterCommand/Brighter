@@ -152,7 +152,7 @@ namespace paramore.brighter.commandprocessor
                 }
                 else
                 {
-                    var message = string.Format("All handlers in an async pipeline must derive from IHandleRequests. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
+                    var message = string.Format("All handlers in a pipeline must derive from IHandleRequests. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
                     throw new ConfigurationException(message);
                 }
             });

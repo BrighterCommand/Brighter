@@ -139,6 +139,8 @@
   <ItemGroup>
     <Compile Include="AppConfig.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyThrowingEventHandlerAsync.cs" />
+    <Compile Include="CommandProcessors\When_Posting_A_Message_And_There_Is_No_Message_Mapper_Registry.cs" />
+    <Compile Include="CommandProcessors\When_Posting_A_Message_And_There_Is_No_Message_Producer.cs" />
     <Compile Include="CommandProcessors\When_Posting_A_Message_And_There_Is_No_Message_Store.cs" />
     <Compile Include="CommandProcessors\When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async.cs" />
     <Compile Include="CommandProcessors\When_There_Is_No_Handler_Factory_On_A_Publish.cs" />
