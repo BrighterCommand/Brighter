@@ -30,7 +30,7 @@ using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
-    [Subject("Basic event publishing")]
+    [Subject(typeof(CommandProcessor))]
     public class When_Publishing_An_Event_To_The_Processor
     {
         private static CommandProcessor s_commandProcessor;

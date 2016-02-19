@@ -40,7 +40,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
             s_receivedEvent = null;
         }
 
-        public override Task<MyEvent> HandleAsync(MyEvent command, CancellationToken? ct = null)
+        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken? ct = null)
         {
             LogEvent(command);
 

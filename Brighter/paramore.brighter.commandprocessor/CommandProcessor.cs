@@ -640,23 +640,21 @@ namespace paramore.brighter.commandprocessor
                 
                 _logger.InfoFormat("Found {0} async pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
 
-                var exceptions = new ConcurrentBag<Exception>();
+                var eventTasks = handlerChain.Select(handleRequests => handleRequests.HandleAsync(@event, ct)).Cast<Task>().ToList();
 
-                foreach(var handler in handlerChain)
+                // Whenall will aggregate individual exceptions, and await will raise it when all tasks have completed
+                try
                 {
-                    try
-                    {
-                        await handler.HandleAsync(@event, ct);
-                    }
-                    catch (Exception e)
-                    {
-                        exceptions.Add(e);
-                    }
-                };
-
-
-                if (exceptions.Count > 0)
+                    await Task.WhenAll(eventTasks).ConfigureAwait(continueOnCapturedContext: false);
+                }
+                catch (Exception)
                 {
+                    var exceptions = new List<Exception>();
+                    foreach (var task in eventTasks.Where(task => task.IsFaulted))
+                    {
+                        if (task.Exception != null) exceptions.AddRange(task.Exception.InnerExceptions);
+                        else exceptions.Add(task.Exception);
+                    }
                     throw new AggregateException(
                         "Failed to async publish to one more handlers successfully, see inner exceptions for details",
                         exceptions);
@@ -679,9 +677,9 @@ namespace paramore.brighter.commandprocessor
         {
             _logger.InfoFormat("Decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
             if (_messageStore == null)
-                throw new ArgumentException("no message store define.");
+                throw new InvalidOperationException("No message store defined.");
             if (_messageProducer == null)
-                throw new ArgumentException("no mesage producer define.");
+                throw new InvalidOperationException("No mesage producer defined.");
 
             var messageMapper = _mapperRegistry.Get<T>();
             if (messageMapper == null)
@@ -714,9 +712,9 @@ namespace paramore.brighter.commandprocessor
         {
             _logger.InfoFormat("Async decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
             if (_asyncMessageStore == null)
-                throw new ArgumentException("no async message store defined.");
+                throw new InvalidOperationException("No async message store defined.");
             if (_asyncMessageProducer == null)
-                throw new ArgumentException("no async message producer define.");
+                throw new InvalidOperationException("No async message producer defined.");
 
             var messageMapper = _mapperRegistry.Get<T>();
             if (messageMapper == null)

@@ -24,28 +24,41 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.extensions;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
     public class FakeMessageStore : IAmAMessageStore<Message>
     {
+        private readonly List<Message> _messages = new List<Message>(); 
+
         public bool MessageWasAdded { get; set; }
         public void Add(Message message, int messageStoreTimeout = -1)
         {
             MessageWasAdded = true;
+            _messages.Add(message);
         }
 
         public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
+            foreach (var message in _messages)
+            {
+                if (message.Id == messageId)
+                {
+                    return message;
+                }
+            }
+
             return null;
         }
 
         public IEnumerable<Message> Get(int pageSize = 100, int pageNumber = 1)
         {
-            throw new NotImplementedException();
+            return _messages.Take(pageSize);
         }
     }
 }
