@@ -63,7 +63,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 null,
-                s_fakeMessageProducer,
+                (IAmAMessageProducer)s_fakeMessageProducer,
                 logger);
         };
 

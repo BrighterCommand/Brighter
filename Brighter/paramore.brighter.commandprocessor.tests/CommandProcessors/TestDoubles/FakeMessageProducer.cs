@@ -28,13 +28,21 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    public class FakeMessageProducer : IAmAMessageProducer
+    public class FakeMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync 
     {
         public bool MessageWasSent { get; set; }
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose() { }
+
+        public Task SendAsync(Message message)
+        {
+            var tcs = new TaskCompletionSource<Message>();
+            Send(message);
+            tcs.SetResult(message);
+            return tcs.Task;
+        }
 
         /// <summary>
         /// Sends the specified message.

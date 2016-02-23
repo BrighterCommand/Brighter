@@ -25,14 +25,15 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-
+using Amazon.SimpleWorkflow.Model;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.extensions;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {
-    public class FakeMessageStore : IAmAMessageStore<Message>
+    public class FakeMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreAsync<Message>
     {
         private readonly List<Message> _messages = new List<Message>(); 
 
@@ -60,5 +61,28 @@ namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
         {
             return _messages.Take(pageSize);
         }
+
+        public async Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        {
+            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            {
+                return;
+            }
+
+            Add(message, messageStoreTimeout);
+        }
+
+        public async Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        {
+            
+            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            {
+                throw new ArgumentOutOfRangeException();
+            }
+
+            return Get(messageId, messageStoreTimeout);
+        }
+
+        public bool ContinueOnCapturedContext { get; set; }
     }
 }

@@ -34,7 +34,7 @@ using Polly;
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
     [Subject(typeof(CommandProcessor))]
-    class When_Posting_A_Message_And_There_Is_No_Message_Producer
+    public class When_Posting_A_Message_And_There_Is_No_Message_Producer
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();
@@ -71,7 +71,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 s_fakeMessageStore,
-                null,
+                (IAmAMessageProducer)null,
                 logger);
         };
 

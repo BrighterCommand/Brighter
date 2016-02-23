@@ -71,8 +71,8 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                s_fakeMessageStore,
-                s_fakeMessageProducer,
+                (IAmAMessageStore<Message>)s_fakeMessageStore,
+                (IAmAMessageProducer)s_fakeMessageProducer,
                 logger);
         };
 

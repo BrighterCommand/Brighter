@@ -36,14 +36,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.Logging;
-using Polly;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -727,75 +724,6 @@ namespace paramore.brighter.commandprocessor
                 await _asyncMessageProducer.SendAsync(message);
             });
             await Task.Delay(0);
-        }
-
-        /// <summary>
-        /// Posts the specified request, using the specified topic in the Message Header.
-        /// Intended for use with Request-Reply scenarios instead of Publish-Subscribe scenarios
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="replyTo">Contains the topic used for routing the reply and the correlation id used by the sender to match response</param>
-        /// <param name="request">The request.</param>
-        /// <exception cref="System.ArgumentOutOfRangeException"></exception>
-        public void Post<T>(ReplyAddress replyTo, T request) where T : class, IRequest
-        {
-            _logger.InfoFormat("Decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
-            if (_messageStore == null)
-                throw new ArgumentException("no message store defined.");
-            if (_messageProducer == null)
-                throw new ArgumentException("no mesage producer defined.");
-
-            if (request is IEvent)
-                throw new ArgumentException("A Post that expects a Reply, should be a Command and not an Event", "request");
-
-            var messageMapper = _mapperRegistry.Get<T>();
-            if (messageMapper == null)
-                throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
-
-            var message = messageMapper.MapToMessage(request);
-            message.Header.Topic = replyTo.Topic;
-            message.Header.CorrelationId = replyTo.CorrelationId;
-
-            RetryAndBreakCircuit(() =>
-            {
-                _messageStore.Add(message, _messageStoreTimeout);
-                _messageProducer.Send(message);
-            });
-        }
-
-        /// <summary>
-        /// Posts the specified request, using the specified topic in the Message Header.
-        /// Intended for use with Request-Reply scenarios instead of Publish-Subscribe scenarios
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="replyTo">Contains the topic used for routing the reply and the correlation id used by the sender to match response</param>
-        /// <param name="request">The request.</param>
-        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
-        /// <exception cref="System.ArgumentOutOfRangeException"></exception>
-        public async Task PostAsync<T>(ReplyAddress replyTo, T request, bool continueOnCapturedContext = false) where T : class, IRequest
-        {
-            _logger.InfoFormat("Async decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
-            if (_asyncMessageStore == null)
-                throw new ArgumentException("no async message store defined.");
-            if (_asyncMessageProducer == null)
-                throw new ArgumentException("no async message producer define.");
-
-            if (request is IEvent)
-                throw new ArgumentException("A Post that expects a Reply, should be a Command and not an Event", "request");
-
-            var messageMapper = _mapperRegistry.Get<T>();
-            if (messageMapper == null)
-                throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
-
-            var message = messageMapper.MapToMessage(request);
-            message.Header.Topic = replyTo.Topic;
-            message.Header.CorrelationId = replyTo.CorrelationId;
-
-            await RetryAndBreakCircuitAsync(async () =>
-            {
-                await _asyncMessageStore.AddAsync(message, _messageStoreTimeout);
-                await _asyncMessageProducer.SendAsync(message);
-            });
         }
 
         /// <summary>
