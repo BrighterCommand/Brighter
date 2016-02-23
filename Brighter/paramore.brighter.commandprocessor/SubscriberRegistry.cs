@@ -43,11 +43,14 @@ namespace paramore.brighter.commandprocessor
 {
     /// <summary>
     /// Class SubscriberRegistry.
-    /// In order to map an <see cref="IHandleRequests"/> to a <see cref="Command"/> or an <see cref="Event"/> we need you to register the association
-    /// via the <see cref="SubscriberRegistry"/>
-    /// The default implementation of <see cref="SubscriberRegistry"/> is usable in most instances and this is provided for testing
+    /// In order to map an <see cref="IHandleRequests"/> or an <see cref="IHandleRequestsAsync"/> 
+    /// to a <see cref="Command"/> or an <see cref="Event"/> we need you to register 
+    /// the association via the <see cref="SubscriberRegistry"/>
+    /// The default implementation of <see cref="SubscriberRegistry"/> is usable in most instances 
+    /// and this is provided for testing
     /// </summary>
-    public class SubscriberRegistry : IAmASubscriberRegistry, IEnumerable<KeyValuePair<Type, List<Type>>>
+    public class SubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry,
+        IEnumerable<KeyValuePair<Type, List<Type>>>
     {
         private readonly Dictionary<Type, List<Type>> _observers = new Dictionary<Type, List<Type>>();
 
