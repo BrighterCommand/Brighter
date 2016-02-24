@@ -50,9 +50,9 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             s_event = new MyEvent();
 
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
-            s_channel.Send(message);
+            s_channel.Add(message);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            s_channel.Send(quitMessage);
+            s_channel.Add(quitMessage);
         };
 
         private Because _of = () => s_messagePump.Run();

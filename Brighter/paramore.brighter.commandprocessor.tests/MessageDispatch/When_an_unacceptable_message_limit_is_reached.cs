@@ -51,9 +51,9 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             var unacceptableMessage2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
             var unacceptableMessage3 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
 
-            s_channel.Send(unacceptableMessage1);
-            s_channel.Send(unacceptableMessage2);
-            s_channel.Send(unacceptableMessage3);
+            s_channel.Add(unacceptableMessage1);
+            s_channel.Add(unacceptableMessage2);
+            s_channel.Add(unacceptableMessage3);
         };
 
         private Because of = () =>

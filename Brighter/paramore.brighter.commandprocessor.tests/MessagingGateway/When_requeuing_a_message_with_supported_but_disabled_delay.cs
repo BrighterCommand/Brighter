@@ -6,10 +6,10 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.MessagingGateway
 {
-    [Subject(typeof(InputChannel))]
+    [Subject(typeof(Channel))]
     public class When_Requeuing_A_Message_With_Supported_But_Disabled_Delay
     {
-        private static IAmAnInputChannel s_channel;
+        private static IAmAChannel s_channel;
         private static IAmAMessageConsumerSupportingDelay s_gateway;
         private static Message s_requeueMessage;
         private static Stopwatch s_stopWatch;
@@ -19,7 +19,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
             s_gateway = A.Fake<IAmAMessageConsumerSupportingDelay>();
             A.CallTo(() => s_gateway.DelaySupported).Returns(false);
 
-            s_channel = new InputChannel("test", s_gateway);
+            s_channel = new Channel("test", s_gateway);
 
             s_requeueMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),

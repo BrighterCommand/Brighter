@@ -35,19 +35,58 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Interface IAmAChannel
-    /// A channel is an abstraction for an <a href="http://en.wikipedia.org/wiki/OSI_model">OSI model</a> Application Layer used to provide support for a 
-    /// <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> pattern of dispatch and processing
+    /// Interface IAmAChannel 
+    /// An <see cref="IAmAChannel"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+    /// and acknowledging receipt of those messages
     /// </summary>
-    public interface IAmAChannel
+    public interface IAmAChannel : IDisposable
     {
+        /// <summary>
+        /// Gets the name.
+        /// </summary>
+        /// <value>The name.</value>
+        ChannelName Name { get; }
+        
+        /// <summary>
+        /// Receives the specified timeout in milliseconds.
+        /// </summary>
+        /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
+        /// <returns>Message.</returns>
+        Message Receive(int timeoutinMilliseconds);
+        
+        /// <summary>
+        /// Acknowledges the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        void Acknowledge(Message message);
+
         /// <summary>
         /// Gets the length.
         /// </summary>
         /// <value>The length.</value>
         int Length { get; }
+
+        /// <summary>
+        /// Rejects the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        void Reject(Message message);
+        
+        /// <summary>
+        /// Stops this instance.
+        /// </summary>
+        void Stop();
+        
+        /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        void Requeue(Message message, int delayMilliseconds = 0);
     }
 }

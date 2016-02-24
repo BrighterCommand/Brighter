@@ -97,7 +97,7 @@ namespace paramore.brighter.serviceactivator
         /// <param name="name">The name.</param>
         /// <param name="channel">The channel.</param>
         /// <param name="messagePump">The message pump.</param>
-        public Consumer(ConnectionName name, IAmAnInputChannel channel, IAmAMessagePump messagePump)
+        public Consumer(ConnectionName name, IAmAChannel channel, IAmAMessagePump messagePump)
         {
             Name = name;
             Performer = new Performer(channel, messagePump);

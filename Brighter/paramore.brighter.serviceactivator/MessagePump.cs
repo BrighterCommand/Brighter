@@ -83,7 +83,7 @@ namespace paramore.brighter.serviceactivator
         /// Gets or sets the channel to read messages from.
         /// </summary>
         /// <value>The channel.</value>
-        public IAmAnInputChannel Channel { get; set; }
+        public IAmAChannel Channel { get; set; }
         /// <summary>
         /// Gets or sets the logger.
         /// </summary>

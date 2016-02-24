@@ -23,14 +23,9 @@
         ///  <param name="routingKey">The routing key.</param>
         ///  <param name="isDurable"></param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAnInputChannel CreateInputChannel(string channelName, string routingKey, bool isDurable)
+        public IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable)
         {
-            return new InputChannel(channelName, _messageConsumerFactory.Create(channelName, routingKey, isDurable));
-        }
-
-        public IAmAnOutputChannel CreateOutputChannel()
-        {
-            return new OutputChannel(_messageProducerFactory.Create());
+            return new Channel(channelName, _messageConsumerFactory.Create(channelName, routingKey, isDurable));
         }
     }
 }

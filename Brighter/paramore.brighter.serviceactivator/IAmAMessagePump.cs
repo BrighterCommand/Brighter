@@ -45,7 +45,7 @@ namespace paramore.brighter.serviceactivator
     /// The message pump reads <see cref="Message"/>s from a channel, translates them into a <see cref="Request"/>s and asks <see cref="CommandProcessor"/> to
     /// dispatch them to an <see cref="IHandleRequests"/>. It is classical message loop, and so should run until it receives an <see cref="MessageType.MT_QUIT"/>
     /// message. Clients of the message pump need to add a <see cref="Message"/> with of type <see cref="MessageType.MT_QUIT"/> to the <see cref="Channel"/> to abort
-    /// a loop once started. The <see cref="IAmAChannel"/> interface provides a <see cref="IAmAnInputChannel.Stop"/> method for this.
+    /// a loop once started. The <see cref="IAmAChannel"/> interface provides a <see cref="IAmAChannel.Stop"/> method for this.
     /// </summary>
     public interface IAmAMessagePump
     {
@@ -62,7 +62,7 @@ namespace paramore.brighter.serviceactivator
         /// Gets or sets the channel to read messages from.
         /// </summary>
         /// <value>The channel.</value>
-        IAmAnInputChannel Channel { get; set; }
+        IAmAChannel Channel { get; set; }
         /// <summary>
         /// Gets or sets the logger.
         /// </summary>

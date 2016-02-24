@@ -49,7 +49,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
             var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
 
-            s_channel.Send(unacceptableMessage);
+            s_channel.Add(unacceptableMessage);
         };
         private Because of = () =>
         {
@@ -57,7 +57,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             Task.Delay(1000).Wait();
 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            s_channel.Send(quitMessage);
+            s_channel.Add(quitMessage);
 
             Task.WaitAll(new[] { task });
         };

@@ -55,12 +55,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="routingKey"></param>
         /// <param name="isDurable"></param>
         /// <returns>IAmAnInputChannel.</returns>
-        IAmAnInputChannel CreateInputChannel(string channelName, string routingKey, bool isDurable);
-
-        /// <summary>
-        /// Creates the output channel.
-        /// </summary>
-        /// <returns>IAmAnOutputChannel.</returns>
-        IAmAnOutputChannel CreateOutputChannel();
+        IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable);
     }
 }

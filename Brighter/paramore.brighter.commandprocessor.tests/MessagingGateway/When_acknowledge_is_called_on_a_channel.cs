@@ -29,10 +29,10 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.MessagingGateway
 {
-    [Subject(typeof(InputChannel))]
+    [Subject(typeof(Channel))]
     public class When_Acknowledge_Is_Called_On_A_Channel
     {
-        private static IAmAnInputChannel s_channel;
+        private static IAmAChannel s_channel;
         private static IAmAMessageConsumer s_gateway;
         private static Message s_receivedMessage;
 
@@ -40,7 +40,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             s_gateway = A.Fake<IAmAMessageConsumer>();
 
-            s_channel = new InputChannel("test", s_gateway);
+            s_channel = new Channel("test", s_gateway);
 
             s_receivedMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),

@@ -51,10 +51,10 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_command)));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_command)));
-            s_channel.Send(message1);
-            s_channel.Send(message2);
+            s_channel.Add(message1);
+            s_channel.Add(message2);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            s_channel.Send(quitMessage);
+            s_channel.Add(quitMessage);
         };
 
         private Because _of = () => s_messagePump.Run();

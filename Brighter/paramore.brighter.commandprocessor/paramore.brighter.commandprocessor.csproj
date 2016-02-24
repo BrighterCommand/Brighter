@@ -72,7 +72,6 @@
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="actions\DeferMessageAction.cs" />
     <Compile Include="HandlerConfiguration.cs" />
-    <Compile Include="IAmAChannel.cs" />
     <Compile Include="IAmAChannelFactory.cs" />
     <Compile Include="IAmACommandStore.cs" />
     <Compile Include="IAmAControlBusSender.cs" />
@@ -87,8 +86,7 @@
     <Compile Include="IAmACommandStoreAsync.cs" />
     <Compile Include="IAmAMessageProducerAsync.cs" />
     <Compile Include="IAmAMessageStoreAsync.cs" />
-    <Compile Include="IAmAnInputChannel.cs" />
-    <Compile Include="IAmAnOutputChannel.cs" />
+    <Compile Include="IAmAChannel.cs" />
     <Compile Include="IAmAPolicyRegistry.cs" />
     <Compile Include="IAmAMessageProducer.cs" />
     <Compile Include="IAmAMessageConsumer.cs" />
@@ -105,8 +103,7 @@
     <Compile Include="monitoring\Configuration\MonitoringConfigurationSection.cs" />
     <Compile Include="monitoring\Handlers\RequestHandlerAsyncMonitorHandler.cs" />
     <Compile Include="monitoring\Mappers\MonitorEventMessageMapper.cs" />
-    <Compile Include="OutputChannel.cs" />
-    <Compile Include="InputChannel.cs" />
+    <Compile Include="Channel.cs" />
     <Compile Include="LifetimeScope.cs" />
     <Compile Include="MessageFactory.cs" />
     <Compile Include="MessageMapperRegistry.cs" />

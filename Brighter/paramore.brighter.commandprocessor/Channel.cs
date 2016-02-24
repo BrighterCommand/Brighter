@@ -42,11 +42,11 @@ using System.Threading.Tasks;
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class InputChannel.
+    /// Class Channel.
     /// An <see cref="IAmAChannel"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     /// and acknowledging receipt of those messages
     /// </summary>
-    public class InputChannel : IAmAnInputChannel
+    public class Channel : IAmAChannel
     {
         private readonly string _channelName;
         private readonly IAmAMessageConsumer _messageConsumer;
@@ -56,11 +56,11 @@ namespace paramore.brighter.commandprocessor
         private int _numberOfMessagesToCache;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InputChannel"/> class.
+        /// Initializes a new instance of the <see cref="Channel"/> class.
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="messageConsumer">The messageConsumer.</param>
-        public InputChannel(string channelName, IAmAMessageConsumer messageConsumer)
+        public Channel(string channelName, IAmAMessageConsumer messageConsumer)
         {
             _channelName = channelName;
             _messageConsumer = messageConsumer;
@@ -154,7 +154,7 @@ namespace paramore.brighter.commandprocessor
             GC.SuppressFinalize(this);
         }
 
-        ~InputChannel()
+        ~Channel()
         {
             Dispose(false);
         }

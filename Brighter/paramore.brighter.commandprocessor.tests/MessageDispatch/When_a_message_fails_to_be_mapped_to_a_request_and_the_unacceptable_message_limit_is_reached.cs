@@ -48,9 +48,9 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
             var unmappableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
 
-            s_channel.Send(unmappableMessage);
-            s_channel.Send(unmappableMessage);
-            s_channel.Send(unmappableMessage);
+            s_channel.Add(unmappableMessage);
+            s_channel.Add(unmappableMessage);
+            s_channel.Add(unmappableMessage);
         };
 
         private Because of = () =>

@@ -31,10 +31,10 @@ namespace paramore.brighter.serviceactivator
     /// Abstracts the thread that runs a message pump
     internal class Performer : IAmAPerformer
     {
-        private readonly IAmAnInputChannel _channel;
+        private readonly IAmAChannel _channel;
         private readonly IAmAMessagePump _messagePump;
 
-        public Performer(IAmAnInputChannel channel, IAmAMessagePump messagePump)
+        public Performer(IAmAChannel channel, IAmAMessagePump messagePump)
         {
             _channel = channel;
             _messagePump = messagePump;

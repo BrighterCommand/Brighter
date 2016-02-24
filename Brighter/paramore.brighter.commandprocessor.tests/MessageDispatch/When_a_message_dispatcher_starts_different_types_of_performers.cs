@@ -66,11 +66,11 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
             var @event = new MyEvent();
             var eventMessage = new MyEventMessageMapper().MapToMessage(@event);
-            s_eventChannel.Send(eventMessage);
+            s_eventChannel.Add(eventMessage);
 
             var command = new MyCommand();
             var commandMessage = new MyCommandMessageMapper().MapToMessage(command);
-            s_commandChannel.Send(commandMessage);
+            s_commandChannel.Add(commandMessage);
 
             s_dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
             s_dispatcher.Receive();

@@ -28,17 +28,17 @@ using paramore.brighter.commandprocessor;
 
 namespace paramore.commandprocessor.tests.MessagingGateway
 {
-    [Subject(typeof(InputChannel))]
+    [Subject(typeof(Channel))]
     public class When_Disposing_Input_Channel
     {
-        private static IAmAnInputChannel s_channel;
+        private static IAmAChannel s_channel;
         private static IAmAMessageConsumer s_messageConsumer;
 
         private Establish _context = () =>
         {
             s_messageConsumer = A.Fake<IAmAMessageConsumer>();
 
-            s_channel = new InputChannel("test", s_messageConsumer);
+            s_channel = new Channel("test", s_messageConsumer);
         };
 
         private Because _of = () => s_channel.Dispose();
