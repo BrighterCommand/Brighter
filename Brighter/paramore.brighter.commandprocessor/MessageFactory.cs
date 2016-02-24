@@ -45,15 +45,6 @@ namespace paramore.brighter.commandprocessor
     public static class MessageFactory
     {
         /// <summary>
-        /// Creates the empty message.
-        /// </summary>
-        /// <returns>Message.</returns>
-        public static Message CreateEmptyMessage()
-        {
-            return new Message();
-        }
-
-        /// <summary>
         /// Creates the quit message.
         /// </summary>
         /// <returns>Message.</returns>

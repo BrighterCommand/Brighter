@@ -83,8 +83,6 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
             //we expect the first and only parameter to be a string
             var policyName = (string)initializerList[0];
             _policy = Context.Policies.Get(policyName);
-            if (_policy == null)
-                throw new ArgumentException("Could not find the policy for this attribute, did you register it with the command processor's container", "initializerList");
         }
 
         /// <summary>
