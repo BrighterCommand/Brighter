@@ -36,23 +36,28 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
     /// Class ControlBusSender.
     /// </summary>
-    public class ControlBusSender : IAmAControlBusSender
+    public class ControlBusSender : IAmAControlBusSender, IAmAControlBusSenderAsync, IDisposable
     {
         /// <summary>
         /// The command processor tat underlies the control bus; we only use the Post method
         /// </summary>
-        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
+        private bool _disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ControlBusSender"/> class.
         /// </summary>
         /// <param name="commandProcessor">The command processor.</param>
-        public ControlBusSender(IAmACommandProcessor commandProcessor)
+        public ControlBusSender(CommandProcessor commandProcessor)
         {
             _commandProcessor = commandProcessor;
         }
@@ -66,5 +71,28 @@ namespace paramore.brighter.commandprocessor
         {
             _commandProcessor.Post(request);
         }
+
+        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
+        {
+            await _commandProcessor.PostAsync(request, continueOnCapturedContext, ct);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+
+        private void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            _commandProcessor.Dispose();
+
+            _disposed = true;
+        }
+
     }
 }

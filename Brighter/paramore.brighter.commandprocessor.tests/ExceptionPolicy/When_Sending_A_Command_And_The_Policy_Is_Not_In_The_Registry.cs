@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -25,66 +25,48 @@ THE SOFTWARE. */
 using System;
 using FakeItEasy;
 using Machine.Specifications;
-using Nito.AsyncEx;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using paramore.commandprocessor.tests.ExceptionPolicy.TestDoubles;
-using Polly;
-using Polly.CircuitBreaker;
 using TinyIoC;
 
 namespace paramore.commandprocessor.tests.ExceptionPolicy
 {
     [Subject(typeof(ExceptionPolicyHandler<>))]
-    public class When_Sending_A_Command_That_Repeatedely_Fails_Break_The_Circuit_Async
+    public class When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Exception s_thirdException;
-        private static Exception s_firstException;
-        private static Exception s_secondException;
+        private static int s_retryCount;
+        private static Exception s_exception;
 
         private Establish _context = () =>
         {
             var logger = A.Fake<ILog>();
 
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyFailsWithDivideByZeroHandlerAsync>();
+            registry.Register<MyCommand, MyDoesNotFailPolicyHandler>();
 
             var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyFailsWithDivideByZeroHandlerAsync>().AsSingleton();
-            container.Register<IHandleRequestsAsync<MyCommand>, ExceptionPolicyHandlerAsync<MyCommand>>().AsSingleton();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler>("MyDoesNotFailPolicyHandler");
+            container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>("MyExceptionPolicyHandler");
             container.Register<ILog>(logger);
 
             var policyRegistry = new PolicyRegistry();
 
-            var policy = Policy
-                .Handle<DivideByZeroException>()
-                .CircuitBreakerAsync(2, TimeSpan.FromMinutes(1));
-
-            policyRegistry.Add("MyDivideByZeroPolicy", policy);
-
-            MyFailsWithDivideByZeroHandlerAsync.ReceivedCommand = false;
+            MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
         };
 
         //We have to catch the final exception that bubbles out after retry
-        private Because _of = () =>
-            {
-                //First two should be caught, and increment the count
-                s_firstException = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_myCommand)));
-                s_secondException = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_myCommand)));
-                //this one should tell us that the circuit is broken
-                s_thirdException = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_myCommand)));
-            };
+        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
 
-        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandlerAsync.ShouldReceive(s_myCommand).ShouldBeTrue();
-        private It _should_bubble_up_the_first_exception = () => s_firstException.ShouldBeOfExactType<DivideByZeroException>();
-        private It _should_bubble_up_the_second_exception = () => s_secondException.ShouldBeOfExactType<DivideByZeroException>();
-        private It _should_break_the_circuit_after_two_fails = () => s_thirdException.ShouldBeOfExactType<BrokenCircuitException>();
+        private It _should_throw_an_exception = () => s_exception.ShouldBeOfExactType<ArgumentException>();
+
+        private It _should_give_the_name_of_the_missing_policy = () => s_exception.ShouldContainErrorMessage("There is no policy for MyDivideByZeroPolicy");
     }
 }

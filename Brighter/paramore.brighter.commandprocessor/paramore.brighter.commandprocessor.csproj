@@ -120,7 +120,7 @@
     <Compile Include="policy\Attributes\UsePolicyAsyncAttribute.cs" />
     <Compile Include="policy\Attributes\UsePolicyAtttribute.cs" />
     <Compile Include="policy\Handlers\ExceptionPolicyHandler.cs" />
-    <Compile Include="policy\Handlers\ExceptionPolicyHandlerRequestHandlerAsync.cs" />
+    <Compile Include="policy\Handlers\ExceptionPolicyHandlerAsync.cs" />
     <Compile Include="policy\Handlers\FallbackPolicyHandler.cs" />
     <Compile Include="policy\Handlers\FallbackPolicyHandlerRequestHandlerAsync.cs" />
     <Compile Include="policy\Handlers\TimeoutPolicyHandler.cs" />

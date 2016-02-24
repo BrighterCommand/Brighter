@@ -30,7 +30,7 @@ namespace paramore.commandprocessor.tests.ExceptionPolicy
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyFailsWithFallbackDivideByZeroHandlerAsync>().AsSingleton();
-            container.Register<IHandleRequestsAsync<MyCommand>, ExceptionPolicyHandlerRequestHandlerAsync<MyCommand>>().AsSingleton();
+            container.Register<IHandleRequestsAsync<MyCommand>, ExceptionPolicyHandlerAsync<MyCommand>>().AsSingleton();
             container.Register<ILog>(logger);
 
             var policyRegistry = new PolicyRegistry();

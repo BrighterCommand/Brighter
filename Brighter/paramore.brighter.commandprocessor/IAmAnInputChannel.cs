@@ -77,15 +77,5 @@ namespace paramore.brighter.commandprocessor
         /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         void Requeue(Message message, int delayMilliseconds = 0);
-        /// <summary>
-        /// Returns if the channel supports caching or not.
-        /// </summary>
-        /// <returns></returns>
-        bool SupportsCaching();
-        /// <summary>
-        /// Sets number of messages to cache.
-        /// </summary>
-        /// <param name="count"></param>
-        void SetCachedMessageCount(int count);
     }
 }

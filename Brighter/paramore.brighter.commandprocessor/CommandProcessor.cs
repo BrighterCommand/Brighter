@@ -623,8 +623,6 @@ namespace paramore.brighter.commandprocessor
             if (_asyncHandlerFactory == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
-            var tcs = new TaskCompletionSource<T>();
-
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
 
@@ -650,9 +648,9 @@ namespace paramore.brighter.commandprocessor
                     }
                 }
                 if (exceptions.Count > 0)
-                    throw new AggregateException(
-                        "Failed to async publish to one more handlers successfully, see inner exceptions for details",
-                        exceptions);
+                {
+                    throw new AggregateException("Failed to async publish to one more handlers successfully, see inner exceptions for details", exceptions);
+                }
             }
         }
 
@@ -750,6 +748,7 @@ namespace paramore.brighter.commandprocessor
 
             _disposed = true;
         } 
+
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
             _logger.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof (T), command.Id);

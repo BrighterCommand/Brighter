@@ -79,7 +79,7 @@ namespace paramore.brighter.commandprocessor.policy.Attributes
         /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
-            return typeof(ExceptionPolicyHandlerRequestHandlerAsync<>);
+            return typeof(ExceptionPolicyHandlerAsync<>);
         }
     }
 }

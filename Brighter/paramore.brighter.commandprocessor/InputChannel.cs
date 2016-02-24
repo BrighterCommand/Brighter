@@ -134,16 +134,6 @@ namespace paramore.brighter.commandprocessor
                 _messageConsumer.Requeue(message);
         }
 
-        public bool SupportsCaching()
-        {
-            return _messageConsumerSupportsCache;
-        }
-
-        public void SetCachedMessageCount(int count)
-        {
-            _numberOfMessagesToCache = count;
-        }
-
         /// <summary>
         /// Gets the length.
         /// </summary>

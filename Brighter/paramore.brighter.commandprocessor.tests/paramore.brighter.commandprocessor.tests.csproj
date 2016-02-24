@@ -146,6 +146,8 @@
     <Compile Include="CommandProcessors\When_Posting_A_Message_And_There_Is_No_Message_Store.cs" />
     <Compile Include="CommandProcessors\When_Posting_A_Message_And_There_Is_No_Message_Store_Async.cs" />
     <Compile Include="CommandProcessors\When_Posting_A_Message_To_The_Command_Processor_Async.cs" />
+    <Compile Include="CommandProcessors\When_Posting_Via_A_Control_Bus_Sender.cs" />
+    <Compile Include="CommandProcessors\When_Posting_Via_A_Control_Bus_Sender_Async.cs" />
     <Compile Include="CommandProcessors\When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async.cs" />
     <Compile Include="CommandProcessors\When_There_Is_No_Handler_Factory_On_A_Publish.cs" />
     <Compile Include="CommandProcessors\When_There_Is_No_Handler_Factory_On_A_Publish_Async.cs" />
@@ -266,6 +268,7 @@
     <Compile Include="EventSourcing\TestDoubles\MyStoredCommandHandler.cs" />
     <Compile Include="EventSourcing\When_Handling_A_Command_With_A_Command_Store_Enabled_Async.cs" />
     <Compile Include="ExceptionPolicy\MyFailsWithDivideByZeroHandlerAsync.cs" />
+    <Compile Include="ExceptionPolicy\TestDoubles\MyDoesNotFailPolicyHandlerAsync.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithFallbackDivideByZeroHandlerAsync.cs" />
     <Compile Include="ExceptionPolicy\When_Raising_An_Exception_Run_Fallback_Chain.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithFallbackMultipleHandlers.cs" />
@@ -274,6 +277,8 @@
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithFallbackBrokenCircuitHandler.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithFallbackDivideByZeroHandler.cs" />
     <Compile Include="ExceptionPolicy\TestDoubles\MyFailsWithDivideByZeroHandler.cs" />
+    <Compile Include="ExceptionPolicy\When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry.cs" />
+    <Compile Include="ExceptionPolicy\When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry_Async.cs" />
     <Compile Include="ExceptionPolicy\When_Sending_A_Command_That_Repeatedely_Fails_Break_The_Circuit.cs" />
     <Compile Include="ExceptionPolicy\When_A_Fallback_Is_Broken_Ciruit_Only.cs" />
     <Compile Include="ExceptionPolicy\When_Raising_An_Exception_Can_Fallback.cs" />

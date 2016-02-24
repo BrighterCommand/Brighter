@@ -56,23 +56,23 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
     /// of the target handler implemented by the client.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
-    public class ExceptionPolicyHandlerRequestHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
+    public class ExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {
         private Policy _policy;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ExceptionPolicyHandlerRequestHandlerAsync{TRequest}" /> class.
+        /// Initializes a new instance of the <see cref="ExceptionPolicyHandlerAsync{TRequest}" /> class.
         /// </summary>
-        public ExceptionPolicyHandlerRequestHandlerAsync()
+        public ExceptionPolicyHandlerAsync()
             : this(LogProvider.GetCurrentClassLogger())
         {}
 
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ExceptionPolicyHandlerRequestHandlerAsync{TRequest}" /> class.
+        /// Initializes a new instance of the <see cref="ExceptionPolicyHandlerAsync{TRequest}" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public ExceptionPolicyHandlerRequestHandlerAsync(ILog logger) : base(logger)
+        public ExceptionPolicyHandlerAsync(ILog logger) : base(logger)
         { }
 
         /// <summary>
