@@ -48,7 +48,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
             s_fakeMessageProducer = new FakeMessageProducer();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var retryPolicy = Policy

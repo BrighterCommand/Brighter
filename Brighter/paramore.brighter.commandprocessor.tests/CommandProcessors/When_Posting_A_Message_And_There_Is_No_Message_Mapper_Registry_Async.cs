@@ -59,7 +59,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 );
 
 
-            var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
 
             var retryPolicy = Policy
                 .Handle<Exception>()

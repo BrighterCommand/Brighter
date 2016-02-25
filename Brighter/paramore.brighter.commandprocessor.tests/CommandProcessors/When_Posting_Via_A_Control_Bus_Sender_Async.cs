@@ -60,7 +60,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
                 );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var retryPolicy = Policy

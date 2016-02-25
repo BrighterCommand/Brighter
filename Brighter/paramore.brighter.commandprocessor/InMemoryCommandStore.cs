@@ -182,11 +182,13 @@ namespace paramore.brighter.commandprocessor
             /// </summary>
             /// <value>The command body.</value>
             public string CommandBody { get; set; }
+            
             /// <summary>
             /// Gets or sets the type of the command.
             /// </summary>
             /// <value>The type of the command.</value>
             public Type CommandType { get; private set; }
+
             /// <summary>
             /// Gets or sets the command when.
             /// </summary>

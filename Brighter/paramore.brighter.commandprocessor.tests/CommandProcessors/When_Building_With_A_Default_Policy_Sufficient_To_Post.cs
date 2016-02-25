@@ -27,19 +27,17 @@ using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using Polly;
 
-
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
-    [Subject(typeof(ControlBusSender))]
-    public class When_Posting_Via_A_Control_Bus_Sender
+    [Subject(typeof (CommandProcessorBuilder))]
+    public class When_Building_With_A_Default_Policy_Sufficient_To_Post
     {
         private static CommandProcessor s_commandProcessor;
-        private static ControlBusSender s_controlBusSender;
         private static readonly MyCommand s_myCommand = new MyCommand();
         private static Message s_message;
         private static FakeMessageStore s_fakeMessageStore;
@@ -54,39 +52,37 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             s_fakeMessageProducer = new FakeMessageProducer();
 
             s_message = new Message(
-                header: new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
+                header:
+                    new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
                 body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
                 );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
+            var messageMapperRegistry =
+                new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .Retry();
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-
-            s_commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
-                messageMapperRegistry,
-                (IAmAMessageStore<Message>)s_fakeMessageStore,
-                (IAmAMessageProducer)s_fakeMessageProducer,
-                logger);
-
-            s_controlBusSender = new ControlBusSender(s_commandProcessor);
+            s_commandProcessor = CommandProcessorBuilder.With()
+                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactory()))
+                .DefaultPolicy()
+                .TaskQueues(new MessagingConfiguration((IAmAMessageStore<Message>)s_fakeMessageStore, (IAmAMessageProducer) s_fakeMessageProducer, messageMapperRegistry))
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
         };
 
-        private Because _of = () => s_controlBusSender .Post(s_myCommand);
-
-        private Cleanup cleanup = () => s_controlBusSender .Dispose();
+        private Because _of = () => s_commandProcessor.Post(s_myCommand);
 
         private It _should_store_the_message_in_the_sent_command_message_repository = () => s_fakeMessageStore.MessageWasAdded.ShouldBeTrue();
         private It _should_send_a_message_via_the_messaging_gateway = () => s_fakeMessageProducer.MessageWasSent.ShouldBeTrue();
         private It _should_convert_the_command_into_a_message =() => s_fakeMessageStore.Get().First().ShouldEqual(s_message);
 
+        internal class EmptyHandlerFactory : IAmAHandlerFactory
+        {
+            public IHandleRequests Create(Type handlerType)
+            {
+                return null;
+            }
+
+            public void Release(IHandleRequests handler) {}
+        }
     }
 }

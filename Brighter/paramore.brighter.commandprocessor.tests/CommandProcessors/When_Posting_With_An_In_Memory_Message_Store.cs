@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
@@ -32,17 +31,15 @@ using paramore.brighter.commandprocessor.Logging;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using Polly;
 
-
 namespace paramore.commandprocessor.tests.CommandProcessors
 {
-    [Subject(typeof(ControlBusSender))]
-    public class When_Posting_Via_A_Control_Bus_Sender
+    [Subject(typeof(CommandProcessor))]
+    public class When_Posting_With_An_In_Memory_Message_Store
     {
         private static CommandProcessor s_commandProcessor;
-        private static ControlBusSender s_controlBusSender;
         private static readonly MyCommand s_myCommand = new MyCommand();
         private static Message s_message;
-        private static FakeMessageStore s_fakeMessageStore;
+        private static InMemoryMessageStore s_MessageStore;
         private static FakeMessageProducer s_fakeMessageProducer;
 
         private Establish _context = () =>
@@ -50,7 +47,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             var logger = A.Fake<ILog>();
             s_myCommand.Value = "Hello World";
 
-            s_fakeMessageStore = new FakeMessageStore();
+            s_MessageStore = new InMemoryMessageStore();
             s_fakeMessageProducer = new FakeMessageProducer();
 
             s_message = new Message(
@@ -73,20 +70,17 @@ namespace paramore.commandprocessor.tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAMessageStore<Message>)s_fakeMessageStore,
+                (IAmAMessageStore<Message>)s_MessageStore,
                 (IAmAMessageProducer)s_fakeMessageProducer,
                 logger);
-
-            s_controlBusSender = new ControlBusSender(s_commandProcessor);
         };
 
-        private Because _of = () => s_controlBusSender .Post(s_myCommand);
+        private Because _of = () => s_commandProcessor.Post(s_myCommand);
 
-        private Cleanup cleanup = () => s_controlBusSender .Dispose();
+        private Cleanup cleanup = () => s_commandProcessor.Dispose();
 
-        private It _should_store_the_message_in_the_sent_command_message_repository = () => s_fakeMessageStore.MessageWasAdded.ShouldBeTrue();
+        private It _should_store_the_message_in_the_sent_command_message_repository = () => s_MessageStore.Get(s_myCommand.Id).ShouldNotBeNull();
         private It _should_send_a_message_via_the_messaging_gateway = () => s_fakeMessageProducer.MessageWasSent.ShouldBeTrue();
-        private It _should_convert_the_command_into_a_message =() => s_fakeMessageStore.Get().First().ShouldEqual(s_message);
-
+        private It _should_convert_the_command_into_a_message =() => s_MessageStore.Get(s_myCommand.Id).ShouldEqual(s_message);
     }
 }

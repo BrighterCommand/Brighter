@@ -181,7 +181,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(MessageHeader other)
         {
-            return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType && TimeStamp == other.TimeStamp && HandledCount == other.HandledCount && DelayedMilliseconds == other.DelayedMilliseconds;
+            return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType;
         }
 
         /// <summary>

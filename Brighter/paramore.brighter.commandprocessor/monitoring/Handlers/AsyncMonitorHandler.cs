@@ -31,7 +31,7 @@ using paramore.brighter.commandprocessor.monitoring.Events;
 
 namespace paramore.brighter.commandprocessor.monitoring.Handlers
 {
-    public class RequestHandlerAsyncMonitorHandler<T> : RequestHandlerAsync<T> where T : class, IRequest
+    public class AsyncMonitorHandler<T> : RequestHandlerAsync<T> where T : class, IRequest
     {
         private readonly IAmAControlBusSender _controlBusSender;
         private bool _isMonitoringEnabled;
@@ -39,20 +39,20 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         private string _instanceName;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandlerAsyncMonitorHandler{T}"/> class.
+        /// Initializes a new instance of the <see cref="AsyncMonitorHandler{T}"/> class.
         /// </summary>
         /// <param name="controlBusSender">The control bus command processor, to post over</param>
-        public RequestHandlerAsyncMonitorHandler(IAmAControlBusSender controlBusSender)
+        public AsyncMonitorHandler(IAmAControlBusSender controlBusSender)
             : this(controlBusSender, LogProvider.GetCurrentClassLogger())
         { }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandlerAsyncMonitorHandler{T}"/> class.
+        /// Initializes a new instance of the <see cref="AsyncMonitorHandler{T}"/> class.
         /// Use this instance if you need to inject a logger, for example for testing
         /// </summary>
         /// <param name="controlBusSender">The control bus command processor, to post over</param>
         /// <param name="logger">The logger</param>
-        public RequestHandlerAsyncMonitorHandler(IAmAControlBusSender controlBusSender, ILog logger) : base(logger)
+        public AsyncMonitorHandler(IAmAControlBusSender controlBusSender, ILog logger) : base(logger)
         {
             _controlBusSender = controlBusSender;
         }

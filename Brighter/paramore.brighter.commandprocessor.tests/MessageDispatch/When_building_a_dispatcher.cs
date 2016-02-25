@@ -45,7 +45,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private Establish _context = () =>
             {
                 var logger = A.Fake<ILog>();
-                var messageMapperRegistry = new MessageMapperRegistry(new TestMessageMapperFactory(() => new MyEventMessageMapper()));
+                var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
                 messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
                 var retryPolicy = Policy

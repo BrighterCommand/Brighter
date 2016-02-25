@@ -57,7 +57,26 @@ namespace paramore.brighter.commandprocessor
         /// <returns>Policy.</returns>
         public Policy Get(string policyName)
         {
-            return Policy.Handle<Exception>().Retry();
+            switch (policyName)
+            {
+                case CommandProcessor.CIRCUITBREAKER:
+                {
+                    return Policy.Handle<Exception>().CircuitBreaker(10, new TimeSpan(5000));
+                }
+                case CommandProcessor.RETRYPOLICY:
+                {
+                    return Policy.Handle<Exception>().WaitAndRetry(new[]
+                    {
+                        TimeSpan.FromMilliseconds(50),
+                        TimeSpan.FromMilliseconds(100),
+                        TimeSpan.FromMilliseconds(150)
+                    });
+                }
+                default:
+                {
+                    return Policy.Handle<Exception>().Retry();
+                }
+            }
         }
 
         /// <summary>

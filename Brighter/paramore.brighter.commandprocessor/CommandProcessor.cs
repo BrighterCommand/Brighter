@@ -769,9 +769,19 @@ namespace paramore.brighter.commandprocessor
             _policyRegistry.Get(CIRCUITBREAKER).Execute(send);
         }
 
+        private async Task CheckCircuitAsync(Func<Task> send)
+        {
+            await _policyRegistry.Get(CIRCUITBREAKER).Execute(send);
+        }
+
         private void RetryAndBreakCircuit(Action send)
         {
             CheckCircuit(() => Retry(send));
+        }
+
+        private async Task RetryAndBreakCircuitAsync(Func<Task> send)
+        {
+            await CheckCircuitAsync(() => RetryAsync(send));
         }
 
         private void Retry(Action send)
@@ -782,16 +792,6 @@ namespace paramore.brighter.commandprocessor
         private async Task RetryAsync(Func<Task> send)
         {
             await _policyRegistry.Get(RETRYPOLICY).Execute(send);
-        }
-
-        private async Task CheckCircuitAsync(Func<Task> send)
-        {
-            await _policyRegistry.Get(CIRCUITBREAKER).Execute(send);
-        }
-
-        private async Task RetryAndBreakCircuitAsync(Func<Task> send)
-        {
-            await CheckCircuitAsync(() => RetryAsync(send));
         }
     }
 }
