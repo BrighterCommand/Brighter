@@ -357,8 +357,10 @@
     <Compile Include="MessagingGateway\When_Requeuing_A_Message_With_Supported_But_Disabled_Delay.cs" />
     <Compile Include="MessagingGateway\When_Requeuing_A_Message_With_Unsupported_Delay.cs" />
     <Compile Include="Monitoring\TestDoubles\MyMonitoredHandlerAsync.cs" />
+    <Compile Include="Monitoring\TestDoubles\MyMonitoredHandlerThatThrowsAsync.cs" />
     <Compile Include="Monitoring\When_Monitoring_Is_On_For_A_Handler_Async.cs" />
     <Compile Include="Monitoring\When_Monitoring_We_Should_Record_But_Rethrow_Exceptions.cs" />
+    <Compile Include="Monitoring\When_Monitoring_We_Should_Record_But_Rethrow_Exceptions_Async.cs" />
     <Compile Include="Monitoring\When_Serializing_A_Monitoring_Event.cs" />
     <Compile Include="Monitoring\TestDoubles\MyMonitoredHandlerThatThrows.cs" />
     <Compile Include="Monitoring\TestDoubles\MyMonitoredHandler.cs" />
