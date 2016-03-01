@@ -45,6 +45,14 @@
       <HintPath>..\..\packages\Nancy.1.4.3\lib\net40\Nancy.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Nancy.Hosting.Aspnet, Version=1.4.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Nancy.Hosting.Aspnet.1.4.1\lib\net40\Nancy.Hosting.Aspnet.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Polly, Version=2.2.4.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Polly.2.2.4\lib\net45\Polly.dll</HintPath>
       <Private>True</Private>
@@ -58,13 +66,25 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Adapters\MessageMappers\TaskCompletedEventMapper.cs" />
+    <Compile Include="Adapters\TasksModule.cs" />
     <Compile Include="Adapters\TinyIoCHandlerFactory.cs" />
     <Compile Include="Adapters\TinyIoCMessageMapperFactory.cs" />
     <Compile Include="Bootstrapper.cs" />
+    <Compile Include="Common\BaseUriProvider.cs" />
+    <Compile Include="Common\IProvideBaseUris.cs" />
+    <Compile Include="Ports\ViewBuilders\IBuildViews.cs" />
+    <Compile Include="Ports\ViewBuilders\TaskViewBuilder.cs" />
+    <Compile Include="Ports\ViewModelRetrievers\TaskViewModelRetriever.cs" />
+    <Compile Include="Ports\ViewModelRetrievers\IRetrieveTaskViewModels.cs" />
+    <Compile Include="Ports\ViewModels\TaskViewModel.cs" />
+    <Compile Include="Ports\Views\LinkView.cs" />
+    <Compile Include="Ports\Views\TaskView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <Content Include="App_Data\Tasks.sdf" />
     <Content Include="Web.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <SubType>Designer</SubType>

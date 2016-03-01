@@ -22,61 +22,56 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using Microsoft.ServiceBus.Messaging;
-using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
 {
-    public class AzureServiceBusMessageProducer : MessageGateway, IAmAMessageProducerSupportingDelay
+    public class MessageSenderPool : IDisposable
     {
         private readonly ILog logger;
-        private readonly MessageSenderPool pool;
+        private readonly MessagingFactory factory;
+        private readonly ConcurrentDictionary<string, MessageSender> senders = new ConcurrentDictionary<string, MessageSender>();
 
-        public AzureServiceBusMessageProducer(ILog logger)
-            : base(logger)
+        public MessageSenderPool(ILog logger, MessagingFactory factory)
         {
             this.logger = logger;
-            this.pool = new MessageSenderPool(logger, factory);
+            this.factory = factory;
         }
 
-        public void Send(Message message)
+        public MessageSender GetMessageSender(string path)
         {
-            SendWithDelay(message);
+            if (senders.ContainsKey(path))
+                return senders[path];
+
+            var sender = factory.CreateMessageSender(path);
+            senders.TryAdd(path, sender);
+            return sender;
         }
 
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        public void Dispose()
         {
-            logger.DebugFormat("AzureServiceBusMessageProducer: Publishing message to topic {0}", message.Header.Topic);
-            var messageSender = pool.GetMessageSender(message.Header.Topic);
-            EnsureTopicExists(message.Header.Topic);
-            messageSender.Send(new BrokeredMessage(message.Body.Value)
-            {
-                ScheduledEnqueueTimeUtc = DateTime.UtcNow.AddMilliseconds(delayMilliseconds)
-            });
-            logger.DebugFormat("AzureServiceBusMessageProducer: Published message with id {0} to topic '{1}' with a delay of {2}ms and content: {3}", message.Id, message.Header.Topic, delayMilliseconds, JsonConvert.SerializeObject(message));
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
-        public bool DelaySupported
-        {
-            get { return true; }
-        }
-
-        ~AzureServiceBusMessageProducer()
+        ~MessageSenderPool()
         {
             Dispose(false);
         }
-
-        protected override void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing)
         {
             if (disposing)
             {
-                if (pool != null)
+                foreach (var sender in senders.Values)
                 {
-                    pool.Dispose();
+                    if (!sender.IsClosed)
+                    {
+                        sender.Close();
+                    }
                 }
             }
-            base.Dispose(disposing);
         }
     }
 }
