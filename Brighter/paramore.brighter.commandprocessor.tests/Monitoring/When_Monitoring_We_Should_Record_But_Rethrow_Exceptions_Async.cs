@@ -60,7 +60,7 @@ namespace paramore.commandprocessor.tests.Monitoring
             container.Register<IHandleRequestsAsync<MyCommand>, MyMonitoredHandlerThatThrowsAsync>();
             container.Register<IHandleRequestsAsync<MyCommand>, MonitorHandlerAsync<MyCommand>>();
             container.Register<ILog>(logger);
-            container.Register<IAmAControlBusSender>(s_controlBusSender);
+            container.Register<IAmAControlBusSenderAsync>(s_controlBusSender);
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
@@ -83,7 +83,7 @@ namespace paramore.commandprocessor.tests.Monitoring
         private It _should_monitor_the_exception = () => s_afterEvent.Exception.ShouldBeOfExactType(typeof(ApplicationException));
         private It _should_surface_the_error_message = () => s_afterEvent.Exception.Message.ShouldContain("monitored");
         private It _should_have_an_instance_name_after = () => s_afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
-        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandlerThatThrowsAsync).AssemblyQualifiedName);
         private It _should_include_the_underlying_request_details_after = () => s_afterEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
         private It should_post_the_time_of_the_request_after = () => s_afterEvent.EventTime.ShouldEqual(s_at);
     }
