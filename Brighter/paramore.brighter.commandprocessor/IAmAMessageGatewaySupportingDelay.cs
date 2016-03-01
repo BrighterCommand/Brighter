@@ -22,6 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
+/// <summary>
+/// Interface IAmAMessagingGatewaySuppotingDelay
+/// Does the Message Broker support the sending of delayed messages
+/// </summary>
 public interface IAmAMessageGatewaySupportingDelay
 {
     /// <summary>

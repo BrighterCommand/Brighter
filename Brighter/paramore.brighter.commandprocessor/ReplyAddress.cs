@@ -42,6 +42,7 @@ namespace paramore.brighter.commandprocessor
 {
     /// <summary>
     /// Class ReplyAddress.
+    /// The addrees to reply to when doing request-reply and not publish-subscribe
     /// </summary>
     public class ReplyAddress
     {

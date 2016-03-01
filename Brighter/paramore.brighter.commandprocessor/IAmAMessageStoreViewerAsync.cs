@@ -4,6 +4,11 @@ using System.Threading.Tasks;
 
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Inteface IAmAMessageStoreViewerAsync{T}
+    /// Used to retrieve messages from an <see cref="IAmAMessageStore{T}"/>
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public interface IAmAMessageStoreViewerAsync<T> where T : Message
     {
         /// <summary>

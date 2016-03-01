@@ -41,6 +41,10 @@ using System.Linq;
 
 namespace paramore.brighter.commandprocessor
 {
+    /// <summary>
+    /// Class MessageRecoverer.
+    /// Used to support reposting a message from a <see cref="IAmAMessageStore{T}"/> to a broker via <see cref="IAmAMessageProducer"/>
+    /// </summary>
     public class MessageRecoverer : IAmAMessageRecoverer
     {
         public void Repost(List<string> messageIds, IAmAMessageStore<Message> messageStore, IAmAMessageProducer messageProducer)
@@ -52,6 +56,12 @@ namespace paramore.brighter.commandprocessor
             }
         }
 
+        /// <summary>
+        /// Gets the selected messages from the store
+        /// </summary>
+        /// <param name="messageStore">The store to retrieve from</param>
+        /// <param name="messageIds">The messages to retrieve</param>
+        /// <returns></returns>
         private static IEnumerable<Message> GetMessagesFromStore(IAmAMessageStore<Message> messageStore, IReadOnlyCollection<string> messageIds)
         {
             IEnumerable<Message> foundMessages = messageIds 

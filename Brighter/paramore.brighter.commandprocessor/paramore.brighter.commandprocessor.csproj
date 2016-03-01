@@ -69,7 +69,7 @@
     <Compile Include="DefaultPolicy.cs" />
     <Compile Include="eventsourcing\Attributes\UseCommandSourcingAsyncAttribute.cs" />
     <Compile Include="eventsourcing\Attributes\UseCommandSourcingAttribute.cs" />
-    <Compile Include="eventsourcing\Handlers\RequestHandlerAsyncCommandSourcingHandler.cs" />
+    <Compile Include="eventsourcing\Handlers\CommandSourcingHandlerAsync.cs" />
     <Compile Include="eventsourcing\Handlers\CommandSourcingHandler.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="actions\DeferMessageAction.cs" />
@@ -78,7 +78,6 @@
     <Compile Include="IAmACommandStore.cs" />
     <Compile Include="IAmAControlBusSender.cs" />
     <Compile Include="IAmAControlBusSenderFactory.cs" />
-    <Compile Include="IAmAMessageGatewaySupportingCache.cs" />
     <Compile Include="IAmAMessageProducerFactory.cs" />
     <Compile Include="IAmAMessageConsumerFactory.cs" />
     <Compile Include="IAmAMessageGatewaySupportingDelay.cs" />

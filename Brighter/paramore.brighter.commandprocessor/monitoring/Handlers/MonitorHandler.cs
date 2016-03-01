@@ -29,6 +29,11 @@ using paramore.brighter.commandprocessor.monitoring.Events;
 
 namespace paramore.brighter.commandprocessor.monitoring.Handlers
 {
+    /// <summary>
+    /// Class MonitorHandler.
+    /// The MonitorHandler raises an event via the Control Bus when we enter, exit, and if any exceptions are thrown, provided that monitoring has been enabled in the configuration.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public class MonitorHandler<T> : RequestHandler<T> where T: class, IRequest
     {
         readonly IAmAControlBusSender _controlBusSender;

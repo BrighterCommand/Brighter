@@ -25,25 +25,68 @@ THE SOFTWARE. */
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using paramore.brighter.commandprocessor.monitoring.Handlers;
 
 namespace paramore.brighter.commandprocessor.monitoring.Events
 {
+    /// <summary>
+    /// What type of event are we recording
+    /// </summary>
     public enum MonitorEventType
     {
+        /// <summary>
+        /// A policy implementing a circuit was tripped whilst running a handler
+        /// </summary>
         BrokenCircuit,
+        /// <summary>
+        /// We have entered a handler
+        /// </summary>
         EnterHandler,
+        /// <summary>
+        /// An exception was thrown by a handler
+        /// </summary>
         ExceptionThrown,
+        /// <summary>
+        /// We have left a handler
+        /// </summary>
         ExitHandler,
     }
 
+    /// <summary>
+    /// Class MonitorEvent.
+    /// We monitor the execution of handlers. A <see cref="MonitorHandler{T}"/> will monitor filters that occur after it in the pipeline. It raises
+    /// events before executing the remainder of the chain, after exiting the remainder of the chain, or because an exception was thrown in the chain.
+    /// We capture the information on timing and the request.
+    /// </summary>
     public class MonitorEvent : Event
     {
+        /// <summary>
+        /// Any exception that was thrown when processing the handler pipeline
+        /// </summary>
         public Exception Exception { get; set; }
+        
+        /// <summary>
+        /// Why was this event raised?
+        /// </summary>
         [JsonConverter(typeof(StringEnumConverter))]
         public MonitorEventType EventType { get; private set; }
+
+        /// <summary>
+        /// When was this event raised?
+        /// </summary>
         public DateTime EventTime { get; private set; }
+
+        //What was the handler that we raised this event for? 
         public string HandlerName { get; private set; }
+
+        /// <summary>
+        /// Which instance was this handler running on?
+        /// </summary>
         public string InstanceName { get; set; }
+
+        /// <summary>
+        /// The serialied request - what were the parameters to this command?
+        /// </summary>
         public string RequestBody { get; private set; }
 
         public MonitorEvent(

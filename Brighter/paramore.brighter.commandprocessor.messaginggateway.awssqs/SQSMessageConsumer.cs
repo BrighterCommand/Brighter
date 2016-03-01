@@ -23,7 +23,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
     /// <summary>
     /// Class SqsMessageConsumer.
     /// </summary>
-    public class SqsMessageConsumer : IAmAMessageConsumerSupportingDelay, IAmAMessageConsumerSupportingCache
+    public class SqsMessageConsumer : IAmAMessageConsumerSupportingDelay 
     {
         /// <summary>
         /// The _logger
@@ -53,7 +53,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
             _logger = logger;
             _queueUrl = queueUrl;
             DelaySupported = true;
-            CacheSupported = true;
         }
 
         /// <summary>
@@ -61,12 +60,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
         /// </summary>
         /// <value><c>true</c> if [delay supported]; otherwise, <c>false</c>.</value>
         public bool DelaySupported { get; private set; }
-
-        /// <summary>
-        /// Gets if the current provider configuration is able to support cached retrieval of messages.
-        /// </summary>
-        /// <value><c>true</c> if [cache supported]; otherwise, <c>false</c>.</value>
-        public bool CacheSupported { get; private set; }
 
         /// <summary>
         /// Receives the specified queue name.
