@@ -17,7 +17,7 @@ namespace paramore.commandprocessor.tests.EventSourcing.TestDoubles
             _logger = logger;
         }
 
-        [UseAsyncCommandSourcing(step: 1, timing: HandlerTiming.Before)]
+        [UseCommandSourcingAsync(step: 1, timing: HandlerTiming.Before)]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
             return await base.HandleAsync(command, ct);

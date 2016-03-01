@@ -31,28 +31,28 @@ using paramore.brighter.commandprocessor.monitoring.Events;
 
 namespace paramore.brighter.commandprocessor.monitoring.Handlers
 {
-    public class AsyncMonitorHandler<T> : RequestHandlerAsync<T> where T : class, IRequest
+    public class MonitorHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
     {
-        private readonly IAmAControlBusSender _controlBusSender;
+        private readonly IAmAControlBusSenderAsync _controlBusSender;
         private bool _isMonitoringEnabled;
         private string _handlerName;
         private string _instanceName;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncMonitorHandler{T}"/> class.
+        /// Initializes a new instance of the <see cref="MonitorHandlerAsync{T}"/> class.
         /// </summary>
         /// <param name="controlBusSender">The control bus command processor, to post over</param>
-        public AsyncMonitorHandler(IAmAControlBusSender controlBusSender)
+        public MonitorHandlerAsync(IAmAControlBusSenderAsync controlBusSender)
             : this(controlBusSender, LogProvider.GetCurrentClassLogger())
         { }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncMonitorHandler{T}"/> class.
+        /// Initializes a new instance of the <see cref="MonitorHandlerAsync{T}"/> class.
         /// Use this instance if you need to inject a logger, for example for testing
         /// </summary>
         /// <param name="controlBusSender">The control bus command processor, to post over</param>
         /// <param name="logger">The logger</param>
-        public AsyncMonitorHandler(IAmAControlBusSender controlBusSender, ILog logger) : base(logger)
+        public MonitorHandlerAsync(IAmAControlBusSenderAsync controlBusSender, ILog logger) : base(logger)
         {
             _controlBusSender = controlBusSender;
         }
@@ -74,52 +74,56 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// <param name="command">The command.</param>
         /// <param name="ct">Allow the caller to cancel the operation (optional)</param>
         /// <returns><see cref="Task"/>.</returns>
-        public override async Task<T> HandleAsync(T command, CancellationToken? ct)
+        public override async Task<T> HandleAsync(T command, CancellationToken? ct = null)
         {
             if (!_isMonitoringEnabled) return await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
             try
             {
-                // Todo FHo: await PostAsync to maximise benefits?
-
-                if (ct.HasValue && !ct.Value.IsCancellationRequested)
+                if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
                 {
-                    _controlBusSender.Post(
+                    await _controlBusSender.PostAsync(
                         new MonitorEvent(
                             _instanceName,
                             MonitorEventType.EnterHandler,
                             _handlerName,
                             JsonConvert.SerializeObject(command),
-                            Clock.Now().GetValueOrDefault()));
+                            Clock.Now().GetValueOrDefault()),
+                        ContinueOnCapturedContext,
+                        ct).ConfigureAwait(ContinueOnCapturedContext);
                 }
 
                 await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
 
 
-                if (ct.HasValue && !ct.Value.IsCancellationRequested)
+                if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
                 {
-                    _controlBusSender.Post(
+                    await _controlBusSender.PostAsync(
                         new MonitorEvent(
                             _instanceName,
                             MonitorEventType.ExitHandler,
                             _handlerName,
                             JsonConvert.SerializeObject(command),
-                            Clock.Now().GetValueOrDefault()));
+                            Clock.Now().GetValueOrDefault()),
+                        ContinueOnCapturedContext,
+                        ct).ConfigureAwait(ContinueOnCapturedContext);
                 }
 
                 return command;
             }
             catch (Exception e)
             {
-                if (ct.HasValue && !ct.Value.IsCancellationRequested)
+                if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
                 {
-                    _controlBusSender.Post(
+                    await _controlBusSender.PostAsync(
                         new MonitorEvent(
                             _instanceName,
                             MonitorEventType.ExceptionThrown,
                             _handlerName,
                             JsonConvert.SerializeObject(command),
                             Clock.Now().GetValueOrDefault(),
-                            e));
+                            e),
+                        ContinueOnCapturedContext,
+                        ct).ConfigureAwait(ContinueOnCapturedContext);
                 }
                 throw;
             }

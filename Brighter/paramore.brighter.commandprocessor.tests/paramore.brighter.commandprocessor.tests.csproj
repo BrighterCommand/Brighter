@@ -356,12 +356,14 @@
     <Compile Include="MessagingGateway\When_Requeuing_A_Message_With_No_Delay.cs" />
     <Compile Include="MessagingGateway\When_Requeuing_A_Message_With_Supported_But_Disabled_Delay.cs" />
     <Compile Include="MessagingGateway\When_Requeuing_A_Message_With_Unsupported_Delay.cs" />
-    <Compile Include="Monitoring\When_monitoring_we_should_record_but_rethrow_exceptions.cs" />
-    <Compile Include="Monitoring\When_serializing_a_monitoring_event.cs" />
+    <Compile Include="Monitoring\TestDoubles\MyMonitoredHandlerAsync.cs" />
+    <Compile Include="Monitoring\When_Monitoring_Is_On_For_A_Handler_Async.cs" />
+    <Compile Include="Monitoring\When_Monitoring_We_Should_Record_But_Rethrow_Exceptions.cs" />
+    <Compile Include="Monitoring\When_Serializing_A_Monitoring_Event.cs" />
     <Compile Include="Monitoring\TestDoubles\MyMonitoredHandlerThatThrows.cs" />
     <Compile Include="Monitoring\TestDoubles\MyMonitoredHandler.cs" />
     <Compile Include="Monitoring\TestDoubles\SpyControlBusSender.cs" />
-    <Compile Include="Monitoring\When_monitoring_is_on_for_a_handler.cs" />
+    <Compile Include="Monitoring\When_Monitoring_Is_On_For_A_Handler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Timeout\Test Doubles\MyPassesTimeoutHandler.cs" />
     <Compile Include="Timeout\Test Doubles\MyFailsDueToTimeoutHandler.cs" />
