@@ -140,6 +140,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
                 capturedException.Throw();
             }
 
+            return command;
         }
     }
 }
