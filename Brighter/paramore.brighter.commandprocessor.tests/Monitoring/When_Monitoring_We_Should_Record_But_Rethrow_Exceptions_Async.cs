@@ -75,8 +75,8 @@ namespace paramore.commandprocessor.tests.Monitoring
 
         private Because _of = () =>
         {
-            //s_thrownException = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_command)));
-            s_thrownException = Catch.Exception(() => Task.WaitAll(s_commandProcessor.SendAsync(s_command)));
+            s_thrownException = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_command)));
+            Task.Delay(TimeSpan.FromSeconds(1)).Wait();
             s_controlBusSender.Observe<MonitorEvent>(); //pop but don't inspect before
             s_afterEvent = s_controlBusSender.Observe<MonitorEvent>();
         };
