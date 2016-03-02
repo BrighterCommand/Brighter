@@ -79,8 +79,6 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         {
             if (!_isMonitoringEnabled) return await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
 
-
-            ExceptionDispatchInfo capturedException = null;
             try
             {
                 if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
@@ -116,15 +114,8 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
             }
             catch (Exception e)
             {
-                capturedException = ExceptionDispatchInfo.Capture(e);
-            }
-
-            //C#5 does not support await in a catch block; once we move to C#6 we can re-inline and drop use of ExceptionDispatchInfo
-            if (capturedException != null)
-            {
                 if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
                 {
-                    //can't await inside a catch block
                     await _controlBusSender.PostAsync(
                         new MonitorEvent(
                             _instanceName,
@@ -132,15 +123,13 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
                             _handlerName,
                             JsonConvert.SerializeObject(command),
                             Clock.Now().GetValueOrDefault(),
-                            capturedException.SourceException),
+                            e),
                         ContinueOnCapturedContext,
                         ct).ConfigureAwait(ContinueOnCapturedContext);
                 }
 
-                capturedException.Throw();
+                throw;
             }
-
-            return command;
         }
     }
 }
