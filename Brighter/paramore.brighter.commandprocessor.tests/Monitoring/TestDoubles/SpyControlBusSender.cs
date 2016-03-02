@@ -47,7 +47,7 @@ namespace paramore.commandprocessor.tests.Monitoring.TestDoubles
 
         public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
         {
-            Post(request);
+            await Task.Run(() => Post(request));
         }
     }
 }
