@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
@@ -74,7 +75,8 @@ namespace paramore.commandprocessor.tests.Monitoring
 
         private Because _of = () =>
         {
-            s_thrownException = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_command)));
+            //s_thrownException = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_command)));
+            s_thrownException = Catch.Exception(() => Task.WaitAll(s_commandProcessor.SendAsync(s_command)));
             s_controlBusSender.Observe<MonitorEvent>(); //pop but don't inspect before
             s_afterEvent = s_controlBusSender.Observe<MonitorEvent>();
         };
