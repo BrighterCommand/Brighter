@@ -53,7 +53,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GreetingCommand.cs" />
-    <Compile Include="GreetingCommandRequestHandlerAsyncHandler.cs" />
+    <Compile Include="GreetingCommandRequestHandlerAsync.cs" />
     <Compile Include="IpFyApi.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

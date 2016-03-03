@@ -26,15 +26,19 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Attributes;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
+using paramore.brighter.commandprocessor.Logging;
 
 
 namespace paramore.commandprocessor.tests.Monitoring.TestDoubles
 {
     internal class MyMonitoredHandlerThatThrowsAsync : RequestHandlerAsync<MyCommand>
     {
+        public MyMonitoredHandlerThatThrowsAsync(ILog logger) 
+            : base(logger)
+        {}
+
         [MonitorAsync(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandlerThatThrowsAsync))]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
