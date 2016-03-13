@@ -28,7 +28,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("paramore.brighter.commandprocessor.messaginggateway.azureservicebus")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("The Command Dispatcher pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Yiannis Triantafyllopoulos")]
 [assembly: AssemblyProduct("paramore.brighter.commandprocessor.messaginggateway.azureservicebus")]
