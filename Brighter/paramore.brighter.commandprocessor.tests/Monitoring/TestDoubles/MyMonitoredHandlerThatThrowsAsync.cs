@@ -26,21 +26,23 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.monitoring.Attributes;
+using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
+using paramore.brighter.commandprocessor.Logging;
 
-namespace HelloWorldAsync
+
+namespace paramore.commandprocessor.tests.Monitoring.TestDoubles
 {
-    internal class GreetingCommandRequestHandlerAsyncHandler : RequestHandlerAsync<GreetingCommand>
+    internal class MyMonitoredHandlerThatThrowsAsync : RequestHandlerAsync<MyCommand>
     {
-        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken? ct = null)
+        public MyMonitoredHandlerThatThrowsAsync(ILog logger) 
+            : base(logger)
+        {}
+
+        [MonitorAsync(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandlerThatThrowsAsync))]
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
-            var api = new IpFyApi(new Uri("https://api.ipify.org"));
-
-            var result = await api.GetAsync(ct);
-
-            Console.WriteLine("Hello {0}", command.Name);
-            Console.WriteLine(result.Success ? "Your public IP addres is {0}" : "Call to IpFy API failed : {0}",
-                result.Message);
-            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
+            throw new ApplicationException("I am an exception in a monitored pipeline");
         }
     }
 }

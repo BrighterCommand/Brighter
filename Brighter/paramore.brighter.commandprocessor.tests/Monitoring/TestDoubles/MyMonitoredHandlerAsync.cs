@@ -22,32 +22,26 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.monitoring.Attributes;
+using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
 namespace paramore.commandprocessor.tests.Monitoring.TestDoubles
 {
-    class SpyControlBusSender : IAmAControlBusSender, IAmAControlBusSenderAsync
+    internal class MyMonitoredHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        readonly Queue<IRequest> _requests = new Queue<IRequest>();
-        public bool PostHappened { get; set; }
-
-        public void Post<T>(T request) where T : class, IRequest
+        public MyMonitoredHandlerAsync(ILog logger) : base(logger)
         {
-            _requests.Enqueue(request);
-            PostHappened = true;
         }
 
-        public virtual T Observe<T>() where T : class, IRequest
+        [MonitorAsync(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandlerAsync))]
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
-            return (T) _requests.Dequeue();
+            return await base.HandleAsync(command, ct);
         }
 
-        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
-        {
-            await Task.Run(() => Post(request));
-        }
     }
 }

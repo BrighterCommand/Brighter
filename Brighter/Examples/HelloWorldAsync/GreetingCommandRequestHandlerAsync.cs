@@ -22,32 +22,25 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 
-namespace paramore.commandprocessor.tests.Monitoring.TestDoubles
+namespace HelloWorldAsync
 {
-    class SpyControlBusSender : IAmAControlBusSender, IAmAControlBusSenderAsync
+    internal class GreetingCommandRequestHandlerAsync : RequestHandlerAsync<GreetingCommand>
     {
-        readonly Queue<IRequest> _requests = new Queue<IRequest>();
-        public bool PostHappened { get; set; }
-
-        public void Post<T>(T request) where T : class, IRequest
+        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken? ct = null)
         {
-            _requests.Enqueue(request);
-            PostHappened = true;
-        }
+            var api = new IpFyApi(new Uri("https://api.ipify.org"));
 
-        public virtual T Observe<T>() where T : class, IRequest
-        {
-            return (T) _requests.Dequeue();
-        }
+            var result = await api.GetAsync(ct);
 
-        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
-        {
-            await Task.Run(() => Post(request));
+            Console.WriteLine("Hello {0}", command.Name);
+            Console.WriteLine(result.Success ? "Your public IP addres is {0}" : "Call to IpFy API failed : {0}",
+                result.Message);
+            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
         }
     }
 }

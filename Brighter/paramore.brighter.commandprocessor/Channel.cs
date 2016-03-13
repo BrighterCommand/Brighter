@@ -52,7 +52,6 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
         private readonly bool _messageConsumerSupportsDelay;
-        private readonly bool _messageConsumerSupportsCache;
         private int _numberOfMessagesToCache;
 
         /// <summary>
@@ -65,7 +64,6 @@ namespace paramore.brighter.commandprocessor
             _channelName = channelName;
             _messageConsumer = messageConsumer;
             _messageConsumerSupportsDelay = _messageConsumer is IAmAMessageConsumerSupportingDelay && (_messageConsumer as IAmAMessageGatewaySupportingDelay).DelaySupported;
-            _messageConsumerSupportsCache = _messageConsumer is IAmAMessageConsumerSupportingCache && (_messageConsumer as IAmAMessageGatewaySupportingCache).CacheSupported;
         }
 
         /// <summary>
@@ -84,10 +82,7 @@ namespace paramore.brighter.commandprocessor
             Message message;
             if (!_queue.TryDequeue(out message))
             {
-                if (_messageConsumerSupportsDelay)
-                    message = (_messageConsumer as IAmAMessageConsumerSupportingCache).Receive(timeoutinMilliseconds, _numberOfMessagesToCache);
-                else
-                    message = _messageConsumer.Receive(timeoutinMilliseconds);
+                message = _messageConsumer.Receive(timeoutinMilliseconds);
             }
 
             return message;

@@ -34,14 +34,14 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Attributes
     /// or recreate commands
     /// See  <a href="http://martinfowler.com/eaaDev/EventSourcing.html">Martin Fowler Event Sourcing</a> for more on this approach.
     /// </summary>
-    public class UseAsyncCommandSourcingAttribute : RequestHandlerAttribute
+    public class UseCommandSourcingAsyncAttribute : RequestHandlerAttribute
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="UseAsyncCommandSourcingAttribute"/> class.
+        /// Initializes a new instance of the <see cref="UseCommandSourcingAsyncAttribute"/> class.
         /// </summary>
         /// <param name="step">The step.</param>
         /// <param name="timing">The timing.</param>
-        public UseAsyncCommandSourcingAttribute(int step, HandlerTiming timing = HandlerTiming.Before)
+        public UseCommandSourcingAsyncAttribute(int step, HandlerTiming timing = HandlerTiming.Before)
             : base(step, timing)
         { }
 
@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Attributes
         /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
-            return typeof (RequestHandlerAsyncCommandSourcingHandler<>);
+            return typeof (CommandSourcingHandlerAsync<>);
         }
     }
 }

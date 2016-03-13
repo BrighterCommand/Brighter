@@ -36,15 +36,18 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
 {
     /// <summary>
     /// Class CommandSourcingHandler.
+    /// Used with the Event Sourcing pattern that stores the commands that we send to handlers for replay. 
+    /// http://martinfowler.com/eaaDev/EventSourcing.html
+    /// Note that without a mechanism to prevent raising events from commands the danger of replay is that if events are raised downstream that are not idempotent then replay can have undesired effects.
+    /// A mitigation is not to record inputs, only changes of state to the model and replay those. Of course it is possible that publishing events is desirable.
+    /// To distinguish the variants the approach is now properly Event Sourcing (because it captures events that occur because of the Command) and the Fowler
+    /// approach is typically called Command Sourcing.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public class CommandSourcingHandler<T> : RequestHandler<T> where T: class, IRequest
@@ -71,7 +74,7 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
         }
 
         /// <summary>
-        /// Logs the command we received to the command store. Today we are forced  
+        /// Logs the command we received to the command store.
         /// </summary>
         /// <param name="command">The command that we want to store.</param>
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>

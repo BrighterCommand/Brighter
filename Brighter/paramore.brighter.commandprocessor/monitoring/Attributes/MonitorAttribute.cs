@@ -45,6 +45,8 @@ namespace paramore.brighter.commandprocessor.monitoring.Attributes
 {
     /// <summary>
     /// Class MonitorAttribute.
+    /// Using this attribute indicates that you intend to monitor the handler. Monitoring implies that diagnostic information will be sent over the ControlBus to any subscribers.
+    /// A configuration setting acts as a 'master switch' to turn monitoring on and off. The <see cref="MonitoringConfigurationSection"/> provides that switch.
     /// </summary>
     public class MonitorAttribute: RequestHandlerAttribute
     {

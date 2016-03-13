@@ -39,6 +39,7 @@ namespace paramore.brighter.commandprocessor
 {
     /// <summary>
     /// Class InMemoryRequestContextFactory
+    /// Creates a <see cref="RequestContext"/> that can be passed between pipeline stages. The RequestContext created is transient and has a lifetime of the pipeline itself.
     /// </summary>
     public class InMemoryRequestContextFactory : IAmARequestContextFactory
     {

@@ -40,7 +40,7 @@ namespace HelloWorldAsync
         private static async Task MainAsync()
         {
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<GreetingCommand, GreetingCommandRequestHandlerAsyncHandler>();
+            registry.RegisterAsync<GreetingCommand, GreetingCommandRequestHandlerAsync>();
 
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(registry, new SimpleAsyncHandlerFactory()))
@@ -66,7 +66,7 @@ namespace HelloWorldAsync
 
             IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType)
             {
-                return new GreetingCommandRequestHandlerAsyncHandler();
+                return new GreetingCommandRequestHandlerAsync();
             }
         }
     }

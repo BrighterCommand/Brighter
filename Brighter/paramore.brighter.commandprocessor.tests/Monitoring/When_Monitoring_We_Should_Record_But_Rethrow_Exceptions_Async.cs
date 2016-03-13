@@ -23,9 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
+using Nito.AsyncEx;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Events;
@@ -37,7 +39,7 @@ using TinyIoC;
 namespace paramore.commandprocessor.tests.Monitoring
 {
     [Subject(typeof(MonitorHandler<>))]
-    public class When_Monitoring_We_Should_Record_But_Rethrow_Exceptions 
+    public class When_Monitoring_We_Should_Record_But_Rethrow_Exceptions_Async
     {
         private static MyCommand s_command;
         private static Exception s_thrownException;
@@ -52,14 +54,14 @@ namespace paramore.commandprocessor.tests.Monitoring
             var logger = A.Fake<ILog>();
             s_controlBusSender = new SpyControlBusSender();
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyMonitoredHandlerThatThrows>();
+            registry.RegisterAsync<MyCommand, MyMonitoredHandlerThatThrowsAsync>();
 
             var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyMonitoredHandlerThatThrows>();
-            container.Register<IHandleRequests<MyCommand>, MonitorHandler<MyCommand>>();
+            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
+            container.Register<IHandleRequestsAsync<MyCommand>, MyMonitoredHandlerThatThrowsAsync>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MonitorHandlerAsync<MyCommand>>();
             container.Register<ILog>(logger);
-            container.Register<IAmAControlBusSender>(s_controlBusSender);
+            container.Register<IAmAControlBusSenderAsync>(s_controlBusSender);
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
@@ -73,8 +75,8 @@ namespace paramore.commandprocessor.tests.Monitoring
 
         private Because _of = () =>
         {
-            s_thrownException = Catch.Exception(() => s_commandProcessor.Send(s_command));
-            s_controlBusSender.Observe<MonitorEvent>(); //pop but don't inspect before
+            s_thrownException = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_command)));
+            s_controlBusSender.Observe<MonitorEvent>(); 
             s_afterEvent = s_controlBusSender.Observe<MonitorEvent>();
         };
 
@@ -82,7 +84,7 @@ namespace paramore.commandprocessor.tests.Monitoring
         private It _should_monitor_the_exception = () => s_afterEvent.Exception.ShouldBeOfExactType(typeof(ApplicationException));
         private It _should_surface_the_error_message = () => s_afterEvent.Exception.Message.ShouldContain("monitored");
         private It _should_have_an_instance_name_after = () => s_afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
-        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandlerThatThrowsAsync).AssemblyQualifiedName);
         private It _should_include_the_underlying_request_details_after = () => s_afterEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
         private It should_post_the_time_of_the_request_after = () => s_afterEvent.EventTime.ShouldEqual(s_at);
     }

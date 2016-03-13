@@ -43,6 +43,7 @@ namespace paramore.brighter.commandprocessor
 {
     /// <summary>
     /// Interface IAmACommandStore
+    /// A Command Store stores <see cref="Command"/>s for diagnostics or replay.
     /// </summary>
     public interface IAmACommandStore
     {

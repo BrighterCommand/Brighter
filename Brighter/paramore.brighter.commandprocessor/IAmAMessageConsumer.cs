@@ -47,6 +47,8 @@ namespace paramore.brighter.commandprocessor
     {
         /// <summary>
         /// Receives the specified queue name.
+        /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge the processing of those messages or requeue them.
+        /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
@@ -81,16 +83,5 @@ namespace paramore.brighter.commandprocessor
         /// <param name="message"></param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         void Requeue(Message message, int delayMilliseconds);
-    }
-
-    public interface IAmAMessageConsumerSupportingCache : IAmAMessageConsumer, IAmAMessageGatewaySupportingCache
-    {
-        /// <summary>
-        /// Receives the specified queue name.
-        /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <param name="noOfMessagesToCache">Number of cacheable messages.</param>
-        /// <returns>Message.</returns>
-        Message Receive(int timeoutInMilliseconds, int noOfMessagesToCache);
     }
 }

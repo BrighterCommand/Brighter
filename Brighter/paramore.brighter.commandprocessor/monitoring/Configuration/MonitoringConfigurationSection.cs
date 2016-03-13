@@ -26,8 +26,19 @@ using System.Configuration;
 
 namespace paramore.brighter.commandprocessor.monitoring.Configuration
 {
+    /// <summary>
+    /// Class MonitoringConfigurationSection.
+    /// Provides a master switch for monitoring that allows us to enable or disable on demand. Due to the cost, particularly in writing to the message store and control bus
+    /// we allow this switch to remove that cost unless you need to monitor.
+    /// We recommend using an in-memory message store to reduce this cost
+    /// Class MonitoringConfigurationSection
+    /// </summary>
     public class MonitoringConfigurationSection : ConfigurationSection
     {
+        /// <summary>
+        /// Get the Configuration Section
+        /// </summary>
+        /// <returns></returns>
         public static MonitoringConfigurationSection  GetConfiguration()
         {
             var configuration = ConfigurationManager.GetSection("monitoring") as MonitoringConfigurationSection ;
@@ -37,7 +48,9 @@ namespace paramore.brighter.commandprocessor.monitoring.Configuration
 
             return new MonitoringConfigurationSection ();
         }
-
+        /// <summary>
+        /// Return the configuration for monitoring
+        /// </summary>
         [ConfigurationProperty("monitor")]
         public MonitorConfiguration Monitor
         {
@@ -47,9 +60,15 @@ namespace paramore.brighter.commandprocessor.monitoring.Configuration
 
     }
 
-
+    /// <summary>
+    /// Class MonitoringConfiguration.
+    /// Describes whether monitoring is enabled for the control bus
+    /// </summary>
     public class MonitorConfiguration : ConfigurationElement
     {
+        /// <summary>
+        /// Is monitoring enabled
+        /// </summary>
         [ConfigurationProperty("isMonitoringEnabled", DefaultValue = "false", IsRequired = true)]
         public bool IsMonitoringEnabled
         {
@@ -57,6 +76,9 @@ namespace paramore.brighter.commandprocessor.monitoring.Configuration
             set { this["isMonitoringEnabled"] = value; }
         }
 
+        /// <summary>
+        /// What is the instance we are reporting from - used to allow aggregation of logs for a particular node.
+        /// </summary>
         [ConfigurationProperty("instanceName", DefaultValue = "", IsRequired = true)]
         public string InstanceName
         {

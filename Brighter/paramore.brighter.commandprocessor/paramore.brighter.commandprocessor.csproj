@@ -35,12 +35,12 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.8.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Polly, Version=2.2.4.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Polly.2.2.4\lib\net45\Polly.dll</HintPath>
+    <Reference Include="Polly, Version=4.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Polly.4.0.0\lib\net45\Polly.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -56,6 +56,7 @@
     <Compile Include="IAmAnAsyncPipelineBuilder.cs" />
     <Compile Include="IAmAnAsyncSubcriberRegistry.cs" />
     <Compile Include="InMemoryMessageStore.cs" />
+    <Compile Include="monitoring\Attributes\MonitorAsyncAttribute.cs" />
     <Compile Include="RequestHandlerAsync.cs" />
     <Compile Include="AsyncRequestHandlers.cs" />
     <Compile Include="ChannelName.cs" />
@@ -66,9 +67,9 @@
     <Compile Include="ControlBusSender.cs" />
     <Compile Include="ControlBusSenderFactory.cs" />
     <Compile Include="DefaultPolicy.cs" />
-    <Compile Include="eventsourcing\Attributes\UseAsyncCommandSourcingAttribute.cs" />
+    <Compile Include="eventsourcing\Attributes\UseCommandSourcingAsyncAttribute.cs" />
     <Compile Include="eventsourcing\Attributes\UseCommandSourcingAttribute.cs" />
-    <Compile Include="eventsourcing\Handlers\RequestHandlerAsyncCommandSourcingHandler.cs" />
+    <Compile Include="eventsourcing\Handlers\CommandSourcingHandlerAsync.cs" />
     <Compile Include="eventsourcing\Handlers\CommandSourcingHandler.cs" />
     <Compile Include="extensions\ReflectionExtensions.cs" />
     <Compile Include="actions\DeferMessageAction.cs" />
@@ -77,7 +78,6 @@
     <Compile Include="IAmACommandStore.cs" />
     <Compile Include="IAmAControlBusSender.cs" />
     <Compile Include="IAmAControlBusSenderFactory.cs" />
-    <Compile Include="IAmAMessageGatewaySupportingCache.cs" />
     <Compile Include="IAmAMessageProducerFactory.cs" />
     <Compile Include="IAmAMessageConsumerFactory.cs" />
     <Compile Include="IAmAMessageGatewaySupportingDelay.cs" />
@@ -100,9 +100,8 @@
     <Compile Include="logging\Handlers\RequestLoggingHandlerRequestHandlerAsync.cs" />
     <Compile Include="logging\Handlers\RequestLoggingHandler.cs" />
     <Compile Include="MessageRecovery.cs" />
-    <Compile Include="monitoring\Attributes\AsyncMonitorAttribute.cs" />
     <Compile Include="monitoring\Configuration\MonitoringConfigurationSection.cs" />
-    <Compile Include="monitoring\Handlers\AsyncMonitorHandler.cs" />
+    <Compile Include="monitoring\Handlers\MonitorHandlerAsync.cs" />
     <Compile Include="monitoring\Mappers\MonitorEventMessageMapper.cs" />
     <Compile Include="Channel.cs" />
     <Compile Include="LifetimeScope.cs" />

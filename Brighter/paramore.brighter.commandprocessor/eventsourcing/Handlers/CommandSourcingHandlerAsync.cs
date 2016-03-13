@@ -43,28 +43,33 @@ using paramore.brighter.commandprocessor.Logging;
 namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
 {
     /// <summary>
-    /// Class AsyncCommandSourcingHandler.
+    /// Used with the Event Sourcing pattern that stores the commands that we send to handlers for replay. 
+    /// http://martinfowler.com/eaaDev/EventSourcing.html
+    /// Note that without a mechanism to prevent raising events from commands the danger of replay is that if events are raised downstream that are not idempotent then replay can have undesired effects.
+    /// A mitigation is not to record inputs, only changes of state to the model and replay those. Of course it is possible that publishing events is desirable.
+    /// To distinguish the variants the approach is now properly Event Sourcing (because it captures events that occur because of the Command) and the Fowler
+    /// approach is typically called Command Sourcing.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class RequestHandlerAsyncCommandSourcingHandler<T> : RequestHandlerAsync<T> where T : class, IRequest
+    public class CommandSourcingHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
     {
         private readonly IAmACommandStoreAsync _commandStore;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandlerAsyncCommandSourcingHandler{T}" /> class.
+        /// Initializes a new instance of the <see cref="CommandSourcingHandlerAsync{T}" /> class.
         /// </summary>
         /// <param name="commandStore">The store for commands that pass into the system</param>
-        public RequestHandlerAsyncCommandSourcingHandler(IAmACommandStoreAsync commandStore)
+        public CommandSourcingHandlerAsync(IAmACommandStoreAsync commandStore)
             : this(commandStore, LogProvider.GetCurrentClassLogger())
         { }
 
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandlerAsyncCommandSourcingHandler{T}" /> class.
+        /// Initializes a new instance of the <see cref="CommandSourcingHandlerAsync{T}" /> class.
         /// </summary>
         /// <param name="commandStore">The store for commands that pass into the system</param>
         /// <param name="logger">The logger.</param>
-        public RequestHandlerAsyncCommandSourcingHandler(IAmACommandStoreAsync commandStore, ILog logger) : base(logger)
+        public CommandSourcingHandlerAsync(IAmACommandStoreAsync commandStore, ILog logger) : base(logger)
         {
             _commandStore = commandStore;
         }
