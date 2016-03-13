@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="paramore.brighter.commandprocessor.messaginggateway.azureservicebus.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
