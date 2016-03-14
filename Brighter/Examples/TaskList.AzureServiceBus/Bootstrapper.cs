@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using Nancy;
+using Nancy.Bootstrapper;
 using Nancy.TinyIoc;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
@@ -30,8 +31,15 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 using paramore.brighter.commandprocessor.messaginggateway.azureservicebus;
 using Polly;
 using TaskList.AzureServiceBus.Adapters;
+using TaskList.AzureServiceBus.Adapters.MessageMappers;
+using TaskList.AzureServiceBus.Common;
+using TaskList.AzureServiceBus.Ports.ViewBuilders;
+using TaskList.AzureServiceBus.Ports.ViewModelRetrievers;
+using TaskList.AzureServiceBus.Ports.ViewModels;
+using TaskList.AzureServiceBus.Ports.Views;
 using Tasks.Ports;
 using Tasks.Ports.Commands;
+using Tasks.Ports.Events;
 using Tasks.Ports.Handlers;
 
 namespace TaskList.AzureServiceBus
@@ -56,13 +64,14 @@ namespace TaskList.AzureServiceBus
             var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
             var policyRegistry = new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
 
-            var sqlMessageStore = new MsSqlMessageStore(new MsSqlMessageStoreConfiguration("Server=.;Database=brighterMessageStore;Trusted_Connection=True", "messages", MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer), logger);
+            var sqlMessageStore = new MsSqlMessageStore(new MsSqlMessageStoreConfiguration("Data Source=|DataDirectory|Tasks.sdf;Persist Security Info=False;", "messages", MsSqlMessageStoreConfiguration.DatabaseType.SqlCe), logger);
             var gateway = new AzureServiceBusMessageProducer(logger);
 
             container.Register<IAmAMessageMapper<TaskReminderCommand>, TaskReminderCommandMessageMapper>().AsMultiInstance();
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory);
             messageMapperRegistry.Add(typeof(TaskReminderCommand), typeof(TaskReminderCommandMessageMapper));
+            messageMapperRegistry.Add(typeof(TaskCompletedEvent), typeof(TaskCompletedEventMapper));
 
             var commandProcessor = CommandProcessorBuilder
                 .With()
@@ -72,6 +81,19 @@ namespace TaskList.AzureServiceBus
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build();
             container.Register<IAmACommandProcessor>(commandProcessor);
+        }
+
+        protected override void ConfigureRequestContainer(TinyIoCContainer container, NancyContext context)
+        {
+            base.ConfigureRequestContainer(container, context);
+            container.Register<IRetrieveTaskViewModels, TaskViewModelRetriever>();
+            container.Register<IProvideBaseUris>((c, o) => new BaseUriProvider(context));
+            container.Register<IBuildViews<TaskViewModel, TaskView>, TaskViewBuilder>();
+        }
+
+        protected override void ApplicationStartup(TinyIoCContainer container, IPipelines pipelines)
+        {
+            Conventions.ViewLocationConventions.Add((viewName, model, context) => string.Concat("Ports/Views/", viewName));
         }
     }
 }

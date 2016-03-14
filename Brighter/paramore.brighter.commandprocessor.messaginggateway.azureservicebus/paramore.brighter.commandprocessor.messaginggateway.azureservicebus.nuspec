@@ -1,0 +1,23 @@
+﻿<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <licenseUrl>http://ianhammondcooper.mit-license.org</licenseUrl>
+    <projectUrl>http://iancooper.github.io/Paramore</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <summary>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter.CommandProcessor pipeline, using Azure Service Bus</summary>
+    <copyright>$copyright$</copyright>
+	<frameworkAssemblies>
+      <frameworkAssembly assemblyName="System" targetFramework="" />
+      <frameworkAssembly assemblyName="System.Configuration" targetFramework="" />
+    </frameworkAssemblies>
+	<dependencies>
+      <dependency id="Paramore.Brighter.CommandProcessor" version="$version$" />
+    </dependencies>
+  </metadata>
+</package>

@@ -134,7 +134,7 @@
     <Compile Include="Adapters\API\Resources\TaskListModel.cs" />
     <Compile Include="Adapters\API\Resources\TaskReminderModel.cs" />
     <Compile Include="Adapters\MessageMappers\TaskAddedEventMapper.cs" />
-    <Compile Include="Adapters\MessageMappers\TaskCompletedEventMappewr.cs" />
+    <Compile Include="Adapters\MessageMappers\TaskCompletedEventMapper.cs" />
     <Compile Include="Adapters\MessageMappers\TaskEditedEventMapper.cs" />
     <Compile Include="Adapters\MessageMappers\TaskReminderSentEventMapper.cs" />
     <Compile Include="Adapters\Tests\TaskListRetrieveFixture.cs" />
