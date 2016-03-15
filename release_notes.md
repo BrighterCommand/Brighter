@@ -1,11 +1,16 @@
 # Release Notes #
-NuGet packages for the last good build on master are available via [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore) (see Artifacts). The simplest way to work with this is to create a local NuGet source in Visual Studio for a shared directory visible to your team and download the packages there.
+NuGet packages for the last good build on master are available via [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore) (see Artifacts) or the nuget feed is [https://ci.appveyor.com/nuget/paramore-gnrfp84lbfd3](https://ci.appveyor.com/nuget/paramore-gnrfp84lbfd3). The simplest way to work with this is to use the Nuget Feed, which is every successful build, So 
 
 When we push a collection of functionality it is available via [nuget.org](http://www.nuget.org) and symbol files are published to [symbolsource.org](http://www.symbolsource.org)
 
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore), but not yet deployed to [nuget.org](http://www.nuget.org).
 
 ## Master ##
+
+**Breaking Changes**
+- CommandProcessorBuilder no longer takes .Logger(logger)
+- In the abstract RequestHandler `logger` is now `Logger`
+- `RequestLogging` has moved namespace to `paramore.brighter.commandprocessor.logging.Attributes`
 
 **Bug fixes**:
 
@@ -16,7 +21,10 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 	- In Test code you should inject the ILog using a fake logger. We don't recommend testing log output, its an implementation detail, unless its an important part of your acceptance criteria for that behaviour.
 	- This means that your production code should not need to take a direct dependency on Paramore's ILog implementation.
 	- This is a BREAKING CHANGE because we remove the ability to inject the constructor via the *Builder objects, so as to remove the temptation to do that when you should rely on the LibLog framework to wrap your current logger.
-- Added support for SendAsync and PublishAsync to an IHandleRequestsAsync pipeline
+
+**Features:**
+- Huge feature, Async; added support for SendAsync and PublishAsync to an IHandleRequestsAsync pipeline.
+- Basic support for publishing to Azure Service Bus with `paramore.brighter.commandprocessor.messaginggateway.azureservicebus`.
 
 
 ## Release 5 ##
