@@ -43,7 +43,7 @@ namespace HelloWorldAsync
             registry.RegisterAsync<GreetingCommand, GreetingCommandRequestHandlerAsync>();
 
             var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(registry, new SimpleAsyncHandlerFactory()))
+                .Handlers(new HandlerConfiguration(registry, new SimpleHandlerFactoryAsync()))
                 .DefaultPolicy()
                 .NoTaskQueues()
                 .RequestContextFactory(new InMemoryRequestContextFactory());
@@ -58,7 +58,7 @@ namespace HelloWorldAsync
             Console.ReadLine();
         }
 
-        internal class SimpleAsyncHandlerFactory : IAmAHandlerFactoryAsync
+        internal class SimpleHandlerFactoryAsync : IAmAHandlerFactoryAsync
         {
             public void Release(IHandleRequestsAsync handler)
             {
