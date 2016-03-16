@@ -71,6 +71,7 @@ pre {
   overflow-x: auto;
 }
 
+
 table {
   width:100%;
   border-collapse:collapse;
@@ -252,4 +253,9 @@ footer {
     font-size:12pt;
     color:#444;
   }
+}
+
+.boxed {
+  border: 2px solid black ;
+  padding: 5px;
 }
