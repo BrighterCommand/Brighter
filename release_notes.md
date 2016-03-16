@@ -7,6 +7,9 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 ## Master ##
 
+
+## Release 6 ##
+
 **Breaking Changes**
 - CommandProcessorBuilder no longer takes .Logger(logger)
 - In the abstract RequestHandler `logger` is now `Logger`
