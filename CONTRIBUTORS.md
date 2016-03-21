@@ -9,7 +9,7 @@ Paramore contributors (sorted alphabeticaly)
 * Delayed Queueing
 
 **[Ed Blackurn](https://github.com/edblackburn)** 
- * Documentaton fixes
+ * Documentation fixes
  
 **[Ian Cooper](https://github.com/iancooper)**
 
