@@ -45,8 +45,8 @@
         <p>The limitation here is that you can only make assumptions about the type you receive into the  pipeline from
             the constraints on the generic type.
         </p>
-        <p>Although it is possible to implement the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/IHandleRequests.cs">IHandleRequestsAsync</a>
-            interface directly, we recommend deriving your handler from <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/RequestHandler.cs">RequestHandler&lt;T&gt;</a>.
+        <p>Although it is possible to implement the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/IHandleRequestsAsync.cs">IHandleRequestsAsync</a>
+            interface directly, we recommend deriving your handler from <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/RequestHandlerAsync.cs">RequestHandlerAsync&lt;T&gt;</a>.
         </p>
         <p>Let us assume that we want to log all requests travelling through the pipeline. (We provide this for you in
             the Paramore.Brighter.CommandProcessor packages so this for illustration only). We could
@@ -135,7 +135,7 @@ public class UseCommandSourcingAsyncAttribute : RequestHandlerAttribute
             our handler. At runtime the Command Processor uses reflection to determine what attributes are on the target
             handler and requests an instance of that type from the user-supplied <strong>Handler Factory</strong>.
         </p>
-        <p>Your Handler Factory needs to respond to requests for instances of a <strong>RequestHandler&lt;T&gt;</strong>
+        <p>Your Handler Factory needs to respond to requests for instances of a <strong>RequestHandlerAsync&lt;T&gt;</strong>
             specialized for a concrete type. For example, if you create a<strong>CommandSourcingHandlerAsync&lt;TRequest&gt;</strong>
             we will ask you for a <strong>CommandSourcingHandlerAsync&lt;MyCommand&gt;</strong> etc. Depending on your implementation of
             HandlerFactory, you may need to register an implementation for every concrete instance of your handler with
