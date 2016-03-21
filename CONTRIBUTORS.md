@@ -8,9 +8,9 @@ Paramore contributors (sorted alphabeticaly)
 * Documentation fixes & general code tidying
 * Delayed Queueing
 
-**[Ed Blackurn](https://github.com/edblackburn)**
- *Documentaton fixes
-
+**[Ed Blackurn](https://github.com/edblackburn)** 
+ *Documentaton fixes*
+ 
 **[Ian Cooper](https://github.com/iancooper)**
 
   * Wrote first version of Command Processor, Policy, RavenDb Message Store, RMQ gateway, RestMS Core, RestMS Server, RestMS Gateway and ServiceActivator, Control Bus
