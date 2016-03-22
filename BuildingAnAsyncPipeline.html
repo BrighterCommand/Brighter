@@ -141,7 +141,7 @@ public class UseCommandSourcingAsyncAttribute : RequestHandlerAttribute
             HandlerFactory, you may need to register an implementation for every concrete instance of your handler with
             your underlying IoC container etc.
         </p>
-        <p>Note that as we rely on an user supplied implementation of <strong>IAmAHandlerFactory</strong> to instantiate
+        <p>Note that as we rely on an user supplied implementation of <strong>IAmAHandlerFactoryAsync</strong> to instantiate
             Handlers, you can have any dependencies in the constructor of your handler that you can resolve at runtime.
             In this case we pass in an ILog reference to actually log to.
         </p>
