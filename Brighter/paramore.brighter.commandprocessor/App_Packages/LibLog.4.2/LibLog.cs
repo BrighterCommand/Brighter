@@ -559,9 +559,11 @@ namespace paramore.brighter.commandprocessor.Logging
 #endif
         static IDisposable OpenNestedContext(string message)
         {
-            return CurrentLogProvider == null 
-                ? new DisposableAction(() => {}) 
-                : CurrentLogProvider.OpenNestedContext(message);
+            ILogProvider logProvider = CurrentLogProvider ?? ResolveLogProvider();
+
+            return logProvider == null
+                ? new DisposableAction(() => { })
+                : logProvider.OpenNestedContext(message);
         }
 
         /// <summary>
@@ -578,9 +580,11 @@ namespace paramore.brighter.commandprocessor.Logging
 #endif
         static IDisposable OpenMappedContext(string key, string value)
         {
-            return CurrentLogProvider == null 
-                ? new DisposableAction(() => { }) 
-                : CurrentLogProvider.OpenMappedContext(key, value);
+            ILogProvider logProvider = CurrentLogProvider ?? ResolveLogProvider();
+
+            return logProvider == null
+                ? new DisposableAction(() => { })
+                : logProvider.OpenMappedContext(key, value);
         }
 #endif
 
@@ -1531,7 +1535,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                 valueParam,
                 destructureObjectsParam)
                 .Compile();
-            return name => func("Name", name, false);
+            return name => func("SourceContext", name, false);
         }
 
         internal class SerilogLogger
@@ -1630,111 +1634,56 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
             public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception, params object[] formatParameters)
             {
+                var translatedLevel = TranslateLevel(logLevel);
                 if (messageFunc == null)
                 {
-                    return IsEnabled(_logger, logLevel);
+                    return IsEnabled(_logger, translatedLevel);
                 }
+
+                if (!IsEnabled(_logger, translatedLevel))
+                {
+                    return false;
+                }
+
                 if (exception != null)
                 {
-                    return LogException(logLevel, messageFunc, exception, formatParameters);
+                    LogException(translatedLevel, messageFunc, exception, formatParameters);
+                }
+                else
+                {
+                    LogMessage(translatedLevel, messageFunc, formatParameters);
                 }
 
-                switch (logLevel)
-                {
-                    case LogLevel.Debug:
-                        if (IsEnabled(_logger, DebugLevel))
-                        {
-                            Write(_logger, DebugLevel, messageFunc(), formatParameters);
-                            return true;
-                        }
-                        break;
-                    case LogLevel.Info:
-                        if (IsEnabled(_logger, InformationLevel))
-                        {
-                            Write(_logger, InformationLevel, messageFunc(), formatParameters);
-                            return true;
-                        }
-                        break;
-                    case LogLevel.Warn:
-                        if (IsEnabled(_logger, WarningLevel))
-                        {
-                            Write(_logger, WarningLevel, messageFunc(), formatParameters);
-                            return true;
-                        }
-                        break;
-                    case LogLevel.Error:
-                        if (IsEnabled(_logger, ErrorLevel))
-                        {
-                            Write(_logger, ErrorLevel, messageFunc(), formatParameters);
-                            return true;
-                        }
-                        break;
-                    case LogLevel.Fatal:
-                        if (IsEnabled(_logger, FatalLevel))
-                        {
-                            Write(_logger, FatalLevel, messageFunc(), formatParameters);
-                            return true;
-                        }
-                        break;
-                    default:
-                        if (IsEnabled(_logger, VerboseLevel))
-                        {
-                            Write(_logger, VerboseLevel, messageFunc(), formatParameters);
-                            return true;
-                        }
-                        break;
-                }
-                return false;
+                return true;
             }
 
-            private bool LogException(LogLevel logLevel, Func<string> messageFunc, Exception exception, object[] formatParams)
+            private void LogMessage(object translatedLevel, Func<string> messageFunc, object[] formatParameters)
+            {
+                Write(_logger, translatedLevel, messageFunc(), formatParameters);
+            }
+
+            private void LogException(object logLevel, Func<string> messageFunc, Exception exception, object[] formatParams)
+            {
+                WriteException(_logger, logLevel, exception, messageFunc(), formatParams);
+            }
+
+            private static object TranslateLevel(LogLevel logLevel)
             {
                 switch (logLevel)
                 {
-                    case LogLevel.Debug:
-                        if (IsEnabled(_logger, DebugLevel))
-                        {
-                            WriteException(_logger, DebugLevel, exception, messageFunc(), formatParams);
-                            return true;
-                        }
-                        break;
-                    case LogLevel.Info:
-                        if (IsEnabled(_logger, InformationLevel))
-                        {
-                            WriteException(_logger, InformationLevel, exception, messageFunc(), formatParams);
-                            return true;
-                        }
-                        break;
-                    case LogLevel.Warn:
-                        if (IsEnabled(_logger, WarningLevel))
-                        {
-                            WriteException(_logger, WarningLevel, exception, messageFunc(), formatParams);
-                            return true;
-                        }
-                        break;
-                    case LogLevel.Error:
-                        if (IsEnabled(_logger, ErrorLevel))
-                        {
-                            WriteException(_logger, ErrorLevel, exception, messageFunc(), formatParams);
-                            return true;
-                        }
-                        break;
                     case LogLevel.Fatal:
-                        if (IsEnabled(_logger, FatalLevel))
-                        {
-                            WriteException(_logger, FatalLevel, exception, messageFunc(), formatParams);
-                            return true;
-                        }
-                        break;
+                        return FatalLevel;
+                    case LogLevel.Error:
+                        return ErrorLevel;
+                    case LogLevel.Warn:
+                        return WarningLevel;
+                    case LogLevel.Info:
+                        return InformationLevel;
+                    case LogLevel.Trace:
+                        return VerboseLevel;
                     default:
-                        if (IsEnabled(_logger, VerboseLevel))
-                        {
-                            WriteException(_logger, VerboseLevel, exception, messageFunc(), formatParams);
-                            return true;
-                        }
-                        break;
+                        return DebugLevel;
                 }
-                return false;
             }
         }
     }

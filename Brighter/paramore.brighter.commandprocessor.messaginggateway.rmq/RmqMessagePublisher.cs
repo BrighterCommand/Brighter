@@ -121,7 +121,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 _exchangeName,
                 message.Header.Topic,
                 false,
-                false,
                 CreateBasicProperties(messageId, message.Header.TimeStamp, headers),
                 Encoding.UTF8.GetBytes(message.Body.Value));
         }
@@ -163,7 +162,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             _channel.BasicPublish(
                 String.Empty,
                 queueName,
-                false,
                 false,
                 CreateBasicProperties(messageId, message.Header.TimeStamp, headers),
                 Encoding.UTF8.GetBytes(message.Body.Value));
