@@ -35,6 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 
@@ -52,7 +53,7 @@ namespace paramore.brighter.serviceactivator
         /// <summary>
         /// Runs the message loop
         /// </summary>
-        void Run();
+        Task Run();
         /// <summary>
         /// Gets or sets the timeout in milliseconds, that the pump waits for a message on the queue before it yields control for an interval, prior to resuming.
         /// </summary>

@@ -47,7 +47,7 @@ namespace paramore.brighter.serviceactivator
 
         public Task Run()
         {
-            return Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+            return Task.Factory.StartNew(() => _messagePump.Run().Wait(), TaskCreationOptions.LongRunning);
         }
 
         public void Dispose()

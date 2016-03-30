@@ -105,8 +105,11 @@ namespace paramore.brighter.serviceactivator
         /// Runs the message loop
         /// </summary>
         /// <exception cref="System.Exception">Could not receive message. Note that should return an MT_NONE from an empty queue on timeout</exception>
-        public void Run()
+        public Task Run()
         {
+            //we are not running asychronously, so just complete when the loop quits
+            var tcs = new TaskCompletionSource<object>();
+
             do
             {
                 if (UnacceptableMessageLimitReached())
@@ -216,6 +219,9 @@ namespace paramore.brighter.serviceactivator
             } while (true);
 
             if (Logger != null) Logger.DebugFormat("MessagePump: Finished running message loop, no longer receiving messages from {0} on thread # {1}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
+
+            tcs.SetResult(new object());
+            return tcs.Task;
         }
 
 
