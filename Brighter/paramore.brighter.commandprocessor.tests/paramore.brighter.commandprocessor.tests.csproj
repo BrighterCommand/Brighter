@@ -306,6 +306,7 @@
     <Compile Include="MessageDispatch\When_A_Message_Dispatcher_Shuts_A_Connection.cs" />
     <Compile Include="MessageDispatch\When_A_Message_Fails_To_Be_Mapped_To_A_Request.cs" />
     <Compile Include="MessageDispatch\When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler.cs" />
+    <Compile Include="MessageDispatch\When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async.cs" />
     <Compile Include="MessageDispatch\When_A_Requeue_Count_Threshold_For_Commands_Has_Been_Reached.cs" />
     <Compile Include="MessageDispatch\When_A_Requeue_Count_Threshold_For_Events_Has_Been_Reached.cs" />
     <Compile Include="MessageDispatch\When_A_Requeue_Of_Command_Exception_Is_Thrown.cs" />
@@ -372,6 +373,7 @@
     <Compile Include="Timeout\When_Sending_A_Command_To_The_Processor_Passing_A_Timeout_Policy_Check.cs" />
     <Compile Include="Timeout\When_Sending_A_Command_To_The_Processor_Failing_A_Timeout_Policy_Check.cs" />
     <Compile Include="TinyIoC.cs" />
+    <Compile Include="When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler_Async.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj">

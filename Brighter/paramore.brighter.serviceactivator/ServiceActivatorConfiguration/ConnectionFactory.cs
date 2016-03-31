@@ -54,7 +54,8 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
                    unacceptableMessageLimit: connectionElement.UnacceptableMessageLimit,
                    channelName: new ChannelName(connectionElement.ChannelName),
                    routingKey: connectionElement.RoutingKey,
-                   isDurable: connectionElement.IsDurable
+                   isDurable: connectionElement.IsDurable,
+                   isAsync:connectionElement.IsAsync
                    )
              ).ToList();
 

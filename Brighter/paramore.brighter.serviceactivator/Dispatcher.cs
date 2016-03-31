@@ -294,7 +294,7 @@ namespace paramore.brighter.serviceactivator
                     var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(connection.DataType);
                     var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, new object[] { CommandProcessor, _messageMapperRegistry, connection, _logger });
 
-                    list.Add(consumerFactory.Create());
+                    list.Add(connection.IsAsync ? consumerFactory.CreateAsync() : consumerFactory.Create());
                 }
             });
             return list;

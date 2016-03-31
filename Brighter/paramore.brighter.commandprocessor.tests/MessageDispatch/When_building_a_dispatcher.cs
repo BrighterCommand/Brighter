@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
 using paramore.brighter.commandprocessor.Logging;
@@ -39,6 +40,12 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     [Subject(typeof(DispatchBuilder))]
     public class When_Building_A_Dispatcher
     {
+        /*
+        <connections>
+          <add connectionName ="foo" channelName="mary" routingKey="bob" isDurable="false" dataType="paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
+          <add connectionName ="bar" channelName="alice" routingKey="simon" isDurable="true" dataType="paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent" noOfPerformers="2" timeOutInMilliseconds="100" isAsync="true" />
+        </connections>
+        */
         private static IAmADispatchBuilder s_builder;
         private static Dispatcher s_dispatcher;
 
@@ -80,5 +87,15 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private Because _of = () => s_dispatcher = s_builder.Build();
 
         private It _should_build_a_dispatcher = () => s_dispatcher.ShouldNotBeNull();
+        private It _should_have_a_foo_connection = () => GetConnection("foo").ShouldNotBeNull();
+        private It _should_have_a_bar_connection = () => GetConnection("bar").ShouldNotBeNull();
+        private It _should_be_in_the_awaiting_state = () => s_dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+
+
+        private static Connection GetConnection(string name)
+        {
+            return s_dispatcher.Connections.SingleOrDefault(conn => conn.Name == name);
+        }
+
     }
 }

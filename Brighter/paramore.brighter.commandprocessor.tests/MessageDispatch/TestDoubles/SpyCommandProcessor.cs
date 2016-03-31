@@ -89,7 +89,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch.TestDoubles
         public virtual async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
         {
             _requests.Enqueue(request);
-            _commands.Add(CommandType.Post);
+            _commands.Add(CommandType.PostAsync);
             await Task.Delay(0);
         }
 

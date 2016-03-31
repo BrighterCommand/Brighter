@@ -1,17 +1,4 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.serviceactivator
-// Author           : ian
-// Created          : 07-02-2014
-//
-// Last Modified By : ian
-// Last Modified On : 07-10-2014
-// ***********************************************************************
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -37,15 +24,9 @@ THE SOFTWARE. */
 
 namespace paramore.brighter.serviceactivator
 {
-    /// <summary>
-    /// Interface IConsumerFactory
-    /// </summary>
     internal interface IConsumerFactory
     {
-        /// <summary>
-        /// Creates a new consumer. Implemented by specific Message Oriented Middleware packages
-        /// </summary>
-        /// <returns>Consumer.</returns>
         Consumer Create();
+        Consumer CreateAsync();
     }
 }

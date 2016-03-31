@@ -63,5 +63,22 @@ namespace paramore.brighter.serviceactivator
             var consumer = new Consumer(_connection.Name, channel, messagePump);
             return consumer;
         }
+
+        public Consumer CreateAsync()
+        {
+            var channel = _connection.ChannelFactory.CreateInputChannel(_connection.ChannelName, _connection.RoutingKey, _connection.IsDurable);
+            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
+            {
+                Channel = channel,
+                TimeoutInMilliseconds = _connection.TimeoutInMiliseconds,
+                RequeueCount = _connection.RequeueCount,
+                RequeueDelayInMilliseconds = _connection.RequeueDelayInMilliseconds,
+                UnacceptableMessageLimit = _connection.UnacceptableMessageLimit,
+                Logger = _logger
+            };
+
+            var consumer = new Consumer(_connection.Name, channel, messagePump);
+            return consumer;
+        }
     }
 }

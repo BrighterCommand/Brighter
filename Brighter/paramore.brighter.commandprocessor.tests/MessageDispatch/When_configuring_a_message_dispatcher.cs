@@ -34,7 +34,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
     /*
     <connections>
       <add connectionName ="foo" channelName="mary" routingKey="bob" isDurable="false" dataType="paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
-      <add connectionName ="bar" channelName="alice" routingKey="simon" isDurable="true" dataType="paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent" noOfPerformers="2" timeOutInMilliseconds="100" />
+      <add connectionName ="bar" channelName="alice" routingKey="simon" isDurable="true" dataType="paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent" noOfPerformers="2" timeOutInMilliseconds="100" isAsync="true" />
     </connections>
     */
 
@@ -63,6 +63,8 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         private It _should_have_a_bar_connection_with_two_performers = () => GetConnection("bar").NoOfPeformers.ShouldEqual(2);
         private It _should_have_a_foo_connection_with_timeoutInMillisecondsOf_200 = () => GetConnection("foo").TimeoutInMiliseconds.ShouldEqual(200);
         private It _should_have_a_bar_connection_with_timeoutInMillisecondsOf_100 = () => GetConnection("bar").TimeoutInMiliseconds.ShouldEqual(100);
+        private It _should_have_a_foo_connection_with_async_false = () => GetConnection("foo").IsAsync.ShouldBeFalse();
+        private It _should_have_a_bar_connection_with_async_true = () => GetConnection("bar").IsAsync.ShouldBeTrue();
 
         private static Connection GetConnection(string name)
         {

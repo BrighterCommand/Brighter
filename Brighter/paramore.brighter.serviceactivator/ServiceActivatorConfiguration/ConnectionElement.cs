@@ -102,5 +102,12 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
             get { return Convert.ToInt32(this["unacceptableMessageLimit"]); }
             set { this["unacceptableMessageLimit"] = value; }
         }
+
+        [ConfigurationProperty("isAsync", DefaultValue = false, IsRequired = false)]
+        public bool IsAsync
+        {
+            get { return (bool)this["isAsync"]; }
+            set { this["isAsync"] = value; }
+        }
     }
 }
