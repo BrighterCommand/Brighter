@@ -36,6 +36,7 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 namespace paramore.commandprocessor.tests.MessageStore.MsSql
 {
     [Subject(typeof(MsSqlMessageStore))]
+    [Tags("MessageStoreTests")]
     public class When_Writing_Messages_To_The_Message_Store
     {
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
