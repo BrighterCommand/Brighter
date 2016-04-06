@@ -172,7 +172,7 @@ namespace paramore.brighter.serviceactivator
                 }
                 catch (ConfigurationException configurationException)
                 {
-                    if (Logger != null) Logger.DebugException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", configurationException, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    if (Logger != null) Logger.ErrorException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", configurationException, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
                     RejectMessage(message);
                     Channel.Dispose();
@@ -275,7 +275,7 @@ namespace paramore.brighter.serviceactivator
 
                 if (exception is ConfigurationException)
                 {
-                    if (Logger != null) Logger.DebugException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    if (Logger != null) Logger.ErrorException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
                     stop = true;
                     break;
                 }
@@ -294,7 +294,7 @@ namespace paramore.brighter.serviceactivator
 
         private void RejectMessage(Message message)
         {
-            if (Logger != null) Logger.DebugFormat("MessagePump: Rejecting message {0} from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            if (Logger != null) Logger.InfoFormat("MessagePump: Rejecting message {0} from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
             Channel.Reject(message);
         }
