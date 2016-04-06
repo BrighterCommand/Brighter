@@ -46,18 +46,33 @@ namespace paramore.brighter.commandprocessor
     public class MessageBody : IEquatable<MessageBody>
     {
         /// <summary>
-        /// Gets the value.
+        /// The message body as a string - usually used to store the message body as JSON or XML.
         /// </summary>
         /// <value>The value.</value>
         public string Value { get; private set; }
 
         /// <summary>
+        /// The message body as a callback function with state - usually used with a MessagePumpAsync for a continuation that should be 
+        /// executed on the message pump thread. Intended for internal use to <see cref="Channel"/>
+        /// </summary>
+        public PostBackItem PostBack{get;set;}
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="MessageBody"/> class.
         /// </summary>
-        /// <param name="body">The body.</param>
+        /// <param name="body">The body of the message, usually XML or JSON.</param>
         public MessageBody(string body)
         {
             Value = body;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessageBody"/> class.
+        /// </summary>
+        /// <param name="postBack">The continuation to run</param>
+        public MessageBody(PostBackItem postBack)
+        {
+            PostBack = postBack;
         }
 
         /// <summary>

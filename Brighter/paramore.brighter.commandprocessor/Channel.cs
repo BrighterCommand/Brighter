@@ -12,6 +12,7 @@
 // ***********************************************************************
 
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -42,20 +43,21 @@ using System.Threading.Tasks;
 namespace paramore.brighter.commandprocessor
 {
     /// <summary>
-    /// Class Channel.
-    /// An <see cref="IAmAChannel"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
-    /// and acknowledging receipt of those messages
+    ///     Class Channel.
+    ///     An <see cref="IAmAChannel" /> for reading messages from a
+    ///     <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+    ///     and acknowledging receipt of those messages
     /// </summary>
     public class Channel : IAmAChannel
     {
         private readonly string _channelName;
         private readonly IAmAMessageConsumer _messageConsumer;
-        private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
         private readonly bool _messageConsumerSupportsDelay;
+        private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
         private int _numberOfMessagesToCache;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Channel"/> class.
+        ///     Initializes a new instance of the <see cref="Channel" /> class.
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="messageConsumer">The messageConsumer.</param>
@@ -63,17 +65,42 @@ namespace paramore.brighter.commandprocessor
         {
             _channelName = channelName;
             _messageConsumer = messageConsumer;
-            _messageConsumerSupportsDelay = _messageConsumer is IAmAMessageConsumerSupportingDelay && (_messageConsumer as IAmAMessageGatewaySupportingDelay).DelaySupported;
+            _messageConsumerSupportsDelay = _messageConsumer is IAmAMessageConsumerSupportingDelay &&
+                                            (_messageConsumer as IAmAMessageGatewaySupportingDelay).DelaySupported;
         }
 
         /// <summary>
-        /// Gets the name.
+        ///     Acknowledges the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public void Acknowledge(Message message)
+        {
+            _messageConsumer.Acknowledge(message);
+        }
+
+        /// <summary>
+        /// Inserts a message into the channel for consumption by the message pump. Used to send control signals to the pump, normal operation uses recieve.
+        /// </summary>
+        /// <param name="message">The message to insert into the channel</param>
+        public void Enqueue(Message message)
+        {
+            _queue.Enqueue(message);
+        }
+
+        /// <summary>
+        ///     Gets the length.
+        /// </summary>
+        /// <value>The length.</value>
+        public int Length { get { return _queue.Count; } }
+
+        /// <summary>
+        ///     Gets the name.
         /// </summary>
         /// <value>The name.</value>
         public ChannelName Name { get { return new ChannelName(_channelName); } }
 
         /// <summary>
-        /// Receives the specified timeout in milliseconds.
+        ///     Receives the specified timeout in milliseconds.
         /// </summary>
         /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
@@ -89,16 +116,7 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
-        /// Acknowledges the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void Acknowledge(Message message)
-        {
-            _messageConsumer.Acknowledge(message);
-        }
-
-        /// <summary>
-        /// Rejects the specified message.
+        ///     Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         public void Reject(Message message)
@@ -107,15 +125,7 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
-        /// Stops this instance.
-        /// </summary>
-        public void Stop()
-        {
-            _queue.Enqueue(MessageFactory.CreateQuitMessage());
-        }
-
-        /// <summary>
-        /// Requeues the specified message.
+        ///     Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
         public void Requeue(Message message, int delayMilliseconds = 0)
@@ -130,28 +140,20 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
-        /// Gets the length.
+        ///     Stops this instance.
         /// </summary>
-        /// <value>The length.</value>
-        /// <exception cref="System.NotImplementedException"></exception>
-        public int Length
+        public void Stop()
         {
-            get { return _queue.Count; }
-            set { throw new NotImplementedException(); }
+            _queue.Enqueue(MessageFactory.CreateQuitMessage());
         }
 
         /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        ///     Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
-        }
-
-        ~Channel()
-        {
-            Dispose(false);
         }
 
         private void Dispose(bool disposing)
@@ -160,6 +162,11 @@ namespace paramore.brighter.commandprocessor
             {
                 _messageConsumer.Dispose();
             }
+        }
+
+        ~Channel()
+        {
+            Dispose(false);
         }
     }
 }

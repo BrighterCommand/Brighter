@@ -62,6 +62,7 @@
     <Compile Include="MessagePump.cs" />
     <Compile Include="MessagePumpAsync.cs" />
     <Compile Include="MessagePumpBase.cs" />
+    <Compile Include="MessagePumpSynchronizationContext.cs" />
     <Compile Include="Performer.cs" />
     <Compile Include="Connection.cs" />
     <Compile Include="Ports\Commands\ConfigurationCommand.cs" />

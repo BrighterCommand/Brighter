@@ -43,17 +43,8 @@ using paramore.brighter.commandprocessor.Logging;
 namespace paramore.brighter.serviceactivator
 {
 
-    /// <summary>
-    /// Class MessagePump.
-    /// </summary>
-    /// <typeparam name="TRequest">The type of the t request.</typeparam>
     internal class MessagePump<TRequest> : MessagePumpBase<TRequest>, IAmAMessagePump where TRequest : class, IRequest
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MessagePump{TRequest}"/> class.
-        /// </summary>
-        /// <param name="commandProcessor">The command processor.</param>
-        /// <param name="messageMapper">The message mapper.</param>
         public MessagePump(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
             : base(commandProcessor, messageMapper)
         {}
