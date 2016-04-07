@@ -35,9 +35,14 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.policy.Attributes;
+using paramore.brighter.commandprocessor.policy.Handlers;
+using Polly.CircuitBreaker;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -57,18 +62,21 @@ namespace paramore.brighter.commandprocessor
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public abstract class RequestHandler<TRequest> : IHandleRequests<TRequest> where TRequest : class, IRequest
     {
+        private static Lazy<ILog> s_logger;
+        private IHandleRequests<TRequest> _successor;
+
         /// <summary>
         /// The logger
         /// </summary>
-        protected readonly ILog Logger;
-        private IHandleRequests<TRequest> _successor;
+        protected ILog Logger { get { return s_logger.Value; }}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
-        protected RequestHandler() 
-            : this(LogProvider.GetCurrentClassLogger())
-        {}
+        protected RequestHandler()
+        {
+            s_logger = new Lazy<ILog>(() => LogProvider.GetCurrentClassLogger());
+        }
         
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
@@ -78,7 +86,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="logger">The logger.</param>
         protected RequestHandler(ILog logger)
         {
-            this.Logger = logger;
+            s_logger = new Lazy<ILog>(() => logger);
         }
 
         /// <summary>
