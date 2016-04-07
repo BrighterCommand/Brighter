@@ -57,7 +57,6 @@
     <Compile Include="IAmAnAsyncSubcriberRegistry.cs" />
     <Compile Include="InMemoryMessageStore.cs" />
     <Compile Include="monitoring\Attributes\MonitorAsyncAttribute.cs" />
-    <Compile Include="PostBackItem.cs" />
     <Compile Include="RequestHandlerAsync.cs" />
     <Compile Include="AsyncRequestHandlers.cs" />
     <Compile Include="ChannelName.cs" />

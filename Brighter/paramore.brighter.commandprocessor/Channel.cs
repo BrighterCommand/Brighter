@@ -79,15 +79,6 @@ namespace paramore.brighter.commandprocessor
         }
 
         /// <summary>
-        /// Inserts a message into the channel for consumption by the message pump. Used to send control signals to the pump, normal operation uses recieve.
-        /// </summary>
-        /// <param name="message">The message to insert into the channel</param>
-        public void Enqueue(Message message)
-        {
-            _queue.Enqueue(message);
-        }
-
-        /// <summary>
         ///     Gets the length.
         /// </summary>
         /// <value>The length.</value>

@@ -88,13 +88,5 @@ namespace paramore.brighter.commandprocessor
         /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         void Requeue(Message message, int delayMilliseconds = 0);
-
-        /// <summary>
-        /// Add a message to the channel. Note that <see cref="Stop"/> adds a quit method. This method is mainly
-        /// used to post async callbacks onto the queue where the message pump is being used to provide
-        /// a Reactor.
-        /// </summary>
-        /// <param name="message"></param>
-        void Enqueue(Message message);
     }
 }
