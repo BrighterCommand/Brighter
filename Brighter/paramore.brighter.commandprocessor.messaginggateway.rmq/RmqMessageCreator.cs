@@ -99,11 +99,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 }
                 else
                 {
-                    string body = Encoding.UTF8.GetString(fromQueue.Body);
+                    var messageHeader = timeStamp.Success
+                        ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, delayedMilliseconds.Result)
+                        : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
 
-                    message = new Message(
-                        timeStamp.Success ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, delayedMilliseconds.Result) : new MessageHeader(messageId.Result, topic.Result, messageType.Result),
-                        new MessageBody(body));
+                    message = new Message(messageHeader, new MessageBody(Encoding.UTF8.GetString(fromQueue.Body)));
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));
                 }
@@ -112,6 +112,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             {
                 _logger.WarnException("Failed to create message from amqp message", e);
                 message = FailureMessage(topic, messageId);
+            }
+
+            if (headers.ContainsKey(HeaderNames.CORRELATION_ID))
+            {
+                var correlationId = Encoding.UTF8.GetString((byte[])headers[HeaderNames.CORRELATION_ID]);
+                message.Header.CorrelationId = Guid.Parse(correlationId);
             }
 
             message.SetDeliveryTag(fromQueue.DeliveryTag);

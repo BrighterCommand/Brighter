@@ -92,26 +92,28 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Publishes the message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="headers">User specified message headers.</param>
-        /// <param name="regenerate">Generate new unique message identifier.</param>
+        /// <param name="delayMilliseconds">The delay in ms.</param>
         public void PublishMessage(Message message, int delayMilliseconds)
         {
             var messageId = message.Id;
             var deliveryTag = message.Header.Bag.ContainsKey(HeaderNames.DELIVERY_TAG) ? message.GetDeliveryTag().ToString() : null;
 
             var headers = new Dictionary<string, object>
-                                      {
-                                          {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
-                                          {HeaderNames.TOPIC, message.Header.Topic},
-                                          {HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString(CultureInfo.InvariantCulture)},
-                                      };
+            {
+                {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
+                {HeaderNames.TOPIC, message.Header.Topic},
+                {HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString(CultureInfo.InvariantCulture)}
+            };
 
-            message.Header.Bag.Each((header) =>
+            if (message.Header.CorrelationId != Guid.Empty)
+                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString());
+
+            message.Header.Bag.Each(header =>
             {
                 if (!HeadersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
             });
 
-            if (!String.IsNullOrEmpty(deliveryTag))
+            if (!string.IsNullOrEmpty(deliveryTag))
                 headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
 
             if (delayMilliseconds > 0)
@@ -129,6 +131,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Requeues the message.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="queueName">The queue name.</param>
         /// <param name="delayMilliseconds">Delay in ms.</param>
         public void RequeueMessage(Message message, string queueName, int delayMilliseconds)
         {
@@ -139,11 +142,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 _logger.InfoFormat("RmqMessagePublisher: Regenerating message {0} with DeliveryTag of {1} to {2} with DeliveryTag of {3}", message.Id, DeliveryTag, messageId, 1);
 
             var headers = new Dictionary<string, object>
-                                      {
-                                          {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
-                                          {HeaderNames.TOPIC, message.Header.Topic},
-                                          {HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString(CultureInfo.InvariantCulture)},
-                                      };
+            {
+                {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
+                {HeaderNames.TOPIC, message.Header.Topic},
+                {HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString(CultureInfo.InvariantCulture)},
+            };
+
+            if (message.Header.CorrelationId != Guid.Empty)
+                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString());
 
             message.Header.Bag.Each((header) =>
             {
