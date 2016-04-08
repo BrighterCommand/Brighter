@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.logging.Handlers;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace HelloWorld
@@ -56,7 +57,12 @@ namespace HelloWorld
         {
             public IHandleRequests Create(Type handlerType)
             {
-                return new GreetingCommandHandler();
+                if (handlerType == typeof(GreetingCommandHandler))
+                    return new GreetingCommandHandler();
+                else if (handlerType == typeof (RequestLoggingHandler<GreetingCommand>))
+                    return new RequestLoggingHandler<GreetingCommand>();
+                else
+                    return null;
             }
 
             public void Release(IHandleRequests handler)

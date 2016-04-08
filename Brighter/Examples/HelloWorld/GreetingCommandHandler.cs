@@ -24,11 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.logging.Attributes;
 
 namespace HelloWorld
 {
     internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
     {
+        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
         public override GreetingCommand Handle(GreetingCommand command)
         {
             Console.WriteLine("Hello {0}", command.Name);
