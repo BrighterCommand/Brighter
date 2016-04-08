@@ -7,6 +7,8 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 ## Master ##
 
+Fix issue with encoding of non-string types and transmission of correlation id https://github.com/iancooper/Paramore/pull/180
+
 ## Release 6.06 ##
 - Increase logging level when we stop reading from a queue that cannot be read https://github.com/iancooper/Paramore/pull/179
 - Peformance issue caused by creation of a logger per requesthandler instance. The logger is now static, but is initialized lazily and can be overridden for TDD or legacy compatibility 
