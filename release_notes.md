@@ -6,7 +6,10 @@ When we push a collection of functionality it is available via [nuget.org](http:
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore), but not yet deployed to [nuget.org](http://www.nuget.org).
 
 ## Master ##
-Increase logging level when we stop reading from a queue that cannot be read https://github.com/iancooper/Paramore/pull/179
+
+## Release 6.06 ##
+- Increase logging level when we stop reading from a queue that cannot be read https://github.com/iancooper/Paramore/pull/179
+- Peformance issue caused by creation of a logger per requesthandler instance. The logger is now static, but is initialized lazily and can be overridden for TDD or legacy compatibility 
 
 ## Release 6 ##
 
