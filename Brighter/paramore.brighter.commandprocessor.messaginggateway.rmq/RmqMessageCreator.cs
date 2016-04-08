@@ -105,7 +105,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                         timeStamp.Success ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, delayedMilliseconds.Result) : new MessageHeader(messageId.Result, topic.Result, messageType.Result),
                         new MessageBody(body));
 
-                    headers.Each(header => message.Header.Bag.Add(header.Key, Encoding.UTF8.GetString((byte[])header.Value)));
+                    headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));
                 }
             }
             catch (Exception e)
@@ -213,6 +213,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             _logger.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
             return new HeaderResult<Guid>(Guid.Empty, false);
+        }
+
+        private static object ParseHeaderValue(object value)
+        {
+            var bytes = value as byte[];
+            return bytes != null ? Encoding.UTF8.GetString(bytes) : value;
         }
     }
 }
