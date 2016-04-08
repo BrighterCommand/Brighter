@@ -52,6 +52,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         public const string MESSAGE_ID = "MessageId";
         /// <summary>
+        /// The correlation id
+        /// </summary>
+        public const string CORRELATION_ID = "CorrelationId";
+        /// <summary>
         /// The topic{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
         /// </summary>
         public const string TOPIC = "Topic";
@@ -72,7 +76,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         public const string ORIGINAL_MESSAGE_ID = Message.OriginalMessageIdHeaderName;
         /// <summary>
-        /// Tag used to identify this message in the sequence against it's Id (used to perform multiple ack against Id upto Tag).
+        /// Tag used to identify this message in the sequence against its Id (used to perform multiple ack against Id upto Tag).
         /// </summary>
         public const string DELIVERY_TAG = Message.DeliveryTagHeaderName;
     }
