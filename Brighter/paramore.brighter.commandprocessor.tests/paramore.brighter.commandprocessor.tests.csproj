@@ -138,6 +138,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppConfig.cs" />
+    <Compile Include="CommandProcessors\MyEventHandlerAsyncWithContinuation.cs" />
     <Compile Include="CommandProcessors\TestDoubles\MyThrowingEventHandlerAsync.cs" />
     <Compile Include="CommandProcessors\When_Building_With_A_Default_Policy_Sufficient_To_Post.cs" />
     <Compile Include="CommandProcessors\When_Posting_A_Message_And_There_Is_No_Message_Mapper_Registry.cs" />

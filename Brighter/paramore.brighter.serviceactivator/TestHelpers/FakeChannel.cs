@@ -57,6 +57,11 @@ namespace paramore.brighter.serviceactivator.TestHelpers
             AcknowledgeCount++;
         }
 
+        public void Enqueue(Message message)
+        {
+            _messageQueue.Enqueue(message);
+        }
+
         public virtual Message Receive(int timeoutinMilliseconds)
         {
             Message message;

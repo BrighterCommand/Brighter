@@ -28,16 +28,22 @@ namespace paramore.brighter.serviceactivator
             {
                 case MessageType.MT_COMMAND:
                     {
-                        await _commandProcessor.SendAsync(request);
+                        await _commandProcessor.SendAsync(request, continueOnCapturedContext: true);
                         break;
                     }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                     {
-                        await _commandProcessor.PublishAsync(request);
+                        await _commandProcessor.PublishAsync(request, continueOnCapturedContext: true);
                         break;
                     }
             }
+        }
+
+        protected override void SynchronizationContextHook()
+        {
+            //we take control of the synchonization context to provide a reactor model i.e. uses one thread, does not use thread pool for callbacks
+            SynchronizationContext.SetSynchronizationContext(new MessagePumpSynchronizationContext(Channel));
         }
     }
 }

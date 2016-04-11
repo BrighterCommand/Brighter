@@ -36,6 +36,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -86,6 +87,15 @@ namespace paramore.brighter.commandprocessor
         {
             Header = header;
             Body = body;
+        }
+
+        public void Execute()
+        {
+            if (Header.MessageType != MessageType.MT_CALLBACK)
+            {
+                throw new InvalidOperationException("You cannot execute a callback, unless the message is a callback message");
+            }
+            Body.PostBack.Call();
         }
 
         /// <summary>
@@ -165,5 +175,6 @@ namespace paramore.brighter.commandprocessor
         {
             Header.Bag[DeliveryTagHeaderName] = deliveryTag;
         }
+
     }
 }

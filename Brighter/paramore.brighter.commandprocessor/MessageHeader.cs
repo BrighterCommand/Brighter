@@ -71,7 +71,11 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         /// A quit message, used to end a dispatcher's message pump
         /// </summary>
-        MT_QUIT = 4
+        MT_QUIT = 4,
+        /// <summary>
+        /// A callback message, used to service an async request callback.
+        /// </summary>
+        MT_CALLBACK
     }
 
     /// <summary>

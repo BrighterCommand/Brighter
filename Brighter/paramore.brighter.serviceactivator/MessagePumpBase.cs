@@ -41,6 +41,8 @@ namespace paramore.brighter.serviceactivator
 
         public async Task Run()
         {
+            SynchronizationContextHook();
+
             do
             {
                 if (UnacceptableMessageLimitReached())
@@ -98,6 +100,13 @@ namespace paramore.brighter.serviceactivator
                     break;
                 }
 
+                //ayn ca
+                if (message.Header.MessageType == MessageType.MT_CALLBACK)
+                {
+                    message.Execute();
+                    break;
+                }
+
                 // Serviceable message
                 try
                 {
@@ -151,6 +160,7 @@ namespace paramore.brighter.serviceactivator
 
             if (Logger != null) Logger.DebugFormat("MessagePump: Finished running message loop, no longer receiving messages from {0} on thread # {1}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
         }
+
 
         protected void AcknowledgeMessage(Message message)
         {
@@ -230,6 +240,8 @@ namespace paramore.brighter.serviceactivator
 
             Channel.Requeue(message, RequeueDelayInMilliseconds);
         }
+
+        protected abstract void SynchronizationContextHook();
 
         protected TRequest TranslateMessage(Message message)
         {

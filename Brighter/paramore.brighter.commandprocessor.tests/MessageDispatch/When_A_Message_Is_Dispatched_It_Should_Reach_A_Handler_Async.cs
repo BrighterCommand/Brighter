@@ -7,12 +7,13 @@ using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.TestHelpers;
+using paramore.commandprocessor.tests.CommandProcessors;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
 namespace paramore.commandprocessor.tests.MessageDispatch
 {
-    class When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async
+    public class When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async
     {
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;
@@ -23,7 +24,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         {
             var logger = A.Fake<ILog>();
             var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
+            subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsyncWithContinuation>();
 
             s_commandProcessor = new CommandProcessor(
                 subscriberRegistry,
@@ -46,16 +47,19 @@ namespace paramore.commandprocessor.tests.MessageDispatch
         
         private Because _of = () => AsyncContext.Run(async () => await s_messagePump.Run());
 
-        private It _should_dispatch_the_message_to_a_handler = () => MyEventHandlerAsync.ShouldReceive(s_event).ShouldBeTrue();
+        private It _should_dispatch_the_message_to_a_handler = () => MyEventHandlerAsyncWithContinuation.ShouldReceive(s_event).ShouldBeTrue();
+        private It _should_modify_the_loop_counter_on_the_callback_thread = () => MyEventHandlerAsyncWithContinuation.LoopCounter.Value.ShouldEqual(2);
+        private It _should_use_the_same_thread_for_the_continuation = () => MyEventHandlerAsyncWithContinuation.WorkThreadId.ShouldEqual(MyEventHandlerAsyncWithContinuation.ContinuationThreadId);
+
 
         internal class CheapHandlerFactoryAsync : IAmAHandlerFactoryAsync
         {
             public IHandleRequestsAsync Create(Type handlerType)
             {
                 var logger = A.Fake<ILog>();
-                if (handlerType == typeof(MyEventHandlerAsync))
+                if (handlerType == typeof(MyEventHandlerAsyncWithContinuation))
                 {
-                    return new MyEventHandlerAsync(logger);
+                    return new MyEventHandlerAsyncWithContinuation(logger);
                 }
                 return null;
             }
