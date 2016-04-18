@@ -89,15 +89,6 @@ namespace paramore.brighter.commandprocessor
             Body = body;
         }
 
-        public void Execute()
-        {
-            if (Header.MessageType != MessageType.MT_CALLBACK)
-            {
-                throw new InvalidOperationException("You cannot execute a callback, unless the message is a callback message");
-            }
-            Body.PostBack.Call();
-        }
-
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>

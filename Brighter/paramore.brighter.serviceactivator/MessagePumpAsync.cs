@@ -39,11 +39,5 @@ namespace paramore.brighter.serviceactivator
                     }
             }
         }
-
-        protected override void SynchronizationContextHook()
-        {
-            //we take control of the synchonization context to provide a reactor model i.e. uses one thread, does not use thread pool for callbacks
-            SynchronizationContext.SetSynchronizationContext(new MessagePumpSynchronizationContext(Channel));
-        }
     }
 }

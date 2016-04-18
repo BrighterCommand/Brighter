@@ -41,8 +41,6 @@ namespace paramore.brighter.serviceactivator
 
         public async Task Run()
         {
-            SynchronizationContextHook();
-
             do
             {
                 if (UnacceptableMessageLimitReached())
@@ -97,13 +95,6 @@ namespace paramore.brighter.serviceactivator
                 {
                     if (Logger != null) Logger.DebugFormat("MessagePump: Quit receiving messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
                     Channel.Dispose();
-                    break;
-                }
-
-                //ayn ca
-                if (message.Header.MessageType == MessageType.MT_CALLBACK)
-                {
-                    message.Execute();
                     break;
                 }
 
@@ -240,8 +231,6 @@ namespace paramore.brighter.serviceactivator
 
             Channel.Requeue(message, RequeueDelayInMilliseconds);
         }
-
-        protected abstract void SynchronizationContextHook();
 
         protected TRequest TranslateMessage(Message message)
         {

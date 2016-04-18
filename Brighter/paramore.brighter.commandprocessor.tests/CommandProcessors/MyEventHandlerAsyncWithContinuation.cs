@@ -36,7 +36,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
             WorkThreadId = Thread.CurrentThread.ManagedThreadId;
 
             LogEvent(command);
-            await Task.Delay(0);
+            await Task.Delay(30);
 
             //this will run on the continuation
             LoopCounter.Value = 2;
