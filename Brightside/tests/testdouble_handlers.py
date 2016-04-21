@@ -1,5 +1,5 @@
 """
-File         : context.py
+File         : my_handler.py
 Author           : ian
 Created          : 02-15-2016
 
@@ -29,10 +29,15 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-import os
-import sys
-sys.path.insert(0, os.path.abspath('..'))
+if __name__ == '__main__':
+    if __package__ is None:
+        import sys
+        from os import path
+        sys.path.append( path.dirname( path.dirname(path.abspath(__file__))))
+        from core.request_handler import Handler
+    else:
+        from ..core.request_handler import Handler
 
-import brightside.command_processor
-import brightside.request_handler
 
+class MyHandler(Handler):
+    pass

@@ -1,5 +1,6 @@
-"""
-File         : command_processor.py
+#!/usr/bin/env python
+""""
+File         : request_handler.py
 Author           : ian
 Created          : 02-15-2016
 
@@ -29,3 +30,24 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
+from abc import ABCMeta, abstractmethod
+
+
+class Handler(metaclass=ABCMeta):
+
+    def __init__(self):
+        self._next = None
+
+    @abstractmethod
+    def __call__(self, parameters):
+        if self._next is not None:
+            return self._next(parameters)
+        return
+
+    @property
+    def next(self):
+        return self._next
+
+    @next.setter
+    def next(self, value):
+        self._next = value

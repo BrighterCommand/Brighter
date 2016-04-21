@@ -30,11 +30,14 @@ THE SOFTWARE.
 """
 
 import unittest
+from .testdouble_handlers import MyHandler
+
 
 class TestRequestHandler(unittest.TestCase):
 
     def setUp(self):
         self._handler = MyHandler()
 
+    def test_handle_command(self):
+        pass
 
-    def test_handle_command:
