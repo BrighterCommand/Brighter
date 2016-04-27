@@ -45,21 +45,23 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly ILog _logger;
+        private readonly string _connectionName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
         /// </summary>
-        public RmqMessageConsumerFactory()
-            :this(LogProvider.GetCurrentClassLogger())
+        public RmqMessageConsumerFactory(string connectionName = "")
+            :this(LogProvider.GetCurrentClassLogger(), connectionName)
         {}
         
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class, with a test logger.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RmqMessageConsumerFactory(ILog logger)
+        public RmqMessageConsumerFactory(ILog logger, string connectionName = "")
         {
             _logger = logger;
+            _connectionName = connectionName;
         }
 
         /// <summary>
@@ -71,7 +73,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create(string queueName, string routingKey, bool isDurable)
         {
-            return new RmqMessageConsumer(queueName, routingKey, isDurable, _logger);
+            return new RmqMessageConsumer(queueName, routingKey, isDurable, _logger, _connectionName);
         }
     }
 }

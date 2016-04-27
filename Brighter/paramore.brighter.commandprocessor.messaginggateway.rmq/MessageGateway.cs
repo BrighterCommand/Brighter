@@ -68,19 +68,32 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         public MessageGateway()
          : this(LogProvider.GetCurrentClassLogger())
         {}
-
-
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway"/> class.
         /// Use if you need to inject a test logger
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public MessageGateway(ILog logger)
+        public MessageGateway(ILog logger) : this(logger, RMQMessagingGatewayConfigurationSection.GetConfiguration())
+        {
+        }
+
+        protected MessageGateway(string connectionName) 
+            : this(LogProvider.GetCurrentClassLogger(), RMQMessagingGatewayConfigurationSection.GetConfiguration(connectionName))
+        {
+            
+        }
+
+        protected MessageGateway(ILog logger, string connectionName) : this(logger, RMQMessagingGatewayConfigurationSection.GetConfiguration(connectionName))
+        {
+        }
+        
+        private MessageGateway(ILog logger, RMQMessagingGatewayConfigurationSection configuration)
         {
             Logger = logger;
-            Configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
+            Configuration = configuration;
 
-            var connectionPolicyFactory = new ConnectionPolicyFactory(logger);
+            var connectionPolicyFactory = new ConnectionPolicyFactory(logger, Configuration);
 
             _retryPolicy = connectionPolicyFactory.RetryPolicy;
             _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicy;
@@ -88,6 +101,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             _connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), RequestedHeartbeat = 30 };
 
             DelaySupported = (this is IAmAMessageGatewaySupportingDelay) && Configuration.Exchange.SupportDelay;
+
         }
 
         /// <summary>

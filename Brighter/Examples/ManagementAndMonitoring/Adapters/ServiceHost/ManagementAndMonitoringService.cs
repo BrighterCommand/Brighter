@@ -85,8 +85,8 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
             };
 
             //create the gateway
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory();
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory();
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory("messages");
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory("messages");
 
             var builder = DispatchBuilder
                 .With()
@@ -115,7 +115,7 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
                     "DataSource=\"" + Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\MessageStore.sdf") + "\"", "Messages", 
                     MsSqlMessageStoreConfiguration.DatabaseType.SqlCe)
                     ), 
-                new RmqMessageProducer()));
+                new RmqMessageProducer("monitoring")));
         }
 
         public bool Start(HostControl hostControl)

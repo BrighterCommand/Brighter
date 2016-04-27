@@ -34,15 +34,24 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
     internal class TestRMQListener
     {
         private readonly string _channelName;
-        private readonly ConnectionFactory _connectionFactory;
-        private readonly IConnection _connection;
-        private readonly IModel _channel;
+        private ConnectionFactory _connectionFactory;
+        private IConnection _connection;
+        private IModel _channel;
+        private RMQMessagingGatewayConfigurationSection rMQMessagingGatewayConfigurationSection;
 
-        public TestRMQListener(string channelName)
+        public TestRMQListener(string channelName) : this(channelName, RMQMessagingGatewayConfigurationSection.GetConfiguration())
+        {
+        }
+
+        public TestRMQListener(string channelName, string connectionName) : this(channelName, RMQMessagingGatewayConfigurationSection.GetConfiguration(connectionName))
+        {
+        }
+
+        private TestRMQListener(string channelName, RMQMessagingGatewayConfigurationSection configuration)
         {
             _channelName = channelName;
-            var configuration = RMQMessagingGatewayConfigurationSection.GetConfiguration();
-            _connectionFactory = new ConnectionFactory { Uri = configuration.AMPQUri.Uri.ToString() };
+            rMQMessagingGatewayConfigurationSection = configuration;
+            _connectionFactory = new ConnectionFactory {Uri = configuration.AMPQUri.Uri.ToString()};
             _connection = _connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
             _channel.DeclareExchangeForConfiguration(configuration);
