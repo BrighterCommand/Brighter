@@ -35,6 +35,7 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 namespace paramore.commandprocessor.tests.MessageStore.MsSql
 {
     [Subject(typeof(MsSqlMessageStore))]
+    [Tags("MessageStoreTests")]
     public class When_The_Message_Is_Already_In_The_Message_Store_Async
     {
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
