@@ -40,6 +40,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         private bool _isMonitoringEnabled;
         private string _handlerName;
         private string _instanceName;
+        private string _handlerFullAssemblyName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
@@ -68,6 +69,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
             _isMonitoringEnabled = (bool) initializerList[0];
             _handlerName = (string) initializerList[1];
             _instanceName = (string) initializerList[2];
+            _handlerFullAssemblyName = (string)initializerList[3];
         }
 
         /// <summary>
@@ -79,6 +81,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         {
             if (_isMonitoringEnabled)
             {
+                var timeBeforeHandle = Clock.Now().GetValueOrDefault();
                 try
                 {
                     _controlBusSender.Post(
@@ -86,30 +89,38 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
                             _instanceName, 
                             MonitorEventType.EnterHandler, 
                             _handlerName, 
+                            _handlerFullAssemblyName,
                             JsonConvert.SerializeObject(command), 
-                            Clock.Now().GetValueOrDefault()));
+                            timeBeforeHandle,
+                            0));
 
                     base.Handle(command);
 
+                    var timeAfterHandle = Clock.Now().GetValueOrDefault();
                     _controlBusSender.Post(
                         new MonitorEvent(
                             _instanceName, 
                             MonitorEventType.ExitHandler, 
-                            _handlerName, 
+                            _handlerName,
+                            _handlerFullAssemblyName,
                             JsonConvert.SerializeObject(command), 
-                            Clock.Now().GetValueOrDefault()));
+                            timeAfterHandle,
+                            (timeAfterHandle-timeBeforeHandle).Milliseconds));
                         
                     return command;
                 }
                 catch (Exception e)
                 {
+                    var timeOnException = Clock.Now().GetValueOrDefault();
                     _controlBusSender.Post(
                         new MonitorEvent(
                             _instanceName, 
                             MonitorEventType.ExceptionThrown, 
-                            _handlerName, 
+                            _handlerName,
+                            _handlerFullAssemblyName,
                             JsonConvert.SerializeObject(command), 
-                            Clock.Now().GetValueOrDefault(),
+                            timeOnException,
+                            (timeOnException - timeBeforeHandle).Milliseconds,
                             e));
                     throw;
                 }

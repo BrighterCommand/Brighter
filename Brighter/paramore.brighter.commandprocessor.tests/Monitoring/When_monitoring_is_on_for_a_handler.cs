@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using FakeItEasy;
 using Machine.Specifications;
 using Newtonsoft.Json;
@@ -80,19 +81,20 @@ namespace paramore.commandprocessor.tests.Monitoring
 
         private It _should_have_an_instance_name_before = () => s_beforeEvent.InstanceName.ShouldEqual("UnitTests"); //set in the config
         private It _should_post_the_event_type_to_the_control_bus_before = () => s_beforeEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
-        private It _should_post_the_handler_name_to_the_control_bus_before = () => s_beforeEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_post_the_handler_fullname_to_the_control_bus_before = () => s_beforeEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_post_the_handler_name_to_the_control_bus_before = () => s_beforeEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).FullName);
         private It _should_include_the_underlying_request_details_before = () => s_beforeEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
-        private It should_post_the_time_of_the_request_before = () => s_beforeEvent.EventTime.ShouldEqual(s_at);
+        private It _should_post_the_time_of_the_request_before = () => s_beforeEvent.EventTime.ShouldEqual(s_at);
+        private It _should_elapsed_before_as_zero = () => s_beforeEvent.TimeElapsedMs.ShouldEqual(0);
         private It _should_have_an_instance_name_after = () => s_afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
         private It _should_post_the_event_type_to_the_control_bus_after= () => s_afterEvent.EventType.ShouldEqual(MonitorEventType.ExitHandler);
-        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_post_the_handler_fullname_to_the_control_bus_after = () => s_afterEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).FullName);
         private It _should_include_the_underlying_request_details_after = () => s_afterEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
-        private It should_post_the_time_of_the_request_after = () => s_afterEvent.EventTime.ShouldEqual(s_at);
-
-        Cleanup _tearDown = () =>
+        private It should_post_the_time_of_the_request_after = () => s_afterEvent.EventTime.ShouldBeGreaterThan(s_at);
+        private It should_post_the_elapsedtime_of_the_request_after = () =>
         {
-            Clock.Clear();
+            s_afterEvent.TimeElapsedMs.ShouldEqual((s_afterEvent.EventTime - s_beforeEvent.EventTime).Milliseconds);
         };
-
     }
 }

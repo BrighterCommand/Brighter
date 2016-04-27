@@ -10,7 +10,9 @@ namespace paramore.brighter.commandprocessor
         {
             if (OverrideTime.HasValue)
             {
-                return OverrideTime;
+                var overrideTime = OverrideTime;
+                OverrideTime = OverrideTime.Value.AddMilliseconds(50);
+                return overrideTime;
             }
             else
             {

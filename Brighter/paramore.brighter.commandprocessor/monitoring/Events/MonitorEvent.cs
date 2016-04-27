@@ -76,8 +76,21 @@ namespace paramore.brighter.commandprocessor.monitoring.Events
         /// </summary>
         public DateTime EventTime { get; private set; }
 
+
+        /// <summary>
+        /// When was the duration in milliseconds?
+        /// </summary>
+        public int TimeElapsedMs { get; set; }
+
+        /// <summary>
         //What was the handler that we raised this event for? 
+        /// </summary>
         public string HandlerName { get; private set; }
+
+        /// <summary>
+        //What was the handler that we raised this event for, include full assembly path
+        /// </summary>
+        public string HandlerFullAssemblyName { get; set; }
 
         /// <summary>
         /// Which instance was this handler running on?
@@ -93,8 +106,10 @@ namespace paramore.brighter.commandprocessor.monitoring.Events
             string instanceName,
             MonitorEventType eventType, 
             string handlerName,
+            string handlerFullName,
             string requestBody,
             DateTime eventTime,
+            int elapsedMilliseconds,
             Exception exception = null
             )
             :base(Guid.NewGuid())
@@ -102,8 +117,10 @@ namespace paramore.brighter.commandprocessor.monitoring.Events
             InstanceName = instanceName;
             EventType = eventType;
             HandlerName = handlerName;
+            HandlerFullAssemblyName = handlerFullName;
             RequestBody = requestBody;
             EventTime = eventTime;
+            TimeElapsedMs = elapsedMilliseconds;
             Exception = exception;
         }
 

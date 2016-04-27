@@ -74,7 +74,7 @@ namespace paramore.commandprocessor.tests.Monitoring
         private Because _of = () =>
         {
             s_thrownException = Catch.Exception(() => s_commandProcessor.Send(s_command));
-            s_controlBusSender.Observe<MonitorEvent>(); //pop but don't inspect before
+            s_controlBusSender.Observe<MonitorEvent>(); //pop but don't inspect before.
             s_afterEvent = s_controlBusSender.Observe<MonitorEvent>();
         };
 
@@ -82,8 +82,13 @@ namespace paramore.commandprocessor.tests.Monitoring
         private It _should_monitor_the_exception = () => s_afterEvent.Exception.ShouldBeOfExactType(typeof(ApplicationException));
         private It _should_surface_the_error_message = () => s_afterEvent.Exception.Message.ShouldContain("monitored");
         private It _should_have_an_instance_name_after = () => s_afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
-        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+        private It _should_post_the_handler_fullname_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).FullName);
+        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
         private It _should_include_the_underlying_request_details_after = () => s_afterEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
-        private It should_post_the_time_of_the_request_after = () => s_afterEvent.EventTime.ShouldEqual(s_at);
+        private It should_post_the_time_of_the_request_after = () => s_afterEvent.EventTime.ShouldBeGreaterThan(s_at);
+        private It should_post_the_elapsedtime_of_the_request_after = () =>
+        {
+            s_afterEvent.TimeElapsedMs.ShouldEqual((s_afterEvent.EventTime - s_at).Milliseconds);
+        };
     }
 }
