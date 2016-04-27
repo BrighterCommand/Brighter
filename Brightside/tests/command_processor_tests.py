@@ -29,7 +29,7 @@ THE SOFTWARE.
 ***********************************************************************
 """
 import unittest
-from tests.handlers_testdoubles import MyHandler, MyCommand
+from tests.handlers_testdoubles import MyCommandHandler, MyCommand, MyEventHandler, MyEvent
 from core.command_processor import CommandProcessor
 from core.registry import Registry
 
@@ -39,14 +39,29 @@ class CommandProcessorFixture(unittest.TestCase):
     """ Command Processor tests """
 
     def setUp(self):
-        self._handler = MyHandler()
-        subscriber_registry = Registry()
-        subscriber_registry.register(MyCommand, lambda: self._handler)
-        self._commandProcessor = CommandProcessor(subscriber_registry)
-        self._command = MyCommand()
+        self._subscriber_registry = Registry()
+        self._commandProcessor = CommandProcessor(self._subscriber_registry)
 
     def test_handle_command(self):
-        """  Can we route a crequest to its associated handler """
-        self._commandProcessor.send(self._command)
+        """  Can we route a command to its associated handler """
+        self._handler = MyCommandHandler()
+        self._request = MyCommand()
+        self._subscriber_registry.register(MyCommand, lambda: self._handler)
+        self._commandProcessor.send(self._request)
 
         self.assertTrue(self._handler.called, "Expected the handle method on the handler to be called with the message")
+
+    def test_handle_event(self):
+        """ Can we route an event to its assoicated handlers """
+
+        self._handler = MyEventHandler()
+        self._other_handler = MyEventHandler()
+        self._request = MyEvent()
+        self._subscriber_registry.register(MyEvent, lambda: self._handler)
+        self._subscriber_registry.register(MyEvent, lambda: self._other_handler)
+        self._commandProcessor.publish(self._request)
+
+        self.assertTrue(self._handler.called, "The first handler should be called with the message")
+        self.assertTrue((self._other_handler, "The second handler should also be called with the message"))
+
+

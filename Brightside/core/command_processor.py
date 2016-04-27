@@ -30,6 +30,7 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
+from core.exceptions import ConfigurationException
 
 class CommandProcessor:
     """ The command processor is actually both a dispatcher - associating a a command with a handler - and a processor
@@ -46,8 +47,22 @@ class CommandProcessor:
         :return:
         """
 
-        handler= self._registry.lookup(request)
+        handler_factories = self._registry.lookup(request)
+        if len(handler_factories) != 1:
+            raise ConfigurationException("There is no handler registered for this request")
+        handler = handler_factories[0]()
         handler.handle(request)
+
+    def publish(self, request):
+        """
+        Dispatches a request. Expects zero or more target handlers
+        :param request: The request to dispatch
+        :return:
+        """
+        handler_factories = self._registry.lookup(request)
+        for factory in handler_factories:
+            handler = factory()
+            handler.handle(request)
 
 
 

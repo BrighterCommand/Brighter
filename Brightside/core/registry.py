@@ -48,10 +48,15 @@ class Registry:
         :return:
         """
         key = request.key
-        if key in self._registry:
+        is_command = request.is_command()
+        is_event = request.is_event()
+        is_present = key in self._registry
+        if is_command and is_present:
             raise ConfigurationException("A handler for this request has already been registered")
-
-        self._registry[key] = handler_factory
+        elif is_event and is_present:
+            self._registry[key].append(handler_factory)
+        elif is_command or is_event:
+            self._registry[key] = [handler_factory]
 
     def lookup(self, request):
         """
@@ -63,5 +68,5 @@ class Registry:
         if key not in self._registry:
             raise ConfigurationException("There is no handler registered for this request")
 
-        return self._registry[key]()
+        return self._registry[key]
 

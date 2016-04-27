@@ -29,14 +29,14 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-from core.handler import Handler, Command
+from core.handler import Handler, Command, Event
 
 
 class MyCommand(Command):
     pass
 
 
-class MyHandler(Handler):
+class MyCommandHandler(Handler):
     called = False
 
     def __init__(self):
@@ -52,3 +52,28 @@ class MyHandler(Handler):
     @called.setter
     def called(self, value):
         self._called = value
+
+
+class MyEvent(Event):
+    pass
+
+
+class MyEventHandler(Handler):
+    called = False
+
+    def __init__(self):
+        self._called = False
+
+    def handle(self, request):
+        self._called = True
+
+    @property
+    def called(self):
+        return self._called
+
+    @called.setter
+    def called(self, value):
+        self._called = value
+
+
+

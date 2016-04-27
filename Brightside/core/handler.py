@@ -33,11 +33,45 @@ import uuid
 from abc import ABCMeta, abstractmethod
 
 
-class Command:
+class Request(metaclass=ABCMeta):
+    """Someting we wish to route over a Command Processor"""
+    key = uuid.uuid4()
+
+    @staticmethod
+    @abstractmethod
+    def is_command():
+        return False
+
+    @staticmethod
+    @abstractmethod
+    def is_event():
+        return False
+
+
+class Command(Request):
     """ A command is a task to be done, it has affinity with a transaction, it encapsulates the arguments of the call
         to a handler
     """
-    key = uuid.uuid4()
+    @staticmethod
+    def is_command():
+        return True
+
+    @staticmethod
+    def is_event():
+        return False
+
+
+class Event(Request):
+    """ An event is a notification that something ha happened, it has affinity with a transaction, it encapsulates the
+    call to a handler
+    """
+    @staticmethod
+    def is_command():
+        return False
+
+    @staticmethod
+    def is_event():
+        return True
 
 
 class Handler(metaclass=ABCMeta):
