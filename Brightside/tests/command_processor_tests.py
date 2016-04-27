@@ -43,7 +43,7 @@ class CommandProcessorFixture(unittest.TestCase):
         self._commandProcessor = CommandProcessor(self._subscriber_registry)
 
     def test_handle_command(self):
-        """  Can we route a command to its associated handler """
+        """ given that we have a handler registered for a command, when we send a command, it should call the handler"""
         self._handler = MyCommandHandler()
         self._request = MyCommand()
         self._subscriber_registry.register(MyCommand, lambda: self._handler)
@@ -52,7 +52,7 @@ class CommandProcessorFixture(unittest.TestCase):
         self.assertTrue(self._handler.called, "Expected the handle method on the handler to be called with the message")
 
     def test_handle_event(self):
-        """ Can we route an event to its assoicated handlers """
+        """ Given that we have many handlers registered of an event, when we raise an event, it should call all the handlers"""
 
         self._handler = MyEventHandler()
         self._other_handler = MyEventHandler()
@@ -63,5 +63,39 @@ class CommandProcessorFixture(unittest.TestCase):
 
         self.assertTrue(self._handler.called, "The first handler should be called with the message")
         self.assertTrue((self._other_handler, "The second handler should also be called with the message"))
+
+    def test_missing_command_handler_registration(self):
+        """Given that we are missing a handler for a command, when we send a command, it should throw an exception"""
+
+        self._handler = MyCommandHandler()
+        self._request = MyCommand()
+
+        exception_thrown = False
+        try:
+            self._commandProcessor.send(self._request)
+        except:
+            exception_thrown = True
+
+        self.assertTrue(exception_thrown, "Expected an exception to be thrown when no handler is registered for a command")
+
+    def test_missing_event_handler_registration(self):
+        """Given that we have no handlers register for an event, when we raise an event, it should not error """
+
+        self._handler = MyEventHandler()
+        self._other_handler = MyEventHandler()
+        self._request = MyEvent()
+
+        exception_thrown = False
+        try:
+            self._commandProcessor.publish(self._request)
+        except:
+            exception_thrown = True
+
+        self.assertFalse(exception_thrown, "Did not expect an exception to be thrown where there are no handlers for an event")
+
+
+
+
+
 
 

@@ -66,7 +66,10 @@ class Registry:
         """
         key = request.key
         if key not in self._registry:
-            raise ConfigurationException("There is no handler registered for this request")
+            if request.is_command():
+                raise ConfigurationException("There is no handler registered for this request")
+            elif request.is_event():
+                return []
 
         return self._registry[key]
 

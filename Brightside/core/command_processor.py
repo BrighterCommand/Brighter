@@ -44,7 +44,7 @@ class CommandProcessor:
         """
         Dispatches a request. Expects one and one only target handler
         :param request: The request to dispatch
-        :return:
+        :return: None, will throw a ConfigurationException if more than one handler factor is registered for the command
         """
 
         handler_factories = self._registry.lookup(request)
@@ -57,7 +57,7 @@ class CommandProcessor:
         """
         Dispatches a request. Expects zero or more target handlers
         :param request: The request to dispatch
-        :return:
+        :return: None.
         """
         handler_factories = self._registry.lookup(request)
         for factory in handler_factories:
