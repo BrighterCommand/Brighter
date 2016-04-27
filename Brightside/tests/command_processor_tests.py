@@ -1,6 +1,5 @@
-#!/usr/bin/env python
 """
-File         : command_processor.py
+File         : test_request_handler.py
 Author           : ian
 Created          : 02-15-2016
 
@@ -29,25 +28,25 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
+import unittest
+from tests.handlers_testdoubles import MyHandler, MyCommand
+from core.command_processor import CommandProcessor
+from core.registry import Registry
 
 
-class CommandProcessor:
-    """ The command processor is actually both a dispatcher - associating a a command with a handler - and a processor
-        providing a pipeline for orthogonal operations to be run prior to dispatch.
-    """
+class CommandProcessorFixture(unittest.TestCase):
 
-    def __init__(self, registry):
-        self._registry = registry
+    """ Command Processor tests """
 
-    def send(self, request):
-        """
-        Dispatches a request. Expects one and one only target handler
-        :param request: The request to dispatch
-        :return:
-        """
+    def setUp(self):
+        self._handler = MyHandler()
+        subscriber_registry = Registry()
+        subscriber_registry.register(MyCommand, lambda: self._handler)
+        self._commandProcessor = CommandProcessor(subscriber_registry)
+        self._command = MyCommand()
 
-        handler= self._registry.lookup(request)
-        handler.handle(request)
+    def test_handle_command(self):
+        """  Can we route a crequest to its associated handler """
+        self._commandProcessor.send(self._command)
 
-
-
+        self.assertTrue(self._handler.called, "Expected the handle method on the handler to be called with the message")

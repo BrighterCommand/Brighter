@@ -1,5 +1,6 @@
-"""
-File         : test_request_handler.py
+#!/usr/bin/env python
+""""
+File         : handler.py
 Author           : ian
 Created          : 02-15-2016
 
@@ -29,15 +30,38 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-import unittest
-from .testdouble_handlers import MyHandler
+from core.exceptions import ConfigurationException
 
 
-class TestRequestHandler(unittest.TestCase):
+class Registry:
+    """
+        Provides a registry of commands and handlers i.e. the observer pattern
+    """
+    def __init__(self):
+        self._registry = dict()
 
-    def setUp(self):
-        self._handler = MyHandler()
+    def register(self, request, handler_factory):
+        """
+        Register the handler for the command
+        :param request: The command or event to dispatch. It must implement getKey()
+        :param handler_factory: A factory method to create the handler to dispatch to
+        :return:
+        """
+        key = request.key
+        if key in self._registry:
+            raise ConfigurationException("A handler for this request has already been registered")
 
-    def test_handle_command(self):
-        pass
+        self._registry[key] = handler_factory
+
+    def lookup(self, request):
+        """
+        Looks up the handler associated with a request - matches the key on the request to a registered handler
+        :param request: The request we want to find a handler for
+        :return:
+        """
+        key = request.key
+        if key not in self._registry:
+            raise ConfigurationException("There is no handler registered for this request")
+
+        return self._registry[key]()
 

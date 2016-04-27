@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-"""
-File         : command_processor.py
+""""
+File         : handler.py
 Author           : ian
 Created          : 02-15-2016
 
@@ -31,23 +31,6 @@ THE SOFTWARE.
 """
 
 
-class CommandProcessor:
-    """ The command processor is actually both a dispatcher - associating a a command with a handler - and a processor
-        providing a pipeline for orthogonal operations to be run prior to dispatch.
-    """
-
-    def __init__(self, registry):
-        self._registry = registry
-
-    def send(self, request):
-        """
-        Dispatches a request. Expects one and one only target handler
-        :param request: The request to dispatch
-        :return:
-        """
-
-        handler= self._registry.lookup(request)
-        handler.handle(request)
-
-
+class ConfigurationException(Exception):
+    pass
 

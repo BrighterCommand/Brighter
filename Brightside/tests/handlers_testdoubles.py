@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-""""
-File         : request_handler.py
+"""
+File         : my_handler.py
 Author           : ian
 Created          : 02-15-2016
 
@@ -30,24 +29,26 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-from abc import ABCMeta, abstractmethod
+from core.handler import Handler, Command
 
 
-class Handler(metaclass=ABCMeta):
+class MyCommand(Command):
+    pass
+
+
+class MyHandler(Handler):
+    called = False
 
     def __init__(self):
-        self._next = None
+        self._called = False
 
-    @abstractmethod
-    def __call__(self, parameters):
-        if self._next is not None:
-            return self._next(parameters)
-        return
+    def handle(self, request):
+        self._called = True
 
     @property
-    def next(self):
-        return self._next
+    def called(self):
+        return self._called
 
-    @next.setter
-    def next(self, value):
-        self._next = value
+    @called.setter
+    def called(self, value):
+        self._called = value

@@ -1,5 +1,6 @@
-"""
-File         : my_handler.py
+#!/usr/bin/env python
+""""
+File         : handler.py
 Author           : ian
 Created          : 02-15-2016
 
@@ -28,16 +29,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
-
-if __name__ == '__main__':
-    if __package__ is None:
-        import sys
-        from os import path
-        sys.path.append( path.dirname( path.dirname(path.abspath(__file__))))
-        from core.request_handler import Handler
-    else:
-        from ..core.request_handler import Handler
+import uuid
+from abc import ABCMeta, abstractmethod
 
 
-class MyHandler(Handler):
-    pass
+class Command:
+    """ A command is a task to be done, it has affinity with a transaction, it encapsulates the arguments of the call
+        to a handler
+    """
+    key = uuid.uuid4()
+
+
+class Handler(metaclass=ABCMeta):
+    """ Receives a message from the command dispatcher, and processes it. Forms part of a pipeline of handlers
+        A handler calls handlers that succeed it through the base class method
+    """
+
+    @abstractmethod
+    def handle(self, request):
+        pass
+
+
+
+
+
