@@ -312,6 +312,7 @@
     <Compile Include="MessageDispatch\When_A_Requeue_Count_Threshold_For_Events_Has_Been_Reached.cs" />
     <Compile Include="MessageDispatch\When_A_Requeue_Of_Command_Exception_Is_Thrown.cs" />
     <Compile Include="MessageDispatch\When_A_Requeue_Of_Event_Exception_Is_Thrown.cs" />
+    <Compile Include="MessageDispatch\When_Building_A_Dispatcher_With_Named_Gateway.cs" />
     <Compile Include="MessageDispatch\When_Configuring_A_Message_Dispatcher.cs" />
     <Compile Include="MessageDispatch\When_Building_A_Dispatcher.cs" />
     <Compile Include="MessageDispatch\When_A_Message_Fails_To_Be_Mapped_To_A_Request_And_The_Unacceptable_Message_Limit_Is_Reached.cs" />
@@ -339,6 +340,7 @@
     <Compile Include="MessageStore\MsSql\When_Wrting_Messages_To_The_Message_Store_Async.cs" />
     <Compile Include="MessagingGateway\awssqs\AWSSQSMessagingGatewayTests.cs" />
     <Compile Include="MessagingGateway\awssqs\TestAWSQueueListener.cs" />
+    <Compile Include="MessagingGateway\rmq\When_posting_a_message_via_a_named_messaging_gateway.cs" />
     <Compile Include="MessagingGateway\When_Requeuing_A_Message_With_Supported_And_Enabled_Delay.cs" />
     <Compile Include="MessagingGateway\restms\When_posting_a_message_via_the_messaging_gateway.cs" />
     <Compile Include="MessagingGateway\restms\When_parsing_a_restMS_domain.cs" />
@@ -411,6 +413,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.with-multiple-gateways.config">
+      <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="app.with-delay.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

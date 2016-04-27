@@ -40,7 +40,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway
         {
             s_gateway = A.Fake<IAmAMessageConsumer>();
 
-            s_channel = new Channel("test", s_gateway);
+            s_channel = new  Channel("test", s_gateway);
 
             s_receivedMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
