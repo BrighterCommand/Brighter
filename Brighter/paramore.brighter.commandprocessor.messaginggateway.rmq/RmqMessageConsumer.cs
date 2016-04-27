@@ -74,8 +74,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="routingKey">The routing key.</param>
         /// <param name="isDurable"></param>
         /// <param name="logger">The logger.</param>
-        public RmqMessageConsumer(string queueName, string routingKey, bool isDurable) 
-            : this(queueName, routingKey, isDurable, LogProvider.GetCurrentClassLogger()) {}
+        public RmqMessageConsumer(string queueName, string routingKey, bool isDurable, string connectionName = "") 
+            : this(queueName, routingKey, isDurable, LogProvider.GetCurrentClassLogger(), connectionName) {}
 
 
         /// <summary>
@@ -86,7 +86,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="routingKey">The routing key.</param>
         /// <param name="isDurable"></param>
         /// <param name="logger">The logger.</param>
-        public RmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger) : base(logger)
+        public RmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger, string connectionName = "") : base(logger, connectionName)
         {
             _queueName = queueName;
             _routingKey = routingKey;

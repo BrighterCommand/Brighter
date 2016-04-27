@@ -79,19 +79,133 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
             set { this["queues"] = value; }
         }
 
+        [ConfigurationProperty("", IsRequired = false, IsDefaultCollection = true)]
+        public Connections Connections
+        {
+            get { return base[""] as Connections; }
+        }
+
         /// <summary>
         /// Gets the configuration.
         /// </summary>
         /// <returns>RMQMessagingGatewayConfigurationSection.</returns>
         public static RMQMessagingGatewayConfigurationSection GetConfiguration()
         {
-            var configuration =
-                ConfigurationManager.GetSection("rmqMessagingGateway") as RMQMessagingGatewayConfigurationSection;
+            var configuration = ConfigurationManager.GetSection("rmqMessagingGateway") as RMQMessagingGatewayConfigurationSection;
 
             if (configuration != null)
-                return configuration;
+            {
+                var foundConfiguration = configuration.Connections;
+                if (foundConfiguration.Count == 0)
+                {
+                    return configuration;
+                }
+                if (foundConfiguration.Count == 1)
+                {
+                    var onlyConnection = foundConfiguration.GetConnection();
+                    return new RMQMessagingGatewayConfigurationSection
+                    {
+                        AMPQUri = onlyConnection.AMPQUri,
+                        Exchange = onlyConnection.Exchange,
+                        Queues = onlyConnection.Queues
+                    };
+                }
+                throw new ConfigurationException(string.Format("Found {0} rmq Configuration sections, but no name provided", foundConfiguration.Count));
+            }
 
             return new RMQMessagingGatewayConfigurationSection();
+        }
+
+        public static RMQMessagingGatewayConfigurationSection GetConfiguration(string connectionName)
+        {
+            if (string.IsNullOrWhiteSpace(connectionName)) return GetConfiguration();
+
+            var configuration = ConfigurationManager.GetSection("rmqMessagingGateway") as RMQMessagingGatewayConfigurationSection;
+
+            if (configuration != null)
+            {
+                var foundConfiguration = configuration.Connections.GetConnection(connectionName);
+                if (foundConfiguration != null)
+                {
+                    return new RMQMessagingGatewayConfigurationSection
+                    {
+                        AMPQUri = foundConfiguration.AMPQUri,
+                        Exchange = foundConfiguration.Exchange, 
+                        Queues = foundConfiguration.Queues
+                    };
+                }
+            }
+            return new RMQMessagingGatewayConfigurationSection();
+        }
+    }
+
+    [ConfigurationCollection(typeof(Connection), AddItemName = "connection")]
+    public class Connections : ConfigurationElementCollection
+    {
+        protected override ConfigurationElement CreateNewElement()
+        {
+            return new Connection();
+        }
+
+        protected override ConfigurationElement CreateNewElement(string elementName)
+        {
+            return new Connection {Name = elementName};
+        }
+
+        protected override object GetElementKey(ConfigurationElement element)
+        {
+            return ((Connection) element).Name;
+        }
+
+        public Connection GetConnection(string connectionName)
+        {
+            return base.BaseGet(connectionName) as Connection;
+        }
+
+        internal Connection GetConnection()
+        {
+            return BaseGet(0) as Connection;
+        }
+    }
+
+    public class Connection : ConfigurationElement
+    {
+        /// <summary>
+        /// Sets Unique name for the connection
+        /// </summary>
+        [ConfigurationProperty("name", DefaultValue = "", IsRequired = true, IsKey = true)]
+        public string Name
+        {
+            get { return (string)this["name"]; }
+            set { this["name"] = value; }
+        }
+        /// <summary>
+        /// Gets or sets the ampq URI.
+        /// </summary>
+        /// <value>The ampq URI.</value>
+        [ConfigurationProperty("amqpUri")]
+        public AMQPUriSpecification AMPQUri
+        {
+            get { return this["amqpUri"] as AMQPUriSpecification; }
+            set { this["amqpUri"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the exchange.
+        /// </summary>
+        /// <value>The exchange.</value>
+        [ConfigurationProperty("exchange", IsRequired = true)]
+        public Exchange Exchange
+        {
+            get { return this["exchange"] as Exchange; }
+            set { this["exchange"] = value; }
+        }
+
+        [ConfigurationProperty("queues", IsRequired = false)]
+        public Queues Queues
+        {
+            get { return this["queues"] as Queues; }
+            set { this["queues"] = value; }
         }
     }
 

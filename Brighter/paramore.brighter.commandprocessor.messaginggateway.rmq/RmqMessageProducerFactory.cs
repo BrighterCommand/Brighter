@@ -45,12 +45,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     public class RmqMessageProducerFactory : IAmAMessageProducerFactory
     {
         private readonly ILog _logger;
+        private readonly string _connectionName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
         /// </summary>
-        public RmqMessageProducerFactory()
-            :this(LogProvider.GetCurrentClassLogger())
+        public RmqMessageProducerFactory(string connectionName = "")
+            :this(LogProvider.GetCurrentClassLogger(), connectionName)
         {}
 
 
@@ -58,9 +59,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RmqMessageProducerFactory(ILog logger)
+        public RmqMessageProducerFactory(ILog logger, string connectionName = "")
         {
             _logger = logger;
+            _connectionName = connectionName;
         }
 
         /// <summary>
@@ -71,7 +73,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAMessageProducer.</returns>
         public IAmAMessageProducer Create()
         {
-            return new RmqMessageProducer(_logger);
+            return new RmqMessageProducer(_logger, _connectionName);
         }
     }
 }

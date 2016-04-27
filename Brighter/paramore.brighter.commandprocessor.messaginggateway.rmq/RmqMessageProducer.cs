@@ -64,6 +64,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="logger">The logger.</param>
         public RmqMessageProducer(ILog logger) : base(logger) { }
 
+        public RmqMessageProducer(ILog logger, string connectionName) : base(logger, connectionName) { }
+
+        public RmqMessageProducer(string connectionName)
+            : base(connectionName)
+        {
+        }
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>
