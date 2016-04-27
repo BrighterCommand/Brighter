@@ -36,6 +36,7 @@ namespace paramore.commandprocessor.tests.Monitoring
     public class When_Serializing_A_Monitoring_Event
     {
         private const string InstanceName = "Paramore.Tests";
+        private const string HandlerFullAssemblyName = "Paramore.Dummy.Handler, with some Assembly information";
         private const string HandlerName = "Paramore.Dummy.Handler";
         private static MonitorEventMessageMapper s_monitorEventMessageMapper;
         private static MonitorEvent s_monitorEvent;
@@ -44,12 +45,14 @@ namespace paramore.commandprocessor.tests.Monitoring
 
         private Establish context = () =>
         {
-            Clock.OverrideTime = DateTime.UtcNow;
+            _overrideTime = DateTime.UtcNow;
+            Clock.OverrideTime = _overrideTime;
 
             s_monitorEventMessageMapper = new MonitorEventMessageMapper();
 
             s_originalRequestAsJson = JsonConvert.SerializeObject(new MyCommand());
-            var @event = new MonitorEvent(InstanceName, MonitorEventType.EnterHandler, HandlerName, s_originalRequestAsJson, Clock.Now().Value);
+            _elapsedMilliseconds = 34;
+            var @event = new MonitorEvent(InstanceName, MonitorEventType.EnterHandler, HandlerName, HandlerFullAssemblyName, s_originalRequestAsJson, Clock.Now().Value, _elapsedMilliseconds);
             s_message = s_monitorEventMessageMapper.MapToMessage(@event);
 
         };
@@ -58,8 +61,12 @@ namespace paramore.commandprocessor.tests.Monitoring
 
         private It _should_have_the_correct_instance_name = () => s_monitorEvent.InstanceName.ShouldEqual(InstanceName);
         private It _should_have_the_correct_handler_name = () => s_monitorEvent.HandlerName.ShouldEqual(HandlerName);
+        private It _should_have_the_correct_handler_full_assembly_name = () => s_monitorEvent.HandlerFullAssemblyName.ShouldEqual(HandlerFullAssemblyName);
         private It _should_have_the_correct_monitor_type = () => s_monitorEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
         private It _should_have_the_original_request_as_json = () => s_monitorEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
-        private It _should_have_the_correct_event_time = () => s_monitorEvent.EventTime.ShouldEqual(Clock.Now().Value);
+        private It _should_have_the_correct_event_time = () => s_monitorEvent.EventTime.ShouldEqual(_overrideTime);
+        private It _should_have_the_correct_time_elapsed = () => s_monitorEvent.TimeElapsedMs.ShouldEqual(_elapsedMilliseconds);
+        private static int _elapsedMilliseconds;
+        private static DateTime _overrideTime;
     }
 }

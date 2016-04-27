@@ -38,6 +38,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         private bool _isMonitoringEnabled;
         private string _handlerName;
         private string _instanceName;
+        private string _handlerFullAssemblyName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MonitorHandlerAsync{T}"/> class.
@@ -67,6 +68,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
             _isMonitoringEnabled = (bool)initializerList[0];
             _handlerName = (string)initializerList[1];
             _instanceName = (string)initializerList[2];
+            _handlerFullAssemblyName = (string)initializerList[3];
         }
 
         /// <summary>
@@ -80,6 +82,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
             if (!_isMonitoringEnabled) return await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
 
             ExceptionDispatchInfo capturedException = null;
+            var timeBeforeHandle = Clock.Now().GetValueOrDefault();
             try
             {
                 if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
@@ -89,24 +92,28 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
                             _instanceName,
                             MonitorEventType.EnterHandler,
                             _handlerName,
+                            _handlerFullAssemblyName,
                             JsonConvert.SerializeObject(command),
-                            Clock.Now().GetValueOrDefault()),
+                            timeBeforeHandle,
+                            0),
                         ContinueOnCapturedContext,
                         ct).ConfigureAwait(ContinueOnCapturedContext);
                 }
 
                 await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
 
-
                 if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
                 {
+                    var timeAfterHandle = Clock.Now().GetValueOrDefault();
                     await _controlBusSender.PostAsync(
                         new MonitorEvent(
                             _instanceName,
                             MonitorEventType.ExitHandler,
                             _handlerName,
+                            _handlerFullAssemblyName,
                             JsonConvert.SerializeObject(command),
-                            Clock.Now().GetValueOrDefault()),
+                            timeAfterHandle,
+                            (timeAfterHandle - timeBeforeHandle).Milliseconds),
                         ContinueOnCapturedContext,
                         ct).ConfigureAwait(ContinueOnCapturedContext);
                 }
@@ -123,14 +130,17 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
             {
                 if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
                 {
+                    var timeOnException = Clock.Now().GetValueOrDefault();
                     //can't await inside a catch block
                     await _controlBusSender.PostAsync(
                         new MonitorEvent(
                             _instanceName,
                             MonitorEventType.ExceptionThrown,
                             _handlerName,
+                            _handlerFullAssemblyName,
                             JsonConvert.SerializeObject(command),
-                            Clock.Now().GetValueOrDefault(),
+                            timeOnException,
+                            (timeOnException - timeBeforeHandle).Milliseconds,
                             capturedException.SourceException),
                         ContinueOnCapturedContext,
                         ct).ConfigureAwait(ContinueOnCapturedContext);
