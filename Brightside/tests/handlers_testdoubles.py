@@ -30,6 +30,7 @@ THE SOFTWARE.
 """
 
 from core.handler import Handler, Command, Event
+from poll import retry
 
 
 class MyCommand(Command):
@@ -37,8 +38,6 @@ class MyCommand(Command):
 
 
 class MyCommandHandler(Handler):
-    called = False
-
     def __init__(self):
         self._called = False
 
@@ -59,8 +58,6 @@ class MyEvent(Event):
 
 
 class MyEventHandler(Handler):
-    called = False
-
     def __init__(self):
         self._called = False
 
@@ -75,5 +72,33 @@ class MyEventHandler(Handler):
     def called(self, value):
         self._called = value
 
+class MyHandlerSupportingRetry(Handler):
+    def __init__(self):
+        self._called = False
+        self._callCount = 0
+
+    @retry(RuntimeError, times=3, interval=1)
+    def handle(self, request):
+        self._callCount += 1
+        if self._callCount <= 2:
+            raise RuntimeError("Fake error to check for retry")
+        else:
+            self._called = True
+
+    @property
+    def called(self):
+        return self._called
+
+    @called.setter
+    def called(self, value):
+        self._called = value
+
+    @property
+    def callCount(self):
+        return self._callCount
+
+    @callCount.setter
+    def callCount(self, value):
+        self._callCount = value
 
 
