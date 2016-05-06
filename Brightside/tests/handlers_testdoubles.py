@@ -30,7 +30,7 @@ THE SOFTWARE.
 """
 
 from core.handler import Handler, Command, Event
-from poll import retry
+from poll import retry, circuitbreaker
 
 
 class MyCommand(Command):
@@ -101,4 +101,64 @@ class MyHandlerSupportingRetry(Handler):
     def callCount(self, value):
         self._callCount = value
 
+class MyHandlerBreakingAfterRetry(Handler):
+    def __init__(self):
+        self._called = False
+        self._callCount = 0
 
+    @retry(RuntimeError, times=3, interval=1)
+    def handle(self, request):
+        self._callCount += 1
+        if self._callCount <= 3:
+            raise RuntimeError("Fake error to check for retry")
+        else:
+            #We should not get here, as we will run out of retries
+            self._called = True
+
+    @property
+    def called(self):
+        return self._called
+
+    @called.setter
+    def called(self, value):
+        self._called = value
+
+    @property
+    def callCount(self):
+        return self._callCount
+
+    @callCount.setter
+    def callCount(self, value):
+        self._callCount = value
+
+
+class MyHandlerBreakingCircuitAfterThreeFailures(Handler):
+    def __init__(self):
+        self._called = False
+        self._callCount = 0
+
+    @retry(RuntimeError)
+    @circuitbreaker(RuntimeError, 3, 60)
+    def handle(self, request):
+        self._callCount += 1
+        if self._callCount <= 3:
+            raise RuntimeError("Fake error to check for circuit broken")
+        else:
+            #We should not get here, as we will run out of retries
+            self._called = True
+
+    @property
+    def called(self):
+        return self._called
+
+    @called.setter
+    def called(self, value):
+        self._called = value
+
+    @property
+    def callCount(self):
+        return self._callCount
+
+    @callCount.setter
+    def callCount(self, value):
+        self._callCount = value

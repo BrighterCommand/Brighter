@@ -30,9 +30,10 @@ THE SOFTWARE.
 ***********************************************************************
 """
 import unittest
-from tests.handlers_testdoubles import MyHandlerSupportingRetry, MyCommand
+from tests.handlers_testdoubles import MyHandlerSupportingRetry, MyHandlerBreakingAfterRetry, MyHandlerBreakingCircuitAfterThreeFailures, MyCommand
 from core.command_processor import CommandProcessor
 from core.registry import Registry
+from poll import CircuitBrokenError
 
 class PipelineTests(unittest.TestCase):
 
@@ -62,8 +63,41 @@ class PipelineTests(unittest.TestCase):
 
     def test_exceed_retry_on_command(self):
         """ given that we have a retry policy for a command, when we raise an exception, then we should bubble the exception out after n retries"""
-        pass
+        self._handler = MyHandlerBreakingAfterRetry()
+        self._request = MyCommand()
+        self._subscriber_registry.register(MyCommand, lambda: self._handler)
 
-    def test_handle_circuit_breaker_on_command(selfself):
-        """ given that we have a handler registered for a command         """
-        pass
+        exception_raised = False
+        try:
+            self._commandProcessor.send(self._request)
+        except RuntimeError:
+            exception_raised = True
+
+        self.assertTrue(exception_raised, "Exepcted the exception to bubble out, when we run out of retries")
+        self.assertFalse(self._handler.called, "Did not expect the handle method on the handler to be called with the message")
+        self.assertTrue(self._handler.callCount == 3, "Expected two retries of the pipeline")
+
+    def test_handle_circuit_breaker_on_command(self):
+        """ given that we have a circuit breaker policy for a command, when we raise an exception, then we should break the circuit after n retries"""
+        self._handler = MyHandlerBreakingCircuitAfterThreeFailures()
+        self._request = MyCommand()
+        self._subscriber_registry.register(MyCommand, lambda: self._handler)
+
+        exception_raised = False
+        try:
+            self._commandProcessor.send(self._request)
+        except RuntimeError:
+            exception_raised = True
+
+        # Now see if the circuit is broken following the failed call
+        circuit_broken = False
+        try:
+            self._commandProcessor.send(self._request)
+        except CircuitBrokenError:
+            circuit_broken = True
+
+        self.assertTrue(exception_raised, "Exepcted an exception to be raised, when we run out of retries")
+        self.assertTrue(circuit_broken, "Expected the circuit to be broken to further calls")
+        self.assertFalse(self._handler.called, "Did not expect the handle method on the handler to be called with the message")
+        self.assertTrue(self._handler.callCount == 3, "Expected two retries of the pipeline")
+
