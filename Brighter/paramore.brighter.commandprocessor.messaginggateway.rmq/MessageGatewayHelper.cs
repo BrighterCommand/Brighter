@@ -37,9 +37,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         internal static void DeclareExchangeForConfiguration(this IModel channel, RMQMessagingGatewayConfigurationSection configuration)
         {
             if (configuration.Exchange.SupportDelay)
-                channel.ExchangeDeclare(configuration.Exchange.Name, "x-delayed-message", configuration.Exchange.Durable, autoDelete: false, arguments: new Dictionary<string, object> { { "x-delayed-type", "direct" } });
+                channel.ExchangeDeclare(configuration.Exchange.Name, "x-delayed-message", configuration.Exchange.Durable, autoDelete: false, arguments: new Dictionary<string, object> { { "x-delayed-type", configuration.Exchange.Type } });
             else
-                channel.ExchangeDeclare(configuration.Exchange.Name, ExchangeType.Direct, configuration.Exchange.Durable);
+                channel.ExchangeDeclare(configuration.Exchange.Name, configuration.Exchange.Type, configuration.Exchange.Durable);
         }
     }
 }
