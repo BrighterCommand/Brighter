@@ -46,13 +46,14 @@ Paramore contributors (sorted alphabeticaly)
   * Documentation for Tasks examples
  
 **[Anthony Peyron] (https://github.com/MrHypnos)**
-
  * Stability fixes for Service Activator
  * Gateway connection pooling
 
 **[Francesco Pighi](https://github.com/fpighi)**
-
   * SQL Message Store
+  * Various fixes
+
+**[tmschlot](https://github.com/tmschlot)**
   * Various fixes
 
 **[Daniel Stockhammer](https://github.com/dstockhammer?tab=activity)** 
