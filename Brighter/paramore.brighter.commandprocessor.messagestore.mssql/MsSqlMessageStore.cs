@@ -56,7 +56,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
     public class MsSqlMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreAsync<Message>,
         IAmAMessageStoreViewer<Message>, IAmAMessageStoreViewerAsync<Message>
     {
-        private const int MsSqlDuplicateKeyError = 2601;
+        private const int MsSqlDuplicateKeyError = 2627;
         private const int SqlCeDuplicateKeyError = 25016;
         private readonly MsSqlMessageStoreConfiguration _configuration;
         private readonly JavaScriptSerializer _javaScriptSerializer;
