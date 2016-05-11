@@ -54,7 +54,8 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
     /// </summary>
     public class MsSqlCommandStore : IAmACommandStore, IAmACommandStoreAsync
     {
-        private const int MsSqlDuplicateKeyError = 2601;
+        private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
+        private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
         private const int SqlCeDuplicateKeyError = 25016;
         private readonly MsSqlCommandStoreConfiguration _configuration;
         private readonly ILog _log;
@@ -99,16 +100,21 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 }
                 catch (SqlException sqlException)
                 {
-                    if (sqlException.Number != MsSqlDuplicateKeyError) throw;
-                    _log.WarnFormat(
-                        "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
-                        command.Id);
+                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                    {
+                        _log.WarnFormat(
+                            "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                            command.Id);
+                        return;
+                    }
+
+                    throw;
                 }
                 catch (SqlCeException sqlCeException)
                 {
                     if (sqlCeException.NativeError != SqlCeDuplicateKeyError) throw;
                     _log.WarnFormat(
-                        "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                        "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
                         command.Id);
                 }
             }
@@ -159,16 +165,21 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 }
                 catch (SqlException sqlException)
                 {
-                    if (sqlException.Number != MsSqlDuplicateKeyError) throw;
-                    _log.WarnFormat(
-                        "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
-                        command.Id);
+                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                    {
+                        _log.WarnFormat(
+                            "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                            command.Id);
+                        return;
+                    }
+
+                    throw;
                 }
                 catch (SqlCeException sqlCeException)
                 {
                     if (sqlCeException.NativeError != SqlCeDuplicateKeyError) throw;
                     _log.WarnFormat(
-                        "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                        "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
                         command.Id);
                 }
             }
