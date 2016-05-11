@@ -73,3 +73,12 @@ class Registry:
 
         return self._registry[key]
 
+
+class MessageMapperRegistry:
+    """
+        Provides a registry of message mappers, used to serialize a command to a message, which a producer can send over the wire
+    """
+    def __init__(self):
+        self._registry = dict()
+
+
