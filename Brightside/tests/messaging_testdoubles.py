@@ -31,3 +31,28 @@ THE SOFTWARE.
 """
 
 import unittest
+
+
+class FakeMessageStore:
+    def __init__(self):
+        self._message_was_added = None
+        self._messages = []
+
+    @property
+    def message_was_added(self):
+        return self._message_was_added
+
+    def get_message(self, id):
+        for msg in self._messages:
+            if msg.id == id:
+                return msg
+        return None
+
+
+class FakeProducer:
+    def __init__(self):
+        self._was_sent_message = None
+
+    @property
+    def was_sent_message(self):
+        return self._was_sent_message

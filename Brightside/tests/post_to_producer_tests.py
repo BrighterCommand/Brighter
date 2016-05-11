@@ -32,18 +32,30 @@ THE SOFTWARE.
 
 import unittest
 from core.registry import MessageMapperRegistry
+from tests.messaging_testdoubles import FakeMessageStore, FakeProducer
 from core.command_processor import CommandProcessor
 from tests.handlers_testdoubles import MyCommand
+
 
 class PostTests(unittest.TestCase):
     def setUp(self):
         self._messageMapperRegistry = MessageMapperRegistry()
-        self._commandProcessor = CommandProcessor(self._messageMapperRegistry)
+        self._message_store = FakeMessageStore()
+        self._producer = FakeProducer()
+        self._commandProcessor = CommandProcessor(message_mapper_registry=self._messageMapperRegistry, message_store=self._message_store, producer=self._producer)
 
     def test_handle_command(self):
         """ given that we have a message mapper and producer registered for a commnd, when we post a command, it should send via the producer"""
         self._request = MyCommand()
         self._commandProcessor.post(self._request)
+
+        self.assertTrue(self._message_store.message_was_added, "Expected a message to be added")
+        self.assertTrue(self._message_store.get_message(self._request.id), "Exepcted the command to be converted into a message")
+        self.assertTrue(self._producer.was_sent_message, "Expected a message to be sent via the producer")
+
+
+
+
 
 
 

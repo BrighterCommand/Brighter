@@ -37,8 +37,11 @@ class CommandProcessor:
         providing a pipeline for orthogonal operations to be run prior to dispatch.
     """
 
-    def __init__(self, registry):
+    def __init__(self, registry=None, message_mapper_registry=None, message_store=None, producer=None):
         self._registry = registry
+        self._message_mapper_registry = message_mapper_registry
+        self._message_store = message_store
+        self._producer = producer
 
     def send(self, request):
         """

@@ -49,7 +49,7 @@ class PipelineTests(unittest.TestCase):
 
     def setUp(self):
         self._subscriber_registry = Registry()
-        self._commandProcessor = CommandProcessor(self._subscriber_registry)
+        self._commandProcessor = CommandProcessor(registry=self._subscriber_registry)
 
     def test_handle_retry_on_command(self):
         """ given that we have a retry plocy for a command, when we raise an exception, then we should retry n times or until succeeds """
@@ -59,7 +59,7 @@ class PipelineTests(unittest.TestCase):
         self._commandProcessor.send(self._request)
 
         self.assertTrue(self._handler.called, "Expected the handle method on the handler to be called with the message")
-        self.assertTrue(self._handler.callCount == 3, "Expected two retries of the pipeline")
+        self.assertTrue(self._handler.call_count == 3, "Expected two retries of the pipeline")
 
     def test_exceed_retry_on_command(self):
         """ given that we have a retry policy for a command, when we raise an exception, then we should bubble the exception out after n retries"""
@@ -75,7 +75,7 @@ class PipelineTests(unittest.TestCase):
 
         self.assertTrue(exception_raised, "Exepcted the exception to bubble out, when we run out of retries")
         self.assertFalse(self._handler.called, "Did not expect the handle method on the handler to be called with the message")
-        self.assertTrue(self._handler.callCount == 3, "Expected two retries of the pipeline")
+        self.assertTrue(self._handler.call_count == 3, "Expected two retries of the pipeline")
 
     def test_handle_circuit_breaker_on_command(self):
         """ given that we have a circuit breaker policy for a command, when we raise an exception, then we should break the circuit after n retries"""
@@ -99,5 +99,5 @@ class PipelineTests(unittest.TestCase):
         self.assertTrue(exception_raised, "Exepcted an exception to be raised, when we run out of retries")
         self.assertTrue(circuit_broken, "Expected the circuit to be broken to further calls")
         self.assertFalse(self._handler.called, "Did not expect the handle method on the handler to be called with the message")
-        self.assertTrue(self._handler.callCount == 3, "Expected two retries of the pipeline")
+        self.assertTrue(self._handler.call_count == 3, "Expected two retries of the pipeline")
 

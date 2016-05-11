@@ -40,7 +40,7 @@ class CommandProcessorFixture(unittest.TestCase):
 
     def setUp(self):
         self._subscriber_registry = Registry()
-        self._commandProcessor = CommandProcessor(self._subscriber_registry)
+        self._commandProcessor = CommandProcessor(registry=self._subscriber_registry)
 
     def test_handle_command(self):
         """ given that we have a handler registered for a command, when we send a command, it should call the handler"""

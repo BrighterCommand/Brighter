@@ -34,7 +34,7 @@ from poll import retry, circuitbreaker
 
 
 class MyCommand(Command):
-    pass
+   pass
 
 
 class MyCommandHandler(Handler):
@@ -94,11 +94,11 @@ class MyHandlerSupportingRetry(Handler):
         self._called = value
 
     @property
-    def callCount(self):
+    def call_count(self):
         return self._callCount
 
-    @callCount.setter
-    def callCount(self, value):
+    @call_count.setter
+    def call_count(self, value):
         self._callCount = value
 
 class MyHandlerBreakingAfterRetry(Handler):
@@ -124,11 +124,11 @@ class MyHandlerBreakingAfterRetry(Handler):
         self._called = value
 
     @property
-    def callCount(self):
+    def call_count(self):
         return self._callCount
 
-    @callCount.setter
-    def callCount(self, value):
+    @call_count.setter
+    def call_count(self, value):
         self._callCount = value
 
 
@@ -156,9 +156,9 @@ class MyHandlerBreakingCircuitAfterThreeFailures(Handler):
         self._called = value
 
     @property
-    def callCount(self):
+    def call_count(self):
         return self._callCount
 
-    @callCount.setter
-    def callCount(self, value):
+    @call_count.setter
+    def call_count(self, value):
         self._callCount = value

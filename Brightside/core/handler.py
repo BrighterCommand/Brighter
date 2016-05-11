@@ -37,6 +37,13 @@ class Request(metaclass=ABCMeta):
     """Someting we wish to route over a Command Processor"""
     key = uuid.uuid4()
 
+    def __init__(self):
+        self._id = uuid.uuid4()
+
+    @property
+    def id(self):
+        return self._id
+
     @staticmethod
     @abstractmethod
     def is_command():
