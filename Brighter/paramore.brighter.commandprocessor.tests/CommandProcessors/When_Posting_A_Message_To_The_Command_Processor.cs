@@ -80,7 +80,7 @@ namespace paramore.commandprocessor.tests.CommandProcessors
 
         private Cleanup cleanup = () => s_commandProcessor.Dispose();
 
-        private It _should_store_the_message_in_the_sent_command_message_repository = () => s_fakeMessageStore.MessageWasAdded.ShouldBeTrue();
+        private It _should_store_the_message_in_the_message_store = () => s_fakeMessageStore.MessageWasAdded.ShouldBeTrue();
         private It _should_send_a_message_via_the_messaging_gateway = () => s_fakeMessageProducer.MessageWasSent.ShouldBeTrue();
         private It _should_convert_the_command_into_a_message =() => s_fakeMessageStore.Get().First().ShouldEqual(s_message);
     }
