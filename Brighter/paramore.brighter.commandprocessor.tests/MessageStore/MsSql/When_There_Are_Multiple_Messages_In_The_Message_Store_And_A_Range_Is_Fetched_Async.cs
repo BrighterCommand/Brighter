@@ -37,7 +37,6 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 namespace paramore.commandprocessor.tests.MessageStore.MsSql
 {
     [Subject(typeof(MsSqlMessageStore))]
-    [Tags("MessageStoreTests")]
     public class When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched_Async
     {
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
