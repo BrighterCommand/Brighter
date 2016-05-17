@@ -118,6 +118,13 @@ namespace paramore.brighter.commandprocessor
         public Guid CorrelationId { get; set; }
 
         /// <summary>
+        /// Gets or sets the ContentType used to describe how the message payload
+        /// has been serialized.  Default value is text/plain to remain compatible
+        /// with Brigher code that pre-dates adding binary message encoding support
+        /// </summary>
+        public string ContentType { get; set; }
+
+        /// <summary>
         /// Gets or sets the reply to topic. Used when doing Request-Reply instead of Publish-Subscribe to identify
         /// the queue that the sender is listening on. Usually a sender listens on a private queue, so that they
         /// do not have to filter replies intended for other listeners.
@@ -148,6 +155,10 @@ namespace paramore.brighter.commandprocessor
             DelayedMilliseconds = 0;
             CorrelationId = correlationId.HasValue ? correlationId.Value : Guid.Empty ;
             ReplyTo = replyTo;
+
+            // Defaulting ContentType to text/plain to match the behavior of Brigher before
+            // the addition of binary message body support.
+            ContentType = "text/plain";
         }
 
         public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, Guid? correlationId = null, string replyTo = null)

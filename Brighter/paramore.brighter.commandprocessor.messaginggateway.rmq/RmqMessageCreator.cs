@@ -103,7 +103,29 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                         ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, delayedMilliseconds.Result)
                         : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
 
-                    message = new Message(messageHeader, new MessageBody(Encoding.UTF8.GetString(fromQueue.Body)));
+                    // Allows differentiation of wire serialization so that UTF8 string encoding is
+                    // no longer assumed.
+                    if (fromQueue.BasicProperties.IsContentTypePresent())
+                    {
+                        messageHeader.ContentType = fromQueue.BasicProperties.ContentType;
+                    }
+
+                    // With a text/plain message, decode it right away as a UTF8 string.  With any other
+                    // content type, defer decoding until later in the processing to allow code based 
+                    // on Brighter to have a domain specific solution.
+                    if (messageHeader.ContentType.Equals("text/plain"))
+                    {
+                        message = new Message(messageHeader, new MessageBody(Encoding.UTF8.GetString(fromQueue.Body)));
+                    }
+                    else
+                    {
+                        // Keep Body and the basicproperties.type value together to allow later deserialization based
+                        // on the type associated with the payload by the serializer.  This faciliates a model where
+                        // serialization format and topic are not tightly coupled.
+                        message = new Message(messageHeader,
+                            new MessageBody(fromQueue.Body, fromQueue.BasicProperties.Type));
+                    }
+
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));
                 }

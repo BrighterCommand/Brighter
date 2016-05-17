@@ -79,5 +79,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Tag used to identify this message in the sequence against its Id (used to perform multiple ack against Id upto Tag).
         /// </summary>
         public const string DELIVERY_TAG = Message.DeliveryTagHeaderName;
+
+        /// <summary>
+        /// The payload content type as written to the message bus
+        /// </summary>
+        public const string CONTENT_TYPE = "ContentType";
+
+        ///// <summary>
+        ///// Conveys the RMQ BasicDeliverEventArgs.Type field, which
+        ///// when used holds an indicator of what type of object/class
+        ///// the serialized payload holds.
+        ///// </summary>
+        //public const string CONTENT_SERIALIZED_TYPE = "ContentSerializedType";
     }
 }

@@ -1,0 +1,12 @@
+﻿// The Brighter Extensions only work with Proto3
+syntax = "proto3";
+
+package BrighterExample;
+
+option csharp_namespace = "Brighter.Example.Messages";
+
+// This message will have Brighter integration code generated for it because it ends in "Command"
+message SampleCommand {
+	string CommandParameter = 1;
+	float CommandValue = 2;
+}

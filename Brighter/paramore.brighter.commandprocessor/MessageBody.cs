@@ -36,6 +36,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
+using System.Text;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -46,18 +48,47 @@ namespace paramore.brighter.commandprocessor
     public class MessageBody : IEquatable<MessageBody>
     {
         /// <summary>
+        /// The message body as a byte array.
+        /// </summary>
+        public byte[] Bytes { get; private set; }
+
+        /// <summary>
+        /// The type of message encoded into Bytes.  A hint for deserialization that 
+        /// will be sent with the byte[] to allow 
+        /// </summary>
+        public string BodyType { get; private set;  }
+
+        /// <summary>
         /// The message body as a string - usually used to store the message body as JSON or XML.
         /// </summary>
         /// <value>The value.</value>
-        public string Value { get; private set; }
+        public string Value
+        {
+            get
+            {
+                return Encoding.UTF8.GetString(Bytes);
+            }
+        }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MessageBody"/> class.
+        /// Initializes a new instance of the <see cref="MessageBody"/> class with a string.  Use Value property to retrieve.
         /// </summary>
         /// <param name="body">The body of the message, usually XML or JSON.</param>
         public MessageBody(string body)
         {
-            Value = body;
+            Bytes = Encoding.UTF8.GetBytes(body);
+            BodyType = String.Empty;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
+        /// </summary>
+        /// <param name="body"></param>
+        /// <param name="bodyType">Hint for deserilization, the type of message encoded in body</param>
+        public MessageBody(byte[] body, string bodyType)
+        {
+            Bytes = body;
+            BodyType = bodyType;
         }
 
         /// <summary>
@@ -67,7 +98,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(MessageBody other)
         {
-            return Value == other.Value;
+            return Bytes.SequenceEqual(other.Bytes) && BodyType.Equals(other.BodyType);
         }
 
         /// <summary>
@@ -89,7 +120,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
         public override int GetHashCode()
         {
-            return (Value != null ? Value.GetHashCode() : 0);
+            return (Bytes != null ? Bytes.GetHashCode() : 0);
         }
 
         /// <summary>
