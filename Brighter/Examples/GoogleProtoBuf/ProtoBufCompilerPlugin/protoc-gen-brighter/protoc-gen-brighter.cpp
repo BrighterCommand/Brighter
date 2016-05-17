@@ -28,10 +28,8 @@ class BrighterCodeGenerator : public gp::compiler::CodeGenerator
 		std::string *error) const
 	{
 		// So far as I was able to tell I don't know enough to put this into the directory
-		// path that we are compiling to, so to keep it out of the source assume bin/Release subdirectory
-		// as per visual studio standards.  Having it in the Release sub-directory will get the file
-		// to be included in the clean action from the IDE.
-		std::string LogFileName = "bin/Release/protoc-gen-brighter.log";
+		// path that we are compiling to, so write it to the working directory.
+		std::string LogFileName = "protoc-gen-brighter.log";
 
 		std::ofstream log;
 		log.open(LogFileName, std::ios::app | std::ios::out);
