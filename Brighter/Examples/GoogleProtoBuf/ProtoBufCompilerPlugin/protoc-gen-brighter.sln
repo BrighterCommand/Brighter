@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "protoc-gen-brighter", "protoc-gen-brighter\protoc-gen-brighter.vcxproj", "{2E7781D9-2F97-4BBD-A7CE-7B7B72642F56}"
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 2
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = http://tfs2013:8080/tfs/bidevelopmentcollection
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = protoc-gen-brighter\\protoc-gen-brighter.vcxproj
+		SccProjectName1 = protoc-gen-brighter
+		SccLocalPath1 = protoc-gen-brighter
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2E7781D9-2F97-4BBD-A7CE-7B7B72642F56}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2E7781D9-2F97-4BBD-A7CE-7B7B72642F56}.Debug|Win32.Build.0 = Debug|Win32
+		{2E7781D9-2F97-4BBD-A7CE-7B7B72642F56}.Release|Win32.ActiveCfg = Release|Win32
+		{2E7781D9-2F97-4BBD-A7CE-7B7B72642F56}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

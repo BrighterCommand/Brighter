@@ -123,8 +123,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 _exchangeName,
                 message.Header.Topic,
                 false,
-                CreateBasicProperties(messageId, message.Header.TimeStamp, headers),
-                Encoding.UTF8.GetBytes(message.Body.Value));
+                CreateBasicProperties(messageId, message.Header.TimeStamp, message.Body.BodyType,
+                    message.Header.ContentType, headers),
+                message.Header.ContentType == "text/plain"
+                    ? Encoding.UTF8.GetBytes(message.Body.Value)
+                    : message.Body.Bytes);
         }
 
         /// <summary>
@@ -169,16 +172,33 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 String.Empty,
                 queueName,
                 false,
-                CreateBasicProperties(messageId, message.Header.TimeStamp, headers),
-                Encoding.UTF8.GetBytes(message.Body.Value));
+                CreateBasicProperties(messageId, message.Header.TimeStamp, message.Body.BodyType, message.Header.ContentType, headers),
+                message.Header.ContentType == "text/plain"
+                    ? Encoding.UTF8.GetBytes(message.Body.Value)
+                    : message.Body.Bytes);
         }
 
-        private IBasicProperties CreateBasicProperties(Guid id, DateTime timeStamp, IDictionary<string, object> headers = null)
+        /// <summary>
+        /// Helper method to create the basic properties object used by RMQ to convey common additional characteristics
+        /// about the message
+        /// </summary>
+        /// <param name="id">Unique message identifier</param>
+        /// <param name="timeStamp">Timestamp associated with the message</param>
+        /// <param name="type">Serialization type information to facilitate interoperability with consumers that may not be using a Data Type Channel pattern and thus need additional information to interpret the message body</param>
+        /// <param name="contentType">Indicates how the content was serialized.  Examples are text/plan (the default) and application/x-protobuf for Google Protocol Buffers</param>
+        /// <param name="headers">Optional headers</param>
+        /// <returns></returns>
+        private IBasicProperties CreateBasicProperties(Guid id, DateTime timeStamp, string type, string contentType, IDictionary<string, object> headers = null)
         {
             var basicProperties = _channel.CreateBasicProperties();
 
             basicProperties.DeliveryMode = 1;
-            basicProperties.ContentType = "text/plain";
+            basicProperties.ContentType = false == string.IsNullOrEmpty(contentType) ? contentType : "text/plain";
+
+            if (false == string.IsNullOrEmpty(type))
+            {
+                basicProperties.Type = type;
+            }
             basicProperties.MessageId = id.ToString();
             basicProperties.Timestamp = new AmqpTimestamp(UnixTimestamp.GetUnixTimestampSeconds(timeStamp));
 

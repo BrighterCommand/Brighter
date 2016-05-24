@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ProjectSchemaDefinitions xmlns="http://schemas.microsoft.com/build/2009/properties" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+  <ItemType Name="ProtoBufItem" DisplayName="Protocol Buffer Schema Item" />
+  <ContentType Name="ProtoBufContent" ItemType="ProtoBufItem" DisplayName="Protocol Buffer Schema Content" />
+  <FileExtension Name="*.proto" ContentType="ProtoBufContent" />
+</ProjectSchemaDefinitions>
+
+
+<!-- Based on http://miken-1gam.blogspot.com/2013/01/visual-studio-and-custom-build-rules.html -->

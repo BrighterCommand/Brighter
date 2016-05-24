@@ -1,0 +1,19 @@
+﻿// The Brighter Extensions only work with Proto3
+syntax = "proto3";
+
+package BrighterExample;
+
+option csharp_namespace = "Brighter.Example.Messages";
+
+
+// This message will have Brighter integration code generated for it because it ends in "Event"
+message SampleEvent {
+	int32 EventIdentifier = 1;
+
+	message EventPayload {
+		string message = 1;
+	}
+
+	repeated EventPayload Messages = 2;
+	string Summary = 3;
+}

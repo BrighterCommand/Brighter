@@ -1,0 +1,13 @@
+﻿// The Brighter Extensions only work with Proto3
+syntax = "proto3";
+
+package BrighterExample;
+
+option csharp_namespace = "Brighter.Example.Messages";
+
+// Because the message class name does not end in "Event", "Command", "Request" or "Response" no Brighter
+// integration code is generated.  This behavior can be altered in the protoc-gen-brighter plug-in 
+// for the Google protoc.exe compiler that parses these .proto files.
+message NoBrighterExtensionsMessage {
+	int32 SomeField = 1;
+}

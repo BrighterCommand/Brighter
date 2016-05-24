@@ -1,0 +1,8 @@
+The protoc-gen-brighter.exe is a plug-in for the Google Protocol Buffers protoc.exe compiler that creates Brigher specific files 
+to allow ProtoBuf generated classes to be derived from IRequest and thus be first class message objects within Brighter.
+
+The compiled binary is included here, but can be re-built with the project included in the Brigher examples if you need it to 
+follow different rules.
+
+The protoc-gen-brighter.exe plug-in looks for message class names that end in "Event", "Request", "Response" and "Command".  When
+the message name ends in one of these it will produce the Brighter partial class extensions needed.

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+  This build target allows for translation from a .proto file that is included in a csproj file into one or more c# source files
+  
+  The recommend use method is to uncomment the lines that add the files directly into the <Compile> ItemGroup as part of the compile
+  and to have only the .proto files in the project.  The downside is that the VS IntelliSense engine then does not know about
+  the compiled output (since it happens at build time), and the IDE gets very confused.  Setting your message assembly up such that
+  it builds stand-alone and publishes to an internal NuGet repo is a good solution to this. Then your projects which must share the
+  definitions can include the messaging library through NuGet.
+  
+  For the purpose of this Brigher example I am hand-including the generated files directly in the .csproj file.
+  
+  To use this custom build type in your own project copy the ProtoBufCompile.targets and ProtoBufCompile.xml files
+  into the same directory as the .csproj file.  Open the .csproj file and include the ProtoBufCompile.targets file 
+  as is done in this example's ProtoBufMessages.csproj file.
+  
+  For every item you want to compile as a Protocol Buffers file (typical extension is .proto) set the Build property
+  on the file to "ProtoBufItem"
+  -->
+ <ItemGroup>
+  <PropertyPageSchema Include="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml" />
+
+  <AvailableItemName Include="ProtoBufItem">
+   <Targets>GenerateProtoBufCode</Targets>
+  </AvailableItemName>
+ </ItemGroup>
+
+ <Target
+  Name="GenerateProtoBufCode"
+  BeforeTargets="BeforeBuild"
+  Inputs="%(ProtoBufItem.Identity)"
+  Outputs="$(OutDir)\cs\%(ProtoBufItem.Filename)$(GeneratedFileExtension)">
+
+  <!-- Create output directories for the C# generated files -->
+  <MakeDir Directories="$(MSBuildProjectDirectory)\Generated"/> 
+   <!-- Compile the .proto file into respective outputs -->
+  <!-- 
+  For .net call out to a custom plugin that generates the extensions required for making our protobuf generated classes Brighter compatible.
+  https://developers.google.com/protocol-buffers/docs/reference/cpp/google.protobuf.compiler.plugin describes the additional command line options.
+  -->
+  <Exec Command="&quot;$(SolutionDir)Examples\GoogleProtoBuf\protobuf\bin\protoc.exe&quot; --proto_path=&quot;$(MSBuildProjectDirectory)&quot; --csharp_out=&quot;$(MSBuildProjectDirectory)\Generated&quot; --csharp_opt=file_extension=$(GeneratedFileExtension) --plugin=protoc-gen-brighter=&quot;$(SolutionDir)Examples\GoogleProtoBuf\protobuf\bin\protoc-gen-brighter.exe&quot; --brighter_out=&quot;$(MSBuildProjectDirectory)\Generated&quot; &quot;$(MSBuildProjectDirectory)\%(ProtoBufItem.Identity)&quot; --error_format=msvs"/>
+
+   <!-- Add the C# Assembly to the list of compile targets for this project.  C++, Java and JavaScript are code-only outputs.  C# is a code and assembly -->
+  <ItemGroup>
+    <!-- If there is a Brighter Extensions file generated as well, then include it -->
+
+    <!-- UNCOMMENT THESE TWO LINES TO HAVE THE .cs FILES FROM YOUR .proto FILE AUTOMATICALLY INCLUDED IN THE ASSEMBLY -->
+    <!--    <Compile Include="$(OutDir)\cs\%(ProtoBufItem.Filename).BrighterExtensions$(GeneratedFileExtension)" Condition="Exists('$(OutDir)\cs\%(ProtoBufItem.Filename).BrighterExtensions$(GeneratedFileExtension)')"/> -->
+    <!--  	<Compile Include="$(OutDir)\cs\%(ProtoBufItem.Filename)$(GeneratedFileExtension)"/> -->
+  </ItemGroup>
+ </Target>
+ 
+ <!-- As part of a clean, remove our generated code outputs -->
+ <Target Name="CleanProtoBufCode" BeforeTargets="Clean">
+   <!--  <RemoveDir Directories="$(MSBuildProjectDirectory)\Generated"/> -->
+  <Delete Files="$(MSBuildProjectDirectory)\$(OutDir)\protoc-gen-brighter.log"/>
+ </Target>
+ </Project>
+
+ <!-- Based on http://miken-1gam.blogspot.com/2013/01/visual-studio-and-custom-build-rules.html -->
+
