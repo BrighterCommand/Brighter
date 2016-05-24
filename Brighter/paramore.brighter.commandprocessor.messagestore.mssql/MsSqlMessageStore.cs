@@ -56,7 +56,8 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
     public class MsSqlMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreAsync<Message>,
         IAmAMessageStoreViewer<Message>, IAmAMessageStoreViewerAsync<Message>
     {
-        private const int MsSqlDuplicateKeyError = 2627;
+        private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
+        private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
         private const int SqlCeDuplicateKeyError = 25016;
         private readonly MsSqlMessageStoreConfiguration _configuration;
         private readonly JavaScriptSerializer _javaScriptSerializer;
@@ -104,7 +105,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                 }
                 catch (SqlException sqlException)
                 {
-                    if (sqlException.Number == MsSqlDuplicateKeyError)
+                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
                         _log.WarnFormat(
                             "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
@@ -163,7 +164,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                 }
                 catch (SqlException sqlException)
                 {
-                    if (sqlException.Number == MsSqlDuplicateKeyError)
+                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
                         _log.WarnFormat(
                             "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
