@@ -20,6 +20,8 @@
  	- Brighter provides a Command Processor, using a 'Russian Doll' model to allow a pipeline of handlers to operate on a command.
 * A task queue allows a one process to send work to be handled asynchronously to another process, using a message queue as the channel, for processing. A common use case is to help a web server scale by handing off a request to another process for back-end processing. This allows both a faster ack and throttling of the request arrival rate to that which can be handled by a back end processing component. For another project with this goal, see [Celery](https://github.com/celery/celery)
  	- Brighter provides a Task Queue implementation for handling commands asynchronously via a work queue. 
+
+## Getting started
 * More detailed documentation on the project can be found on the GitHub pages for the project here: [Paramore](http://iancooper.github.io/Paramore/)
 
 
