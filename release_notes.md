@@ -7,7 +7,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 ## Master ##
 
-## Release 6.028 ##
+## Release 6.28 ##
 
 Fix issue with encoding of non-string types and transmission of correlation id https://github.com/iancooper/Paramore/pull/180
 
