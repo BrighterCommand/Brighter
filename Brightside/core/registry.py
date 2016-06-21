@@ -40,16 +40,16 @@ class Registry:
     def __init__(self):
         self._registry = dict()
 
-    def register(self, request, handler_factory):
+    def register(self, requestClass, handler_factory):
         """
         Register the handler for the command
-        :param request: The command or event to dispatch. It must implement getKey()
+        :param requestClass: The command or event to dispatch. It must implement getKey()
         :param handler_factory: A factory method to create the handler to dispatch to
         :return:
         """
-        key = request.key
-        is_command = request.is_command()
-        is_event = request.is_event()
+        key = requestClass.key
+        is_command = requestClass.is_command()
+        is_event = requestClass.is_event()
         is_present = key in self._registry
         if is_command and is_present:
             raise ConfigurationException("A handler for this request has already been registered")
@@ -80,5 +80,18 @@ class MessageMapperRegistry:
     """
     def __init__(self):
         self._registry = dict()
+
+    def register(self, requestClass, mapper_factory):
+        """Adds a message mapper to a factory, using the requests key"""
+        key = request_key
+        if key not in self._registry:
+            self._registry[key].append(mapper_factory)
+        else:
+            raise ConfigurationException("There is already a message mapper defined for this key; there can be only one")
+
+
+
+
+
 
 

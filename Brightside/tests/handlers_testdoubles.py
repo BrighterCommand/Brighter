@@ -72,6 +72,7 @@ class MyEventHandler(Handler):
     def called(self, value):
         self._called = value
 
+
 class MyHandlerSupportingRetry(Handler):
     def __init__(self):
         self._called = False
@@ -100,6 +101,7 @@ class MyHandlerSupportingRetry(Handler):
     @call_count.setter
     def call_count(self, value):
         self._callCount = value
+
 
 class MyHandlerBreakingAfterRetry(Handler):
     def __init__(self):
@@ -162,3 +164,10 @@ class MyHandlerBreakingCircuitAfterThreeFailures(Handler):
     @call_count.setter
     def call_count(self, value):
         self._callCount = value
+
+
+class MyCommandMessageMapper:
+
+    @staticmethod
+    def map_to_message(self, request):
+        pass

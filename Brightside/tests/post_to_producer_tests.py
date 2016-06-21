@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+i#!/usr/bin/env python
 """"
 File         : post_to_producer_tests.py
 Author           : ian
@@ -27,7 +27,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-***********************************************************************
+**********************************************************************i*
 """
 
 import unittest
@@ -39,7 +39,11 @@ from tests.handlers_testdoubles import MyCommand
 
 class PostTests(unittest.TestCase):
     def setUp(self):
+        self._mycommand_message_mapper = MyCommandMessageMapper()
         self._messageMapperRegistry = MessageMapperRegistry()
+        self._messageMapperRegistry.register(MyCommand, MyCommandMessageMapper.map_to_message())
+
+        self._messageMapperRegistry
         self._message_store = FakeMessageStore()
         self._producer = FakeProducer()
         self._commandProcessor = CommandProcessor(

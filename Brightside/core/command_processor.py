@@ -32,6 +32,7 @@ THE SOFTWARE.
 
 from core.exceptions import ConfigurationException
 
+
 class CommandProcessor:
     """ The command processor is actually both a dispatcher - associating a a command with a handler - and a processor
         providing a pipeline for orthogonal operations to be run prior to dispatch.
@@ -66,6 +67,16 @@ class CommandProcessor:
         for factory in handler_factories:
             handler = factory()
             handler.handle(request)
+
+    def post(self, request):
+        """
+        Dispatches a request over middleware. Returns when message put onto outgoing channel by producer,
+        does not wait for response from a consuming application i.e. is fire-and-forget
+        :param request: The request to dispatch
+        :return: None
+        """
+
+        message_mapper = self._message_mapper_registry.lookup(request)
 
 
 

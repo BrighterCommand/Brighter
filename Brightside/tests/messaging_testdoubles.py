@@ -51,7 +51,10 @@ class FakeMessageStore:
 
 class FakeProducer:
     def __init__(self):
-        self._was_sent_message = None
+        self._was_sent_message = False
+
+    def send(self, message):
+        self._was_sent_message = True
 
     @property
     def was_sent_message(self):
