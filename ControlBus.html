@@ -29,35 +29,56 @@
     </header>
     <section>
         <h1>Brighter</h1>
-        <h2>Ports & Adapters</h2>
-        <p><a href="http://alistair.cockburn.us/Hexagonal+architecture">Ports and Adapters</a> is a <em>hierarchical architectural style</em> which makes clear the separation between the <em>Domain Model</em> -
-            which contains the rules of our application - and the <em>Adapters</em>, which abstract the inputs to the system and our outputs. The advantage of this style is that the
-            application is decoupled from the nature of the input or output device, and any frameworks used to implement them.</p>
-        <p>For example when a client POSTs a request to the REST API exposed by our application the Adapter recieves the HTTP request, transforms it into a call onto our Domain,
-            and marshals the response back out to the client over HTTP. Similarly if our application needs to retrieve persisted entity state to initialise the domain it calls out to an
-            Adapter that wraps access to the Db.</p>
-        <img src="images/Hexagonal%20Architecture.png"/>
-        <p>The layer between the Adapter and the Domain is identified as the <em>Ports</em> layer. Our Domain is inside the Port, Adapters for external concerns are on the outisde of the port.
-            The notion of a 'port' invokes the OS idea that any device that adheres to a know protocol can be plugged into a port. Similarly, many adapters may use our Ports.</p>
-        <p>One particular asset is <em>testability</em>. Our tests can be written against the Ports, instead of the Adapters. This decouples our tests from the Adapters - which may change over time
-            as we add or remove frameworks that we wish to use to surface the application (for example switching from Webforms to ASP.NET MVC). It also means that our functionality must be contained
-            inside the Port, against which the test runs, and cannot bleed into other layers. A traditional problem of layered architectures is bleeding of domain logic out of the Domain and into the
-            <em>Presentation</em> layer. The Ports and Adapters model seeks to solve this, by forcing Adapters to use the API exposed by the port. Writing TDD unit tests at this layer means that the
-            test driven-development pushes the domain logic required to implement them behind the Port.</p>
-        <p>We have a notion of <em>primary</em> and <em>secondary</em> actors in use cases which map to the Adapter and Port layer. Primary actors exercise our application, they are inputs into our application.
-            A primary actor uses a primary Adapter, which calls a primary Port - the chain is one of inputs into our application. So our REST API is a primary Adapter, so are our tests.
-            A secondary actor is one that our application exercises as part of its work, they are outputs from out application. So our Db is a secondary Adapter, as our mocks and we talk to them
-            over a secondary Port. Many applications seem to consist only of one primary and one secondary, but once we factor in tests we may begin to observe that
-            we have more, and by building for multiple Ports we make our application more modifiable to new ports in future.</p>
-        <p>We often show primary Ports on the left and secondary Ports on the right.</p>
-        <p>A Port is the 'use case boundary'. Use cases become problematic when they become focused on technology concerns. Use cases written against the ports can elide those concerns and focus
-            on the application rules, making them easier to write and maintain. There is a correlation here between the use case boundary and the test boundary - tests should focus on the behaviour
-            expressed by a use case, not on a unit of code. Contrary to Cockburn, I don't suggest using a ATDD like FIT or SpecFlow here, preferring to use our xUnit test tool here (and not test
-            implementation details).</p>
-        <h1>Clean and Onion Architectures</h1>
-        <p>A number of architectures have similar properties to a ports and adapters architecture, such as the <a href="http://jeffreypalermo.com/blog/the-onion-architecture-part-1/">Onion Architecture</a>.
-            In essence they all have the hierarchical architectural style, specifically a layered style, with similar invariants and constraints around the components and connectors within that architectural style.
-            <a href="http://blog.8thlight.com/uncle-bob/archive.html">Bob Martin</a> clubs these together under the heading <a href="http://blog.8thlight.com/uncle-bob/2012/08/13/the-clean-architecture.html">Clean Architecture</a></p>
+        <h2>Control Bus</h2>
+        <h3>What is a Control Bus?</h3>
+        <p>A <a href="https://en.wikipedia.org/wiki/Control_bus">Control Bus is defined by Wikipedia</a> as:</p>
+         <p>
+         <cite>(part of) a computer bus, used by CPUs for communicating with other devices within the computer. While the address bus carries the information on which device the CPU is communicating with and the data bus carries the actual data being processed, the control bus carries commands from the CPU and returns status signals from the devices</cite>
+        </p>
+        <p>Within a system comprising Distributed Task Queues it can be thought of as a mechanism for controlling and managing the queues without interferring with   dispatch to those queues.<p>
+
+        <p>The control bus within Brighter is aligned to that defined by Greghor Hope:</p>
+        <p><cite>"Use a Control Bus to manage an enterprise integration system." in his <a href="http://www.enterpriseintegrationpatterns.com/patterns/messaging/ControlBus.html">Enterprise Integration Patterns</a></cite></p> 
+        <img src="http://www.enterpriseintegrationpatterns.com/img/ControlBus.gif" />
+
+        <p>Gregor additionally further states that a Control Bus;</p>
+        <p><cite>uses the same messaging mechanism used by the application data, but uses separate channels to transmit data</cite></p>
+
+        <h3>Brighter Control Bus</h3>
+        <p>Within a Brighter context this results in the use of the same mechanism of dispatch for control bus messages as for Commands or Events - namely using the ChannelFactory (this ensures the same mechanism is used). An alternative channel is configured by using an alternative <b>broker</b> to transmit the Control Messages. This ensures independence to the Task Messages and adds additional resilience in times of faults on the Messaging broker.<p>
+
+        <p>The Control Bus is to be used for Controlling and Configuring Tasks queues. It is also used for broadcasting and issuing <a href="Monitoring.html">Monitoring information</a></p>
+
+        <h3><a name="configure"></a>Configuring a Control Bus</h3>
+        <p>
+            As covered in <a href="DistributedTaskQueueConfiguration.html">Configuring the Distributed Task Queue</a> the following need to be considered:
+            <ul>
+                <li>Channel Factory</li>
+                <li>Connection List</li>
+            </ul>
+        </p>
+        <p>
+            For the following example we will again be using a rabbitMQ Channel, with an independent, named connection. We'll assume the Configuration Section is already present in the config file (again detailed in <a href="DistributedTaskQueueConfiguration.html"> Configuring the Distributed Task Queue</a>)'.
+        </p>
+        <p>
+            Then the channel connection for the control bus can be specified to use rabbit using the <a href="RabbitMQConfiguration.html">standard rabbitMq configuration for brighter</a>:
+        </p>
+             <pre><code>&lt;rmqMessagingGateway&gt;
+    &lt;connection name=&quot;monitoring&quot;&gt;
+      &lt;amqpUri uri=&quot;amqp://uri:port&quot; connectionRetryCount=&quot;9&quot; retryWaitInMilliseconds=&quot;50&quot; circuitBreakTimeInMilliseconds=&quot;60000&quot; /&gt;
+      &lt;exchange name=&quot;exchangeName&quot; type=&quot;direct&quot; durable=&quot;true&quot; /&gt;
+      &lt;queues highAvailability=&quot;true&quot; /&gt;
+    &lt;/connection&gt;
+&lt;/rmqMessagingGateway&gt;</code></pre>
+            
+        <p>
+            The next step is to instantiate a Control Bus using the Brighter Factory, referring to the Connection configured, in this case "monitoring":
+        </p>
+             <pre><code>container.Register(new ControlBusSenderFactory()
+.Create(new InMemoryMessageStore(), new RmqMessageProducer("monitoring")));</code></pre>
+        <p>
+            A Control Bus is now active and ready to transmit monitoring messages.
+        </p>
     </section>
     <footer>
         <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
