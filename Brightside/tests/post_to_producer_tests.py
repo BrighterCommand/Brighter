@@ -1,4 +1,4 @@
-i#!/usr/bin/env python
+#!/usr/bin/env python
 """"
 File         : post_to_producer_tests.py
 Author           : ian
@@ -34,7 +34,7 @@ import unittest
 from core.registry import MessageMapperRegistry
 from tests.messaging_testdoubles import FakeMessageStore, FakeProducer
 from core.command_processor import CommandProcessor
-from tests.handlers_testdoubles import MyCommand
+from tests.handlers_testdoubles import MyCommand, MyCommandMessageMapper
 
 
 class PostTests(unittest.TestCase):

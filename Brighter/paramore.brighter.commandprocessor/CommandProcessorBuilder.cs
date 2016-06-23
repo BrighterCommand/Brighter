@@ -235,8 +235,7 @@ namespace paramore.brighter.commandprocessor
                     asyncMessageStore: _asyncMessageStore,
                     messageProducer: _messagingGateway,
                     asyncMessageProducer: _asyncMessagingGateway,
-                    messageStoreTimeout: _messageStoreWriteTimeout,
-                    messageGatewaySendTimeout: _messagingGatewaySendTimeout
+                    messageStoreTimeout: _messageStoreWriteTimeout
                     );
             }
         }

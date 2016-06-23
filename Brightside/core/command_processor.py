@@ -77,6 +77,6 @@ class CommandProcessor:
         """
 
         message_mapper = self._message_mapper_registry.lookup(request)
-
+        message = message_mapper(request)
 
 

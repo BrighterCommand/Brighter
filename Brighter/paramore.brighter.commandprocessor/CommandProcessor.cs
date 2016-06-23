@@ -326,10 +326,9 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
-            int messageStoreTimeout = 300,
-            int messageGatewaySendTimeout = 300
+            int messageStoreTimeout = 300
             )
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.GetCurrentClassLogger()) {}
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.GetCurrentClassLogger(), messageStoreTimeout) {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
@@ -343,7 +342,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="asyncMessageStore">The message store supporting async/await.</param>
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
@@ -352,12 +350,11 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducerAsync asyncMessageProducer,
-            int messageStoreTimeout = 300,
-            int messageGatewaySendTimeout = 300
+            int messageStoreTimeout = 300
             )
             : this(
                 subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, mapperRegistry,
-                asyncMessageStore, asyncMessageProducer, LogProvider.GetCurrentClassLogger())
+                asyncMessageStore, asyncMessageProducer, LogProvider.GetCurrentClassLogger(), messageStoreTimeout)
         {}
 
         /// <summary>
@@ -373,7 +370,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="logger">The logger.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -383,8 +379,7 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
             ILog logger,
-            int messageStoreTimeout = 300,
-            int messageGatewaySendTimeout = 300
+            int messageStoreTimeout = 300
             )
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
         {
@@ -407,7 +402,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="logger">The logger.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
@@ -417,8 +411,7 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducerAsync asyncMessageProducer,
             ILog logger,
-            int messageStoreTimeout = 300,
-            int messageGatewaySendTimeout = 300
+            int messageStoreTimeout = 300
             )
             : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, logger)
         {
@@ -443,7 +436,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -455,13 +447,12 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducer messageProducer,
             IAmAMessageProducerAsync asyncMessageProducer,
-            int messageStoreTimeout = 300,
-            int messageGatewaySendTimeout = 300
+            int messageStoreTimeout = 300
             )
             : this(
                 subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry,
                 mapperRegistry, messageStore, asyncMessageStore, messageProducer, asyncMessageProducer,
-                LogProvider.GetCurrentClassLogger())
+                LogProvider.GetCurrentClassLogger(), messageStoreTimeout)
         {}
 
         /// <summary>
@@ -480,7 +471,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="logger">The logger.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -493,8 +483,7 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageProducer messageProducer,
             IAmAMessageProducerAsync asyncMessageProducer,
             ILog logger,
-            int messageStoreTimeout = 300,
-            int messageGatewaySendTimeout = 300
+            int messageStoreTimeout = 300
             )
             : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, logger)
         {

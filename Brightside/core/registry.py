@@ -81,11 +81,11 @@ class MessageMapperRegistry:
     def __init__(self):
         self._registry = dict()
 
-    def register(self, requestClass, mapper_factory):
+    def register(self, requestClass, mapper_func):
         """Adds a message mapper to a factory, using the requests key"""
-        key = request_key
+        key = requestClass.key
         if key not in self._registry:
-            self._registry[key].append(mapper_factory)
+            self._registry[key].append(mapper_func)
         else:
             raise ConfigurationException("There is already a message mapper defined for this key; there can be only one")
 
