@@ -26,8 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
-
 using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.Logging;
 
@@ -123,8 +121,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 _exchangeName,
                 message.Header.Topic,
                 false,
-                CreateBasicProperties(messageId, message.Header.TimeStamp, headers),
-                Encoding.UTF8.GetBytes(message.Body.Value));
+                CreateBasicProperties(messageId, message.Header.TimeStamp, message.Body.BodyType, message.Header.ContentType, headers),
+                message.Body.Bytes);
         }
 
         /// <summary>
@@ -169,16 +167,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 String.Empty,
                 queueName,
                 false,
-                CreateBasicProperties(messageId, message.Header.TimeStamp, headers),
-                Encoding.UTF8.GetBytes(message.Body.Value));
+                CreateBasicProperties(messageId, message.Header.TimeStamp, message.Body.BodyType, message.Header.ContentType, headers),
+                message.Body.Bytes);
         }
 
-        private IBasicProperties CreateBasicProperties(Guid id, DateTime timeStamp, IDictionary<string, object> headers = null)
+        private IBasicProperties CreateBasicProperties(Guid id, DateTime timeStamp, string type, string contentType, IDictionary<string, object> headers = null)
         {
             var basicProperties = _channel.CreateBasicProperties();
 
             basicProperties.DeliveryMode = 1;
-            basicProperties.ContentType = "text/plain";
+            basicProperties.ContentType = contentType;
+            basicProperties.Type = type;
             basicProperties.MessageId = id.ToString();
             basicProperties.Timestamp = new AmqpTimestamp(UnixTimestamp.GetUnixTimestampSeconds(timeStamp));
 

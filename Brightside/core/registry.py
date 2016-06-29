@@ -81,13 +81,30 @@ class MessageMapperRegistry:
     def __init__(self):
         self._registry = dict()
 
-    def register(self, requestClass, mapper_func):
-        """Adds a message mapper to a factory, using the requests key"""
-        key = requestClass.key
+    def register(self, request_class, mapper_func):
+        """Adds a message mapper to a factory, using the requests key
+        :param mapper_func:
+        :param request_class:
+        """
+        key = request_class.key
         if key not in self._registry:
-            self._registry[key].append(mapper_func)
+            self._registry[key] = [mapper_func]
         else:
             raise ConfigurationException("There is already a message mapper defined for this key; there can be only one")
+
+    def lookup(self, request_class):
+        """
+        Looks up the message mapper function associated with this class. Function should take in a Request derived class
+         and return a Message derived class, for sending on the wire
+        :param request_class:
+        :return:
+        """
+        key = request_class.key
+        if key not in self._registry:
+            raise ConfigurationException("There is no message mapper associated with this key; we require a mapper")
+        else:
+            return self._registry[key]
+
 
 
 

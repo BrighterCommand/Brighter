@@ -17,9 +17,9 @@
   <DetectStackOverflow>true</DetectStackOverflow>
   <IncludeStaticReferencesInWorkspace>true</IncludeStaticReferencesInWorkspace>
   <DefaultTestTimeout>60000</DefaultTestTimeout>
-  <UseBuildConfiguration />
-  <UseBuildPlatform />
-  <ProxyProcessPath />
+  <UseBuildConfiguration></UseBuildConfiguration>
+  <UseBuildPlatform></UseBuildPlatform>
+  <ProxyProcessPath></ProxyProcessPath>
   <UseCPUArchitecture>AutoDetect</UseCPUArchitecture>
   <MSTestThreadApartmentState>STA</MSTestThreadApartmentState>
   <BuildProcessArchitecture>x86</BuildProcessArchitecture>
@@ -50,21 +50,6 @@
     </FixtureTestSelector>
     <FixtureTestSelector>
       <FixtureName>paramore.commandprocessor.tests.MessagingGateway.restms.When_posting_a_message_via_the_messaging_gateway</FixtureName>
-    </FixtureTestSelector>
-    <FixtureTestSelector>
-      <FixtureName>paramore.commandprocessor.tests.MessagingGateway.rmq.When_a_message_consumer_throws_an_already_closed_exception_when_connecting_should_retry_until_circuit_breaks</FixtureName>
-    </FixtureTestSelector>
-    <FixtureTestSelector>
-      <FixtureName>paramore.commandprocessor.tests.MessagingGateway.rmq.When_a_message_consumer_throws_an_not_supported_exception_when_connecting_should_retry_until_circuit_breaks</FixtureName>
-    </FixtureTestSelector>
-    <FixtureTestSelector>
-      <FixtureName>paramore.commandprocessor.tests.MessagingGateway.rmq.When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting_should_retry_until_circuit_breaks</FixtureName>
-    </FixtureTestSelector>
-    <FixtureTestSelector>
-      <FixtureName>paramore.commandprocessor.tests.MessagingGateway.rmq.When_multiple_threads_try_to_post_a_message_at_the_same_time</FixtureName>
-    </FixtureTestSelector>
-    <FixtureTestSelector>
-      <FixtureName>paramore.commandprocessor.tests.MessagingGateway.rmq.When_posting_a_message_via_the_messaging_gateway</FixtureName>
     </FixtureTestSelector>
     <FixtureTestSelector>
       <FixtureName>paramore.commandprocessor.tests.MessagingGateway.rmq.When_reading_a_delayed_message_via_the_messaging_gateway</FixtureName>

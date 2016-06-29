@@ -118,6 +118,12 @@ namespace paramore.brighter.commandprocessor
         public Guid CorrelationId { get; set; }
 
         /// <summary>
+        /// Gets or sets the ContentType used to describe how the message payload
+        /// has been serialized.  Default value is text/plain
+        /// </summary>
+        public string ContentType { get; set; }
+
+        /// <summary>
         /// Gets or sets the reply to topic. Used when doing Request-Reply instead of Publish-Subscribe to identify
         /// the queue that the sender is listening on. Usually a sender listens on a private queue, so that they
         /// do not have to filter replies intended for other listeners.
@@ -137,7 +143,8 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageType">Type of the message.</param>
         /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
         /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, Guid? correlationId = null, string replyTo = null)
+        /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, Guid? correlationId = null, string replyTo = null, string contentType = "text/plain")
         {
             Id = messageId;
             Topic = topic;
@@ -148,16 +155,17 @@ namespace paramore.brighter.commandprocessor
             DelayedMilliseconds = 0;
             CorrelationId = correlationId.HasValue ? correlationId.Value : Guid.Empty ;
             ReplyTo = replyTo;
+            ContentType = contentType;
         }
 
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, Guid? correlationId = null, string replyTo = null)
-            : this(messageId, topic, messageType, correlationId, replyTo)
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, Guid? correlationId = null, string replyTo = null, string contentType = "text/plain")
+            : this(messageId, topic, messageType, correlationId, replyTo, contentType)
         {
             TimeStamp = RoundToSeconds(timeStamp);
         }
 
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, int handledCount, int delayedMilliseconds, Guid? correlationId = null, string replyTo = null)
-            : this(messageId, topic, messageType, timeStamp, correlationId, replyTo)
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, int handledCount, int delayedMilliseconds, Guid? correlationId = null, string replyTo = null, string contentType = "text/plain")
+            : this(messageId, topic, messageType, timeStamp, correlationId, replyTo, contentType)
         {
             HandledCount = handledCount;
             DelayedMilliseconds = delayedMilliseconds;

@@ -166,8 +166,5 @@ class MyHandlerBreakingCircuitAfterThreeFailures(Handler):
         self._callCount = value
 
 
-class MyCommandMessageMapper:
-
-    @staticmethod
-    def map_to_message(self, request):
-        pass
+def map_to_message(request):
+    pass

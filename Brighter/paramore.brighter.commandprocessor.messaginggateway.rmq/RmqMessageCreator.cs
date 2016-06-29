@@ -103,7 +103,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                         ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, delayedMilliseconds.Result)
                         : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
 
-                    message = new Message(messageHeader, new MessageBody(Encoding.UTF8.GetString(fromQueue.Body)));
+                    message = new Message(messageHeader, new MessageBody(fromQueue.Body, fromQueue.BasicProperties.Type));
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));
                 }
