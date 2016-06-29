@@ -32,11 +32,15 @@ Paramore contributors (sorted alphabeticaly)
   * Various fixes
   * *Async methods on Command Processor
 
-**[Eddie Li](https://github.com/xiaodili)**
-  * Various fixes  
-  
 **[Olivier Kouamé](https://github.com/okouam)**
  * Various fixes
+ * 
+
+**[Eddie Li](https://github.com/xiaodili)**
+  * Various fixes   
+
+**[Scott McLewin](https://github.com/smclewin)**
+  * Binary serialization support for messages 
    
 **[Solveig Oskarsdottir] (https://github.com/solveigo)**
  * QA of Brighter
