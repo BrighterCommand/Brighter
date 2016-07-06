@@ -1,5 +1,5 @@
 {
-  "projects": [ "paramore.brighter.commandprocessor", "Examples/Greetings", "." ],
+  "projects": [ "paramore.brighter.commandprocessor" ],
   "sdk": {
     "version": "1.0.0-preview2-003121"
   }
