@@ -187,7 +187,7 @@ namespace paramore.brighter.commandprocessor
 
         internal MethodInfo FindHandlerMethod()
         {
-            var methods = GetType().GetMethods();
+            var methods = GetType().GetTypeInfo().GetMethods();
             return methods
                 .Where(method => method.Name == "Handle")
                 .SingleOrDefault(method => method.GetParameters().Count() == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest));

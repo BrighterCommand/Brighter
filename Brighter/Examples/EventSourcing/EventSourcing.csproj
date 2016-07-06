@@ -66,10 +66,6 @@
       <Project>{de5ba1bc-cf70-4465-9a23-7a28604a5949}</Project>
       <Name>paramore.brighter.commandprocessor.commandstore.mssql</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
-      <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
-      <Name>paramore.brighter.commandprocessor</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Adapters\Tests\" />

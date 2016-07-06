@@ -62,12 +62,6 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
-      <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
-      <Name>paramore.brighter.commandprocessor</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

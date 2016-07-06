@@ -1,5 +1,4 @@
 using System;
-using paramore.brighter.commandprocessor.monitoring.Configuration;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
 
 namespace paramore.brighter.commandprocessor.monitoring.Attributes

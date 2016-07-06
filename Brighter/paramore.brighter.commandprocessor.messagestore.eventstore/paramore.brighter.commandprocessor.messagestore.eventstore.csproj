@@ -52,12 +52,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
-      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
-      <Name>paramore.brighter.commandprocessor</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="packages.config" />
     <None Include="paramore.brighter.commandprocessor.messagestore.eventstore.nuspec" />
   </ItemGroup>

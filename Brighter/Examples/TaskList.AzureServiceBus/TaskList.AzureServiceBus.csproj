@@ -112,10 +112,6 @@
       <Project>{e70c6c98-e292-4919-b72a-8f2d42e9e6cc}</Project>
       <Name>paramore.brighter.commandprocessor.messaginggateway.azureservicebus</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
-      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
-      <Name>paramore.brighter.commandprocessor</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Tasks\Tasks.csproj">
       <Project>{E7900A56-DA88-46CA-8418-FB4C2BC2D326}</Project>
       <Name>Tasks</Name>

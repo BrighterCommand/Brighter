@@ -85,10 +85,6 @@
       <Project>{bd921f35-47c9-41ba-b1bc-ae9698869977}</Project>
       <Name>paramore.brighter.commandprocessor.messaginggateway.awssqs</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
-      <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
-      <Name>paramore.brighter.commandprocessor</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\paramore.brighter.serviceactivator\paramore.brighter.serviceactivator.csproj">
       <Project>{b9126b00-5a97-4c7d-b395-755456e5fa28}</Project>
       <Name>paramore.brighter.serviceactivator</Name>

@@ -206,7 +206,7 @@ namespace paramore.brighter.commandprocessor
 
         internal MethodInfo FindHandlerMethod()
         {
-            var methods = GetType().GetMethods();
+            var methods = GetType().GetTypeInfo().GetMethods();
             return methods
                 .Where(method => method.Name == "HandleAsync")
                 .SingleOrDefault(method => method.GetParameters().Count() == 2 

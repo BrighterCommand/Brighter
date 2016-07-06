@@ -132,10 +132,6 @@
       <Project>{65badb63-5f98-4f24-84d7-8c99263f88c6}</Project>
       <Name>paramore.brighter.commandprocessor.tests</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
-      <Project>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</Project>
-      <Name>paramore.brighter.commandprocessor</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

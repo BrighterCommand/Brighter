@@ -147,10 +147,6 @@
       <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>
       <Name>paramore.brighter.commandprocessor.messaginggateway.rmq</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
-      <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
-      <Name>paramore.brighter.commandprocessor</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="assets\images\brighter.ico">

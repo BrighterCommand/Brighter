@@ -131,12 +131,6 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor\paramore.brighter.commandprocessor.csproj">
-      <Project>{2acb382a-38fa-49a6-a9cd-212881d3cd37}</Project>
-      <Name>paramore.brighter.commandprocessor</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

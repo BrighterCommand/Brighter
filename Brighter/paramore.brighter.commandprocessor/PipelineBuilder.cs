@@ -39,6 +39,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using paramore.brighter.commandprocessor.extensions;
 using paramore.brighter.commandprocessor.Logging;
 
@@ -124,7 +125,7 @@ namespace paramore.brighter.commandprocessor
             attributes.Each((attribute) =>
             {
                 var handlerType = attribute.GetHandlerType();
-                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequests)))
+                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))
                 {
                     var decorator =
                         new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
@@ -144,7 +145,7 @@ namespace paramore.brighter.commandprocessor
             attributes.Each((attribute) =>
             {
                 var handlerType = attribute.GetHandlerType();
-                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequests)))
+                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))
                 {
                     var decorator =
                         new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
@@ -202,7 +203,7 @@ namespace paramore.brighter.commandprocessor
             attributes.Each(attribute =>
             {
                 var handlerType = attribute.GetHandlerType();
-                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
+                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
                 {   var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext).CreateAsyncRequestHandler();
                     lastInPipeline.SetSuccessor(decorator);
                     lastInPipeline = decorator;
@@ -220,7 +221,7 @@ namespace paramore.brighter.commandprocessor
             attributes.Each(attribute =>
             {
                 var handlerType = attribute.GetHandlerType();
-                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
+                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
                 {
                     var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext) .CreateAsyncRequestHandler();
                     decorator.ContinueOnCapturedContext = continueOnCapturedContext;
