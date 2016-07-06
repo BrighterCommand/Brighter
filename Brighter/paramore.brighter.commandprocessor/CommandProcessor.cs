@@ -94,7 +94,7 @@ namespace paramore.brighter.commandprocessor
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry)
-            : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger())
+            : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.For<CommandProcessor>())
         {}
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace paramore.brighter.commandprocessor
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry)
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger())
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, LogProvider.For<CommandProcessor>())
         {}
 
         /// <summary>
@@ -126,7 +126,7 @@ namespace paramore.brighter.commandprocessor
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry)
-            : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.GetCurrentClassLogger())
+            : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.For<CommandProcessor>())
         { }
 
         /// <summary>
@@ -219,7 +219,7 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
             int messageStoreTimeout = 300
-            ) : this(requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.GetCurrentClassLogger(), messageStoreTimeout) 
+            ) : this(requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.For<CommandProcessor>(), messageStoreTimeout) 
         {}
 
         /// <summary>
@@ -242,7 +242,7 @@ namespace paramore.brighter.commandprocessor
             )
             : this(
                 requestContextFactory, policyRegistry, mapperRegistry, asyncMessageStore, asyncMessageProducer,
-                LogProvider.GetCurrentClassLogger(), messageStoreTimeout)
+                LogProvider.For<CommandProcessor>(), messageStoreTimeout)
         {}
 
         /// <summary>
@@ -328,7 +328,7 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageProducer messageProducer,
             int messageStoreTimeout = 300
             )
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.GetCurrentClassLogger(), messageStoreTimeout) {}
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.For<CommandProcessor>(), messageStoreTimeout) {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
@@ -354,7 +354,7 @@ namespace paramore.brighter.commandprocessor
             )
             : this(
                 subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, mapperRegistry,
-                asyncMessageStore, asyncMessageProducer, LogProvider.GetCurrentClassLogger(), messageStoreTimeout)
+                asyncMessageStore, asyncMessageProducer, LogProvider.For<CommandProcessor>(), messageStoreTimeout)
         {}
 
         /// <summary>
@@ -452,7 +452,7 @@ namespace paramore.brighter.commandprocessor
             : this(
                 subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry,
                 mapperRegistry, messageStore, asyncMessageStore, messageProducer, asyncMessageProducer,
-                LogProvider.GetCurrentClassLogger(), messageStoreTimeout)
+                LogProvider.For<CommandProcessor>(), messageStoreTimeout)
         {}
 
         /// <summary>

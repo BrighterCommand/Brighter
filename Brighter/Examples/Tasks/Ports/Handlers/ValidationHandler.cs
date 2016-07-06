@@ -33,7 +33,7 @@ namespace Tasks.Ports.Handlers
         where TRequest : class, IRequest, ICanBeValidated
     {
         public ValidationHandler()
-            : this(LogProvider.GetCurrentClassLogger())
+            : this(LogProvider.For<ValidationHandler<TRequest>>())
         {}
 
         public ValidationHandler(ILog logger)

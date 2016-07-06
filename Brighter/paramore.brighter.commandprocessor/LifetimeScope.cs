@@ -52,15 +52,15 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
         public LifetimeScope(IAmAHandlerFactory handlerFactory) 
-            :this(handlerFactory, null, LogProvider.GetCurrentClassLogger())
+            :this(handlerFactory, null, LogProvider.For<LifetimeScope>())
         {}
 
         public LifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory) 
-            :this(null, asyncHandlerFactory, LogProvider.GetCurrentClassLogger())
+            :this(null, asyncHandlerFactory, LogProvider.For<LifetimeScope>())
         {}
 
         public LifetimeScope(IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync asyncHandlerFactory) 
-            :this(handlerFactory, asyncHandlerFactory, LogProvider.GetCurrentClassLogger())
+            :this(handlerFactory, asyncHandlerFactory, LogProvider.For<LifetimeScope>())
         {}
 
         public LifetimeScope(IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync asyncHandlerFactory, ILog logger)

@@ -36,7 +36,7 @@ namespace paramore.brighter.serviceactivator
 
         public ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry,
             Connection connection) 
-            : this(commandProcessor, messageMapperRegistry, connection, LogProvider.GetCurrentClassLogger()) 
+            : this(commandProcessor, messageMapperRegistry, connection, LogProvider.For<ConsumerFactory<TRequest>>()) 
         {}
 
         public ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, Connection connection, ILog logger)

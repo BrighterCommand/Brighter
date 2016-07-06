@@ -54,7 +54,7 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
         internal PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory) 
-            :this(registry, handlerFactory, LogProvider.GetCurrentClassLogger())
+            :this(registry, handlerFactory, LogProvider.For<PipelineBuilder<TRequest>>())
         {}
 
 
@@ -67,7 +67,7 @@ namespace paramore.brighter.commandprocessor
         }
 
         internal PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactoryAsync asyncHandlerFactory)
-            : this(registry, asyncHandlerFactory, LogProvider.GetCurrentClassLogger())
+            : this(registry, asyncHandlerFactory, LogProvider.For<PipelineBuilder<TRequest>>())
         { }
 
         public PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactoryAsync asyncHandlerFactory, ILog logger)

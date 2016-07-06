@@ -63,7 +63,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         /// </summary>
         /// <param name="eventStore">The active connection to an Event Store instance.</param>
         public EventStoreMessageStore(IEventStoreConnection eventStore)
-            : this(eventStore, LogProvider.GetCurrentClassLogger()) {}
+            : this(eventStore, LogProvider.For<EventStoreMessageStore>()) {}
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="EventStoreMessageStore" /> class.

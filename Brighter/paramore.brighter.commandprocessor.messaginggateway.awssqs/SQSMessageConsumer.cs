@@ -39,7 +39,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
         /// </summary>
         /// <param name="queueUrl">The queue URL.</param>
         public SqsMessageConsumer(string queueUrl)
-            : this(queueUrl, LogProvider.GetCurrentClassLogger())
+            : this(queueUrl, LogProvider.For<SqsMessageConsumer>())
         {}
 
         /// <summary>

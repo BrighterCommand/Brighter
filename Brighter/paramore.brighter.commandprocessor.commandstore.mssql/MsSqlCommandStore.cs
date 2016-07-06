@@ -65,7 +65,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         public MsSqlCommandStore(MsSqlCommandStoreConfiguration configuration)
-            : this(configuration, LogProvider.GetCurrentClassLogger()) {}
+            : this(configuration, LogProvider.For<MsSqlCommandStore>()) {}
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlCommandStore" /> class.

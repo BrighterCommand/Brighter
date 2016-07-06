@@ -40,7 +40,7 @@ namespace Tasks.Ports.Handlers
         private readonly IAmACommandProcessor _commandProcessor;
 
         public AddTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor) 
-            : this(tasksDAO, commandProcessor, LogProvider.GetCurrentClassLogger())
+            : this(tasksDAO, commandProcessor, LogProvider.For<AddTaskCommandHandler>())
         {}
 
 

@@ -71,7 +71,7 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         protected RequestHandler()
         {
-            s_logger = new Lazy<ILog>(() => LogProvider.GetCurrentClassLogger());
+            s_logger = new Lazy<ILog>(() => LogProvider.For<RequestHandler<TRequest>>());
         }
         
         /// <summary>

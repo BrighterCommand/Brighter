@@ -75,7 +75,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="isDurable"></param>
         /// <param name="logger">The logger.</param>
         public RmqMessageConsumer(string queueName, string routingKey, bool isDurable, string connectionName = "") 
-            : this(queueName, routingKey, isDurable, LogProvider.GetCurrentClassLogger(), connectionName) {}
+            : this(queueName, routingKey, isDurable, LogProvider.For<RmqMessageConsumer>(), connectionName) {}
 
 
         /// <summary>

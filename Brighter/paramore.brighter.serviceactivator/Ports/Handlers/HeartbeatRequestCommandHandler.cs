@@ -62,7 +62,7 @@ namespace paramore.brighter.serviceactivator.Ports.Handlers
         /// <param name="commandProcessor">The command processor.</param>
         /// <param name="dispatcher">The dispatcher.</param>
         public HeartbeatRequestCommandHandler(IAmACommandProcessor commandProcessor, IDispatcher dispatcher)
-            : this(LogProvider.GetCurrentClassLogger(), commandProcessor, dispatcher) {}
+            : this(LogProvider.For<HeartbeatRequestCommandHandler>(), commandProcessor, dispatcher) {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HeartbeatRequestCommandHandler"/> class.

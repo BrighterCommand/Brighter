@@ -38,7 +38,7 @@ namespace Tasks.Ports.Handlers
         private readonly IAmACommandProcessor _commandProcessor;
 
         public MailTaskReminderHandler(IAmAMailGateway mailGateway, IAmACommandProcessor commandProcessor) 
-            : this(mailGateway, commandProcessor, LogProvider.GetCurrentClassLogger())
+            : this(mailGateway, commandProcessor, LogProvider.For<MailTaskReminderHandler>())
         {}
 
         public MailTaskReminderHandler(IAmAMailGateway mailGateway, IAmACommandProcessor commandProcessor, ILog logger)

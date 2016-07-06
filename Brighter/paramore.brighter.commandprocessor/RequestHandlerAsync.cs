@@ -78,7 +78,7 @@ namespace paramore.brighter.commandprocessor
         /// Initializes a new instance of the <see cref="RequestHandlerAsync{TRequest}"/> class.
         /// </summary>
         protected RequestHandlerAsync() 
-            : this(LogProvider.GetCurrentClassLogger())
+            : this(LogProvider.For<RequestHandlerAsync<TRequest>>())
         { }
 
         /// <summary>

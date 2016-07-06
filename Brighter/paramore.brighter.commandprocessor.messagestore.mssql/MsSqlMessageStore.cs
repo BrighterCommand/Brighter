@@ -68,7 +68,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         public MsSqlMessageStore(MsSqlMessageStoreConfiguration configuration)
-            : this(configuration, LogProvider.GetCurrentClassLogger()) {}
+            : this(configuration, LogProvider.For<MsSqlMessageStore>()) {}
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlMessageStore" /> class.

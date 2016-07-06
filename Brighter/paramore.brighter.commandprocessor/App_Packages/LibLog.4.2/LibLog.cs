@@ -3,7 +3,7 @@
 //
 // https://github.com/damianh/LibLog
 //===============================================================================
-// Copyright Â© 2011-2015 Damian Hickey.  All rights reserved.
+// Copyright © 2011-2015 Damian Hickey.  All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -98,7 +98,7 @@ namespace paramore.brighter.commandprocessor.Logging
         /// 
         /// To check IsEnabled call Log with only LogLevel and check the return value, no event will be written.
         /// </remarks>
-        bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters );
+        bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters);
     }
 #endif
 
@@ -426,7 +426,7 @@ namespace paramore.brighter.commandprocessor.Logging
         /// The disable logging environment variable. If the environment variable is set to 'true', then logging
         /// will be disabled.
         /// </summary>
-        public const string DisableLoggingEnvironmentVariable = "paramore.brighter.commandprocessor_LIBLOG_DISABLE";
+        public const string DisableLoggingEnvironmentVariable = "$rootnamespace$_LIBLOG_DISABLE";
         private const string NullLogProvider = "Current Log Provider is not set. Call SetCurrentLogProvider " +
                                                "with a non-null value first.";
         private static dynamic s_currentLogProvider;
@@ -541,7 +541,7 @@ namespace paramore.brighter.commandprocessor.Logging
         static ILog GetLogger(string name)
         {
             ILogProvider logProvider = CurrentLogProvider ?? ResolveLogProvider();
-            return logProvider == null 
+            return logProvider == null
                 ? NoOpLogger.Instance
                 : (ILog)new LoggerExecutionWrapper(logProvider.GetLogger(name), () => IsDisabled);
         }
@@ -591,31 +591,31 @@ namespace paramore.brighter.commandprocessor.Logging
 #if LIBLOG_PROVIDERS_ONLY
     private
 #else
-    internal
+        internal
 #endif
     delegate bool IsLoggerAvailable();
 
 #if LIBLOG_PROVIDERS_ONLY
     private
 #else
-    internal
+        internal
 #endif
     delegate ILogProvider CreateLogProvider();
 
 #if LIBLOG_PROVIDERS_ONLY
     private
 #else
-    internal
+        internal
 #endif
     static readonly List<Tuple<IsLoggerAvailable, CreateLogProvider>> LogProviderResolvers =
-            new List<Tuple<IsLoggerAvailable, CreateLogProvider>>
-        {
+                new List<Tuple<IsLoggerAvailable, CreateLogProvider>>
+            {
             new Tuple<IsLoggerAvailable, CreateLogProvider>(SerilogLogProvider.IsLoggerAvailable, () => new SerilogLogProvider()),
             new Tuple<IsLoggerAvailable, CreateLogProvider>(NLogLogProvider.IsLoggerAvailable, () => new NLogLogProvider()),
             new Tuple<IsLoggerAvailable, CreateLogProvider>(Log4NetLogProvider.IsLoggerAvailable, () => new Log4NetLogProvider()),
             new Tuple<IsLoggerAvailable, CreateLogProvider>(EntLibLogProvider.IsLoggerAvailable, () => new EntLibLogProvider()),
             new Tuple<IsLoggerAvailable, CreateLogProvider>(LoupeLogProvider.IsLoggerAvailable, () => new LoupeLogProvider()),
-        };
+            };
 
 #if !LIBLOG_PROVIDERS_ONLY
         private static void RaiseOnCurrentLogProviderSet()
@@ -757,7 +757,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
         protected LogProviderBase()
         {
-            _lazyOpenNdcMethod 
+            _lazyOpenNdcMethod
                 = new Lazy<OpenNdc>(GetOpenNdcMethod);
             _lazyOpenMdcMethod
                = new Lazy<OpenMdc>(GetOpenMdcMethod);
@@ -885,7 +885,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                 }
                 messageFunc = LogMessageFormatter.SimulateStructuredLogging(messageFunc, formatParameters);
 
-                if(exception != null)
+                if (exception != null)
                 {
                     return LogException(logLevel, messageFunc, exception);
                 }
@@ -1373,17 +1373,17 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
             Expression severityParameter, ParameterExpression logNameParameter)
         {
             var entryType = LogEntryType;
-            MemberInitExpression memberInit = Expression.MemberInit(Expression.New(entryType), 
+            MemberInitExpression memberInit = Expression.MemberInit(Expression.New(entryType),
                 Expression.Bind(entryType.GetPropertyPortable("Message"), message),
                 Expression.Bind(entryType.GetPropertyPortable("Severity"), severityParameter),
                 Expression.Bind(
                     entryType.GetPropertyPortable("TimeStamp"),
-                    Expression.Property(null, typeof (DateTime).GetPropertyPortable("UtcNow"))),
+                    Expression.Property(null, typeof(DateTime).GetPropertyPortable("UtcNow"))),
                 Expression.Bind(
                     entryType.GetPropertyPortable("Categories"),
                     Expression.ListInit(
-                        Expression.New(typeof (List<string>)),
-                        typeof (List<string>).GetMethodPortable("Add", typeof (string)),
+                        Expression.New(typeof(List<string>)),
+                        typeof(List<string>).GetMethodPortable("Add", typeof(string)),
                         logNameParameter)));
             return memberInit;
         }
@@ -1491,7 +1491,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
         {
             Type ndcContextType = Type.GetType("Serilog.Context.LogContext, Serilog.FullNetFx");
             MethodInfo pushPropertyMethod = ndcContextType.GetMethodPortable(
-                "PushProperty", 
+                "PushProperty",
                 typeof(string),
                 typeof(object),
                 typeof(bool));
@@ -1507,7 +1507,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                     valueParam,
                     destructureObjectParam)
                 .Compile();
-            
+
             return (key, value) => pushProperty(key, value, false);
         }
 
@@ -1525,7 +1525,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
             ParameterExpression destructureObjectsParam = Expression.Parameter(typeof(bool), "destructureObjects");
             MethodCallExpression methodCall = Expression.Call(null, method, new Expression[]
             {
-                propertyNameParam, 
+                propertyNameParam,
                 valueParam,
                 destructureObjectsParam
             });
@@ -1596,7 +1596,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                     messageParam,
                     propertyValuesParam);
                 var expression = Expression.Lambda<Action<object, object, string, object[]>>(
-                    writeMethodExp, 
+                    writeMethodExp,
                     instanceParam,
                     levelParam,
                     messageParam,
@@ -1605,7 +1605,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
                 // Action<object, object, string, Exception> WriteException =
                 // (logger, level, exception, message) => { ((ILogger)logger).Write(level, exception, message, new object[]); }
-                MethodInfo writeExceptionMethodInfo = loggerType.GetMethodPortable("Write", 
+                MethodInfo writeExceptionMethodInfo = loggerType.GetMethodPortable("Write",
                     logEventLevelType,
                     typeof(Exception),
                     typeof(string),
@@ -1619,7 +1619,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                     messageParam,
                     propertyValuesParam);
                 WriteException = Expression.Lambda<Action<object, object, Exception, string, object[]>>(
-                    writeMethodExp, 
+                    writeMethodExp,
                     instanceParam,
                     levelParam,
                     exceptionParam,
@@ -1755,7 +1755,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
             MethodInfo method = logManagerType.GetMethodPortable(
                 "Write",
-                logMessageSeverityType, typeof(string), typeof(int), typeof(Exception), typeof(bool), 
+                logMessageSeverityType, typeof(string), typeof(int), typeof(Exception), typeof(bool),
                 logWriteModeType, typeof(string), typeof(string), typeof(string), typeof(string), typeof(object[]));
 
             var callDelegate = (WriteDelegate)method.CreateDelegate(typeof(WriteDelegate));
@@ -1875,7 +1875,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
                 foreach (Match match in Pattern.Matches(targetMessage))
                 {
                     int notUsed;
-                    if (!int.TryParse(match.Value.Substring(1, match.Value.Length -2), out notUsed))
+                    if (!int.TryParse(match.Value.Substring(1, match.Value.Length - 2), out notUsed))
                     {
                         targetMessage = ReplaceFirst(targetMessage, match.Value,
                             "{" + argumentIndex++ + "}");
@@ -1990,7 +1990,7 @@ namespace paramore.brighter.commandprocessor.Logging.LogProviders
 
         public void Dispose()
         {
-            if(_onDispose != null)
+            if (_onDispose != null)
             {
                 _onDispose();
             }

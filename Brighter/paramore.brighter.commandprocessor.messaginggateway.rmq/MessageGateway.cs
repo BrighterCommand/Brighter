@@ -66,7 +66,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="logger">The logger.</param>
         public MessageGateway()
-         : this(LogProvider.GetCurrentClassLogger())
+         : this(LogProvider.For<MessageGateway>())
         {}
         
         /// <summary>
@@ -79,7 +79,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         }
 
         protected MessageGateway(string connectionName) 
-            : this(LogProvider.GetCurrentClassLogger(), RMQMessagingGatewayConfigurationSection.GetConfiguration(connectionName))
+            : this(LogProvider.For<MessageGateway>(), RMQMessagingGatewayConfigurationSection.GetConfiguration(connectionName))
         {
             
         }

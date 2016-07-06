@@ -71,7 +71,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// Initializes a new instance of the <see cref="T:System.Object" /> class.
         /// </summary>
         public RestMSMessageGateway() 
-            :this(LogProvider.GetCurrentClassLogger())
+            :this(LogProvider.For<RestMSMessageGateway>())
         {}
 
         /// <summary>

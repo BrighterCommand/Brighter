@@ -56,7 +56,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
-        public RmqMessageProducer() : base(LogProvider.GetCurrentClassLogger()) { }
+        public RmqMessageProducer() : base(LogProvider.For<RmqMessageProducer>()) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.

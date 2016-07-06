@@ -59,7 +59,7 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
         /// </summary>
         /// <param name="commandStore">The store for commands that pass into the system</param>
         public CommandSourcingHandler(IAmACommandStore commandStore)
-            : this(commandStore, LogProvider.GetCurrentClassLogger())
+            : this(commandStore, LogProvider.For<CommandSourcingHandler<T>>())
         {}
 
 

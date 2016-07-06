@@ -29,7 +29,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
         /// Initializes a new instance of the <see cref="SqsMessageConsumerFactory"/> class.
         /// </summary>
         public SqsMessageConsumerFactory() 
-           : this(LogProvider.GetCurrentClassLogger())
+           : this(LogProvider.For<SqsMessageConsumerFactory>())
         {}
 
         /// <summary>

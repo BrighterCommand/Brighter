@@ -49,7 +49,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     {
         private static readonly Dictionary<string, IConnection> s_connectionPool = new Dictionary<string, IConnection>();
         private static readonly object s_lock = new object();
-        private static readonly ILog s_logger = LogProvider.GetCurrentClassLogger();
+        private static readonly ILog s_logger = LogProvider.For<MessageGatewayConnectionPool>();
 
         /// <summary>
         /// Return matching RabbitMQ connection if exist (match by amqp scheme)

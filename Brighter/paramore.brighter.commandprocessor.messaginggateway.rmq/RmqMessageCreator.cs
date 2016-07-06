@@ -38,7 +38,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         private readonly ILog _logger;
 
         public RmqMessageCreator()
-            : this(LogProvider.GetCurrentClassLogger())
+            : this(LogProvider.For<RmqMessageCreator>())
         {}
 
 

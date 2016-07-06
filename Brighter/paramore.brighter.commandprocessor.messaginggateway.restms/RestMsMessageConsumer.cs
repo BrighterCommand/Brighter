@@ -61,7 +61,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="routingKey">The routing key.</param>
         public RestMsMessageConsumer(string queueName, string routingKey) 
-            :this(queueName, routingKey, LogProvider.GetCurrentClassLogger())
+            :this(queueName, routingKey, LogProvider.For<RestMsMessageConsumer>())
         {}
 
 

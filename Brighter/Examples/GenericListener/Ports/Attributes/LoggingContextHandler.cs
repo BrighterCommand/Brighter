@@ -1,5 +1,4 @@
 ﻿using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.logging;
 using paramore.brighter.commandprocessor.logging.Attributes;
 using paramore.brighter.commandprocessor.Logging;
 
@@ -8,7 +7,7 @@ namespace GenericListener.Ports.Attributes
     public class LoggingContextHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         public LoggingContextHandler()
-            : base(LogProvider.GetCurrentClassLogger())
+            : base(LogProvider.For<LoggingContextHandler<TRequest>>())
         {
         }
 

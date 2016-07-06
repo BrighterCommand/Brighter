@@ -102,7 +102,7 @@ namespace paramore.brighter.serviceactivator
             IAmACommandProcessor commandProcessor, 
             IAmAMessageMapperRegistry messageMapperRegistry,
             IEnumerable<Connection> connections)
-            :this(commandProcessor, messageMapperRegistry, connections, LogProvider.GetCurrentClassLogger())
+            :this(commandProcessor, messageMapperRegistry, connections, LogProvider.For<Dispatcher>())
         {}
 
 

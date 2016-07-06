@@ -51,7 +51,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
         /// </summary>
         public RmqMessageProducerFactory(string connectionName = "")
-            :this(LogProvider.GetCurrentClassLogger(), connectionName)
+            :this(LogProvider.For<RmqMessageProducerFactory>(), connectionName)
         {}
 
 

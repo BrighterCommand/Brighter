@@ -98,7 +98,7 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// Initializes a new instance of the <see cref="TimeoutPolicyHandler{TRequest}"/> class.
         /// </summary>
         public TimeoutPolicyHandler()
-            : this(LogProvider.GetCurrentClassLogger()) {}
+            : this(LogProvider.For<TimeoutPolicyHandler<TRequest>>()) {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TimeoutPolicyHandler{TRequest}"/> class.

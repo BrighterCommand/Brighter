@@ -12,7 +12,7 @@ namespace paramore.brighter.serviceactivator.Ports
         private readonly ILog _logger;
 
         public ControlBusHandlerFactory(IDispatcher worker, Func<IAmACommandProcessor> commandProcessorFactory) 
-            : this(worker, LogProvider.GetCurrentClassLogger(), commandProcessorFactory)
+            : this(worker, LogProvider.For<ControlBusHandlerFactory>(), commandProcessorFactory)
         {
         }
 

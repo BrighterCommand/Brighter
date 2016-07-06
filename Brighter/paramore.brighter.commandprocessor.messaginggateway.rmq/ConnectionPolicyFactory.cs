@@ -57,7 +57,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="logger">The logger.</param>
         public ConnectionPolicyFactory()
-           : this(LogProvider.GetCurrentClassLogger(), RMQMessagingGatewayConfigurationSection.GetConfiguration())
+           : this(LogProvider.For<ConnectionPolicyFactory>(), RMQMessagingGatewayConfigurationSection.GetConfiguration())
         {}
 
         /// <summary>

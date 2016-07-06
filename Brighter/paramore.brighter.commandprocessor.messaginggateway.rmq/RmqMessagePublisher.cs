@@ -55,7 +55,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// exchangeName
         /// </exception>
         public RmqMessagePublisher(IModel channel, string exchangeName) 
-            : this(channel, exchangeName, LogProvider.GetCurrentClassLogger())
+            : this(channel, exchangeName, LogProvider.For<RmqMessagePublisher>())
         {}
 
         /// <summary>

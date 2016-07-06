@@ -54,7 +54,7 @@ namespace paramore.brighter.serviceactivator.Ports.Handlers
         /// </summary>
         /// <param name="dispatcher"></param>
         public ConfigurationCommandHandler(IDispatcher dispatcher)
-            : this(dispatcher, LogProvider.GetCurrentClassLogger()) 
+            : this(dispatcher, LogProvider.For<ConfigurationCommandHandler>()) 
         {}
 
 

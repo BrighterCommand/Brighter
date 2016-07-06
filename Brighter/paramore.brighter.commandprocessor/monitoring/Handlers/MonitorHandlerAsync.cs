@@ -45,7 +45,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// </summary>
         /// <param name="controlBusSender">The control bus command processor, to post over</param>
         public MonitorHandlerAsync(IAmAControlBusSenderAsync controlBusSender)
-            : this(controlBusSender, LogProvider.GetCurrentClassLogger())
+            : this(controlBusSender, LogProvider.For<MonitorHandlerAsync<T>>())
         { }
 
         /// <summary>

@@ -41,7 +41,7 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
         public FallbackPolicyHandler() 
-            : this(LogProvider.GetCurrentClassLogger()) 
+            : this(LogProvider.For<FallbackPolicyHandler<TRequest>>()) 
         {}
 
         /// <summary>

@@ -47,7 +47,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// </summary>
         /// <param name="controlBusSender">The control bus command processor, to post over</param>
         public MonitorHandler(IAmAControlBusSender controlBusSender)
-            : this(controlBusSender, LogProvider.GetCurrentClassLogger()) {}
+            : this(controlBusSender, LogProvider.For<MonitorHandler<T>>()) {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.

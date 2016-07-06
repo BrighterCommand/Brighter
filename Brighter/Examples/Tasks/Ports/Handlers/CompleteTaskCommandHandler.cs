@@ -41,7 +41,7 @@ namespace Tasks.Ports.Handlers
         private readonly IAmACommandProcessor _commandProcessor;
 
         public CompleteTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor)
-            :this(tasksDAO, commandProcessor, LogProvider.GetCurrentClassLogger())
+            :this(tasksDAO, commandProcessor, LogProvider.For<CompleteTaskCommandHandler>())
         {}
 
         public CompleteTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor, ILog logger)

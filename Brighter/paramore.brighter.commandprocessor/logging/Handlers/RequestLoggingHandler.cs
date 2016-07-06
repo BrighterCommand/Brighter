@@ -59,7 +59,7 @@ namespace paramore.brighter.commandprocessor.logging.Handlers
         /// </summary>
         /// <param name="logger">The logger.</param>
         public RequestLoggingHandler()
-            : this(LogProvider.GetCurrentClassLogger())
+            : this(LogProvider.For<RequestLoggingHandler<TRequest>>())
         { }
 
         /// <summary>
