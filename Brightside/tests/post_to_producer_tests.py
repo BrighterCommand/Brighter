@@ -40,7 +40,7 @@ from tests.handlers_testdoubles import MyCommand, map_to_message
 class PostTests(unittest.TestCase):
     def setUp(self):
         self._messageMapperRegistry = MessageMapperRegistry()
-        self._messageMapperRegistry.register(MyCommand, lambda: map_to_message)
+        self._messageMapperRegistry.register(MyCommand, map_to_message)
 
         self._messageMapperRegistry
         self._message_store = FakeMessageStore()

@@ -76,8 +76,10 @@ class CommandProcessor:
         :return: None
         """
 
-        message_mapper = self._message_mapper_registry.lookup(request)
+        message_mapper_list = self._message_mapper_registry.lookup(request)
+        message_mapper = message_mapper_list[0]
         message = message_mapper(request)
+        self._message_store.add(message)
         self._producer.send(message)
 
 

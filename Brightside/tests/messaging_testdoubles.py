@@ -30,9 +30,6 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-import unittest
-
-
 class FakeMessageStore:
     def __init__(self):
         self._message_was_added = None
@@ -41,6 +38,10 @@ class FakeMessageStore:
     @property
     def message_was_added(self):
         return self._message_was_added
+
+    def add(self, message):
+        self._messages.append(message)
+        self._message_was_added = True
 
     def get_message(self, id):
         for msg in self._messages:
