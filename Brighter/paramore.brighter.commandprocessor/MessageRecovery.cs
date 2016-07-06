@@ -71,7 +71,7 @@ namespace paramore.brighter.commandprocessor
 
             if (foundMessages.Count() < messageIds.Count)
             {
-                throw new SystemException("Cannot find messages " +
+                throw new IndexOutOfRangeException("Cannot find messages " +
                                           string.Join(",", messageIds.Where(id => foundMessages.All(fm => fm.Id.ToString() != id.ToString())).ToArray()));
             }
             return foundMessages;

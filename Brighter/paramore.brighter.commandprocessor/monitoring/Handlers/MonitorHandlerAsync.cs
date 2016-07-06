@@ -28,6 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.monitoring.Configuration;
 using paramore.brighter.commandprocessor.monitoring.Events;
 
 namespace paramore.brighter.commandprocessor.monitoring.Handlers
@@ -44,8 +45,9 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// Initializes a new instance of the <see cref="MonitorHandlerAsync{T}"/> class.
         /// </summary>
         /// <param name="controlBusSender">The control bus command processor, to post over</param>
-        public MonitorHandlerAsync(IAmAControlBusSenderAsync controlBusSender)
-            : this(controlBusSender, LogProvider.For<MonitorHandlerAsync<T>>())
+        /// <param name="monitorConfiguration"></param>
+        public MonitorHandlerAsync(IAmAControlBusSenderAsync controlBusSender, MonitorConfiguration monitorConfiguration)
+            : this(controlBusSender, LogProvider.For<MonitorHandlerAsync<T>>(), monitorConfiguration)
         { }
 
         /// <summary>
@@ -54,9 +56,12 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// </summary>
         /// <param name="controlBusSender">The control bus command processor, to post over</param>
         /// <param name="logger">The logger</param>
-        public MonitorHandlerAsync(IAmAControlBusSenderAsync controlBusSender, ILog logger) : base(logger)
+        /// <param name="monitorConfiguration"></param>
+        public MonitorHandlerAsync(IAmAControlBusSenderAsync controlBusSender, ILog logger, MonitorConfiguration monitorConfiguration) : base(logger)
         {
             _controlBusSender = controlBusSender;
+            _isMonitoringEnabled = monitorConfiguration.IsMonitoringEnabled;
+            _instanceName = monitorConfiguration.InstanceName;
         }
 
         /// <summary>
@@ -65,10 +70,8 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// <param name="initializerList">The initializer list.</param>
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
-            _isMonitoringEnabled = (bool)initializerList[0];
-            _handlerName = (string)initializerList[1];
-            _instanceName = (string)initializerList[2];
-            _handlerFullAssemblyName = (string)initializerList[3];
+            _handlerName = (string)initializerList[0];
+            _handlerFullAssemblyName = (string)initializerList[1];
         }
 
         /// <summary>

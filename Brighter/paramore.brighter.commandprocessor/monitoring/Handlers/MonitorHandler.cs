@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.monitoring.Configuration;
 using paramore.brighter.commandprocessor.monitoring.Events;
 
 namespace paramore.brighter.commandprocessor.monitoring.Handlers
@@ -37,17 +38,18 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
     public class MonitorHandler<T> : RequestHandler<T> where T: class, IRequest
     {
         readonly IAmAControlBusSender _controlBusSender;
-        private bool _isMonitoringEnabled;
+        private readonly bool _isMonitoringEnabled;
         private string _handlerName;
-        private string _instanceName;
+        private readonly string _instanceName;
         private string _handlerFullAssemblyName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
         /// </summary>
         /// <param name="controlBusSender">The control bus command processor, to post over</param>
-        public MonitorHandler(IAmAControlBusSender controlBusSender)
-            : this(controlBusSender, LogProvider.For<MonitorHandler<T>>()) {}
+        /// <param name="monitorConfiguration"></param>
+        public MonitorHandler(IAmAControlBusSender controlBusSender, MonitorConfiguration monitorConfiguration)
+            : this(controlBusSender, LogProvider.For<MonitorHandler<T>>(), monitorConfiguration) {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
@@ -55,9 +57,12 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// </summary>
         /// <param name="controlBusSender">The control bus command processor, to post over</param>
         /// <param name="logger">The logger</param>
-        public MonitorHandler(IAmAControlBusSender controlBusSender, ILog logger) : base(logger)
+        /// <param name="monitorConfiguration"></param>
+        public MonitorHandler(IAmAControlBusSender controlBusSender, ILog logger, MonitorConfiguration monitorConfiguration) : base(logger)
         {
             _controlBusSender = controlBusSender;
+            _isMonitoringEnabled = monitorConfiguration.IsMonitoringEnabled;
+            _instanceName = monitorConfiguration.InstanceName;
         }
 
         /// <summary>
@@ -66,10 +71,8 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// <param name="initializerList">The initializer list.</param>
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
-            _isMonitoringEnabled = (bool) initializerList[0];
-            _handlerName = (string) initializerList[1];
-            _instanceName = (string) initializerList[2];
-            _handlerFullAssemblyName = (string)initializerList[3];
+            _handlerName = (string) initializerList[0];
+            _handlerFullAssemblyName = (string)initializerList[1];
         }
 
         /// <summary>

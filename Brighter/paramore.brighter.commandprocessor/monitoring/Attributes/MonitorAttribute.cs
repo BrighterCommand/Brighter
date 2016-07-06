@@ -51,8 +51,6 @@ namespace paramore.brighter.commandprocessor.monitoring.Attributes
     public class MonitorAttribute: RequestHandlerAttribute
     {
         private readonly string _handlerName;
-        private readonly bool _monitoringEnabled = false;
-        private readonly string _instanceName;
         private readonly string _handlerFullAssemblyName;
 
         /// <summary>
@@ -66,10 +64,6 @@ namespace paramore.brighter.commandprocessor.monitoring.Attributes
         {
             _handlerName = handlerType.FullName;
             _handlerFullAssemblyName = handlerType.AssemblyQualifiedName;
-            var monitoringSetting = MonitoringConfigurationSection.GetConfiguration();
- 
-            _monitoringEnabled = monitoringSetting.Monitor.IsMonitoringEnabled;
-            _instanceName = monitoringSetting.Monitor.InstanceName;
         }
 
         /// <summary>
@@ -78,7 +72,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Attributes
         /// <returns>System.Object[].</returns>
         public override object[] InitializerParams()
         {
-            return new object[] {_monitoringEnabled, _handlerName, _instanceName, _handlerFullAssemblyName};
+            return new object[] {_handlerName, _handlerFullAssemblyName};
         }
 
         /// <summary>
