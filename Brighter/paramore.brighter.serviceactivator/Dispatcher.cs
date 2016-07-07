@@ -39,6 +39,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -59,7 +60,8 @@ namespace paramore.brighter.serviceactivator
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
         private readonly ILog _logger;
         private Task _controlTask;
-        private readonly IList<Task> _tasks = new SynchronizedCollection<Task>();
+        private readonly ConcurrentDictionary<int, Task> _tasks = new ConcurrentDictionary<int, Task>();
+        private readonly ConcurrentDictionary<string, IAmAConsumer> _consumers;
 
         /// <summary>
         /// Gets the command processor.
@@ -77,7 +79,11 @@ namespace paramore.brighter.serviceactivator
         /// Gets the <see cref="Consumer"/>s
         /// </summary>
         /// <value>The consumers.</value>
-        public IList<IAmAConsumer> Consumers { get; private set; }
+        public IEnumerable<IAmAConsumer> Consumers
+        {
+            get { return _consumers.Values; }
+        }
+
 
         /// <summary>
         /// Gets or sets the name for this dispatcher instance.
@@ -126,7 +132,7 @@ namespace paramore.brighter.serviceactivator
             _logger = logger;
             State = DispatcherState.DS_NOTREADY;
 
-            Consumers = new SynchronizedCollection<IAmAConsumer>();
+            _consumers = new ConcurrentDictionary<string, IAmAConsumer>();
 
             State = DispatcherState.DS_AWAITING;
         }
@@ -172,14 +178,14 @@ namespace paramore.brighter.serviceactivator
                     addedConsumers.Each(
                         (consumer) =>
                         {
-                            Consumers.Add(consumer);
+                            _consumers.TryAdd(consumer.Name, consumer);
                             consumer.Open();
-                            _tasks.Add(consumer.Job);
+                            _tasks.TryAdd(consumer.JobId, consumer.Job);
                         });
                     break;
                 case DispatcherState.DS_STOPPED:
                 case DispatcherState.DS_AWAITING:
-                    addedConsumers.Each((consumer) => Consumers.Add(consumer));
+                    addedConsumers.Each((consumer) => _consumers.TryAdd(consumer.Name, consumer));
                     Start();
                     break;
                 default:
@@ -200,7 +206,7 @@ namespace paramore.brighter.serviceactivator
         /// </summary>
         public void Receive()
         {
-            CreateConsumers(Connections).Each(consumer => Consumers.Add(consumer));
+            CreateConsumers(Connections).Each(consumer => _consumers.TryAdd(consumer.Name, consumer));
             Start();
         }
 
@@ -242,27 +248,33 @@ namespace paramore.brighter.serviceactivator
 
                         var consumers = Consumers.ToArray();
                         consumers.Each((consumer) => consumer.Open());
-                        consumers.Select(consumer => consumer.Job).Each(job => _tasks.Add(job));
+                        consumers.Each(consumer => _tasks.TryAdd(consumer.JobId, consumer.Job));
 
                         _logger.InfoFormat("Dispatcher: Dispatcher starting {0} performers", _tasks.Count);
 
-                        while (_tasks.Any())
+                        while (!_tasks.IsEmpty)
                         {
                             try
                             {
-                                var index = Task.WaitAny(_tasks.ToArray());
-                                _logger.DebugFormat("Dispatcher: Performer stopped with state {0}", _tasks[index].Status);
+                                var runningTasks = _tasks.Values.ToArray();
+                                var index = Task.WaitAny(runningTasks);
+                                var stoppingConsumer = runningTasks[index];
+                                _logger.DebugFormat("Dispatcher: Performer stopped with state {0}", stoppingConsumer.Status);
 
-                                var consumer = Consumers.SingleOrDefault(c => c.JobId == _tasks[index].Id);
+                                var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
                                 if (consumer != null)
                                 {
                                     _logger.DebugFormat("Dispatcher: Removing a consumer with connection name {0}", consumer.Name);
                                     consumer.Dispose();
-                                    Consumers.Remove(consumer);
+
+                                    _consumers.TryRemove(consumer.Name, out consumer);
                                 }
 
-                                _tasks[index].Dispose();
-                                _tasks.RemoveAt(index);
+                                //_tasks[index].Dispose();
+                                //_tasks.RemoveAt(index);
+                                //_tasks.TryTake(out )
+                                Task removedTask;
+                                _tasks.TryRemove(stoppingConsumer.Id, out removedTask);
                             }
                             catch (AggregateException ae)
                             {

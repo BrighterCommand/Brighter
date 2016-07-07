@@ -29,7 +29,6 @@ using paramore.brighter.serviceactivator.Ports;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Handlers;
 using paramore.brighter.serviceactivator.Ports.Mappers;
-using paramore.brighter.serviceactivator.ServiceActivatorConfiguration;
 using Polly;
 
 //Needs a different namespace to the DispatchBuilder to avoid collisions
@@ -110,32 +109,48 @@ namespace paramore.brighter.serviceactivator.controlbus
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build(string hostName)
         {
-            var connections = new List<ConnectionElement>();
+            var connectionsConfiguration = new List<Connection>();
 
             /* 
              * These are the control bus channels, we hardcode them because we want to know they exist, but we use
             a base naming scheme to allow centralized management.
              */
 
-            var configurationElement = new ConnectionElement
-            {
-                ChannelName = hostName  + "." + CONFIGURATION,
-                ConnectionName = hostName  + "." + CONFIGURATION,
-                IsDurable = true,
-                DataType = typeof(ConfigurationCommand).FullName,
-                RoutingKey = hostName + "." + CONFIGURATION,
-            };
-            connections.Add(configurationElement);
+            var connectionConfiguration = new Connection(
+                new ConnectionName(hostName + "." + CONFIGURATION),
+                _channelFactory,
+                typeof(ConfigurationCommand),
+                new ChannelName(hostName + "." + CONFIGURATION),
+                hostName + "." + CONFIGURATION
+                );
+            //var connectionConfiguration = new ConnectionConfiguration()
+            //{ 
+            //    ChannelName = hostName  + "." + CONFIGURATION,
+            //    ConnectionName = hostName  + "." + CONFIGURATION,
+            //    IsDurable = true,
+            //    DataType = typeof(ConfigurationCommand).FullName,
+            //    RoutingKey = hostName + "." + CONFIGURATION,
+            //};
+            connectionsConfiguration.Add(connectionConfiguration);
 
-            var heartbeatElement = new ConnectionElement
-            {
-                ChannelName = hostName  + "." + HEARTBEAT,
-                ConnectionName = hostName  + "." + HEARTBEAT,
-                IsDurable = false,
-                DataType = typeof(HeartbeatRequest).FullName,
-                RoutingKey = hostName + "." + HEARTBEAT,
-            };
-            connections.Add(heartbeatElement);
+            var heartbeatElement = new Connection(
+                new ConnectionName(hostName + "." + HEARTBEAT),
+                _channelFactory,
+                typeof(HeartbeatRequest),
+                new ChannelName(hostName + "." + HEARTBEAT),
+                hostName + "." + HEARTBEAT,
+                isDurable:false
+                );
+
+            //var heartbeatElement = new ConnectionConfiguration
+            //{
+            //    ChannelName = hostName  + "." + HEARTBEAT,
+            //    ConnectionName = hostName  + "." + HEARTBEAT,
+            //    IsDurable = false,
+            //    DataType = typeof(HeartbeatRequest).FullName,
+            //    RoutingKey = hostName + "." + HEARTBEAT,
+            //};
+            connectionsConfiguration.Add(heartbeatElement);
 
             /* We want to register policies, messages and handlers for receiving built in commands. It's simple enough to do this for
              the registries, but we cannot know your HandlerFactory implementation in order to insert. So we have to rely on
@@ -199,7 +214,7 @@ namespace paramore.brighter.serviceactivator.controlbus
                 .CommandProcessor(commandProcessor)
                 .MessageMappers(incomingMessageMapperRegistry)
                 .ChannelFactory(_channelFactory)
-                .ConnectionsFromElements(connections)
+                .Connections(connectionsConfiguration)
                 .Build();
         }
 

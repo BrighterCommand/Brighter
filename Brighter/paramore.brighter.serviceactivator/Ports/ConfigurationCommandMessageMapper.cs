@@ -10,7 +10,7 @@ namespace paramore.brighter.serviceactivator.Ports.Mappers
     {
         public Message MapToMessage(ConfigurationCommand request)
         {
-            var topic = Environment.MachineName + Assembly.GetExecutingAssembly().GetName();
+            var topic = Environment.MachineName + Assembly.GetEntryAssembly().GetName();
 
             var header = new MessageHeader(messageId: request.Id, topic: topic, messageType: MessageType.MT_COMMAND);
             var body = new MessageBody(JsonConvert.SerializeObject(request));

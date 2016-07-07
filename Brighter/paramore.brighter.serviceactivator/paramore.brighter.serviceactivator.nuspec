@@ -22,8 +22,4 @@
       <dependency id="Paramore.Brighter.CommandProcessor" version="$version$" />
     </dependencies>
   </metadata>
-  <files>
-    <file src="app.config.install.xdt" target="content\app.config.install.xdt" />
-    <file src="app.config.uninstall.xdt" target="content\app.config.uninstall.xdt" />
-  </files>
 </package>

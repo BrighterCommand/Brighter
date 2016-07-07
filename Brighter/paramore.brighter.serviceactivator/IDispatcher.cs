@@ -52,7 +52,7 @@ namespace paramore.brighter.serviceactivator
         /// Gets the <see cref="Consumer"/>s
         /// </summary>
         /// <value>The consumers.</value>
-        IList<IAmAConsumer> Consumers { get; }
+        IEnumerable<IAmAConsumer> Consumers { get; }
 
         /// <summary>
         /// Gets or sets the name for this dispatcher instance.
