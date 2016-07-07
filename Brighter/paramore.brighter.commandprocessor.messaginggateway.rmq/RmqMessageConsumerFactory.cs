@@ -36,6 +36,7 @@ THE SOFTWARE. */
 #endregion
 
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
@@ -45,12 +46,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly ILog _logger;
-        private readonly string _connectionName;
+        private readonly RMQMessagingGatewayConfigurationSection _connectionName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
         /// </summary>
-        public RmqMessageConsumerFactory(string connectionName = "")
+        public RmqMessageConsumerFactory(RMQMessagingGatewayConfigurationSection connectionName)
             :this(LogProvider.For<RmqMessageConsumerFactory>(), connectionName)
         {}
         
@@ -58,7 +59,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class, with a test logger.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RmqMessageConsumerFactory(ILog logger, string connectionName = "")
+        public RmqMessageConsumerFactory(ILog logger, RMQMessagingGatewayConfigurationSection connectionName)
         {
             _logger = logger;
             _connectionName = connectionName;

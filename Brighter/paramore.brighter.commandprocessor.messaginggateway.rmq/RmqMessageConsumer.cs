@@ -42,6 +42,7 @@ using System.IO;
 
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -74,7 +75,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="routingKey">The routing key.</param>
         /// <param name="isDurable"></param>
         /// <param name="logger">The logger.</param>
-        public RmqMessageConsumer(string queueName, string routingKey, bool isDurable, string connectionName = "") 
+        public RmqMessageConsumer(string queueName, string routingKey, bool isDurable, RMQMessagingGatewayConfigurationSection connectionName) 
             : this(queueName, routingKey, isDurable, LogProvider.For<RmqMessageConsumer>(), connectionName) {}
 
 
@@ -86,7 +87,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="routingKey">The routing key.</param>
         /// <param name="isDurable"></param>
         /// <param name="logger">The logger.</param>
-        public RmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger, string connectionName = "") : base(logger, connectionName)
+        public RmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger, RMQMessagingGatewayConfigurationSection connectionName) : base(logger, connectionName)
         {
             _queueName = queueName;
             _routingKey = routingKey;

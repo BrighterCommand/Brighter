@@ -41,6 +41,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
@@ -56,18 +57,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
-        public RmqMessageProducer() : base(LogProvider.For<RmqMessageProducer>()) { }
+        //public RmqMessageProducer() : base(LogProvider.For<RmqMessageProducer>(), new RMQMessagingGatewayConfigurationSection()) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        public RmqMessageProducer(ILog logger) : base(logger) { }
+       // public RmqMessageProducer(ILog logger) : base(logger) { }
 
-        public RmqMessageProducer(ILog logger, string connectionName) : base(logger, connectionName) { }
+        public RmqMessageProducer(ILog logger, RMQMessagingGatewayConfigurationSection connectionName) : base(logger, connectionName) { }
 
-        public RmqMessageProducer(string connectionName)
-            : base(connectionName)
+        public RmqMessageProducer(RMQMessagingGatewayConfigurationSection connectionName) : base(connectionName)
         {
         }
 

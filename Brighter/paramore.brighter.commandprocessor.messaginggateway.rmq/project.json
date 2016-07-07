@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0-*",
+
+  "dependencies": {
+    "NETStandard.Library": "1.6.0",
+    "Newtonsoft.Json": "9.0.1",
+    "paramore.brighter.commandprocessor": "1.0.0-*",
+    "Polly": "4.3.0",
+    "RabbitMQ.Client": "4.0.0-ci-201607070941"
+  },
+
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50"
+    },
+    "net452": { }
+  },
+  "configurations": {
+    "Debug": {
+      "buildOptions": {
+        "define": [ "DEBUG", "TRACE", "LIBLOG_PORTABLE", "LIBLOG_PUBLIC" ]
+      }
+    },
+    "Release": {
+      "buildOptions": {
+        "define": [ "RELEASE", "TRACE", "LIBLOG_PORTABLE", "LIBLOG_PUBLIC" ],
+        "optimize": true
+      }
+    }
+  }
+}
