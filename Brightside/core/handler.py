@@ -35,23 +35,23 @@ from abc import ABCMeta, abstractmethod
 
 class Request(metaclass=ABCMeta):
     """Someting we wish to route over a Command Processor"""
-    key = uuid.uuid4()
+    key = uuid.uuid4() # type: uuid
 
     def __init__(self):
         self._id = uuid.uuid4()
 
     @property
-    def id(self):
+    def id(self) -> uuid:
         return self._id
 
     @staticmethod
     @abstractmethod
-    def is_command():
+    def is_command() -> bool:
         return False
 
     @staticmethod
     @abstractmethod
-    def is_event():
+    def is_event() -> bool:
         return False
 
     def __str__(self):
@@ -64,11 +64,11 @@ class Command(Request):
         to a handler
     """
     @staticmethod
-    def is_command():
+    def is_command() -> bool:
         return True
 
     @staticmethod
-    def is_event():
+    def is_event() -> bool:
         return False
 
 
@@ -77,11 +77,11 @@ class Event(Request):
     call to a handler
     """
     @staticmethod
-    def is_command():
+    def is_command() -> bool:
         return False
 
     @staticmethod
-    def is_event():
+    def is_event() ->bool:
         return True
 
 
@@ -91,7 +91,7 @@ class Handler(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def handle(self, request):
+    def handle(self, request: Request) -> Request:
         pass
 
 

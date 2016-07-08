@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 """"
-File         : post_to_producer_tests.py
+File             : messaging.py
 Author           : ian
-Created          : 04-26-2016
+Created          : 07-08-2016
 
 Last Modified By : ian
-Last Modified On : 04-26-2016
+Last Modified On : 07-08-2016
 ***********************************************************************
 The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2016 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -31,33 +31,10 @@ THE SOFTWARE.
 """
 
 
-class FakeMessageStore:
-    def __init__(self):
-        self._message_was_added = None
-        self._messages = []
-
-    @property
-    def message_was_added(self):
-        return self._message_was_added
-
-    def add(self, message):
-        self._messages.append(message)
-        self._message_was_added = True
-
-    def get_message(self, id):
-        for msg in self._messages:
-            if msg.id == id:
-                return msg
-        return None
+class MessageStore:
+    pass
 
 
-class FakeProducer:
-    def __init__(self):
-        self._was_sent_message = False
+class Producer:
+    pass
 
-    def send(self, message):
-        self._was_sent_message = True
-
-    @property
-    def was_sent_message(self):
-        return self._was_sent_message

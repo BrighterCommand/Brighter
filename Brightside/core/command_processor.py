@@ -29,8 +29,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
-
+from typing import Optional
 from core.exceptions import ConfigurationException
+from core.registry import Registry, MessageMapperRegistry
+from core.messaging import MessageStore, Producer
+from core.handler import Request
 
 
 class CommandProcessor:
@@ -38,13 +41,17 @@ class CommandProcessor:
         providing a pipeline for orthogonal operations to be run prior to dispatch.
     """
 
-    def __init__(self, registry=None, message_mapper_registry=None, message_store=None, producer=None):
+    def __init__(self,
+                 registry: Optional[Registry]=None,
+                 message_mapper_registry: Optional[MessageMapperRegistry]=None,
+                 message_store: Optional[MessageStore]=None,
+                 producer: Optional[Producer]=None):
         self._registry = registry
         self._message_mapper_registry = message_mapper_registry
         self._message_store = message_store
         self._producer = producer
 
-    def send(self, request):
+    def send(self, request: Request) -> None:
         """
         Dispatches a request. Expects one and one only target handler
         :param request: The request to dispatch
@@ -57,7 +64,7 @@ class CommandProcessor:
         handler = handler_factories[0]()
         handler.handle(request)
 
-    def publish(self, request):
+    def publish(self, request: Request) -> None:
         """
         Dispatches a request. Expects zero or more target handlers
         :param request: The request to dispatch
@@ -68,7 +75,7 @@ class CommandProcessor:
             handler = factory()
             handler.handle(request)
 
-    def post(self, request):
+    def post(self, request: Request) -> None:
         """
         Dispatches a request over middleware. Returns when message put onto outgoing channel by producer,
         does not wait for response from a consuming application i.e. is fire-and-forget
