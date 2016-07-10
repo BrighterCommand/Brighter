@@ -29,7 +29,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
-
+from typing import Callable
+from core.handler import Handler, Request
+from core.messaging import MessageMapper
 from core.exceptions import ConfigurationException
 
 
@@ -38,18 +40,18 @@ class Registry:
         Provides a registry of commands and handlers i.e. the observer pattern
     """
     def __init__(self):
-        self._registry = dict()
+        self._registry = dict()  # type: Dict[uuid, Callable[[], Handler]]
 
-    def register(self, requestClass, handler_factory):
+    def register(self, request_class: Request, handler_factory: Callable[[], Handler]) -> None:
         """
         Register the handler for the command
-        :param requestClass: The command or event to dispatch. It must implement getKey()
+        :param request_class: The command or event to dispatch. It must implement getKey()
         :param handler_factory: A factory method to create the handler to dispatch to
         :return:
         """
-        key = requestClass.key
-        is_command = requestClass.is_command()
-        is_event = requestClass.is_event()
+        key = request_class.key
+        is_command = request_class.is_command()
+        is_event = request_class.is_event()
         is_present = key in self._registry
         if is_command and is_present:
             raise ConfigurationException("A handler for this request has already been registered")
@@ -58,7 +60,7 @@ class Registry:
         elif is_command or is_event:
             self._registry[key] = [handler_factory]
 
-    def lookup(self, request):
+    def lookup(self, request: Request) -> Callable[[], Handler]:
         """
         Looks up the handler associated with a request - matches the key on the request to a registered handler
         :param request: The request we want to find a handler for
@@ -69,7 +71,7 @@ class Registry:
             if request.is_command():
                 raise ConfigurationException("There is no handler registered for this request")
             elif request.is_event():
-                return []
+                return []  # type: Callable[[] Handler]
 
         return self._registry[key]
 
@@ -79,20 +81,20 @@ class MessageMapperRegistry:
         Provides a registry of message mappers, used to serialize a command to a message, which a producer can send over the wire
     """
     def __init__(self):
-        self._registry = dict()
+        self._registry = dict() # type: Dict[uuid, Callable[[], MessageMapper]]
 
-    def register(self, request_class, mapper_func):
+    def register(self, request_class : Request, mapper_func: Callable[[], MessageMapper]) -> None:
         """Adds a message mapper to a factory, using the requests key
         :param mapper_func:
         :param request_class:
         """
         key = request_class.key
         if key not in self._registry:
-            self._registry[key] = [mapper_func]
+            self._registry[key] = mapper_func
         else:
             raise ConfigurationException("There is already a message mapper defined for this key; there can be only one")
 
-    def lookup(self, request_class):
+    def lookup(self, request_class: Request) -> Callable[[], MessageMapper]:
         """
         Looks up the message mapper function associated with this class. Function should take in a Request derived class
          and return a Message derived class, for sending on the wire

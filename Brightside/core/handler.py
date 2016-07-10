@@ -37,7 +37,7 @@ class Request(metaclass=ABCMeta):
     """Someting we wish to route over a Command Processor"""
     key = uuid.uuid4() # type: uuid
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._id = uuid.uuid4()
 
     @property

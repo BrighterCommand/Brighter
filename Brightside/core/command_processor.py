@@ -45,7 +45,7 @@ class CommandProcessor:
                  registry: Optional[Registry]=None,
                  message_mapper_registry: Optional[MessageMapperRegistry]=None,
                  message_store: Optional[MessageStore]=None,
-                 producer: Optional[Producer]=None):
+                 producer: Optional[Producer]=None) -> None:
         self._registry = registry
         self._message_mapper_registry = message_mapper_registry
         self._message_store = message_store
@@ -83,8 +83,7 @@ class CommandProcessor:
         :return: None
         """
 
-        message_mapper_list = self._message_mapper_registry.lookup(request)
-        message_mapper = message_mapper_list[0]
+        message_mapper= self._message_mapper_registry.lookup(request)
         message = message_mapper(request)
         self._message_store.add(message)
         self._producer.send(message)

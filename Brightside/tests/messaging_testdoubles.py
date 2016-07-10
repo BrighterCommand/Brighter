@@ -30,8 +30,11 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
+import uuid
+from core.messaging import Message, MessageStore, Producer
 
-class FakeMessageStore:
+
+class FakeMessageStore(MessageStore):
     def __init__(self):
         self._message_was_added = None
         self._messages = []
@@ -40,22 +43,22 @@ class FakeMessageStore:
     def message_was_added(self):
         return self._message_was_added
 
-    def add(self, message):
+    def add(self, message: Message):
         self._messages.append(message)
         self._message_was_added = True
 
-    def get_message(self, id):
+    def get_message(self, key: uuid) -> Message:
         for msg in self._messages:
-            if msg.id == id:
+            if msg.id == key:
                 return msg
         return None
 
 
-class FakeProducer:
+class FakeProducer(Producer):
     def __init__(self):
         self._was_sent_message = False
 
-    def send(self, message):
+    def send(self, message: Message):
         self._was_sent_message = True
 
     @property

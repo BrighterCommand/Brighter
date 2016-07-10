@@ -30,11 +30,35 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
+import uuid
+from abc import ABCMeta, abstractmethod
 
-class MessageStore:
+
+class Message:
+    def __init__(self) -> None:
+        self._id = uuid.uuid4()
+
+    @property
+    def id(self) -> uuid:
+        return self._id
+
+
+class MessageMapper:
     pass
 
 
-class Producer:
-    pass
+class MessageStore(metaclass=ABCMeta):
+    @abstractmethod
+    def add(self, message: Message):
+        pass
+
+    @abstractmethod
+    def get_message(self, key: uuid):
+        pass
+
+
+class Producer(metaclass=ABCMeta):
+    @abstractmethod
+    def send(self, message: Message):
+        pass
 
