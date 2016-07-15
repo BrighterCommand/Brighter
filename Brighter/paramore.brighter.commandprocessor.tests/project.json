@@ -1,0 +1,68 @@
+﻿{
+  "buildOptions": {
+    "emitEntryPoint": true
+  },
+
+  "dependencies": {
+    "dotnet-test-nunit": "3.4.0-beta-1",
+    "NUnit": "3.4.0",
+    "paramore.brighter.commandprocessor": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.commandstore.mssql": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messagestore.eventstore": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messagestore.mssql": {
+      "target": "project"
+    },
+    "paramore.brighter.messageviewer": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messaginggateway.awssqs": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messaginggateway.azureservicebus": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messaginggateway.restms": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messaginggateway.rmq": {
+      "target": "project"
+    },
+    "paramore.brighter.serviceactivator": {
+      "target": "project"
+    }      
+  },
+  "frameworks": {
+    "netcoreapp1.0": {
+      "imports": [
+        "dnxcore50",
+        "portable-net45+win8"
+      ],
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.0"
+        }
+      }
+    },
+    "net452": {}
+  }, 
+  "configurations": {
+    "Debug": {
+      "buildOptions": {
+        "define": [ "DEBUG", "TRACE" ]
+      }
+    },
+    "Release": {
+      "buildOptions": {
+        "define": [ "RELEASE", "TRACE" ],
+        "optimize": true
+      }
+    }
+  }
+}

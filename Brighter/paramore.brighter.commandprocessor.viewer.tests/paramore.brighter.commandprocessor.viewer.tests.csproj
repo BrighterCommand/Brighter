@@ -128,10 +128,6 @@
       <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
       <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.csproj">
-      <Project>{65badb63-5f98-4f24-84d7-8c99263f88c6}</Project>
-      <Name>paramore.brighter.commandprocessor.tests</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
