@@ -135,16 +135,6 @@
     <None Include="Scripts\jquery-2.2.2.min.map" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
-      <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
-      <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.awssqs\paramore.brighter.commandprocessor.messaginggateway.awssqs.csproj">
-      <Project>{bd921f35-47c9-41ba-b1bc-ae9698869977}</Project>
-      <Name>paramore.brighter.commandprocessor.messaginggateway.awssqs</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="assets\images\brighter.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>

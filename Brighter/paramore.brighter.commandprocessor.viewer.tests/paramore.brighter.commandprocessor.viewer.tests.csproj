@@ -124,10 +124,6 @@
       <Project>{C64FE82E-8512-422A-8832-7821EF448F2C}</Project>
       <Name>paramore.brighter.commandprocessor.messageviewer</Name>
     </ProjectReference>
-    <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
-      <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
-      <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

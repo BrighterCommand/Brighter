@@ -62,12 +62,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.csproj">
-      <Project>{de5ba1bc-cf70-4465-9a23-7a28604a5949}</Project>
-      <Name>paramore.brighter.commandprocessor.commandstore.mssql</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Folder Include="Adapters\Tests\" />
     <Folder Include="Ports\Mappers\" />
   </ItemGroup>
