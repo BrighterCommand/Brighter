@@ -65,88 +65,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         public Queues Queues { get; set; }
 
         public IEnumerable<Connection> Connections { get; set; }
-
-        /// <summary>
-        /// Gets the configuration.
-        /// </summary>
-        /// <returns>RMQMessagingGatewayConfigurationSection.</returns>
-        //public static RMQMessagingGatewayConfigurationSection GetConfiguration()
-        //{
-        //    var configuration = ConfigurationManager.GetSection("rmqMessagingGateway") as RMQMessagingGatewayConfigurationSection;
-
-        //    if (configuration != null)
-        //    {
-        //        var foundConfiguration = configuration.Connections;
-        //        if (foundConfiguration.Count == 0)
-        //        {
-        //            return configuration;
-        //        }
-        //        if (foundConfiguration.Count == 1)
-        //        {
-        //            var onlyConnection = foundConfiguration.GetConnection();
-        //            return new RMQMessagingGatewayConfigurationSection
-        //            {
-        //                AMPQUri = onlyConnection.AMPQUri,
-        //                Exchange = onlyConnection.Exchange,
-        //                Queues = onlyConnection.Queues
-        //            };
-        //        }
-        //        throw new ConfigurationException(string.Format("Found {0} rmq Configuration sections, but no name provided", foundConfiguration.Count));
-        //    }
-
-        //    return new RMQMessagingGatewayConfigurationSection();
-        //}
-
-        //public static RMQMessagingGatewayConfigurationSection GetConfiguration(string connectionName)
-        //{
-        //    if (string.IsNullOrWhiteSpace(connectionName)) return GetConfiguration();
-
-        //    //var configuration = ConfigurationManager.GetSection("rmqMessagingGateway") as RMQMessagingGatewayConfigurationSection;
-
-        //    if (configuration != null)
-        //    {
-        //        var foundConfiguration = configuration.Connections.GetConnection(connectionName);
-        //        if (foundConfiguration != null)
-        //        {
-        //            return new RMQMessagingGatewayConfigurationSection
-        //            {
-        //                AMPQUri = foundConfiguration.AMPQUri,
-        //                Exchange = foundConfiguration.Exchange, 
-        //                Queues = foundConfiguration.Queues
-        //            };
-        //        }
-        //    }
-        //    return new RMQMessagingGatewayConfigurationSection();
-        //}
     }
-
-    //public class Connections
-    //{
-    //    protected override Connection CreateNewElement()
-    //    {
-    //        return new Connection();
-    //    }
-
-    //    protected override Connection CreateNewElement(string elementName)
-    //    {
-    //        return new Connection {Name = elementName};
-    //    }
-
-    //    protected override object GetElementKey(Connection element)
-    //    {
-    //        return ((Connection) element).Name;
-    //    }
-
-    //    public Connection GetConnection(string connectionName)
-    //    {
-    //        return base.BaseGet(connectionName) as Connection;
-    //    }
-
-    //    internal Connection GetConnection()
-    //    {
-    //        return BaseGet(0) as Connection;
-    //    }
-    //}
 
     public class Connection 
     {
@@ -185,6 +104,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         /// </summary>
         //DefaultValue = (ushort)1
         public ushort QosPrefetchSize { get; set; }
+
+        public Queues(bool highAvailability = false, ushort qosPrefetchSize = 1)
+        {
+            HighAvailability = highAvailability;
+            QosPrefetchSize = qosPrefetchSize;
+        }
     }
 
     /// <summary>
@@ -231,6 +156,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         /// </summary>
         // DefaultValue = "60000", IsRequired = false)]
         public int CircuitBreakTimeInMilliseconds { get; set; }
+
+        public AMQPUriSpecification(Uri uri, int connectionRetryCount = 3, int retryWaitInMilliseconds = 1000, int circuitBreakTimeInMilliseconds = 60000)
+        {
+            Uri = uri;
+            ConnectionRetryCount = connectionRetryCount;
+            RetryWaitInMilliseconds = retryWaitInMilliseconds;
+            CircuitBreakTimeInMilliseconds = circuitBreakTimeInMilliseconds;
+        }
     }
 
     /// <summary>
@@ -263,5 +196,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         /// </summary>
         /// <value><c>true</c> if supporting; otherwise, <c>false</c>.</value>
         public bool SupportDelay { get; set; }
+
+        public Exchange(string name, string type = ExchangeType.Direct, bool durable = false, bool supportDelay = false)
+        {
+            Name = name;
+            Type = type;
+            Durable = durable;
+            SupportDelay = supportDelay;
+        }
     }
 }
