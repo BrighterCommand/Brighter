@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using GenericListener.Adapters.Containers;
 using GenericListener.Adapters.MessageMappers;
@@ -9,13 +10,13 @@ using GenericListener.Ports.Events;
 using GenericListener.Ports.Handlers;
 using GenericListener.Ports.Handlers.Tasks;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.serviceactivator;
 using Polly;
-using Tasks.Ports.Events;
-using TinyIoC;
+using TinyIoc;
 using Topshelf;
+using Connection = paramore.brighter.serviceactivator.Connection;
 
 namespace GenericListener.Adapters.Services
 {
@@ -113,8 +114,35 @@ namespace GenericListener.Adapters.Services
         Dispatcher BuildDispatcher(HandlerConfig handlers)
         {
             var policy = BuildPolicy();
-            var logger = LogProvider.GetLogger("Brighter");
 
+            //create the gateway
+            var rmqMessagingGatewayConfigurationSection = new RMQMessagingGatewayConfigurationSection
+            {
+                AMPQUri = new AMQPUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                Exchange = new Exchange("paramore.brighter.exchange"),
+                Queues = new Queues()
+            };
+
+            //<!-- Events with mapper and handler overrides -->
+            //<add connectionName="Task.ReminderSent" channelName="Task.ReminderSent" routingKey="Task.ReminderSent" dataType="Tasks.Ports.Events.TaskReminderSentEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
+
+            //<!-- Generic Events -->
+            //<add connectionName="Task.Added" channelName="Task.Added" routingKey="Task.Added" dataType="GenericListener.Ports.Events.GenericTaskAddedEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
+            //<add connectionName="Task.Edited" channelName="Task.Edited" routingKey="Task.Edited" dataType="GenericListener.Ports.Events.GenericTaskEditedEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
+            //<add connectionName="Task.Completed" channelName="Task.Completed" routingKey="Task.Completed" dataType="GenericListener.Ports.Events.GenericTaskCompletedEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
+
+            var inputChannelFactory = new InputChannelFactory(new RmqMessageConsumerFactory(rmqMessagingGatewayConfigurationSection), new RmqMessageProducerFactory(rmqMessagingGatewayConfigurationSection));
+
+            var connections = new List<Connection>
+            {
+                // Events with mapper and handler overrides
+                new Connection(new ConnectionName("Task.ReminderSent"),inputChannelFactory, typeof(Tasks.Ports.Events.TaskReminderSentEvent), new ChannelName("Task.ReminderSent"), "Task.ReminderSent", noOfPerformers:1, timeoutInMilliseconds: 200),
+                // Generic Events
+                new Connection(new ConnectionName("Task.Added"),inputChannelFactory, typeof(GenericTaskAddedEvent), new ChannelName("Task.Added"), "Task.Added", noOfPerformers:1, timeoutInMilliseconds: 200),
+                new Connection(new ConnectionName("Task.Edited"),inputChannelFactory, typeof(GenericTaskEditedEvent), new ChannelName("Task.Edited"), "Task.Edited", noOfPerformers:1, timeoutInMilliseconds: 200),
+                new Connection(new ConnectionName("Task.Completed"),inputChannelFactory, typeof(GenericTaskCompletedEvent), new ChannelName("Task.Completed"), "Task.Completed", noOfPerformers:1, timeoutInMilliseconds: 200),
+            };
+            
             return DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
                     .Handlers(handlers.Handlers)
@@ -123,8 +151,9 @@ namespace GenericListener.Adapters.Services
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build())
                 .MessageMappers(handlers.Mappers)
-                .ChannelFactory(new InputChannelFactory(new RmqMessageConsumerFactory(logger), new RmqMessageProducerFactory(logger)))
-                .ConnectionsFromConfiguration()
+                .ChannelFactory(inputChannelFactory)
+                //.ConnectionsFromConfiguration()
+                .Connections(connections)
                 .Build();
         }
 

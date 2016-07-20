@@ -8,7 +8,7 @@ using GenericListener.Adapters.EventStore;
 using GenericListener.Ports.Indexers;
 using paramore.brighter.commandprocessor.Logging;
 using Tasks.Ports.Events;
-using TinyIoC;
+using TinyIoc;
 
 namespace GenericListener.Adapters.Containers
 {

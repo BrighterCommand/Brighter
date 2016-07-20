@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0-*",
+  "buildOptions": {
+    "emitEntryPoint": true
+  },
+  "dependencies": {
+    "EventStore.Client": "3.8.0",
+    "log4net": "2.0.5",
+    "paramore.brighter.commandprocessor": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messaginggateway.rmq": {
+      "target": "project"
+    },
+    "paramore.brighter.serviceactivator": {
+      "target": "project"
+    }
+  },
+  "frameworks": {
+    "net452": {
+      "dependencies": {
+        "Topshelf": "4.0.1"
+      }
+    }
+  }
+}
