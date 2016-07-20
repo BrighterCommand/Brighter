@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
+using HelloAsyncListeners.TinyIoc;
 using paramore.brighter.commandprocessor;
-using TinyIoC;
 
 namespace HelloAsyncListeners
 {

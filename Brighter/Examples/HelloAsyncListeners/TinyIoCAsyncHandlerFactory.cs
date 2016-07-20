@@ -1,6 +1,6 @@
 ﻿using System;
+using HelloAsyncListeners.TinyIoc;
 using paramore.brighter.commandprocessor;
-using TinyIoC;
 
 namespace HelloAsyncListeners
 {
