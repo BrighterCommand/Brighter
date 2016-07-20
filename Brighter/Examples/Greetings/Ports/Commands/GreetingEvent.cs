@@ -27,11 +27,11 @@ using paramore.brighter.commandprocessor;
 
 namespace Greetings.Ports.Commands
 {
-    public class GreetingCommand : Command
+    public class GreetingEvent : Event
     {
-        public GreetingCommand() : base(Guid.NewGuid()) { }
+        public GreetingEvent() : base(Guid.NewGuid()) { }
 
-        public GreetingCommand(string greeting) : base(Guid.NewGuid())
+        public GreetingEvent(string greeting) : base(Guid.NewGuid())
         {
             Greeting = greeting;
         }

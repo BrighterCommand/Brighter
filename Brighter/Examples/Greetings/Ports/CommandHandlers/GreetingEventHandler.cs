@@ -28,16 +28,16 @@ using paramore.brighter.commandprocessor;
 
 namespace Greetings.Ports.CommandHandlers
 {
-    internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
+    public class GreetingEventHandler : RequestHandler<GreetingEvent>
     {
-        public override GreetingCommand Handle(GreetingCommand command)
+        public override GreetingEvent Handle(GreetingEvent @event)
         {
             Console.WriteLine("Received Greeting. Message Follows");
             Console.WriteLine("----------------------------------");
-            Console.WriteLine(command.Greeting);
+            Console.WriteLine(@event.Greeting);
             Console.WriteLine("----------------------------------");
             Console.WriteLine("Message Ends");
-            return base.Handle(command);
+            return base.Handle(@event);
         }
     }
 }

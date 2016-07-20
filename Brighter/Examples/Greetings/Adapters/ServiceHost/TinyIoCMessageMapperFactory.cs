@@ -23,12 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Greetings.TinyIoc;
 using paramore.brighter.commandprocessor;
-using TinyIoC;
 
 namespace Greetings.Adapters.ServiceHost
 {
-    internal class TinyIoCMessageMapperFactory : IAmAMessageMapperFactory
+    public class TinyIoCMessageMapperFactory : IAmAMessageMapperFactory
     {
         private readonly TinyIoCContainer _container;
 

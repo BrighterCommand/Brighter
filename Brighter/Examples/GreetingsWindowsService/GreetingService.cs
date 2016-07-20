@@ -23,17 +23,21 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.IO;
+using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
+using Greetings.TinyIoc;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.serviceactivator;
 using Polly;
-using TinyIoC;
 using Topshelf;
 
-namespace Greetings.Adapters.ServiceHost
+namespace GreetingsWindowsService
 {
     internal class GreetingService : ServiceControl
     {
@@ -41,26 +45,26 @@ namespace Greetings.Adapters.ServiceHost
 
         public GreetingService()
         {
-            log4net.Config.XmlConfigurator.Configure();
+            log4net.Config.XmlConfigurator.Configure(new FileInfo("log4net.config"));
 
             var container = new TinyIoCContainer();
 
             var handlerFactory = new TinyIocHandlerFactory(container);
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-            container.Register<IHandleRequests<GreetingCommand>, GreetingCommandHandler>();
+            container.Register<IHandleRequests<GreetingEvent>, GreetingEventHandler>();
 
             var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.Register<GreetingCommand, GreetingCommandHandler>();
+            subscriberRegistry.Register<GreetingEvent, GreetingEventHandler>();
 
             //create policies
             var retryPolicy = Policy
                 .Handle<Exception>()
                 .WaitAndRetry(new[]
-                    {
-                        TimeSpan.FromMilliseconds(50),
-                        TimeSpan.FromMilliseconds(100),
-                        TimeSpan.FromMilliseconds(150)
-                    });
+                {
+                    TimeSpan.FromMilliseconds(50),
+                    TimeSpan.FromMilliseconds(100),
+                    TimeSpan.FromMilliseconds(150)
+                });
 
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
@@ -75,12 +79,34 @@ namespace Greetings.Adapters.ServiceHost
             //create message mappers
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
             {
-                {typeof(GreetingCommand), typeof(GreetingCommandMessageMapper)}
+                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
             };
 
             //create the gateway
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory();
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory();
+            var rmqMessagingGatewayConfigurationSection = new RMQMessagingGatewayConfigurationSection
+            {
+                AMPQUri = new AMQPUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                Exchange = new Exchange("paramore.brighter.exchange"),
+                Queues = new Queues()
+            };
+
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqMessagingGatewayConfigurationSection);
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqMessagingGatewayConfigurationSection);
+
+
+            // < add connectionName = "paramore.example.greeting" channelName = "greeting." routingKey = "greeting.command" dataType = "Greetings.Ports.Commands.GreetingEvent" timeOutInMilliseconds = "200" />
+            // Service Activator connections
+            var connections = new List<paramore.brighter.serviceactivator.Connection>
+            {
+                new paramore.brighter.serviceactivator.Connection(
+                    new ConnectionName("paramore.example.greeting"),
+                    new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory),
+                    typeof(GreetingEvent),
+                    new ChannelName("greeting.event"),
+                    "greeting.event",
+                    timeoutInMilliseconds: 200)
+            };
+
             var builder = DispatchBuilder
                 .With()
                 .CommandProcessor(CommandProcessorBuilder.With()
@@ -89,10 +115,11 @@ namespace Greetings.Adapters.ServiceHost
                     .NoTaskQueues()
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
-                 )
-                 .MessageMappers(messageMapperRegistry)
-                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
-                 .ConnectionsFromConfiguration();
+                )
+                .MessageMappers(messageMapperRegistry)
+                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                .Connections(connections);
+
             _dispatcher = builder.Build();
         }
 

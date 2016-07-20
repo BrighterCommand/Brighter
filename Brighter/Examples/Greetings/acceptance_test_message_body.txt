@@ -1,6 +1,6 @@
 Header
 ------
-MessageType=1
+MessageType=2
 
 Body
 ----

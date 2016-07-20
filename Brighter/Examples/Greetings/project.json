@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0-*",
+  "dependencies": {
+    "paramore.brighter.commandprocessor": { "target": "project" },
+    "paramore.brighter.commandprocessor.messaginggateway.rmq": { "target": "project" },
+    "paramore.brighter.serviceactivator": { "target": "project" }
+  },
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50",
+      "dependencies": {
+        "System.Reflection.TypeExtensions": "4.1.0"
+      }
+    },
+    "net452": {}
+  }
+}
