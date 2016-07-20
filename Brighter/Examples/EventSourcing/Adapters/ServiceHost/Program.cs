@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
-using System.Reflection;
+//using System.Reflection;
 using EventSourcing.Ports.CommandHandlers;
 using EventSourcing.Ports.Commands;
 using Newtonsoft.Json;
@@ -39,7 +39,7 @@ namespace EventSourcing.Adapters.ServiceHost
     {
         private static void Main(string[] args)
         {
-            var dbPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\CommandStore.sdf");
+            //var dbPath = Path.Combine(Path.GetDirectoryName(typeof(GreetingCommandHandler).GetTypeInfo().Assembly.GetName().FullName), "App_Data\\CommandStore.sdf");
             var connectionString = "DataSource=\"" + dbPath + "\"";
             var configuration = new MsSqlCommandStoreConfiguration(connectionString, "Commands", MsSqlCommandStoreConfiguration.DatabaseType.SqlCe);
             var commandStore = new MsSqlCommandStore(configuration);

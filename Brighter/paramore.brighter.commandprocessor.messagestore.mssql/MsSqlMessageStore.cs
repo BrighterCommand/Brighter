@@ -42,10 +42,11 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
-using System.Data.SqlServerCe;
+//TODO: sqlce replacement
+//using System.Data.SqlServerCe;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
+using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messagestore.mssql
@@ -60,7 +61,6 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
         private const int SqlCeDuplicateKeyError = 25016;
         private readonly MsSqlMessageStoreConfiguration _configuration;
-        private readonly JavaScriptSerializer _javaScriptSerializer;
         private readonly ILog _log;
 
         /// <summary>
@@ -80,7 +80,6 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         {
             _configuration = configuration;
             _log = log;
-            _javaScriptSerializer = new JavaScriptSerializer();
             ContinueOnCapturedContext = false;
         }
 
@@ -115,18 +114,19 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 
                     throw;
                 }
-                catch (SqlCeException sqlCeException)
-                {
-                    if (sqlCeException.NativeError == SqlCeDuplicateKeyError)
-                    {
-                        _log.WarnFormat(
-                            "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
-                            message.Id);
-                        return;
-                    }
+                //TODO: sqlce replacement
+                //catch (SqlCeException sqlCeException)
+                //{
+                //    if (sqlCeException.NativeError == SqlCeDuplicateKeyError)
+                //    {
+                //        _log.WarnFormat(
+                //            "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                //            message.Id);
+                //        return;
+                //    }
 
-                    throw;
-                }
+                //    throw;
+                //}
             }
         }
 
@@ -174,18 +174,19 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 
                     throw;
                 }
-                catch (SqlCeException sqlCeException)
-                {
-                    if (sqlCeException.NativeError == SqlCeDuplicateKeyError)
-                    {
-                        _log.WarnFormat(
-                            "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
-                            message.Id);
-                        return;
-                    }
+                //TODO: sqlce replacement
+                //catch (SqlCeException sqlCeException)
+                //{
+                //    if (sqlCeException.NativeError == SqlCeDuplicateKeyError)
+                //    {
+                //        _log.WarnFormat(
+                //            "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                //            message.Id);
+                //        return;
+                //    }
 
-                    throw;
-                }
+                //    throw;
+                //}
             }
         }
 
@@ -290,8 +291,9 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             {
                 case MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer:
                     return new SqlParameter(parameterName, value);
-                case MsSqlMessageStoreConfiguration.DatabaseType.SqlCe:
-                    return new SqlCeParameter(parameterName, value);
+                //TODO: sqlce replacement
+                //case MsSqlMessageStoreConfiguration.DatabaseType.SqlCe:
+                //    return new SqlCeParameter(parameterName, value);
             }
             return null;
         }
@@ -339,8 +341,9 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             {
                 case MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer:
                     return new SqlConnection(_configuration.ConnectionString);
-                case MsSqlMessageStoreConfiguration.DatabaseType.SqlCe:
-                    return new SqlCeConnection(_configuration.ConnectionString);
+                //TODO: sqlce replacement
+                //case MsSqlMessageStoreConfiguration.DatabaseType.SqlCe:
+                //    return new SqlCeConnection(_configuration.ConnectionString);
             }
             return null;
         }
@@ -359,7 +362,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 
         private DbParameter[] InitAddDbParameters(Message message)
         {
-            var bagJson = _javaScriptSerializer.Serialize(message.Header.Bag);
+            var bagJson = JsonConvert.SerializeObject(message.Header.Bag);
             var parameters = new[]
             {
                 CreateSqlParameter("MessageId", message.Id),
@@ -391,7 +394,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 
                 var i = dr.GetOrdinal("HeaderBag");
                 var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-                var dictionaryBag = _javaScriptSerializer.Deserialize<Dictionary<string, string>>(headerBag);
+                var dictionaryBag = JsonConvert.DeserializeObject<Dictionary<string, string>>(headerBag);
                 if (dictionaryBag != null)
                 {
                     foreach (var key in dictionaryBag.Keys)

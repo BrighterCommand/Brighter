@@ -1,22 +1,20 @@
-﻿{
+{
   "dependencies": {
     "NETStandard.Library": "1.6.0",
     "Newtonsoft.Json": "9.0.1",
-     "paramore.brighter.commandprocessor": {
+    "paramore.brighter.commandprocessor": {
       "target": "project"
     },
- },
+    "System.Data.SqlClient": "4.1.0"
+  },
   "frameworks": {
     "netstandard1.6": {
       "imports": [
         "dnxcore50",
         "portable-net45+win8"
-      ],
-      "dependencies": {
-        "System.Threading.Thread": "4.0.0"
-      }
+      ]
     },
-   "net452": {}
+    "net452": {    }
   }, 
   "configurations": {
     "Debug": {

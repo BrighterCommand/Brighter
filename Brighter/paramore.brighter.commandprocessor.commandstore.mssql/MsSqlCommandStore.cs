@@ -41,7 +41,8 @@ using System;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
-using System.Data.SqlServerCe;
+//TODO: sqlce replacement
+//using System.Data.SqlServerCe;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -110,13 +111,14 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
 
                     throw;
                 }
-                catch (SqlCeException sqlCeException)
-                {
-                    if (sqlCeException.NativeError != SqlCeDuplicateKeyError) throw;
-                    _log.WarnFormat(
-                        "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
-                        command.Id);
-                }
+                //TODO: sqlce replacement
+                //catch (SqlCeException sqlCeException)
+                //{
+                //    if (sqlCeException.NativeError != SqlCeDuplicateKeyError) throw;
+                //    _log.WarnFormat(
+                //        "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                //        command.Id);
+                //}
             }
         }
 
@@ -175,13 +177,14 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
 
                     throw;
                 }
-                catch (SqlCeException sqlCeException)
-                {
-                    if (sqlCeException.NativeError != SqlCeDuplicateKeyError) throw;
-                    _log.WarnFormat(
-                        "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
-                        command.Id);
-                }
+                //TODO: sqlce replacement
+                //catch (SqlCeException sqlCeException)
+                //{
+                //    if (sqlCeException.NativeError != SqlCeDuplicateKeyError) throw;
+                //    _log.WarnFormat(
+                //        "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                //        command.Id);
+                //}
             }
         }
 
@@ -235,8 +238,9 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
             {
                 case MsSqlCommandStoreConfiguration.DatabaseType.MsSqlServer:
                     return new SqlParameter(parameterName, value);
-                case MsSqlCommandStoreConfiguration.DatabaseType.SqlCe:
-                    return new SqlCeParameter(parameterName, value);
+                //TODO: sqlce replacement
+                //case MsSqlCommandStoreConfiguration.DatabaseType.SqlCe:
+                //    return new SqlCeParameter(parameterName, value);
             }
             return null;
         }
@@ -283,8 +287,9 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
             {
                 case MsSqlCommandStoreConfiguration.DatabaseType.MsSqlServer:
                     return new SqlConnection(_configuration.ConnectionString);
-                case MsSqlCommandStoreConfiguration.DatabaseType.SqlCe:
-                    return new SqlCeConnection(_configuration.ConnectionString);
+                //TODO: sqlce replacement
+                //case MsSqlCommandStoreConfiguration.DatabaseType.SqlCe:
+                //    return new SqlCeConnection(_configuration.ConnectionString);
             }
             return null;
         }
