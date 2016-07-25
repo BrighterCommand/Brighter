@@ -35,7 +35,7 @@ Paramore contributors (sorted alphabeticaly)
 **[Olivier Kouamé](https://github.com/okouam)**
  * Various fixes
 
-**João Lebre](https://github.com/jplebre)**
+**[João Lebre](https://github.com/jplebre)**
  * Various fixes
 
 **[Eddie Li](https://github.com/xiaodili)**
