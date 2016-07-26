@@ -2,10 +2,23 @@
   "dependencies": {
     "NETStandard.Library": "1.6.0",
     "Newtonsoft.Json": "9.0.1",
-     "paramore.brighter.commandprocessor": {
+    "Microsoft.Bcl" : "1.1.10",
+    "Microsoft.Bcl.Async" : "1.0.168",
+    "Microsoft.Bcl.Build" : "1.0.21",
+    "Microsoft.Net.Http" : "2.2.29",
+    "PCLStorage" : "1.0.2",
+    "PInvoke.Windows.Core" : "0.3.2",
+    "PInvoke.BCrypt":"0.3.2",
+    "PInvoke.NCrypt" : "0.3.2",
+    "Validation": "2.2.8",
+    "PCLCrypto" : "2.0.147",
+    "AWSSDK.Core":"3.1.9", 
+    "AWSSDK.SQS":"3.1.0.12",
+    "AWSSDK.SimpleNotificationService":"3.1.1.1",
+    "paramore.brighter.commandprocessor": {
       "target": "project"
-    },
- },
+    }
+  },
   "frameworks": {
     "netstandard1.6": {
       "imports": [
