@@ -4,25 +4,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-
+using Amazon.Runtime;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
 {
-    public sealed class SqsQueuedRetriever
+    public class SqsQueuedRetriever
     {
-        private static readonly Lazy<SqsQueuedRetriever> Lazy =
-            new Lazy<SqsQueuedRetriever>(() => new SqsQueuedRetriever());
+        private readonly AWSCredentials _credentials;
 
         private readonly ConcurrentDictionary<string, ConcurrentQueue<Amazon.SQS.Model.Message>> _queue;
         private readonly object _queueLock;
 
-        public static SqsQueuedRetriever Instance { get { return Lazy.Value; } }
-
-        private SqsQueuedRetriever()
+        public SqsQueuedRetriever(AWSCredentials credentials)
         {
-             _queueLock = new object();
+            _credentials = credentials;
+            _queueLock = new object();
             _queue = new ConcurrentDictionary<string, ConcurrentQueue<Amazon.SQS.Model.Message>>();
         }
 
@@ -37,7 +35,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
                 WaitTimeSeconds = (int)TimeSpan.FromMilliseconds(timeoutInMilliseconds).TotalSeconds
             };
 
-            using (var client = new AmazonSQSClient())
+            using (var client = new AmazonSQSClient(_credentials))
             {
                 var response = await client.ReceiveMessageAsync(request);
                                 

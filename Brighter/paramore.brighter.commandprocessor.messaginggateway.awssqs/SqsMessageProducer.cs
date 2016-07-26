@@ -12,6 +12,7 @@
 // <summary></summary>
 // ***********************************************************************
 using System.Net;
+using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Newtonsoft.Json;
@@ -24,6 +25,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
     /// </summary>
     public class SqsMessageProducer : IAmAMessageProducer
     {
+        private readonly AWSCredentials _credentials;
+
         /// <summary>
         /// The _logger
         /// </summary>
@@ -32,10 +35,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>
-        public SqsMessageProducer() 
+        public SqsMessageProducer(AWSCredentials credentials) 
             : this(LogProvider.For<SqsMessageProducer>())
-        {}
-
+        {
+            _credentials = credentials;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
@@ -55,29 +59,26 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
             var messageString = JsonConvert.SerializeObject(message);
             _logger.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", message.Header.Topic, message.Id, messageString);
             
-            using (var client = new AmazonSimpleNotificationServiceClient())
+            using (var client = new AmazonSimpleNotificationServiceClient(_credentials))
             {
                 var topicArn = EnsureTopic(message.Header.Topic, client);
 
                 var publishRequest = new PublishRequest(topicArn, messageString);
-                client.Publish(publishRequest);
+                client.PublishAsync(publishRequest).Wait();
             }
         }
 
         /// <summary>
-        /// Ensures the topic.
+        /// Ensures the topic. The call to create topic is idempotent and just returns the arn if it already exists. Therefore there is 
+        /// no nee to check then create if it does not exist, as this would be extral calls
         /// </summary>
         /// <param name="topicName">Name of the topic.</param>
         /// <param name="client">The client.</param>
         /// <returns>System.String.</returns>
         private string EnsureTopic(string topicName, AmazonSimpleNotificationServiceClient client)
         {
-            var topic = client.FindTopic(topicName);
-            if (topic != null)
-                return topic.TopicArn;
-
             _logger.DebugFormat("Topic with name {0} does not exist. Creating new topic", topicName);
-            var topicResult = client.CreateTopic(topicName);
+            var topicResult = client.CreateTopicAsync(new CreateTopicRequest(topicName)).Result;
             return topicResult.HttpStatusCode == HttpStatusCode.OK ? topicResult.TopicArn : string.Empty;
         }
 
