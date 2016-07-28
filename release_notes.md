@@ -6,17 +6,19 @@ When we push a collection of functionality it is available via [nuget.org](http:
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore), but not yet deployed to [nuget.org](http://www.nuget.org).
 
 ## Master ##
+
+## Release 6.1.0 ##
  - Support for binary message payloads i.e. not just text/plain for JSON or XML. Current support is modelled around use of protobuf over RMQ
 
-## Release 6.28 ##
+## Release 6.0.28 ##
 
 Fix issue with encoding of non-string types and transmission of correlation id https://github.com/iancooper/Paramore/pull/180
 
-## Release 6.06 ##
+## Release 6.0.6 ##
 - Increase logging level when we stop reading from a queue that cannot be read https://github.com/iancooper/Paramore/pull/179
 - Peformance issue caused by creation of a logger per requesthandler instance. The logger is now static, but is initialized lazily and can be overridden for TDD or legacy compatibility 
 
-## Release 6 ##
+## Release 6.0.0 ##
 
 **Breaking Changes**
 - CommandProcessorBuilder no longer takes .Logger(logger)
