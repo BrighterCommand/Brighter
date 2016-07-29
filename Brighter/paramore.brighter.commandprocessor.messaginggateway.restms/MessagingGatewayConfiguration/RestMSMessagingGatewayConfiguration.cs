@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,20 +23,34 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using RabbitMQ.Client;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using System;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration
 {
-    public static class MessageGatewayHelper
+    public class RestMSMessagingGatewayConfiguration  
     {
-        internal static void DeclareExchangeForConfiguration(this IModel channel, RmqMessagingGatewayConfiguration configuration)
-        {
-            if (configuration.Exchange.SupportDelay)
-                channel.ExchangeDeclare(configuration.Exchange.Name, "x-delayed-message", configuration.Exchange.Durable, autoDelete: false, arguments: new Dictionary<string, object> { { "x-delayed-type", configuration.Exchange.Type } });
-            else
-                channel.ExchangeDeclare(configuration.Exchange.Name, configuration.Exchange.Type, configuration.Exchange.Durable);
-        }
+        public RestMsSpecification RestMS { get; set; }
+
+        public Feed Feed { get; set; }
+    }
+
+    public class RestMsSpecification 
+    {
+        public Uri Uri { get; set; }
+
+        public string Id { get; set; }
+
+        public string User { get; set; }
+
+        public string Key { get; set; }
+
+        public string Timeout { get; set; }
+    }
+
+    public class Feed 
+    {
+        public string Name { get; set; }
+
+        public string Type { get; set; }
     }
 }

@@ -1,7 +1,4 @@
-﻿
-
-
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
 // Author           : ian
 // Created          : 12-18-2014
@@ -38,6 +35,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using System;
 using System.Collections.Generic;
 using RabbitMQ.Client;
@@ -47,7 +45,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
     /// <summary>
     /// Class RMQMessagingGatewayConfigurationSection.
     /// </summary>
-    public class RMQMessagingGatewayConfigurationSection
+    public class RmqMessagingGatewayConfiguration
     {
         /// <summary>
         /// Gets or sets the ampq URI.

@@ -36,10 +36,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Net.Cache;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Mime;
 using System.Threading;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
@@ -65,23 +63,25 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// The configuration
         /// </summary>
-        public readonly RestMSMessagingGatewayConfigurationSection Configuration;
+        public readonly RestMSMessagingGatewayConfiguration Configuration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:System.Object" /> class.
+        /// <param name="configuration">The configuration to use with RestMS.</param>
         /// </summary>
-        public RestMSMessageGateway() 
-            :this(LogProvider.For<RestMSMessageGateway>())
+        public RestMSMessageGateway(RestMSMessagingGatewayConfiguration configuration) 
+            :this(configuration, LogProvider.For<RestMSMessageGateway>())
         {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:System.Object" /> class.
         /// Use this if you need to provide the logger, for example for testing
         /// </summary>
+        /// <param name="configuration">The configuration to use with RestMS.</param>
         /// <param name="logger">The logger.</param>
-        public RestMSMessageGateway(ILog logger)
+        public RestMSMessageGateway(RestMSMessagingGatewayConfiguration configuration, ILog logger)
         {
-            Configuration = RestMSMessagingGatewayConfigurationSection.GetConfiguration();
+            Configuration = configuration; 
             Logger = logger;
             _timeout = Convert.ToDouble(Configuration.RestMS.Timeout);
         }
@@ -113,7 +113,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         public HttpRequestMessage CreateRequest(string uri, StringContent content)
         {
             var request = new HttpRequestMessage(HttpMethod.Post, uri) { Content = content };
-            request.Content.Headers.ContentType = new MediaTypeHeaderValue(MediaTypeNames.Text.Xml);
+            request.Content.Headers.ContentType = new MediaTypeHeaderValue(@"text/xml");
             return request;
         }
 

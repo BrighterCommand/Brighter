@@ -4,7 +4,7 @@
     "Newtonsoft.Json": "9.0.1",
      "paramore.brighter.commandprocessor": {
       "target": "project"
-    },
+    }
  },
   "frameworks": {
     "netstandard1.6": {
@@ -13,10 +13,18 @@
         "portable-net45+win8"
       ],
       "dependencies": {
-        "System.Threading.Thread": "4.0.0"
+        "System.Threading.Thread": "4.0.0",
+        "System.Xml.XmlSerializer": "4.0.11"
+      },
+      "bin":{
+        "assembly" : "../lib/hawk/netstandard1.6/Hawk.dll"
       }
     },
-   "net452": {}
+   "net452": {
+      "bin":{
+        "assembly" : "../lib/hawk/net452/Hawk.dll"
+      }
+    }
   }, 
   "configurations": {
     "Debug": {

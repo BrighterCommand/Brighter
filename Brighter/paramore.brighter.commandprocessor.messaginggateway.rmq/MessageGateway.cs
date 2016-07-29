@@ -65,29 +65,24 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="MessageGateway"/> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        //public MessageGateway(): this(LogProvider.For<MessageGateway>(), new RMQMessagingGatewayConfigurationSection())
-        //{}
-        
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway"/> class.
         /// Use if you need to inject a test logger
         /// </summary>
-        /// <param name="logger">The logger.</param>
-        //public MessageGateway(ILog logger) : this(logger, new RMQMessagingGatewayConfigurationSection())
-        //{
-        //}
-
-        protected MessageGateway(RMQMessagingGatewayConfigurationSection configuration) :
+        /// <param name="configuration">The configuration for RMQ</param>
+        protected MessageGateway(RmqMessagingGatewayConfiguration configuration) :
             this(LogProvider.For<MessageGateway>(), configuration)
         {
             
         }
 
-        //protected MessageGateway(ILog logger) : this(logger, new RMQMessagingGatewayConfigurationSection())
-        //{
-        //}
-
-        protected MessageGateway(ILog logger, RMQMessagingGatewayConfigurationSection configuration)
+        ///<summary>
+        /// Initializes a new instance of the <see cref="MessageGateway"/> class.
+        /// Use if you need to inject a test logger
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        /// <param name="configuration">The configuration for RMQ</param>
+        protected MessageGateway(ILog logger, RmqMessagingGatewayConfiguration configuration)
         {
             Logger = logger;
             Configuration = configuration;
@@ -111,7 +106,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// The configuration
         /// </summary>
-        protected readonly RMQMessagingGatewayConfigurationSection Configuration;
+        protected readonly RmqMessagingGatewayConfiguration Configuration;
 
         /// <summary>
         /// The channel

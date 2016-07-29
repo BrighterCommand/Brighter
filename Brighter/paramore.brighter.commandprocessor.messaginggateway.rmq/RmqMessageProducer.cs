@@ -58,15 +58,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
         /// <param name="logger">The logger.</param>
-        /// <param name="connectionName">The connection information needed to talk to RMQ</param>
+        /// <param name="connection">The connection information needed to talk to RMQ</param>
         // public RmqMessageProducer(ILog logger) : base(logger) { }
-        public RmqMessageProducer(ILog logger, RMQMessagingGatewayConfigurationSection connectionName) : base(logger, connectionName) { }
+        public RmqMessageProducer(ILog logger, RmqMessagingGatewayConfiguration connection) : base(logger, connection) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
         /// </summary>
-        /// <param name="connectionName">The connection information needed to talk to RMQ</param>
-        public RmqMessageProducer(RMQMessagingGatewayConfigurationSection connectionName) : base(connectionName)
+        /// <param name="connection">The connection information needed to talk to RMQ</param>
+        public RmqMessageProducer(RmqMessagingGatewayConfiguration connection) : base(connection)
         {
         }
 
