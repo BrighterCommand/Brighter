@@ -1,0 +1,74 @@
+{
+  "version": "1.0.0-*",
+<<<<<<< 576ccded066e65de92b31a6afed22b557317c968
+  "title": "Paramore.Brighter.CommandProcessor",
+  "description": "The Command Dispatcher pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers",
+  "authors": [ "Ian Cooper" ],
+  "packOptions": {
+    "summary": "Brighter is a .NET implementation of the Command Processor and Command Dispatcher patterns. It decouples invoker from target and provides common services to the command pipeline.",
+    "tags": ["RabbitMQ","Messaging","AMQP","ServiceBus","PubSub","Publish","Subscribe","Queue","Topic","Relay","Service","Bus","CQRS","Command Dispatcher","Command Processor","Command","Event","Broker","Task Queue","Work Queue","Retry","Circuit Breaker","Availability"],
+    "owners": [ "Ian Cooper" ],
+    "releaseNotes": "https://github.com/iancooper/Paramore/blob/master/release_notes.md",
+    "iconUrl": "http://iancooper.github.io/Paramore/images/brightercanon-nuget.png",
+    "projectUrl": "http://iancooper.github.io/Paramore",
+    "licenseUrl": "http://ianhammondcooper.mit-license.org",
+    "requireLicenseAcceptance": false,
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/paramore.brighter.commandprocessor"
+    }
+  },
+=======
+
+>>>>>>> Build both the netstandard 1.6 and dotnet 4.5.2 version
+  "dependencies": {
+    "NETStandard.Library": "1.6.0",
+    "Newtonsoft.Json": "9.0.1",
+    "Polly": "4.3.0"
+  },
+<<<<<<< 576ccded066e65de92b31a6afed22b557317c968
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50"
+    },
+    "net452": {}
+=======
+
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50"
+    }
+>>>>>>> Build both the netstandard 1.6 and dotnet 4.5.2 version
+  },
+  "configurations": {
+    "Debug": {
+      "buildOptions": {
+<<<<<<< 576ccded066e65de92b31a6afed22b557317c968
+        "define": [
+          "DEBUG",
+          "TRACE",
+          "LIBLOG_PORTABLE",
+          "LIBLOG_PUBLIC"
+        ]
+=======
+        "define": [ "DEBUG", "TRACE", "LIBLOG_PORTABLE", "LIBLOG_PUBLIC" ]
+>>>>>>> Build both the netstandard 1.6 and dotnet 4.5.2 version
+      }
+    },
+    "Release": {
+      "buildOptions": {
+<<<<<<< 576ccded066e65de92b31a6afed22b557317c968
+        "define": [
+          "RELEASE",
+          "TRACE",
+          "LIBLOG_PORTABLE",
+          "LIBLOG_PUBLIC"
+        ],
+=======
+        "define": [ "RELEASE", "TRACE", "LIBLOG_PORTABLE", "LIBLOG_PUBLIC" ],
+>>>>>>> Build both the netstandard 1.6 and dotnet 4.5.2 version
+        "optimize": true
+      }
+    }
+  }
+}

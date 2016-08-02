@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{2ACB382A-38FA-49A6-A9CD-212881D3CD37}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>paramore.brighter.commandprocessor</RootNamespace>
+    <AssemblyName>paramore.brighter.commandprocessor</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;LIBLOG_PUBLIC; LIBLOG_PORTABLE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE;LIBLOG_PUBLIC;LIBLOG_PORTABLE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Polly, Version=4.1.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Polly.4.1.2\lib\net45\Polly.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="App_Packages\LibLog.4.2\LibLog.cs" />
+    <Compile Include="AsyncHandlerFactory.cs" />
+    <Compile Include="AsyncPipelines.cs" />
+    <Compile Include="IAmAMessageStoreViewerAsync.cs" />
+    <Compile Include="IAmAnAsyncPipelineBuilder.cs" />
+    <Compile Include="IAmAnAsyncSubcriberRegistry.cs" />
+    <Compile Include="InMemoryMessageStore.cs" />
+    <Compile Include="monitoring\Attributes\MonitorAsyncAttribute.cs" />
+    <Compile Include="NoOpMessageStore.cs" />
+    <Compile Include="RequestHandlerAsync.cs" />
+    <Compile Include="AsyncRequestHandlers.cs" />
+    <Compile Include="ChannelName.cs" />
+    <Compile Include="Clock.cs" />
+    <Compile Include="CommandProcessorBuilder.cs" />
+    <Compile Include="ConfigurationException.cs" />
+    <Compile Include="ChannelFailureException.cs" />
+    <Compile Include="ControlBusSender.cs" />
+    <Compile Include="ControlBusSenderFactory.cs" />
+    <Compile Include="DefaultPolicy.cs" />
+    <Compile Include="eventsourcing\Attributes\UseCommandSourcingAsyncAttribute.cs" />
+    <Compile Include="eventsourcing\Attributes\UseCommandSourcingAttribute.cs" />
+    <Compile Include="eventsourcing\Handlers\CommandSourcingHandlerAsync.cs" />
+    <Compile Include="eventsourcing\Handlers\CommandSourcingHandler.cs" />
+    <Compile Include="extensions\ReflectionExtensions.cs" />
+    <Compile Include="actions\DeferMessageAction.cs" />
+    <Compile Include="HandlerConfiguration.cs" />
+    <Compile Include="IAmAChannelFactory.cs" />
+    <Compile Include="IAmACommandStore.cs" />
+    <Compile Include="IAmAControlBusSender.cs" />
+    <Compile Include="IAmAControlBusSenderFactory.cs" />
+    <Compile Include="IAmAMessageProducerFactory.cs" />
+    <Compile Include="IAmAMessageConsumerFactory.cs" />
+    <Compile Include="IAmAMessageGatewaySupportingDelay.cs" />
+    <Compile Include="IAmAMessageMapperFactory.cs" />
+    <Compile Include="IAmAMessageRecoverer.cs" />
+    <Compile Include="IAmAMessageStoreViewer.cs" />
+    <Compile Include="IAmACommandStoreAsync.cs" />
+    <Compile Include="IAmAMessageProducerAsync.cs" />
+    <Compile Include="IAmAMessageStoreAsync.cs" />
+    <Compile Include="IAmAChannel.cs" />
+    <Compile Include="IAmAPolicyRegistry.cs" />
+    <Compile Include="IAmAMessageProducer.cs" />
+    <Compile Include="IAmAMessageConsumer.cs" />
+    <Compile Include="IEvent.cs" />
+    <Compile Include="IHandleRequestsAsync.cs" />
+    <Compile Include="IAmAHandlerFactoryAsync.cs" />
+    <Compile Include="InMemoryCommandStore.cs" />
+    <Compile Include="logging\Attributes\RequestLoggingAsyncAttribute.cs" />
+    <Compile Include="logging\Attributes\RequestLoggingAttribute.cs" />
+    <Compile Include="logging\Handlers\RequestLoggingHandlerRequestHandlerAsync.cs" />
+    <Compile Include="logging\Handlers\RequestLoggingHandler.cs" />
+    <Compile Include="MessageRecovery.cs" />
+    <Compile Include="monitoring\Configuration\MonitoringConfigurationSection.cs" />
+    <Compile Include="monitoring\Handlers\MonitorHandlerAsync.cs" />
+    <Compile Include="monitoring\Mappers\MonitorEventMessageMapper.cs" />
+    <Compile Include="Channel.cs" />
+    <Compile Include="LifetimeScope.cs" />
+    <Compile Include="MessageFactory.cs" />
+    <Compile Include="MessageMapperRegistry.cs" />
+    <Compile Include="monitoring\Attributes\MonitorAttribute.cs" />
+    <Compile Include="monitoring\Events\MonitorEvent.cs" />
+    <Compile Include="monitoring\Handlers\MonitorHandler.cs" />
+    <Compile Include="PolicyRegistry.cs" />
+    <Compile Include="policy\Attributes\FallbackPolicyAsyncAttribute.cs" />
+    <Compile Include="policy\Attributes\FallbackPolicyAttribute.cs" />
+    <Compile Include="policy\Attributes\TimeoutPolicyAttribute.cs" />
+    <Compile Include="policy\Attributes\UsePolicyAsyncAttribute.cs" />
+    <Compile Include="policy\Attributes\UsePolicyAtttribute.cs" />
+    <Compile Include="policy\Handlers\ExceptionPolicyHandler.cs" />
+    <Compile Include="policy\Handlers\ExceptionPolicyHandlerAsync.cs" />
+    <Compile Include="policy\Handlers\FallbackPolicyHandler.cs" />
+    <Compile Include="policy\Handlers\FallbackPolicyHandlerRequestHandlerAsync.cs" />
+    <Compile Include="policy\Handlers\TimeoutPolicyHandler.cs" />
+    <Compile Include="Reply.cs" />
+    <Compile Include="ReplyAddress.cs" />
+    <Compile Include="Request.cs" />
+    <Compile Include="SubscriberRegistry.cs" />
+    <Compile Include="IAmAHandlerFactory.cs" />
+    <Compile Include="IAmASubscriberRegistry.cs" />
+    <Compile Include="IAmALifetime.cs" />
+    <Compile Include="IAmAMessageMapperRegistry.cs" />
+    <Compile Include="Message.cs" />
+    <Compile Include="IAmAMessageMapper.cs" />
+    <Compile Include="IAmAMessageStore.cs" />
+    <Compile Include="Interpreter.cs" />
+    <Compile Include="MessageBody.cs" />
+    <Compile Include="MessageHeader.cs" />
+    <Compile Include="MessagingConfiguration.cs" />
+    <Compile Include="PipelineBuilder.cs" />
+    <Compile Include="PipelineTracer.cs" />
+    <Compile Include="Pipelines.cs" />
+    <Compile Include="Command.cs" />
+    <Compile Include="CommandProcessor.cs" />
+    <Compile Include="Event.cs" />
+    <Compile Include="extensions\Each.cs" />
+    <Compile Include="HandlerFactory.cs" />
+    <Compile Include="HandlerName.cs" />
+    <Compile Include="HandlerTiming.cs" />
+    <Compile Include="IAmACommandProcessor.cs" />
+    <Compile Include="IAmARequestContextFactory.cs" />
+    <Compile Include="IAmAPipelineBuilder.cs" />
+    <Compile Include="IAmAPipelineTracer.cs" />
+    <Compile Include="ICommand.cs" />
+    <Compile Include="IHandleRequests.cs" />
+    <Compile Include="InMemoryRequestContextFactory.cs" />
+    <Compile Include="IRequest.cs" />
+    <Compile Include="IRequestContext.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RequestContext.cs" />
+    <Compile Include="RequestHandler.cs" />
+    <Compile Include="RequestHandlerAttribute.cs" />
+    <Compile Include="RequestHandlers.cs" />
+    <Compile Include="SimpleMessageMapperFactory.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="paramore.brighter.commandprocessor.nuspec" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

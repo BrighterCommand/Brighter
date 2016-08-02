@@ -1,0 +1,211 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{C64FE82E-8512-422A-8832-7821EF448F2C}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>paramore.brighter.commandprocessor.messageviewer</RootNamespace>
+    <AssemblyName>paramore.brighter.commandprocessor.messageviewer</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="CsQuery, Version=1.3.3.249, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\CsQuery.1.3.4\lib\net40\CsQuery.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Humanizer, Version=2.0.1.0, Culture=neutral, PublicKeyToken=979442b78dfc278e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Humanizer.Core.2.0.1\lib\dotnet\Humanizer.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Owin">
+      <HintPath>..\packages\Microsoft.Owin.3.0.1\lib\net45\Microsoft.Owin.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Owin.Hosting">
+      <HintPath>..\packages\Microsoft.Owin.Hosting.3.0.1\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
+    </Reference>
+    <Reference Include="Nancy, Version=1.4.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Nancy.1.4.3\lib\net40\Nancy.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Nancy.Hosting.Self, Version=1.4.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Nancy.Hosting.Self.1.4.1\lib\net40\Nancy.Hosting.Self.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Owin">
+      <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration">
+      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5\System.Configuration.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Topshelf, Version=3.3.154.0, Culture=neutral, PublicKeyToken=b800c4cfcdeea87b, processorArchitecture=MSIL">
+      <HintPath>..\packages\Topshelf.3.3.1\lib\net40-full\Topshelf.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerProducerElement.cs" />
+    <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerSection.cs" />
+    <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerStoresElement.cs" />
+    <Compile Include="Adaptors\API\Configuration\ConfigurationSections\MessageViewerStoresElementCollection.cs" />
+    <Compile Include="Adaptors\API\Resources\RepostView.cs" />
+    <Compile Include="Ports\Handlers\HandlerFactory.cs" />
+    <Compile Include="Ports\Handlers\IAmAMessageProducerFactoryProvider.cs" />
+    <Compile Include="Ports\Handlers\ICommand.cs" />
+    <Compile Include="Ports\Handlers\IHandleCommand.cs" />
+    <Compile Include="Ports\Handlers\IHandlerFactory.cs" />
+    <Compile Include="Ports\Handlers\MessageProducerFactoryProvider.cs" />
+    <Compile Include="Ports\Handlers\RepostCommandHandler.cs" />
+    <Compile Include="Ports\ViewModelRetrievers\MessageStoreViewerModelRetriever.cs" />
+    <Compile Include="Ports\ViewModelRetrievers\MessageStoreActivationStateListViewModelRetriever.cs" />
+    <Compile Include="Ports\ViewModelRetrievers\MessageListViewModelRetriever.cs" />
+    <Compile Include="Adaptors\API\Resources\MessageStoreViewerModel.cs" />
+    <Compile Include="Ports\Domain\MessageStoreViewerService.cs" />
+    <Compile Include="Ports\Domain\ViewModelRetrieverResult.cs" />
+    <Compile Include="Ports\Domain\MessageStoreConfigCache.cs" />
+    <Compile Include="Adaptors\API\Configuration\MessageStoreListCacheLoader.cs" />
+    <Compile Include="Ports\Domain\MessageStoreConfigFactory.cs" />
+    <Compile Include="Ports\Domain\MessageStoreViewerFactory.cs" />
+    <Compile Include="Adaptors\API\Resources\MessageViewerError.cs" />
+    <Compile Include="Adaptors\API\Configuration\DependencyResolver.cs" />
+    <Compile Include="Adaptors\API\Resources\MessageItemModel.cs" />
+    <Compile Include="Ports\Domain\MessageStoreConfig.cs" />
+    <Compile Include="Ports\Domain\MessageStoreConfigProvider.cs" />
+    <Compile Include="Adaptors\API\Configuration\NancyBootstrapper.cs" />
+    <Compile Include="Adaptors\API\Configuration\NancySelfHost.cs" />
+    <Compile Include="Ports\Domain\IMessageStoreConfigProvider.cs" />
+    <Compile Include="Adaptors\API\Resources\MessageStoreActivationStateModel.cs" />
+    <Compile Include="Adaptors\API\Resources\MessageStoreActivationStateListModel.cs" />
+    <Compile Include="Adaptors\API\Handlers\StoresNancyModule.cs" />
+    <Compile Include="Adaptors\API\Resources\MessageListModel.cs" />
+    <Compile Include="Adaptors\API\Handlers\IndexModule.cs" />
+    <Compile Include="Adaptors\API\Handlers\MessagesNancyModule.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Content\bootstrap-theme.css.map" />
+    <None Include="Content\bootstrap.css.map" />
+    <None Include="fonts\glyphicons-halflings-regular.eot" />
+    <None Include="fonts\glyphicons-halflings-regular.ttf" />
+    <None Include="fonts\glyphicons-halflings-regular.woff" />
+    <None Include="fonts\glyphicons-halflings-regular.woff2" />
+    <None Include="packages.config" />
+    <None Include="read.md" />
+    <EmbeddedResource Include="Scripts\jquery-2.1.3.min.map">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <None Include="Scripts\jquery-2.2.2.min.map" />
+  </ItemGroup>
+  <ItemGroup>
+<<<<<<< 2b0b8a7be053432c8fe01cd9e5c22e12b7b2ca89:Brighter/paramore.brighter.comandprocessor.messageviewer/paramore.brighter.commandprocessor.messageviewer.csproj.bak
+=======
+    <ProjectReference Include="..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
+      <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
+      <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.awssqs\paramore.brighter.commandprocessor.messaginggateway.awssqs.csproj">
+      <Project>{bd921f35-47c9-41ba-b1bc-ae9698869977}</Project>
+      <Name>paramore.brighter.commandprocessor.messaginggateway.awssqs</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
+      <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>
+      <Name>paramore.brighter.commandprocessor.messaginggateway.rmq</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+>>>>>>> CommandProcessor building under dotnetstandard 1.6:Brighter/paramore.brighter.comandprocessor.messageviewer/paramore.brighter.commandprocessor.messageviewer.csproj
+    <EmbeddedResource Include="assets\images\brighter.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="favicon.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="assets\views\index.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Scripts\jquery-2.1.3.min.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Scripts\mustache.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="assets\js\storesVm.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="assets\js\app.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="assets\js\messagesVm.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="assets\images\ellipsis.gif">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Content\bootstrap-theme.css" />
+    <Content Include="Content\bootstrap-theme.min.css" />
+    <Content Include="Content\bootstrap.css" />
+    <Content Include="Content\bootstrap.min.css" />
+    <Content Include="fonts\glyphicons-halflings-regular.svg" />
+    <Content Include="Scripts\bootstrap.js" />
+    <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Scripts\jquery-2.2.2.intellisense.js" />
+    <Content Include="Scripts\jquery-2.2.2.js" />
+    <Content Include="Scripts\jquery-2.2.2.min.js" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
