@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0-*",
+  "dependencies": {
+    "paramore.brighter.commandprocessor": {
+      "target": "project"
+    }
+  },
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50"
+    },
+    "net452": {}
+  }
+}
