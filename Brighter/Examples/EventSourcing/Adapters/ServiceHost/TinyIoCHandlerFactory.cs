@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using EventSourcing.ManualTinyIoc;
 using paramore.brighter.commandprocessor;
-using TinyIoC;
 
 namespace EventSourcing.Adapters.ServiceHost
 {

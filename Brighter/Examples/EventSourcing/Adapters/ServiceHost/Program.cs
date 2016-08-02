@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
+using EventSourcing.ManualTinyIoc;
 //using System.Reflection;
 using EventSourcing.Ports.CommandHandlers;
 using EventSourcing.Ports.Commands;
@@ -31,7 +32,6 @@ using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.commandstore.mssql;
 using paramore.brighter.commandprocessor.Logging;
-using TinyIoC;
 
 namespace EventSourcing.Adapters.ServiceHost
 {
@@ -40,8 +40,9 @@ namespace EventSourcing.Adapters.ServiceHost
         private static void Main(string[] args)
         {
             //var dbPath = Path.Combine(Path.GetDirectoryName(typeof(GreetingCommandHandler).GetTypeInfo().Assembly.GetName().FullName), "App_Data\\CommandStore.sdf");
-            var connectionString = "DataSource=\"" + dbPath + "\"";
-            var configuration = new MsSqlCommandStoreConfiguration(connectionString, "Commands", MsSqlCommandStoreConfiguration.DatabaseType.SqlCe);
+            //var connectionString = "DataSource=\"" + dbPath + "\"";
+            string connectionString = "";
+             var configuration = new MsSqlCommandStoreConfiguration(connectionString, "Commands", MsSqlCommandStoreConfiguration.DatabaseType.SqlCe);
             var commandStore = new MsSqlCommandStore(configuration);
 
             var registry = new SubscriberRegistry();

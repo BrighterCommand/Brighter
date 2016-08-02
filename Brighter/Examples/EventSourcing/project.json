@@ -14,7 +14,8 @@
         "Microsoft.NETCore.App": {
           "type": "platform",
           "version": "1.0.0"
-        }
+        },
+        "System.Reflection.TypeExtensions": "4.1.0"
       }
     },
     "net452": {}
