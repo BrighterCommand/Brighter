@@ -89,7 +89,7 @@ namespace paramore.brighter.commandprocessor
         public MessageBody(byte[] body, string bodyType)
         {
             Bytes = body;
-            BodyType = bodyType;
+            BodyType = bodyType ?? "JSON";
         }
 
         /// <summary>
