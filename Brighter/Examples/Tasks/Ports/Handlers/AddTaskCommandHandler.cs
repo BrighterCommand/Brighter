@@ -56,8 +56,7 @@ namespace Tasks.Ports.Handlers
         [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
         public override AddTaskCommand Handle(AddTaskCommand addTaskCommand)
         {
-            using (var scope = _tasksDAO.BeginTransaction())
-            {
+            
                 var inserted = _tasksDAO.Add(
                     new Task(
                         taskName: addTaskCommand.TaskName,
@@ -66,10 +65,8 @@ namespace Tasks.Ports.Handlers
                         )
                     );
 
-                scope.Commit();
-
-                addTaskCommand.TaskId = inserted.Id;
-            }
+            addTaskCommand.TaskId = inserted.Id;
+            
 
             _commandProcessor.Post(new TaskAddedEvent(addTaskCommand.Id, addTaskCommand.TaskId, addTaskCommand.TaskName, addTaskCommand.TaskDescription, addTaskCommand.TaskDueDate));
 

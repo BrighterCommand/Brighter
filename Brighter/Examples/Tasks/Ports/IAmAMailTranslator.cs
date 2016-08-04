@@ -22,13 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
-using SendGrid;
+using MimeKit;
 using Tasks.Model;
 
 namespace Tasks.Ports
 {
     public interface IAmAMailTranslator
     {
-        Mail Translate(TaskReminder taskReminder);
+        MimeMessage Translate(TaskReminder taskReminder);
     }
 }

@@ -22,20 +22,26 @@ THE SOFTWARE. */
 
 #endregion
 
-using SendGrid;
+using MimeKit;
 using Tasks.Model;
 
 namespace Tasks.Ports
 {
     public class MailTranslator : IAmAMailTranslator
     {
-        public Mail Translate(TaskReminder taskReminder)
+        public MimeMessage Translate(TaskReminder taskReminder)
         {
-            var mail = Mail.GetInstance();
-            mail.AddTo(taskReminder.ReminderTo);
-            mail.AddCc(taskReminder.CopyReminderTo);
-            mail.Subject = string.Format("Task Reminder! Task {0} is due on {1}", taskReminder.TaskName, taskReminder.DueDate);
-            return mail;
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress("Tasks Reminder", "tasks@paramorebrighter.com"));
+            message.To.Add(new MailboxAddress(taskReminder.ReminderTo, taskReminder.ReminderTo));
+            message.Subject = string.Format("Task Reminder! Task {0} is due on {1}", taskReminder.TaskName,
+                taskReminder.DueDate);
+            message.Body = new TextPart("plain")
+            {
+                Text = string.Format("Task {0} is due on {1}", taskReminder.TaskName, taskReminder.DueDate)
+            };
+
+            return message;
         }
     }
 }

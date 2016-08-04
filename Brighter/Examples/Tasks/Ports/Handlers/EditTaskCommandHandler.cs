@@ -56,8 +56,7 @@ namespace Tasks.Ports.Handlers
         [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
         public override EditTaskCommand Handle(EditTaskCommand editTaskCommand)
         {
-            using (var scope = _tasksDAO.BeginTransaction())
-            {
+           
                 Task task = _tasksDAO.FindById(editTaskCommand.TaskId);
 
                 task.TaskName = editTaskCommand.TaskName;
@@ -65,8 +64,6 @@ namespace Tasks.Ports.Handlers
                 task.DueDate = editTaskCommand.TaskDueDate;
 
                 _tasksDAO.Update(task);
-                scope.Commit();
-            }
 
             _commandProcessor.Post(new TaskEditedEvent(editTaskCommand.Id, editTaskCommand.TaskId, editTaskCommand.TaskName, editTaskCommand.TaskDescription, editTaskCommand.TaskDueDate));
 

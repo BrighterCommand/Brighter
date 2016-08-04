@@ -24,64 +24,76 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
-using Simple.Data;
+
 using Tasks.Model;
 
 namespace Tasks.Adapters.DataAccess
 {
     public class TasksDAO : ITasksDAO
     {
-        private readonly dynamic _db;
+        private string _connectionString = "Data Source = tasks.db";
 
         public TasksDAO()
         {
-            if (System.Web.HttpContext.Current != null)
-            {
-                var databasePath = System.Web.HttpContext.Current.Server.MapPath("~\\App_Data\\Tasks.sdf");
-                _db = Database.Opener.OpenFile(databasePath);
-            }
-            else
-            {
-                var file = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\Tasks.sdf");
 
-                _db = Database.OpenFile(file);
-            }
         }
 
         public Task Add(Task newTask)
         {
-            return _db.Tasks.Insert(newTask);
+            using (var context = TasksContextFactory.Create(_connectionString))
+            {
+                var task = context.Add(newTask);
+                context.SaveChanges();
+
+                return task.Entity;
+            }
         }
 
         public IEnumerable<Task> FindAll()
         {
-            return _db.Tasks.All().ToList<Task>();
-        }
-
-        public dynamic BeginTransaction()
-        {
-            return _db.BeginTransaction();
+            using (var context = TasksContextFactory.Create(_connectionString))
+            {
+                return context.Tasks.ToList();
+            }
         }
 
         public void Update(Task task)
         {
-            _db.Tasks.UpdateById(task);
+            using (var context = TasksContextFactory.Create(_connectionString))
+            {
+                context.Update(task);
+                context.SaveChanges();
+            }
         }
 
         public void Clear()
         {
-            _db.Tasks.DeleteAll();
+            using (var context = TasksContextFactory.Create(_connectionString))
+            {
+                context.Tasks.RemoveRange(context.Tasks);
+                context.SaveChanges();
+            }
         }
 
         public Task FindById(int taskId)
         {
-            return _db.Tasks.FindById(taskId);
+            using (var context = TasksContextFactory.Create(_connectionString))
+            {
+                return context.Tasks.First(t => t.Id == taskId);
+
+            }
         }
 
         public Task FindByName(string taskName)
         {
-            return _db.Tasks.FindBy(taskName: taskName);
+
+            using (var context = TasksContextFactory.Create(_connectionString))
+            {
+                return context.Tasks.First(t => t.TaskName == taskName);
+            }
+
         }
     }
 }

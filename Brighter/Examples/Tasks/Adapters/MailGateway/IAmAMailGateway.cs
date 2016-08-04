@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using Tasks.Model;
-using Task = System.Threading.Tasks.Task;
 
 namespace Tasks.Adapters.MailGateway
 {

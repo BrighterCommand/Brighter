@@ -56,20 +56,17 @@ namespace Tasks.Ports.Handlers
         [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
         public override CompleteTaskCommand Handle(CompleteTaskCommand completeTaskCommand)
         {
-            using (var scope = _tasksDAO.BeginTransaction())
-            {
+           
                 Task task = _tasksDAO.FindById(completeTaskCommand.TaskId);
                 if (task != null)
                 {
                     task.CompletionDate = completeTaskCommand.CompletionDate;
                     _tasksDAO.Update(task);
-                    scope.Commit();
                 }
                 else
                 {
                     throw new ArgumentOutOfRangeException("completeTaskCommand", completeTaskCommand, "Could not find the task to complete");
                 }
-            }
 
             _commandProcessor.Post(new TaskCompletedEvent(completeTaskCommand.Id, completeTaskCommand.TaskId, completeTaskCommand.CompletionDate));
 

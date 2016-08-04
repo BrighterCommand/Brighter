@@ -22,36 +22,60 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Configuration;
-using System.Net;
-using SendGrid.Transport;
+using MailKit.Net.Smtp;
 using Tasks.Model;
 using Tasks.Ports;
-using Task = System.Threading.Tasks.Task;
+
 
 namespace Tasks.Adapters.MailGateway
 {
     public class MailGateway : IAmAMailGateway
     {
         private readonly IAmAMailTranslator _translator;
+        private readonly SmtpDetails _smtpDetails;
 
-        public MailGateway(IAmAMailTranslator translator)
+        public MailGateway(IAmAMailTranslator translator, SmtpDetails smtpDetails)
         {
             _translator = translator;
+            _smtpDetails = smtpDetails;
         }
 
         public void Send(TaskReminder reminder)
         {
-            var mail = _translator.Translate(reminder);
+            var message = _translator.Translate(reminder);
 
-            var credentials = new NetworkCredential(
-                ConfigurationManager.AppSettings["sendGridUserName"],
-                ConfigurationManager.AppSettings["sendGridPassword"]
-                );
+            using (var client = new SmtpClient())
+            {
 
-            var api = Web.GetInstance(credentials);
+                //_smtpDetails = new SmtpDetails()
+                //{
+                //    Server = "smtp.friends.com",
+                //    Port = 587,
+                //    UserName = "joey",
+                //    Password = "password"
+                //};
 
-            api.DeliverAsync(mail).Wait();
+
+                client.Connect(_smtpDetails.Server, _smtpDetails.Port, false);
+
+                // Note: since we don't have an OAuth2 token, disable
+                // the XOAUTH2 authentication mechanism.
+                client.AuthenticationMechanisms.Remove("XOAUTH2");
+
+                // Note: only needed if the SMTP server requires authentication
+                client.Authenticate(_smtpDetails.UserName, _smtpDetails.Password);
+
+                client.Send(message);
+                client.Disconnect(true);
+            }
         }
+    }
+
+    public class SmtpDetails
+    {
+        public string Server { get; set; }
+        public int Port { get; set; }
+        public string UserName { get; set; }
+        public string Password { get; set; }
     }
 }

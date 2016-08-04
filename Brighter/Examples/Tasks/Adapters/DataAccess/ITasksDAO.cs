@@ -29,8 +29,6 @@ namespace Tasks.Adapters.DataAccess
 {
     public interface ITasksDAO
     {
-        dynamic BeginTransaction();
-
         Task Add(Task newTask);
         IEnumerable<Task> FindAll();
         Task FindById(int id);
