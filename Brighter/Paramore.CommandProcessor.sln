@@ -73,6 +73,8 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "GenericListener", "Examples
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Tasks", "Examples\Tasks\Tasks.xproj", "{7BBE222E-131F-42ED-B48D-A532509BD931}"
 EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "TasksApi", "Examples\TasksApi\TasksApi.xproj", "{1B814628-FA71-49ED-9957-A51F4986A7E8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -405,6 +407,18 @@ Global
 		{7BBE222E-131F-42ED-B48D-A532509BD931}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{7BBE222E-131F-42ED-B48D-A532509BD931}.Release|x86.ActiveCfg = Release|Any CPU
 		{7BBE222E-131F-42ED-B48D-A532509BD931}.Release|x86.Build.0 = Release|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Debug|x86.Build.0 = Debug|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Release|x86.ActiveCfg = Release|Any CPU
+		{1B814628-FA71-49ED-9957-A51F4986A7E8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -427,5 +441,6 @@ Global
 		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{936E66F7-759E-4CF1-9816-44E4A1BDF898} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{7BBE222E-131F-42ED-B48D-A532509BD931} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
+		{1B814628-FA71-49ED-9957-A51F4986A7E8} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 	EndGlobalSection
 EndGlobal
