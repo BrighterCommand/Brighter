@@ -29,7 +29,7 @@ using paramore.brighter.commandprocessor.monitoring.Attributes;
 
 namespace ManagementAndMonitoring.Ports.CommandHandlers
 {
-    internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
+    public class GreetingCommandHandler : RequestHandler<GreetingCommand>
     {
         [Monitor(step: 1, timing: HandlerTiming.Before, handlerType: typeof(GreetingCommandHandler))]
         public override GreetingCommand Handle(GreetingCommand command)

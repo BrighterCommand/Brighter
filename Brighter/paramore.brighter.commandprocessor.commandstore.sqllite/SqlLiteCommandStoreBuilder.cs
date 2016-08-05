@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,34 +22,20 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using ManagementAndMonitoring.ManualTinyIoc;
-using paramore.brighter.commandprocessor;
-
-namespace ManagementAndMonitoring.Adapters.ServiceHost
+namespace paramore.brighter.commandprocessor.commandstore.sqllite
 {
-    public class TinyIocHandlerFactory : IAmAHandlerFactory
+    public class SqlLiteCommandStoreBuilder
     {
-        private readonly TinyIoCContainer _container;
+        const string _messageStoreDDL = "CREATE TABLE {0} (" +
+                "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
+                "CommandType nvarchar(256)," +
+                "CommandBody ntext," +
+                "Timestamp dateTime" +
+                ")";
 
-        public TinyIocHandlerFactory(TinyIoCContainer container)
+        public static string GetDDL(string tableName)
         {
-            _container = container;
-        }
-
-        public IHandleRequests Create(Type handlerType)
-        {
-            return (IHandleRequests)_container.Resolve(handlerType);
-        }
-
-        public void Release(IHandleRequests handler)
-        {
-            var disposable = handler as IDisposable;
-            if (disposable != null)
-            {
-                disposable.Dispose();
-            }
-            handler = null;
+            return string.Format(_messageStoreDDL, tableName);
         }
     }
 }

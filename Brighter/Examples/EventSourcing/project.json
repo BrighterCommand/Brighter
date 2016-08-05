@@ -4,8 +4,8 @@
     "emitEntryPoint": true
   },
   "dependencies": {
-    "paramore.brighter.commandprocessor": "1.0.0-*",
-    "paramore.brighter.commandprocessor.commandstore.mssql": "1.0.0-*"
+    "paramore.brighter.commandprocessor": { "target": "project" },
+    "paramore.brighter.commandprocessor.commandstore.mssql": { "target": "project" }
   },
   "frameworks": {
     "netcoreapp1.0": {
@@ -14,8 +14,7 @@
         "Microsoft.NETCore.App": {
           "type": "platform",
           "version": "1.0.0"
-        },
-        "System.Reflection.TypeExtensions": "4.1.0"
+        }
       }
     },
     "net452": {}

@@ -23,21 +23,25 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using ManagementAndMonitoring.Adapters.ServiceHost;
+using ManagementAndMonitoring.ManualTinyIoc;
 using ManagementAndMonitoring.Ports.CommandHandlers;
 using ManagementAndMonitoring.Ports.Commands;
 using ManagementAndMonitoring.Ports.Mappers;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messagestore.mssql;
+using paramore.brighter.commandprocessor.messagestore.sqllite;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
 using Polly;
-using TinyIoC;
 using Topshelf;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using Connection = paramore.brighter.serviceactivator.Connection;
 
-namespace ManagementAndMonitoring.Adapters.ServiceHost
+namespace ManagementAndMonitoringWindowsService.ServiceHost
 {
     internal class ManagementAndMonitoringService : ServiceControl
     {
@@ -84,9 +88,27 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
                 {typeof(GreetingCommand), typeof(GreetingCommandMessageMapper)}
             };
 
+            var rmqGatewayMessages = new RMQMessagingGatewayConfigurationSection
+            {
+                AMPQUri = new AMQPUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                Exchange = new Exchange("paramore.brighter.exchange"),
+                Queues = new Queues()
+            };
+            var rmqGatewayMonitoring = new RMQMessagingGatewayConfigurationSection
+            {
+                AMPQUri = new AMQPUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                Exchange = new Exchange("paramore.brighter.exchange"),
+                Queues = new Queues()
+            };
+
             //create the gateway
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory("messages");
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory("messages");
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqGatewayMessages);
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqGatewayMessages);
+
+            var connections = new List<Connection>
+            {
+
+            };
 
             var builder = DispatchBuilder
                 .With()
@@ -99,7 +121,7 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
                  )
                  .MessageMappers(messageMapperRegistry)
                  .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
-                 .ConnectionsFromConfiguration();    
+                 .Connections(connections);
             _dispatcher = builder.Build();
 
             var controlBusBuilder = ControlBusReceiverBuilder
@@ -110,12 +132,11 @@ namespace ManagementAndMonitoring.Adapters.ServiceHost
             _controlDispatcher = controlBusBuilder.Build(Environment.MachineName + "." + "ManagementAndMonitoring");
 
             container.Register<IAmAControlBusSender>(new ControlBusSenderFactory().Create(
-                new MsSqlMessageStore(
-                    new MsSqlMessageStoreConfiguration(
-                    "DataSource=\"" + Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetName().CodeBase.Substring(8)), "App_Data\\MessageStore.sdf") + "\"", "Messages", 
-                    MsSqlMessageStoreConfiguration.DatabaseType.SqlCe)
-                    ), 
-                new RmqMessageProducer("monitoring")));
+                new SqlLiteMessageStore(
+                    new SqlLiteMessageStoreConfiguration(
+                    "DataSource=\"" + Path.Combine(Path.GetDirectoryName(typeof(GreetingCommand).GetTypeInfo().Assembly.CodeBase.Substring(8)), "App_Data\\MessageStore.sdf") + "\"", "Messages")
+                    ),
+                new RmqMessageProducer(rmqGatewayMonitoring)));
         }
 
         public bool Start(HostControl hostControl)

@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0-*",
+  "buildOptions": {
+    "emitEntryPoint": true
+  },
+
+  "dependencies": {
+    "Microsoft.NETCore.App": {
+      "type": "platform",
+      "version": "1.0.0"
+    },
+    "ManagementAndMonitoring": { "target": "project" },
+    "paramore.brighter.commandprocessor.messagestore.sqllite": { "target": "project" },
+    "Serilog": "2.0.0",
+    "Serilog.Sinks.Console": "2.1.0"
+  },
+
+  "frameworks": {
+    "netcoreapp1.0": {
+      "imports": "dnxcore50"
+    }
+  }
+}

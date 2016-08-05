@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,32 +22,22 @@ THE SOFTWARE. */
 
 #endregion
 
-using Topshelf;
-
-namespace ManagementAndMonitoring.Adapters.ServiceHost
+namespace paramore.brighter.commandprocessor.messagestore.sqllite
 {
-    internal class Program
+    public class SqlMessageStoreBuilder
     {
-        public static void Main()
+        const string _messageStoreDDL = "CREATE TABLE {0} (" +
+                "MessageId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
+                "Topic nvarchar(255)," +
+                "MessageType nvarchar(32)," +
+                "Timestamp dateTime," +
+                "HeaderBag ntext," +
+                "Body ntext" +
+                ")";
+
+        public static string GetDDL(string tableName)
         {
-            /*
-             * Send a message in this format to this service and it will print it out
-             * We document this here so that you can simply paste this into the RMQ web portal
-             * to see commands flowing through the system. 
-             * {"Greeting":"hello world","Id":"0a81cbbc-5f82-4912-99ee-19f0b7ee4bc8"}
-             */
-
-            HostFactory.Run(x => x.Service<ManagementAndMonitoringService >(sc =>
-               {
-                   sc.ConstructUsing(() => new ManagementAndMonitoringService ());
-
-                    // the start and stop methods for the service
-                    sc.WhenStarted((s, hostcontrol) => s.Start(hostcontrol));
-                   sc.WhenStopped((s, hostcontrol) => s.Stop(hostcontrol));
-
-                    // optional, when shutdown is supported
-                    sc.WhenShutdown((s, hostcontrol) => s.Shutdown(hostcontrol));
-               }));
+            return string.Format(_messageStoreDDL, tableName);
         }
     }
 }

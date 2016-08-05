@@ -28,7 +28,7 @@ using paramore.brighter.commandprocessor;
 
 namespace ManagementAndMonitoring.Ports.Mappers
 {
-    internal class GreetingCommandMessageMapper : IAmAMessageMapper<GreetingCommand>
+    public class GreetingCommandMessageMapper : IAmAMessageMapper<GreetingCommand>
     {
         public Message MapToMessage(GreetingCommand request)
         {
