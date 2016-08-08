@@ -39,11 +39,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Mime;
 using System.Text;
-using System.Threading.Tasks;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
+using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Parsers;
 
@@ -60,16 +59,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMsMessageProducer"/> class.
         /// </summary>
-        public RestMsMessageProducer()
-            : this(LogProvider.For<RestMsMessageProducer>()) 
+        public RestMsMessageProducer(RestMSMessagingGatewayConfiguration configuration)
+            : this(configuration, LogProvider.For<RestMsMessageProducer>()) 
         {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMsMessageProducer"/> class.
         /// Use this if you need to inject the logger, for example for testing
         /// </summary>
+        /// <param name="configuration">The configuration of the RestMS broker we need to contact</param>
         /// <param name="logger">The logger.</param>
-        public RestMsMessageProducer(ILog logger) : base(logger)
+        public RestMsMessageProducer(RestMSMessagingGatewayConfiguration configuration, ILog logger) : base(configuration, logger)
         {
             _feed = new Feed(this);
             _domain = new Domain(this);
@@ -126,7 +126,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 Content = new RestMSMessageContent
                 {
                     Value = message.Body.Value,
-                    Type = MediaTypeNames.Text.Plain,
+                    Type = "text/plain",
                     Encoding = Encoding.ASCII.WebName
                 }
             };

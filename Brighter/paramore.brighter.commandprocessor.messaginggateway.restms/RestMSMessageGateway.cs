@@ -162,14 +162,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         private HttpClient CreateClient(ClientOptions options, double timeout)
         {
             var handler = new HawkValidationHandler(options);
-            var requestHandler = new WebRequestHandler
+            var requestHandler = new HttpClientHandler()
             {
-                AllowPipelining = true,
                 AllowAutoRedirect = true,
-                CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.Revalidate)
             };
-            var client = HttpClientFactory.Create(requestHandler, handler);
-            client.Timeout = TimeSpan.FromMilliseconds(timeout);
+            handler.InnerHandler = requestHandler;
+            var client = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromMilliseconds(timeout),
+                
+            };
+            client.DefaultRequestHeaders.CacheControl.MustRevalidate = true;
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/xml"));
             return client;
         }

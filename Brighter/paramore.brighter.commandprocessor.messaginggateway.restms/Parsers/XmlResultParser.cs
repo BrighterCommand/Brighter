@@ -23,14 +23,20 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Xml.Serialization;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
 {
-    public static class XmlResultParser
+    public class XmlResultParser
     {
+        /// <summary>
+        /// We don't want to create instances, but LibLog does not accept a static type.
+        /// </summary>
+        private XmlResultParser()
+        { }
+
         public static bool TryParse<T>(string body, out T domainObject)
         {
             MemoryStream ms = null;
@@ -43,7 +49,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
             }
             catch (Exception e)
             {
-                Trace.WriteLine(e.Message);
+                var logger = LogProvider.For<XmlResultParser>();
+                logger.Trace(e.Message);
                 domainObject = default(T);
                 return false;
             }

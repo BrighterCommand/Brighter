@@ -36,18 +36,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
+using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
 {
     /// <summary>
     /// Class XmlRequestBuilder.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
     /// </summary>
-    public static class XmlRequestBuilder
+    public class XmlRequestBuilder
     {
+        /// <summary>
+        /// Private constructor - we don't want to build instances, but can't use a static type with LibLog
+        /// </summary>
+        private XmlRequestBuilder()
+        { }
+
         /// <summary>
         /// Serialize the object to xml. Returns true if successful, false if failed. The out property is set to null on a failure, otherwise it contains the XML
         /// This code is designed to produce an XML Fragment suitable for use with a REST API. It omits the <xml/> declaration in the output
@@ -71,7 +77,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
             }
             catch (Exception e)
             {
-                Trace.WriteLine(e.Message);
+                var logger = LogProvider.For<XmlRequestBuilder>();
+                logger.Trace(e.Message);
                 body = null;
                 return false;
             }

@@ -1,10 +1,11 @@
 ﻿{
   "dependencies": {
-    "NETStandard.Library": "1.6.0",
+   "NETStandard.Library": "1.6.0",
     "Newtonsoft.Json": "9.0.1",
      "paramore.brighter.commandprocessor": {
       "target": "project"
-    }
+    },
+    "Hawk":"2.0.0-beta5"
  },
   "frameworks": {
     "netstandard1.6": {
@@ -13,16 +14,28 @@
         "portable-net45+win8"
       ],
       "dependencies": {
+        "System.IO": "4.1.0",
+        "System.Private.DataContractSerialization": "4.1.1",
+        "System.Runtime": "4.1.0",
+        "System.Runtime.Serialization.Xml": "4.1.1",
+        "System.Runtime.Serialization.Primitives":"4.1.1",
+        "System.Text.Encoding": "4.0.11",
         "System.Threading.Thread": "4.0.0",
-        "System.Xml.XmlSerializer": "4.0.11"
-      },
-      "bin":{
-        "assembly" : "../lib/hawk/netstandard1.6/Hawk.dll"
+        "System.Xml.ReaderWriter": "4.0.11",
+        "System.Xml.XmlSerializer": "4.0.11",
+        "System.Net.Requests": "4.0.11"      
       }
     },
-   "net452": {
-      "bin":{
-        "assembly" : "../lib/hawk/net452/Hawk.dll"
+    "net452": {
+      "frameworkAssemblies": {
+        "System.Net.Requests": "4.0.0",      
+        "System.Runtime.Serialization": "4.0.0.0",
+        "System.Xml.XmlSerializer": "4.0.0",
+        "System.Xml": "4.0.0"
+      },
+      "dependencies": {
+        "System.Runtime.Serialization.Xml": "4.0.0",
+        "System.Runtime.Serialization.Primitives":"4.0.0"
       }
     }
   }, 

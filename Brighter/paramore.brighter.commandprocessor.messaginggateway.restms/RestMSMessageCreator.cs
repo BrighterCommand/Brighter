@@ -43,7 +43,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         private static MessageBody ReadMessageBody(RestMSMessage restMSMessage)
         {
-            var srcEncoding = Encoding.Default;
+            var srcEncoding = Encoding.GetEncoding(0);
             if (restMSMessage.Content.Encoding == "QuotedPrintable" || restMSMessage.Content.Encoding == "Plain")
             {
                 srcEncoding = Encoding.ASCII;

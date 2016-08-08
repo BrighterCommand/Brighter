@@ -40,6 +40,7 @@ using System.Linq;
 using System.Net.Http;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
+using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms
@@ -58,10 +59,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMsMessageConsumer"/> class.
         /// </summary>
+        /// <param name="configuration">The configuration of the RestMS broker</param>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="routingKey">The routing key.</param>
-        public RestMsMessageConsumer(string queueName, string routingKey) 
-            :this(queueName, routingKey, LogProvider.For<RestMsMessageConsumer>())
+        public RestMsMessageConsumer(RestMSMessagingGatewayConfiguration configuration, string queueName, string routingKey) 
+            :this(configuration, queueName, routingKey, LogProvider.For<RestMsMessageConsumer>())
         {}
 
 
@@ -69,11 +71,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// Initializes a new instance of the <see cref="RestMsMessageConsumer"/> class.
         /// Use this if you need to override the logger, for example in a test
         /// </summary>
+        /// <param name="configuration">The configuration of the RestMS broker</param>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="routingKey">The routing key.</param>
         /// <param name="logger">The logger.</param>
-        public RestMsMessageConsumer(string queueName, string routingKey, ILog logger)
-            : base(logger)
+        public RestMsMessageConsumer(RestMSMessagingGatewayConfiguration configuration, string queueName, string routingKey, ILog logger)
+            : base(configuration, logger)
         {
             _queueName = queueName;
             _routingKey = routingKey;
