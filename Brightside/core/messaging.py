@@ -30,21 +30,45 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-import uuid
+from uuid import UUID
 from abc import ABCMeta, abstractmethod
 
 
-class Message:
-    def __init__(self) -> None:
-        self._id = uuid.uuid4()
+class MessageBody:
+    """The body of our message. Note that this must use the same binary payload approach as Paramore Brighter to
+        ensure that payload is binary compatible. plain/text should be encoded as a UTF8 byte array for example
+    """
+    pass
+
+
+class MessageHeader:
+    """The header for our message. Note that this should agree with the Paramore.Brighter definition to ensure that
+        different language implementations are compatible
+    """
+    def __init__(self, identity: UUID) -> None:
+        self._id = identity  # type: UUID
 
     @property
-    def id(self) -> uuid:
+    def id (self):
         return self._id
 
 
-class MessageMapper:
-    pass
+class Message:
+    def __init__(self, message_header: MessageHeader, message_body: MessageBody) -> None:
+        self._message_header = message_header
+        self._message_body = message_body
+
+    @property
+    def header(self) -> MessageHeader:
+        return self._message_header
+
+    @property
+    def body(self) -> MessageBody:
+        return self._message_body
+
+    @property
+    def id(self) -> UUID:
+        return self._message_header.id
 
 
 class MessageStore(metaclass=ABCMeta):
@@ -53,7 +77,7 @@ class MessageStore(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_message(self, key: uuid):
+    def get_message(self, key: UUID):
         pass
 
 

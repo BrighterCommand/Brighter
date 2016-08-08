@@ -29,19 +29,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
-import uuid
+from uuid import UUID, uuid4
 from abc import ABCMeta, abstractmethod
 
 
 class Request(metaclass=ABCMeta):
     """Someting we wish to route over a Command Processor"""
-    key = uuid.uuid4() # type: uuid
+    key = uuid4()  # type: UUID
 
     def __init__(self) -> None:
-        self._id = uuid.uuid4()
+        self._id = uuid4()
 
     @property
-    def id(self) -> uuid:
+    def id(self) -> UUID:
         return self._id
 
     @staticmethod

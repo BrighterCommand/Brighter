@@ -37,7 +37,7 @@ from core.messaging import Message, MessageStore, Producer
 class FakeMessageStore(MessageStore):
     def __init__(self):
         self._message_was_added = None
-        self._messages = []
+        self._messages = []  # type: List[Message]
 
     @property
     def message_was_added(self):

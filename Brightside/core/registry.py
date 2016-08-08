@@ -29,8 +29,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
-import uuid
-from typing import Callable, Dict, TypeVar
+from uuid import UUID, uuid4
+from typing import Callable, Dict, List, TypeVar
 from core.handler import Handler, Request
 from core.messaging import Message
 from core.exceptions import ConfigurationException
@@ -40,8 +40,8 @@ class Registry:
     """
         Provides a registry of commands and handlers i.e. the observer pattern
     """
-    def __init__(self):
-        self._registry = dict()  # type: Dict[uuid, Callable[[], Handler]]
+    def __init__(self) -> None:
+        self._registry = dict()  # type: Dict[UUID, List[Callable[[], Handler]]]
 
     def register(self, request_class: Request, handler_factory: Callable[[], Handler]) -> None:
         """
@@ -61,7 +61,7 @@ class Registry:
         elif is_command or is_event:
             self._registry[key] = [handler_factory]
 
-    def lookup(self, request: Request) -> Callable[[], Handler]:
+    def lookup(self, request: Request) -> List[Callable[[], Handler]]:
         """
         Looks up the handler associated with a request - matches the key on the request to a registered handler
         :param request: The request we want to find a handler for
@@ -83,10 +83,10 @@ class MessageMapperRegistry:
     """
         Provides a registry of message mappers, used to serialize a command to a message, which a producer can send over the wire
     """
-    def __init__(self):
-        self._registry = dict() # type: Dict[uuid, Callable[[Request], Message]]
+    def __init__(self) -> None:
+        self._registry = dict() # type: Dict[UUID, Callable[[Request], Message]]
 
-    def register(self, request_class: type[R], mapper_func: Callable[[Request], Message]) -> None:
+    def register(self, request_class: Request, mapper_func: Callable[[Request], Message]) -> None:
         """Adds a message mapper to a factory, using the requests key
         :param mapper_func: A callback that creates a Message from a Request
         :param request_class: A request type
@@ -98,7 +98,7 @@ class MessageMapperRegistry:
         else:
             raise ConfigurationException("There is already a message mapper defined for this key; there can be only one")
 
-    def lookup(self, request_class: type[R]) -> Callable[[Request], Message]:
+    def lookup(self, request_class: Request) -> Callable[[Request], Message]:
         """
         Looks up the message mapper function associated with this class. Function should take in a Request derived class
          and return a Message derived class, for sending on the wire

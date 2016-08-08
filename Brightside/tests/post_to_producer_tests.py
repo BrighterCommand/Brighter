@@ -51,7 +51,10 @@ class PostTests(unittest.TestCase):
             producer=self._producer)
 
     def test_handle_command(self):
-        """ given that we have a message mapper and producer registered for a commnd, when we post a command, it should send via the producer"""
+        """ given that we have a message mapper and producer registered for a commnd,
+            when we post a command,
+            it should send via the producer
+        """
         self._request = MyCommand()
         self._commandProcessor.post(self._request)
 

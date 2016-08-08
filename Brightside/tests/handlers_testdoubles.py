@@ -29,7 +29,8 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-from core.handler import Handler, Command, Event
+from core.handler import Handler, Command, Event, Request
+from core.messaging import MessageBody, MessageHeader, Message
 from poll import retry, circuitbreaker
 
 
@@ -146,7 +147,7 @@ class MyHandlerBreakingCircuitAfterThreeFailures(Handler):
         if self._callCount <= 3:
             raise RuntimeError("Fake error to check for circuit broken")
         else:
-            #We should not get here, as we will run out of retries
+            # We should not get here, as we will run out of retries
             self._called = True
 
     @property
@@ -166,5 +167,7 @@ class MyHandlerBreakingCircuitAfterThreeFailures(Handler):
         self._callCount = value
 
 
-def map_to_message(request):
-    pass
+def map_to_message(request: Request) -> Message:
+    message_body = MessageBody()
+    message = Message(MessageHeader(request.id), message_body)
+    return message
