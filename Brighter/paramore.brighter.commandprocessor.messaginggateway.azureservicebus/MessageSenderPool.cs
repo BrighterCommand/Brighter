@@ -23,32 +23,38 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
-using Microsoft.ServiceBus.Messaging;
+using System.Linq;
+using Amqp;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
 {
     public class MessageSenderPool : IDisposable
     {
-        private readonly ILog logger;
-        private readonly MessagingFactory factory;
-        private readonly ConcurrentDictionary<string, MessageSender> senders = new ConcurrentDictionary<string, MessageSender>();
+        private readonly ILog _logger;
+        private readonly ConcurrentDictionary<string, SenderLink> _senders = new ConcurrentDictionary<string, SenderLink>();
+        private bool _closing;
 
-        public MessageSenderPool(ILog logger, MessagingFactory factory)
+        public MessageSenderPool(ILog logger)
         {
-            this.logger = logger;
-            this.factory = factory;
+            this._logger = logger;
         }
 
-        public MessageSender GetMessageSender(string path)
+        public SenderLink GetMessageSender(string topic)
         {
-            if (senders.ContainsKey(path))
-                return senders[path];
+            if (_senders.ContainsKey(topic))
+                return _senders[topic];
 
-            var sender = factory.CreateMessageSender(path);
-            senders.TryAdd(path, sender);
+            Address address = new Address("amqp://guest:guest@localhost:5672");
+            Connection connection = Connection.Factory.CreateAsync(address).Result;
+            Session session = new Session(connection);
+            SenderLink sender = new SenderLink(session, "sender", topic);
+
+            _senders.TryAdd(topic, sender);
+            sender.Closed += Sender_Closed;
             return sender;
         }
+
 
         public void Dispose()
         {
@@ -60,16 +66,30 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
         {
             Dispose(false);
         }
+
         protected virtual void Dispose(bool disposing)
         {
+            _closing = true;
             if (disposing)
             {
-                foreach (var sender in senders.Values)
+                foreach (var sender in _senders.Values)
                 {
-                    if (!sender.IsClosed)
-                    {
-                        sender.Close();
-                    }
+                    sender.Close();
+                }
+            }
+        }
+
+        private void Sender_Closed(AmqpObject sender, Amqp.Framing.Error error)
+        {
+            if (!_closing)
+            {
+                var senderLink = (SenderLink) sender;
+                var key =
+                    _senders.ToArray().Where(pair => pair.Value == senderLink).Select(pair => pair.Key).FirstOrDefault();
+                if (key != null)
+                {
+                    SenderLink returnedLink;
+                    _senders.TryRemove(key, out returnedLink);
                 }
             }
         }

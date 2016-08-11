@@ -22,46 +22,40 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Microsoft.ServiceBus;
-using Microsoft.ServiceBus.Messaging;
+using System.Globalization;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
 {
+    /// <summary>
+    /// Provides access to Azure Service Bus, ensuring that the required topics exist.
+    /// Uses the REST API for Azure Service Bus as the AMQP .NET Lite library only supports AMQP 1.0
+    /// and thus has no understanding of notions like queues, subscriptions, and topics.
+    /// </summary>
     public class MessageGateway : IDisposable
     {
-        private readonly ILog logger;
-        private readonly AzureServiceBusMessagingGatewayConfigurationSection configuration;
-        protected readonly MessagingFactory factory;
-        private readonly NamespaceManager namespaceManager;
+        private readonly ILog _logger;
+        private readonly AzureServiceBusMessagingGatewayConfiguration _configuration;
+        private readonly HttpClient _client = new HttpClient();
 
-        public MessageGateway(ILog logger)
+        public MessageGateway(AzureServiceBusMessagingGatewayConfiguration configuration, ILog logger)
         {
-            this.logger = logger;
-            this.configuration = AzureServiceBusMessagingGatewayConfigurationSection.GetConfiguration();
-            var endpoint = ServiceBusEnvironment.CreateServiceUri("sb", this.configuration.Namespace.Name, String.Empty);
-            var tokenProvider =
-                TokenProvider.CreateSharedAccessSignatureTokenProvider(this.configuration.SharedAccessPolicy.Name,
-                    this.configuration.SharedAccessPolicy.Key);
-            var factorySettings = new MessagingFactorySettings
-            {
-                TransportType = TransportType.Amqp,
-                OperationTimeout = TimeSpan.FromMinutes(5),
-                TokenProvider = tokenProvider
-            };
-            this.factory = MessagingFactory.Create(endpoint, factorySettings);
-            var namespaceSettings = new NamespaceManagerSettings
-            {
-                TokenProvider = tokenProvider
-            };
-            namespaceManager = new NamespaceManager(endpoint, namespaceSettings);
+            _configuration = configuration;
+            _logger = logger;
+
+            _client.BaseAddress = _configuration.Namespace.BaseAddress;
         }
 
-        protected void EnsureTopicExists(string topic)
+        protected void EnsureTopicExists(string topicName)
         {
-            if (!namespaceManager.TopicExists(topic))
+            if (!TopicExists(topicName))
             {
-                namespaceManager.CreateTopic(topic);
+                PutTopic(topicName);
             }
         }
 
@@ -80,11 +74,54 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
         {
             if (disposing)
             {
-                if (factory != null && !factory.IsClosed)
-                {
-                    factory.Close();
-                }
+                _client.Dispose();
             }
+        }
+
+        private string GetSASToken(string SASKeyName, string SASKeyValue)
+        {
+            var fromEpochStart = DateTime.UtcNow - new DateTime(1970, 1, 1);
+            var expiry = Convert.ToString((int)fromEpochStart.TotalSeconds + 3600);
+            var stringToSign = WebUtility.UrlEncode(_client.BaseAddress.AbsoluteUri) + "\n" + expiry;
+            var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(SASKeyValue));
+
+            var signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(stringToSign)));
+            var sasToken = String.Format(CultureInfo.InvariantCulture, "SharedAccessSignature sr={0}&sig={1}&se={2}&skn={3}",
+                WebUtility.UrlEncode(_client.BaseAddress.AbsoluteUri), WebUtility.UrlEncode(signature), expiry, SASKeyName);
+            return sasToken;
+        }
+
+
+        private void PutTopic(string topicName)
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                GetSASToken(_configuration.SharedAccessPolicy.Name, _configuration.SharedAccessPolicy.Key)
+                );
+
+            _logger.DebugFormat("\nCreating topic {0}", topicName);
+
+            // Prepare the body of the create queue request 
+            var requestBody = @"<entry xmlns=""http://www.w3.org/2005/Atom""> <title type=""text"">" + topicName + @"</title> <content type=""application/xml""> <TopicDescription xmlns:i=""http://www.w3.org/2001/XMLSchema-instance"" xmlns=""http://schemas.microsoft.com/netservices/2010/10/servicebus/connect"" /> </content> </entry>";
+
+            var response = _client.PutAsync(topicName, new StringContent(requestBody)).Result;
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new ConfigurationException(string.Format("Error creating topic on Azure Service BUS. Management API returned a {0) with {1}", response.StatusCode, response.Content.ReadAsStringAsync().Result));
+            }
+        }
+
+        private bool TopicExists(string topicName)
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                GetSASToken(_configuration.SharedAccessPolicy.Name, _configuration.SharedAccessPolicy.Key)
+                );
+
+            _logger.DebugFormat("\nCreating topic {0}", topicName);
+
+            var response = _client.GetAsync(topicName).Result;
+
+            return !response.IsSuccessStatusCode;
         }
     }
 }

@@ -21,8 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using Microsoft.ServiceBus.Messaging;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
 
@@ -30,14 +28,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
 {
     public class AzureServiceBusMessageProducer : MessageGateway, IAmAMessageProducerSupportingDelay
     {
-        private readonly ILog logger;
-        private readonly MessageSenderPool pool;
+        private readonly ILog _logger;
+        private readonly MessageSenderPool _pool;
 
-        public AzureServiceBusMessageProducer(ILog logger)
-            : base(logger)
+        public AzureServiceBusMessageProducer(AzureServiceBusMessagingGatewayConfiguration configuration, ILog logger)
+            : base(configuration, logger)
         {
-            this.logger = logger;
-            this.pool = new MessageSenderPool(logger, factory);
+            this._logger = logger;
         }
 
         public void Send(Message message)
@@ -47,20 +44,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
 
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
-            logger.DebugFormat("AzureServiceBusMessageProducer: Publishing message to topic {0}", message.Header.Topic);
-            var messageSender = pool.GetMessageSender(message.Header.Topic);
+            _logger.DebugFormat("AzureServiceBusMessageProducer: Publishing message to topic {0}", message.Header.Topic);
+            var messageSender = _pool.GetMessageSender(message.Header.Topic);
             EnsureTopicExists(message.Header.Topic);
-            messageSender.Send(new BrokeredMessage(message.Body.Value)
-            {
-                ScheduledEnqueueTimeUtc = DateTime.UtcNow.AddMilliseconds(delayMilliseconds)
-            });
-            logger.DebugFormat("AzureServiceBusMessageProducer: Published message with id {0} to topic '{1}' with a delay of {2}ms and content: {3}", message.Id, message.Header.Topic, delayMilliseconds, JsonConvert.SerializeObject(message));
+            messageSender.Send(new Amqp.Message(message.Body.Value));
+            _logger.DebugFormat("AzureServiceBusMessageProducer: Published message with id {0} to topic '{1}' with a delay of {2}ms and content: {3}", message.Id, message.Header.Topic, delayMilliseconds, JsonConvert.SerializeObject(message));
         }
 
-        public bool DelaySupported
-        {
-            get { return true; }
-        }
+        public bool DelaySupported => false;
 
         ~AzureServiceBusMessageProducer()
         {
@@ -71,10 +62,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
         {
             if (disposing)
             {
-                if (pool != null)
-                {
-                    pool.Dispose();
-                }
+                _pool?.Dispose();
             }
             base.Dispose(disposing);
         }
