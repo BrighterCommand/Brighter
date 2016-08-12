@@ -1,4 +1,4 @@
-﻿{
+{
   "dependencies": {
     "Microsoft.NETCore.App": {
       "version": "1.0.0",
@@ -14,8 +14,20 @@
     "Microsoft.Extensions.Logging.Console": "1.0.0",
     "Microsoft.Extensions.Logging.Debug": "1.0.0",
     "Microsoft.Extensions.Options.ConfigurationExtensions": "1.0.0",
-    "Tasks": "1.0.0-*",
-    "System.Xml.XmlSerializer": "4.0.11"
+    "System.Xml.XmlSerializer": "4.0.11",
+    "Tasks": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messaginggateway.rmq": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messagestore.sqllite": {
+      "target": "project"
+    },
+    "StructureMap.Microsoft.DependencyInjection": "1.0.1"
   },
 
   "tools": {

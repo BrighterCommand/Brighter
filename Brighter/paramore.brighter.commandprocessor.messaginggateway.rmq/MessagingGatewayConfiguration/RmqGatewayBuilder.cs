@@ -26,9 +26,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
             return this;
         }
 
-        public RMQMessagingGatewayConfigurationSection DefaultQueues()
+        public RmqMessagingGatewayConfiguration DefaultQueues()
         {
-            return new RMQMessagingGatewayConfigurationSection
+            return new RmqMessagingGatewayConfiguration
             {
                 AMPQUri = new AMQPUriSpecification(_ampqUri),
                 Exchange = new Exchange(_exchangeName),
@@ -48,7 +48,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
 
         public interface IRmqGatewayBuilderQueues
         {
-            RMQMessagingGatewayConfigurationSection DefaultQueues();
+            RmqMessagingGatewayConfiguration DefaultQueues();
         }
     }
 }

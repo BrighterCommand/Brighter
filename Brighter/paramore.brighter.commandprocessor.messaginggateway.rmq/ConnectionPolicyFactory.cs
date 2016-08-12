@@ -65,12 +65,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Use if you need to inject a test logger
         /// </summary>
         /// <param name="logger">The logger.</param>
-        /// <param name="configurationSection"></param>
+        /// <param name="configuration"></param>
         public ConnectionPolicyFactory(ILog logger, RmqMessagingGatewayConfiguration configuration)
         {
             _logger = logger;
 
-            var configuration = configurationSection;
             int retries = configuration.AMPQUri.ConnectionRetryCount;
             int retryWaitInMilliseconds = configuration.AMPQUri.RetryWaitInMilliseconds;
             int circuitBreakerTimeout = configuration.AMPQUri.CircuitBreakTimeInMilliseconds;
