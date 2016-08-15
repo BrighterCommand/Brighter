@@ -35,7 +35,11 @@ from poll import retry, circuitbreaker
 
 
 class MyCommand(Command):
-   pass
+    pass
+
+
+class MyOtherCommand(Command):
+    pass
 
 
 class MyCommandHandler(Handler):

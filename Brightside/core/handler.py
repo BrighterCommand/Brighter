@@ -35,8 +35,6 @@ from abc import ABCMeta, abstractmethod
 
 class Request(metaclass=ABCMeta):
     """Someting we wish to route over a Command Processor"""
-    key = uuid4()  # type: UUID
-
     def __init__(self) -> None:
         self._id = uuid4()
 

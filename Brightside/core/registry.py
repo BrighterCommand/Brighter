@@ -29,7 +29,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
-from uuid import UUID, uuid4
 from typing import Callable, Dict, List, TypeVar
 from core.handler import Handler, Request
 from core.messaging import Message
@@ -41,7 +40,7 @@ class Registry:
         Provides a registry of commands and handlers i.e. the observer pattern
     """
     def __init__(self) -> None:
-        self._registry = dict()  # type: Dict[UUID, List[Callable[[], Handler]]]
+        self._registry = dict()  # type: Dict[str, List[Callable[[], Handler]]]
 
     def register(self, request_class: Request, handler_factory: Callable[[], Handler]) -> None:
         """
@@ -50,7 +49,7 @@ class Registry:
         :param handler_factory: A factory method to create the handler to dispatch to
         :return:
         """
-        key = request_class.key
+        key = request_class.__class__.__name__
         is_command = request_class.is_command()
         is_event = request_class.is_event()
         is_present = key in self._registry
@@ -67,7 +66,7 @@ class Registry:
         :param request: The request we want to find a handler for
         :return:
         """
-        key = request.key
+        key = request.__class__.__name__
         if key not in self._registry:
             if request.is_command():
                 raise ConfigurationException("There is no handler registered for this request")
@@ -84,7 +83,7 @@ class MessageMapperRegistry:
         Provides a registry of message mappers, used to serialize a command to a message, which a producer can send over the wire
     """
     def __init__(self) -> None:
-        self._registry = dict() # type: Dict[UUID, Callable[[Request], Message]]
+        self._registry = dict()  # type: Dict[str, Callable[[Request], Message]]
 
     def register(self, request_class: Request, mapper_func: Callable[[Request], Message]) -> None:
         """Adds a message mapper to a factory, using the requests key
@@ -92,7 +91,7 @@ class MessageMapperRegistry:
         :param request_class: A request type
         """
 
-        key = request_class.key
+        key = request_class.__class__.__name__
         if key not in self._registry:
             self._registry[key] = mapper_func
         else:
@@ -105,7 +104,7 @@ class MessageMapperRegistry:
         :param request_class:
         :return:
         """
-        key = request_class.key
+        key = request_class.__class__.__name__
         if key not in self._registry:
             raise ConfigurationException("There is no message mapper associated with this key; we require a mapper")
         else:

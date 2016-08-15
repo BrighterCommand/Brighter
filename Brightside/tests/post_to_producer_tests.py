@@ -34,7 +34,8 @@ import unittest
 from core.registry import MessageMapperRegistry
 from tests.messaging_testdoubles import FakeMessageStore, FakeProducer
 from core.command_processor import CommandProcessor
-from tests.handlers_testdoubles import MyCommand, map_to_message
+from tests.handlers_testdoubles import MyCommand, MyOtherCommand, map_to_message
+from core.exceptions import ConfigurationException
 
 
 class PostTests(unittest.TestCase):
@@ -61,6 +62,24 @@ class PostTests(unittest.TestCase):
         self.assertTrue(self._message_store.message_was_added, "Expected a message to be added")
         self.assertTrue(self._message_store.get_message(self._request.id), "Expected the command to be converted into a message")
         self.assertTrue(self._producer.was_sent_message, "Expected a message to be sent via the producer")
+        self.assertTrue(str(self._message_store.get_message(self._request.id).body), "")
+
+    def test_missing_message_mapper(self):
+        """given that we have no message mapper registered for a command
+            when we post a command
+            it should raise an error
+        """
+        self._request = MyOtherCommand()
+
+        was_exception_thrown = False
+        try:
+            self._commandProcessor.post(self._request)
+        except ConfigurationException as ex:
+            was_exception_thrown = True
+
+        self.assertTrue(was_exception_thrown)
+
+
 
 
 
