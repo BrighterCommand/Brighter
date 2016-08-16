@@ -21,7 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-
+#if NET452
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -147,3 +147,4 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
         }
     }
 }
+#endif

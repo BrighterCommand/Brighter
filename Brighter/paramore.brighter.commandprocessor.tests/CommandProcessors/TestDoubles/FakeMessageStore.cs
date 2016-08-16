@@ -27,9 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.SimpleWorkflow.Model;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.extensions;
 
 namespace paramore.commandprocessor.tests.CommandProcessors.TestDoubles
 {

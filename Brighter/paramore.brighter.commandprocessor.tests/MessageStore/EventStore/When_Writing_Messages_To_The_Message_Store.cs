@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+#if NET452
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -144,3 +145,4 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
         }
     }
 }
+#endif

@@ -1,23 +1,16 @@
-﻿{
+{
   "buildOptions": {
     "emitEntryPoint": true
   },
 
   "dependencies": {
-   "dotnet-test-nunit": "3.4.0-beta-1",
-   "paramore.brighter.commandprocessor": {
+    "paramore.brighter.commandprocessor": {
       "target": "project"
     },
     "paramore.brighter.commandprocessor.commandstore.mssql": {
       "target": "project"
     },
-    "paramore.brighter.commandprocessor.messagestore.eventstore": {
-      "target": "project"
-    },
     "paramore.brighter.commandprocessor.messagestore.mssql": {
-      "target": "project"
-    },
-    "paramore.brighter.messageviewer": {
       "target": "project"
     },
     "paramore.brighter.commandprocessor.messaginggateway.awssqs": {
@@ -38,7 +31,9 @@
     "Machine.Specifications": "0.11.0",
     "Machine.Specifications.Should": "0.11.0",
     "Machine.Fakes": "2.8.0-beta3",
-    "dotnet-test-mspec": "0.2.0"
+    "dotnet-test-mspec": "0.2.0",
+    "Nito.AsyncEx": "3.0.1",
+    "FluentAssertions": "4.13.0"
   },
   "frameworks": {
     "netcoreapp1.0": {
@@ -58,11 +53,17 @@
       }
     },
     "net452": {
-        "dependencies": {
-          "FakeItEasy": "2.3.0-coreclr-beta56"
+      "dependencies": {
+        "paramore.brighter.commandprocessor.messagestore.eventstore": {
+          "target": "project"
+        },
+        "EventStore.Client": "3.8.0",
+        "EventStore.Client.Embedded": "3.8.0",
+        "FakeItEasy": "2.3.0-coreclr-beta56"
       }
     }
-  }, 
+  },
+  "tools": {},
   "configurations": {
     "Debug": {
       "buildOptions": {
