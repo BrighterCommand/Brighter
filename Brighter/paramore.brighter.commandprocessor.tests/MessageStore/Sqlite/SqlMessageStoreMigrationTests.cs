@@ -23,33 +23,29 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.Data.SqlServerCe;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Machine.Specifications;
+using Microsoft.Data.Sqlite;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messagestore.mssql;
+using paramore.brighter.commandprocessor.messagestore.sqllite;
+using paramore.commandprocessor.tests.CommandStore.MsSsql;
 
-namespace paramore.commandprocessor.tests.MessageStore.MsSql
+namespace paramore.commandprocessor.tests.MessageStore.Sqlite
 {
     public class SqlMessageStoreMigrationTests
     {
-        private const string TestDbPath = "test.sdf";
+        private const string TestDbPath = "test.db";
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
         private const string TableName = "test_messages";
 
         private Establish _context = () =>
         {
-            CleanUpDb();
-            CreateTestDb();
+            //TODO: fix db
 
-            s_sqlMessageStore = new MsSqlMessageStore(
-                    new MsSqlMessageStoreConfiguration(ConnectionString, TableName, MsSqlMessageStoreConfiguration.DatabaseType.SqlCe),
-                    new LogProvider.NoOpLogger());
+            s_sqlMessageStore = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration(ConnectionString, TableName), new LogProvider.NoOpLogger());
         };
 
         public class when_writing_a_message_with_minimal_header_information_to_the_message_store
@@ -60,18 +56,18 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
                 AddHistoricMessage(s_sqlMessageStore, s_message).Wait();
             };
 
-            private async static Task AddHistoricMessage(MsSqlMessageStore sSqlMessageStore, Message message)
+            private async static Task AddHistoricMessage(SqlLiteMessageStore sSqlMessageStore, Message message)
             {
                 var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Body) VALUES (@MessageId, @MessageType, @Topic, @Body)", TableName);
                 var parameters = new[]
                 {
-                    new SqlCeParameter("MessageId", message.Id),
-                    new SqlCeParameter("MessageType", message.Header.MessageType.ToString()),
-                    new SqlCeParameter("Topic", message.Header.Topic),
-                    new SqlCeParameter("Body", message.Body.Value),
+                    new SqliteParameter("MessageId", message.Id),
+                    new SqliteParameter("MessageType", message.Header.MessageType.ToString()),
+                    new SqliteParameter("Topic", message.Header.Topic),
+                    new SqliteParameter("Body", message.Body.Value),
                 };
 
-                using (var connection = new SqlCeConnection(ConnectionString))
+                using (var connection = new SqliteConnection(ConnectionString))
                 using (var command = connection.CreateCommand())
                 {
                     await connection.OpenAsync();
@@ -82,7 +78,7 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
                 }
             }
 
-            private Because _of = () => { s_storedMessage = s_sqlMessageStore.Get(s_message.Id).Result; };
+            private Because _of = () => { s_storedMessage = s_sqlMessageStore.Get(s_message.Id); };
 
             private It _should_read_the_message_from_the__sql_message_store = () => s_storedMessage.Body.Value.ShouldEqual(s_message.Body.Value);
             private It _should_read_the_message_header_type_from_the__sql_message_store = () => s_storedMessage.Header.MessageType.ShouldEqual(s_message.Header.MessageType);
@@ -91,35 +87,19 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
             private It _should_read_empty_header_bag_from_the__sql_message_store = () => s_storedMessage.Header.Bag.Keys.Any().ShouldBeFalse();
         }
 
-        private Cleanup _cleanup = () => CleanUpDb();
-        private static MsSqlMessageStore s_sqlMessageStore;
+        private Cleanup _cleanup = () =>
+        {
+            if(_sqliteConnection != null)
+                _sqliteConnection.Dispose();
+        };
+        private static SqlLiteMessageStore s_sqlMessageStore;
         private static Message s_message;
         private static Message s_storedMessage;
+        private static SqliteConnection _sqliteConnection;
 
         private static void CleanUpDb()
         {
             File.Delete(TestDbPath);
-        }
-
-        private static void CreateTestDb()
-        {
-            var en = new SqlCeEngine(ConnectionString);
-            en.CreateDatabase();
-
-            var oldSchemaCreationSql = string.Format("CREATE TABLE {0} (" +
-                                        "MessageId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
-                                        "Topic nvarchar(255)," +
-                                        "MessageType nvarchar(32)," +
-                                        "Body ntext" +
-                                    ")", TableName);
-
-            using (var cnn = new SqlCeConnection(ConnectionString))
-            using (var cmd = cnn.CreateCommand())
-            {
-                cmd.CommandText = oldSchemaCreationSql;
-                cnn.Open();
-                cmd.ExecuteNonQuery();
-            }
         }
     }
 }

@@ -22,11 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Data.SqlServerCe;
 using System.IO;
 using Machine.Specifications;
+using Microsoft.Data.Sqlite;
 using Nito.AsyncEx;
-using paramore.brighter.commandprocessor.commandstore.mssql;
+using paramore.brighter.commandprocessor.commandstore.sqllite;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
@@ -34,20 +34,18 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
 {
     public class When_Writing_A_Message_To_The_Command_Store_Async
     {
-        private const string TestDbPath = "test.sdf";
+        private const string TestDbPath = "test.db";
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
         private const string TableName = "test_messages";
-        private static MsSqlCommandStore s_sqlCommandStore;
+        private static SqlLiteCommandStore s_sqlCommandStore;
         private static MyCommand s_raisedCommand;
         private static MyCommand s_storedCommand;
 
         private Establish _context = () =>
         {
-            CleanUpDb();
-            CreateTestDb();
+            _sqliteConnection = DatabaseHelper.CreateDatabaseWithTable(ConnectionString, SqlLiteCommandStoreBuilder.GetDDL(TableName));
 
-            s_sqlCommandStore = new MsSqlCommandStore(new MsSqlCommandStoreConfiguration(ConnectionString, TableName, MsSqlCommandStoreConfiguration.DatabaseType.SqlCe),
-                new LogProvider.NoOpLogger());
+            s_sqlCommandStore = new SqlLiteCommandStore(new SqlLiteCommandStoreConfiguration(ConnectionString, TableName), new LogProvider.NoOpLogger());
             s_raisedCommand = new MyCommand() {Value = "Test"};
             AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync<MyCommand>(s_raisedCommand));
         };
@@ -58,28 +56,17 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
         private It _should_read_the_command_value = () => s_storedCommand.Value.ShouldEqual(s_raisedCommand.Value);
         private It _should_read_the_command_id = () => s_storedCommand.Id.ShouldEqual(s_raisedCommand.Id);
 
-        private Cleanup _cleanup = () => CleanUpDb();
+        private Cleanup _cleanup = () =>
+        {
+            if (_sqliteConnection != null)
+                _sqliteConnection.Dispose();
+        };
+
+        private static SqliteConnection _sqliteConnection;
 
         private static void CleanUpDb()
         {
             File.Delete(TestDbPath);
-        }
-
-        private static void CreateTestDb()
-        {
-            var en = new SqlCeEngine(ConnectionString);
-            en.CreateDatabase();
-
-
-            var sql = SqlCommandStoreBuilder.GetDDL(TableName);
-
-            using (var cnn = new SqlCeConnection(ConnectionString))
-            using (var cmd = cnn.CreateCommand())
-            {
-                cmd.CommandText = sql;
-                cnn.Open();
-                cmd.ExecuteNonQuery();
-            }
         }
     }
 }

@@ -23,10 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Data.SqlServerCe;
 using System.IO;
 using Machine.Specifications;
-using paramore.brighter.commandprocessor.commandstore.mssql;
+using Microsoft.Data.Sqlite;
+using paramore.brighter.commandprocessor.commandstore.sqllite;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 
@@ -34,48 +34,32 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
 {
     public class When_There_Is_No_Message_In_The_Sql_Command_Store
     {
-        private const string TestDbPath = "test.sdf";
+        private const string TestDbPath = "test.db";
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
         private const string TableName = "test_messages";
-        private static MsSqlCommandStore s_sqlCommandStore;
+        private static SqlLiteCommandStore s_sqlCommandStore;
         private static MyCommand s_raisedCommand;
         private static MyCommand s_storedCommand;
 
         private Establish _context = () =>
         {
-            CleanUpDb();
-            CreateTestDb();
-
-            s_sqlCommandStore = new MsSqlCommandStore(new MsSqlCommandStoreConfiguration(ConnectionString, TableName, MsSqlCommandStoreConfiguration.DatabaseType.SqlCe),
-                new LogProvider.NoOpLogger());
+            _sqliteConnection = DatabaseHelper.CreateDatabaseWithTable(ConnectionString, SqlLiteCommandStoreBuilder.GetDDL(TableName));
+            s_sqlCommandStore = new SqlLiteCommandStore(new SqlLiteCommandStoreConfiguration(ConnectionString, TableName), new LogProvider.NoOpLogger());
         };
 
         private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(Guid.NewGuid()); };
 
-        private It _should_return_an_empty_command_on_a_missing_command = () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
+        private It _should_return_an_empty_command_on_a_missing_command =
+            () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
 
-        private Cleanup _cleanup = () => CleanUpDb();
-
-        private static void CleanUpDb()
+        private Cleanup _cleanup = () =>
         {
-            File.Delete(TestDbPath);
-        }
+            if (_sqliteConnection != null)
+                _sqliteConnection.Dispose();
+        };
 
-        private static void CreateTestDb()
-        {
-            var en = new SqlCeEngine(ConnectionString);
-            en.CreateDatabase();
+        private static SqliteConnection _sqliteConnection;
 
-
-            var sql = SqlCommandStoreBuilder.GetDDL(TableName);
-
-            using (var cnn = new SqlCeConnection(ConnectionString))
-            using (var cmd = cnn.CreateCommand())
-            {
-                cmd.CommandText = sql;
-                cnn.Open();
-                cmd.ExecuteNonQuery();
-            }
-        }
     }
+
 }

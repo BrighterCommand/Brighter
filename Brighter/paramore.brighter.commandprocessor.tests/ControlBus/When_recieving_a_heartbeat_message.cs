@@ -63,7 +63,7 @@ namespace paramore.commandprocessor.tests.ControlBus
 
             A.CallTo(() => dispatcher.Consumers).Returns(new List<IAmAConsumer>() {s_firstConsumer, s_secondConsumer});
 
-            var hostName = new HostName(Environment.MachineName + "." +System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+            var hostName = new HostName(Environment.MachineName + "." +System.Reflection.Assembly.GetEntryAssembly().FullName);
             A.CallTo(() => dispatcher.HostName).Returns(hostName);
             s_hostName = hostName;
 

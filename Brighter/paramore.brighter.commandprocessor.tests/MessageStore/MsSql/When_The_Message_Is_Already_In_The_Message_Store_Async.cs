@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Data.SqlServerCe;
 using System.IO;
 using Machine.Specifications;
 using Nito.AsyncEx;
@@ -49,8 +48,7 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
 
         private Establish _context = () =>
         {
-            CleanUpDb();
-            CreateTestDb();
+            //TODO: fix db
 
             s_sqlMessageStore = new MsSqlMessageStore(
                 new MsSqlMessageStoreConfiguration(ConnectionString, TableName,
@@ -69,20 +67,5 @@ namespace paramore.commandprocessor.tests.MessageStore.MsSql
             File.Delete(TestDbPath);
         }
 
-        private static void CreateTestDb()
-        {
-            var en = new SqlCeEngine(ConnectionString);
-            en.CreateDatabase();
-
-            var sql = SqlMessageStoreBuilder.GetDDL(TableName);
-
-            using (var cnn = new SqlCeConnection(ConnectionString))
-            using (var cmd = cnn.CreateCommand())
-            {
-                cmd.CommandText = sql;
-                cnn.Open();
-                cmd.ExecuteNonQuery();
-            }
-        }
     }
 }

@@ -68,7 +68,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
             s_dispatcher.Shut("test");
             s_dispatcher.Shut("newTest");
             Task.Delay(3000).Wait();
-            s_dispatcher.Consumers.Count.ShouldEqual(0); //sanity check
+            s_dispatcher.Consumers.Count().ShouldEqual(0); //sanity check
         };
 
 
@@ -90,7 +90,7 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         private It _should_have_consumed_the_messages_in_the_event_channel = () => s_channel.Length.ShouldEqual(0);
         private It _should_have_a_running_state = () => s_dispatcher.State.ShouldEqual(DispatcherState.DS_RUNNING);
-        private It _should_have_only_one_consumer = () => s_dispatcher.Consumers.Count.ShouldEqual(1);
+        private It _should_have_only_one_consumer = () => s_dispatcher.Consumers.Count().ShouldEqual(1);
         private It _should_have_two_connections = () => s_dispatcher.Connections.Count().ShouldEqual(2);
     }
 }
