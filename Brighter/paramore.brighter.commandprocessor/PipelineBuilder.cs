@@ -62,7 +62,7 @@ namespace paramore.brighter.commandprocessor
         {
             _handlerFactory = handlerFactory;
             _logger = logger;
-            _instanceScope = new LifetimeScope(handlerFactory);
+            _instanceScope = new LifetimeScope(handlerFactory, logger);
             _interpreter = new Interpreter<TRequest>(registry, handlerFactory);
         }
 

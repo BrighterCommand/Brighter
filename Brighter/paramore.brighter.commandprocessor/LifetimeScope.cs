@@ -52,8 +52,12 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
         public LifetimeScope(IAmAHandlerFactory handlerFactory) 
-            :this(handlerFactory, null, LogProvider.For<LifetimeScope>())
+            :this(handlerFactory, LogProvider.For<LifetimeScope>())
         {}
+
+        public LifetimeScope(IAmAHandlerFactory handlerFactory, ILog logger)
+            : this(handlerFactory, null, logger)
+        { }
 
         public LifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory) 
             :this(null, asyncHandlerFactory, LogProvider.For<LifetimeScope>())
