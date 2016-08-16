@@ -25,18 +25,15 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Concurrent;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
 using Polly;
-using TaskMailer.Ports;
 using Tasks.Adapters.MailGateway;
 using Tasks.Ports;
 using Tasks.Ports.Commands;
 using Tasks.Ports.Events;
 using Tasks.Ports.Handlers;
 using TinyIoC;
-using Topshelf;
 
 namespace TaskMailer.Adapters.ServiceHost
 {

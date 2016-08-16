@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Tasks.Model;
 using Microsoft.AspNetCore.Mvc;
 using paramore.brighter.commandprocessor;
 using Tasks.Ports.Commands;
@@ -24,7 +21,6 @@ namespace TasksApi.Controllers
             _commandProcessor = commandProcessor;
         }
 
-        // GET api/values
         [HttpGet]
         public TaskListModel Get()
         {
@@ -32,16 +28,14 @@ namespace TasksApi.Controllers
             return responseResource;
         }
 
-        // GET api/values/5
-        [HttpGet("{id}")]
+        [HttpGet("{id}", Name = "GetTask")]
         public TaskModel Get(int id)
         {
             return _taskRetriever.Get(id);
         }
 
-        // POST api/values
         [HttpPost]
-        public void Post([FromBody]TaskModel newTask)
+        public IActionResult Post([FromBody]TaskModel newTask)
         {
             var addTaskCommand = new AddTaskCommand(
                taskName: newTask.TaskName,
@@ -50,18 +44,19 @@ namespace TasksApi.Controllers
                );
 
             _commandProcessor.Send(addTaskCommand);
+
+            return this.CreatedAtRoute("GetTask", new {id = addTaskCommand.TaskId}, null);
         }
 
-        // PUT api/values/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody]string value)
-        {
-        }
-
-        // DELETE api/values/5
         [HttpDelete("{id}")]
         public void Delete(int id)
         {
+            var completeTaskCommand = new CompleteTaskCommand(
+               taskId: id,
+               completionDate: DateTime.UtcNow
+               );
+
+            _commandProcessor.Send(completeTaskCommand);
         }
     }
 }

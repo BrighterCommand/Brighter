@@ -27,7 +27,8 @@
     "paramore.brighter.commandprocessor.messagestore.sqllite": {
       "target": "project"
     },
-    "StructureMap.Microsoft.DependencyInjection": "1.0.1"
+    "StructureMap.Microsoft.DependencyInjection": "1.0.1",
+    "Microsoft.AspNetCore.Mvc.Formatters.Xml": "1.0.0"
   },
 
   "tools": {

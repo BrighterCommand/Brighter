@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Hosting.Internal;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -39,7 +34,6 @@ namespace TasksApi
 
         public IConfigurationRoot Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add serviceProvider to the container.
         public IServiceProvider ConfigureServices(IServiceCollection services)
         {
            // Add framework serviceProvider.
@@ -72,10 +66,7 @@ namespace TasksApi
             var gateway = new RmqMessageProducer(messagingGatewayConfiguration);
             IAmAMessageStore<Message> sqlMessageStore = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration("Data Source = tasks.db", "MessageStores"));
 
-           
-
-
-            var container = new StructureMap.Container();
+            var container = new Container();
             container.Configure(config =>
             {
                 var servicesMessageMapperFactory = new ServicesMessageMapperFactory(container);
@@ -102,6 +93,7 @@ namespace TasksApi
 
             });
             container.Populate(services);
+
             return container.GetInstance<IServiceProvider>();
         }
 
@@ -117,7 +109,7 @@ namespace TasksApi
 
     public class ServicesMessageMapperFactory : IAmAMessageMapperFactory
     {
-        private readonly StructureMap.Container _serviceProvider;
+        private readonly Container _serviceProvider;
 
         public ServicesMessageMapperFactory(StructureMap.Container serviceProvider)
         {
@@ -132,9 +124,9 @@ namespace TasksApi
 
     public class ServicesHandlerFactory : IAmAHandlerFactory
     {
-        private readonly StructureMap.Container _serviceProvider;
+        private readonly Container _serviceProvider;
 
-        public ServicesHandlerFactory(StructureMap.Container serviceProvider)
+        public ServicesHandlerFactory(Container serviceProvider)
         {
             _serviceProvider = serviceProvider;
         }

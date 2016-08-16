@@ -101,7 +101,8 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
                 }
                 catch (SqliteException sqlException)
                 {
-                    if (sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                    if (sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueIndexViolation ||
+                        sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
                         _log.WarnFormat(
                             "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
@@ -110,6 +111,10 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
                     }
 
                     throw;
+                }
+                finally
+                {
+                    command.Dispose();
                 }
             }
         }
@@ -184,7 +189,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
                 _configuration.MessageStoreTableName);
             var parameters = new[]
             {
-                CreateSqlParameter("MessageId", messageId)
+                CreateSqlParameter("@MessageId", messageId)
             };
 
             var result =
@@ -298,34 +303,32 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
             }
         }
 
-        private DbConnection GetConnection()
+        private SqliteConnection GetConnection()
         {
             return new SqliteConnection(_configuration.ConnectionString);
         }
 
-        private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters)
+        private SqliteCommand InitAddDbCommand(SqliteConnection connection, IEnumerable<SqliteParameter> parameters)
         {
+            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)", _configuration.MessageStoreTableName);
             var command = connection.CreateCommand();
-            var sql =
-                string.Format(
-                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
-                    _configuration.MessageStoreTableName);
+
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
             return command;
         }
 
-        private DbParameter[] InitAddDbParameters(Message message)
+        private SqliteParameter[] InitAddDbParameters(Message message)
         {
             var bagJson = JsonConvert.SerializeObject(message.Header.Bag);
             var parameters = new[]
             {
-                CreateSqlParameter("MessageId", message.Id),
-                CreateSqlParameter("MessageType", message.Header.MessageType.ToString()),
-                CreateSqlParameter("Topic", message.Header.Topic),
-                CreateSqlParameter("Timestamp", message.Header.TimeStamp),
-                CreateSqlParameter("HeaderBag", bagJson),
-                CreateSqlParameter("Body", message.Body.Value)
+                new SqliteParameter("@MessageId", SqliteType.Text) { Value = message.Id.ToString()},
+                new SqliteParameter("@MessageType", SqliteType.Text) { Value = message.Header.MessageType.ToString()},
+                new SqliteParameter("@Topic", SqliteType.Text) { Value =message.Header.Topic},
+                new SqliteParameter("@Timestamp", SqliteType.Text) { Value =message.Header.TimeStamp.ToString("s")},
+                new SqliteParameter("@HeaderBag",SqliteType.Text) { Value = bagJson},
+                new SqliteParameter("@Body", SqliteType.Text) { Value = message.Body.Value}
             };
             return parameters;
         }

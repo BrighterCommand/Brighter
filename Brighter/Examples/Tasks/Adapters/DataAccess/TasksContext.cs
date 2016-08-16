@@ -27,10 +27,10 @@ namespace Tasks.Adapters.DataAccess
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
-        public Guid MessageId { get; set; }
+        public string MessageId { get; set; }
         public string MessageType { get; set; }
         public string Topic { get; set; }
-        public DateTime TimeStamp { get; set; }
+        public DateTime Timestamp { get; set; }
         public string HeaderBag { get; set; }
         public string Body { get; set; }
     }

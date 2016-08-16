@@ -22,7 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
+
+#if net452
 using Topshelf;
+#endif
+
 
 namespace TaskMailer.Adapters.ServiceHost
 {
@@ -30,6 +34,7 @@ namespace TaskMailer.Adapters.ServiceHost
     {
         public static void Main()
         {
+#if net452
             HostFactory.Run(x => x.Service<TaskMailerService>(sc =>
                {
                    sc.ConstructUsing(() => new TaskMailerService());
@@ -41,6 +46,10 @@ namespace TaskMailer.Adapters.ServiceHost
                    // optional, when shutdown is supported
                    sc.WhenShutdown((s, hostcontrol) => s.Shutdown(hostcontrol));
                }));
+#endif
+#if netstandard1_6
+
+#endif
         }
     }
 }
