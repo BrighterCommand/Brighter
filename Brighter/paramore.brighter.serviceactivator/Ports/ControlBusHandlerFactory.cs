@@ -36,7 +36,7 @@ namespace paramore.brighter.serviceactivator.Ports
             }
             else if (handlerType == typeof (HeartbeatRequestCommandHandler))
             {
-                return new HeartbeatRequestCommandHandler(_commandProcessorFactory(), _worker);
+                return new HeartbeatRequestCommandHandler(_logger, _commandProcessorFactory(), _worker);
             }
 
             throw new ArgumentOutOfRangeException("handlerType");
