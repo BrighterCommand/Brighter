@@ -25,13 +25,17 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using Microsoft.Extensions.DependencyModel;
 using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
+namespace paramore.brighter.serviceactivator.Configuration
 {
     internal class ConnectionFactory
     {
         private readonly IAmAChannelFactory _channelFactory;
+        private bool _is_defined = false;
+        private List<Assembly> _assemblies;
 
         public ConnectionFactory(IAmAChannelFactory channelFactory)
         {
@@ -63,21 +67,39 @@ namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
             return connections;
         }
 
-        public static Type GetType(string typeName)
+        public Type GetType(string typeName)
         {
             try
             {
-                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                var assemblies = GetAssemblies();
                 var doesAssemblyHaveAMatchingType = assemblies.Select(a => a.GetType(typeName));
                 var matchingTypes = doesAssemblyHaveAMatchingType.Where(type => type != null).Select(type => type);
                 var match = matchingTypes.First();
                 return match;
+
             }
             catch (Exception e)
             {
                 throw new ConfigurationException("Data Type for Connection cannot be found in the component", e);
             }
 
+        }
+
+        private IEnumerable<Assembly> GetAssemblies()
+        {
+            if (_is_defined) return _assemblies;
+
+            var deps = DependencyContext.Default;
+            _assemblies = new List<Assembly>();
+            foreach (var compilationLibrary in deps.CompileLibraries)
+            {
+                _assemblies.AddRange(
+                    compilationLibrary.Assemblies.Select(assembly => Assembly.Load(new AssemblyName(assembly))));
+            }
+            _is_defined = true;
+
+            return _assemblies;
+            
         }
     }
 }

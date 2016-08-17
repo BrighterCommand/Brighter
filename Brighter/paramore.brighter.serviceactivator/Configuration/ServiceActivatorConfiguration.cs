@@ -23,32 +23,18 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using System.Configuration;
 
-namespace paramore.brighter.serviceactivator.ServiceActivatorConfiguration
+namespace paramore.brighter.serviceactivator.Configuration
 {
-    public class ConnectionElements : ConfigurationElementCollection
+    public class ServiceActivatorConfiguration 
     {
-        private readonly List<ConnectionElement> _elements = new List<ConnectionElement>();
+        private readonly IList<ConnectionElement> _connectionElements = new List<ConnectionElement>();
 
-        protected override ConfigurationElement CreateNewElement()
-        {
-            var newElement = new ConnectionElement();
-            _elements.Add(newElement);
-            return newElement;
-        }
 
-        public ConfigurationElement this[int i]
-        {
-            get
-            {
-                return (ConfigurationElement)BaseGet(i);
-            }
-        }
+        public void Add(ConnectionElement connection) { _connectionElements.Add(connection);}
 
-        protected override object GetElementKey(ConfigurationElement element)
-        {
-            return ((ConnectionElement)element).ConnectionName;
-        }
+        public IEnumerable<ConnectionElement> Connections => _connectionElements;
+
+        public ConnectionElement this[int i] => _connectionElements[i];
     }
 }
