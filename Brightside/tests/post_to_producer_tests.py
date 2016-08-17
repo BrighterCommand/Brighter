@@ -43,7 +43,6 @@ class PostTests(unittest.TestCase):
         self._messageMapperRegistry = MessageMapperRegistry()
         self._messageMapperRegistry.register(MyCommand, map_to_message)
 
-        self._messageMapperRegistry
         self._message_store = FakeMessageStore()
         self._producer = FakeProducer()
         self._commandProcessor = CommandProcessor(
@@ -74,16 +73,29 @@ class PostTests(unittest.TestCase):
         was_exception_thrown = False
         try:
             self._commandProcessor.post(self._request)
-        except ConfigurationException as ex:
+        except ConfigurationException:
             was_exception_thrown = True
 
         self.assertTrue(was_exception_thrown)
 
+    def test_missing_message_producer(self):
+        """given that we have no me message producer configured for the commandprocessor
+            when we post a command
+            it should raise a confiugration error
+        """
+        self._commandProcessor = CommandProcessor(
+            message_mapper_registry=self._messageMapperRegistry,
+            message_store=self._message_store,
+            producer=None)
 
+        was_exception_thrown = False
+        try:
+            self._request = MyCommand()
+            self._commandProcessor.post(self._request)
+        except ConfigurationException:
+            was_exception_thrown = True
 
+        self.assertTrue(was_exception_thrown)
 
-
-
-
-
-
+    def test_missing_message_mapper_registry(self):
+        pass
