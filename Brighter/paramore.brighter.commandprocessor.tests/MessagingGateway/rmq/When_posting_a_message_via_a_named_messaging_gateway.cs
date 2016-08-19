@@ -28,6 +28,7 @@ using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 {
@@ -44,18 +45,21 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         private Establish _context = () =>
         {
-            using (AppConfig.Change("app.with-multiple-gateways.config"))
+            s_message = new Message(header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), body: new MessageBody("test content"));
+
+            var rmqConnection = new RmqMessagingGatewayConnection
             {
-                s_message = new Message(header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), body: new MessageBody("test content"));
+                AmpqUri = new AmqpUriSpecification(uri: new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                Exchange = new Exchange("paramore.brighter.exchange")
+            };
 
-                s_messageProducer = new RmqMessageProducer("gateway1");
+            s_messageProducer = new RmqMessageProducer(rmqConnection);
 
-                var logger = LogProvider.For<RmqMessageConsumer>();
-                s_messageConsumer = new RmqMessageConsumer(s_message.Header.Topic, s_message.Header.Topic, false, logger, "gateway1");
-                s_messageConsumer.Purge();
+            var logger = LogProvider.For<RmqMessageConsumer>();
+            s_messageConsumer = new RmqMessageConsumer(rmqConnection, s_message.Header.Topic, s_message.Header.Topic, false, 1, false, logger);
+            s_messageConsumer.Purge();
 
-                s_client = new TestRMQListener(s_message.Header.Topic, "gateway1");
-            }
+            s_client = new TestRMQListener(rmqConnection, s_message.Header.Topic);
         };
 
         private Because _of = () =>

@@ -28,6 +28,7 @@ using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 {
@@ -48,11 +49,17 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
             s_message = new Message(header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
-            s_messageProducer = new RmqMessageProducer(logger);
-            s_messageConsumer = new RmqMessageConsumer(s_message.Header.Topic, s_message.Header.Topic, false, logger);
+            var rmqConnection = new RmqMessagingGatewayConnection
+            {
+                AmpqUri = new AmqpUriSpecification(uri: new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                Exchange = new Exchange("paramore.brighter.exchange")
+            };
+
+            s_messageProducer = new RmqMessageProducer(rmqConnection, logger);
+            s_messageConsumer = new RmqMessageConsumer(rmqConnection, s_message.Header.Topic, s_message.Header.Topic, false, 1, false, logger);
             s_messageConsumer.Purge();
 
-            s_client = new TestRMQListener(s_message.Header.Topic);
+            s_client = new TestRMQListener(rmqConnection, s_message.Header.Topic);
         };
 
         private Because _of = () =>

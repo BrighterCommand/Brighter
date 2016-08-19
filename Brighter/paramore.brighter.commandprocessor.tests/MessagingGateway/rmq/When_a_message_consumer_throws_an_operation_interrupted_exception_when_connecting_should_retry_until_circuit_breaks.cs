@@ -24,13 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using Machine.Specifications;
-using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.commandprocessor.tests.MessagingGateway.TestDoubles;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using paramore.brighter.commandprocessor.tests.MessagingGateway.TestDoubles;
 using RabbitMQ.Client.Exceptions;
 
-namespace paramore.commandprocessor.tests.MessagingGateway.rmq
+namespace paramore.brighter.commandprocessor.tests.MessagingGateway.rmq
 {
     [Subject("Messaging Gateway")]
     [Tags("Requires", new[] { "RabbitMQ" })]
@@ -51,9 +51,16 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
             messageHeader.UpdateHandledCount();
             s_sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
-            s_sender = new RmqMessageProducer(logger);
-            s_receiver = new RmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, logger);
-            s_badReceiver = new OperationInterruptedRmqMessageConsumer(s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, logger);
+            var rmqConnection = new RmqMessagingGatewayConnection()
+            {
+                AmpqUri = new AmqpUriSpecification(uri: new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                Exchange = new Exchange("paramore.brighter.exchange")
+            };
+
+
+            s_sender = new RmqMessageProducer(rmqConnection, logger);
+            s_receiver = new RmqMessageConsumer(rmqConnection, s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, 1, false, logger);
+            s_badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, 1, false, logger);
 
             s_receiver.Purge();
             s_sender.Send(s_sentMessage);

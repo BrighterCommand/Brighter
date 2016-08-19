@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
@@ -62,7 +60,7 @@ namespace GreetingsCoreConsole
             //create the gateway
             var rmqMessagingGatewayConfigurationSection = new RMQMessagingGatewayConfigurationSection
             {
-                AMPQUri = new AMQPUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AMPQUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
                 Queues = new Queues()
             };

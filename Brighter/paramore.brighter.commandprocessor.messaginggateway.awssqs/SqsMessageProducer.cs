@@ -35,18 +35,19 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>
+        /// <param name="credentials">The credentials for the AWS account being used</param>
         public SqsMessageProducer(AWSCredentials credentials) 
-            : this(LogProvider.For<SqsMessageProducer>())
-        {
-            _credentials = credentials;
-        }
+            : this(credentials, LogProvider.For<SqsMessageProducer>())
+        {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>
+        /// <param name="credentials">The credentials for the AWS account being used</param>
         /// <param name="logger">The logger.</param>
-        public SqsMessageProducer(ILog logger)
+        public SqsMessageProducer(AWSCredentials credentials, ILog logger)
         {
+            _credentials = credentials;
             _logger = logger;
         }
 

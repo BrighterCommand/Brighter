@@ -30,12 +30,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     public static class MessageGatewayHelper
     {
-        internal static void DeclareExchangeForConfiguration(this IModel channel, RmqMessagingGatewayConfiguration configuration)
+        internal static void DeclareExchangeForConnection(this IModel channel, RmqMessagingGatewayConnection connection)
         {
-            if (configuration.Exchange.SupportDelay)
-                channel.ExchangeDeclare(configuration.Exchange.Name, "x-delayed-message", configuration.Exchange.Durable, autoDelete: false, arguments: new Dictionary<string, object> { { "x-delayed-type", configuration.Exchange.Type } });
+            if (connection.Exchange.SupportDelay)
+                channel.ExchangeDeclare(connection.Exchange.Name, "x-delayed-message", connection.Exchange.Durable, autoDelete: false, arguments: new Dictionary<string, object> { { "x-delayed-type", connection.Exchange.Type } });
             else
-                channel.ExchangeDeclare(configuration.Exchange.Name, configuration.Exchange.Type, configuration.Exchange.Durable);
+                channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable);
         }
     }
 }

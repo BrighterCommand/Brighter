@@ -29,6 +29,18 @@ namespace paramore.brighter.serviceactivator.Configuration
     /// </summary>
     public class ConnectionElement 
     {
+        public ConnectionElement()
+        {
+            //We can use defaults for these, but other values must be set
+            IsDurable = false;
+            NoOfPerformers = 1;
+            TimeoutInMiliseconds = 200;
+            RequeueCount = -1;
+            RequeueDelayInMilliseconds = 0;
+            UnacceptableMessageLimit = 0;
+            IsAsync = false;
+        }
+
         /// <summary>
         /// The name of the connection, for identification
         /// </summary>

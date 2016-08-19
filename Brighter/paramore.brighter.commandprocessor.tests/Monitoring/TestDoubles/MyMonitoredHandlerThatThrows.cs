@@ -23,12 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Attributes;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
+using paramore.commandprocessor.tests.Monitoring.TestDoubles;
 
-namespace paramore.commandprocessor.tests.Monitoring.TestDoubles
+namespace paramore.brighter.commandprocessor.tests.Monitoring.TestDoubles
 {
     internal class MyMonitoredHandlerThatThrows : RequestHandler<MyCommand>
     {
@@ -39,7 +39,7 @@ namespace paramore.commandprocessor.tests.Monitoring.TestDoubles
         [Monitor(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandler))]
         public override MyCommand Handle(MyCommand command)
         {
-            throw new ApplicationException("I am an exception in a monitored pipeline");
+            throw new Exception("I am an exception in a monitored pipeline");
         }
 
     }

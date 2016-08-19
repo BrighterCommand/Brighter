@@ -38,23 +38,15 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
         private IConnection _connection;
         private IModel _channel;
 
-        //public TestRMQListener(string channelName) : this(channelName, RMQMessagingGatewayConfiguration.GetConfiguration())
-        //{
-        //}
-
-        //public TestRMQListener(string channelName, string connectionName) : this(channelName, RMQMessagingGatewayConfiguration.GetConfiguration(connectionName))
-        //{
-        //}
-
-        private TestRMQListener(string channelName, RmqMessagingGatewayConfiguration configuration)
+        public TestRMQListener(RmqMessagingGatewayConnection connection, string channelName)
         {
             _channelName = channelName;
-            _connectionFactory = new ConnectionFactory {Uri = configuration.AMPQUri.Uri.ToString()};
+            _connectionFactory = new ConnectionFactory {Uri = connection.AmpqUri.Uri.ToString()};
             _connection = _connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
-            _channel.DeclareExchangeForConfiguration(configuration);
+            _channel.DeclareExchangeForConnection(connection);
             _channel.QueueDeclare(_channelName, false, false, false, null);
-            _channel.QueueBind(_channelName, configuration.Exchange.Name, _channelName);
+            _channel.QueueBind(_channelName, connection.Exchange.Name, _channelName);
         }
 
         public BasicGetResult Listen(int waitForMilliseconds = 0, bool suppressDisposal = false)

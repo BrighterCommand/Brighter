@@ -1,17 +1,4 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
-// Author           : ian
-// Created          : 12-18-2014
-//
-// Last Modified By : ian
-// Last Modified On : 01-02-2015
-// ***********************************************************************
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -48,23 +35,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
     public class RmqMessagingGatewayConfiguration
     {
         /// <summary>
-        /// Gets or sets the ampq URI.
+        /// A list of brokers with their uri, and an exchange on that broker
         /// </summary>
-        /// <value>The ampq URI.</value>
-        public AMQPUriSpecification AMPQUri { get; set; }
-
-        /// <summary>
-        /// Gets or sets the exchange.
-        /// </summary>
-        /// <value>The exchange.</value>
-        public Exchange Exchange { get; set; }
-
-        public Queues Queues { get; set; }
-
-        public IEnumerable<Connection> Connections { get; set; }
+        public IList<RmqMessagingGatewayConnection> Connections { get; set; }
     }
 
-    public class Connection 
+    public class RmqMessagingGatewayConnection 
     {
         /// <summary>
         /// Sets Unique name for the connection
@@ -75,7 +51,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         /// Gets or sets the ampq URI.
         /// </summary>
         /// <value>The ampq URI.</value>
-        public AMQPUriSpecification AMPQUri { get; set; }
+        public AmqpUriSpecification AmpqUri { get; set; }
 
         /// <summary>
         /// Gets or sets the exchange.
@@ -83,83 +59,54 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         /// <value>The exchange.</value>
         public Exchange Exchange { get; set; }
 
-        public Queues Queues { get; set; }
     }
 
     /// <summary>
-    /// Gets or Sets the general settings for queues
+    /// Class AMQPUriSpecification
     /// </summary>
-    public class Queues
+    public class AmqpUriSpecification
     {
-        /// <summary>
-        /// When true, default false, all queues are mirrored across all nodes in the cluster. When a new node is added to the cluster, the queue will be mirrored to that node.
-        /// </summary>
-        public bool HighAvailability { get; set; }
+        private string _sanitizedUri;
 
-        /// <summary>
-        /// Allow you to limit the number of unacknowledged messages on a channel (or connection) when consuming (aka "prefetch count"). Applied separately to each new consumer on the channel
-        /// </summary>
-        //DefaultValue = (ushort)1
-        public ushort QosPrefetchSize { get; set; }
-
-        public Queues(bool highAvailability = false, ushort qosPrefetchSize = 1)
-        {
-            HighAvailability = highAvailability;
-            QosPrefetchSize = qosPrefetchSize;
-        }
-    }
-
-    /// <summary>
-    /// Class AMQPUriSpecification.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-    /// </summary>
-    public class AMQPUriSpecification
-    {
-        private string _sanitizedUri = null;
-
-        /// <summary>
-        /// Gets or sets the URI.
-        /// </summary>
-        /// <value>The URI.</value>
-        //[ConfigurationProperty("uri", DefaultValue = "amqp://guest:guest@localhost:5672/%2f", IsRequired = true)]
-        public Uri Uri { get; set; }
-
-        public string GetSanitizedUri()
-        {
-            if (_sanitizedUri == null)
-            {
-                var uri = Uri.ToString();
-                var positionOfSlashSlash = uri.IndexOf("//") + 2;
-                var usernameAndPassword = uri.Substring(positionOfSlashSlash, uri.IndexOf('@') - positionOfSlashSlash);
-                _sanitizedUri = uri.Replace(usernameAndPassword, "*****");
-            }
-
-            return _sanitizedUri;
-        }
-
-        /// <summary>
-        /// Gets or sets the retry count for when a connection fails
-        /// </summary>
-        // DefaultValue = "3", IsRequired = false)]
-        public int ConnectionRetryCount { get; set; }
-
-        /// <summary>
-        /// The time in milliseconds to wait before retrying to connect again
-        /// </summary>
-        // DefaultValue = "1000", IsRequired = false)]
-        public int RetryWaitInMilliseconds { get; set; }
-
-        /// <summary>
-        /// The time in milliseconds to wait before retrying to connect again
-        /// </summary>
-        // DefaultValue = "60000", IsRequired = false)]
-        public int CircuitBreakTimeInMilliseconds { get; set; }
-
-        public AMQPUriSpecification(Uri uri, int connectionRetryCount = 3, int retryWaitInMilliseconds = 1000, int circuitBreakTimeInMilliseconds = 60000)
+        public AmqpUriSpecification(Uri uri, int connectionRetryCount = 3, int retryWaitInMilliseconds = 1000, int circuitBreakTimeInMilliseconds = 60000)
         {
             Uri = uri;
             ConnectionRetryCount = connectionRetryCount;
             RetryWaitInMilliseconds = retryWaitInMilliseconds;
             CircuitBreakTimeInMilliseconds = circuitBreakTimeInMilliseconds;
+        }
+        /// <summary>
+        /// Gets or sets the URI.
+        /// </summary>
+        /// <value>The URI.</value>
+        public Uri Uri { get; set; }
+
+
+        /// <summary>
+        /// Gets or sets the retry count for when a connection fails
+        /// </summary>
+        public int ConnectionRetryCount { get; set; }
+
+        /// <summary>
+        /// The time in milliseconds to wait before retrying to connect again
+        /// </summary>
+        public int RetryWaitInMilliseconds { get; set; }
+
+        /// <summary>
+        /// The time in milliseconds to wait before retrying to connect again. 
+        /// </summary>
+        public int CircuitBreakTimeInMilliseconds { get; set; }
+
+        public string GetSanitizedUri()
+        {
+            if (_sanitizedUri != null) return _sanitizedUri;
+
+            var uri = Uri.ToString();
+            var positionOfSlashSlash = uri.IndexOf("//", StringComparison.Ordinal) + 2;
+            var usernameAndPassword = uri.Substring(positionOfSlashSlash, uri.IndexOf('@') - positionOfSlashSlash);
+            _sanitizedUri = uri.Replace(usernameAndPassword, "*****");
+
+            return _sanitizedUri;
         }
     }
 
@@ -175,10 +122,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         public string Name { get; set; }
 
         /// <summary>
-        /// Gets or sets the type.
+        /// Gets or sets the type. DefaultValue = ExchangeType.Direct
         /// </summary>
         /// <value>The type.</value>
-// DefaultValue = ExchangeType.Direct)]
         public string Type { get; set; }
 
         /// <summary>

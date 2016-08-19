@@ -30,6 +30,7 @@ using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 {
@@ -48,7 +49,13 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
             s_message = new Message(header: new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
-            s_messageProducer = new RmqMessageProducer(logger);
+            var rmqConnection = new RmqMessagingGatewayConnection
+            {
+                AmpqUri = new AmqpUriSpecification(uri: new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                Exchange = new Exchange("paramore.brighter.exchange")
+            };
+
+            s_messageProducer = new RmqMessageProducer(rmqConnection, logger);
         };
 
         private Because _of = () =>

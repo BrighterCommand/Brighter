@@ -55,8 +55,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
         /// <param name="channelName">Name of the channel.</param>
         /// <param name="routingKey">The routing key.</param>
         /// <param name="isDurable">if set to <c>true</c> [is durable].</param>
+        /// <param name="preFetchSize">Number of items to read from the queue at once</param>
+        /// <param name="highAvailability">Our are queues high-availablility</param>
         /// <returns>IAmAMessageConsumer.</returns>
-        public IAmAMessageConsumer Create(string channelName, string routingKey, bool isDurable)
+        public IAmAMessageConsumer Create(string channelName, string routingKey, bool isDurable, ushort preFetchSize = 1, bool highAvailability = false)
         {
             return new SqsMessageConsumer(_credentials, channelName, _logger);
         }

@@ -1,17 +1,4 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
-// Author           : ian
-// Created          : 01-02-2015
-//
-// Last Modified By : toby
-// Last Modified On : 01-02-2015
-// ***********************************************************************
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Toby Henderson 
 
@@ -46,21 +33,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     public class RmqMessageProducerFactory : IAmAMessageProducerFactory
     {
         private readonly ILog _logger;
-        private readonly RmqMessagingGatewayConfiguration _connection;
+        private readonly RmqMessagingGatewayConnection  _connection;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
         /// </summary>
-        public RmqMessageProducerFactory(RmqMessagingGatewayConfiguration connection)
-            :this(LogProvider.For<RmqMessageProducerFactory>(), connection)
+        public RmqMessageProducerFactory(RmqMessagingGatewayConnection  configuration)
+            :this(configuration, LogProvider.For<RmqMessageProducerFactory>())
         {}
 
-
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
         /// </summary>
+        /// <param name="connection"></param>
         /// <param name="logger">The logger.</param>
-        public RmqMessageProducerFactory(ILog logger, RmqMessagingGatewayConfiguration connection)
+        public RmqMessageProducerFactory(RmqMessagingGatewayConnection connection, ILog logger)
         {
             _logger = logger;
             _connection = connection;
@@ -69,12 +56,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// Creates the specified queue name.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
-        /// <param name="routingKey">The routing key.</param>
         /// <returns>IAmAMessageProducer.</returns>
         public IAmAMessageProducer Create()
         {
-            return new RmqMessageProducer(_logger, _connection);
+            return new RmqMessageProducer(_connection, _logger);
         }
     }
 }

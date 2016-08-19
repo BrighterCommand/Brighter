@@ -28,6 +28,7 @@ using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 {
@@ -46,23 +47,26 @@ namespace paramore.commandprocessor.tests.MessagingGateway.rmq
 
         private Establish _context = () =>
         {
-            using (AppConfig.Change("app.with-delay.config"))
+            var logger = LogProvider.For<RmqMessageConsumer>();
+
+            var s_header = new MessageHeader(Guid.NewGuid(), "test3", MessageType.MT_COMMAND);
+            var s_originalMessage = new Message(header: s_header, body: new MessageBody("test3 content"));
+
+            var s_mutatedHeader = new MessageHeader(s_header.Id, "test3", MessageType.MT_COMMAND);
+            s_mutatedHeader.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
+            s_message = new Message(header: s_mutatedHeader, body: s_originalMessage.Body);
+
+            var rmqConnection = new RmqMessagingGatewayConnection
             {
-                var logger = LogProvider.For<RmqMessageConsumer>();
+                AmpqUri = new AmqpUriSpecification(uri: new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                Exchange = new Exchange("paramore.brighter.exchange", supportDelay: true)
+            };
 
-                var s_header = new MessageHeader(Guid.NewGuid(), "test3", MessageType.MT_COMMAND);
-                var s_originalMessage = new Message(header: s_header, body: new MessageBody("test3 content"));
+            s_messageProducer = new RmqMessageProducer(rmqConnection, logger);
+            s_messageConsumer = new RmqMessageConsumer(rmqConnection, s_message.Header.Topic, s_message.Header.Topic, false, 1, false, logger);
+            s_messageConsumer.Purge();
 
-                var s_mutatedHeader = new MessageHeader(s_header.Id, "test3", MessageType.MT_COMMAND);
-                s_mutatedHeader.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
-                s_message = new Message(header: s_mutatedHeader, body: s_originalMessage.Body);
-
-                s_messageProducer = new RmqMessageProducer(logger);
-                s_messageConsumer = new RmqMessageConsumer(s_message.Header.Topic, s_message.Header.Topic, false, logger);
-                s_messageConsumer.Purge();
-
-                s_client = new TestRMQListener(s_message.Header.Topic);
-            }
+            s_client = new TestRMQListener(rmqConnection, s_message.Header.Topic);
         };
 
         private Because _of = () =>

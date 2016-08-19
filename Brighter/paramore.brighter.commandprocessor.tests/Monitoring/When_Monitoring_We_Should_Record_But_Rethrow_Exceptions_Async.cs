@@ -81,7 +81,7 @@ namespace paramore.commandprocessor.tests.Monitoring
         };
 
         private It _should_pass_through_the_exception_not_swallow = () => s_thrownException.ShouldNotBeNull();
-        private It _should_monitor_the_exception = () => s_afterEvent.Exception.ShouldBeOfExactType(typeof(ApplicationException));
+        private It _should_monitor_the_exception = () => s_afterEvent.Exception.ShouldBeOfExactType(typeof(Exception));
         private It _should_surface_the_error_message = () => s_afterEvent.Exception.Message.ShouldContain("monitored");
         private It _should_have_an_instance_name_after = () => s_afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
         private It _should_post_the_handler_fullname_to_the_control_bus_after = () => s_afterEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandlerThatThrowsAsync).AssemblyQualifiedName);

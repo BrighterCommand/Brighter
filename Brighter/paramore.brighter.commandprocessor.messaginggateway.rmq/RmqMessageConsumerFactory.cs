@@ -1,17 +1,4 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
-// Author           : ian
-// Created          : 01-02-2015
-//
-// Last Modified By : toby
-// Last Modified On : 01-02-2015
-// ***********************************************************************
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Toby Henderson 
 
@@ -46,20 +33,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly ILog _logger;
-        private readonly RmqMessagingGatewayConfiguration _connection;
+        private readonly RmqMessagingGatewayConnection _connection;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
         /// </summary>
-        public RmqMessageConsumerFactory(RmqMessagingGatewayConfiguration connection)
-            :this(LogProvider.For<RmqMessageConsumerFactory>(), connection)
+        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection  connection)
+            :this(connection, LogProvider.For<RmqMessageConsumerFactory>())
         {}
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class, with a test logger.
         /// </summary>
+        /// <param name="connection"></param>
         /// <param name="logger">The logger.</param>
-        public RmqMessageConsumerFactory(ILog logger, RmqMessagingGatewayConfiguration connection)
+        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection connection, ILog logger)
         {
             _logger = logger;
             _connection = connection;
@@ -71,10 +59,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="routingKey">The routing key.</param>
         /// <param name="isDurable">Is the consumer target durable i.e. channel stores messages between restarts of consumer</param>
+        /// <param name="preFetchSize">0="Don't send me a new message until I?ve finished",  1= "Send me one message at a time", n = number to grab (take care with competing consumers)</param>
+        /// <param name="highAvailability">Does the queue exist in multiple nodes</param>
         /// <returns>IAmAMessageConsumer.</returns>
-        public IAmAMessageConsumer Create(string queueName, string routingKey, bool isDurable)
+        public IAmAMessageConsumer Create(string queueName, string routingKey, bool isDurable, ushort preFetchSize = 1, bool highAvailability = false)
         {
-            return new RmqMessageConsumer(queueName, routingKey, isDurable, _logger, _connection);
+            return new RmqMessageConsumer(_connection, queueName, routingKey, isDurable, preFetchSize, highAvailability, _logger);
         }
     }
 }

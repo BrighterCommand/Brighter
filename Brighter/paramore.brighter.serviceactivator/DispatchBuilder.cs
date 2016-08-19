@@ -192,24 +192,26 @@ namespace paramore.brighter.serviceactivator
     /// </summary>
     public interface INeedAListOfConnections
     {
-        ///// <summary>
-        ///// A list of connections i.e. mappings of channels to commands or events
-        ///// </summary>
-        ///// <param name="connections"></param>
-        ///// <returns>IAmADispatchBuilder.</returns>
-        //IAmADispatchBuilder ConnectionsFromConfiguration(List<ConnectionConfiguration> connections);
         /// <summary>
         /// Initialize the Dispatcher from a list of connection elements       
         /// </summary>
         /// <param name="connections">The connections.</param>
         /// <returns>IAmADispatchBuilder.</returns>
-        IAmADispatchBuilder Connections(IEnumerable<Connection> connections);
+        IAmADispatchBuilder ConnectionsFromElements(IEnumerable<ConnectionElement> connections);
+
         ///// <summary>
         ///// Obtains a list of connections i.e. mappings of channels to commands or events via the configuration file for the application
         ///// </summary>
         ///// <param name="connectionsConfiguration">The connection elements.</param>
         ///// <returns>IAmADispatchBuilder.</returns>
-        //IAmADispatchBuilder ConnectionsFromElements(IEnumerable<ConnectionConfiguration> connectionsConfiguration);
+        IAmADispatchBuilder ConnectionsFromConfiguration(ServiceActivatorConfiguration configuration);
+
+        ///// <summary>
+        ///// A list of connections i.e. mappings of channels to commands or events
+        ///// </summary>
+        ///// <param name="connections"></param>
+        ///// <returns>IAmADispatchBuilder.</returns>
+        IAmADispatchBuilder Connections(IEnumerable<Connection> connections);
     }
 
     /// <summary>

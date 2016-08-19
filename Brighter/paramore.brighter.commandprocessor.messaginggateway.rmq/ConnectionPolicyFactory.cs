@@ -1,18 +1,4 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
-// Author           : ian
-// Created          : 02-16-2015
-//
-// Last Modified By : ian
-// Last Modified On : 02-26-2015
-// ***********************************************************************
-// <copyright file="ConnectionPolicyFactory.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -57,22 +43,22 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <param name="logger">The logger.</param>
         public ConnectionPolicyFactory()
-           : this(LogProvider.For<ConnectionPolicyFactory>(), new RmqMessagingGatewayConfiguration())
+           : this(new RmqMessagingGatewayConnection (), LogProvider.For<ConnectionPolicyFactory>())
         {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectionPolicyFactory"/> class. 
         /// Use if you need to inject a test logger
         /// </summary>
+        /// <param name="connection"></param>
         /// <param name="logger">The logger.</param>
-        /// <param name="configuration"></param>
-        public ConnectionPolicyFactory(ILog logger, RmqMessagingGatewayConfiguration configuration)
+        public ConnectionPolicyFactory(RmqMessagingGatewayConnection connection, ILog logger)
         {
             _logger = logger;
 
-            int retries = configuration.AMPQUri.ConnectionRetryCount;
-            int retryWaitInMilliseconds = configuration.AMPQUri.RetryWaitInMilliseconds;
-            int circuitBreakerTimeout = configuration.AMPQUri.CircuitBreakTimeInMilliseconds;
+            int retries = connection.AmpqUri.ConnectionRetryCount;
+            int retryWaitInMilliseconds = connection.AmpqUri.RetryWaitInMilliseconds;
+            int circuitBreakerTimeout = connection.AmpqUri.CircuitBreakTimeInMilliseconds;
 
             RetryPolicy = Policy.Handle<BrokerUnreachableException>()
                 .Or<Exception>()
@@ -87,8 +73,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                                 "RMQMessagingGateway: BrokerUnreachableException error on connecting to queue {0} exchange {1} on connection {2}. Will retry {3} times",
                                 exception,
                                 context["queueName"],
-                                configuration.Exchange.Name,
-                                configuration.AMPQUri.GetSanitizedUri(),
+                                connection.Exchange.Name,
+                                connection.AmpqUri.GetSanitizedUri(),
                                 retries);
                         }
                         else
@@ -97,8 +83,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                                 "RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2}",
                                 exception,
                                 context["queueName"],
-                                configuration.Exchange.Name,
-                                configuration.AMPQUri.GetSanitizedUri());
+                                connection.Exchange.Name,
+                                connection.AmpqUri.GetSanitizedUri());
                             throw exception;
                         }
                     });

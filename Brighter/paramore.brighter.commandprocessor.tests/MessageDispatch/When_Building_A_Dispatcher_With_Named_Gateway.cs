@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
@@ -31,7 +32,9 @@ using Polly;
 using TinyIoC;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.serviceactivator;
+using paramore.brighter.serviceactivator.Configuration;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using paramore.commandprocessor.tests.MessageDispatch.TestDoubles;
 
@@ -57,37 +60,65 @@ namespace paramore.commandprocessor.tests.MessageDispatch
 
         private Establish _context = () =>
         {
-            using (AppConfig.Change("app.with-multiple-gateways.config"))
-            {
-                var logger = A.Fake<ILog>();
-                var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
-                messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-                var policyRegistry = new PolicyRegistry(){
-                    {CommandProcessor.RETRYPOLICY, Policy
-                        .Handle<Exception>()
-                        .WaitAndRetry(new[]{TimeSpan.FromMilliseconds(50)})},
-                    {CommandProcessor.CIRCUITBREAKER, Policy
-                        .Handle<Exception>()
-                        .CircuitBreaker(1, TimeSpan.FromMilliseconds(500))}
-                };
+            var logger = A.Fake<ILog>();
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
+            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            var policyRegistry = new PolicyRegistry(){
+                {CommandProcessor.RETRYPOLICY, Policy
+                    .Handle<Exception>()
+                    .WaitAndRetry(new[]{TimeSpan.FromMilliseconds(50)})},
+                {CommandProcessor.CIRCUITBREAKER, Policy
+                    .Handle<Exception>()
+                    .CircuitBreaker(1, TimeSpan.FromMilliseconds(500))}
+            };
 
-                string gatewayName = "gateway2";
-                var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger, gatewayName);
-                var rmqMessageProducerFactory = new RmqMessageProducerFactory(logger, gatewayName);
-                
-                s_builder = DispatchBuilder.With()
-                    .CommandProcessor(CommandProcessorBuilder.With()
+            var connection = new RmqMessagingGatewayConnection
+            {
+                AmpqUri = new AmqpUriSpecification(uri: new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                Exchange = new Exchange("paramore.brighter.exchange")
+            };
+
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(connection, logger);
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory(connection, logger);
+
+            s_builder = DispatchBuilder.With()
+                .CommandProcessor(CommandProcessorBuilder.With()
                         .Handlers(new HandlerConfiguration(new SubscriberRegistry(),
                             new TinyIocHandlerFactory(new TinyIoCContainer())))
                         .Policies(policyRegistry)
                         .NoTaskQueues()
                         .RequestContextFactory(new InMemoryRequestContextFactory())
                         .Build()
-                    )
-                    .MessageMappers(messageMapperRegistry)
-                    .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
-                    .ConnectionsFromConfiguration();
-            }
+                )
+                .MessageMappers(messageMapperRegistry)
+                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                .ConnectionsFromElements(new List<ConnectionElement>
+                {
+                    new ConnectionElement()
+                    {
+                        ChannelName = "mary",
+                        ConnectionName = "foo",
+                        DataType = "paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent",
+                        IsAsync = false,
+                        IsDurable = false,
+                        NoOfPerformers = 1,
+                        RequeueCount = -1,
+                        RoutingKey = "bob",
+                        TimeoutInMiliseconds = 200
+                    },
+                    new ConnectionElement()
+                    {
+                        ChannelName = "alice",
+                        ConnectionName = "bar",
+                        DataType = "paramore.commandprocessor.tests.CommandProcessors.TestDoubles.MyEvent",
+                        IsAsync = true,
+                        IsDurable = true,
+                        NoOfPerformers = 2,
+                        RequeueCount = -1,
+                        RoutingKey = "simon",
+                        TimeoutInMiliseconds = 100
+                    }
+                });
         };
 
         private Because _of = () => s_dispatcher = s_builder.Build();

@@ -25,10 +25,11 @@ THE SOFTWARE. */
 using System;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
-namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
+namespace paramore.brighter.commandprocessor.tests.MessagingGateway.TestDoubles
 {
     /*
      * Use to force a failure mirroring a RabbitMQ connection failure for testing flow of failure
@@ -36,14 +37,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
 
     internal class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MessageGateway" /> class.
-        /// </summary>
-        /// <param name="queueName"></param>
-        /// <param name="routingKey"></param>
-        /// <param name="isDurable"></param>
-        /// <param name="logger">The logger.</param>
-        public BrokerUnreachableRmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger) : base(queueName, routingKey, isDurable, logger) { }
+        public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability, ILog logger) : base(connection, queueName, routingKey, isDurable, preFetchSize, isHighAvailability, logger) { }
 
         protected override void ConnectToBroker()
         {
@@ -53,14 +47,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
 
     internal class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MessageGateway" /> class.
-        /// </summary>
-        /// <param name="queueName"></param>
-        /// <param name="routingKey"></param>
-        /// <param name="isDurable"></param>
-        /// <param name="logger">The logger.</param>
-        public AlreadyClosedRmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger) : base(queueName, routingKey, isDurable, logger) { }
+        public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability, ILog logger) : base(connection, queueName, routingKey, isDurable, preFetchSize, isHighAvailability, logger) { }
 
         protected override void CreateConsumer()
         {
@@ -70,14 +57,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
 
     internal class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MessageGateway" /> class.
-        /// </summary>
-        /// <param name="queueName"></param>
-        /// <param name="routingKey"></param>
-        /// <param name="isDurable"></param>
-        /// <param name="logger">The logger.</param>
-        public OperationInterruptedRmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger) : base(queueName, routingKey, isDurable, logger) { }
+        public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability, ILog logger) : base(connection, queueName, routingKey, isDurable,preFetchSize,isHighAvailability, logger) { }
 
         protected override void CreateConsumer()
         {
@@ -87,14 +67,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.TestDoubles
 
     internal class NotSupportedRmqMessageConsumer : RmqMessageConsumer
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MessageGateway" /> class.
-        /// </summary>
-        /// <param name="queueName"></param>
-        /// <param name="routingKey"></param>
-        /// <param name="isDurable"></param>
-        /// <param name="logger">The logger.</param>
-        public NotSupportedRmqMessageConsumer(string queueName, string routingKey, bool isDurable, ILog logger) : base(queueName, routingKey, isDurable, logger) { }
+        public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability, ILog logger) : base(connection, queueName, routingKey, isDurable, preFetchSize, isHighAvailability, logger) { }
 
         protected override void CreateConsumer()
         {

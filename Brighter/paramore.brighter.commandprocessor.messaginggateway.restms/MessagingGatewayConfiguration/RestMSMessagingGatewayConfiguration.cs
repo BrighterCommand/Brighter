@@ -44,7 +44,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGa
 
         public string Key { get; set; }
 
-        public string Timeout { get; set; }
+        public double Timeout { get; set; }
     }
 
     public class Feed 

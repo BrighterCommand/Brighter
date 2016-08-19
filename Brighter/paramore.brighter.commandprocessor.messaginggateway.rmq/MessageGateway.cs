@@ -63,38 +63,32 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway"/> class.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MessageGateway"/> class.
         /// Use if you need to inject a test logger
+        /// <param name="connection">The amqp uri and exchange to connect to</param>
         /// </summary>
-        /// <param name="configuration">The configuration for RMQ</param>
-        protected MessageGateway(RmqMessagingGatewayConfiguration configuration) :
-            this(LogProvider.For<MessageGateway>(), configuration)
-        {
-            
-        }
+        protected MessageGateway(RmqMessagingGatewayConnection  connection) :
+            this(connection, LogProvider.For<MessageGateway>())
+        {}
 
-        ///<summary>
-        /// Initializes a new instance of the <see cref="MessageGateway"/> class.
-        /// Use if you need to inject a test logger
-        /// </summary>
+        /// <summary>
+        ///  Initializes a new instance of the <see cref="MessageGateway"/> class.
+        ///  Use if you need to inject a test logger
+        ///  </summary>
+        /// <param name="connection">The amqp uri and exchange to connect to</param>
         /// <param name="logger">The logger.</param>
-        /// <param name="configuration">The configuration for RMQ</param>
-        protected MessageGateway(ILog logger, RmqMessagingGatewayConfiguration configuration)
+        protected MessageGateway(RmqMessagingGatewayConnection connection, ILog logger)
         {
             Logger = logger;
-            Configuration = configuration;
+            Connection = connection;
 
-            var connectionPolicyFactory = new ConnectionPolicyFactory(logger, Configuration);
+            var connectionPolicyFactory = new ConnectionPolicyFactory(Connection, logger);
 
             _retryPolicy = connectionPolicyFactory.RetryPolicy;
             _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicy;
 
-            _connectionFactory = new ConnectionFactory { Uri = Configuration.AMPQUri.Uri.ToString(), RequestedHeartbeat = 30 };
+            _connectionFactory = new ConnectionFactory { Uri = Connection.AmpqUri.Uri.ToString(), RequestedHeartbeat = 30 };
 
-            DelaySupported = (this is IAmAMessageGatewaySupportingDelay) && Configuration.Exchange.SupportDelay;
+            DelaySupported = (this is IAmAMessageGatewaySupportingDelay) && Connection.Exchange.SupportDelay;
 
         }
 
@@ -106,7 +100,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// The configuration
         /// </summary>
-        protected readonly RmqMessagingGatewayConfiguration Configuration;
+        protected readonly RmqMessagingGatewayConnection Connection;
 
         /// <summary>
         /// The channel
@@ -144,7 +138,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             {
                 var connection = new MessageGatewayConnectionPool().GetConnection(_connectionFactory);
 
-                Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Configuration.AMPQUri.GetSanitizedUri());
+                Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Connection.AmpqUri.GetSanitizedUri());
 
                 Channel = connection.CreateModel();
 
@@ -155,14 +149,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     connection.AutoClose = true;
                 }
 
-                // Configure the Quality of service for the model.
-                // BasicQos(0="Don't send me a new message until I?ve finished",  1= "Send me one message at a time", false ="Applied separately to each new consumer on the channel")
-                Channel.BasicQos(0, Configuration.Queues.QosPrefetchSize, false);
 
-                Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Configuration.Exchange.Name, Configuration.AMPQUri.GetSanitizedUri());
+                Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
                 //desired state configuration of the exchange
-                Channel.DeclareExchangeForConfiguration(Configuration);
+                Channel.DeclareExchangeForConnection(Connection);
             }
         }
 

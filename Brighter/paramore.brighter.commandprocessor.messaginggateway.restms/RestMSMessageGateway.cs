@@ -83,7 +83,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         {
             Configuration = configuration; 
             Logger = logger;
-            _timeout = Convert.ToDouble(Configuration.RestMS.Timeout);
+            _timeout = Configuration.RestMS.Timeout;
         }
 
         public HttpClient Client()

@@ -27,6 +27,7 @@ using Machine.Specifications;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms;
+using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
 namespace paramore.commandprocessor.tests.MessagingGateway.restms
@@ -45,8 +46,13 @@ namespace paramore.commandprocessor.tests.MessagingGateway.restms
         private Establish _context = () =>
         {
             var logger = LogProvider.For<RmqMessageConsumer>();
-            s_messageProducer = new RestMsMessageProducer(logger);
-            s_messageConsumer = new RestMsMessageConsumer(QUEUE_NAME, TOPIC, logger);
+            var configuration = new RestMSMessagingGatewayConfiguration
+            {
+                Feed = new Feed { Name = "test", Type = "Default"},
+                RestMS = new RestMsSpecification { Uri = new Uri("http://localhost:3416/restms/domain/default"),  Id = "dh37fgj492je", User ="Guest", Key ="wBgvhp1lZTr4Tb6K6+5OQa1bL9fxK7j8wBsepjqVNiQ=", Timeout=2000}
+            };
+            s_messageProducer = new RestMsMessageProducer(configuration, logger);
+            s_messageConsumer = new RestMsMessageConsumer(configuration, QUEUE_NAME, TOPIC, logger);
             s_message = new Message(
                 header: new MessageHeader(Guid.NewGuid(), TOPIC, MessageType.MT_COMMAND),
                 body: new MessageBody("test content")

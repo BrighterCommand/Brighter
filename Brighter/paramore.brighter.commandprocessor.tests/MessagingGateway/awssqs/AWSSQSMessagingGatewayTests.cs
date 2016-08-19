@@ -1,20 +1,13 @@
 ﻿using System;
-using System.Linq;
-
+using Amazon.Runtime;
 using Amazon.SimpleNotificationService.Model;
-
 using Machine.Specifications;
-
-using Newtonsoft.Json;
-
-using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.commandprocessor.tests.MessagingGateway.awssqs;
 
-using Message = paramore.brighter.commandprocessor.Message;
-
-namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
+namespace paramore.brighter.commandprocessor.tests.MessagingGateway.awssqs
 {
     public class AWSSQSMessagingGatewayTests
     {
@@ -26,11 +19,12 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
         {
             private Establish context = () =>
             {
-                _queueListener = new TestAWSQueueListener(queueUrl);
+                _queueListener = new TestAWSQueueListener(new AnonymousAWSCredentials(), queueUrl);
                 var logger = LogProvider.For<RmqMessageConsumer>();
                 _message = new Message(header: new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
-                _messageProducer = new SqsMessageProducer(logger);
+                var credentials = new AnonymousAWSCredentials();
+                _messageProducer = new SqsMessageProducer(credentials, logger);
             };
 
             private Because of = () =>
@@ -55,11 +49,12 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
         {
             private Establish context = () =>
             {
-                _queueListener = new TestAWSQueueListener();
+                _queueListener = new TestAWSQueueListener(new AnonymousAWSCredentials());
                 var logger = LogProvider.For<RmqMessageConsumer>();
                 _message = new Message(header: new MessageHeader(Guid.NewGuid(), "AnotherTestSqsTopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
-                _messageProducer = new SqsMessageProducer(logger);
+                var credentials = new AnonymousAWSCredentials();
+                _messageProducer = new SqsMessageProducer(credentials, logger);
             };
 
             private Because of = () =>
@@ -92,9 +87,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 messageHeader.UpdateHandledCount();
                 sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
-                sender = new SqsMessageProducer(logger);
-                receiver = new SqsMessageConsumer(queueUrl, logger);
-                testQueueListener = new TestAWSQueueListener(queueUrl);
+                var credentials = new AnonymousAWSCredentials();
+                sender = new SqsMessageProducer(credentials, logger);
+                receiver = new SqsMessageConsumer(credentials, queueUrl, logger);
+                testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
             };
 
             Because of = () =>
@@ -134,9 +130,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 messageHeader.UpdateHandledCount();
                 message = new Message(header: messageHeader, body: new MessageBody("test content"));
 
-                sender = new SqsMessageProducer(logger);
-                receiver = new SqsMessageConsumer(queueUrl, logger);
-                testQueueListener = new TestAWSQueueListener(queueUrl);
+                var credentials = new AnonymousAWSCredentials();
+                sender = new SqsMessageProducer(credentials, logger);
+                receiver = new SqsMessageConsumer(credentials, queueUrl, logger);
+                testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
 
 
                 sender.Send(message);
@@ -174,9 +171,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 messageHeader.UpdateHandledCount();
                 message = new Message(header: messageHeader, body: new MessageBody("test content"));
 
-                sender = new SqsMessageProducer(logger);
-                receiver = new SqsMessageConsumer(queueUrl, logger);
-                testQueueListener = new TestAWSQueueListener(queueUrl);
+                var credentials = new AnonymousAWSCredentials();
+                sender = new SqsMessageProducer(credentials, logger);
+                receiver = new SqsMessageConsumer(credentials, queueUrl, logger);
+                testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
 
 
                 sender.Send(message);
@@ -213,9 +211,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 messageHeader.UpdateHandledCount();
                 sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
-                sender = new SqsMessageProducer(logger);
-                receiver = new SqsMessageConsumer(queueUrl, logger);
-                testQueueListener = new TestAWSQueueListener(queueUrl);
+                var credentials = new AnonymousAWSCredentials();
+                sender = new SqsMessageProducer(credentials, logger);
+                receiver = new SqsMessageConsumer(credentials, queueUrl, logger);
+                testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
             };
 
             private Because of = () =>
@@ -245,9 +244,10 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
                 messageHeader.UpdateHandledCount();
                 sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
-                sender = new SqsMessageProducer(logger);
-                receiver = new SqsMessageConsumer(queueUrl, logger);
-                testQueueListener = new TestAWSQueueListener(queueUrl);
+                var credentials = new AnonymousAWSCredentials();
+                sender = new SqsMessageProducer(credentials,logger);
+                receiver = new SqsMessageConsumer(credentials, queueUrl, logger);
+                testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
             };
 
             private Because of = () =>

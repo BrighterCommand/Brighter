@@ -42,7 +42,7 @@ namespace paramore.commandprocessor.tests.Monitoring.TestDoubles
         [MonitorAsync(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandlerThatThrowsAsync))]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
         {
-            throw new ApplicationException("I am an exception in a monitored pipeline");
+            throw new Exception("I am an exception in a monitored pipeline");
         }
     }
 }

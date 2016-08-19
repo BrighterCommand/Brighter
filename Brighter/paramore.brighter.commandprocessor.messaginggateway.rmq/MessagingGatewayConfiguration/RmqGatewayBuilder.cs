@@ -30,9 +30,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatew
         {
             return new RmqMessagingGatewayConfiguration
             {
-                AMPQUri = new AMQPUriSpecification(_ampqUri),
-                Exchange = new Exchange(_exchangeName),
-                Queues = new Queues()
+                Connections = {
+                    new RmqMessagingGatewayConnection { 
+                        AmpqUri = new AmqpUriSpecification(_ampqUri),
+                        Exchange = new Exchange(_exchangeName)
+                    }
+                }
             };
         }
 
