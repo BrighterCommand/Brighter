@@ -1,4 +1,5 @@
 {
+  "testRunner": "mspec",
   "dependencies": {
     "paramore.brighter.commandprocessor": {
       "target": "project"
