@@ -1,6 +1,6 @@
-// ***********************************************************************
+ï»¿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
-// Author           : ianp
+// Author           : ian
 // Created          : 25-03-2014
 //
 // Last Modified By : ian
@@ -13,10 +13,10 @@
 
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright Â© 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
+of this software and associated documentation files (the â€œSoftwareâ€), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -25,7 +25,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED â€œAS ISâ€, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -35,31 +35,20 @@ THE SOFTWARE. */
 
 #endregion
 
-using Machine.Specifications;
-using Nancy;
-using Nancy.Testing;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
+using System.Configuration;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
+namespace paramore.brighter.comandprocessor.messageviewer.windowsservice.Configuration
 {
-    [Subject(typeof(IndexModule))]
-    public class When_retrieving_home
+    public class MessageViewerStoresElementCollection : ConfigurationElementCollection
     {
-        private Establish _context = () =>
+        protected override ConfigurationElement CreateNewElement()
         {
-            browser = new Browser(new ConfigurableBootstrapper(with => with.Module<IndexModule>()));
-        };
+            return new MessageViewerStoresElement();
+        }
 
-        private Because _with_GET = () => result = browser.Get("/", with =>
+        protected override object GetElementKey(ConfigurationElement element)
         {
-            with.HttpRequest();
-            with.Header("accept", "text/html");
-        });
-
-        private It should_return_200_OK = () => result.StatusCode.ShouldEqual(HttpStatusCode.OK);
-        private It should_return_text_html = () => result.ContentType.ShouldEqual("text/html");
-
-        private static Browser browser;
-        private static BrowserResponse result;
+            return ((MessageViewerStoresElement)element).Name;
+        }
     }
 }

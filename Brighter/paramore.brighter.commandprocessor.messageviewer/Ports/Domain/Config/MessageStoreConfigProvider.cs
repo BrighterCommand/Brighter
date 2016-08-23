@@ -1,6 +1,6 @@
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
-// Author           : ianp
+// Author           : ian
 // Created          : 25-03-2014
 //
 // Last Modified By : ian
@@ -10,7 +10,6 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -35,31 +34,48 @@ THE SOFTWARE. */
 
 #endregion
 
-using Machine.Specifications;
-using Nancy;
-using Nancy.Testing;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
+using System.Collections.Generic;
+using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
+namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config
 {
-    [Subject(typeof(IndexModule))]
-    public class When_retrieving_home
+    public class MessageStoreConfigProvider : IMessageStoreConfigProvider
     {
-        private Establish _context = () =>
+        private readonly MessageViewerConfiguration _config;
+        private List<MessageStoreConfig> _stores=null;
+        private readonly ILog _logger = LogProvider.GetLogger("MessageStoreConfigProvider");
+
+        public MessageStoreConfigProvider(MessageViewerConfiguration config)
         {
-            browser = new Browser(new ConfigurableBootstrapper(with => with.Module<IndexModule>()));
-        };
+            _config = config;
+        }
 
-        private Because _with_GET = () => result = browser.Get("/", with =>
+        public IEnumerable<MessageStoreConfig> Get()
         {
-            with.HttpRequest();
-            with.Header("accept", "text/html");
-        });
+            if (_stores == null)
+            {
+                LoadStores();
+            }
+            return _stores;
+        }
 
-        private It should_return_200_OK = () => result.StatusCode.ShouldEqual(HttpStatusCode.OK);
-        private It should_return_text_html = () => result.ContentType.ShouldEqual("text/html");
+        private void LoadStores()
+        {
+            _logger.Log(LogLevel.Debug, () => "Initialising MessageStoreConfigProvider. Checking config sections");
 
-        private static Browser browser;
-        private static BrowserResponse result;
+            _stores = new List<MessageStoreConfig>();
+//            var configSection = MessageViewerConfiguration.Create();
+            foreach (object store in _config.Stores)
+            {
+                var messageStore = store as MessageViewerConfigurationStore;
+                if (messageStore != null)
+                {
+                    var messageStoreListItem = new MessageStoreConfig(messageStore);
+                    _stores.Add(messageStoreListItem);
+                }
+            }
+        }
     }
 }
+

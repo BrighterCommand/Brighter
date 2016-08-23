@@ -35,31 +35,39 @@ THE SOFTWARE. */
 
 #endregion
 
-using Machine.Specifications;
-using Nancy;
-using Nancy.Testing;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
+using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messagestore.mssql;
+using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
+namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration
 {
-    [Subject(typeof(IndexModule))]
-    public class When_retrieving_home
+    public interface IMessageStoreListCacheLoader
     {
-        private Establish _context = () =>
+        IMessageStoreConfigCache Load();
+    }
+
+    public class MessageStoreListCacheLoader : IMessageStoreListCacheLoader
+    {
+        private ILog _logger = LogProvider.GetLogger("MessageStoreListCacheLoader");
+        private readonly IMessageStoreConfigCache _messageStoreConfigCache;
+
+        public MessageStoreListCacheLoader(IMessageStoreConfigCache messageStoreConfigCache)
         {
-            browser = new Browser(new ConfigurableBootstrapper(with => with.Module<IndexModule>()));
-        };
+            _messageStoreConfigCache= messageStoreConfigCache;
+        }
 
-        private Because _with_GET = () => result = browser.Get("/", with =>
+        public IMessageStoreConfigCache Load()
         {
-            with.HttpRequest();
-            with.Header("accept", "text/html");
-        });
+            _messageStoreConfigCache.Set(MessageStoreType.SqlServer,
+                (storeConfig) => new MsSqlMessageStore(
+                    new MsSqlMessageStoreConfiguration(storeConfig.ConnectionString, storeConfig.TableName,
+                        MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer), _logger));
 
-        private It should_return_200_OK = () => result.StatusCode.ShouldEqual(HttpStatusCode.OK);
-        private It should_return_text_html = () => result.ContentType.ShouldEqual("text/html");
-
-        private static Browser browser;
-        private static BrowserResponse result;
+            _messageStoreConfigCache.Set(MessageStoreType.SqlCe,
+                (storeConfig) => new MsSqlMessageStore(
+                    new MsSqlMessageStoreConfiguration(storeConfig.ConnectionString, storeConfig.TableName,
+                        MsSqlMessageStoreConfiguration.DatabaseType.SqlCe), _logger));
+            return _messageStoreConfigCache;
+        }
     }
 }

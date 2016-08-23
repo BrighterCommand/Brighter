@@ -35,31 +35,31 @@ THE SOFTWARE. */
 
 #endregion
 
-using Machine.Specifications;
-using Nancy;
-using Nancy.Testing;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
+using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
+using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
+namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources
 {
-    [Subject(typeof(IndexModule))]
-    public class When_retrieving_home
+    public class MessageStoreViewerModel
     {
-        private Establish _context = () =>
+        public MessageStoreViewerModel(IAmAMessageStore<Message> connectedStore, MessageStoreConfig foundState)
         {
-            browser = new Browser(new ConfigurableBootstrapper(with => with.Module<IndexModule>()));
-        };
+            Name = foundState.Name;
+            StoreType = foundState.StoreType;
+            TypeName = foundState.TypeName;
+            ConnectionString = foundState.ConnectionString;
+            TableName = foundState.TableName;
+            //TODO: ++ double something with connectedStore
+        }
 
-        private Because _with_GET = () => result = browser.Get("/", with =>
+        public MessageStoreViewerModel()
         {
-            with.HttpRequest();
-            with.Header("accept", "text/html");
-        });
+        }
 
-        private It should_return_200_OK = () => result.StatusCode.ShouldEqual(HttpStatusCode.OK);
-        private It should_return_text_html = () => result.ContentType.ShouldEqual("text/html");
-
-        private static Browser browser;
-        private static BrowserResponse result;
+        public MessageStoreType StoreType { get; private set; }
+        public string Name { get; set; }
+        public string TypeName { get; set; }
+        public string ConnectionString { get; set; }
+        public string TableName { get; set; }
     }
 }
