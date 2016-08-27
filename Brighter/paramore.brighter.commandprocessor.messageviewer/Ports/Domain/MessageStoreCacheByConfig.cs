@@ -1,6 +1,6 @@
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
-// Author           : ianp
+// Author           : ian
 // Created          : 25-03-2014
 //
 // Last Modified By : ian
@@ -10,7 +10,6 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -35,31 +34,35 @@ THE SOFTWARE. */
 
 #endregion
 
-using Machine.Specifications;
-using Nancy;
-using Nancy.Testing;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
+using System;
+using System.Collections.Generic;
+using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
+namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
 {
-    [Subject(typeof(IndexModule))]
-    public class When_retrieving_home
+    public interface IMessageStoreConfigCache
     {
-        private Establish _context = () =>
+        IAmAMessageStore<Message> Get(MessageStoreConfig type);
+        void Set(MessageStoreType storeType, Func<MessageStoreConfig, IAmAMessageStore<Message>> storeCtor);
+    }
+
+    public class MessageStoreCacheByConfig : IMessageStoreConfigCache
+    {
+        private readonly Dictionary<MessageStoreType, Func<MessageStoreConfig, IAmAMessageStore<Message>>> _storeCtorLookup = new Dictionary<MessageStoreType, Func<MessageStoreConfig, IAmAMessageStore<Message>>>();
+        private readonly Dictionary<string, IAmAMessageStore<Message>> _storesCreated = new Dictionary<string, IAmAMessageStore<Message>>();
+
+        public IAmAMessageStore<Message> Get(MessageStoreConfig messageStore)
         {
-            browser = new Browser(new ConfigurableBootstrapper(with => with.Module<IndexModule>()));
-        };
+            if (!_storesCreated.ContainsKey(messageStore.Name))
+            {
+                _storesCreated.Add(messageStore.Name, _storeCtorLookup[messageStore.StoreType].Invoke(messageStore));
+            }
+            return _storesCreated[messageStore.Name];
+        }
 
-        private Because _with_GET = () => result = browser.Get("/", with =>
+        public void Set(MessageStoreType storeType, Func<MessageStoreConfig, IAmAMessageStore<Message>> storeCtor)
         {
-            with.HttpRequest();
-            with.Header("accept", "text/html");
-        });
-
-        private It should_return_200_OK = () => result.StatusCode.ShouldEqual(HttpStatusCode.OK);
-        private It should_return_text_html = () => result.ContentType.ShouldEqual("text/html");
-
-        private static Browser browser;
-        private static BrowserResponse result;
+            _storeCtorLookup.Add(storeType, storeCtor);
+        }
     }
 }

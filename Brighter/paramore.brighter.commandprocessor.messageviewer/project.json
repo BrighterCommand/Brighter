@@ -1,0 +1,37 @@
+﻿{
+  "version": "1.0.0-*",
+  "dependencies": {
+    "Newtonsoft.Json": "9.0.1",
+    "paramore.brighter.commandprocessor": { "target": "project" },
+    "paramore.brighter.commandprocessor.messagestore.mssql": { "target": "project" },
+    "paramore.brighter.commandprocessor.messaginggateway.rmq": { "target": "project"},
+    "Nancy": "2.0.0-barneyrubble",
+    "Nancy.Embedded": "2.0.0-barneyrubble",
+    "Polly": "4.3.0"
+    // ,"Humanizer": "2.0.1"
+  },
+  "frameworks": {
+    "netstandard1.6": {
+       "imports": "dnxcore50"
+      // "dependencies": {
+      //   "System.Reflection.TypeExtensions": "4.1.0"
+      // }
+    },
+    "net452": {
+
+    }
+  },
+  "buildOptions": {
+    "embed": [
+      "assets/**",
+      "Content/**",
+      "fonts/**",
+      "Scripts/bootstrap.js",
+      "Scripts/jquery-2.1.3.min.js",
+      "Scripts/mustache.js",
+      "favicon.ico"
+
+      //, "Scripts/**" - include this and build fiels with errors in *.targets (!)
+    ]
+  }
+}

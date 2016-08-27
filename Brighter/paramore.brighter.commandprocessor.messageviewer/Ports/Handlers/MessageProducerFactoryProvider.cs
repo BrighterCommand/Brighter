@@ -1,6 +1,6 @@
 // ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
-// Author           : ianp
+// Author           : ian
 // Created          : 25-03-2014
 //
 // Last Modified By : ian
@@ -10,7 +10,6 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -35,31 +34,34 @@ THE SOFTWARE. */
 
 #endregion
 
-using Machine.Specifications;
-using Nancy;
-using Nancy.Testing;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
+using System;
+using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
+namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
 {
-    [Subject(typeof(IndexModule))]
-    public class When_retrieving_home
+    public class MessageProducerFactoryProvider : IMessageProducerFactoryProvider
     {
-        private Establish _context = () =>
+        private MessageViewerConfigurationProducer _producer;
+
+        public MessageProducerFactoryProvider(MessageViewerConfiguration config)
         {
-            browser = new Browser(new ConfigurableBootstrapper(with => with.Module<IndexModule>()));
-        };
+            _producer = config.Producer;
+        }
 
-        private Because _with_GET = () => result = browser.Get("/", with =>
+        public IAmAMessageProducerFactory Get(ILog logger)
         {
-            with.HttpRequest();
-            with.Header("accept", "text/html");
-        });
+            //ToDo: assume always needs a logger!!!
+            //ToDo: factory or actual producer???
 
-        private It should_return_200_OK = () => result.StatusCode.ShouldEqual(HttpStatusCode.OK);
-        private It should_return_text_html = () => result.ContentType.ShouldEqual("text/html");
-
-        private static Browser browser;
-        private static BrowserResponse result;
+            var orType = Type.GetType(_producer.AssemblyQualifiedName);
+            if (orType == null)
+            {
+                throw new Exception("Cannot find ProducerFactory " + _producer.AssemblyQualifiedName);
+            }
+            
+            var factory = Activator.CreateInstance(orType, logger);
+            return factory as IAmAMessageProducerFactory;
+        }
     }
 }

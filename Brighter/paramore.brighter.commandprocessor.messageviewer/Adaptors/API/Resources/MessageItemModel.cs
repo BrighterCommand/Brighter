@@ -35,31 +35,37 @@ THE SOFTWARE. */
 
 #endregion
 
-using Machine.Specifications;
-using Nancy;
-using Nancy.Testing;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
+using System;
+using Newtonsoft.Json;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
+//using Humanizer;
+
+namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources
 {
-    [Subject(typeof(IndexModule))]
-    public class When_retrieving_home
+    public class MessageItemModel
     {
-        private Establish _context = () =>
+        public MessageItemModel(){}
+        public MessageItemModel(Message message)
         {
-            browser = new Browser(new ConfigurableBootstrapper(with => with.Module<IndexModule>()));
-        };
+            MessageId = message.Id;
+            TimeStamp = message.Header.TimeStamp;
+            MessageType = message.Header.MessageType.ToString();
+            HandledCount = message.Header.HandledCount;
+            Bag = JsonConvert.SerializeObject(message.Header.Bag);
+            MessageBody = message.Body.Value;
+            Topic = message.Header.Topic;
+            //TODO re-humanize!
+            //TimeStampUI = TimeStamp.Humanize();
+            TimeStampUI = TimeStamp.ToString();
+        }
 
-        private Because _with_GET = () => result = browser.Get("/", with =>
-        {
-            with.HttpRequest();
-            with.Header("accept", "text/html");
-        });
-
-        private It should_return_200_OK = () => result.StatusCode.ShouldEqual(HttpStatusCode.OK);
-        private It should_return_text_html = () => result.ContentType.ShouldEqual("text/html");
-
-        private static Browser browser;
-        private static BrowserResponse result;
+        public string Topic { get; set; }
+        public string Bag { get; set; }
+        public string MessageBody { get; set; }
+        public int HandledCount { get; set; }
+        public string MessageType { get; set; }
+        public DateTime TimeStamp { get; set; }
+        public Guid MessageId { get; set; }
+        public string TimeStampUI { get; set; }
     }
 }
