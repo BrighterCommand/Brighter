@@ -76,7 +76,8 @@ class PostTests(unittest.TestCase):
         except ConfigurationException:
             was_exception_thrown = True
 
-        self.assertTrue(was_exception_thrown)
+        # it looks as though we should use self_assertRaises...
+        self.assertTrue(was_exception_thrown, "")
 
     def test_missing_message_producer(self):
         """given that we have no me message producer configured for the commandprocessor
@@ -98,4 +99,22 @@ class PostTests(unittest.TestCase):
         self.assertTrue(was_exception_thrown)
 
     def test_missing_message_mapper_registry(self):
-        pass
+        """ given that we have no message mapper registry for the commandprocessor
+            when we post a command
+            it should raise a configuration error
+        """
+        self._commandProcessor = CommandProcessor(
+            message_mapper_registry=None,
+            message_store=self._message_store,
+            producer=self._producer
+        )
+
+        was_exception_thrown = False
+        try:
+            self._request = MyCommand()
+            self._commandProcessor.post(self._request)
+        except ConfigurationException:
+            was_exception_thrown = True
+
+        self.assertTrue(was_exception_thrown)
+

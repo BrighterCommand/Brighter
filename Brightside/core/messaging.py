@@ -45,15 +45,56 @@ class MessageHeader:
     """The header for our message. Note that this should agree with the Paramore.Brighter definition to ensure that
         different language implementations are compatible
     """
-    def __init__(self, identity: UUID) -> None:
-        self._id = identity  # type: UUID
+    def __init__(self, identity: UUID, topic: str, message_type: int, correlation_id: UUID = None,
+        reply_to: str = None, content_type: str = "text/plain") -> None:
+        self._id = identity
+        self._topic = topic
+        self._message_type = message_type
+        self._correlation_id = correlation_id
+        self._reply_to = reply_to
+        self._content_type = content_type
 
     @property
     def id (self):
         return self._id
 
+    @property
+    def topic(self):
+        return self._topic
+
+    @topic.setter
+    def topic(self, value):
+        self._topic = value
+
+    @property
+    def message_type(self):
+        return self._message_type
+
+    @property
+    def correlation_id(self):
+        return self._correlation_id
+
+    @property
+    def reply_to(self):
+        return self._reply_to
+
+    @reply_to.setter
+    def reply_to(self, value):
+        self._reply_to = value
+
+    @property
+    def content_type(self):
+        return self._content_type
+
+    @content_type.setter
+    def content_type(self, value):
+        self._content_type = value
 
 class Message:
+    """The representation of an on the wire message in Brighter. It abstracts the message typeof the underlying
+    implementation and thus acts as a anti-corruption layer between us and an implementation specific message
+    type
+    """
     def __init__(self, message_header: MessageHeader, message_body: MessageBody) -> None:
         self._message_header = message_header
         self._message_body = message_body
@@ -72,6 +113,11 @@ class Message:
 
 
 class MessageStore(metaclass=ABCMeta):
+    """ Brighter stores messages that it sends to a broker (before sending). This allows us to replay messages sent
+    from a publisher to its subscribers. As a result, you can use non-durable queues (which are often more performant)
+    if you are willing to trade 'at least once' delivery for 'retry on fail' and cope with duplicates.
+
+    """
     @abstractmethod
     def add(self, message: Message):
         pass
@@ -82,7 +128,18 @@ class MessageStore(metaclass=ABCMeta):
 
 
 class Producer(metaclass=ABCMeta):
+    """ The component that sends messages to a broker. Usually abstracts a socket connection to the broker, using
+    a vendor specific client library.
+    """
     @abstractmethod
     def send(self, message: Message):
         pass
 
+
+class Consumer(metaclass=ABCMeta):
+    """The comoonent that receives messages from a broker. Usually abstracts a queue for subscribing to a topic on the
+    broker i.e. a dynamic recepient list.
+    """
+    @abstractmethod
+    def receive(self) -> Message:
+        pass

@@ -85,6 +85,8 @@ class CommandProcessor:
 
         if self._producer is None:
             raise ConfigurationException("Command Processor requires a Producer to post to a Broker")
+        if self._message_mapper_registry is None:
+            raise ConfigurationException("Command Processor requires a Message Mapper Registry to post to a Broker")
 
         message_mapper= self._message_mapper_registry.lookup(request)
         message = message_mapper(request)
