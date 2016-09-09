@@ -1,25 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-
-using DocumentsAndFolders.Sqs.Adapters.ServiceHost;
-using DocumentsAndFolders.Sqs.Ports.Events;
-
-using Greetings.Adapters.ServiceHost;
-using Greetings.Ports.CommandHandlers;
-using Greetings.Ports.Mappers;
-
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messaginggateway.awssqs;
-
 using Polly;
-
-using TinyIoC;
 
 namespace DocumentsAndFolders.Sqs.EventsGenerator
 {

@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0-*",
+  "buildOptions": {
+    "emitEntryPoint": true
+  },
+
+  "dependencies": {
+    "DocumentsAndFolders.Sqs.Core": { "target": "project" },
+    "log4net": "2.0.5"
+  },
+  "frameworks": {
+    "net452": {
+      "dependencies": {
+        "Topshelf": "4.0.1"
+      },
+      "frameworkAssemblies": {
+        "System.Xml": "4.0.0"
+      }
+    }
+  }
+}

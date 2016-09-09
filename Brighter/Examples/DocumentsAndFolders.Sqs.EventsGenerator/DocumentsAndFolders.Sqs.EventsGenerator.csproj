@@ -61,10 +61,6 @@
       <Project>{bd921f35-47c9-41ba-b1bc-ae9698869977}</Project>
       <Name>paramore.brighter.commandprocessor.messaginggateway.awssqs</Name>
     </ProjectReference>
-    <ProjectReference Include="..\DocumentsAndFolders.Sqs\DocumentsAndFolders.Sqs.csproj">
-      <Project>{b75121f4-0181-4a8f-ae25-529d64b1f694}</Project>
-      <Name>DocumentsAndFolders.Sqs</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

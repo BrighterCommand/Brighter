@@ -117,9 +117,9 @@ namespace paramore.brighter.serviceactivator
         ///// </summary>
         ///// <param name="connections"></param>
         ///// <returns>IAmADispatchBuilder.</returns>
-        public IAmADispatchBuilder ConnectionsFromConfiguration(ServiceActivatorConfiguration configuration)
+        public IAmADispatchBuilder ConnectionsFromSubscriptions(Subscriptions subscriptions)
         {
-            var connectionElements = from ConnectionElement connection in configuration.Connections select connection;
+            var connectionElements = from ConnectionElement connection in subscriptions.Connections select connection;
             return ConnectionsFromElements(connectionElements);
         }
 
@@ -204,7 +204,7 @@ namespace paramore.brighter.serviceactivator
         ///// </summary>
         ///// <param name="connectionsConfiguration">The connection elements.</param>
         ///// <returns>IAmADispatchBuilder.</returns>
-        IAmADispatchBuilder ConnectionsFromConfiguration(ServiceActivatorConfiguration configuration);
+        IAmADispatchBuilder ConnectionsFromSubscriptions(Subscriptions subscriptions);
 
         ///// <summary>
         ///// A list of connections i.e. mappings of channels to commands or events
