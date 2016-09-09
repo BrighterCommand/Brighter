@@ -1,18 +1,23 @@
-{
-  "version": "1.0.0-*",
+ {
+    "version": "1.0.0-*",
+    "buildOptions": {
+    "emitEntryPoint": true
+  },
   "dependencies": {
     "paramore.brighter.commandprocessor": { "target": "project" },
     "paramore.brighter.commandprocessor.messaginggateway.rmq": { "target": "project" },
     "paramore.brighter.serviceactivator": { "target": "project" },
+    "TaskMailer.Core": { "target": "project" },
     "Tasks": { "target": "project" }
   },
   "frameworks": {
-    "netstandard1.6": {
-      "imports": "dnxcore50",
+    "net452": {
       "dependencies": {
-        "System.Reflection.TypeExtensions": "4.1.0"
+        "Topshelf": "4.0.1"
+      },
+      "frameworkAssemblies": {
+        "System.Xml": "4.0.0"
       }
-    },
-    "net452": {}
+    }
   }
 }

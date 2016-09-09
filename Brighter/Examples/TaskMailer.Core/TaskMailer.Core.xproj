@@ -6,8 +6,8 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\DotNet\Microsoft.DotNet.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>42dfbd98-7bf4-4085-a5cc-f9afaefa579b</ProjectGuid>
-    <RootNamespace>TaskMailer</RootNamespace>
+    <ProjectGuid>521ad08c-ed01-4976-a137-f8850c4b0b90</ProjectGuid>
+    <RootNamespace>TaskMailer.Core</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">.\obj</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">.\bin\</OutputPath>
   </PropertyGroup>

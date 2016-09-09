@@ -1,9 +1,8 @@
-﻿{
+﻿ {
   "version": "1.0.0-*",
   "buildOptions": {
     "emitEntryPoint": true
   },
-
   "dependencies": {
     "ManagementAndMonitoring": { "target": "project" },
     "paramore.brighter.commandprocessor.messagestore.sqllite": { "target": "project" },

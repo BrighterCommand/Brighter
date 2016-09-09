@@ -34,6 +34,7 @@ using Tasks.Ports.Commands;
 using Tasks.Ports.Events;
 using Tasks.Ports.Handlers;
 using TinyIoC;
+using Topshelf;
 
 namespace TaskMailer.Adapters.ServiceHost
 {

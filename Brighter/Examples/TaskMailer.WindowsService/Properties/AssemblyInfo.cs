@@ -28,7 +28,7 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("TaskMailer")]
+[assembly: AssemblyTitle("TaskMailer.WindowsService")]
 [assembly: AssemblyDescription("Demonstrates usage of Paramore.Brighter.SerivceActivator")]
 [assembly: AssemblyConfiguration("Debug")]
 [assembly: AssemblyCompany("Ian Cooper")]
