@@ -29,17 +29,6 @@ using RabbitMQ.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration
 {
-    /// <summary>
-    /// Class RMQMessagingGatewayConfigurationSection.
-    /// </summary>
-    public class RmqMessagingGatewayConfiguration
-    {
-        /// <summary>
-        /// A list of brokers with their uri, and an exchange on that broker
-        /// </summary>
-        public IList<RmqMessagingGatewayConnection> Connections { get; set; }
-    }
-
     public class RmqMessagingGatewayConnection 
     {
         /// <summary>

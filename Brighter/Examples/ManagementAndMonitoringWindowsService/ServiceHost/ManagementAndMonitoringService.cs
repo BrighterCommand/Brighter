@@ -88,17 +88,15 @@ namespace ManagementAndMonitoringWindowsService.ServiceHost
                 {typeof(GreetingCommand), typeof(GreetingCommandMessageMapper)}
             };
 
-            var rmqGatewayMessages = new RMQMessagingGatewayConfigurationSection
+            var rmqGatewayMessages = new RmqMessagingGatewayConnection 
             {
-                AMPQUri = new AMQPUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AmpqUri  = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
-                Queues = new Queues()
             };
-            var rmqGatewayMonitoring = new RMQMessagingGatewayConfigurationSection
+            var rmqGatewayMonitoring = new RmqMessagingGatewayConnection 
             {
-                AMPQUri = new AMQPUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AmpqUri  = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
-                Queues = new Queues()
             };
 
             //create the gateway

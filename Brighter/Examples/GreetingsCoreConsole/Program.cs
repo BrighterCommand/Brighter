@@ -58,15 +58,14 @@ namespace GreetingsCoreConsole
             };
 
             //create the gateway
-            var rmqMessagingGatewayConfigurationSection = new RMQMessagingGatewayConfigurationSection
+            var rmqConnnection = new RmqMessagingGatewayConnection 
             {
-                AMPQUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AmpqUri  = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
-                Queues = new Queues()
             };
 
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqMessagingGatewayConfigurationSection);
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqMessagingGatewayConfigurationSection);
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection );
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqConnnection );
 
             // Service Activator connections
             var connections = new List<paramore.brighter.serviceactivator.Connection>
