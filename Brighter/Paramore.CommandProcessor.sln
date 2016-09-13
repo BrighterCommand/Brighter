@@ -87,7 +87,7 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "DocumentsAndFolders.Sqs.Win
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "TaskMailer.Core", "Examples\TaskMailer.Core\TaskMailer.Core.xproj", "{521AD08C-ED01-4976-A137-F8850C4B0B90}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "TaskMailer", "Examples\TaskMailer.WindowsService\TaskMailer.xproj", "{42DFBD98-7BF4-4085-A5CC-F9AFAEFA579B}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "TaskMailer.WindowsService", "Examples\TaskMailer.WindowsService\TaskMailer.WindowsService.xproj", "{42DFBD98-7BF4-4085-A5CC-F9AFAEFA579B}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "DocumentsAndFolders.Sqs.EventsGenerator", "Examples\DocumentsAndFolders.Sqs.EventsGenerator\DocumentsAndFolders.Sqs.EventsGenerator.xproj", "{90624357-4D6D-4378-854C-5A1133F92D4F}"
 EndProject
