@@ -14,6 +14,7 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.serviceactivator;
 using Polly;
+using Tasks.Ports.Events;
 using TinyIoc;
 using Topshelf;
 using Connection = paramore.brighter.serviceactivator.Connection;
@@ -116,11 +117,10 @@ namespace GenericListener.Adapters.Services
             var policy = BuildPolicy();
 
             //create the gateway
-            var rmqMessagingGatewayConfigurationSection = new RMQMessagingGatewayConfigurationSection
+            var rmqConnnection = new RmqMessagingGatewayConnection
             {
-                AMPQUri = new AMQPUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
-                Queues = new Queues()
             };
 
             //<!-- Events with mapper and handler overrides -->
@@ -131,7 +131,7 @@ namespace GenericListener.Adapters.Services
             //<add connectionName="Task.Edited" channelName="Task.Edited" routingKey="Task.Edited" dataType="GenericListener.Ports.Events.GenericTaskEditedEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
             //<add connectionName="Task.Completed" channelName="Task.Completed" routingKey="Task.Completed" dataType="GenericListener.Ports.Events.GenericTaskCompletedEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
 
-            var inputChannelFactory = new InputChannelFactory(new RmqMessageConsumerFactory(rmqMessagingGatewayConfigurationSection), new RmqMessageProducerFactory(rmqMessagingGatewayConfigurationSection));
+            var inputChannelFactory = new InputChannelFactory(new RmqMessageConsumerFactory(rmqConnnection), new RmqMessageProducerFactory(rmqConnnection));
 
             var connections = new List<Connection>
             {
