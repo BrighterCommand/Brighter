@@ -1,7 +1,13 @@
-﻿using System;
-using System.Collections.Specialized;
+﻿using Amazon.Runtime;
+using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using DocumentsAndFolders.Sqs.Core.Ports.Events;
+using DocumentsAndFolders.Sqs.Core.Ports.Mappers;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 using Polly;
+using TinyIoC;
 
 namespace DocumentsAndFolders.Sqs.EventsGenerator
 {
@@ -86,8 +92,9 @@ namespace DocumentsAndFolders.Sqs.EventsGenerator
             };
 
 
+            var awsCredentials = new StoredProfileAWSCredentials();
             
-            var sqsMessageProducer = new SqsMessageProducer();
+            var sqsMessageProducer = new SqsMessageProducer(awsCredentials);
             var processor = new CommandProcessor(
                 null,
                 policyRegistry,
@@ -116,47 +123,46 @@ namespace DocumentsAndFolders.Sqs.EventsGenerator
     public class Arguments
     {
         // Variables
-        private StringDictionary Parameters;
+        private Dictionary<string, string> _parameters;
 
         // Constructor
         public Arguments(string[] Args)
         {
-            Parameters = new StringDictionary();
-            Regex Spliter = new Regex(@"^-{1,2}|^/|=|:",
+            _parameters = new Dictionary<string, string>();
+            var spliter = new Regex(@"^-{1,2}|^/|=|:",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-            Regex Remover = new Regex(@"^['""]?(.*?)['""]?$",
+            var remover = new Regex(@"^['""]?(.*?)['""]?$",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-            string Parameter = null;
-            string[] Parts;
+            string parameter = null;
 
             // Valid parameters forms:
             // {-,/,--}param{ ,=,:}((",')value(",'))
             // Examples: 
             // -param1 value1 --param2 /param3:"Test-:-work" 
             //   /param4=happy -param5 '--=nice=--'
-            foreach (string Txt in Args)
+            foreach (var txt in Args)
             {
                 // Look for new parameters (-,/ or --) and a
                 // possible enclosed value (=,:)
-                Parts = Spliter.Split(Txt, 3);
+                var parts = spliter.Split(txt, 3);
 
-                switch (Parts.Length)
+                switch (parts.Length)
                 {
                     // Found a value (for the last parameter 
                     // found (space separator))
                     case 1:
-                        if (Parameter != null)
+                        if (parameter != null)
                         {
-                            if (!Parameters.ContainsKey(Parameter))
+                            if (!_parameters.ContainsKey(parameter))
                             {
-                                Parts[0] =
-                                    Remover.Replace(Parts[0], "$1");
+                                parts[0] =
+                                    remover.Replace(parts[0], "$1");
 
-                                Parameters.Add(Parameter, Parts[0]);
+                                _parameters.Add(parameter, parts[0]);
                             }
-                            Parameter = null;
+                            parameter = null;
                         }
                         // else Error: no parameter waiting for a value (skipped)
                         break;
@@ -165,53 +171,47 @@ namespace DocumentsAndFolders.Sqs.EventsGenerator
                     case 2:
                         // The last parameter is still waiting. 
                         // With no value, set it to true.
-                        if (Parameter != null)
+                        if (parameter != null)
                         {
-                            if (!Parameters.ContainsKey(Parameter))
-                                Parameters.Add(Parameter, "true");
+                            if (!_parameters.ContainsKey(parameter))
+                                _parameters.Add(parameter, "true");
                         }
-                        Parameter = Parts[1];
+                        parameter = parts[1];
                         break;
 
                     // Parameter with enclosed value
                     case 3:
                         // The last parameter is still waiting. 
                         // With no value, set it to true.
-                        if (Parameter != null)
+                        if (parameter != null)
                         {
-                            if (!Parameters.ContainsKey(Parameter))
-                                Parameters.Add(Parameter, "true");
+                            if (!_parameters.ContainsKey(parameter))
+                                _parameters.Add(parameter, "true");
                         }
 
-                        Parameter = Parts[1];
+                        parameter = parts[1];
 
                         // Remove possible enclosing characters (",')
-                        if (!Parameters.ContainsKey(Parameter))
+                        if (!_parameters.ContainsKey(parameter))
                         {
-                            Parts[2] = Remover.Replace(Parts[2], "$1");
-                            Parameters.Add(Parameter, Parts[2]);
+                            parts[2] = remover.Replace(parts[2], "$1");
+                            _parameters.Add(parameter, parts[2]);
                         }
 
-                        Parameter = null;
+                        parameter = null;
                         break;
                 }
             }
             // In case a parameter is still waiting
-            if (Parameter != null)
+            if (parameter != null)
             {
-                if (!Parameters.ContainsKey(Parameter))
-                    Parameters.Add(Parameter, "true");
+                if (!_parameters.ContainsKey(parameter))
+                    _parameters.Add(parameter, "true");
             }
         }
 
         // Retrieve a parameter value if it exists 
         // (overriding C# indexer property)
-        public string this[string Param]
-        {
-            get
-            {
-                return (Parameters[Param]);
-            }
-        }
+        public string this[string Param] => (_parameters[Param]);
     }
 }

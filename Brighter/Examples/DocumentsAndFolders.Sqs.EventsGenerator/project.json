@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0-*",
+  "buildOptions": {
+    "emitEntryPoint": true
+  },
+
+  "dependencies": {
+    "AWSSDK.Core": "3.1.11",
+    "DocumentsAndFolders.Sqs.Core": { "target": "project" },
+    "paramore.brighter.commandprocessor": { "target": "project" },
+    "paramore.brighter.commandprocessor.messaginggateway.awssqs": { "target": "project" }
+    },
+  "frameworks": {
+   "net452": {}
+  }
+}
