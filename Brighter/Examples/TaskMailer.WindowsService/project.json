@@ -8,7 +8,8 @@
     "paramore.brighter.commandprocessor.messaginggateway.rmq": { "target": "project" },
     "paramore.brighter.serviceactivator": { "target": "project" },
     "TaskMailer.Core": { "target": "project" },
-    "Tasks": { "target": "project" }
+    "Tasks": { "target": "project" },
+    "Topshelf.Log4Net": "4.0.1"
   },
   "frameworks": {
     "net452": {

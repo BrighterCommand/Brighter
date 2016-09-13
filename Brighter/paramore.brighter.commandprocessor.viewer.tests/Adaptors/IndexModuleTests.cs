@@ -54,7 +54,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
         {
             with.HttpRequest();
             with.Header("accept", "text/html");
-        });
+        }).Result;
 
         private It should_return_200_OK = () => result.StatusCode.ShouldEqual(HttpStatusCode.OK);
         private It should_return_text_html = () => result.ContentType.ShouldEqual("text/html");

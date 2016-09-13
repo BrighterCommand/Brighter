@@ -96,7 +96,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
             private It should_throw_expected_exception = () =>
             {
-                _ex.ShouldBeOfExactType<SystemException>();
+                _ex.ShouldBeOfExactType<Exception>();
                 _ex.Message.ShouldContain("messages");
                 _ex.Message.ShouldContain(_messageToRepostMissing.Id.ToString());
             };
@@ -125,7 +125,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
             private It should_throw_expected_exception = () =>
             {
-                _ex.ShouldBeOfExactType<SystemException>();
+                _ex.ShouldBeOfExactType<Exception>();
                 _ex.Message.ShouldContain("Store");
             };
 
@@ -152,7 +152,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
             private It should_throw_expected_exception = () =>
             {
-                _ex.ShouldBeOfExactType<SystemException>();
+                _ex.ShouldBeOfExactType<Exception>();
                 _ex.Message.ShouldContain("messages");
                 _ex.Message.ShouldContain(_command.MessageIds.Single());
             };
@@ -181,7 +181,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
             private It should_throw_expected_exception = () =>
             {
-                _ex.ShouldBeOfExactType<SystemException>();
+                _ex.ShouldBeOfExactType<Exception>();
                 _ex.Message.ShouldContain("Mis-configured");
             };
 
@@ -208,7 +208,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
             private It should_throw_expected_exception = () =>
             {
-                _ex.ShouldBeOfExactType<SystemException>();
+                _ex.ShouldBeOfExactType<Exception>();
                 _ex.Message.ShouldContain("Mis-configured");
             };
 
