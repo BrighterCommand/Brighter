@@ -27,12 +27,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-**********************************************************************i*
+**********************************************************************i*s
 """
 
 import unittest
 from rmq.rmq_gateway import RmqConsumer, RmqConnection, RmqProducer
-from core.messaging import Message, MessageBody, MessageHeader
+from core.messaging import Message, MessageBody, MessageHeader, MessageType
+from uuid import uuid4
 
 
 class RmqGatewayTests(unittest.TestCase):
@@ -46,6 +47,16 @@ class RmqGatewayTests(unittest.TestCase):
             when I send that message via the produecer
             then I should be able to read that message via the consumer
         """
-        header = MessageHeader()
-        message = Message()
+        header = MessageHeader(uuid4(), "test 1", MessageType.command, uuid4())
+        body = MessageBody("test content")
+        message = Message(header, body)
+
+        self._consumer.purge()
+
+        self._producer.send(message)
+
+        read_message = self._consumer.receive(500)
+
+        self.assertEqual(message.id, read_message.id)
+        self.assertEqual(message.body.value, read_message.body.value)
 

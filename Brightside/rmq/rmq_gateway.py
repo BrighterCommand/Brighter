@@ -71,13 +71,51 @@ class RmqProducer(Producer):
         self._logger = logger or logging.getLogger(__name__)
 
     def send(self, message: Message):
-        pass
+        # we want to expose our logger to the functions defined in inner scope, so put it in their outer scope
+
+        logger = self._logger
+
+        def _build_message_header():
+            return dict([("MessageType", "1")]) # todo: turn our header into a message header
+
+        def _create_queue(key, exchange):
+
+            # We don't publish over a queue, so this is optional, it just creates a consuming channel which consumers
+            # can read from. The advantage of declaring it now is that we ensure messages won't be lost if no consumers
+            # are currently running.
+            print("Creating queue for key {key}".format(key=key))
+            return Queue(key, exchange=exchange, routing_key=key)
+
+        def _publish(sender):
+            logger.debug("Send message {body} to broker {amqpuri} with routing key {routing_key}".format(body=message, amqpuri=self._amqp_uri, routing_key=key))
+            queue = _create_queue(message.header.topic, self._exchange)
+            sender.publish(message.body.value,
+                           headers=header,
+                           exchange=self._exchange,
+                           serializer='json',   # todo: fix this for the mime type of the message
+                           routing_key=message.header.topic,
+                           declare=[self._exchange, queue])
+
+        def _error_callback(e, interval):
+            logger.debug('Publishing error: {e}. Will retry in {interval} seconds', e, interval)
+
+        self._logger.debug("Connect to broker {amqpuri}".format(amqpuri=self._amqp_uri))
+
+        with connections[self._cnx].acquire(block=True) as conn:
+            with conn.Producer() as producer:
+                ensure_kwargs = self.RETRY_OPTIONS.copy()
+                ensure_kwargs['errback'] = _error_callback
+                safe_publish = conn.ensure(producer, _publish, **ensure_kwargs)
+                safe_publish(producer)
 
 
 class RmqConsumer(Consumer):
     """ Implements reading a message from an RMQ broker. It uses a queue, created by subscribing to a message topic
 
     """
-    def receive(self) -> Message:
+    def purge(self, ):
+        pass
+
+    def receive(self, timeout:int) -> Message:
         pass
 

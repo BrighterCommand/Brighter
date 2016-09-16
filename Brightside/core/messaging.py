@@ -32,21 +32,38 @@ THE SOFTWARE.
 
 from uuid import UUID
 from abc import ABCMeta, abstractmethod
+from enum import Enum, unique
 
 
 class MessageBody:
     """The body of our message. Note that this must use the same binary payload approach as Paramore Brighter to
         ensure that payload is binary compatible. plain/text should be encoded as a UTF8 byte array for example
     """
-    pass
+    def __init__(self, body: str, body_type: str) -> None:
+        self._encoded_body = body.encode()
+        self._body_type = body_type
+
+    @property
+    def value(self) -> str:
+        """ Assumes that the body is text/plain i.e. json or xml and so returns the content as a string"""
+        return self._encoded_body.decode()
+
+
+@unique
+class MessageType(Enum):
+    unacceptable = 1
+    none = 2
+    command = 3
+    event = 4
+    quit = 5
 
 
 class MessageHeader:
     """The header for our message. Note that this should agree with the Paramore.Brighter definition to ensure that
         different language implementations are compatible
     """
-    def __init__(self, identity: UUID, topic: str, message_type: int, correlation_id: UUID = None,
-        reply_to: str = None, content_type: str = "text/plain") -> None:
+    def __init__(self, identity: UUID, topic: str, message_type: MessageType, correlation_id: UUID = None,
+                reply_to: str = None, content_type: str = "text/plain") -> None:
         self._id = identity
         self._topic = topic
         self._message_type = message_type
@@ -55,40 +72,41 @@ class MessageHeader:
         self._content_type = content_type
 
     @property
-    def id (self):
+    def id (self) -> UUID:
         return self._id
 
     @property
-    def topic(self):
+    def topic(self) -> None:
         return self._topic
 
     @topic.setter
-    def topic(self, value):
+    def topic(self, value: str):
         self._topic = value
 
     @property
-    def message_type(self):
+    def message_type(self) -> MessageType:
         return self._message_type
 
     @property
-    def correlation_id(self):
+    def correlation_id(self) -> UUID:
         return self._correlation_id
 
     @property
-    def reply_to(self):
+    def reply_to(self) -> str:
         return self._reply_to
 
     @reply_to.setter
-    def reply_to(self, value):
+    def reply_to(self, value: str):
         self._reply_to = value
 
     @property
-    def content_type(self):
+    def content_type(self) -> str:
         return self._content_type
 
     @content_type.setter
-    def content_type(self, value):
+    def content_type(self, value: str):
         self._content_type = value
+
 
 class Message:
     """The representation of an on the wire message in Brighter. It abstracts the message typeof the underlying
@@ -140,6 +158,11 @@ class Consumer(metaclass=ABCMeta):
     """The comoonent that receives messages from a broker. Usually abstracts a queue for subscribing to a topic on the
     broker i.e. a dynamic recepient list.
     """
+
     @abstractmethod
-    def receive(self) -> Message:
+    def purge(self):
+        pass
+
+    @abstractmethod
+    def receive(self, timeout: int) -> Message:
         pass
