@@ -33,9 +33,6 @@ THE SOFTWARE.
 from kombu import BrokerConnection, Queue
 from kombu.pools import connections
 import logging
-
-
-
 from core.messaging import Consumer, Message, Producer
 
 
@@ -66,6 +63,7 @@ class RmqProducer(Producer):
     """Implements sending a message to a RMQ broker. It does not use a queue, just a connection to the broker
     """
     def __init__(self, connection: RmqConnection, logger=None):
+        self._amqp_uri = connection.amqp_uri
         self._cnx = BrokerConnection(hostname=connection.amqp_uri)
         self._exchange = connection.exchange
         self._logger = logger or logging.getLogger(__name__)
@@ -76,21 +74,13 @@ class RmqProducer(Producer):
         logger = self._logger
 
         def _build_message_header():
-            return dict([("MessageType", "1")]) # todo: turn our header into a message header
-
-        def _create_queue(key, exchange):
-
-            # We don't publish over a queue, so this is optional, it just creates a consuming channel which consumers
-            # can read from. The advantage of declaring it now is that we ensure messages won't be lost if no consumers
-            # are currently running.
-            print("Creating queue for key {key}".format(key=key))
-            return Queue(key, exchange=exchange, routing_key=key)
+            return {'MessageType': message.header.message_type}
 
         def _publish(sender):
-            logger.debug("Send message {body} to broker {amqpuri} with routing key {routing_key}".format(body=message, amqpuri=self._amqp_uri, routing_key=key))
-            queue = _create_queue(message.header.topic, self._exchange)
+            logger.debug("Send message {body} to broker {amqpuri} with routing key {routing_key}"
+                         .format(body=message, amqpuri=self._amqp_uri, routing_key=message.header.topic))
             sender.publish(message.body.value,
-                           headers=header,
+                           headers=_build_message_header(),
                            exchange=self._exchange,
                            serializer='json',   # todo: fix this for the mime type of the message
                            routing_key=message.header.topic,
