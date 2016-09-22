@@ -103,9 +103,59 @@ class RmqConsumer(Consumer):
     """ Implements reading a message from an RMQ broker. It uses a queue, created by subscribing to a message topic
 
     """
+    def __init__(self, connection: RmqConnection, logger=None) -> None:
+       self._exchange = connection.exchange
+        self._routing_key = routing_key
+        self._amqp_uri =connection.amqp_uri
+        self._running = Event()  # control access to te queue
+        self._logger = logger or logging.getLogger(__name__)
+
     def purge(self, ):
         pass
 
     def receive(self, timeout:int) -> Message:
-        pass
+
+        def _drain(cnx, timeout):
+            try:
+                cnx.drain_events(timeout=timeout)
+            except kombu_exceptions.TimeoutError:
+                pass
+
+        def _drain_errors(exc, interval):
+            self._logger.error('Draining error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)
+
+        def _read_message(body, message):
+            self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), message.headers, message.payload)
+            now = datetime.utcnow().isoformat()
+            activity = body
+            print("{time}: {event}".format(time=now, event=activity))
+            message.ack()
+
+        # read the next batch number of monitoring messages from the control bus
+        # evaluate for color coding (error is red)
+        # print to stdout
+
+        connection = BrokerConnection(hostname=self._amqp_uri)
+        with connections[connection].acquire(block=True) as conn:
+            self._logger.debug('Got connection: %s', conn.as_uri())
+            with Consumer(conn, [self._monitoring_queue], callbacks=[_read_message], accept=['json', 'text/plain']) as consumer:
+                self._running.set()
+                ensure_kwargs = self.RETRY_OPTIONS.copy()
+                ensure_kwargs['errback'] = _drain_errors
+                lines = 0
+                updates = 0
+                while self._running.is_set():
+                    # page size number before we sleep
+                    safe_drain = conn.ensure(consumer, _drain, **ensure_kwargs)
+                    safe_drain(conn, DRAIN_EVENTS_TIMEOUT)
+                    lines += 1
+                    if lines == self.page_size:
+                        if self.limit != -1 and updates > self.limit:
+                            self._running.clear()
+                        else:
+                            sleep(self.delay_between_refreshes)
+                            lines = 0
+                            updates += 1
+
+
 
