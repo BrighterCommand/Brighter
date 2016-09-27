@@ -1,0 +1,63 @@
+html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="../index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+        <p><a href="CommandsCommandDispatcherandProcessor.html">Next</a></p>
+        <p><a href="PortsAndAdapters.html">Prev</a></p>
+    </header>
+    <section>
+        <h1>Brighter</h1>
+        <h2>Implementing Ports and Adapters</h2>
+        <p> A ports and adapters architecture is an <a href="https://www.cs.cmu.edu/afs/cs/project/vit/ftp/pdf/intro_softarch.pdf">architectural style</a> that follows the layered architectural style, but has some additional
+        constraints and invariants around the layers.</p>
+        <p>The Components are layers. Each component comprises a group of sub-tasks which implement an abstraction at some layer in the hierarchy. Each layer provides services to the layer above it and acts as a client to the layer below.</p>
+        <p>The Connectors are the protocols that define how the layers can interact.</p>
+        <p>Lower layers can pass data and service requests to higher layers via notifications (i.e. an observable)</p>
+        <p>A hexagonal architecture has three layers: adapter, ports, and domain</p>
+        <h2>The Domain Layer</h2>
+        <p>The domain is constrained to avoid concerns outside the process boundary i.e. I/O and as such should consist of <a href="http://en.wikipedia.org/wiki/Plain_Old_CLR_Object">POCO</a> classes. Thus we should not have
+        references to libraries such as System.Web and System.IO which live in the layers that implements communication with us, or from us to other processes.</p>
+        <p>We include developer tests as something that lives outside the domain, so we should have no testing framework in this layer either</p>
+        <h2>The Adapter Layer</h2>
+        <p>Adapters are where we implement communication between our process and other processes. This is where the frameworks we use for I/O and our tests live. They layer is constrained not to communicate directly with the domain, but a port.</p>
+        <h2>The Ports Layer</h2>
+        <p>A port is the means by which an adapter exercises the domain. The adapter may not exercise the domain directly but must use a port which forms a use case or scenario boundary for the domain.</p>
+        <p>The port provides co-ordination and control of the domain in response to a request from a primary adapter,and communication of other ports with secondary adapters.</p>
+        <p>We recommend using the <a href="CommandsCommandDispatcherandProcessor.html">Command</a> pattern to implement Ports.</p>
+        <p>This use case is also described as implementing the Command Invoker pattern within a service by
+            <a href="http://www.servicedesignpatterns.com/">Service Design Patterns</a>. The <a href = "http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker">Command Invoker</a>:
+            <blockquote>Create command objects that fully encapsulate common request processing logic. Instantiate and invoke these commands from within the web service,
+            or forward them to an asynchronous background process. </blockquote>
+            We would identify this as Ports layer, with the service endpoint being in the Adapters layer.
+        </p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>

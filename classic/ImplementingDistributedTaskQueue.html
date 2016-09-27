@@ -1,0 +1,214 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="../index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+        <p><a href="Routing.html">Next</a></p>
+        <p><a href="BasicConfiguration.html">Prev</a></p>
+    </header>
+    <section>
+        <h1>Brighter</h1>
+        <h2>Task Queues</h2>
+       <p>Brighter provides support for a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">distributed task queue</a>. Instead of handling a command or event, synchronously
+           and in-process, work can be dispatched to a distributed task queue to be handled asynchronously and out-of-process. The trade-off here is between the cost of distribution
+           (see <a href="http://en.wikipedia.org/wiki/Fallacies_of_distributed_computing">The Fallacies of Distributed Computing</a>) against performance.
+           </p>
+        <p>For example you might have an HTTP API a rule that any given request to that API must execute in under 100ms. On measuring the performance of a key POST or PUT operation to your API you find that
+        you exceed this value. Upon realizing that much of your time is spent I/O you consider two options:</p>
+        <ul>
+            <li>Use the TPL to perform the work concurrently</li>
+            <li>Offload the work to a distributed task queue, ack the message, and allow the work to complete asynchronously</li>
+        </ul>
+        <p>A problem with the TPL approach is that your operation can only meet the 100ms threshold if your work can be parallelised such that no sub-task takes longer than 100ms. Your speed is always
+            constrained by the slowest operation that you need to parallelize. If you are I/O bound on a resource experiencing contention beyond 100ms, you will not meet your goal by introducing
+            more threads. Your minimum time is your minimum time.</p>
+        <p>You might try to fix this by acking (acknowledging) the request, and completing the work asynchronously. This option is particularly attractive if the work is I/O bound as you can process other requests
+            whilst you wait for the I/O to complete. </p>
+        <p>The downside of the async approach is that you risk that the work will be lost if the server fails prior to completion of the work, or the app simply recycles.</p>
+        <p>These requirements tend to push you in the direction of <a href="http://www.eaipatterns.com/GuaranteedMessaging.html">Guaranteed Delivery</a> to ensure that work you ack will eventually be handled.</p>
+        <p>A distributed task queue allows you offload work to another process, to be handled asynchronously (once you push the work onto the queue, you don't wait) and in parallel (you can use other cores to process the work).
+            It also allows you to ensure delivery of the message, eventually (the queue will hold the work until a consumer is available to read it).</p>
+        <p>In addition use of a distributed task queue allows you to throttle requests - you can hand work off from the web server to a queue that only needs to consume at the
+            rate you have resources to support. This allows you to scale to meet unexpected demand, at the price of <a href="http://en.wikipedia.org/wiki/Eventual_consistency">eventual consistency.</a> </p>
+        <h2>Brighter's Task Queue Architecture</h2>
+        <p>Brighter implements Task Queues using a <a href="http://www.enterpriseintegrationpatterns.com/MessageBroker.html">Message Broker</a>.</p>
+        <p>The producer sends a <strong>Command</strong> or <strong>Event</strong> to a <a href="http://www.enterpriseintegrationpatterns.com/MessageBroker.html">Message Broker</a>
+            using <strong>CommandProcessor.Post()</strong>.</p>
+        <p>We use an <strong>IAmAMessageMapper</strong> to map the <strong>Command</strong> or <strong>Event</strong> to a <strong>Message</strong>. (Usually we just serialize the object to JSON and add to the <strong>MessageBody</strong>),
+            but if you want to use higher performance serialization approaches, such as <a href="https://github.com/mgravell/protobuf-net">protobuf-net</a>, the message mapper is agnostic to the way the body is formatted.)</p>
+        <p>When we deserialize we set the <strong>MessageHeader</strong> which includes a topic (often we use a namespaced name for the <strong>Command</strong> or <strong>Event</strong>).</p>
+        <p>We store the created <strong>Message</strong> in a <a href="http://www.enterpriseintegrationpatterns.com/MessageStore.html">Message Store</a> for use by
+                <strong>CommandProcessor.Repost()</strong> if we need to resend a failed message.</p>
+        <p>The Message Broker manages a <a href="http://www.enterpriseintegrationpatterns.com/RecipientList.html">Recipient List</a> of subscribers to a topic. When it receives a <strong>Message</strong>
+            the Broker looks at the topic in the <strong>MessageHeader</strong> and dispatches the <strong>Message</strong> to the
+            <a href="http://www.enterpriseintegrationpatterns.com/MessageChannel.html">Recipient Channels</a> identified by the Recipient List.</p>
+        <p>The consumer registers a <a href="http://www.enterpriseintegrationpatterns.com/MessageChannel.html">Recipient Channel</a>
+            to receive messages on a given topic. In other words when the consumer's registered topic matches the producer's topic, the broker dispatches the message to the consumer when it receives it from the producer.</p>
+          <p>A <strong>Message</strong> may be delivered to multiple Consumers, all of whom get their own copy.</p>
+        <p>in addition, we can support a <a href="http://www.enterpriseintegrationpatterns.com/CompetingConsumers.html">Competing Consumers</a> approach by having multiple consumers read
+            from the same <a href="http://www.enterpriseintegrationpatterns.com/MessageChannel.html">Channel</a> to allow us to scale out to meet load.</p>
+        <img src="images/Task%20Queues.png">
+        <h2>Do I have to use a Broker, what about MSMQ?</h2>
+        <p>Brighter removes some complexity from its implementation by relying on the Message Broker to provide a number of services. First the Broker provides message routing. The producer does not need to have any idea
+            where the consumers are located, only where the broker is located. This makes it easy to relocate your consumers, and when then begin subscribing the Broker will figure out how to deliver to them. It also supports
+            a recipient list when routing messages: one producer can send to many consumers. Second we rely on the Broker to provide a clustered High Availability (HA) solution to queueing. We want to be able to send a
+            message to the Broker cluster and rely on the Broker to deliver it, eventually.</p>
+        <p>Without a Broker, using a point-ot-point solution we have to provide a lot of this infrastructure ourselves, such as routing and distribution and how to do so in a way that is HA.</p>
+        <p>For this reason we don't support a point-to-point approach like MSMQ or sending directly to a service via HTTP.</p>
+        <p> (We do have an experimental implementation of an <a href="https://github.com/iancooper/Paramore/tree/master/Renegade">HTTP-based broker</a> using the RESTMS specification but it is not
+            production-grade, and only in-memory as of today).</p>
+        <h2>What happens when the consumer receives the message?</h2>
+        <p>A consumer reads the <strong>Message</strong> using the <a href="http://www.enterpriseintegrationpatterns.com/MessagingAdapter.html">Service Activator</a> pattern to map between an
+             <a href="http://www.enterpriseintegrationpatterns.com/EventDrivenConsumer.html">Event Driven Consumer</a> and a Handler.</p>
+        <p>The use of the Service Activator pattern means the complexity of the distributed task queue is hidden from you. You just write a handler as normal, but call it via post and create a message mapper,
+              the result is that your command is handled reliably, asynchronously, and in parallel with little cognitive overhead. It just works!</p>
+        <h2>What does this look like in code</h2>
+        <p>Instead of using <strong>CommandProcessor.Send()</strong> you use <strong>CommandProcessor.Post()</strong> to send the message</p>
+        <pre>
+        <code>
+var reminderCommand = new TaskReminderCommand(
+     taskName: reminder.TaskName,
+     dueDate: DateTime.Parse(reminder.DueDate),
+     recipient: reminder.Recipient,
+     copyTo: reminder.CopyTo
+     );
+
+ _commandProcessor.Post(reminderCommand);
+        </code>
+        </pre>
+        <p>You add a message mapper to tell Brighter how to serialize the message for sending to your consumers.</p>
+        <pre>
+        <code>
+public class TaskReminderCommandMessageMapper : IAmAMessageMapper&lt;TaskReminderCommand&gt;
+{
+    public Message MapToMessage(TaskReminderCommand request)
+    {
+        var header = new MessageHeader(messageId: request.Id, topic: &quot;Task.Reminder&quot;, messageType: MessageType.MT_COMMAND);
+        var body = new MessageBody(JsonConvert.SerializeObject(request));
+        var message = new Message(header, body);
+        return message;
+    }
+
+    public TaskReminderCommand MapToRequest(Message message)
+    {
+        return JsonConvert.DeserializeObject&lt;TaskReminderCommand&gt;(message.Body.Value);
+    }
+}
+        </code>
+        </pre>
+        <p>One option is to use a <em>Core</em> assembly that contains your domain model, handlers, message mappers etc. and then pull that assembly into endpoints that consume such as services and
+            web endpoints. This makes it easy to move between in-process and out-of-process versions of the handler. It also means you don't end up writing two versions of the mapper
+            one on the consumer side and one on the sender side.</p>
+        <p>The <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples">Tasks Example</a> uses this strategy.</p>
+        <p> This model only works if your library is shared between components that operate on the same bounded context i.e. Continuous Integration that are released together.
+            Never share such an assembly between projects that should be released autonomously as it is a shared dependency. In that case you **must** implement the mapper
+            on both sides.</p>
+        <p>Then you write a handler as normal.</p>
+        <pre>
+        <code>
+public class MailTaskReminderHandler : RequestHandler&lt;TaskReminderCommand&gt;
+{
+    private readonly IAmAMailGateway _mailGateway;
+
+    public MailTaskReminderHandler(IAmAMailGateway mailGateway, IAmACommandProcessor commandProcessor)
+        : this(mailGateway, commandProcessor, LogProvider.GetCurrentClassLogger())
+        {}
+
+    public MailTaskReminderHandler(IAmAMailGateway mailGateway, ILog logger) : base(logger)
+    {
+        _mailGateway = mailGateway;
+    }
+
+    [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+    [UsePolicy(CommandProcessor.CIRCUITBREAKER, step: 2)]
+    [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
+    public override TaskReminderCommand Handle(TaskReminderCommand command)
+    {
+        _mailGateway.Send(new TaskReminder(
+        taskName: new TaskName(command.TaskName),
+        dueDate: command.DueDate,
+        reminderTo: new EmailAddress(command.Recipient),
+        copyReminderTo: new EmailAddress(command.CopyTo)
+        ));
+
+        return base.Handle(command);
+    }
+}
+        </code>
+        </pre>
+        <h2>The Dispatcher</h2>
+        <p>To ensure that messages reach the handlers from the queue you have to use the <strong>Dispatcher</strong>.</p>
+        <p>The Dispatcher reads messages of input channels. Internally it creates a message pump for each channel, and allocates a thread to run that message pump. The pump consumes messages from the channel,
+            using the <strong>Message Mapper</strong> to translate them into a <strong>Message</strong> and from there a <strong>Command</strong> or <strong>Event</strong>. It then dispatches
+            those to handlers (using the Brighter <strong>Command Processor</strong>.</p>
+        <p>To use the Dispatcher you need to host it in a consumer application. Usually a console application or Windows Service is appropriate. We recommend using
+            <a href="http://topshelf-project.com/">Topshelf</a> to host your consumers.</p>
+        <p>The following code shows an example of using the <strong>Dispatcher</strong> from Topshelf. The key methods are <strong>Dispatcher.Receive()</strong> to start the message pumps
+            and <strong>Dispatcher.End()</strong> to shut them.</p>
+        <p>We do allow you to start and stop individual channels, but this is an advanced feature for operating the services.</p>
+        <pre>
+        <code>
+internal class GreetingService : ServiceControl
+{
+    private Dispatcher _dispatcher;
+
+    public GreetingService()
+    {
+       /* Configfuration Code Goes here*/
+    }
+
+    public bool Start(HostControl hostControl)
+    {
+        _dispatcher.Receive();
+        return true;
+    }
+
+    public bool Stop(HostControl hostControl)
+    {
+        _dispatcher.End().Wait();
+        _dispatcher = null;
+        return false;
+    }
+
+    public void Shutdown(HostControl hostcontrol)
+    {
+        if (_dispatcher != null)
+            _dispatcher.End();
+        return;
+    }
+}
+        </code>
+        </pre>
+        <h2>Configuration</h2>
+        <p>So how do we route messages from the channel to the handler? The answer is the framework uses configuration that your provide to do that. Configuration is the subject of this
+            documentation <a href="DistributedTaskQueueConfiguration.html">here</a>.</p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>

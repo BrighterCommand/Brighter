@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+	<header>
+        <h1>Paramore</h1>
+		<p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="../index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+        <p><a href="AWSSQSConfiguration.html">Next</a></p>
+		<p><a href="RabbitMQConfiguration.html">Prev</a></p>
+     </header>
+    <section>
+		<h1>Brighter</h1>
+		<h2>Running Brighter under AWS SQS Infrastructure</h2>
+		<p>Getting your application to interact with SQS using Brighter is a trivial task. But, there are couple of things that needs to be done manually.</p>
+		<p>First, you should have your AWS Access Key ID and Secret Access Key ready to be used by AWSSDK. You can check out the AWS documentation on how to create an account <a href="http://docs.aws.amazon.com/AWSSdkDocsNET/latest/DeveloperGuide/net-dg-setup.html#net-dg-signup" target="_blank">here</a></p>
+		<p>After setting up your credentials, you can either create a profile in your local computer or you can use the access and secret keys directly in the application configuration file. Here, we will create a profile using <a href="http://aws.amazon.com/visualstudio/" target="_blank">AWS Toolkit on Visual Studio</a>:</p>
+		<p>Click to add profile button on AWS Explorer window.<br/><img src="images/AWSToolkitOverview.png"/></p>
+		<p>Then fill the form to create your profile.<br/><img src="images/AWSToolkitCreateAccount.png"/></p>
+		<p>You can find more information about profiles and credentials <a href="http://docs.aws.amazon.com/AWSSdkDocsNET/latest/DeveloperGuide/net-dg-config-creds.html" target="_blank">here</a>.</p>
+		<h3>Creating queues</h3>
+		<p>Unfortunately, brighter will not be creating the queues on request for you; you need to create them manually. To create queues, you should go to your AWS Console.<br/><img src="images/AWSConsoleList.png"/></p>
+		<p>Then create the queue by filling the form below. <br/><img src="images/AWSConsoleCreateQueue.png"/></p>
+		<ul>
+			<li><b>Default Visibility Timeout:</b> The length of time that a message received from a queue will be invisible to other receiving components.</li>
+			<li><b>Message Retention Period:</b> The amount of time that Amazon SQS will retain amessage if it doesn't get deleted.</li>
+			<li><b>Maximum Message Size:</b> Maximum message size in bytes.</li>
+			<li><b>Delivery Delay:</b> The amount of time to delay the first delivery of all messages added to the queue.</li>
+			<li><b>Receive Message Wait Time:</b> The maximum amount of time that a long polling receive call will wait for a message to become available before returning empty response.</li>
+		</ul>
+		<p>After saving the queue, get the queue url to put it in the application configuration file.</p>
+		<h3>Posting messages</h3>
+		<p>Instead of posting messages directly to the queues, Brighter posts them to a topic so that any queue can listen or stop listening messages without changing any code. AWS SNS is used for that purpose. <br/><img src="images/AWSConsoleTopics.png"/></p>
+		<p>You can create a topic by clicking on create topic link <img src="images/AWSConsoleCreateTopic.png"/></p>
+		<p>After that, simply go back to your queue list, select a queue and click on Subscribe Queue to SNS Topic link at Queue Actions menu. <br/><img src="images/AWSConsoleLinkToSNS.png"/></p>
+		<p>Select your SNS queue and now your queue will get the messages which are sent to the SNS topic.</p>
+		<p>Please follow the link below to see an example application configuration to use AWS SQS:</p>
+		<p><a href="AWSSQSConfiguration.html">AWS SQS Configuration<a>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="../index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+        <p><a href="PolicyFallback.html">Next</a></p>
+        <p><a href="UsingTheContextBag.html">Prev</a></p>
+    </header>
+    <section>
+        <h1>Brighter</h1>
+        <h2>Supporting Retry, and Circuit Breaker</h2>
+        <p>Brighter is a <a href="CommandsCommandDispatcherandProcessor.html">Command Processor</a> and supports a <a href="BuildingAPipeline.html">pipeline of Handlers to handle orthogonal requests</a>.</p>
+        <p>Amongst the valuable uses of orthogonal requests is patterns to support Quality of Service in a distributed environment: <a href="QualityOfServicePatterns.html">Timeout, Retry, and Circuit Breaker</a>.</p>
+        <p>Even if you don't believe that you are writing a distributed system that needs this protection, consider that as soon as you have multiple processes, such as a database server, you are.</p>
+        <p>Brighter uses <a href="https://github.com/michael-wolfenden/Polly">Polly</a> to support Retry and Circuit-Breaker. Through our <a href="BuildingAPipeline.html">Russian Doll Model</a>
+            we are able to run the target handler in the context of a Policy Handler, that catches exceptions, and applies a Policy on how to deal with them.</p>
+        <h2>Using Brighter's UsePolicy Attribute</h2>
+        <p>By adding the <strong>UsePolicy</strong> attribute, you instruct the Command Processor to insert a handler (filter) into the pipeline that runs all later steps using that Polly policy.</p>
+        <pre><code>
+internal class MyQoSProtectedHandler : RequestHandler&lt;MyCommand&gt;
+{
+    static MyQoSProtectedHandler()
+    {
+        ReceivedCommand = false;
+    }
+
+    [UsePolicy(policy: &quot;MyExceptionPolicy&quot;, step: 1)]
+    public override MyCommand Handle(MyCommand command)
+    {
+        /*Do work that could throw error because of distributed computing reliability*/
+    }
+}
+        </code></pre>
+        <p> To configure the Polly policy you use the PolicyRegistry to register the Polly Policy with a name. At runtime we look up that Policy by name.</p>
+        <pre><code>
+var policyRegistry = new PolicyRegistry();
+
+var policy = Policy
+.Handle&lt;Exception&gt;()
+.WaitAndRetry(new[]
+{
+    1.Seconds(),
+    2.Seconds(),
+    3.Seconds()
+}, (exception, timeSpan) =&gt;
+{
+    s_retryCount++;
+});
+policyRegistry.Add(&quot;MyExceptionPolicy&quot;, policy);
+        </code></pre>
+        <p>When creating policies, refer to the <a href="https://github.com/michael-wolfenden/Polly">Polly</a> documentation.</p>
+        <p>Whilst <a href="https://github.com/michael-wolfenden/Polly"><strong>Polly</strong></a> does not support a Policy that is both Circuit Breaker and Retry i.e. retry n times with an
+            interval between each retry, and then break circuit, to implement that simply put a Circuit Breaker UsePolicy attribute as an earlier step than the Retry UsePolicy attribute.
+            If retries expire, the exception will bubble out to the Circuit Breaker.</p>
+        <h3>Retry and Circuit Breaker with Task Queues</h3>
+        <p>When posting a request to a <a href="ImplementingDistributedTaskQueue.html">Task Queue</a> we mandate use of a Polly policy to control Retry and Circuit Breaker in case the output channel
+            is not available. These are configured using the constants: <strong>Paramore.RETRYPOLICY</strong> and <strong>Paramore.CIRCUITBREAKER</strong></p>
+        <h2>Timeout</h2>
+        <p>You should not allow a handler that calls out to another process (e.g. a call to a Database, queue, or an API) to run without a <a href="QualityOfServicePatterns.html">timeout</a>.
+            If the process has failed, you will consumer a resource in your application polling that resource. This can cause your application to fail because another process failed.</p>
+        <p>Usually the client library you are using will have a timeout value that you can set.</p>
+        <p>In some scenarios the client library does not provide a timeout, so you have no way to abort.</p>
+        <p>We provide the Timeout attribute for that circumstance. You can apply it to a Handler to force that Handler into a thread which we will timeout, if it does not complete within the
+            required time period.</p>
+    <pre>
+        <code>
+public class EditTaskCommandHandler : RequestHandler&lt;EditTaskCommand&gt;
+{
+    private readonly ITasksDAO _tasksDAO;
+
+    public EditTaskCommandHandler(ITasksDAO tasksDAO)
+    {
+        _tasksDAO = tasksDAO;
+    }
+
+    [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+    [Validation(step: 2, timing: HandlerTiming.Before)]
+    [TimeoutPolicy(step: 3, milliseconds: 300)]
+    public override EditTaskCommand Handle(EditTaskCommand editTaskCommand)
+    {
+        using (var scope = _tasksDAO.BeginTransaction())
+        {
+            Task task = _tasksDAO.FindById(editTaskCommand.TaskId);
+
+            task.TaskName = editTaskCommand.TaskName;
+            task.TaskDescription = editTaskCommand.TaskDescription;
+            task.DueDate = editTaskCommand.TaskDueDate;
+
+            _tasksDAO.Update(task);
+            scope.Commit();
+        }
+
+        return editTaskCommand;
+    }
+}
+        </code>
+    </pre>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>

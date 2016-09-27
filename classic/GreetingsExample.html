@@ -1,0 +1,485 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="../index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+        <p><a href="TasksExample.html">Next</a></p>
+        <p><a href="HelloWorldExample.html">Prev</a></p>
+    </header>
+    <section>
+        <h1>Brighter</h1>
+        <h2>Tutorial</h2>
+        <p>This tutorial takes you building the Greetings project, which is Hello World via a Task Queue. The walkthrough will build the example availabe in the Examples folder of Brighter
+            available in the public repo at <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples/Greetings">Greetings Example</a>
+            if you want to follow along there instead of typing in the code.</p>
+        <p>Note that you will need to have <a href="https://www.rabbitmq.com/download.html">RabbitMQ</a> installed to step through this example as a tutorial.</p>
+        <h3>Step One</h3>
+        <p>Create a C# Console Application, targeting .NET 4.5.</p>
+        <p>Note that you can use any kind of application with Brighter.ServiceActivator, it's purpose is to take messages of a task queue and route to a Request Handler seamlessly.
+            We use a console application as we intend to build a Windows Service which is one of the most common use cases for the
+            <a href="http://www.eaipatterns.com/MessagingAdapter.html">Service Activator pattern</a>.</p>
+        <img src="images/Greetings-Step1-ConsoleProject.png">
+        <h3>Step Two</h3>
+        <p>Install the <strong>Paramore.Brighter.ServiceActivator</strong> package from NuGet</p>
+        <ul>
+            <li>PM> Install-Package paramore.brighter.serviceactivator</li>
+        </ul>
+        <img src="images/Nuget-ServiceActivator.png">
+        <p>This will install <strong>Paramore.Brighter.Serviceactivator</strong> and it's dependencies <strong>Paramore.Brighter.CommandProcessor</strong>,
+            <strong>Polly</strong>, and <strong>Newtonsoft.Json</strong>.</p>
+        <p>Although the Service Activator provides support for a consumer reading messages of an Input Channel, we need to supply a concrete implementation of
+            <strong>IAmAMessageConsumer</strong> which abstracts the Message-Oriented-Middleware used by that Input Channel for the task queue implementation.</p>
+        <p>Note that your app.config file will be updated by this install. Although you have no channels as yet, the configuration section for you to add them
+        has been added.</p>
+        <pre><code>
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+    &lt;configuration&gt;
+        &lt;configSections&gt;
+            &lt;section name=&quot;serviceActivatorConnections&quot;
+type=&quot;paramore.brighter.serviceactivator.ServiceActivatorConfiguration.ServiceActivatorConfigurationSection, paramore.brighter.serviceactivator&quot;
+allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot;/&gt;
+        &lt;/configSections&gt;
+        &lt;serviceActivatorConnections&gt;
+            &lt;connections&gt;
+            &lt;/connections&gt;
+        &lt;/serviceActivatorConnections&gt;
+    &lt;/configuration&gt;
+        </code></pre>
+        <p>Install the <strong>Paramore.Brighter.CommandProcessor.MessagingGateway.RMQ</strong> package from NuGet</p>
+        <ul>
+            <li>PM> Install-Package paramore.brighter.commandprocessor.messaginggateway.rmq</li>
+        </ul>
+        <img src="images/Nuget-ServiceActivator.png">
+        <p>This will install <strong>RabbitMQ.Client</strong> as a dependency.</p>
+
+        <p>This will install the <stong>Paramore.Brighter.CommandProcessor.MessageingGateway.RMQ</stong> package which provides support for a Task Queue
+            implemented in <a href="http://www.rabbitmq.com/">Rabbit MQ</a></p>
+        <h3>Step Three</h3>
+        <p>Use Topshelf to run the console application as a service</p>
+        <p>Install the <a href="http://topshelf-project.com/">TopShelf</a> package from NuGet</p>
+        <ul>
+            <li>PM> Install-Package Topshelf</li>
+        </ul>
+        <img src="images/NuGet-Topshelf.png">
+        <img src="images/NuGet-Topshelf-Licence.png">
+        <p>You will need to accept the licence for <a href="http://topshelf-project.com/">Topshelf</a>. We don't go into detail on <stong>Topshelf</stong> here,
+            please see that package's own documentation for how to use it in more depth.</p>
+        <h3>Step Four</h3>
+        <p>We use  <a href="https://github.com/grumpydev/TinyIoC">TinyIoC</a> as a DI container within Greetings, so we need to add that package into the solution as well. Brighter is a
+            <a href="http://blog.ploeh.dk/2014/05/19/di-friendly-framework/">DI Friendly Frameworks</a> so you can use the DI container of your choice with Brighter.</p>
+        <ul>
+            <li>PM> Install-Package TinyIoC</li>
+        </ul>
+        <img src="images/TinyIoC-Nuget.png">
+        <h3>Step Five</h3>
+        <p>Brighter uses <a href="https://github.com/damianh/LibLog">LibLog</a> to abstract the implementation details of a client's logger. Greetings uses log4net as the concrete logger
+        so we need to add a NuGet reference to that project too.</p>
+        <ul>
+            <li>PM> Install-Package LibLog</li>
+        </ul>
+        <img src="images/log4Net-NuGet.png">
+        <h3>Step Six</h3>
+        <p>We use boiler plate code to implement the Main method to configure the <stong>Topshelf</stong> service.</p>
+        <pre><code>
+public static void Main()
+{
+    /*
+    * Send a message in this format to this service and it will print it out
+    * We document this here so that you can simply paste this into the RMQ web portal
+    * to see commands flowing through the system.
+    * {"Greeting":"hello world","Id":"0a81cbbc-5f82-4912-99ee-19f0b7ee4bc8"}
+    */
+
+    HostFactory.Run(x => x.Service&lt;GreetingService&gt;(sc =>
+    {
+        sc.ConstructUsing(() => new GreetingService());
+
+        // the start and stop methods for the service
+        sc.WhenStarted((s, hostcontrol) => s.Start(hostcontrol));
+        sc.WhenStopped((s, hostcontrol) => s.Stop(hostcontrol));
+
+        // optional, when shutdown is supported
+        sc.WhenShutdown((s, hostcontrol) => s.Shutdown(hostcontrol));
+    }));
+}
+        </code></pre>
+        <p>A summary of this code is: it provides callbacks for <stong>Topshelf</stong> to call in response to OS instructions to a Windows Service to start, stop or shutdown. In other words
+            it configures how we respond to service lifetime events. We use a class called GreetingService to implement our response.</p>
+        <h3>Step Seven</h3>
+        <p>We now need to implement the GreetingsService to respond to the control messages. Add a new class to the project called GreetingService and enter the following code:</p>
+        <pre><code>
+using System;
+using Greetings.Ports.CommandHandlers;
+using Greetings.Ports.Commands;
+using Greetings.Ports.Mappers;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq;
+using paramore.brighter.serviceactivator;
+using Polly;
+using TinyIoC;
+using Topshelf;
+
+namespace Greetings.Adapters.ServiceHost
+{
+    internal class GreetingService : ServiceControl
+    {
+        private Dispatcher _dispatcher;
+
+        public GreetingService()
+        {
+            log4net.Config.XmlConfigurator.Configure();
+
+            var container = new TinyIoCContainer();
+
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
+            container.Register&lt;IHandleRequests&lt;GreetingCommand&gt;, GreetingCommandHandler>();
+
+            var subscriberRegistry = new SubscriberRegistry();
+            subscriberRegistry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
+
+            //create policies
+            var retryPolicy = Policy
+            .Handle&lt;Exception&gt;()
+                .WaitAndRetry(new[]
+                {
+                    TimeSpan.FromMilliseconds(50),
+                    TimeSpan.FromMilliseconds(100),
+                    TimeSpan.FromMilliseconds(150)
+                });
+
+            var circuitBreakerPolicy = Policy
+                .Handle&lt;Exception&gt;()
+                    .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+
+                    var policyRegistry = new PolicyRegistry()
+                    {
+                        {CommandProcessor.RETRYPOLICY, retryPolicy},
+                        {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+                    };
+
+            //create message mappers
+            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
+            {
+                {typeof(GreetingCommand), typeof(GreetingCommandMessageMapper)}
+            };
+
+            //create the gateway
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(logger);
+            var builder = DispatchBuilder
+                .With()
+                .CommandProcessor(CommandProcessorBuilder.With()
+                    .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+                    .Policies(policyRegistry)
+                    .NoTaskQueues()
+                    .RequestContextFactory(new InMemoryRequestContextFactory())
+                    .Build()
+                )
+                .MessageMappers(messageMapperRegistry)
+                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
+                .ConnectionsFromConfiguration();
+             _dispatcher = builder.Build();
+        }
+
+        public bool Start(HostControl hostControl)
+        {
+        _dispatcher.Receive();
+        return true;
+        }
+
+        public bool Stop(HostControl hostControl)s
+        {
+        _dispatcher.End().Wait();
+        _dispatcher = null;
+        return false;
+        }
+
+        public void Shutdown(HostControl hostcontrol)
+        {
+            if (_dispatcher != null)
+                _dispatcher.End();
+            return;
+        }
+    }
+ }
+        </code></pre>
+        <p>The key behavior of Greeting is to configure the <strong>Command Processor</strong> and the <strong>Dispatcher</strong>. We covered the basics of the CommandProcessor in the
+            <a href="HelloWorldExample.html">Hello World Example</a>.</p>
+        <p>We use a  <strong>DispatchBuilder</strong> to build a <strong>Dispatcher</strong>, which dispatches messages from a <a href="ImplementingDistributedTaskQueue.html">Task Queue</a>
+            to a Command Handler. The principle is that once configured you can send messages to handlers in the service without having to write the infrastructure code around reading from a queue,
+            translating the message body into an IRequest (Command or Event), and dispatching to a handler. The goal here is that the task queue should remain transparent to the developer,
+            who simply uses <strong>IAmACommandProcessor.Post</strong> to send  a message from one process and then uses the <strong>Dispatcher</strong> to read that same message and pass to a handler in another.</p>
+        <p>We create a <strong>Command Processor</strong> as part of creating our <strong>Dispatcher</strong> to map de-serialized Commands or Events to handlers. Note that it may seem counter-intuitive
+            that we set no Task Queue on the Command Processor. This is because we are not sending to a task queue from this service, just reading, so we do not need to configure  <strong>Command Processor</strong>
+            for sending only receiving. The <a href="TasksExample.html">Tasks Example</a> shows an application that has both sending and receiving components.</p>
+        <p>We add both a <a href="QualityOfServicePatterns.html">Retry Policy and a Circuit Breaker Policy</a> using the <a href="https://github.com/michael-wolfenden/Polly">Polly</a> library.
+            We create policies to decide what intervals to retry at in the event of failure, and how long to break a circuit for in the presence of persistent failure. We register these policies in the
+            <strong>PolicyRegistry</strong>, using the well-known names <strong>CommandProcessor.RETRYPOLICY</strong> and <strong>CommandProcessor.CIRCUITBREAKER</strong>. Internally,
+            CommandProcessor uses the policies you register when you call <strong>IAmACommandProcessor.Post</strong> to push a message onto a Task Queue, but you can re-use them yourself.
+            As discussed above, we are not doing a Post here.</p>
+            <p>(You can also use policies in your own handlers as discussed <a href="PolicyRetryAndCircuitBreaker.html">here</a>).</p>
+        <p>We register implementations of <strong>IAmAMessageMapper</strong> with the <strong>MessageMapperRegistry</strong> to map the message body from the Task Queue into Commands and Events. In this
+            case we only have one: <strong>GreetingCommandMessageMapper</strong> which we use to map a <strong>GreetingCommand</strong> to and from the message body (as JSON). </p>
+        <p>In order to read messages from a Task Queue we need a <strong>IAmAMessageConsumerFactory</strong>. In this case we are reading from a RabbitMQ Task Queue so we use
+            <strong>RmqMessageConsumerFactory</strong>. We set this as the parameter to an <strong>InputChannelFactory</strong> and pass to the <strong>DispatchBuilder</strong> </p>
+        <p>The <strong>Input Channel</strong> is an abstraction over the stream from which we read messages - mostly implemented using Message-Oriented Middleware - and <strong>Dispatcher</strong> uses
+            the <strong>InputChannelFactory</strong> to create instances of the stream to read from, as specified in configuration. We pass the application protocol specific factory to this,
+            so that we can create input channels for that protocol. The use of abstraction is intended to allow support for different protocols and implementations of those protocols to be
+            used as the stream that underlies the Task Queue</p>
+        <p> As outlined in <a href="HelloWorldExample.html">Hello World</a> our goal is to be a <a href="http://blog.ploeh.dk/2014/05/19/di-friendly-framework/">DI Friendly Frameworks</a> so we rely
+            on the client implementing a factory to provide instances of handlers and message mappers to us. In this example we use <a href="https://github.com/grumpydev/TinyIoC">TinyIoC</a>
+            as our DI framework and implement the required factories using that DI framework.</p>
+        <h3>Step Eight</h3>
+        <p>Add a TinyIocHandlerFactory class to the project and enter the following code</p>
+        <pre><code>
+using System;
+using paramore.brighter.commandprocessor;
+using TinyIoC;
+
+namespace Greetings.Adapters.ServiceHost
+{
+    internal class TinyIocHandlerFactory : IAmAHandlerFactory
+    {
+       private readonly TinyIoCContainer _container;
+
+    public TinyIocHandlerFactory(TinyIoCContainer container)
+    {
+        _container = container;
+    }
+
+    public IHandleRequests Create(Type handlerType)
+    {
+        return (IHandleRequests)_container.Resolve(handlerType);
+    }
+
+    public void Release(IHandleRequests handler)
+    {
+        var disposable = handler as IDisposable;
+        if (disposable != null)
+        {
+            disposable.Dispose();
+        }
+            handler = null;
+        }
+    }
+}
+    </code></pre>
+    <p>Add a TinyIoCMessageMapperFactory class to the project and enter the following code</p>
+    <pre><code>
+using System;
+using paramore.brighter.commandprocessor;
+using TinyIoC;
+
+namespace Greetings.Adapters.ServiceHost
+{
+    internal class TinyIoCMessageMapperFactory : IAmAMessageMapperFactory
+    {
+        private readonly TinyIoCContainer _container;
+
+        public TinyIoCMessageMapperFactory(TinyIoCContainer container)
+        {
+            _container = container;
+        }
+
+        public IAmAMessageMapper Create(Type messageMapperType)
+        {
+            return (IAmAMessageMapper)_container.Resolve(messageMapperType);
+        }
+    }
+}
+        </code></pre>
+        <h3>Step Nine</h3>
+        <p>Now we need to add the GreetingCommand itself. Add a new class GreetingCommand to the project and enter the following code.</p>
+        <pre><code>
+using System;
+using paramore.brighter.commandprocessor;
+
+namespace Greetings.Ports.Commands
+{
+    public class GreetingCommand : Command
+    {
+        public GreetingCommand() : base(Guid.NewGuid()) { }
+
+        public GreetingCommand(string greeting) : base(Guid.NewGuid())
+        {
+            Greeting = greeting;
+        }
+
+     public string Greeting { get; set; }
+    }
+}
+        </code></pre>
+        <p>We simply derive our class from <strong>Command</strong> and add a property that allows you to set the Greeting which we intend to send.</p>
+        <h3>Step Ten</h3>
+        <p>Once we have a command we need to add the code for its <strong>Message Mapper</strong> which we use to de-serialize the message from the wire protocol.
+            Add a class GreetingCommandMessageMapper to the project.</p>
+        <pre><code>
+using Greetings.Ports.Commands;
+using Newtonsoft.Json;
+using paramore.brighter.commandprocessor;
+
+namespace Greetings.Ports.Mappers
+{
+   internal class GreetingCommandMessageMapper : IAmAMessageMapper&lt;GreetingCommand&gt;
+   {
+       public Message MapToMessage(GreetingCommand request)
+       {
+           var header = new MessageHeader(messageId: request.Id, topic: "greeting.command", messageType: MessageType.MT_COMMAND);
+           var body = new MessageBody(JsonConvert.SerializeObject(request));
+           var message = new Message(header, body);
+           return message;
+       }
+
+       public GreetingCommand MapToRequest(Message message)
+       {
+        return JsonConvert.DeserializeObject&lt;GreetingCommand&gt;(message.Body.Value);
+       }
+   }
+}
+        </code></pre>
+        <p>A message has a header - where we write metadata about the message - and a body - where we write the contents of the message.</p>
+        <p>When mapping to a message, on the header, we set the <strong>Message Type</strong> to <strong>MT_COMMAND</strong> because we want only one handler in the target to receive the message.
+            The topic is used for routing subscribers to the message use the topic to indicate their interest in receiving the message</p>
+        <p>The body of the message is a JSON string representing the GreetingCommand</p>
+        <p>Because we don't send from this service, we don't need MapToMessage and could simply throw a NotImplemented exception instead.</p>
+        <p>When mapping back to a request we simply serialize the entity body into the Command we want to raise.</p>
+        <h3>Step Eleven</h3>
+        <p>Now we need to add the handler, which actually does the work. Add a new class GreetingCommandHandler to the project</p>
+        <pre><code>
+using System;
+using Greetings.Ports.Commands;
+using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.Logging;
+
+namespace Greetings.Ports.CommandHandlers
+{
+    internal class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
+    {
+        public override GreetingCommand Handle(GreetingCommand command)
+        {
+            Console.WriteLine("Received Greeting. Message Follows");
+            Console.WriteLine("----------------------------------");
+            Console.WriteLine(command.Greeting);
+            Console.WriteLine("----------------------------------");
+            Console.WriteLine("Message Ends");
+            return base.Handle(command);
+        }
+    }
+}
+        </code></pre>
+        <p>We derive from <strong>RequestHandler</strong> to reduce the boiler plate code we need to write, and override the <strong>Handle()</strong> method to provide
+        an implementation that just echoes the greeting out to the console.</p>
+        <h3>Step Twelve</h3>
+        <p>Build the project</p>
+        <h3>Step Fourteen</h3>
+        <p>Now we need to configure the service to read from the input channels</p>
+        <p>Amend your app.config file as follows</p>
+        <p>Add the following to your configSections, for the RMQ consumer and log4net</p>
+        <pre><code>
+&lt;section name=&quot;rmqMessagingGateway&quot; type=&quot;paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, paramore.brighter.commandprocessor.messaginggateway.rmq&quot; allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot; /&gt;
+&lt;section name=&quot;log4net&quot; type=&quot;log4net.Config.Log4NetConfigurationSectionHandler, log4net&quot; /&gt;
+        </code></pre>
+        <p>Add the rmwMessagingGateway section and the serviceActivatorConnections, which configures both the AMQP URI for your RabbitMQ server (amend if you are not using defaults) and the channel over which you subscribe
+        to messages</p>
+        <pre><code>
+&lt;rmqMessagingGateway&gt;
+    &lt;amqpUri uri=&quot;amqp://guest:guest@localhost:5672/%2f&quot; /&gt;
+    &lt;exchange name=&quot;paramore.brighter.exchange&quot; /&gt;
+&lt;/rmqMessagingGateway&gt;
+&lt;serviceActivatorConnections&gt;
+    &lt;connections&gt;
+        &lt;add connectionName=&quot;paramore.example.greeting&quot; channelName=&quot;greeting.command&quot; routingKey=&quot;greeting.command&quot; dataType=&quot;Greetings.Ports.Commands.GreetingCommand&quot; timeOutInMilliseconds=&quot;200&quot; /&gt;
+    &lt;/connections&gt;
+&lt;/serviceActivatorConnections&gt;
+        </code></pre>
+        <p>We also need to configure log4net:</p>
+        <pre><code>
+&lt;log4net&gt;
+&lt;appender name=&quot;ConsoleAppender&quot; type=&quot;log4net.Appender.ConsoleAppender&quot;&gt;
+&lt;layout type=&quot;log4net.Layout.PatternLayout&quot;&gt;
+&lt;conversionPattern value=&quot;%date [%thread] %-5level %logger %ndc - %message%newline&quot; /&gt;
+&lt;/layout&gt;
+&lt;/appender&gt;
+&lt;root&gt;
+&lt;level value=&quot;DEBUG&quot; /&gt;
+&lt;appender-ref ref=&quot;ConsoleAppender&quot; /&gt;
+&lt;/root&gt;
+&lt;/log4net&gt;
+        </code></pre>
+        <p>For convenience, the app.config should look like this:</p>
+        <pre><code>
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;configuration&gt;
+    &lt;configSections&gt;
+        &lt;section name=&quot;serviceActivatorConnections&quot; type=&quot;paramore.brighter.serviceactivator.ServiceActivatorConfiguration.ServiceActivatorConfigurationSection, paramore.brighter.serviceactivator&quot; allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot;/&gt;
+        &lt;section name=&quot;rmqMessagingGateway&quot; type=&quot;paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, paramore.brighter.commandprocessor.messaginggateway.rmq&quot; allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot; /&gt;
+        &lt;section name=&quot;log4net&quot; type=&quot;log4net.Config.Log4NetConfigurationSectionHandler, log4net&quot; /&gt;
+    &lt;/configSections&gt;
+    &lt;log4net&gt;
+        &lt;appender name=&quot;ConsoleAppender&quot; type=&quot;log4net.Appender.ConsoleAppender&quot;&gt;
+            &lt;layout type=&quot;log4net.Layout.PatternLayout&quot;&gt;
+               &lt;conversionPattern value=&quot;%date [%thread] %-5level %logger %ndc - %message%newline&quot; /&gt;
+            &lt;/layout&gt;
+        &lt;/appender&gt;
+        &lt;root&gt;
+            &lt;level value=&quot;DEBUG&quot; /&gt;
+            &lt;appender-ref ref=&quot;ConsoleAppender&quot; /&gt;
+        &lt;/root&gt;
+    &lt;/log4net&gt;
+    &lt;runtime&gt;
+    &lt;/runtime&gt;
+    &lt;rmqMessagingGateway&gt;
+        &lt;amqpUri uri=&quot;amqp://guest:guest@localhost:5672/%2f&quot; /&gt;
+        &lt;exchange name=&quot;paramore.brighter.exchange&quot; /&gt;
+    &lt;/rmqMessagingGateway&gt;
+    &lt;serviceActivatorConnections&gt;
+        &lt;connections&gt;
+            &lt;add connectionName=&quot;paramore.example.greeting&quot; channelName=&quot;greeting.command&quot; routingKey=&quot;greeting.command&quot; dataType=&quot;Greetings.Ports.Commands.GreetingCommand&quot; timeOutInMilliseconds=&quot;200&quot; /&gt;
+        &lt;/connections&gt;
+    &lt;/serviceActivatorConnections&gt;
+&lt;/configuration&gt;
+        </code></pre>
+        <h3>Step Fifteen</h3>
+        <p>Once the example is built you can run it using F5 within Visual Studio, or navigate the binary and run that directly, as Topshelf supports running as a console application.</p>
+        <p>To test the service use the Rabbit MQ management website, to post to a Greeting to the queue that the service will just have created when you ran it.</p>
+        <img src="images/greeting_command_queue.png">
+        <p>To get the service working you only need to dispatch a simple message body to the queue</p>
+        <pre><code>{"Greeting":"hello world","Id":"0a81cbbc-5f82-4912-99ee-19f0b7ee4bc8"}</code></pre>
+        <p>You can do this in the Publish Message section of RabbitMQ</p>
+        <img src="images/publish_message.png">
+        <p>And you should be able to observe the greeting you entered being output in the console</p>
+        <img src="images/hello%20world.png">
+        <h3>Next Steps</h3>
+        <p>The <a href="TasksExample.html">Tasks Example</a> contains a full example of a distributed application, that contains a user-agent client, a REST API, and a Windows Service that consumes
+        work from a Task Queue</p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>

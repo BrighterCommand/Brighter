@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="../index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+        <p><a href="PortsAndAdapters.html">Next</a></p>
+        <p><a href="GreetingsExample.html">Prev</a></p>
+    </header>
+    <section>
+        <h2>Tutorial</h2>
+        <p>This project has been created to be an example how to use Brighter under AWS SQS Infrastructure. This project is a service which listens 3 different events from AWS SQS.
+        <ul>
+            <li><b>DocumentCreatedEvent:</b> Document Id, Folder Id, Title</li>
+            <li><b>DocumentUpdatedEvent:</b> Document Id, Folder Id, Title</li>
+            <li><b>FolderCreatedEvent:</b> Folder Id, Title</li>
+        </ul> 
+        <p>And the event handlers are:</p>
+        <ul>
+            <li><b>DocumentCreatedEventHandler:</b> If there is no folder with the event's Folder Id, requeue the message. Otherwise, save the document to the database.</li>
+            <li><b>DocumentUpdatedEventHandler:</b> If there is no document with the event's Document Id, requeue the message. If there is no folder with the event's Folder Id, requeue the message. Otherwise, update the document on database</li>
+            <li><b>FolderCreatedEventHandler:</b> Save the folder to the database.</li>
+        </ul> 
+        <p>IN AWS console, you need to create 3 different SNS topics for the events<br/><img src="images/AWSConsoleSNSList.png" /></p>
+        <p>And create 3 different queues listening those SNS topics<br/><img src="images/AWSConsoleQueueList.png" /></p>
+        <p>Once you have the topics and the queues, just update the app.config file's &lt;serviceActivatorConnections/&gt; section and put your queue urls.</p>
+        <p>You also need to set your AWSSDK profile in app.config file's &lt;aws/&gt; section. To findout how to setup your credentials please check <a href="RunningUnderAWSSQSInfrastructure.html">Running Under AWS SQS Infrastructure</a> section.</p>
+        <h2>Configuring application</h2>
+        <p>To set up your application to use Brighter on SQS, you can use the following code.</p>
+        <pre><code>
+var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(logger);
+var sqsMessageProducerFactory = new SqsMessageProducerFactory(logger);
+
+var builder = DispatchBuilder
+    .With()
+    .CommandProcessor(CommandProcessorBuilder.With()
+        .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+        .Policies(policyRegistry)
+        .NoTaskQueues()
+        .RequestContextFactory(new InMemoryRequestContextFactory())
+        .Build()
+     )
+     .MessageMappers(messageMapperRegistry)
+     .ChannelFactory(new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory))
+     .ConnectionsFromConfiguration();
+_dispatcher = builder.Build();
+        </code></pre>
+        <p>For details, please check out the example project <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/DocumentsAndFolders.Sqs/Adapters/ServiceHost/DocumentService.cs">here</a></p>
+        <h2>Publishing messages</h2>
+        <p>To generate DocumentCreated, DocumentUpdated and FolderCreated events, you can use <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples/DocumentsAndFolders.Sqs.EventsGenerator" target="_blank">DocumentsAndFolders.Sqs.EventsGenerator</a></p>
+        <p>This project is a console application which can create bulk events and post it to the SNS topics. The parameters are:</p>
+        <ul>
+            <li><b>eventType:</b> E.g.: DocumentCreatedEvent, DocumentUpdatedEvent, FolderCreatedEvent</li>
+            <li><b>eventCount:</b> E.g.: Number of events to generate. Default: 10</li>
+            <li><b>firstEventId:</b>Default: 1</li>
+            <li><b>documentPerFolder:</b>Used for DocumentCreatedEvent and DocumentUpdatedEvent. Sets the same folder id to defined number of documents. Default: 1</li>
+            <li><b>firstFolderId:</b> Default: 1</li>
+        </ul>
+        <p>Example:</p>
+        <pre><code>
+./.DocumentsAndFolders.Sqs.EventsGenerator.exe -eventType "DocumentCreatedEvent" -eventCount 1000 -firstEventId 1 -documentPerFolder: 10 -firstFolderId: 1
+        </code></pre>
+        <p>This should genereate 1000 DocumentCreatedEvents with DocumentIds 1-1000 and FolderIds 1-100 in DocumentCreated Queue.</p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>

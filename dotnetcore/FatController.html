@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="../index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+        <a href="CommandsCommandDispatcherandProcessor.html">Prev</a>
+        </header>
+        <section>
+        <h1>Brighter</h1>
+        <h2>Fat Controller</h2>
+        <p>The use of MVC frameworks can lead you into the &#8216;fat&#8217; controller anti-pattern. it&#8217;s pretty easy to recognize the stink of the fat controller smell. The controller is hundreds of lines long, packed with actions, and the actions are long swathes of code, not the handful of lines that they should be. The two main causes of the stink seem to be:</p>
+        <ul>
+            <li>The controller services too many requests (i.e. has too many actions)</li>
+            <li>The controller has domain logic (i.e. model code has crept into the controller)</li>
+        </ul>
+        <p>Why is this bad (just in case you could not see that it was)? I&#8217;ll paraphrase the issues identified by Rebecca Wirfs-Brock and Alan McKean in <a href="http://www.wirfs-brock.com/DesignBooks.html">Object Design</a> here:</p>
+        <ul>
+            <li>Controller logic is overly complex</li>
+            <li>Controllers have become dependent on domain concepts</li>
+            <li>Controllers increase coupling between otherwise distinct entities, as they pass information from one entity to another</li>
+            <li>Controllers do the interesting work</li>
+        </ul>
+        <p>All of this can really be summed up as making your code hard to maintain. Complex logic is easy to write but hard to read. Simple code requires more effort to write, but pays dividends to maintainers trying
+            to fix or amend it. Breaking the dependencies between your controller and the domain make your code much more amenable to change. Need that domain logic from another action or another controller. It should
+            be easy because it lives in the domain. Slap it into your controller and suddenly its harder to get at. Perhaps a new customer needs a different view of the domain. Perhaps you want to expose the logic in
+            that controller as an AJAX call instead of on a postback. Perhaps you want to expose it as a WCF service.easy if lives in the domain, hard if it lives in the controller.</p>
+        <p>That kind of pain tends to lead to cut &amp; paste and re-use. Cut &amp; paste reuse is the road to hell as there are now multiple versions of the truth.Over time they will deviate and you will have
+            confusion.</p>
+        <p>The more the controllers know about the domain, the more sticky they make it. Want to change the domain, well now you have to change the controllers too. And maybe those UI templates if your domain model
+            was being directly consumed by the view. And that kind of change is more expensive because your refactoring tools probably don&#8217;t read your templates.</p>
+        <h2>Skinny Controllers, Fat Model</h2>
+        <p>For my part, the worst smell comes from the controller becoming dependent on the domain. The controller begins to hold domain logic, holding the knowledge of what is is to ship a cargo, purchase a product,
+            make a payment. The domain objects become aneamic, their only role to hold data The interaction becomes a controller setting properties on the domain objects. The controller becomes vampiric, it grows fat
+            by
+            sucking the life-blood out of your domain, which ends up weak, drained, and anaemic. </p>
+        <p>This is the good old problem of domain-logic in code-behind that we had in ASP.NET webforms. Indeed Webforms are just another type of controller, a <a href="http://martinfowler.com/eaaCatalog/pageController.html">page controller</a>, and switching to an <a href="http://martinfowler.com/eaaCatalog/applicationController.html">application controller</a> model does not remove the need for us to watch for domain logic
+            creeping into the controller. There can be a tempation to believe that just because the controller is easier to test it is now safe to put domain logic in there. Do not fall into that trap.</p>
+        <h2>Fighting the Flab</h2>
+        <p>Our current solution to this smell is to review our controllers to ensure that they are doing very little work. We <a href="http://devlicio.us/blogs/derik_whittaker/archive/2008/10/22/how-is-interacting-with-your-data-repository-in-your-controller-different-or-better-than-doing-it-in-your-code-behind.aspx">push responsibility for co-ordinating between
+            domain objects</a> to <a href="http://www.lostechies.com/blogs/jimmy_bogard/archive/2008/08/21/services-in-domain-driven-design.aspx">domain level services</a>. The services have no state, they just
+            co-ordinate the actions of domain objects, such as getting an instance of an entity from the repository and then calling methods on it. This properly belongs in a service that co-ordinates that part of our
+            domain, not the controller whose job is to co-ordinate between the domain (model) and view.&nbsp;</p>
+        <p>I suspect, but have no evidence, that a <a href="http://xunitpatterns.com/Philosophy%20Of%20Test%20Automation.html">bottom up (or inside-out) and not top down (or outside-in)</a> strategy to development
+            may also help. If we write the domain entities and value types before we write the coordinators and controllers we will tend to find that the functionality tends to cluster at the leaf nodes of our domain
+            model. If we start at the top then we will tend to find ourselves putting more logic into the controllers, because we tend to want to write our tests for something other than just calling a couple of
+            objects on the next, and as yet only stubbed out, layer below. I suspect that some of our worse cases of fat controllers may have come from taking a top-down approach. I suspect this is particularly true
+            with folks who drive from the UI. Of course the downside with bottom up or inside-out approaches is because the unit tests drive over the acceptance tests it is easier to slip in speculative functionality
+            that turns out not to be needed by the unit test.</p>
+        <p>The Rails Way is <a href="http://weblog.jamisbuck.org/2006/10/18/skinny-controller-fat-model">Skinny Controller, Fat Model</a> and its a good mantra to pick up as you approach development with .NET MVC applications.</p>
+        <h2>Beware God Controllers</h2>
+        <p>The god controller is really just a variation of the <a href="http://en.wikipedia.org/wiki/God_object">god object anti-pattern</a>. Fat Controllers have become God Controllers when they take responsibility
+            for handling too many requests. The pathological case is a site that has just the one controller which handles all requests from the client. Whereas the WebForms page controller forced us into a controller
+            per page, MVC applications don&#8217;t force us down this route. So we have to make sensible decisions about what responsibilities each of our controllers should have.</p>
+        <p>We began by having one controller per aggregate in our domain model.<br />
+            That seemed attractive at first because of the affinity between<br />
+            repositories and aggregates but we have quickly hit overload on our<br />
+            controllers through that approach. </p>
+        <p>At the other end we might be think<br />
+            about one controller per entity. This seems attractive at first and Rails sometimes has a controller per model approach,&nbsp; but ends up too granular. It also breaks down because we<br />
+            often have multiple entities on one page. </p>
+        <p>We could move to having a controller per page. This seems attractive when coming from a WebForms background but tends to create too many controllers.Developing with MVC frameworks differs from Webforms in
+            that there is no support for server-side controls. If you want dynamic behavior then you need to support it through Javascript and CSS on the client. When moving to an MVC application you quickly understand
+            that you need to shift from server side controls to client side controls. There are many advantages to this. Your template can render simple clean, standards compliant, HTML. You get clean separation of the
+            UI widget code away from the controller.</p>
+        <p>People who have done Javascript in the past shy away at this point because developing rich interactive applications with Javascript used to be expensive. It required a lot of low-level coding against the
+            DOM. The rise of Javascript libraries like JQuery has revolutionized the development of rich interactive applications because these frameworks dramatically lower the cost of development. </p>
+        <p>What it means in this context is that your controller can handle the code for more than one page very easily. This is true even if you include the actions that your page will expose to client-side AJAX
+            calls.</p>
+        <p>&nbsp;A more productive approach looks to be thinking in terms of user<br />
+            activities and provide one controller per user activity. By user<br />
+            activity I mean ordering a product, reviewing an account, checking out,<br />
+            making a payment. These business transactions seem to be a good<br />
+            granularity level for controllers.</p>
+        <h2><q>God is dead. God remains dead. And we have killed him.</q></h2>
+        <p>Of course the danger is that the domain service itself becomes vampiric<br />
+            and drains the life-blood of our domain. Control and co-ordination are roles that many services fulfill. Our controller, the &#8216;C&#8217; in MVC can be thought of as a presentation layer service that
+            co-ordinates between our view and model. Everything that applies to controllers also applies to any service that do control and co-ordination. The fat controller is a specific but not an exclusive case.</p>
+        <p>We want to watch for swapping our fat controller<br />
+            for a fat service when we push our code out of the controller and into<br />
+            a domain service. The mechanism for fighting the flab remains the same. Figure out what control and co-ordination responsibilities this service has and do not spread it to include control and co-ordination
+            responsibilities over other areas. Consider the <a href="http://en.wikipedia.org/wiki/Single_responsibility_principle">Single Responsibility Principle</a> as a guide. Break up services to stop<br />
+            them becoming god objects, and push code down into the<br />
+            entities and value types at the same time. I find that sniffing<br />
+            for the <a href="http://www.soberit.hut.fi/mmantyla/BadCodeSmellsTaxonomy.htm">Feature Envy</a><br />
+            smells helps uncover the places where refactoring will help push logic<br />
+            out of the domain level service and into the domain objects. </p>
+        <h2>Keeping Fit</h2>
+        <p>Development is a bit like life. It is easy to get flabby. We just need to get lazy and eat too many things that are bad for us. The trouble is that once you become overweight it gets harder and harder to
+            lose that weight. So if you don&#8217;t want to end up with controllers so overweight that they require surgical intervention, you need to watch how you code them and refactor mercilessly once you see those
+            fat deposits accumulating. </p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+</body>
+</html>
+

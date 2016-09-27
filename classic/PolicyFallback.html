@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="../index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+        <p><a href="EventSourcing.html">Next</a></p>
+        <p><a href="PolicyRetryAndCircuitBreaker.html">Prev</a></p>
+    </header>
+    <section>
+        <h1>Brighter</h1>
+        <h2>Failure and Fallback</h2>
+        <p>If your <strong>RequestHandler.Handle()</strong> call fails you have a number of options:</p>
+        <ul>
+        <li>The basic failure strategy is to throw an exception. This will terminate the request handling pipeline.</li>
+        <li>If you want to support <a href="PolicyRetryAndCircuitBreaker.html">Retry, and Circuit Breaker</a> you can use our support for <a href="https://github.com/michael-wolfenden/Polly">Polly</a>
+            Policies</li>
+        <li>You can also build your own exception handling into your <a href="BuildingAPipeline.html">Pipeline</a>.</li>
+        </ul>
+        <p>If none of these strategies succeed, you may want some sort of backstop exception handler, that allows you to take compensating action, such as undoing any partially committed work,
+            issuing a compensating transaction, or queuing work for later delivery (perhaps using the <a href="ImplementingDistributedTaskQueue.html">Task Queue</a>).</p>
+        <p>To support this we provide a <strong>IHandleRequests&lt;TRequest&gt;Fallback</strong> method. In the Fallback method you write your code to run in the event of failure.</p>
+        <h3>Calling the Fallback Pipeline</h3>
+        <p>We provide a <strong>FallbackPolicy</strong> Attribute that you can use on your <strong>IHandleRequests&lt;TRequest&gt;.Handle()</strong> method. The implementation of the
+            <strong>Fallback Policy Handler</strong> is straightforward: it creates a backstop exception handler by encompassing later requests in the
+            <a href="BuildingAPipeline.html">Request Handling Pipeline</a> in a try...catch block. You can configure it to catch all exceptions,
+            or just <a href="PolicyRetryAndCircuitBreaker.html">Broken Circuit Exceptions</a> when a Circuit Breaker has tripped.</p>
+        <p>When the <strong>Fallback Policy Handler</strong> catches an exception it calls the <strong>IHandleRequests&lt;TRequest&gt;.Fallback()</strong> method of the next Handler
+            in the pipeline, as determined by <strong>IHandleRequests&lt;TRequest&gt;.Successor</strong></p>
+        <p> The implementation of <strong>RequestHandler&lt;T&gt;.Fallback()</strong> uses the same <a href="BuildingAPipeline.html">Russian Doll</a> approach as it uses for
+            <strong>RequestHandler&lt;T&gt;.Handle()</strong>. This means that the request to take compensating action for failure, flows through the same pipeline as the request for service,
+            allowing each Handler in the chain to contribute.</p>
+        <p>In addition the <strong>Fallback Policy Handler</strong> makes the originating exception available to subsequent Handlers using the <strong>Context Bag</strong>
+            with the key: <strong>CAUSE_OF_FALLBACK_EXCEPTION</strong></p>
+        <h3>Using the FallbackPolicy Attribute</h3>
+        <p>The following example shows a Handler with <strong>Request Handler Attributes</strong> for <a href="PolicyRetryAndCircuitBreaker.html">Retry and Circuit Breaker policies</a> that
+            is configured with a <strong>Fallback Policy</strong> which catches a <strong>Broken Circuit Exception</strong> (raised when the Circuit Breaker is tripped) and initiates the
+            Fallback chain.</p>
+        <pre><code>
+public class MyFallbackProtectedHandler: RequestHandler&lt;MyCommand&gt;
+{
+    [FallbackPolicy(backstop: false, circuitBreaker: true, step: 1)]
+    [UsePolicy(&quot;MyCircuitBreakerStrategy&quot;, step: 2)]
+    [UsePolicy(&quot;MyRetryStrategy&quot;, step: 3)]
+    public override MyCommand Handle(MyCommand command)
+    {
+        /*Do some work that can fail*/
+    }
+
+    public override MyCommand Fallback(MyCommand command)
+    {
+        if (Context.Bag.ContainsKey(FallbackPolicyHandler&lt;MyCommand&gt;.CAUSE_OF_FALLBACK_EXCEPTION))
+        {
+            /*Use fallback information to determine what action to take*/
+        }
+        return base.Fallback(command);
+    }
+
+}
+        </code></pre>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>

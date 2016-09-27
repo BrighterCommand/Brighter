@@ -1,0 +1,99 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"[]>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="save" content="history" />
+    <title>CommandProcessorBuilder Class</title>
+    <link rel="stylesheet" type="text/css" href="../styles/lightweight.css" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" />
+    <link rel="stylesheet" type="text/css" href="../styles/lw-code.css" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" />
+    <script type="text/javascript" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" src="../scripts/languageSelector.js"> </script>
+    <meta name="container" content="paramore.brighter.commandprocessor" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" />
+    <meta name="file" content="1998769638" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" />
+    <meta name="guid" content="1998769638" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt" />
+    <xml xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt">
+      <MSHelp:Attr Name="AssetID" Value="T:paramore.brighter.commandprocessor.CommandProcessorBuilder" />
+      <MSHelp:TOCTitle Title="CommandProcessorBuilder Class" />
+      <MSHelp:RLTitle Title="CommandProcessorBuilder Class (paramore.brighter.commandprocessor)" />
+      <MSHelp:Keyword Index="A" Term="T:paramore.brighter.commandprocessor.CommandProcessorBuilder" />
+      <MSHelp:Keyword Index="A" Term="frlrfparamorebrightercommandprocessorCommandProcessorBuilderClassTopic" />
+      <MSHelp:Keyword Index="K" Term="CommandProcessorBuilder class" />
+      <MSHelp:Keyword Index="K" Term="paramore.brighter.commandprocessor.CommandProcessorBuilder class" />
+      <MSHelp:Keyword Index="K" Term="CommandProcessorBuilder class, about CommandProcessorBuilder class" />
+      <MSHelp:Keyword Index="F" Term="paramore.brighter.commandprocessor.CommandProcessorBuilder" />
+      <MSHelp:Attr Name="HelpPriority" Value="2" />
+      <MSHelp:Attr Name="APIType" Value="Managed" />
+      <MSHelp:Attr Name="APILocation" Value="paramore.brighter.commandprocessor.dll" />
+      <MSHelp:Attr Name="APIName" Value="paramore.brighter.commandprocessor.CommandProcessorBuilder" />
+      <MSHelp:Attr Name="DevLang" Value="CSharp" />
+      <MSHelp:Attr Name="DevLang" Value="VB" />
+      <MSHelp:Attr Name="Locale" Value="en-us" />
+      <MSHelp:Attr Name="TopicType" Value="kbSyntax" />
+      <MSHelp:Attr Name="TopicType" Value="apiref" />
+      <MSHelp:Attr Name="Abstract" Value="Class CommandProcessorBuilder. Provides a fluent interface to construct a . We need to identify the following dependencies in order to create a A containing a and a . You can use to provide the but you ne ..." />
+      <MSHelp:Attr Name="AssemblyVersion" Value="" />
+    </xml>
+  </head>
+  <body>
+    <div class="contentPlaceHolder" xmlns:MSHelp="http://msdn.microsoft.com/mshelp" xmlns:mshelp="http://msdn.microsoft.com/mshelp" xmlns:ddue="http://ddue.schemas.microsoft.com/authoring/2003/5" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:msxsl="urn:schemas-microsoft-com:xslt">
+      <div class="content">
+        <div class="topicContainer">
+          <div class="topic">
+            <p class="majorTitle" />
+            <h1 class="title">CommandProcessorBuilder Class</h1>
+            <div id="mainSection">
+              <div id="mainBody">
+                <div class="summary">
+   Class CommandProcessorBuilder.
+   Provides a fluent interface to construct a <a href="1551909888.htm">CommandProcessor</a>. We need to identify the following dependencies in order to create a <a href="1551909888.htm">CommandProcessor</a><ul><li>
+               A <a href="1511288919.htm">HandlerConfiguration</a> containing a <a href="5116153.htm">IAmASubscriberRegistry</a> and a <a href="38136503.htm">IAmAHandlerFactory</a>. You can use <a href="51813318.htm">SubscriberRegistry</a>
+               to provide the <a href="5116153.htm">IAmASubscriberRegistry</a> but you need to implement your own  <a href="38136503.htm">IAmAHandlerFactory</a>, for example using your preferred Inversion of Control
+               (IoC) container
+           </li><li>
+               A <a href="560753741.htm">IAmAPolicyRegistry</a> containing a list of policies that you want to be accessible to the <a href="1551909888.htm">CommandProcessor</a>. You can use
+               <a href="1110601651.htm">PolicyRegistry</a> to provide the <a href="560753741.htm">IAmAPolicyRegistry</a>. Policies are expected to be Polly <span class="nolink">[!:https://github.com/michael-wolfenden/Polly]</span><span class="nolink">Policy</span> references.
+               If you do not need any policies around quality of service (QoS) concerns - you do not have Work Queues and/or do not intend to use Polly Policies for
+               QoS concerns - you can use <span class="nolink">[NoPolicy]</span> to indicate you do not need them.
+           </li><li>
+               A <a href="1611365628.htm">ILog</a> that is the logger to use for diagnostic feedback. <a href="1611365628.htm">ILog</a> is defined by
+               LibLog <span class="nolink">[!:hhttps://github.com/damianh/LibLog]</span> as an abstraction over logging frameworks and allows us to support your
+               preferred logging framework
+           </li><li>
+               A <a href="1221912875.htm">MessagingConfiguration</a> describing how you want to configure Task Queues for the <a href="1551909888.htm">CommandProcessor</a>. We store messages in a <span class="nolink">[IAmAMessageStore]</span>
+               for later replay (in case we need to compensate by trying a message again). We send messages to a Task Queue via a <a href="1740782637.htm">IAmAMessageProducer</a> and we  want to know how
+               to map the <a href="1129012828.htm">IRequest</a> (<a href="1650404514.htm">Command</a> or <a href="987625519.htm">Event</a>) to a <a href="1521002829.htm">Message</a> using a <a href="1546792997.htm">IAmAMessageMapper</a> using
+               an <a href="343614780.htm">IAmAMessageMapperRegistry</a>. You can use the default <a href="1700995936.htm">MessageMapperRegistry</a> to register the association. You need to
+               provide a <a href="1091437229.htm">IAmAMessageMapperFactory</a> so that we can create instances of your  <a href="1546792997.htm">IAmAMessageMapper</a>. You need to provide a <a href="1091437229.htm">IAmAMessageMapperFactory</a>
+               when using <a href="1700995936.htm">MessageMapperRegistry</a> so that we can create instances of your mapper.
+               If you don't want to use Task Queues i.e. you are just using a synchronous Command Dispatcher approach, then use the <span class="nolink">[NoTaskQueues]</span> method to indicate your intent
+           </li><li>
+               Finally we need to provide a <a href="2110624453.htm">IRequestContext</a> to provide context to requests handlers in the pipeline that can be used to pass information without using the message
+               that initiated the pipeline. We instantiate this via a user-provided <a href="519316750.htm">IAmARequestContextFactory</a>. The default approach is use <a href="2114541437.htm">InMemoryRequestContextFactory</a>
+               to provide a <a href="1883414501.htm">RequestContext</a> unless you have a requirement to replace this, such as in testing.
+           </li></ul></div>
+                <p />
+    <b>Namespace:</b> 
+   <a href="1096871896.htm">paramore.brighter.commandprocessor</a><br />
+    <b>Assembly:</b>
+   <span sdata="assembly">paramore.brighter.commandprocessor</span> (in paramore.brighter.commandprocessor.dll)<div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">Syntax</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="syntaxSection"><!----></a><div class="CodeSnippetContainer"><div class="CodeSnippetContainerTabs"><div class="CodeSnippetContainerTabLeft"><!----></div><div class="CodeSnippetContainerTabFirst CSharpTab" id="CSharpTabId" style="background:white;border-bottom-color:white"><a href="javascript:setActiveTab('CodeSnippetContainerCode','CSharpCode','CSharpTabId');" title="C#">C#</a></div><div class="CodeSnippetContainerTab VisualBasicTab" id="VisualBasicTabId"><a href="javascript:setActiveTab('CodeSnippetContainerCode','VisualBasicCode','VisualBasicTabId');" title="Visual Basic">VB</a></div><div class="CodeSnippetContainerTab ManagedCPlusPlusTab" id="ManagedCPlusPlusTabId"><a href="javascript:setActiveTab('CodeSnippetContainerCode','ManagedCPlusPlusCode','ManagedCPlusPlusTabId');" title="Visual C++">C++</a></div><div class="CodeSnippetContainerTabRight"><!----></div></div><div class="CodeSnippetContainerCodeCollection"><div class="CodeSnippetToolBar"><div class="CodeSnippetToolBarText" /></div><div class="CodeSnippetContainerCode CSharpCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">public</span> <span class="keyword">class</span> <span class="identifier">CommandProcessorBuilder</span> : <a href="1278473238.htm">INeedAHandlers</a>, 
+	<a href="844070412.htm">INeedPolicy</a>, <a href="1061556090.htm">INeedLogging</a>, <a href="967223715.htm">INeedMessaging</a>, <a href="2062042881.htm">INeedARequestContext</a>, <a href="1354315642.htm">IAmACommandProcessorBuilder</a></pre></div><div class="CodeSnippetContainerCode VisualBasicCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">Public</span> <span class="keyword">Class</span> <span class="identifier">CommandProcessorBuilder</span> _
+	<span class="keyword">Implements</span> <a href="1278473238.htm">INeedAHandlers</a>, <a href="844070412.htm">INeedPolicy</a>, <a href="1061556090.htm">INeedLogging</a>, <a href="967223715.htm">INeedMessaging</a>,  _
+	<a href="2062042881.htm">INeedARequestContext</a>, <a href="1354315642.htm">IAmACommandProcessorBuilder</a></pre></div><div class="CodeSnippetContainerCode ManagedCPlusPlusCode"><pre xml:space="preserve" class="libCScode"><span class="keyword">public</span> <span class="keyword">ref class</span> <span class="identifier">CommandProcessorBuilder</span> : <a href="1278473238.htm">INeedAHandlers</a>, 
+	<a href="844070412.htm">INeedPolicy</a>, <a href="1061556090.htm">INeedLogging</a>, <a href="967223715.htm">INeedMessaging</a>, <a href="2062042881.htm">INeedARequestContext</a>, <a href="1354315642.htm">IAmACommandProcessorBuilder</a></pre></div></div></div></div><div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">Inheritance Hierarchy</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="familySection"><!----></a><a href="http://msdn.microsoft.com/en-us/library/system.object.aspx" target="_blank">Object</a><br />  <span class="selflink">paramore.brighter.commandprocessor<span class="languageSpecificText"><span class="cs">.</span><span class="vb">.</span><span class="cpp">::</span><span class="nu">.</span><span class="fs">.</span></span>CommandProcessorBuilder</span><br /></div><div class="LW_CollapsibleArea_Container"><div class="LW_CollapsibleArea_TitleDiv"><h2 class="LW_CollapsibleArea_Title">See Also</h2><div class="LW_CollapsibleArea_HrDiv"><hr class="LW_CollapsibleArea_Hr" /></div></div><a id="seeAlsoSection"><!----></a><div class="seeAlsoStyle"><a href="1954596902.htm">CommandProcessorBuilder Members</a></div><div class="seeAlsoStyle"><a href="1096871896.htm">paramore.brighter.commandprocessor Namespace</a></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+        <div id="footer" class="footerContainer">
+          <div class="footerLogoContainer">
+            <div style="margin-top:5px">
+              <span class="customCopyrightFooter" />
+            </div>
+            <div style="margin-top:5px" class="copyrightFooter">Help File generated with GhostDoc</div>
+            <div> </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

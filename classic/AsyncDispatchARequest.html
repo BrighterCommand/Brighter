@@ -1,0 +1,201 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <ul>
+            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="../index.html">Paramore Home</a></p>
+        <p><a href="Brighter.html">Brighter Home</a></p>
+        <p><a href="ImplementingAsyncHandler.html">Next</a></p>
+        <p><a href="AWSSQSConfiguration.html">Prev</a></p>
+    </header>
+    <section>
+        <h1>Brighter</h1>
+        <h2>Dispatching Requests Asynchronously</h2>
+        <p>Brighter supports an asynchronous <a href="CommandsCommandDispatcherandProcessor.html">Command Dispatcher and Command Processor</a>.</p>
+        <p>Using an asynchronous approach to dispatch can be valuable when the work done by a handler can be done concurrently with other work.
+            Instead of blocking on the call to <strong>Send</strong> or <strong>Publish</strong> the calling thread can continue to do work,
+            with a continuation executing once the operation completes.
+            See the MSDN article <a href="https://msdn.microsoft.com/en-us/library/hh191443.aspx">Asynchronous Programming with Async and Await</a>
+        </p>
+        <p>Brighter supports using the async...await pattern in .NET to allow your code to avoid blocking.
+            We provide asynchronous versions of the <strong>Command Dispatcher</strong> methods i.e. <strong>CommandProcessor.SendAsync()</strong>,
+            <strong>CommandProcessor.PublishAsync()</strong>, and <strong>CommandProcessor.PostAsync()</strong>.
+        </p>
+        <h3>Usage</h3>
+        <p>In the following example code we register a handler, create a command processor, and then use that command processor to send a
+            command to the handler asynchronously.</p>
+        <p>Note that this code is the same as the equivalent code for calling the command processor synchonously - apart from the use of
+            async alternatives i.e. <strong>SubscriberRegistry.RegisterAsync()</strong> instead of <strong>SubscriberRegistry.Register()</strong>
+            and  <strong>CommandProcessor.SendAsync()</strong> instead of  <strong>CommandProcessor.Send()</strong>. </p>
+        <p>Note also that we have a <strong>SimpleHandlerFactoryAsync</strong> as this factory needs to return handlers
+            that implement <strong>IHandleRequestsAsync</strong> not <strong>IHandleRequests</strong>.
+        </p>
+<pre><code>
+private static async Task MainAsync()
+{
+    var registry = new SubscriberRegistry();
+    registry.RegisterAsync&lt;GreetingCommand, GreetingCommandRequestHandlerAsync&gt;();
+
+    var builder = CommandProcessorBuilder.With()
+    .Handlers(new HandlerConfiguration(registry, new SimpleHandlerFactoryAsync()))
+    .DefaultPolicy()
+    .NoTaskQueues()
+    .RequestContextFactory(new InMemoryRequestContextFactory());
+
+    var commandProcessor = builder.Build();
+
+    await commandProcessor.SendAsync(new GreetingCommand("Ian"));
+
+    Console.ReadLine();
+}
+</code></pre>
+        <p>Note that line: <strong>Console.ReadLine()</strong> is a continuation. Control passes back to the calling
+            method after the await, and subsequent lines of code run after that method returns.
+        </p>
+        <h3>Registering a Handler</h3>
+        <p>In order for a <strong>Command Dispatcher</strong> to find a Handler for your <strong>Command</strong>
+            or <strong>Event</strong> you need to register the association between that <strong>Command</strong>
+            or <strong>Event</strong> and your Handler.
+        </p>
+        <p>The <strong>Subscriber Registry</strong> is where you register your Handlers.</p>
+        <p>The <strong>SubscriberRegistry.RegisterAsync()</strong> expects a handler that implements
+            <strong>IHandleRequestsAsync</strong>
+        </p>
+    <pre><code>
+var registry = new SubscriberRegistry();
+registry.RegisterAsync&lt;GreetingCommand, GreetingCommandRequestHandlerAsync&gt;();
+    </code></pre>
+        <h4>Pipelines Must be Homogeneous</h4>
+        <p>Brighter only supports pipelines that are solely <strong>IHandleRequestsAsync</strong> or <strong>IHandleRequests</strong>.</p>
+        <p>This is due to expectation of the caller using an <strong>*Async</strong> method that the code will execute asynchronously
+            - allowing some handlers in the chain to block would defy that expectations. The async...await pattern is often described
+            as 'viral' because it spreads up the chain of callers to be effective. Brighter is no exception in this regard.
+        </p>
+        <h3>Dispatching Requests</h3>
+        <p>Once you have registered your Handlers, you can dispatch requests to them. To do that you simply use the
+            <strong>CommandProcessor.SendAsync()</strong> (or <strong>CommandProcessor.PublishAsync()</strong> or <strong>CommandProcessor.PublishAsync()</strong>) method passing in an instance of your command.
+        </p>
+<pre><code>
+    await commandProcessor.SendAsync(new GreetingCommand("Ian"));
+</code></pre>
+        <h4>Cancellation</h4>
+        <p>Brighter supports the cancellation of asynchronous operations.
+        </p>
+        <p>The asynchronous methods: <strong>SendAsync</strong>, <strong>PublishAsync</strong>, and <strong>PostAsync</strong> all accept
+            a <strong>CancellationToken</strong> and pass this token down the pipeline. The parameter defaults to null where the call does not
+            intend to cancel.
+        </p>
+        <p>The responsibility for checking for a cancellation request lies with the individual handlers, which must determine what
+            action to take if cancellation had been signalled.
+        </p>
+        <p>The ability of the <strong>*Async</strong> methods to take a cancellation token can be particularly useful with ASP.NET AsyncTimeout
+            see <a href="http://dotnetcodr.com/2013/01/04/timeout-exceptions-with-asyncawait-in-net4-5-mvc4-with-c/">here for more.</a>
+        </p>
+        <h3>Do Not Block When Calling *Async Methods</h3>
+        <p>When calling an asynchronous method you should <strong>await</strong> that method. Avoid using <strong>.Wait</strong> or <strong>.Result</strong>
+            on the <strong>Task</strong> returned by the method, as this turns it back into a blocking call, which is probably not your intent
+            and likely undermines the reason you wanted to use an asynchronous approach in the first place. If you find yourself using  <strong>.Wait</strong> or <strong>.Result</strong>
+            then consider whether you would be better using a synchronous pipeline instead.
+        </p>
+        <p>Therefore you should only call <strong>SendAsync</strong>, <strong>PublishAsync</strong>, or <strong>PostAsync</strong> from a method
+            that is itself async and supports await, otherwise you will block, and there will be no value to having used an async method.
+        </p>
+        <p>In <a href="PortsAndAdapters.html">Ports & Adapters Architecture</a> terms you should use an <strong>Adapter</strong> layer that supports async when calling the <strong>Ports</strong> layer
+            represented by your handlers.
+        </p>
+        <p>This creates the question: at what point do we stop being async i.e. who waits? This is normally a responsibility of your framework
+            which has to understand that it can use re-use thread to service other requests, thus improving throughput and call back to your continuation
+            when done.
+        </p>
+         <p>For example ASP.NET Controllers <a href="http://www.asp.net/mvc/overview/performance/using-asynchronous-methods-in-aspnet-mvc-4">
+            support async</a> can be used to call the <strong>*Async methods</strong> without blocking. This allows ASP.NET to release a thread
+            from the thread pool to service another request whilst the asynchronous operation completes, allowing greater throughput on the server.
+        </p>
+        <h4>Understand Captured Contexts</h4>
+        <p>When an awaited method completes, what thread runs any completion code? The answer depends on the SynchronizationContext which is 'captured'
+            at the point await is called. For ASP.NET or Windows Forms, WPF, or Metro apps then the SynchronizationContext means that the thread that was
+            running at the point we yielded runs the continuation. Otherwise the SynchronizationContext is null and the default Task Scheduler runs the continuation.
+        </p>
+        <p> Why does this matter? Because if you needed to access anything that is thread local, being called back on the wrong thread means you will not have
+            access to those variables.
+        </p>
+        <p>A Windows UI for example is single-threaded via a message pump and interacting with the UI requires you to be on that thread.
+            See <a href="http://blogs.msdn.com/b/pfxteam/archive/2012/01/20/10259049.aspx">this article for more.</a>
+        </p>
+        <p>When awaiting it is possible to configure how the continuation runs - on the SyncronizationContext or using the Task Scheduler,
+            overriding the default behaviour, which is to capture the SynchronizationContext.
+        </p>
+<pre><code>
+await MethodAsync(value, ct).ConfigureAwait(true);
+</code></pre>
+        <p>Library writers are encouraged to default to false i.e. use the Task Scheduler instead of the SychronizationContext.
+        </p>
+        <p>Brighter adopts this default, but recognizes it might not be what you want if your handler needs to run in the context of the original thread.
+            As a result we let you pass in a parameter on the <strong>*Async</strong> calls to change the behaviour throughout your pipeline.
+        </p>
+<pre><code>
+await commandProcessor.SendAsync(new GreetingCommand("Ian"), continueOnCapturedContext: true);
+</code></pre>
+        <p>A handler exposes the parameter you supply to the call to <strong>SendAsync</strong>, <strong>PublishAsync</strong>, or <strong>PostAsync</strong>
+            via a property called <strong>ContinueOnCapturedContext</strong>. That property is true if we want to use the SynchronizationContext and not the
+            Task Scheduler to run our continuation.
+        </p>
+<pre><code>
+await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
+</code></pre>
+        <p>We recommend explicitly using this parameter when awaiting within your own handler, such as when calling the next handler in an async pipeline.
+        </p>
+        <div class="boxed">
+            <h3>Asynchronous vs. Work Queues</h3>
+            <p>One obvious question is: when should I use an asynchronous pipeline to handle work and when should I use a work queue.
+            </p>
+            <p>Using an asynchronous handler allows us to avoid blocking. This can increase our throughput by allowing us to re-use threads to service
+                new requests. Using this approach, even a single-threaded application can achieve high throughput, if it is not CPU-bound.
+            </p>
+            <p>Using a work queue allows us to hand-off work to another process, to be executed at some point in the future. This also allows us to
+                improve throughput by freeing up the thread to service new requests. We assume that we can accept dealing with that work at some
+                point in the future i.e. we can be eventually consistent.
+            </p>
+            <p>One disadvantage of a work queue is that our pattern - ack to callers, and then do the work, can create additional complexity because
+                we must deal with notifying the user of completion, or errors. Because an async operation simply has the caller wait, the programming
+                model is simpler. The trade-off here is that the client of our process is still using resources awaiting for the request with the
+                async operation. If the operation takes time to complete the client may not know if the operation failed and should be timed out,
+                or is still running.
+            </p>
+            <p>Where work is long-running there is a risk that the server faults, and we lose the long-running work. A work queue provides
+                reliability here, through guaranteed delivery. The queue keeps the work until it is successfully processed and acknowledged.
+            </p>
+            <p>Our recommendation is to use the async pattern to improve throughput where the framework supports async, such as ASP.NET WebAPI
+                but to continue to hand-off work that takes a long time to complete to a work queue. You may choose to define your own thresholds
+                but we recommend that operations that take longer than 200ms to complete be handed-off. We also recommend that operations that are CPU
+                bound be handed-off as they diminish the throughput of your application.
+            </p>
+        </div>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>
