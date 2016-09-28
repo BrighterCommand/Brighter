@@ -8,7 +8,7 @@ Last Modified By : ian
 Last Modified On : 09-01-2016
 ***********************************************************************
 The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2016 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -30,10 +30,14 @@ THE SOFTWARE.
 **********************************************************************i*
 """
 
-from kombu import BrokerConnection, Queue
+from kombu import BrokerConnection, Consumer, Queue
 from kombu.pools import connections
-import logging
+from kombu import exceptions as kombu_exceptions
+from kombu.message import Message as KombuMessage
+from datetime import datetime
 from core.messaging import Consumer, Message, Producer
+from rmq.rmq_messaging import RmqMessageFactory
+import logging
 
 
 class RmqConnection:
@@ -62,7 +66,7 @@ class RmqConnection:
 class RmqProducer(Producer):
     """Implements sending a message to a RMQ broker. It does not use a queue, just a connection to the broker
     """
-    def __init__(self, connection: RmqConnection, logger=None):
+    def __init__(self, connection: RmqConnection, logger:logging.Logger=None) -> None:
         self._amqp_uri = connection.amqp_uri
         self._cnx = BrokerConnection(hostname=connection.amqp_uri)
         self._exchange = connection.exchange
@@ -84,7 +88,7 @@ class RmqProducer(Producer):
                            exchange=self._exchange,
                            serializer='json',   # todo: fix this for the mime type of the message
                            routing_key=message.header.topic,
-                           declare=[self._exchange, queue])
+                           declare=[self._exchange])
 
         def _error_callback(e, interval):
             logger.debug('Publishing error: {e}. Will retry in {interval} seconds', e, interval)
@@ -103,59 +107,67 @@ class RmqConsumer(Consumer):
     """ Implements reading a message from an RMQ broker. It uses a queue, created by subscribing to a message topic
 
     """
-    def __init__(self, connection: RmqConnection, logger=None) -> None:
-       self._exchange = connection.exchange
-        self._routing_key = routing_key
-        self._amqp_uri =connection.amqp_uri
-        self._running = Event()  # control access to te queue
-        self._logger = logger or logging.getLogger(__name__)
+    RETRY_OPTIONS = {
+        'interval_start': 1,
+        'interval_step': 1,
+        'interval_max': 1,
+        'max_retries': 3,
+    }
 
-    def purge(self, ):
+    def __init__(self, connection: RmqConnection, queue_name: str, routing_key: str, prefetch_count: int=1,
+                 is_durable: bool=False, logger: logging.Logger=None) -> None:
+        self._exchange = connection.exchange
+        self._routing_key = routing_key
+        self._amqp_uri = connection.amqp_uri
+        self._queue_name = queue_name
+        self._routing_key = routing_key
+        self._prefetch_count = prefetch_count
+        self._is_durable = is_durable
+        self._message_factory = RmqMessageFactory()
+        self._logger = logger or logging.getLogger(__name__)
+        
+        # TODO: Need to fix the argument types with default types issue
+
+    def purge(self):
         pass
 
-    def receive(self, timeout:int) -> Message:
+    def receive(self, timeout: int) -> Message:
 
-        def _drain(cnx, timeout):
+        def _consume(cnx, timesup):
             try:
-                cnx.drain_events(timeout=timeout)
+                cnx.drain_events(timeout=timesup)
             except kombu_exceptions.TimeoutError:
                 pass
 
-        def _drain_errors(exc, interval):
+        def _consume_errors(exc, interval):
             self._logger.error('Draining error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)
 
-        def _read_message(body, message):
+        def _ensure_consumer():
+            self._queue = Queue(self._queue_name, exchange=self._exchange, routing_key=self._routing_key)
+
+        def _read_message(body, message: KombuMessage) -> Message:
             self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), message.headers, message.payload)
-            now = datetime.utcnow().isoformat()
-            activity = body
-            print("{time}: {event}".format(time=now, event=activity))
-            message.ack()
+            return self._message_factory.create(message)
+
 
         # read the next batch number of monitoring messages from the control bus
         # evaluate for color coding (error is red)
         # print to stdout
 
+        _ensure_consumer()
+
         connection = BrokerConnection(hostname=self._amqp_uri)
         with connections[connection].acquire(block=True) as conn:
             self._logger.debug('Got connection: %s', conn.as_uri())
-            with Consumer(conn, [self._monitoring_queue], callbacks=[_read_message], accept=['json', 'text/plain']) as consumer:
-                self._running.set()
+            with Consumer(conn, [self._queue], callbacks=[_read_message], accept=['json', 'text/plain']) as consumer:
+                consumer.qos(prefetch_count = 1)
                 ensure_kwargs = self.RETRY_OPTIONS.copy()
-                ensure_kwargs['errback'] = _drain_errors
-                lines = 0
-                updates = 0
-                while self._running.is_set():
-                    # page size number before we sleep
-                    safe_drain = conn.ensure(consumer, _drain, **ensure_kwargs)
-                    safe_drain(conn, DRAIN_EVENTS_TIMEOUT)
-                    lines += 1
-                    if lines == self.page_size:
-                        if self.limit != -1 and updates > self.limit:
-                            self._running.clear()
-                        else:
-                            sleep(self.delay_between_refreshes)
-                            lines = 0
-                            updates += 1
+                ensure_kwargs['errback'] = _consume_errors
+                safe_drain = conn.ensure(consumer, _consume, **ensure_kwargs)
+                safe_drain(conn, timeout)
+
+
+
 
 
 
