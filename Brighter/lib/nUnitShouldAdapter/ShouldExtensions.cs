@@ -58,5 +58,10 @@ namespace nUnitShouldAdapter
         {
             Assert.AreSame(expected, actual);
         }
+
+        public static void ShouldBeGreaterThan(this IComparable actual, IComparable greaterThan)
+        {
+            Assert.Greater(actual, greaterThan);
+        } 
     }
 }
