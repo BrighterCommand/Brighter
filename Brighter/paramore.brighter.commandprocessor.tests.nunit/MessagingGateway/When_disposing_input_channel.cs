@@ -22,20 +22,27 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using RabbitMQ.Client;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using FakeItEasy;
+using Machine.Specifications;
+using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace paramore.commandprocessor.tests.MessagingGateway
 {
-    public static class MessageGatewayHelper
+    [Subject(typeof(Channel))]
+    public class When_Disposing_Input_Channel
     {
-        public static void DeclareExchangeForConnection(this IModel channel, RmqMessagingGatewayConnection connection)
+        private static IAmAChannel s_channel;
+        private static IAmAMessageConsumer s_messageConsumer;
+
+        private Establish _context = () =>
         {
-            if (connection.Exchange.SupportDelay)
-                channel.ExchangeDeclare(connection.Exchange.Name, "x-delayed-message", connection.Exchange.Durable, autoDelete: false, arguments: new Dictionary<string, object> { { "x-delayed-type", connection.Exchange.Type } });
-            else
-                channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable);
-        }
+            s_messageConsumer = A.Fake<IAmAMessageConsumer>();
+
+            s_channel = new Channel("test", s_messageConsumer);
+        };
+
+        private Because _of = () => s_channel.Dispose();
+
+        private It _should_call_dipose_on_messaging_gateway = () => A.CallTo(() => s_messageConsumer.Dispose()).MustHaveHappened();
     }
 }

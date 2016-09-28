@@ -22,20 +22,22 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using RabbitMQ.Client;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using Machine.Specifications;
+using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
+using paramore.brighter.commandprocessor.messaginggateway.restms.Parsers;
+using nUnitShouldAdapter;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace paramore.commandprocessor.tests.MessagingGateway.restms
 {
-    public static class MessageGatewayHelper
+    public class When_parsing_a_restMS_domain
     {
-        public static void DeclareExchangeForConnection(this IModel channel, RmqMessagingGatewayConnection connection)
-        {
-            if (connection.Exchange.SupportDelay)
-                channel.ExchangeDeclare(connection.Exchange.Name, "x-delayed-message", connection.Exchange.Durable, autoDelete: false, arguments: new Dictionary<string, object> { { "x-delayed-type", connection.Exchange.Type } });
-            else
-                channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable);
-        }
+        private const string BODY = "<domain xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" name=\"default\" title=\"title\" href=\"http://localhost/restms/domain/default\" xmlns=\"http://www.restms.org/schema/restms\"><feed type=\"Default\" name=\"default\" title=\"Default feed\" href=\"http://localhost/restms/feed/default\" /><profile name=\"3/Defaults\" href=\"href://www.restms.org/spec:3/Defaults\" /></domain>";
+        private static RestMSDomain s_domain;
+        private static bool s_couldParse;
+
+        private Because _of = () => s_couldParse = XmlResultParser.TryParse(BODY, out s_domain);
+
+        private It _should_be_able_to_parse_the_result = () => s_couldParse.ShouldBeTrue();
+        private It _should_have_a_domain_object = () => s_domain.ShouldNotBeNull();
     }
 }

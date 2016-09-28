@@ -32,6 +32,11 @@ namespace nUnitShouldAdapter
             Assert.AreEqual(expected, actual);
         }
 
+        public static void ShouldNotEqual<T>(this T actual, T notExpected)
+        {
+            Assert.AreNotEqual(actual, notExpected);   
+        }
+
         public static void ShouldBeOfExactType<TExpectedType>(this object objectToCheck)
         {
             Assert.IsInstanceOf<TExpectedType>(objectToCheck);
@@ -53,6 +58,16 @@ namespace nUnitShouldAdapter
         {
             CollectionAssert.Contains(actualEnumerable, expectedObject);
         }
+        public static void ShouldContain<T>(this ICollection<T> actualEnumerable, object expectedObject)
+        {
+            CollectionAssert.Contains(actualEnumerable, expectedObject);
+        }
+
+        public static void ShouldNotContain<T>(this ICollection<T> actualEnumerable, object expectedObject)
+        {
+            CollectionAssert.DoesNotContain(actualEnumerable, expectedObject);
+        }
+
         public static void ShouldContain<T>(this List<T> actualEnumerable, T expectedObject)
         {
             CollectionAssert.Contains(actualEnumerable, expectedObject);
