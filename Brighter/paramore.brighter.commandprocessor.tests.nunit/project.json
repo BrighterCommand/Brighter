@@ -40,8 +40,8 @@
     },
     "NUnit": "3.4.1",
     "dotnet-test-nunit": "3.4.0-beta-2",
-    //"Nito.AsyncEx.Context": "1.1.0",
-    "Nito.AsyncEx": "3.0.1",
+    "Nito.AsyncEx.Context": "1.1.0",
+    //"Nito.AsyncEx": "3.0.1",
     //"Nito.AsyncEx.Enlightenment": "3.0.1.0", maybe try Nito.AsyncEx.Context
     "FluentAssertions": "4.13.0",
     "Microsoft.Data.Sqlite": "1.0.0"
@@ -64,7 +64,7 @@
         "System.Reflection.TypeExtensions": "4.1.0"
       }
     },
-    "net452": {
+    "net46": {
       "dependencies": {
         "paramore.brighter.commandprocessor.messagestore.eventstore": {
           "target": "project"
