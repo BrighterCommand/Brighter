@@ -24,9 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using Machine.Specifications;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Events;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
