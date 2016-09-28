@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "NUnit": "3.4.1"
+    "NUnit": "3.4.1",
+    "System.Collections": "4.0.11"
   },
   "frameworks": {
     "netstandard1.6": {

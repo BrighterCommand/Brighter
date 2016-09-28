@@ -1,4 +1,7 @@
-﻿using NUnit.Framework;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using NUnit.Framework;
 
 namespace nUnitShouldAdapter
 {
@@ -33,10 +36,27 @@ namespace nUnitShouldAdapter
         {
             Assert.IsInstanceOf<TExpectedType>(objectToCheck);
         }
+        public static void ShouldBeOfExactType(this object objectToCheck, Type tExpectedType)
+        {
+            Assert.IsInstanceOf(tExpectedType, objectToCheck);
+        }
 
         public static void ShouldContain(this string actualString, string expectedSubString)
         {
             StringAssert.Contains(expectedSubString, actualString);
+        }
+        public static void ShouldContain<T>(this IEnumerable actualEnumerable, object expectedObject)
+        {
+            CollectionAssert.Contains(actualEnumerable, expectedObject);
+        }
+        public static void ShouldContain<T>(this List<T> actualEnumerable, T expectedObject)
+        {
+            CollectionAssert.Contains(actualEnumerable, expectedObject);
+        }
+
+        public static void ShouldBeTheSameAs<T>(this T actual, T expected)
+        {
+            Assert.AreSame(expected, actual);
         }
     }
 }

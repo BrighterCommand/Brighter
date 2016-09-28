@@ -1,7 +1,7 @@
 {
   "runtimeTarget": {
     "name": ".NETStandard,Version=v1.6/",
-    "signature": "89f506be7d282bce2aafd2c0e5b80ba386b55271"
+    "signature": "8021e6284166992642432f2d7f87352723aeaad9"
   },
   "compilationOptions": {},
   "targets": {
@@ -10,7 +10,8 @@
       "nUnitShouldAdapter/1.0.0": {
         "dependencies": {
           "System.Runtime": "4.1.0",
-          "NUnit": "3.4.1"
+          "NUnit": "3.4.1",
+          "System.Collections": "4.0.11"
         },
         "runtime": {
           "nUnitShouldAdapter.dll": {}
@@ -21,6 +22,13 @@
       "NUnit/3.4.1": {
         "runtime": {
           "lib/dotnet/nunit.framework.dll": {}
+        }
+      },
+      "System.Collections/4.0.11": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.Runtime": "4.1.0"
         }
       },
       "System.Runtime/4.1.0": {
@@ -51,6 +59,11 @@
       "type": "package",
       "serviceable": true,
       "sha512": "sha512-G/9h/ENn8+GvT5DvBqVNrUhIWuxtAr0/oVGN2ljKVUw50EAZYBzeWSy9s6nqMswaQACpQzljql1sWQ/peE2eJg=="
+    },
+    "System.Collections/4.0.11": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-MWb7aKYFP0dQH022KxO5mS8iE1sfoDxb8aKgxoNnpF5vNp/XWZYhmwkrpI4/s1tcE6LoEhQxHURDxKzXm+fhpA=="
     },
     "System.Runtime/4.1.0": {
       "type": "package",

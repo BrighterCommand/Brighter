@@ -1,0 +1,91 @@
+{
+  "testRunner": "nunit",
+  "dependencies": {
+    "paramore.brighter.commandprocessor": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.commandstore.mssql": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.commandstore.sqllite": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messagestore.mssql": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messagestore.sqllite": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messaginggateway.awssqs": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messaginggateway.azureservicebus": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messaginggateway.restms": {
+      "target": "project"
+    },
+    "paramore.brighter.commandprocessor.messaginggateway.rmq": {
+      "target": "project"
+    },
+    "paramore.brighter.serviceactivator": {
+      "target": "project"
+    },
+
+    "NUnit.Specifications.NUnit3.coreCLR": {
+      "target": "project"
+    },
+    "nUnitShouldAdapter": {
+      "target": "project"
+    },
+    "NUnit": "3.4.1",
+    "Machine.Fakes": "2.8.0-beta3",
+    "dotnet-test-nunit": "3.4.0-beta-2",
+    "Nito.AsyncEx": "3.0.1",
+    "FluentAssertions": "4.13.0",
+    "Microsoft.Data.Sqlite": "1.0.0"
+  },
+  "frameworks": {
+    "netcoreapp1.0": {
+      "imports": [
+        "dnxcore50",
+        "portable-net45+win8"
+      ],
+      "dependencies": {
+        "FakeItEasy": "2.3.0-coreclr-beta56",
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.0"
+        },
+        "System.Diagnostics.TextWriterTraceListener": "4.0.0",
+        "System.Diagnostics.TraceSource": "4.0.0",
+        "System.Linq": "4.1.0",
+        "System.Reflection.TypeExtensions": "4.1.0"
+      }
+    },
+    "net452": {
+      "dependencies": {
+        "paramore.brighter.commandprocessor.messagestore.eventstore": {
+          "target": "project"
+        },
+        "EventStore.Client": "3.8.0",
+        "EventStore.Client.Embedded": "3.8.0",
+        "FakeItEasy": "2.3.0-coreclr-beta56"
+      }
+    }
+  },
+  "tools": {},
+  "configurations": {
+    "Debug": {
+      "buildOptions": {
+        "define": [ "DEBUG", "TRACE" ]
+      }
+    },
+    "Release": {
+      "buildOptions": {
+        "define": [ "RELEASE", "TRACE" ],
+        "optimize": true
+      }
+    }
+  }
+}

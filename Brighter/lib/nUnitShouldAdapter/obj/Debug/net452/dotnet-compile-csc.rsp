@@ -11,6 +11,7 @@
 "D:\dev\GitHub\paramore\Brighter\lib\nUnitShouldAdapter\obj\Debug\net452\dotnet-compile.assemblyinfo.cs"
 -out:"D:\dev\GitHub\paramore\Brighter\lib\nUnitShouldAdapter\bin\Debug\net452\nUnitShouldAdapter.dll"
 -r:"C:\Users\ian.pender\.nuget\packages\NUnit\3.4.1\lib\net45\nunit.framework.dll"
+-r:"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\Facades\System.Collections.dll"
 -r:"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\mscorlib.dll"
 -r:"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.dll"
 -r:"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.Core.dll"

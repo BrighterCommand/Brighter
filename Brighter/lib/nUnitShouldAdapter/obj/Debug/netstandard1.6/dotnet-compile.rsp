@@ -13,5 +13,6 @@
 --informational-version:1.0.0
 --target-framework:.NETStandard,Version=v1.6
 --reference:C:\Users\ian.pender\.nuget\packages\NUnit\3.4.1\lib\dotnet\nunit.framework.dll
+--reference:C:\Users\ian.pender\.nuget\packages\System.Collections\4.0.11\ref\netstandard1.3\System.Collections.dll
 --reference:C:\Users\ian.pender\.nuget\packages\System.Runtime\4.1.0\ref\netstandard1.5\System.Runtime.dll
 D:\dev\GitHub\paramore\Brighter\lib\nUnitShouldAdapter\ShouldExtensions.cs

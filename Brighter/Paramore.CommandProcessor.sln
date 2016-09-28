@@ -97,6 +97,8 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "NUnit.Specifications.NUnit3
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "nUnitShouldAdapter", "lib\nUnitShouldAdapter\nUnitShouldAdapter.xproj", "{297BBBDF-AB54-467D-960A-C494EAB456A1}"
 EndProject
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "paramore.brighter.commandprocessor.tests.nunit", "paramore.brighter.commandprocessor.tests.nunit\paramore.brighter.commandprocessor.tests.nunit.xproj", "{9E0E5F11-2777-4789-BB09-C866BC5F800D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -569,6 +571,18 @@ Global
 		{297BBBDF-AB54-467D-960A-C494EAB456A1}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{297BBBDF-AB54-467D-960A-C494EAB456A1}.Release|x86.ActiveCfg = Release|Any CPU
 		{297BBBDF-AB54-467D-960A-C494EAB456A1}.Release|x86.Build.0 = Release|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Debug|x86.Build.0 = Debug|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|x86.ActiveCfg = Release|Any CPU
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -599,5 +613,6 @@ Global
 		{B28F58E5-CD6A-460E-82A8-690C7A9DC12F} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{B258B09F-F581-4BBF-B076-E0E155714B7B} = {B28F58E5-CD6A-460E-82A8-690C7A9DC12F}
 		{297BBBDF-AB54-467D-960A-C494EAB456A1} = {B28F58E5-CD6A-460E-82A8-690C7A9DC12F}
+		{9E0E5F11-2777-4789-BB09-C866BC5F800D} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 	EndGlobalSection
 EndGlobal
