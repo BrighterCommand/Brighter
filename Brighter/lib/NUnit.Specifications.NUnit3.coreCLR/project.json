@@ -1,0 +1,30 @@
+{
+  "dependencies": {
+    "NUnit": "3.4.1"
+  },
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50",
+      "dependencies": {
+        "System.Reflection.TypeExtensions": "4.1.0",
+        "System.Collections": "4.0.11",
+        "System.Linq": "4.1.0",
+        "System.Runtime": "4.1.0",
+        "System.Console": "4.0.0",
+        "System.Diagnostics.Debug": "4.0.11"
+      },
+      /* Using this to signify a Core build, best way rather than nominating ind frameworks */
+      "buildOptions": { "define": [ "NET_STANDARD" ] }
+    },
+    "net452": {
+      "dependencies": {
+        "System.Diagnostics.Debug": "4.0.0"
+      }
+    }
+  },
+  "buildOptions": {
+    "compile": [
+      "../NUnit.Specifications.NUnit3/Categories/*.cs"
+    ]
+  }
+}

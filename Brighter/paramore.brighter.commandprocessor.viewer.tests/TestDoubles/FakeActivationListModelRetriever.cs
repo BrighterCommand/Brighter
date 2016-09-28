@@ -41,7 +41,7 @@ using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers
 
 namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
 {
-    internal class FakeActivationListModelRetriever : IMessageStoreActivationStateListViewModelRetriever
+    public class FakeActivationListModelRetriever : IMessageStoreActivationStateListViewModelRetriever
     {
         private MessageStoreActivationStateListModel _fakeResult = null;
         private MessageStoreActivationStateListModelError _fakeError;
@@ -51,7 +51,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
             _fakeResult = storeListModel;
         }
 
-        private FakeActivationListModelRetriever()
+        public FakeActivationListModelRetriever()
         {
         }
 

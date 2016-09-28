@@ -1,0 +1,17 @@
+--temp-output:D:\dev\GitHub\paramore\Brighter\lib\nUnitShouldAdapter\obj\Debug\netstandard1.6\
+--out:D:\dev\GitHub\paramore\Brighter\lib\nUnitShouldAdapter\bin\Debug\netstandard1.6\nUnitShouldAdapter.dll
+--define:DEBUG
+--define:TRACE
+--define:NETSTANDARD1_6
+--suppress-warning:CS1701
+--suppress-warning:CS1702
+--suppress-warning:CS1705
+--optimize:False
+--output-name:nUnitShouldAdapter
+--file-version:1.0.0.0
+--version:1.0.0.0
+--informational-version:1.0.0
+--target-framework:.NETStandard,Version=v1.6
+--reference:C:\Users\ian.pender\.nuget\packages\NUnit\3.4.1\lib\dotnet\nunit.framework.dll
+--reference:C:\Users\ian.pender\.nuget\packages\System.Runtime\4.1.0\ref\netstandard1.5\System.Runtime.dll
+D:\dev\GitHub\paramore\Brighter\lib\nUnitShouldAdapter\ShouldExtensions.cs

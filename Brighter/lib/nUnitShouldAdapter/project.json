@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "NUnit": "3.4.1"
+  },
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50",
+      "dependencies": {
+        "System.Runtime": "4.1.0"
+      }
+    },
+    "net452": {
+      "dependencies": {
+      }
+    }
+  }
+}

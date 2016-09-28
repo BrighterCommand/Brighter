@@ -1,12 +1,10 @@
 ﻿{
   "version": "1.0.0-*",
-  "testRunner": "mspec",
+  "testRunner": "nunit",
   "dependencies": {
-    "dotnet-test-nunit": "3.4.0-beta-1",
-    "Machine.Specifications": "0.11.0",
-    "Machine.Specifications.Should": "0.11.0",
+    "dotnet-test-nunit": "3.4.0-beta-2",
     "Nancy.Testing": "2.0.0-barneyrubble",
-    "NUnit": "3.4.0",
+    "NUnit": "3.4.1",
     "paramore.brighter.commandprocessor": {
       "target": "project"
     },
@@ -14,6 +12,12 @@
       "target": "project"
     },
     "paramore.brighter.commandprocessor.tests": {
+      "target": "project"
+    },
+    "NUnit.Specifications.NUnit3.coreCLR": {
+      "target": "project"
+    },
+    "nUnitShouldAdapter": {
       "target": "project"
     }
   },
@@ -34,9 +38,6 @@
       "dependencies": {
       }
     }
-  },
-  "tools": {
-    "dotnet-test-mspec": "0.2.0"
   },
   "configurations": {
     "Debug": {

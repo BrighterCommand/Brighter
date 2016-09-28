@@ -35,19 +35,29 @@ THE SOFTWARE. */
 
 #endregion
 
-using Machine.Specifications;
+using System;
 using Nancy;
+using Nancy.Conventions;
 using Nancy.Testing;
+using Nancy.TinyIoc;
+using NUnit.Framework;
+using NUnit.Specifications;
+using nUnitShouldAdapter;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
+using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
 {
-    [Subject(typeof(IndexModule))]
-    public class When_retrieving_home
+    //    [Subject(typeof(IndexModule))]
+    [Category("Index Module")]
+    public class When_retrieving_home :  NUnit.Specifications.ContextSpecification
     {
         private Establish _context = () =>
         {
-            browser = new Browser(new ConfigurableBootstrapper(with => with.Module<IndexModule>()));
+            //var configurableBootstrapper = new TestConfigurableBootstrapper(with => with.Module<IndexModule>());
+            var configurableBootstrapper = new NancyBootstrapper(new MessageViewerConfiguration());
+  //          configurableBootstrapper.Initialise();
+            browser = new Browser(configurableBootstrapper);
         };
 
         private Because _with_GET = () => result = browser.Get("/", with =>
@@ -56,10 +66,32 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
             with.Header("accept", "text/html");
         }).Result;
 
-        private It should_return_200_OK = () => result.StatusCode.ShouldEqual(HttpStatusCode.OK);
-        private It should_return_text_html = () => result.ContentType.ShouldEqual("text/html");
+        private It should_return_200_OK = () => Assert.AreEqual(result.StatusCode, HttpStatusCode.OK);
+        private It should_return_text_html = () => Assert.AreEqual(result.ContentType, "text/html");
 
         private static Browser browser;
         private static BrowserResponse result;
     }
+
+    public class TestConfigurableBootstrapper : ConfigurableBootstrapper
+    {
+        public TestConfigurableBootstrapper(Action<ConfigurableBootstrapperConfigurator> func) : base(func)
+        {
+        }
+
+        protected override void ConfigureConventions(NancyConventions nancyConventions)
+        {
+    //        base.ConfigureConventions(nancyConventions);
+            Console.WriteLine("Registering static embedded");
+            BootstrapperEmbeddedHelper.RegisterStaticEmbedded(nancyConventions);
+        }
+
+        protected override void ConfigureApplicationContainer(TinyIoCContainer container)
+        {
+  //          base.ConfigureApplicationContainer(container);
+            Console.WriteLine("Registering view locations");
+            BootstrapperEmbeddedHelper.RegisterViewLocationEmbedded();
+        }
+    }
+
 }

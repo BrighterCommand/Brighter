@@ -1,0 +1,237 @@
+{
+  "runtimeTarget": {
+    "name": ".NETStandard,Version=v1.6/",
+    "signature": "531a863d4ff5bc34e8fc556e6f2d492080c93feb"
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETStandard,Version=v1.6": {},
+    ".NETStandard,Version=v1.6/": {
+      "NUnit.Specifications.NUnit3.coreCLR/1.0.0": {
+        "dependencies": {
+          "System.Reflection.TypeExtensions": "4.1.0",
+          "System.Collections": "4.0.11",
+          "System.Linq": "4.1.0",
+          "System.Runtime": "4.1.0",
+          "System.Console": "4.0.0",
+          "System.Diagnostics.Debug": "4.0.11",
+          "NUnit": "3.4.1"
+        },
+        "runtime": {
+          "NUnit.Specifications.NUnit3.coreCLR.dll": {}
+        }
+      },
+      "Microsoft.NETCore.Platforms/1.0.1": {},
+      "Microsoft.NETCore.Targets/1.0.1": {},
+      "NUnit/3.4.1": {
+        "runtime": {
+          "lib/dotnet/nunit.framework.dll": {}
+        }
+      },
+      "System.Collections/4.0.11": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.Runtime": "4.1.0"
+        }
+      },
+      "System.Console/4.0.0": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.IO": "4.1.0",
+          "System.Runtime": "4.1.0",
+          "System.Text.Encoding": "4.0.11"
+        }
+      },
+      "System.Diagnostics.Debug/4.0.11": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.Runtime": "4.1.0"
+        }
+      },
+      "System.Globalization/4.0.11": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.Runtime": "4.1.0"
+        }
+      },
+      "System.IO/4.1.0": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.Runtime": "4.1.0",
+          "System.Text.Encoding": "4.0.11",
+          "System.Threading.Tasks": "4.0.11"
+        }
+      },
+      "System.Linq/4.1.0": {
+        "dependencies": {
+          "System.Collections": "4.0.11",
+          "System.Diagnostics.Debug": "4.0.11",
+          "System.Resources.ResourceManager": "4.0.1",
+          "System.Runtime": "4.1.0",
+          "System.Runtime.Extensions": "4.1.0"
+        },
+        "runtime": {
+          "lib/netstandard1.6/System.Linq.dll": {}
+        }
+      },
+      "System.Reflection/4.1.0": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.IO": "4.1.0",
+          "System.Reflection.Primitives": "4.0.1",
+          "System.Runtime": "4.1.0"
+        }
+      },
+      "System.Reflection.Primitives/4.0.1": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.Runtime": "4.1.0"
+        }
+      },
+      "System.Reflection.TypeExtensions/4.1.0": {
+        "dependencies": {
+          "System.Reflection": "4.1.0",
+          "System.Runtime": "4.1.0"
+        },
+        "runtime": {
+          "lib/netstandard1.5/System.Reflection.TypeExtensions.dll": {}
+        }
+      },
+      "System.Resources.ResourceManager/4.0.1": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.Globalization": "4.0.11",
+          "System.Reflection": "4.1.0",
+          "System.Runtime": "4.1.0"
+        }
+      },
+      "System.Runtime/4.1.0": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1"
+        }
+      },
+      "System.Runtime.Extensions/4.1.0": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.Runtime": "4.1.0"
+        }
+      },
+      "System.Text.Encoding/4.0.11": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.Runtime": "4.1.0"
+        }
+      },
+      "System.Threading.Tasks/4.0.11": {
+        "dependencies": {
+          "Microsoft.NETCore.Platforms": "1.0.1",
+          "Microsoft.NETCore.Targets": "1.0.1",
+          "System.Runtime": "4.1.0"
+        }
+      }
+    }
+  },
+  "libraries": {
+    "NUnit.Specifications.NUnit3.coreCLR/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Microsoft.NETCore.Platforms/1.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-TvF05cdC2TgEmeMAXn7CokIvOEwfl+GN8wSKlCMj8V6DbBFpo7sYl3CS7JC6ESVI7A1OQctMiSujDtYFTT4/nA=="
+    },
+    "Microsoft.NETCore.Targets/1.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-3E2PfCXlSq0PNPcAOnROYUc7FlWMv/sgcsXJQ1GJmlxsPGXcoLKp5QptB+3MGdVrtOBNphAiPrEpjzJddV0Uiw=="
+    },
+    "NUnit/3.4.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-G/9h/ENn8+GvT5DvBqVNrUhIWuxtAr0/oVGN2ljKVUw50EAZYBzeWSy9s6nqMswaQACpQzljql1sWQ/peE2eJg=="
+    },
+    "System.Collections/4.0.11": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-MWb7aKYFP0dQH022KxO5mS8iE1sfoDxb8aKgxoNnpF5vNp/XWZYhmwkrpI4/s1tcE6LoEhQxHURDxKzXm+fhpA=="
+    },
+    "System.Console/4.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-y0/jGVV5ILne0u+NbgMOBW1lMJ0synnq8A3EM4oR56GbIH9WPXMZtFuZwvvps8h/AymUypKEmeHWjbAN44GmKw=="
+    },
+    "System.Diagnostics.Debug/4.0.11": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-TqYGc4Hfk4YbwJAObiMn2LuFZWBLTXH2vZBC1Uh2ikBbAjAmJGsm2KrtpZUgYDxvcP+ve8Kpqo6/LvO0Jr+GrQ=="
+    },
+    "System.Globalization/4.0.11": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-g078DkLVeAIJ66omWsq/eh8rtyODie+Z4DS0tBpQiQnxrcL2vENeQD5Pi+qacO7Oymkf+aqTwHioU7E3A35fcw=="
+    },
+    "System.IO/4.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-IQvVLSomdauVtL5cb4kREBVkn0e94RVh/FNfaKyW3+5OcqQRr3Z2Gm8gWj7TaHg5tJ0PT+2f5Z3tRp9oCGfe7w=="
+    },
+    "System.Linq/4.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-lJlQX2Mu5//edHeqyuQ3eTEtrkFre3mFPPjzs/McqdCkVQw6tYTxXVlXQMG+Z4ftj7ZhuPeAoRsU5qxWucOMAw=="
+    },
+    "System.Reflection/4.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-6B0911RUNWaKUuiV4AL9cXrB25ZBEGjYYrOAjouB0BUgRESuVmKyUg2a9cJ5vW4Uj1Dvrjw9fblFgaDTF+OFRg=="
+    },
+    "System.Reflection.Primitives/4.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-NBUNitil7KUnz782FT0CX4OFbdZdq1qj0fFLmiVeF6cIgDqPKWO7cLQLShxqJecFuOfjohZ8cBlGdr3EIKazBw=="
+    },
+    "System.Reflection.TypeExtensions/4.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-AAUMK218Qh1dnpOIPqnwgsgW6LGf/1c2PHmXMOqesO8sXkVBcM6lhYjA7n+W3otMNNG14BAFyOXnTbZhOTneKw=="
+    },
+    "System.Resources.ResourceManager/4.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-6PZ/Gwi/K2QsADMJGgowcDF1Gbr6kymW0hWZCStqO6cTZj/WGt3H9wQz1LNKRVr6f5udkLEhOV+EqAKT4JxzvQ=="
+    },
+    "System.Runtime/4.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-WFY4A+Lpv6qKX2FkyWDNaIHuQa0KH/PZr3MtDq3TG0TdWpj3tMfHMcMpgp6ulF4JN37d+/yNlA4TIhLEfrdyew=="
+    },
+    "System.Runtime.Extensions/4.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-gQV421UdnsU31WLY+/6u7o3NmNYmMCHH2jeWltwIZQ513OOjSJB5zoagibvdaFahratg1g9UUNkSjQyR30zgug=="
+    },
+    "System.Text.Encoding/4.0.11": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-YY05+gjetKj9OAUGbeGMw+9ag4+3yakYju3Xib7MxrKQccJagiA/yejeechEctbWvMyUuz1V76r127kQLjE3XQ=="
+    },
+    "System.Threading.Tasks/4.0.11": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-F4itIIEi3SWUie8kpoPuYJ3ctIT0v9UDRJ/XbhBfUBohtLFd4h/6Y3Dol2UAbp7icVSu8qjO1aC0Bwx6DJIL+g=="
+    }
+  }
+}

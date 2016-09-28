@@ -37,18 +37,19 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Machine.Specifications;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
 using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
+using NUnit.Specifications;
+using nUnitShouldAdapter;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewModelRetrieverTests
 {
     [Subject(typeof (MessageListViewModelRetriever))]
     public class MessageListViewModelRetrieverGetTests
     {
-        public class When_retrieving_messages_for_a_store
+        public class When_retrieving_messages_for_a_store : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -104,7 +105,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             private static Message _message1;
         }
 
-        public class When_retrieving_messages_for_non_existent_store
+        public class When_retrieving_messages_for_non_existent_store : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -127,7 +128,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
         }
 
-        public class When_retrieving_messages_for_existent_store_that_is_not_viewer
+        public class When_retrieving_messages_for_existent_store_that_is_not_viewer : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -151,7 +152,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
        }
 
-        public class When_retrieving_messages_with_store_that_cannot_get
+        public class When_retrieving_messages_with_store_that_cannot_get : NUnit.Specifications.ContextSpecification
         {
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
 

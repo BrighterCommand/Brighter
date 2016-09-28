@@ -38,18 +38,19 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Machine.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
 using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
 using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
+using NUnit.Specifications;
+using nUnitShouldAdapter;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 {
     [Subject(typeof (RepostCommandHandler))]
     public class RepostCommandHandlerTests
     {
-        public class When_reposting_messages
+        public class When_reposting_messages : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -77,7 +78,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private static FakeMessageProducer _fakeMessageProducer;
         }
 
-        public class When_reposting_messages_one_fails
+        public class When_reposting_messages_one_fails : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -110,7 +111,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private static Message _messageToRepostMissing;
         }
 
-        public class When_reposting_messages_and_store_not_found
+        public class When_reposting_messages_and_store_not_found : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -136,7 +137,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private static Exception _ex;
         }
 
-        public class When_reposting_message_messages_not_found
+        public class When_reposting_message_messages_not_found : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -164,7 +165,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private static Exception _ex;
         }
 
-        public class When_reposting_message_broker_not_found
+        public class When_reposting_message_broker_not_found : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -191,7 +192,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
             private static Message _messageToRepost;
             private static Exception _ex;
         }
-        public class When_reposting_message_broker_cannot_be_created
+        public class When_reposting_message_broker_cannot_be_created : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {

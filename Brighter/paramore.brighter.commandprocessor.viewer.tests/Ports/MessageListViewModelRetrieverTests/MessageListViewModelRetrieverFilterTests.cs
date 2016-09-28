@@ -36,18 +36,19 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Machine.Specifications;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
 using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
+using NUnit.Specifications;
+using nUnitShouldAdapter;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewModelRetrieverTests
 {
     [Subject(typeof (MessageListViewModelRetriever))]
-    public class MessageListViewModelRetrieverFilterTests
+    public class MessageListViewModelRetrieverFilterTests 
     {
-        public class When_searching_messages_for_matching_rows_topic
+        public class When_searching_messages_for_matching_rows_topic : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -76,7 +77,8 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
             private static List<Message> _messages;
         }
-        public class When_searching_messages_for_matching_row_topic
+
+        public class When_searching_messages_for_matching_row_topic : ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -105,7 +107,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
             private static List<Message> _messages;
         }
-        public class When_searching_messages_for_matching_row_body
+        public class When_searching_messages_for_matching_row_body : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -134,7 +136,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
             private static List<Message> _messages;
         }
-        public class When_searching_messages_for_non_matching_rows
+        public class When_searching_messages_for_non_matching_rows : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -163,7 +165,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
             private static List<Message> _messages;
         }
-        public class When_filtering_messages_for_non_existent_store
+        public class When_filtering_messages_for_non_existent_store : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -186,7 +188,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
         }
 
-        public class When_filtering_messages_for_existent_store_that_is_not_viewer
+        public class When_filtering_messages_for_existent_store_that_is_not_viewer : NUnit.Specifications.ContextSpecification
         {
             private Establish _context = () =>
             {
@@ -210,7 +212,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
         }
 
-        public class When_fitlering_messages_with_store_that_cannot_get
+        public class When_fitlering_messages_with_store_that_cannot_get : NUnit.Specifications.ContextSpecification
         {
             private static ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
 

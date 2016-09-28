@@ -45,17 +45,17 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resource
         public MessageStoreActivationStateModel(){}
         public MessageStoreActivationStateModel(MessageStoreConfig store) : this()
         {
-            StoreType = store.GetType().Name;
-            TypeName = store.TypeName;
-            Name = store.Name;
-            ConnectionString = store.ConnectionString;
-            TableName = store.TableName;
+            storeType = store.GetType().Name;
+            typeName = store.TypeName;
+            name = store.Name;
+            connectionString = store.ConnectionString;
+            tableName = store.TableName;
         }
         
-        public string ConnectionString { get; set; }
-        public string Name { get; private set; }
-        public string TypeName { get; private set; }
-        public string StoreType { get; private set; }
-        public string TableName { get; set; }
+        public string connectionString { get; set; }
+        public string name { get; private set; }
+        public string typeName { get; private set; }
+        public string storeType { get; private set; }
+        public string tableName { get; set; }
     }
 }

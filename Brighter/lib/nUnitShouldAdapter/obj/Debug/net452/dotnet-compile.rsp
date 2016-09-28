@@ -1,0 +1,20 @@
+--temp-output:D:\dev\GitHub\paramore\Brighter\lib\nUnitShouldAdapter\obj\Debug\net452\
+--out:D:\dev\GitHub\paramore\Brighter\lib\nUnitShouldAdapter\bin\Debug\net452\nUnitShouldAdapter.dll
+--define:DEBUG
+--define:TRACE
+--define:NET452
+--suppress-warning:CS1701
+--suppress-warning:CS1702
+--suppress-warning:CS1705
+--optimize:False
+--output-name:nUnitShouldAdapter
+--file-version:1.0.0.0
+--version:1.0.0.0
+--informational-version:1.0.0
+--target-framework:.NETFramework,Version=v4.5.2
+--reference:C:\Users\ian.pender\.nuget\packages\NUnit\3.4.1\lib\net45\nunit.framework.dll
+--reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\mscorlib.dll
+--reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.dll
+--reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.Core.dll
+--reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\Microsoft.CSharp.dll
+D:\dev\GitHub\paramore\Brighter\lib\nUnitShouldAdapter\ShouldExtensions.cs

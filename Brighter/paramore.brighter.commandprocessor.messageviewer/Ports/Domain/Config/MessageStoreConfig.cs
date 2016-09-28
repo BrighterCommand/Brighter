@@ -71,7 +71,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config
             StoreType = MessageStoreTypeMapper.Map(TypeName, ConnectionString);
         }
 
-        public MessageStoreType StoreType { get; private set; }
+        public MessageStoreType StoreType { get; set; }
         public string Name { get; set; }
         public string TypeName { get; set; }
         public string ConnectionString { get; set; }

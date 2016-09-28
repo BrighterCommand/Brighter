@@ -36,7 +36,6 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using System.Linq;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
 
@@ -47,9 +46,9 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resource
         public MessageStoreActivationStateListModel(){}
         public MessageStoreActivationStateListModel(IEnumerable<MessageStoreConfig> stores) : this()
         {
-            Stores = stores.Select(s => new MessageStoreActivationStateModel(s));
+            this.stores = stores.Select(s => new MessageStoreActivationStateModel(s));
         }
 
-        public IEnumerable<MessageStoreActivationStateModel> Stores { get; private set; }
+        public IEnumerable<MessageStoreActivationStateModel> stores { get; set; }
     }
 }

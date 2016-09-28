@@ -1,0 +1,31 @@
+--temp-output:D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\obj\Debug\net452\
+--out:D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\bin\Debug\net452\NUnit.Specifications.NUnit3.coreCLR.dll
+--define:DEBUG
+--define:TRACE
+--define:NET452
+--suppress-warning:CS1701
+--suppress-warning:CS1702
+--suppress-warning:CS1705
+--optimize:False
+--output-name:NUnit.Specifications.NUnit3.coreCLR
+--file-version:1.0.0.0
+--version:1.0.0.0
+--informational-version:1.0.0
+--target-framework:.NETFramework,Version=v4.5.2
+--reference:C:\Users\ian.pender\.nuget\packages\NUnit\3.4.1\lib\net45\nunit.framework.dll
+--reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\Facades\System.Diagnostics.Debug.dll
+--reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\mscorlib.dll
+--reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.dll
+--reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.Core.dll
+--reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\Microsoft.CSharp.dll
+D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\Action.cs
+D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\Catch.cs
+D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\ContextSpecification.cs
+D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\ObservationTestCaseData.cs
+D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\SpecificationSourceAttribute.cs
+D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\Categories\AcceptanceAttribute.cs
+D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\Categories\ComponentAttribute.cs
+D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\Categories\IntegrationAttribute.cs
+D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\Categories\SubcutaneousAttribute.cs
+D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\Categories\SubjectAttribute.cs
+D:\dev\GitHub\paramore\Brighter\lib\NUnit.Specifications.NUnit3.coreCLR\Categories\UnitAttribute.cs

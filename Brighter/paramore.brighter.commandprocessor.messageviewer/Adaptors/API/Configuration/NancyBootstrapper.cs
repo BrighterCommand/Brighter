@@ -40,6 +40,7 @@ using Nancy;
 using Nancy.Bootstrapper;
 using Nancy.Configuration;
 using Nancy.Conventions;
+using Nancy.Diagnostics;
 using Nancy.TinyIoc;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration
@@ -64,12 +65,8 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
         public override void Configure(INancyEnvironment environment)
         {
             environment.Tracing(enabled: true, displayErrorTraces: true);
+            environment.Diagnostics("password");            
         }
-
-        //protected override DiagnosticsConfiguration DiagnosticsConfiguration
-        //{
-        //    get { return new DiagnosticsConfiguration{Password = "password"}; }
-        //}
 
         protected override void ConfigureConventions(NancyConventions nancyConventions)
         {

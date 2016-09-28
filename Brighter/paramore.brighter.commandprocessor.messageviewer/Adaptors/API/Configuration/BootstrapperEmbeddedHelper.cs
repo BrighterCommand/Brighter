@@ -15,9 +15,10 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
         public static void RegisterStaticEmbedded(NancyConventions nancyConventions)
         {
             //Need to register static content for embedded. Views work out of the box
-            var assembly = typeof(HandlerFactory).GetTypeInfo().Assembly;
             var staticContentsConventions = nancyConventions.StaticContentsConventions;
             staticContentsConventions.Clear();
+
+            var assembly = GetAssembly();
             foreach (var asset in _assetLocations)
             {
                 staticContentsConventions.Add(EmbeddedStaticContentConventionBuilder.AddDirectory(asset, assembly));
