@@ -24,15 +24,14 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using paramore.brighter.commandprocessor;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-using Polly;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using Polly;
 
-namespace paramore.commandprocessor.tests.nunit.CommandProcessors
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(CommandProcessor))]
     public class When_Posting_A_Message_And_There_Is_No_Message_Store_Async : NUnit.Specifications.ContextSpecification

@@ -24,15 +24,14 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using paramore.brighter.commandprocessor;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-using TinyIoC;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using TinyIoC;
 
-namespace paramore.commandprocessor.tests.nunit.CommandProcessors
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(CommandProcessor))]
     public class When_There_Are_No_Command_Handlers_Async : NUnit.Specifications.ContextSpecification

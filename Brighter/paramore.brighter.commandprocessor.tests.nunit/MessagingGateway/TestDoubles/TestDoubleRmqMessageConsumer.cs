@@ -29,7 +29,7 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayCo
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
-namespace paramore.brighter.commandprocessor.tests.MessagingGateway.TestDoubles
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.TestDoubles
 {
     /*
      * Use to force a failure mirroring a RabbitMQ connection failure for testing flow of failure

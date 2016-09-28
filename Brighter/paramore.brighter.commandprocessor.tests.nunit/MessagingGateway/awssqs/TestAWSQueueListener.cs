@@ -3,9 +3,8 @@ using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
-using Amazon.SQS.Model;
 
-namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     public class TestAWSQueueListener
     {
@@ -20,7 +19,7 @@ namespace paramore.commandprocessor.tests.MessagingGateway.awssqs
             _client = new AmazonSQSClient(credentials);
         }
 
-        public Message Listen()
+        public Amazon.SQS.Model.Message Listen()
         {
             var response = _client.ReceiveMessageAsync(_queueUrl).Result;
             if (!response.Messages.Any()) return null;

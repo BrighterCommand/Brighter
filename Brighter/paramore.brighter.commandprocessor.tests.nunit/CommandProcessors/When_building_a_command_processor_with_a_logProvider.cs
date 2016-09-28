@@ -22,13 +22,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Specifications;
 using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor;
+using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.nunit.CommandProcessors
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(CommandProcessorBuilder))]
     public class When_Building_A_Command_Processor_With_A_LogProvider : NUnit.Specifications.ContextSpecification

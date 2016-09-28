@@ -23,24 +23,22 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 using FakeItEasy;
-using Machine.Specifications;
+using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
-using paramore.brighter.commandprocessor;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Events;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.commandprocessor.tests.Monitoring.TestDoubles;
+using paramore.brighter.commandprocessor.tests.nunit.Monitoring.TestDoubles;
 using TinyIoC;
-using nUnitShouldAdapter;
 
-namespace paramore.commandprocessor.tests.Monitoring
+namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 {
     [Subject(typeof(MonitorHandler<>))]
-    public class When_Monitoring_We_Should_Record_But_Rethrow_Exceptions_Async
+    public class When_Monitoring_We_Should_Record_But_Rethrow_Exceptions_Async: NUnit.Specifications.ContextSpecification
     {
         private static MyCommand s_command;
         private static Exception s_thrownException;

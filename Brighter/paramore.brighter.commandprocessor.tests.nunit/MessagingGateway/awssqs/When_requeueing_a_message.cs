@@ -1,17 +1,17 @@
 ﻿using System;
 using Amazon.Runtime;
-using Machine.Specifications;
+using nUnitShouldAdapter;
+using NUnit.Framework;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.commandprocessor.tests.MessagingGateway.awssqs;
-using nUnitShouldAdapter;
 
-namespace paramore.brighter.commandprocessor.tests.MessagingGateway.awssqs
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     [Subject("Messaging Gateway")]
-    [Tags("Requires", new[] { "AWSSDK", "AWSCredentials" })]
-    public class When_requeueing_a_message
+    [Category("Requires AWSSDK AWSCredentials")]
+    public class When_requeueing_a_message : ContextSpecification
     {
         private static TestAWSQueueListener testQueueListener;
         private static IAmAMessageProducer sender;

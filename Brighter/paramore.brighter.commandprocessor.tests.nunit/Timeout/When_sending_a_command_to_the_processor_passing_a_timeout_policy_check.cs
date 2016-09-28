@@ -24,15 +24,13 @@ THE SOFTWARE. */
 
 using FakeItEasy;
 using Machine.Specifications;
-using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.commandprocessor.tests.Timeout.TestDoubles;
-
+using paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles;
 using TinyIoC;
 
-namespace paramore.commandprocessor.tests.Timeout
+namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
 {
     [Subject(typeof(TimeoutPolicyHandler<>))]
     public class When_Sending_A_Command_To_The_Processor_Passing_A_Timeout_Policy_Check : NUnit.Specifications.ContextSpecification

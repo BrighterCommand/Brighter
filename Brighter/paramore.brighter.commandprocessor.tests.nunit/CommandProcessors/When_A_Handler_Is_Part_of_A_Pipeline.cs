@@ -26,10 +26,10 @@ using System.Linq;
 using FakeItEasy;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
-using TinyIoC;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {

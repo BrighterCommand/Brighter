@@ -23,14 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using FakeItEasy;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
-using TinyIoC;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using TinyIoC;
 
-namespace paramore.commandprocessor.tests.nunit.CommandProcessors
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     public class When_There_Are_No_Failures_Execute_All_The_Steps_In_The_Pipeline : NUnit.Specifications.ContextSpecification
     {

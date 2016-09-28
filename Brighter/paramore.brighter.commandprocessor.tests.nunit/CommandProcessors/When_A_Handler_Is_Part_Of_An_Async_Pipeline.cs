@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using System.Linq;
 using FakeItEasy;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
-using TinyIoC;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Specifications;
+using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using TinyIoC;
 
-namespace paramore.commandprocessor.tests.nunit.CommandProcessors2
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(PipelineBuilder<>))]
     public class When_A_Handler_Is_Part_Of_An_Async_Pipeline : NUnit.Specifications.ContextSpecification

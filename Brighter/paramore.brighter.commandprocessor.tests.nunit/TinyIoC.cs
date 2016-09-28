@@ -93,7 +93,7 @@ using System.Runtime.Serialization;
 
 namespace TinyIoC
 {
-    using paramore.brighter.commandprocessor.tests;
+    using paramore.brighter.commandprocessor.tests.nunit;
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;

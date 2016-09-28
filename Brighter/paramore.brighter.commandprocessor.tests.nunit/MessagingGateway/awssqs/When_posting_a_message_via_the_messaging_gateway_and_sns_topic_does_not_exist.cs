@@ -1,18 +1,18 @@
 ﻿using System;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService.Model;
-using Machine.Specifications;
+using nUnitShouldAdapter;
+using NUnit.Framework;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.commandprocessor.tests.MessagingGateway.awssqs;
-using nUnitShouldAdapter;
 
-namespace paramore.brighter.commandprocessor.tests.MessagingGateway.awssqs
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     [Subject("Messaging Gateway")]
-    [Tags("Requires", new[] { "AWSSDK", "AWSCredentials" })]
-    public class When_posting_a_message_via_the_messaging_gateway_and_sns_topic_does_not_exist
+    [Category("Requires AWSSDK AWSCredentials")]
+    public class When_posting_a_message_via_the_messaging_gateway_and_sns_topic_does_not_exist : ContextSpecification
     {
         private static Message _message;
         private static SqsMessageProducer _messageProducer;

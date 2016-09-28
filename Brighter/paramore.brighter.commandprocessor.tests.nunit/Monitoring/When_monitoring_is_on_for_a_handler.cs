@@ -23,23 +23,21 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
 using FakeItEasy;
 using Machine.Specifications;
+using nUnitShouldAdapter;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Events;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.commandprocessor.tests.Monitoring.TestDoubles;
+using paramore.brighter.commandprocessor.tests.nunit.Monitoring.TestDoubles;
 using TinyIoC;
-using nUnitShouldAdapter;
 
-namespace paramore.commandprocessor.tests.Monitoring
+namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 {
     [Subject(typeof(MonitorHandler<>))]
-    public class When_Monitoring_Is_On_For_A_Handler
+    public class When_Monitoring_Is_On_For_A_Handler : NUnit.Specifications.ContextSpecification
     {
         private static MyCommand s_command;
         private static IAmACommandProcessor s_commandProcessor;

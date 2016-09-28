@@ -25,15 +25,13 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using FakeItEasy;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using Newtonsoft.Json;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor;
-using Polly;
+using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.nunit.CommandProcessors
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof (CommandProcessorBuilder))]
     public class When_Building_With_A_Default_Policy_Sufficient_To_Post : NUnit.Specifications.ContextSpecification

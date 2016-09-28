@@ -24,21 +24,20 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using Machine.Specifications;
+using nUnitShouldAdapter;
 using Newtonsoft.Json;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Events;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
-using paramore.brighter.commandprocessor.tests.Monitoring.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.commandprocessor.tests.Monitoring.TestDoubles;
+using paramore.brighter.commandprocessor.tests.nunit.Monitoring.TestDoubles;
 using TinyIoC;
-using nUnitShouldAdapter;
 
-namespace paramore.brighter.commandprocessor.tests.Monitoring
+namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 {
     [Subject(typeof(MonitorHandler<>))]
-    public class When_Monitoring_We_Should_Record_But_Rethrow_Exceptions 
+    public class When_Monitoring_We_Should_Record_But_Rethrow_Exceptions : NUnit.Specifications.ContextSpecification
     {
         private static MyCommand s_command;
         private static Exception s_thrownException;

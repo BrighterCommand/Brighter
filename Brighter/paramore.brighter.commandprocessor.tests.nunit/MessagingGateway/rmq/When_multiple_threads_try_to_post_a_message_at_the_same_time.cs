@@ -26,18 +26,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Machine.Specifications;
-using paramore.brighter.commandprocessor;
+using NUnit.Framework;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
-using nUnitShouldAdapter;
 
-namespace paramore.commandprocessor.tests.MessagingGateway.rmq
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 {
     [Subject("Messaging Gateway")]
-    [Tags("Requires", new[] { "RabbitMQ", "RabbitMQProducerReceiver" })]
-    public class When_multiple_threads_try_to_post_a_message_at_the_same_time
+    [Category("Requires RabbitMQ RabbitMQProducerReceiver")]
+    public class When_multiple_threads_try_to_post_a_message_at_the_same_time : ContextSpecification
     {
         private static IAmAMessageProducer s_messageProducer;
         private static Message s_message;

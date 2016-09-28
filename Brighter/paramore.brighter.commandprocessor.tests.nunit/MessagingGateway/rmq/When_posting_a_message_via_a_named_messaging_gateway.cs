@@ -24,18 +24,18 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Machine.Specifications;
-using paramore.brighter.commandprocessor;
+using nUnitShouldAdapter;
+using NUnit.Framework;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
-using nUnitShouldAdapter;
 
-namespace paramore.commandprocessor.tests.MessagingGateway.rmq
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 {
     [Subject("Messaging Gateway")]
-    [Tags("Requires", new[] { "RabbitMQ", "RabbitMQProducerReceiver" })]
-    public class When_posting_a_message_via_a_named_messaging_gateway
+    [Category("Requires RabbitMQ RabbitMQProducerReceiver")]
+    public class When_posting_a_message_via_a_named_messaging_gateway : ContextSpecification
     {
         private static IAmAMessageProducer s_messageProducer;
         private static IAmAMessageConsumer s_messageConsumer;

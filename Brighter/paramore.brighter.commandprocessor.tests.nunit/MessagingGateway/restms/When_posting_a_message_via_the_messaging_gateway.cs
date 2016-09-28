@@ -23,18 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Machine.Specifications;
-using paramore.brighter.commandprocessor;
+using nUnitShouldAdapter;
+using NUnit.Framework;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms;
 using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using nUnitShouldAdapter;
 
-namespace paramore.commandprocessor.tests.MessagingGateway.restms
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
 {
-    [Tags("Requires", new[] { "RestMS" })]
-    public class When_posting_a_message_via_the_messaging_gateway
+    [Subject("Messaging Gateway")]
+    [Category("Requires RestMS")]
+    public class When_posting_a_message_via_the_messaging_gateway : ContextSpecification
     {
         private const string TOPIC = "test";
         private static IAmAMessageProducer s_messageProducer;

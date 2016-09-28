@@ -1,4 +1,4 @@
-﻿namespace paramore.brighter.commandprocessor.tests
+﻿namespace paramore.brighter.commandprocessor.tests.nunit
 {
     /// <summary>
     /// A cache for empty arrays.

@@ -24,13 +24,12 @@ THE SOFTWARE. */
 
 using System.Linq;
 using FakeItEasy;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.nunit.CommandProcessors
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(PipelineBuilder<>))]
     public class When_Building_A_Handler_For_A_Command : NUnit.Specifications.ContextSpecification

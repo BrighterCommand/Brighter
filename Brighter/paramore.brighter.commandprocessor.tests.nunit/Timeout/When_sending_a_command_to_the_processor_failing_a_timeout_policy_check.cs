@@ -26,14 +26,14 @@ using System;
 using System.Linq;
 using FakeItEasy;
 using Machine.Specifications;
-using paramore.brighter.commandprocessor;
+using nUnitShouldAdapter;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles;
 using TinyIoC;
-using nUnitShouldAdapter;
 
-namespace paramore.commandprocessor.tests.Timeout
+namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
 {
     [Subject(typeof(TimeoutPolicyHandler<>))]
     [Tags("Requires", new[] { "Fails on AppVeyor" })]

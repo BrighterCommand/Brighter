@@ -23,13 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using FakeItEasy;
-using Machine.Specifications;
-using paramore.brighter.commandprocessor;
+using NUnit.Specifications;
 
-namespace paramore.commandprocessor.tests.MessagingGateway
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
 {
     [Subject(typeof(Channel))]
-    public class When_Disposing_Input_Channel
+    public class When_Disposing_Input_Channel : ContextSpecification
     {
         private static IAmAChannel s_channel;
         private static IAmAMessageConsumer s_messageConsumer;

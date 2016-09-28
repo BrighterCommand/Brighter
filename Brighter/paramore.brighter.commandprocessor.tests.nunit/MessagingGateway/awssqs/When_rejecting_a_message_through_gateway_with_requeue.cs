@@ -1,18 +1,18 @@
 ﻿using System;
 using Amazon.Runtime;
-using Machine.Specifications;
+using nUnitShouldAdapter;
+using NUnit.Framework;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.commandprocessor.tests.MessagingGateway.awssqs;
-using nUnitShouldAdapter;
 
-namespace paramore.brighter.commandprocessor.tests.MessagingGateway.awssqs
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     public partial class AWSSQSMessagingGatewayTests {
         [Subject("Messaging Gateway")]
-        [Tags("Requires", new[] { "AWSSDK", "AWSCredentials" })]
-        public class when_rejecting_a_message_through_gateway_with_requeue
+        [Category("Requires AWSSDK AWSCredentials")]
+        public class when_rejecting_a_message_through_gateway_with_requeue : ContextSpecification
         {
             private static string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
             private static TestAWSQueueListener testQueueListener;

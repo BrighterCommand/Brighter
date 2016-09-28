@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using paramore.brighter.commandprocessor;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
-namespace paramore.commandprocessor.tests.nunit.CommandProcessors
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(CommandProcessor))]
     public class When_There_Is_No_Handler_Factory_On_A_Send_Async : NUnit.Specifications.ContextSpecification

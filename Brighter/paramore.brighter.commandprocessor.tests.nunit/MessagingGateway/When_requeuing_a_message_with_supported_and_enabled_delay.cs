@@ -23,16 +23,15 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
-using Machine.Specifications;
-using paramore.brighter.commandprocessor;
 using System.Diagnostics;
+using FakeItEasy;
 using nUnitShouldAdapter;
+using NUnit.Specifications;
 
-namespace paramore.commandprocessor.tests.MessagingGateway
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
 {
     [Subject(typeof(Channel))]
-    public class When_Requeuing_A_Message_With_Supported_And_Enabled_Delay
+    public class When_Requeuing_A_Message_With_Supported_And_Enabled_Delay : ContextSpecification
     {
         private static IAmAChannel s_channel;
         private static IAmAMessageConsumerSupportingDelay s_gateway;

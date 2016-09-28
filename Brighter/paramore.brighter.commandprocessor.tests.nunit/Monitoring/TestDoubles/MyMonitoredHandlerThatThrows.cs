@@ -26,9 +26,8 @@ using System;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Attributes;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.commandprocessor.tests.Monitoring.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.Monitoring.TestDoubles
+namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring.TestDoubles
 {
     internal class MyMonitoredHandlerThatThrows : RequestHandler<MyCommand>
     {

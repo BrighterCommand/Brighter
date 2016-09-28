@@ -23,18 +23,17 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Machine.Specifications;
+using nUnitShouldAdapter;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.monitoring.Events;
 using paramore.brighter.commandprocessor.monitoring.Mappers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using nUnitShouldAdapter;
 
-namespace paramore.commandprocessor.tests.Monitoring
+namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 {
     [Subject(typeof(MonitorEventMessageMapper))]
-    public class When_Serializing_A_Monitoring_Event
+    public class When_Serializing_A_Monitoring_Event : NUnit.Specifications.ContextSpecification
     {
         private const string InstanceName = "Paramore.Tests";
         private const string HandlerFullAssemblyName = "Paramore.Dummy.Handler, with some Assembly information";

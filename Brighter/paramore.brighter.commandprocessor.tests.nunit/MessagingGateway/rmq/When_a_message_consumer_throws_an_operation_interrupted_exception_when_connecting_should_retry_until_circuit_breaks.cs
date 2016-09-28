@@ -23,19 +23,20 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Machine.Specifications;
+using nUnitShouldAdapter;
+using NUnit.Framework;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
-using paramore.brighter.commandprocessor.tests.MessagingGateway.TestDoubles;
+using paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.TestDoubles;
 using RabbitMQ.Client.Exceptions;
-using nUnitShouldAdapter;
 
-namespace paramore.brighter.commandprocessor.tests.MessagingGateway.rmq
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 {
     [Subject("Messaging Gateway")]
-    [Tags("Requires", new[] { "RabbitMQ" })]
-    public class When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting_should_retry_until_circuit_breaks
+    [Category("Requires RabbitMQ")]
+    public class When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting_should_retry_until_circuit_breaks : ContextSpecification
     {
         private static IAmAMessageProducer s_sender;
         private static IAmAMessageConsumer s_receiver;

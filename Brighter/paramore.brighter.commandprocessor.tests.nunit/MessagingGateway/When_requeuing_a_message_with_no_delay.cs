@@ -24,13 +24,12 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using Machine.Specifications;
-using paramore.brighter.commandprocessor;
+using NUnit.Specifications;
 
-namespace paramore.commandprocessor.tests.MessagingGateway
+namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
 {
     [Subject(typeof(Channel))]
-    public class When_Requeuing_A_Message_With_No_Delay
+    public class When_Requeuing_A_Message_With_No_Delay : ContextSpecification
     {
         private static IAmAChannel s_channel;
         private static IAmAMessageConsumer s_gateway;

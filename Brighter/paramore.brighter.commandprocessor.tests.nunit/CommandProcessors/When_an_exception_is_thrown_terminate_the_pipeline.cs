@@ -1,13 +1,12 @@
 using System;
 using FakeItEasy;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
-namespace paramore.commandprocessor.tests.nunit.CommandProcessors
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     public class When_An_Exception_Is_Thrown_Terminate_The_Pipeline : NUnit.Specifications.ContextSpecification
     {

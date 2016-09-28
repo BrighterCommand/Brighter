@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using System.Linq;
 using FakeItEasy;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
-namespace paramore.commandprocessor.tests.nunit.CommandProcessors
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(PipelineBuilder<>))]
     public class When_Building_An_Async_Pipeline_Preserve_The_Order : NUnit.Specifications.ContextSpecification
