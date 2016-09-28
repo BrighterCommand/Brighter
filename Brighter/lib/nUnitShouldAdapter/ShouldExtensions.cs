@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using NUnit.Framework;
 
 namespace nUnitShouldAdapter
@@ -11,7 +13,6 @@ namespace nUnitShouldAdapter
         {
             Assert.Null(objectToCheck);
         }
-
         public static void ShouldNotBeNull<T>(this T objectToCheck) where T : class
         {
             Assert.NotNull(objectToCheck);
@@ -21,7 +22,6 @@ namespace nUnitShouldAdapter
         {
             Assert.False(condition);
         }
-
         public static void ShouldBeTrue(this bool condition)
         {
             Assert.True(condition);
@@ -68,9 +68,13 @@ namespace nUnitShouldAdapter
             CollectionAssert.DoesNotContain(actualEnumerable, expectedObject);
         }
 
-        public static void ShouldContain<T>(this List<T> actualEnumerable, T expectedObject)
+        public static void ShouldContain<T>(this IEnumerable<T> list, Func<T, bool> condition)
         {
-            CollectionAssert.Contains(actualEnumerable, expectedObject);
+            Assert.True(list.Any(condition));
+        }
+        public static void ShouldContain<T>(this IList<T> list, Func<T, bool> condition)
+        {
+            Assert.True(list.Any(condition));
         }
 
         public static void ShouldBeTheSameAs<T>(this T actual, T expected)
@@ -81,6 +85,16 @@ namespace nUnitShouldAdapter
         {
             Assert.NotNull(exception);
             ShouldContain(exception.Message, message);
+        }
+
+        public static void ShouldMatch<T>(this T actual, Func<T, bool> condition)
+        {
+            Assert.True(condition.Invoke(actual));
+        }
+
+        public static void ShouldBeEmpty<T>(this IEnumerable<T> list)
+        {
+            Assert.False(list.Any());
         }
         public static void ShouldBeGreaterThan(this IComparable actual, IComparable greaterThan)
         {

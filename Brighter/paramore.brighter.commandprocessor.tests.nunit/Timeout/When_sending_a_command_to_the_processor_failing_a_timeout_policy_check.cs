@@ -25,18 +25,18 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using FakeItEasy;
-using Machine.Specifications;
-using nUnitShouldAdapter;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles;
 using TinyIoC;
+using NUnit.Specifications;
+using nUnitShouldAdapter;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
 {
     [Subject(typeof(TimeoutPolicyHandler<>))]
-    [Tags("Requires", new[] { "Fails on AppVeyor" })]
+//    [Tags("Requires", new[] { "Fails on AppVeyor" })]
     public class When_Sending_A_Command_To_The_Processor_Failing_A_Timeout_Policy_Check : NUnit.Specifications.ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;

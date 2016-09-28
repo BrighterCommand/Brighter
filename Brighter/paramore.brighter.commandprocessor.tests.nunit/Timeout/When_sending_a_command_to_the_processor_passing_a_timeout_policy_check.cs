@@ -23,7 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using FakeItEasy;
-using Machine.Specifications;
+using NUnit.Specifications;
+using nUnitShouldAdapter;
+using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;

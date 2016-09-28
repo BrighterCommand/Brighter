@@ -39,8 +39,8 @@
       "target": "project"
     },
     "NUnit": "3.4.1",
-    "Machine.Fakes": "2.8.0-beta3",
     "dotnet-test-nunit": "3.4.0-beta-2",
+    //"Nito.AsyncEx.Context": "1.1.0",
     "Nito.AsyncEx": "3.0.1",
     //"Nito.AsyncEx.Enlightenment": "3.0.1.0", maybe try Nito.AsyncEx.Context
     "FluentAssertions": "4.13.0",

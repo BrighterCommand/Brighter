@@ -58,3 +58,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyVersion("2.0.1.0")]
 [assembly: AssemblyFileVersion("2.0.*")]
 [assembly: InternalsVisibleTo("paramore.brighter.commandprocessor.tests")]
+[assembly: InternalsVisibleTo("paramore.brighter.commandprocessor.tests.nunit")]
