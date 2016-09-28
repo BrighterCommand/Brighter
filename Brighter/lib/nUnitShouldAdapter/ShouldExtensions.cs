@@ -40,6 +40,10 @@ namespace nUnitShouldAdapter
         {
             Assert.IsInstanceOf(tExpectedType, objectToCheck);
         }
+        public static void ShouldBeAssignableTo(this object objectToCheck, Type tExpectedType)
+        {
+            Assert.IsAssignableFrom(tExpectedType, objectToCheck);
+        }
 
         public static void ShouldContain(this string actualString, string expectedSubString)
         {
@@ -58,7 +62,11 @@ namespace nUnitShouldAdapter
         {
             Assert.AreSame(expected, actual);
         }
-
+        public static void ShouldContainErrorMessage(this Exception exception, string message)
+        {
+            Assert.NotNull(exception);
+            ShouldContain(exception.Message, message);
+        }
         public static void ShouldBeGreaterThan(this IComparable actual, IComparable greaterThan)
         {
             Assert.Greater(actual, greaterThan);
