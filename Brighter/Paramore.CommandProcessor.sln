@@ -27,8 +27,6 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "paramore.brighter.serviceac
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "paramore.brighter.commandprocessor.messaginggateway.rmq", "paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.xproj", "{61DE9904-884B-4E8A-A4DF-CD697B5A9CF6}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "paramore.brighter.commandprocessor.tests", "paramore.brighter.commandprocessor.tests\paramore.brighter.commandprocessor.tests.xproj", "{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}"
-EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "paramore.brighter.commandprocessor.commandstore.mssql", "paramore.brighter.commandprocessor.commandstore.mssql\paramore.brighter.commandprocessor.commandstore.mssql.xproj", "{6F7705C6-A4C1-4497-BEE5-BA22A7CB2162}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "paramore.brighter.commandprocessor.messagestore.eventstore", "paramore.brighter.commandprocessor.messagestore.eventstore\paramore.brighter.commandprocessor.messagestore.eventstore.xproj", "{0A254942-F673-4CFC-A2CE-11F7CA62D1D0}"
@@ -157,18 +155,6 @@ Global
 		{61DE9904-884B-4E8A-A4DF-CD697B5A9CF6}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{61DE9904-884B-4E8A-A4DF-CD697B5A9CF6}.Release|x86.ActiveCfg = Release|Any CPU
 		{61DE9904-884B-4E8A-A4DF-CD697B5A9CF6}.Release|x86.Build.0 = Release|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Debug|x86.Build.0 = Debug|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Release|x86.ActiveCfg = Release|Any CPU
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA}.Release|x86.Build.0 = Release|Any CPU
 		{6F7705C6-A4C1-4497-BEE5-BA22A7CB2162}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6F7705C6-A4C1-4497-BEE5-BA22A7CB2162}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6F7705C6-A4C1-4497-BEE5-BA22A7CB2162}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -512,7 +498,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{7397E1D1-140E-4C5E-A60A-2DB34F962601} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{EEDF9610-AAE0-4604-999C-159B39B52532} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
-		{EBAF194E-5792-467F-B4B5-DA83E48BD0EA} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{EF37D89A-8394-42A3-AD96-1E8E1BF904BE} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{12C2C3DF-CFDE-4C79-AFF0-D2123EDD3D49} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{73287A8F-C4EC-46AD-8C6F-2CDFB7ACA789} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
