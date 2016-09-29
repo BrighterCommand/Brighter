@@ -34,7 +34,7 @@
         }
       }
     },
-    "net452": {
+    "net46": {
       "dependencies": {
       }
     }
