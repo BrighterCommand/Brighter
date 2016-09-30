@@ -36,11 +36,11 @@ from kombu import exceptions as kombu_exceptions
 from kombu.message import Message as KombuMessage
 from datetime import datetime
 from core.messaging import Consumer, Message, Producer
-from rmq.rmq_messaging import RmqMessageFactory
+from kombu_brighter.rmq_messaging import KombuMessageFactory
 import logging
 
 
-class RmqConnection:
+class KombuConnection:
     """Contains the details required to connect to a RMQ broker: the amqp uri and the exchange"""
     def __init__(self, amqp_uri: str, exchange: str) -> None:
         self._amqp_uri = amqp_uri
@@ -63,10 +63,10 @@ class RmqConnection:
         self._exchange = value
 
 
-class RmqProducer(Producer):
+class KombuProducer(Producer):
     """Implements sending a message to a RMQ broker. It does not use a queue, just a connection to the broker
     """
-    def __init__(self, connection: RmqConnection, logger:logging.Logger=None) -> None:
+    def __init__(self, connection: KombuConnection, logger:logging.Logger=None) -> None:
         self._amqp_uri = connection.amqp_uri
         self._cnx = BrokerConnection(hostname=connection.amqp_uri)
         self._exchange = connection.exchange
@@ -103,7 +103,7 @@ class RmqProducer(Producer):
                 safe_publish(producer)
 
 
-class RmqConsumer(Consumer):
+class KombuConsumer(Consumer):
     """ Implements reading a message from an RMQ broker. It uses a queue, created by subscribing to a message topic
 
     """
@@ -114,7 +114,7 @@ class RmqConsumer(Consumer):
         'max_retries': 3,
     }
 
-    def __init__(self, connection: RmqConnection, queue_name: str, routing_key: str, prefetch_count: int=1,
+    def __init__(self, connection: KombuConnection, queue_name: str, routing_key: str, prefetch_count: int=1,
                  is_durable: bool=False, logger: logging.Logger=None) -> None:
         self._exchange = connection.exchange
         self._routing_key = routing_key
@@ -123,7 +123,7 @@ class RmqConsumer(Consumer):
         self._routing_key = routing_key
         self._prefetch_count = prefetch_count
         self._is_durable = is_durable
-        self._message_factory = RmqMessageFactory()
+        self._message_factory = KombuMessageFactory()
         self._logger = logger or logging.getLogger(__name__)
         
         # TODO: Need to fix the argument types with default types issue

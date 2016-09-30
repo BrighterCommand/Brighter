@@ -14,7 +14,7 @@ setup(
     url='https://github.com/iancooper/Paramore',
 
     packages=find_packages(),
-    install_requires=['ez_setup', 'kombu', 'poll'],
+    install_requires=['ez_setup', 'kombu_brighter', 'poll'],
     package_data={
         # If any package contains *.txt or *.rst files, include them:
         '': ['*.txt', '*.rst'],

@@ -34,7 +34,7 @@ from core.messaging import Message, MessageHeader, MessageBody
 from uuid import UUID, uuid4
 
 
-class RmqMessageFactory:
+class KombuMessageFactory:
     """
     The message factory turn an 'on-the-wire' message into our internal representation. We try to be as
     tolerant as possible (following Postel's Law: https://en.wikipedia.org/wiki/Robustness_principle) Be conservative
@@ -42,7 +42,12 @@ class RmqMessageFactory:
     """
 
     def CreateMessage(self, message: KombuMessage) -> Message:
+
+        def _getTopic(msg: KombuMessage) -> str:
+            pass
+
         id = uuid4()
+        topic = _getTopic()
         message_header = MessageHeader(identity=id, topic=topic, message_type=message_type,
             correlation_id=corrrelation_id, content_type=type)
         message_body =  MessageBody(body=payload, body_type=payload_type)

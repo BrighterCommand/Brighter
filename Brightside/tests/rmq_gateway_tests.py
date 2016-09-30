@@ -31,16 +31,16 @@ THE SOFTWARE.
 """
 
 import unittest
-from rmq.rmq_gateway import RmqConsumer, RmqConnection, RmqProducer
+from kombu_brighter.kombu_gateway import KombuConsumer, KombuConnection, KombuProducer
 from core.messaging import Message, MessageBody, MessageHeader, MessageType
 from uuid import uuid4
 
 
-class RmqGatewayTests(unittest.TestCase):
+class KombuGatewayTests(unittest.TestCase):
     def setUp(self):
-        self._connection = RmqConnection("amqp://guest:guest@localhost:5672//", "paramore.brighter.exchange")
-        self._producer = RmqProducer(self._connection)
-        self._consumer = RmqConsumer()
+        self._connection = KombuConnection("amqp://guest:guest@localhost:5672//", "paramore.brighter.exchange")
+        self._producer = KombuProducer(self._connection)
+        self._consumer = KombuConsumer()
 
     def test_posting_a_message(self):
         """Given that I have an RMQ message producer
