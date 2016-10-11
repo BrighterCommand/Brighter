@@ -50,7 +50,7 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
             s_sqlCommandStore.Add<MyCommand>(s_raisedCommand);
         };
 
-        private Because _of = () => { s_exception = Catch.Exception(() => s_sqlCommandStore.Add(s_raisedCommand)); };
+        private Because _of = () => { s_exception = Catch.Exception(() => s_sqlCommandStore.Add<MyCommand>(s_raisedCommand)); };
 
         private It _should_succeed_even_if_the_message_is_a_duplicate = () => s_exception.ShouldBeNull();
 

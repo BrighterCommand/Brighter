@@ -23,32 +23,30 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Data.SqlClient;
-using NUnit.Specifications;
+using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using NUnit.Framework;
-using paramore.brighter.commandprocessor.commandstore.mssql;
+using NUnit.Specifications;
+using paramore.brighter.commandprocessor.commandstore.sqllite;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.Sqlite
 {
-
-    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
-    internal class When_The_Message_Is_Already_In_The_Command_Store_Async : ContextSpecification
+    internal class When_The_Message_Is_Already_In_The_Command_Store_Async : NUnit.Specifications.ContextSpecification
     {
-        private static MsSqlTestHelper _msSqlTestHelper;
-        private static MsSqlCommandStore s_sqlCommandStore;
+        private static SqlLiteTestHelper _sqlLiteTestHelper;
+        private static SqlLiteCommandStore s_sqlCommandStore;
         private static MyCommand s_raisedCommand;
         private static Exception s_exception;
 
         private Establish _context = () =>
         {
-            _msSqlTestHelper = new MsSqlTestHelper();
-            _sqliteConnection = _msSqlTestHelper.CreateDatabase();
+            _sqlLiteTestHelper = new SqlLiteTestHelper();
+            _sqliteConnection = _sqlLiteTestHelper.CreateDatabase();
 
-            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.Configuration, new LogProvider.NoOpLogger());
+            s_sqlCommandStore =
+                new SqlLiteCommandStore(new SqlLiteCommandStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName), new LogProvider.NoOpLogger());
             s_raisedCommand = new MyCommand() {Value = "Test"};
             AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync<MyCommand>(s_raisedCommand));
         };
@@ -67,10 +65,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
         {
             if (_sqliteConnection != null)
                 _sqliteConnection.Dispose();
-            _msSqlTestHelper.CleanUpDb();
+            _sqlLiteTestHelper.CleanUpDb();
 
         };
 
-        private static SqlConnection _sqliteConnection;
+        private static SqliteConnection _sqliteConnection;
     }
 }

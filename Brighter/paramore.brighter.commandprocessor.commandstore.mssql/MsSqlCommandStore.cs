@@ -314,7 +314,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
             var commandJson = JsonConvert.SerializeObject(command);
             var parameters = new[]
             {
-                CreateSqlParameter("CommandId", command.Id),
+                CreateSqlParameter("CommandID", command.Id),
                 CreateSqlParameter("CommandType", typeof (T).Name),
                 CreateSqlParameter("CommandBody", commandJson),
                 CreateSqlParameter("Timestamp", DateTime.UtcNow)

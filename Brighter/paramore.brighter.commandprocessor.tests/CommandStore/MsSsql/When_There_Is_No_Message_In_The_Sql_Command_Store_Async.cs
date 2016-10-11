@@ -51,7 +51,7 @@ namespace paramore.commandprocessor.tests.CommandStore.MsSsql
             s_sqlCommandStore = new SqlLiteCommandStore(new SqlLiteCommandStoreConfiguration(ConnectionString, TableName), new LogProvider.NoOpLogger());
         };
 
-        private Because _of = () => { s_storedCommand = AsyncContext.Run(async () => await s_sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid())); };
+        private Because _of = () => { s_storedCommand = AsyncContext.Run<MyCommand>(async () => await s_sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid())); };
 
         private It _should_return_an_empty_command_on_a_missing_command = () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
 

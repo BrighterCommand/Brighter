@@ -23,35 +23,34 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.IO;
+using System.Data.SqlClient;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
-using Microsoft.Data.Sqlite;
 using Nito.AsyncEx;
-using paramore.brighter.commandprocessor.commandstore.sqllite;
+using NUnit.Framework;
+using paramore.brighter.commandprocessor.commandstore.mssql;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
 {
-    public class When_There_Is_No_Message_In_The_Sql_Command_Store_Async : NUnit.Specifications.ContextSpecification
+    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
+    public class When_There_Is_No_Message_In_The_Sql_Command_Store_Async : ContextSpecification
     {
-        private const string TestDbPath = "test.db";
-        private const string ConnectionString = "Data Source=\"" + TestDbPath + "\"";
-        private const string TableName = "test_messages";
-        private static SqlLiteCommandStore s_sqlCommandStore;
+        private static MsSqlTestHelper _msSqlTestHelper;
+        private static MsSqlCommandStore s_sqlCommandStore;
         private static MyCommand s_raisedCommand;
         private static MyCommand s_storedCommand;
 
         private Establish _context = () =>
         {
-            // "Data Source=:memory:"
-            _sqliteConnection = DatabaseHelper.CreateDatabaseWithTable(ConnectionString, SqlLiteCommandStoreBuilder.GetDDL(TableName));
+            _msSqlTestHelper = new MsSqlTestHelper();
+            _sqliteConnection = _msSqlTestHelper.CreateDatabase();
 
-            s_sqlCommandStore = new SqlLiteCommandStore(new SqlLiteCommandStoreConfiguration(ConnectionString, TableName), new LogProvider.NoOpLogger());
+            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.Configuration, new LogProvider.NoOpLogger());
         };
 
-        private Because _of = () => { s_storedCommand = AsyncContext.Run(async () => await s_sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid())); };
+        private Because _of = () => { s_storedCommand = AsyncContext.Run<MyCommand>(async () => await s_sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid())); };
 
         private It _should_return_an_empty_command_on_a_missing_command = () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
 
@@ -59,13 +58,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
         {
             if (_sqliteConnection != null)
                 _sqliteConnection.Dispose();
+            _msSqlTestHelper.CleanUpDb();
+
         };
 
-        private static SqliteConnection _sqliteConnection;
-
-        private static void CleanUpDb()
-        {
-            File.Delete(TestDbPath);
-        }
+        private static SqlConnection _sqliteConnection;
     }
 }

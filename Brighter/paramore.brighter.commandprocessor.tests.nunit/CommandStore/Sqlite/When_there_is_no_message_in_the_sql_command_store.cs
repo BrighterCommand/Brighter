@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,54 +23,43 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Data.SqlClient;
-using NUnit.Specifications;
+using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
-using Nito.AsyncEx;
-using NUnit.Framework;
-using paramore.brighter.commandprocessor.commandstore.mssql;
+using paramore.brighter.commandprocessor.commandstore.sqllite;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.Sqlite
 {
-
-    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
-    internal class When_The_Message_Is_Already_In_The_Command_Store_Async : ContextSpecification
+    public class When_There_Is_No_Message_In_The_Sql_Command_Store : NUnit.Specifications.ContextSpecification
     {
-        private static MsSqlTestHelper _msSqlTestHelper;
-        private static MsSqlCommandStore s_sqlCommandStore;
+        private static SqlLiteTestHelper _sqlLiteTestHelper;
+        private static SqlLiteCommandStore s_sqlCommandStore;
         private static MyCommand s_raisedCommand;
-        private static Exception s_exception;
+        private static MyCommand s_storedCommand;
 
         private Establish _context = () =>
         {
-            _msSqlTestHelper = new MsSqlTestHelper();
-            _sqliteConnection = _msSqlTestHelper.CreateDatabase();
-
-            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.Configuration, new LogProvider.NoOpLogger());
-            s_raisedCommand = new MyCommand() {Value = "Test"};
-            AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync<MyCommand>(s_raisedCommand));
+            _sqlLiteTestHelper = new SqlLiteTestHelper();
+            _sqliteConnection = _sqlLiteTestHelper.CreateDatabase();
+            s_sqlCommandStore = new SqlLiteCommandStore(new SqlLiteCommandStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName), new LogProvider.NoOpLogger());
         };
 
-        private Because _of =
-            () =>
-            {
-                s_exception =
-                    Catch.Exception(
-                        () => AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync(s_raisedCommand)));
-            };
+        private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(Guid.NewGuid()); };
 
-        private It _should_succeed_even_if_the_message_is_a_duplicate = () => s_exception.ShouldBeNull();
+        private It _should_return_an_empty_command_on_a_missing_command =
+            () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
 
         private Cleanup _cleanup = () =>
         {
             if (_sqliteConnection != null)
                 _sqliteConnection.Dispose();
-            _msSqlTestHelper.CleanUpDb();
+            _sqlLiteTestHelper.CleanUpDb();
 
         };
 
-        private static SqlConnection _sqliteConnection;
+        private static SqliteConnection _sqliteConnection;
+
     }
+
 }

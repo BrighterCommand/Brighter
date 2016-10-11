@@ -22,29 +22,29 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Specifications;
+using System.Data.SqlClient;
 using nUnitShouldAdapter;
-using Microsoft.Data.Sqlite;
-using paramore.brighter.commandprocessor.commandstore.sqllite;
+using NUnit.Framework;
+using paramore.brighter.commandprocessor.commandstore.mssql;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
 {
+    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
     public class When_Writing_A_Message_To_The_Command_Store : NUnit.Specifications.ContextSpecification
     {
-        private const string TestDbPath = "test.db";
-        private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
-        private const string TableName = "test_messages";
-        private static SqlLiteCommandStore s_sqlCommandStore;
+        private static MsSqlTestHelper _msSqlTestHelper;
+        private static MsSqlCommandStore s_sqlCommandStore;
         private static MyCommand s_raisedCommand;
         private static MyCommand s_storedCommand;
 
         private Establish _context = () =>
         {
-            _sqliteConnection = DatabaseHelper.CreateDatabaseWithTable(ConnectionString, SqlLiteCommandStoreBuilder.GetDDL(TableName));
+            _msSqlTestHelper = new MsSqlTestHelper();
+            _sqliteConnection = _msSqlTestHelper.CreateDatabase();
 
-            s_sqlCommandStore = new SqlLiteCommandStore(new SqlLiteCommandStoreConfiguration(ConnectionString, TableName), new LogProvider.NoOpLogger());
+            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.Configuration, new LogProvider.NoOpLogger());
             s_raisedCommand = new MyCommand() {Value = "Test"};
             s_sqlCommandStore.Add<MyCommand>(s_raisedCommand);
         };
@@ -59,8 +59,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
         {
             if (_sqliteConnection != null)
                 _sqliteConnection.Dispose();
+            _msSqlTestHelper.CleanUpDb();
+
         };
 
-        private static SqliteConnection _sqliteConnection;
+        private static SqlConnection _sqliteConnection;
     }
 }
