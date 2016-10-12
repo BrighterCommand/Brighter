@@ -11,7 +11,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     public partial class AWSSQSMessagingGatewayTests {
         [Subject("Messaging Gateway")]
-        [Category("Requires AWSSDK AWSCredentials")]
+        [Category("AWS")]
+        [Property("Requires", "SQS")]
+        [Property("Requires", "SNS")]
         public class when_rejecting_a_message_through_gateway_with_requeue : ContextSpecification
         {
             private static string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";

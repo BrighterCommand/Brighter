@@ -1,7 +1,7 @@
 ﻿using System;
-using System.ComponentModel;
 using Amazon.Runtime;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
@@ -13,7 +13,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 
     public partial class AWSSQSMessagingGatewayTests {
         [Subject("Messaging Gateway")]
-        [Category("Requires AWSSDK AWSCredentials")]
+        [Category("AWS")]
+        [Property("Requires", "SQS")]
+        [Property("Requires", "SNS")]
         public class When_posting_a_message_via_the_messaging_gateway : ContextSpecification
         {
             private static string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";

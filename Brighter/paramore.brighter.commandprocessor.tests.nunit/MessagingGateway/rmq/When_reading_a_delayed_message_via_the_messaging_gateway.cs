@@ -34,7 +34,8 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayCo
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 {
     [Subject("Messaging Gateway Delayed")]
-    [Category("Requires RabbitMQ RabbitMQProducerReceiver RabbitMQDelayed")]
+    [Category("RMQ")]
+    [Property("Requires", "RabbitMQ")]
     public class When_reading_a_delayed_message_via_the_messaging_gateway : ContextSpecification
     {
         private static IAmAMessageProducerSupportingDelay s_messageProducer;

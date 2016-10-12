@@ -36,7 +36,8 @@ using Catch = NUnit.Specifications.Catch;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq 
 {
     [Subject("Messaging Gateway")]
-    [Category("Requires RabbitMQ")]
+    [Category("RMQ")]
+    [Property("Requires", "RabbitMQ")]
     public class When_a_message_consumer_throws_an_already_closed_exception_when_connecting_should_retry_until_circuit_breaks: ContextSpecification
     {
         private static IAmAMessageProducer s_sender;
