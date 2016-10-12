@@ -94,8 +94,7 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
                     }
                     catch (SqliteException sqliteException)
                     {
-                        if (sqliteException.SqliteErrorCode == SqlliteDuplicateKeyError ||
-                            sqliteException.SqliteErrorCode == SqlliteUniqueKeyError)
+                        if (IsExceptionUnqiueOrDuplicateIssue(sqliteException))
                         {
                             _log.WarnFormat(
                                 "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
@@ -104,6 +103,12 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
                     }
                 }
             }
+        }
+
+        private static bool IsExceptionUnqiueOrDuplicateIssue(SqliteException sqlException)
+        {
+            return sqlException.SqliteErrorCode == SqlliteDuplicateKeyError ||
+                   sqlException.SqliteErrorCode == SqlliteUniqueKeyError;
         }
 
         public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
@@ -136,7 +141,7 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
                     }
                     catch (SqliteException sqliteException)
                     {
-                        if (sqliteException.SqliteErrorCode != SqlliteDuplicateKeyError) throw;
+                        if (!IsExceptionUnqiueOrDuplicateIssue(sqliteException)) throw;
                         _log.WarnFormat(
                             "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
                             command.Id);
