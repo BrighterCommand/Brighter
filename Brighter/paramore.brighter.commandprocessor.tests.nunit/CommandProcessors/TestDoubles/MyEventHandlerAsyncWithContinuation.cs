@@ -1,9 +1,8 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
+namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
     class MyEventHandlerAsyncWithContinuation : RequestHandlerAsync<MyEvent>
     {
