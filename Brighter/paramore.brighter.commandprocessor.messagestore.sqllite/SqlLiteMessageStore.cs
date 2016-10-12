@@ -391,17 +391,13 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
 
         private void SetPagingCommandFor(DbCommand command, int pageSize, int pageNumber)
         {
-            string pagingSqlFormat;
-            //works 2005+
-            pagingSqlFormat = "SELECT * FROM {0} ORDER BY Timestamp DESC";
-            //"SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
-                CreateSqlParameter("PageNumber", pageNumber)
+                CreateSqlParameter("PageNumber", pageNumber-1)
                 , CreateSqlParameter("PageSize", pageSize)
             };
 
-            var sql = string.Format(pagingSqlFormat, _configuration.MessageStoreTableName);
+            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber", _configuration.MessageStoreTableName);
 
             command.CommandText = sql;
             AddParamtersParamArrayToCollection(parameters, command);
