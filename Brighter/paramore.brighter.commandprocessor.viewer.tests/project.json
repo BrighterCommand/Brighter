@@ -7,7 +7,7 @@
     "paramore.brighter.commandprocessor.messageviewer": {
       "target": "project"
     },
-    "paramore.brighter.commandprocessor.tests": {
+    "paramore.brighter.commandprocessor.tests.nunit": {
       "target": "project"
     },
     "NUnit.Specifications.NUnit3.coreCLR": {

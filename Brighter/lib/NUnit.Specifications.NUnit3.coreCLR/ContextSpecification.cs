@@ -159,15 +159,15 @@ namespace NUnit.Specifications
       var description = string.Empty;
 
 #if NET_STANDARD
-      var categoryAttributes = t.GetTypeInfo().CustomAttributes;
-      var subjectAttributes = t.GetTypeInfo().CustomAttributes;
+      var categoryAttributes = t.GetTypeInfo().CustomAttributes.Where(ca => ca.AttributeType == typeof(CategoryAttribute));
+      var subjectAttributes = t.GetTypeInfo().CustomAttributes.Where(ca => ca.AttributeType == typeof(SubjectAttribute));
 #else
       var categoryAttributes = t.GetCustomAttributes(typeof(CategoryAttribute), true);
       var subjectAttributes = t.GetCustomAttributes(typeof(SubjectAttribute), true);
 #endif
 
 #if NET_STANDARD
-      if (categoryAttributes.Any())
+            if (categoryAttributes.Any())
       {
         categoryName = categoryAttributes.First().ConstructorArguments[0].Value.ToString();
 #else

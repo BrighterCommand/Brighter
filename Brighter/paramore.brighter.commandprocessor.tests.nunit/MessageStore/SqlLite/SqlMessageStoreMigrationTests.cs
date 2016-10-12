@@ -23,16 +23,17 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.IO;
+using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
+using Newtonsoft.Json;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.sqllite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.Sqlite
+namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 {
 
     public class when_writing_a_message_with_minimal_header_information_to_the_message_store : ContextSpecification
@@ -41,34 +42,42 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.Sqlite
         private static Message s_message;
         private static Message s_storedMessage;
         private static SqliteConnection _sqliteConnection;
-        private const string TestDbPath = "test.db";
-        private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
-        private const string TableName = "test_messages";
+        private static SqlLiteTestHelper _sqlLiteTestHelper;
+
         private Establish _context = () =>
         {
-            s_sqlMessageStore = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration(ConnectionString, TableName), new LogProvider.NoOpLogger());
+            _sqlLiteTestHelper = new SqlLiteTestHelper();
+            _sqliteConnection = _sqlLiteTestHelper.CreateMessageStoreConnection();
+            s_sqlMessageStore  = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
+
             s_message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            AddHistoricMessage(s_sqlMessageStore, s_message).Wait();
+            AddHistoricMessage(s_message).Wait();
         };
 
-        private async static Task AddHistoricMessage(SqlLiteMessageStore sSqlMessageStore, Message message)
+        private static async Task AddHistoricMessage(Message message)
         {
-            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Body) VALUES (@MessageId, @MessageType, @Topic, @Body)", TableName);
+            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)", _sqlLiteTestHelper.TableName_Messages);
             var parameters = new[]
             {
-                new SqliteParameter("MessageId", message.Id),
+                new SqliteParameter("MessageId", message.Id.ToString()),
                 new SqliteParameter("MessageType", message.Header.MessageType.ToString()),
                 new SqliteParameter("Topic", message.Header.Topic),
+                new SqliteParameter("Timestamp", SqliteType.Text) { Value =message.Header.TimeStamp.ToString("s")},
+                new SqliteParameter("HeaderBag",SqliteType.Text) { Value = JsonConvert.SerializeObject(message.Header.Bag)},
                 new SqliteParameter("Body", message.Body.Value),
             };
 
-            using (var connection = new SqliteConnection(ConnectionString))
+            using (var connection = new SqliteConnection(_sqlLiteTestHelper.ConnectionString))
             using (var command = connection.CreateCommand())
             {
                 await connection.OpenAsync();
 
                 command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
+                //command.Parameters.AddRange(parameters); used to work... but can't with current sqllite lib. Iterator issue
+                for (var index = 0; index < parameters.Length; index++)
+                {
+                    command.Parameters.Add(parameters[index]);
+                }
                 await command.ExecuteNonQueryAsync();
             }
         }
@@ -83,12 +92,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.Sqlite
 
         private Cleanup _cleanup = () =>
         {
-            _sqliteConnection?.Dispose();
+            _sqlLiteTestHelper.CleanUpDb();
         };
-
-        private static void CleanUpDb()
-        {
-            File.Delete(TestDbPath);
-        }
     }
 }

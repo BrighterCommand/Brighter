@@ -62,7 +62,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
             container.Register<IHandleRequestsAsync<MyCommand>, MonitorHandlerAsync<MyCommand>>();
             container.Register<ILog>(logger);
             container.Register<IAmAControlBusSenderAsync>(s_controlBusSender);
-            container.Register<MonitorConfiguration>(new MonitorConfiguration { IsMonitoringEnabled = true });
+            container.Register<MonitorConfiguration>(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
