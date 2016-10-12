@@ -41,6 +41,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -93,30 +94,40 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
             using (var connection = GetConnection())
             {
                 connection.Open();
-                var command = InitAddDbCommand(connection, parameters);
+                var sql = GetAddSql();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = sql;
+                    AddParamtersParamArrayToCollection(parameters.ToArray(), command);
 
-                try
-                {
-                    command.ExecuteNonQuery();
-                }
-                catch (SqliteException sqlException)
-                {
-                    if (sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                        sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                    try
                     {
-                        _log.WarnFormat(
-                            "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
-                            message.Id);
-                        return;
+                        command.ExecuteNonQuery();
                     }
+                    catch (SqliteException sqlException)
+                    {
+                        if (sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueIndexViolation ||
+                            sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                        {
+                            _log.WarnFormat(
+                                "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                                message.Id);
+                            return;
+                        }
 
-                    throw;
-                }
-                finally
-                {
-                    command.Dispose();
-                }
+                        throw;
+                    }
+                };
             }
+        }
+
+        private string GetAddSql()
+        {
+            var sql =
+                string.Format(
+                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
+                    _configuration.MessageStoreTableName);
+            return sql;
         }
 
         /// <summary>
@@ -130,7 +141,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
                 _configuration.MessageStoreTableName);
             var parameters = new[]
             {
-                CreateSqlParameter("MessageId", messageId)
+                CreateSqlParameter("@MessageId", messageId.ToString())
             };
 
             return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, messageStoreTimeout, parameters);
@@ -143,26 +154,30 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
             using (var connection = GetConnection())
             {
                 await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
-                var command = InitAddDbCommand(connection, parameters);
+                using (var command = connection.CreateCommand())
+                {
+                    var sql = GetAddSql();
+                    command.CommandText = sql;
+                    AddParamtersParamArrayToCollection(parameters.ToArray(), command);
 
-                try
-                {
-                    await
-                        command.ExecuteNonQueryAsync(ct ?? CancellationToken.None)
-                            .ConfigureAwait(ContinueOnCapturedContext);
-                }
-                catch (SqliteException sqlException)
-                {
-                    if (sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                    try
                     {
-                        _log.WarnFormat(
-                            "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
-                            message.Id);
-                        return;
+                        await
+                            command.ExecuteNonQueryAsync(ct ?? CancellationToken.None)
+                                .ConfigureAwait(ContinueOnCapturedContext);
                     }
+                    catch (SqliteException sqlException)
+                    {
+                        if (sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                        {
+                            _log.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                                message.Id);
+                            return;
+                        }
 
-                    throw;
-                }
+                        throw;
+                    }
+                };
             }
         }
 
@@ -185,11 +200,10 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
         /// <returns><see cref="Task{Message}" />.</returns>
         public async Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken? ct = null)
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
-                _configuration.MessageStoreTableName);
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
             var parameters = new[]
             {
-                CreateSqlParameter("@MessageId", messageId)
+                CreateSqlParameter("@MessageId", messageId.ToString())
             };
 
             var result =
@@ -224,14 +238,15 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
 
                 connection.Open();
 
-                var dbDataReader = command.ExecuteReader();
-
-                var messages = new List<Message>();
-                while (dbDataReader.Read())
+                using (var dbDataReader = command.ExecuteReader())
                 {
-                    messages.Add(MapAMessage(dbDataReader));
+                    var messages = new List<Message>();
+                    while (dbDataReader.Read())
+                    {
+                        messages.Add(MapAMessage(dbDataReader));
+                    }
+                    return messages;
                 }
-                return messages;
             }
         }
 
@@ -250,13 +265,14 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
 
                 await connection.OpenAsync().ConfigureAwait(ContinueOnCapturedContext);
 
-                var dbDataReader = await command.ExecuteReaderAsync();
-
                 var messages = new List<Message>();
-                while (await dbDataReader.ReadAsync(ct ?? CancellationToken.None))
+                using (var dbDataReader = await command.ExecuteReaderAsync())
                 {
-                    messages.Add(MapAMessage(dbDataReader));
-                }
+                    while (await dbDataReader.ReadAsync(ct ?? CancellationToken.None))
+                    {
+                        messages.Add(MapAMessage(dbDataReader));
+                    }
+                };
                 return messages;
             }
         }
@@ -273,7 +289,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
+                AddParamtersParamArrayToCollection(parameters, command);
 
                 if (messageStoreTimeout != -1) command.CommandTimeout = messageStoreTimeout;
 
@@ -295,7 +311,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
             {
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
                 command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
+                AddParamtersParamArrayToCollection(parameters, command);
 
                 await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
@@ -306,16 +322,6 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
         private SqliteConnection GetConnection()
         {
             return new SqliteConnection(_configuration.ConnectionString);
-        }
-
-        private SqliteCommand InitAddDbCommand(SqliteConnection connection, IEnumerable<SqliteParameter> parameters)
-        {
-            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)", _configuration.MessageStoreTableName);
-            var command = connection.CreateCommand();
-
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-            return command;
         }
 
         private SqliteParameter[] InitAddDbParameters(Message message)
@@ -335,7 +341,8 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
 
         private Message MapAMessage(IDataReader dr)
         {
-            var id = dr.GetGuid(dr.GetOrdinal("MessageId"));
+            //var id = dr.GetGuid(dr.GetOrdinal("MessageId"));
+            var id = Guid.Parse(dr.GetString(0));
             var messageType = (MessageType) Enum.Parse(typeof (MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
             var topic = dr.GetString(dr.GetOrdinal("Topic"));
 
@@ -377,15 +384,13 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
             return new Message();
         }
 
-        private void SetPagingCommandFor(DbCommand command, int pageSize,
-            int pageNumber)
+        private void SetPagingCommandFor(DbCommand command, int pageSize, int pageNumber)
         {
             string pagingSqlFormat;
-            DbParameter[] parameters;
             //works 2005+
-            pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-            parameters = new[]
+            pagingSqlFormat = "SELECT * FROM {0} ORDER BY Timestamp DESC";
+            //"SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
             {
                 CreateSqlParameter("PageNumber", pageNumber)
                 , CreateSqlParameter("PageSize", pageSize)
@@ -394,7 +399,17 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
             var sql = string.Format(pagingSqlFormat, _configuration.MessageStoreTableName);
 
             command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
+            AddParamtersParamArrayToCollection(parameters, command);
         }
+
+        public void AddParamtersParamArrayToCollection(DbParameter[] parameters, DbCommand command)
+        {
+            //command.Parameters.AddRange(parameters); used to work... but can't with current sqllite lib. Iterator issue
+            for (var index = 0; index < parameters.Length; index++)
+            {
+                command.Parameters.Add(parameters[index]);
+            }
+        }
+
     }
 }

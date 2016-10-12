@@ -29,12 +29,14 @@ using System.IO;
 using System.Linq;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
+    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
     [Subject(typeof(MsSqlMessageStore))]
     public class When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched_Async : ContextSpecification
     {

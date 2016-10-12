@@ -23,27 +23,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.IO;
+using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messagestore.mssql;
+using paramore.brighter.commandprocessor.messagestore.sqllite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
+namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 {
-    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
-    [Subject(typeof(MsSqlMessageStore))]
+    [Subject(typeof(SqlLiteMessageStore))]
     public class When_Writing_A_Message_To_The_Message_Store_Async : ContextSpecification
     {
-        private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
-        private const string TableName = "test_messages";
-        private const string TestDbPath = "test.sdf";
+        private static SqlLiteTestHelper _sqlLiteTestHelper;
+        private static SqliteConnection _sqliteConnection;
+        private static SqlLiteMessageStore _sSqlMessageStore;
         private static readonly string key1 = "name1";
         private static readonly string key2 = "name2";
         private static Message s_messageEarliest;
-        private static MsSqlMessageStore s_sqlMessageStore;
         private static Message s_storedMessage;
         private static readonly string value1 = "value1";
         private static readonly string value2 = "value2";
@@ -52,24 +49,21 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 
         private Establish _context = () =>
         {
-            //TODO: fix db
-
-            s_sqlMessageStore = new MsSqlMessageStore(
-                new MsSqlMessageStoreConfiguration(ConnectionString, TableName,
-                    MsSqlMessageStoreConfiguration.DatabaseType.SqlCe),
-                new LogProvider.NoOpLogger());
+            _sqlLiteTestHelper = new SqlLiteTestHelper();
+            _sqliteConnection = _sqlLiteTestHelper.CreateMessageStoreConnection();
+            _sSqlMessageStore = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,
                 DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(key1, value1);
             messageHeader.Bag.Add(key2, value2);
 
             s_messageEarliest = new Message(messageHeader, new MessageBody("message body"));
-            AsyncContext.Run(async () => await s_sqlMessageStore.AddAsync(s_messageEarliest));
+            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(s_messageEarliest));
         };
 
         private Because _of = () =>
         {
-            AsyncContext.Run(async () => s_storedMessage = await s_sqlMessageStore.GetAsync(s_messageEarliest.Id));
+            AsyncContext.Run(async () => s_storedMessage = await _sSqlMessageStore.GetAsync(s_messageEarliest.Id));
         };
 
         private It _should_read_the_message_from_the__sql_message_store =
@@ -98,7 +92,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 
         private static void CleanUpDb()
         {
-            File.Delete(TestDbPath);
+            _sqlLiteTestHelper.CleanUpDb();
         }
     }
 }

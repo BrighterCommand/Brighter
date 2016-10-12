@@ -27,12 +27,14 @@ using System;
 using System.IO;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
+    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
     [Subject(typeof(MsSqlMessageStore))]
     public class When_The_Message_Is_Already_In_The_Message_Store_Async : ContextSpecification
     {

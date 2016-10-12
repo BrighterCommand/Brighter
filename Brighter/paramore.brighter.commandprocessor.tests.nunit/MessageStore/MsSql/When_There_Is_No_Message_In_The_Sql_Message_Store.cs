@@ -26,12 +26,14 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
+    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
     [Subject(typeof(MsSqlMessageStore))]
     public class When_There_Is_No_Message_In_The_Sql_Message_Store : ContextSpecification
     {

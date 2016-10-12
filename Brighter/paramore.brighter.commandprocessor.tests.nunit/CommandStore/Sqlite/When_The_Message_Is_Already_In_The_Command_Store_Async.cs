@@ -63,8 +63,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.Sqlite
 
         private Cleanup _cleanup = () =>
         {
-            if (_sqliteConnection != null)
-                _sqliteConnection.Dispose();
             _sqlLiteTestHelper.CleanUpDb();
 
         };

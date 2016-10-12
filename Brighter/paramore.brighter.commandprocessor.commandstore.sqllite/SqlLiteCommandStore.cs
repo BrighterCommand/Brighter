@@ -40,7 +40,6 @@ THE SOFTWARE. */
 using System;
 using System.Data;
 using System.Data.Common;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -79,22 +78,26 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
 
         public void Add<T>(T command, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var parameters = InitAddDbParameters(command, this);
+            var parameters = InitAddDbParameters(command);
 
             using (var connection = this.GetConnection())
             {
                 connection.Open();
-                var sqlcmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters, this);
-                try
+                var sqlAdd = GetAddSql();
+                using (var sqlcmd = connection.CreateCommand())
                 {
-                    sqlcmd.ExecuteNonQuery();
-                }
-                catch (SqliteException sqliteException)
-                {
-                    if (sqliteException.SqliteErrorCode != SqlLiteCommandStore.SqlliteDuplicateKeyError) throw sqliteException;
-                    _log.WarnFormat(
-                        "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
-                        command.Id);
+                    FormatAddCommand(timeoutInMilliseconds, parameters, sqlcmd, sqlAdd);
+                    try
+                    {
+                        sqlcmd.ExecuteNonQuery();
+                    }
+                    catch (SqliteException sqliteException)
+                    {
+                        if (sqliteException.SqliteErrorCode != SqlLiteCommandStore.SqlliteDuplicateKeyError) throw;
+                        _log.WarnFormat(
+                            "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                            command.Id);
+                    }
                 }
             }
         }
@@ -107,31 +110,36 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
                 this.CreateSqlParameter("CommandId", id)
             };
 
-            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, timeoutInMilliseconds, this, parameters);
+            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, timeoutInMilliseconds, parameters);
         }
 
         public async Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken? ct = null) where T : class, IRequest
         {
-            var parameters = InitAddDbParameters(command, this);
+            var parameters = InitAddDbParameters(command);
 
             using (var connection = this.GetConnection())
             {
-                await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(this.ContinueOnCapturedContext);
-                var sqlcmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters, this);
-                try
+                await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
+                var sqlAdd = GetAddSql();
+                using (var sqlcmd = connection.CreateCommand())
                 {
-                    await
-                        sqlcmd.ExecuteNonQueryAsync(ct ?? CancellationToken.None)
-                            .ConfigureAwait(this.ContinueOnCapturedContext);
+                    FormatAddCommand(timeoutInMilliseconds, parameters, sqlcmd, sqlAdd);
+                    try
+                    {
+                        await
+                            sqlcmd.ExecuteNonQueryAsync(ct ?? CancellationToken.None)
+                                .ConfigureAwait(ContinueOnCapturedContext);
+                    }
+                    catch (SqliteException sqliteException)
+                    {
+                        if (sqliteException.SqliteErrorCode != SqlliteDuplicateKeyError) throw;
+                        _log.WarnFormat(
+                            "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                            command.Id);
+                    }
+
                 }
-                catch (SqliteException sqliteException)
-                {
-                    if (sqliteException.SqliteErrorCode != SqlliteDuplicateKeyError) throw sqliteException;
-                    _log.WarnFormat(
-                        "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
-                        command.Id);
-                } 
-                
+
             }
         }
 
@@ -146,10 +154,10 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
                         async command => ReadCommand<T>(
                             await
                                 command.ExecuteReaderAsync(ct ?? CancellationToken.None)
-                                    .ConfigureAwait(this.ContinueOnCapturedContext)),
+                                    .ConfigureAwait(ContinueOnCapturedContext)),
                         sql,
-                        timeoutInMilliseconds, this, parameters, ct)
-                    .ConfigureAwait(this.ContinueOnCapturedContext);
+                        timeoutInMilliseconds, parameters, ct)
+                    .ConfigureAwait(ContinueOnCapturedContext);
             return result;
         }
 
@@ -187,12 +195,11 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
         {
             return new SqliteConnection(_configuration.ConnectionString);
         }
-
-
-        public T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,
-            SqlLiteCommandStore sqlLiteCommandStore, params DbParameter[] parameters)
+        
+        public T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, 
+            int timeoutInMilliseconds, params DbParameter[] parameters)
         {
-            using (var connection = sqlLiteCommandStore.GetConnection())
+            using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
@@ -205,42 +212,47 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
             }
         }
 
-        public async Task<T> ExecuteCommandAsync<T>(Func<DbCommand, Task<T>> execute, string sql, int timeoutInMilliseconds,
-            SqlLiteCommandStore sqlLiteCommandStore, DbParameter[] parameters, CancellationToken? ct = null)
+        public async Task<T> ExecuteCommandAsync<T>(Func<DbCommand, Task<T>> execute, 
+            string sql, int timeoutInMilliseconds, DbParameter[] parameters, CancellationToken? ct = null)
         {
-            using (var connection = sqlLiteCommandStore.GetConnection())
+            using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
                 command.CommandText = sql;
                 AddParamtersParamArrayToCollection(parameters, command);
 
-                await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(sqlLiteCommandStore.ContinueOnCapturedContext);
-                var item = await execute(command).ConfigureAwait(sqlLiteCommandStore.ContinueOnCapturedContext);
+                await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
+                var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 return item;
             }
         }
 
-        public DbCommand InitAddDbCommand(int timeoutInMilliseconds, DbConnection connection, DbParameter[] parameters, SqlLiteCommandStore sqlLiteCommandStore)
+        private void FormatAddCommand(int timeoutInMilliseconds, DbParameter[] parameters, DbCommand sqlcmd, string sqlAdd)
         {
-            var sqlAdd = string.Format(
-                "insert into {0} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)", sqlLiteCommandStore.MessageStoreTableName);
-
-            var sqlcmd = connection.CreateCommand();
             if (timeoutInMilliseconds != -1) sqlcmd.CommandTimeout = timeoutInMilliseconds;
 
             sqlcmd.CommandText = sqlAdd;
             AddParamtersParamArrayToCollection(parameters, sqlcmd);
-            return sqlcmd;
         }
 
-        public DbParameter[] InitAddDbParameters<T>(T command, SqlLiteCommandStore sqlLiteCommandStore) where T : class, IRequest
+        private string GetAddSql()
+        {
+            var sqlAdd = string.Format(
+                "insert into {0} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)",
+                MessageStoreTableName);
+            return sqlAdd;
+        }
+
+        public DbParameter[] InitAddDbParameters<T>(T command) where T : class, IRequest
         {
             var commandJson = JsonConvert.SerializeObject(command);
             var parameters = new[]
             {
-                sqlLiteCommandStore.CreateSqlParameter("CommandID", command.Id), //was CommandId
-                sqlLiteCommandStore.CreateSqlParameter("CommandType", typeof (T).Name), sqlLiteCommandStore.CreateSqlParameter("CommandBody", commandJson), sqlLiteCommandStore.CreateSqlParameter("Timestamp", DateTime.UtcNow)
+                CreateSqlParameter("CommandID", command.Id), //was CommandId
+                CreateSqlParameter("CommandType", typeof (T).Name), 
+                CreateSqlParameter("CommandBody", commandJson), 
+                CreateSqlParameter("Timestamp", DateTime.UtcNow)
             };
             return parameters;
         }

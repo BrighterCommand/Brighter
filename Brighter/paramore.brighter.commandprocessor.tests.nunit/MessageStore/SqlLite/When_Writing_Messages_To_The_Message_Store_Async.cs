@@ -25,58 +25,54 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messagestore.mssql;
+using paramore.brighter.commandprocessor.messagestore.sqllite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
+namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 {
-    [Subject(typeof(MsSqlMessageStore))]
-    public class When_Wrting_Messages_To_The_Message_Store_Async : ContextSpecification
+    [Subject(typeof(SqlLiteMessageStore))]
+    public class When_Writing_Messages_To_The_Message_Store_Async : ContextSpecification
     {
-        private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
-        private const string TableName = "test_messages";
-        private const string TestDbPath = "test.sdf";
+        private static SqlLiteTestHelper _sqlLiteTestHelper;
+        private static SqliteConnection _sqliteConnection;
+        private static SqlLiteMessageStore _sSqlMessageStore;
         private static Message s_message2;
         private static Message s_messageEarliest;
         private static Message s_messageLatest;
         private static IList<Message> s_retrievedMessages;
-        private static MsSqlMessageStore s_sqlMessageStore;
         private static Message s_storedMessage;
 
         private Cleanup _cleanup = () => CleanUpDb();
 
         private Establish _context = () =>
         {
-            //TODO: fix db
-
-            s_sqlMessageStore = new MsSqlMessageStore(
-                new MsSqlMessageStoreConfiguration(ConnectionString, TableName,
-                    MsSqlMessageStoreConfiguration.DatabaseType.SqlCe),
-                new LogProvider.NoOpLogger());
+            _sqlLiteTestHelper = new SqlLiteTestHelper();
+            _sqliteConnection = _sqlLiteTestHelper.CreateMessageStoreConnection();
+            _sSqlMessageStore = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND),
                 new MessageBody("Body"));
-            AsyncContext.Run(async () => await s_sqlMessageStore.AddAsync(s_messageEarliest));
+            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(s_messageEarliest));
 
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-2);
 
             s_message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND),
                 new MessageBody("Body2"));
-            AsyncContext.Run(async () => await s_sqlMessageStore.AddAsync(s_message2));
+            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(s_message2));
 
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-1);
 
             s_messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND),
                 new MessageBody("Body3"));
-            AsyncContext.Run(async () => await s_sqlMessageStore.AddAsync(s_messageLatest));
+            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(s_messageLatest));
         };
 
-        private Because _of = () =>  AsyncContext.Run(async () => s_retrievedMessages = await s_sqlMessageStore.GetAsync()); 
+        private Because _of = () =>  AsyncContext.Run(async () => s_retrievedMessages = await _sSqlMessageStore.GetAsync()); 
 
         private It _should_read_first_message_last_from_the__message_store =
             () => s_retrievedMessages.Last().Id.ShouldEqual(s_messageEarliest.Id);
@@ -88,9 +84,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 
         private static void CleanUpDb()
         {
-            File.Delete(TestDbPath);
+            _sqlLiteTestHelper.CleanUpDb();
         }
-
-        
     }
 }

@@ -24,50 +24,44 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.IO;
+using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messagestore.mssql;
+using paramore.brighter.commandprocessor.messagestore.sqllite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
+namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 {
-    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
-    [Subject(typeof(MsSqlMessageStore))]
-    public class When_There_Is_No_Message_In_The_Sql_Message_Store_Async : ContextSpecification
+    [Subject(typeof(SqlLiteMessageStore))]
+    public class When_The_Message_Is_Already_In_The_Message_Store_Async : ContextSpecification
     {
-        private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
-        private const string TableName = "test_messages";
-        private const string TestDbPath = "test.sdf";
+        private static SqlLiteTestHelper _sqlLiteTestHelper;
+        private static SqliteConnection _sqliteConnection;
+        private static SqlLiteMessageStore _sSqlMessageStore;
+        private static Exception s_exception;
         private static Message s_messageEarliest;
-        private static MsSqlMessageStore s_sqlMessageStore;
         private static Message s_storedMessage;
 
         private Cleanup _cleanup = () => CleanUpDb();
 
         private Establish _context = () =>
         {
-            //TODO: fix db
-
-            s_sqlMessageStore = new MsSqlMessageStore(
-                new MsSqlMessageStoreConfiguration(ConnectionString, TableName,
-                    MsSqlMessageStoreConfiguration.DatabaseType.SqlCe),
-                new LogProvider.NoOpLogger());
+            _sqlLiteTestHelper = new SqlLiteTestHelper();
+            _sqliteConnection = _sqlLiteTestHelper.CreateMessageStoreConnection();
+            _sSqlMessageStore = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
+            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(s_messageEarliest));
         };
 
-        private Because _of = () =>  AsyncContext.Run(async () => s_storedMessage = await s_sqlMessageStore.GetAsync(s_messageEarliest.Id)); 
-
-        private It _should_return_a_empty_message = () => s_storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+        private Because _of = () =>  s_exception = Catch.Exception(() => AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(s_messageEarliest)));
+        private It _should_ignore_the_duplcate_key_and_still_succeed = () => { s_exception.ShouldBeNull(); };
 
         private static void CleanUpDb()
         {
-            File.Delete(TestDbPath);
+            _sqliteConnection?.Dispose();
+            _sqlLiteTestHelper.CleanUpDb();
         }
-
-      
-    }    
+    }
 }

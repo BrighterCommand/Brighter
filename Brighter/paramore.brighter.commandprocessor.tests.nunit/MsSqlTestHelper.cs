@@ -1,10 +1,8 @@
 using System;
 using System.Data.SqlClient;
-using System.IO;
 using paramore.brighter.commandprocessor.commandstore.mssql;
-using paramore.brighter.commandprocessor.commandstore.sqllite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
+namespace paramore.brighter.commandprocessor.tests.nunit
 {
     public class MsSqlTestHelper
     {

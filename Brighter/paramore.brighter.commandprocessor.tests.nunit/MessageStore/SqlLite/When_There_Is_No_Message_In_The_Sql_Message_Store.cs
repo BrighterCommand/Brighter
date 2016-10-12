@@ -1,6 +1,7 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -25,38 +26,40 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
-using Nito.AsyncEx;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.commandstore.sqllite;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using paramore.brighter.commandprocessor.messagestore.sqllite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.Sqlite
+namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 {
-    public class When_There_Is_No_Message_In_The_Sql_Command_Store_Async : ContextSpecification
+    [Subject(typeof(SqlLiteMessageStore))]
+    public class When_There_Is_No_Message_In_The_Sql_Message_Store : ContextSpecification
     {
         private static SqlLiteTestHelper _sqlLiteTestHelper;
-        private static SqlLiteCommandStore s_sqlCommandStore;
-        private static MyCommand s_raisedCommand;
-        private static MyCommand s_storedCommand;
+        private static SqliteConnection _sqliteConnection;
+        private static SqlLiteMessageStore _sSqlMessageStore;
+        private static Message s_messageEarliest;
+        private static Message s_storedMessage;
+
+        private Cleanup _cleanup = () => CleanUpDb();
 
         private Establish _context = () =>
         {
             _sqlLiteTestHelper = new SqlLiteTestHelper();
-            _sqliteConnection = _sqlLiteTestHelper.CreateDatabase();
-
-            s_sqlCommandStore = new SqlLiteCommandStore(new SqlLiteCommandStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName), new LogProvider.NoOpLogger());
+            _sqliteConnection = _sqlLiteTestHelper.CreateMessageStoreConnection();
+            _sSqlMessageStore = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
+            s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
+                new MessageBody("message body"));
         };
 
-        private Because _of = () => { s_storedCommand = AsyncContext.Run<MyCommand>(async () => await s_sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid())); };
+        private Because _of = () => { s_storedMessage = _sSqlMessageStore.Get(s_messageEarliest.Id); };
 
-        private It _should_return_an_empty_command_on_a_missing_command = () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
+        private It _should_return_a_empty_message =
+            () => s_storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
 
-        private Cleanup _cleanup = () =>
+        private static void CleanUpDb()
         {
             _sqlLiteTestHelper.CleanUpDb();
-        };
-
-        private static SqliteConnection _sqliteConnection;
+        }
     }
 }

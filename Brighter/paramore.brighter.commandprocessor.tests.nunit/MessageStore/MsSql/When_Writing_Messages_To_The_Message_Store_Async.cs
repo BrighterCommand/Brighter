@@ -1,10 +1,10 @@
-#region Licence
+Ôªø#region Licence
 
 /* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
+Copyright ¬© 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the ìSoftwareî), to deal
+of this software and associated documentation files (the ‚ÄúSoftware‚Äù), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -13,7 +13,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED ìAS ISî, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED ‚ÄúAS IS‚Äù, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using nUnitShouldAdapter;
+using Nito.AsyncEx;
 using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
@@ -37,7 +38,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
     [Ignore("No MsSql ddl etc yet. Also need to add tag")]
     [Subject(typeof(MsSqlMessageStore))]
-    public class When_Writing_Messages_To_The_Message_Store : ContextSpecification
+    public class When_Writing_Messages_To_The_Message_Store_Async : ContextSpecification
     {
         private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
         private const string TableName = "test_messages";
@@ -45,7 +46,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
         private static Message s_message2;
         private static Message s_messageEarliest;
         private static Message s_messageLatest;
-        private static IEnumerable<Message> s_retrievedMessages;
+        private static IList<Message> s_retrievedMessages;
         private static MsSqlMessageStore s_sqlMessageStore;
         private static Message s_storedMessage;
 
@@ -62,22 +63,22 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND),
                 new MessageBody("Body"));
-            s_sqlMessageStore.Add(s_messageEarliest);
+            AsyncContext.Run(async () => await s_sqlMessageStore.AddAsync(s_messageEarliest));
 
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-2);
 
             s_message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND),
                 new MessageBody("Body2"));
-            s_sqlMessageStore.Add(s_message2);
+            AsyncContext.Run(async () => await s_sqlMessageStore.AddAsync(s_message2));
 
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-1);
 
             s_messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND),
                 new MessageBody("Body3"));
-            s_sqlMessageStore.Add(s_messageLatest);
+            AsyncContext.Run(async () => await s_sqlMessageStore.AddAsync(s_messageLatest));
         };
 
-        private Because _of = () => { s_retrievedMessages = s_sqlMessageStore.Get(); };
+        private Because _of = () =>  AsyncContext.Run(async () => s_retrievedMessages = await s_sqlMessageStore.GetAsync()); 
 
         private It _should_read_first_message_last_from_the__message_store =
             () => s_retrievedMessages.Last().Id.ShouldEqual(s_messageEarliest.Id);
@@ -92,5 +93,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
             File.Delete(TestDbPath);
         }
 
+        
     }
 }
