@@ -28,6 +28,7 @@ using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.monitoring.Configuration;
 using paramore.brighter.commandprocessor.monitoring.Events;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -60,6 +61,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
             container.Register<IHandleRequests<MyCommand>, MonitorHandler<MyCommand>>();
             container.Register<ILog>(logger);
             container.Register<IAmAControlBusSender>(s_controlBusSender);
+            container.Register<MonitorConfiguration>(new MonitorConfiguration { IsMonitoringEnabled = true });
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
 
