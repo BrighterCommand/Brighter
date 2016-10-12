@@ -41,9 +41,9 @@ using System.Linq;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
 using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
-using paramore.commandprocessor.tests.CommandProcessors.TestDoubles;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
+using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 {
