@@ -12,9 +12,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit
         public string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
         public string TableName = "test_commands";
         public string TableName_Messages = "test_messages";
-        private static string connectionStringPath;
-        private static SqliteConnection _sqlConnection;
-        private static string connectionStringPathDir;
+        private string connectionStringPath;
+        private SqliteConnection _sqlConnection;
+        private string connectionStringPathDir;
 
         public SqliteConnection CreateDatabase()
         {
@@ -30,7 +30,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit
             return CreateDatabaseWithTable(ConnectionString, SqlMessageStoreBuilder.GetDDL(TableName_Messages));
         }
 
-        private static string GetUniqueTestDbPathAndCreateDir()
+        private string GetUniqueTestDbPathAndCreateDir()
         {
             var testRootPath = Directory.GetCurrentDirectory();
             var guidInPath = Guid.NewGuid().ToString();
@@ -55,7 +55,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit
             }
         }
 
-        private static SqliteConnection CreateDatabaseWithTable(string dataSourceTestDb, string createTableScript)
+        private SqliteConnection CreateDatabaseWithTable(string dataSourceTestDb, string createTableScript)
         {
             _sqlConnection = new SqliteConnection(dataSourceTestDb);
 

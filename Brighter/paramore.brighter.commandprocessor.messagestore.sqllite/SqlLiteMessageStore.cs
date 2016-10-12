@@ -56,8 +56,8 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
     public class SqlLiteMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreAsync<Message>,
         IAmAMessageStoreViewer<Message>, IAmAMessageStoreViewerAsync<Message>
     {
-        private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
-        private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
+        private const int SqlliteDuplicateKeyError = 1555;
+        private const int SqlliteUniqueKeyError = 19;
         private readonly SqlLiteMessageStoreConfiguration _configuration;
         private readonly ILog _log;
 
@@ -106,8 +106,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
                     }
                     catch (SqliteException sqlException)
                     {
-                        if (sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                            sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                        if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
                             _log.WarnFormat(
                                 "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
@@ -119,6 +118,12 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
                     }
                 };
             }
+        }
+
+        private static bool IsExceptionUnqiueOrDuplicateIssue(SqliteException sqlException)
+        {
+            return sqlException.SqliteErrorCode == SqlliteDuplicateKeyError ||
+                   sqlException.SqliteErrorCode == SqlliteUniqueKeyError;
         }
 
         private string GetAddSql()
@@ -168,7 +173,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqllite
                     }
                     catch (SqliteException sqlException)
                     {
-                        if (sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.SqliteErrorCode == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                        if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
                             _log.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
                                 message.Id);

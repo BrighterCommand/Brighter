@@ -54,6 +54,7 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
     public class SqlLiteCommandStore : IAmACommandStore, IAmACommandStoreAsync
     {
         private const int SqlliteDuplicateKeyError = 1555;
+        private const int SqlliteUniqueKeyError = 19;
         private readonly SqlLiteCommandStoreConfiguration _configuration;
         private readonly ILog _log;
 
@@ -93,10 +94,13 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
                     }
                     catch (SqliteException sqliteException)
                     {
-                        if (sqliteException.SqliteErrorCode != SqlLiteCommandStore.SqlliteDuplicateKeyError) throw;
-                        _log.WarnFormat(
-                            "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
-                            command.Id);
+                        if (sqliteException.SqliteErrorCode == SqlliteDuplicateKeyError ||
+                            sqliteException.SqliteErrorCode == SqlliteUniqueKeyError)
+                        {
+                            _log.WarnFormat(
+                                "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                                command.Id);
+                        }
                     }
                 }
             }
