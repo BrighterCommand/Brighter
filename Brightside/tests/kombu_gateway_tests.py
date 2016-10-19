@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """"
-File         : rmq_gateway_tests.py
+File         : kombu_gateway_tests.py
 Author           : ian
 Created          : 09-01-2016
 

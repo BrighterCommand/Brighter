@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """"
-File         : rmq_gateway_tests.py
+File         : kombu_gateway_tests.py
 Author           : ian
 Created          : 09-01-2016
 
@@ -36,7 +36,7 @@ from kombu import exceptions as kombu_exceptions
 from kombu.message import Message as KombuMessage
 from datetime import datetime
 from core.messaging import Consumer, Message, Producer
-from kombu_brighter.rmq_messaging import KombuMessageFactory
+from kombu_brighter.kombu_messaging import KombuMessageFactory
 import logging
 
 
@@ -148,11 +148,6 @@ class KombuConsumer(Consumer):
         def _read_message(body, message: KombuMessage) -> Message:
             self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), message.headers, message.payload)
             return self._message_factory.create(message)
-
-
-        # read the next batch number of monitoring messages from the control bus
-        # evaluate for color coding (error is red)
-        # print to stdout
 
         _ensure_consumer()
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """"
-File         : rmq_messaging.py
+File         : kombu_messaging.py
 Author           : ian
 Created          : 09-28-2016
 
@@ -30,7 +30,7 @@ THE SOFTWARE.
 **********************************************************************i*
 """
 from kombu.message import Message as KombuMessage
-from core.messaging import Message, MessageHeader, MessageBody
+from core.messaging import Message, MessageHeader, MessageBody, MessageType
 from uuid import UUID, uuid4
 
 
@@ -41,15 +41,34 @@ class KombuMessageFactory:
     in what you do, be liberal in what you accept
     """
 
-    def CreateMessage(self, message: KombuMessage) -> Message:
+    def create_message(self, message: KombuMessage) -> Message:
 
-        def _getTopic(msg: KombuMessage) -> str:
+        def _get_correlation_id() -> UUID:
+            pass
+
+        def _get_message_type() -> MessageType:
+            pass
+
+        def _get_payload() -> str:
+            pass
+
+        def _get_payload_type() -> str:
+            pass
+
+        def _getTopic() -> str:
             pass
 
         id = uuid4()
         topic = _getTopic()
+        message_type = _get_message_type()
+        correlation_id = _get_correlation_id()
+        payload = _get_payload()
+        payload_type = _get_payload_type()
+
         message_header = MessageHeader(identity=id, topic=topic, message_type=message_type,
-            correlation_id=corrrelation_id, content_type=type)
+                correlation_id=correlation_id, content_type=type)
+
         message_body =  MessageBody(body=payload, body_type=payload_type)
+
         return Message(message_header, message_body)
 
