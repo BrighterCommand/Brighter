@@ -34,6 +34,10 @@ from core.messaging import Message, MessageHeader, MessageBody, MessageType
 from uuid import UUID, uuid4
 
 
+class ReadError:
+    pass
+
+
 class KombuMessageFactory:
     """
     The message factory turn an 'on-the-wire' message into our internal representation. We try to be as
@@ -71,4 +75,7 @@ class KombuMessageFactory:
         message_body =  MessageBody(body=payload, body_type=payload_type)
 
         return Message(message_header, message_body)
+
+    def _read_header(self, header_key: str, message: KombuMessage) -> (str, ReadError):
+        pass
 
