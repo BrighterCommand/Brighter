@@ -59,6 +59,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 
         private static void CleanUpDb()
         {
+            _sqliteConnection?.Dispose();
             _sqlLiteTestHelper.CleanUpDb();
         }
     }

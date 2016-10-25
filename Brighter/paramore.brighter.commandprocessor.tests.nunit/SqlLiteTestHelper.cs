@@ -3,6 +3,7 @@ using System.IO;
 using Microsoft.Data.Sqlite;
 using paramore.brighter.commandprocessor.commandstore.sqllite;
 using paramore.brighter.commandprocessor.messagestore.mssql;
+using paramore.brighter.commandprocessor.messagestore.sqllite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit
 {
@@ -27,7 +28,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = "DataSource=\"" + connectionStringPath + "\"";
-            return CreateDatabaseWithTable(ConnectionString, SqlMessageStoreBuilder.GetDDL(TableName_Messages));
+            return CreateDatabaseWithTable(ConnectionString, SqlLiteMessageStoreBuilder.GetDDL(TableName_Messages));
         }
 
         private string GetUniqueTestDbPathAndCreateDir()

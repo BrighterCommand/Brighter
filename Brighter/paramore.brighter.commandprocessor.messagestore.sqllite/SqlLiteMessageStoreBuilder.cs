@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace paramore.brighter.commandprocessor.messagestore.sqllite
 {
-    public class SqlMessageStoreBuilder
+    public class SqlLiteMessageStoreBuilder
     {
         const string _messageStoreDDL = "CREATE TABLE {0} (" +
                 "MessageId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
