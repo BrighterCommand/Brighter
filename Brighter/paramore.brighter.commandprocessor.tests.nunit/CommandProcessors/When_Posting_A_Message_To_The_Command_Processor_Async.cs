@@ -36,7 +36,7 @@ using Polly;
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(CommandProcessor))]
-    public class When_Posting_A_Message_To_The_Command_Processor_Async : NUnit.Specifications.ContextSpecification
+    public class When_Posting_A_Message_To_The_Command_Processor_Async : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

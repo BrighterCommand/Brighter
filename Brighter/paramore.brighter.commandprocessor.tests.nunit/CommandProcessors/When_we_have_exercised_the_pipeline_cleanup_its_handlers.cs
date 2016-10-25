@@ -9,7 +9,7 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(PipelineBuilder<>))]
-    public class When_We_Have_Exercised_The_Pipeline_Cleanup_Its_Handlers : NUnit.Specifications.ContextSpecification
+    public class When_We_Have_Exercised_The_Pipeline_Cleanup_Its_Handlers : ContextSpecification
     {
         private static PipelineBuilder<MyCommand> s_pipeline_Builder;
         private static string s_released;

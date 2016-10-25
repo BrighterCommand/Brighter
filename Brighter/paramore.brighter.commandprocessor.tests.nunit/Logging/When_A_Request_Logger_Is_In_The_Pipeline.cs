@@ -10,7 +10,7 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.Logging
 {
     [Subject(typeof(RequestLoggingHandler<>))]
-    public class When_A_Request_Logger_Is_In_The_Pipeline : NUnit.Specifications.ContextSpecification
+    public class When_A_Request_Logger_Is_In_The_Pipeline : ContextSpecification
     {
         private static SpyLog s_logger;
         private static MyCommand s_myCommand;

@@ -1,10 +1,11 @@
 ﻿using FakeItEasy;
 using nUnitShouldAdapter;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_creating_a_control_bus_sender : NUnit.Specifications.ContextSpecification
+    public class When_creating_a_control_bus_sender : ContextSpecification
     {
         private static IAmAControlBusSender s_sender;
         private static IAmAControlBusSenderFactory s_senderFactory;

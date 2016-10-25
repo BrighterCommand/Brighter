@@ -34,7 +34,7 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    public class When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop : NUnit.Specifications.ContextSpecification
+    public class When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop : ContextSpecification
     {
         private static Performer s_performer;
         private static SpyCommandProcessor s_commandProcessor;

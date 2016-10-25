@@ -33,7 +33,7 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(CommandProcessor))]
-    public class When_There_Are_No_Subscribers_Async : NUnit.Specifications.ContextSpecification
+    public class When_There_Are_No_Subscribers_Async : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyEvent s_myEvent = new MyEvent();

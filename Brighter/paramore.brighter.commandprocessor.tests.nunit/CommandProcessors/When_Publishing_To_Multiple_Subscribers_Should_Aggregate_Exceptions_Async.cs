@@ -33,7 +33,7 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    public class When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async : NUnit.Specifications.ContextSpecification
+    public class When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyEvent s_myEvent = new MyEvent();

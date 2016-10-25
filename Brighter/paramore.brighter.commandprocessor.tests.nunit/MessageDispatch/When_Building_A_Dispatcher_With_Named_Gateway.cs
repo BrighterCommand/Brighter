@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
     </rmqMessagingGateway>
     */
     [Subject(typeof(DispatchBuilder))]
-    public class When_Building_A_Dispatcher_With_Named_Gateway : NUnit.Specifications.ContextSpecification
+    public class When_Building_A_Dispatcher_With_Named_Gateway : ContextSpecification
     {
         private static IAmADispatchBuilder s_builder;
         private static Dispatcher s_dispatcher;

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Data.Sqlite;
+using NUnit.Specifications;
 using nUnitShouldAdapter;
 using paramore.brighter.commandprocessor.commandstore.sqllite;
 using paramore.brighter.commandprocessor.Logging;
@@ -31,7 +32,7 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.Sqlite
 {
-    public class When_There_Is_No_Message_In_The_Sql_Command_Store : NUnit.Specifications.ContextSpecification
+    public class When_There_Is_No_Message_In_The_Sql_Command_Store : ContextSpecification
     {
         private static SqlLiteTestHelper _sqlLiteTestHelper;
         private static SqlLiteCommandStore s_sqlCommandStore;

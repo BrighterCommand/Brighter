@@ -39,7 +39,7 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 {
     [Subject(typeof(MonitorHandler<>))]
-    public class When_Monitoring_Is_On_For_A_Handler_Async: NUnit.Specifications.ContextSpecification
+    public class When_Monitoring_Is_On_For_A_Handler_Async: ContextSpecification
     {
         private static MyCommand s_command;
         private static IAmACommandProcessor s_commandProcessor;

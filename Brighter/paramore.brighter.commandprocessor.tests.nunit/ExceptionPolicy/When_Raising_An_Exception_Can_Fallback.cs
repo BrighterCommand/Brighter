@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using FakeItEasy;
 using NUnit.Specifications;
-using nUnitShouldAdapter;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -34,7 +33,7 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
     [Subject(typeof(ExceptionPolicyHandler<>))]
-    public class When_Raising_An_Exception_Can_Fallback : NUnit.Specifications.ContextSpecification
+    public class When_Raising_An_Exception_Can_Fallback : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

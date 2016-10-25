@@ -37,7 +37,7 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
     [Subject(typeof(ExceptionPolicyHandler<>))]
-    public class When_Sending_A_Command_That_Repeatedely_Fails_Break_The_Circuit : NUnit.Specifications.ContextSpecification
+    public class When_Sending_A_Command_That_Repeatedely_Fails_Break_The_Circuit : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

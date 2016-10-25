@@ -33,7 +33,7 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.Sqlite
 {
-    internal class When_The_Message_Is_Already_In_The_Command_Store_Async : NUnit.Specifications.ContextSpecification
+    internal class When_The_Message_Is_Already_In_The_Command_Store_Async : ContextSpecification
     {
         private static SqlLiteTestHelper _sqlLiteTestHelper;
         private static SqlLiteCommandStore s_sqlCommandStore;

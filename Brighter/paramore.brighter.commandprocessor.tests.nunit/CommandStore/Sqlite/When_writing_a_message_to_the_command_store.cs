@@ -24,13 +24,14 @@ THE SOFTWARE. */
 
 using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.commandstore.sqllite;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.Sqlite
 {
-    public class When_Writing_A_Message_To_The_Command_Store : NUnit.Specifications.ContextSpecification
+    public class When_Writing_A_Message_To_The_Command_Store : ContextSpecification
     {
         private static SqlLiteTestHelper _sqlLiteTestHelper;
         private static SqlLiteCommandStore s_sqlCommandStore;

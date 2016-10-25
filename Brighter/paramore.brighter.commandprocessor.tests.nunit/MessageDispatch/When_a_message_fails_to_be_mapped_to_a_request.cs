@@ -9,7 +9,7 @@ using paramore.brighter.serviceactivator.TestHelpers;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
     [Subject(typeof(MessagePump<>))]
-    public class When_A_Message_Fails_To_Be_Mapped_To_A_Request : NUnit.Specifications.ContextSpecification
+    public class When_A_Message_Fails_To_Be_Mapped_To_A_Request : ContextSpecification
     {
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;

@@ -1,4 +1,5 @@
 ﻿using FakeItEasy;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
@@ -6,7 +7,7 @@ using paramore.brighter.serviceactivator.Ports.Handlers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_receiving_a_stop_message_for_a_connection : NUnit.Specifications.ContextSpecification
+    public class When_receiving_a_stop_message_for_a_connection : ContextSpecification
     {
         const string CONNECTION_NAME = "Test";
         private static ConfigurationCommandHandler s_configurationCommandHandler;

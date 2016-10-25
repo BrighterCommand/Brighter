@@ -28,7 +28,6 @@ using System.Linq;
 using FakeItEasy;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
-using NUnit.Framework;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
@@ -42,9 +41,8 @@ using Connection = paramore.brighter.serviceactivator.Connection;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Ignore("Test crashes dotnet process")]
     [Subject(typeof(DispatchBuilder))]
-    public class When_Building_A_Dispatcher : NUnit.Specifications.ContextSpecification
+    public class When_Building_A_Dispatcher : ContextSpecification
     {
         private static IAmADispatchBuilder s_builder;
         private static Dispatcher s_dispatcher;

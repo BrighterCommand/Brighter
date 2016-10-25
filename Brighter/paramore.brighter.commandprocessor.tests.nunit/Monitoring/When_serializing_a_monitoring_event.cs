@@ -33,7 +33,7 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 {
     [Subject(typeof(MonitorEventMessageMapper))]
-    public class When_Serializing_A_Monitoring_Event : NUnit.Specifications.ContextSpecification
+    public class When_Serializing_A_Monitoring_Event : ContextSpecification
     {
         private const string InstanceName = "Paramore.Tests";
         private const string HandlerFullAssemblyName = "Paramore.Dummy.Handler, with some Assembly information";

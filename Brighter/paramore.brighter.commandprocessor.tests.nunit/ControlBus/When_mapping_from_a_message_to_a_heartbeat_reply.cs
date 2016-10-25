@@ -24,13 +24,14 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
+using NUnit.Specifications;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Mappers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_mapping_from_a_message_to_a_heartbeat_reply : NUnit.Specifications.ContextSpecification
+    public class When_mapping_from_a_message_to_a_heartbeat_reply : ContextSpecification
     {
         private static IAmAMessageMapper<HeartbeatReply> s_mapper;
         private static Message s_message;

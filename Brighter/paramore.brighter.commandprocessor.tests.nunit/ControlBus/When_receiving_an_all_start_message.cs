@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using FakeItEasy;
+using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
@@ -30,7 +31,7 @@ using paramore.brighter.serviceactivator.Ports.Handlers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_receiving_an_all_start_message : NUnit.Specifications.ContextSpecification
+    public class When_receiving_an_all_start_message : ContextSpecification
     {
         private static ConfigurationCommandHandler s_configurationCommandHandler;
         private static ConfigurationCommand s_configurationCommand;

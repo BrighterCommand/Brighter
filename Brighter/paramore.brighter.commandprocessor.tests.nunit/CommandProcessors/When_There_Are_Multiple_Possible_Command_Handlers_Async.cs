@@ -34,7 +34,7 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(CommandProcessor))]
-    public class When_There_Are_Multiple_Possible_Command_Handlers_Async : NUnit.Specifications.ContextSpecification
+    public class When_There_Are_Multiple_Possible_Command_Handlers_Async : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

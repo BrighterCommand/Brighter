@@ -5,7 +5,6 @@ using NUnit.Specifications;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -13,7 +12,7 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    public class When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async : NUnit.Specifications.ContextSpecification
+    public class When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async : ContextSpecification
     {
         private static IAmAMessagePump s_messagePump;
         private static FakeChannel s_channel;

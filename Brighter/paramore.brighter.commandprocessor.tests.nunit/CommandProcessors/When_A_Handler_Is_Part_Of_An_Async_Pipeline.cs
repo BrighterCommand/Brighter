@@ -33,9 +33,9 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(PipelineBuilder<>))]
-    public class When_A_Handler_Is_Part_Of_An_Async_Pipeline : NUnit.Specifications.ContextSpecification
+    public class When_A_Handler_Is_Part_Of_An_Async_Pipeline : ContextSpecification
     {
-        private static PipelineBuilder<MyCommand> s_pipeline_Builder;
+        private static PipelineBuilder<MyCommand> s_pipelineBuilder;
         private static IHandleRequestsAsync<MyCommand> s_pipeline;
 
         private Establish _context = () =>
@@ -51,10 +51,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
             container.Register<ILog>(logger);
 
-            s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
+            s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        private Because _of = () => s_pipeline = s_pipeline_Builder.BuildAsync(new RequestContext(), false).First();
+        private Because _of = () => s_pipeline = s_pipelineBuilder.BuildAsync(new RequestContext(), false).First();
 
         private It _should_include_my_command_handler_filter_in_the_chain = () => TracePipeline().ToString().Contains("MyImplicitHandlerAsync").ShouldBeTrue();
         private It _should_include_my_logging_handler_in_the_chain = () => TracePipeline().ToString().Contains("MyLoggingHandlerAsync").ShouldBeTrue();

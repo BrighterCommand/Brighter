@@ -7,7 +7,7 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(PipelineBuilder<>))]
-    public class When_Putting_A_Variable_Into_The_Bag_Should_Be_Accessible_In_The_Handler : NUnit.Specifications.ContextSpecification
+    public class When_Putting_A_Variable_Into_The_Bag_Should_Be_Accessible_In_The_Handler : ContextSpecification
     {
         private const string I_AM_A_TEST_OF_THE_CONTEXT_BAG = "I am a test of the context bag";
         private static RequestContext s_request_context;

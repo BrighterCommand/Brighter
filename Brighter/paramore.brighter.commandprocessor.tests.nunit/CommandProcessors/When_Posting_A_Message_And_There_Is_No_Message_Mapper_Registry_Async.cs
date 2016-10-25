@@ -35,7 +35,7 @@ using Polly;
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(CommandProcessor))]
-    public class When_Posting_A_Message_And_There_Is_No_Message_Mapper_Registry_Async : NUnit.Specifications.ContextSpecification
+    public class When_Posting_A_Message_And_There_Is_No_Message_Mapper_Registry_Async : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

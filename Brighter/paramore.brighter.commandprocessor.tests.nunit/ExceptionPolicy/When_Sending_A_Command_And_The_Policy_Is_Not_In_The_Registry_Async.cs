@@ -36,7 +36,7 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
     [Subject(typeof(ExceptionPolicyHandlerAsync<>))]
-    class When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry_Async : NUnit.Specifications.ContextSpecification
+    class When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry_Async : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

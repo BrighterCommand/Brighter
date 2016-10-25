@@ -10,7 +10,7 @@ using Polly.CircuitBreaker;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    public class When_An_Error_Should_Break_The_Circuit : NUnit.Specifications.ContextSpecification
+    public class When_An_Error_Should_Break_The_Circuit : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

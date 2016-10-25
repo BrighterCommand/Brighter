@@ -11,7 +11,7 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    public class When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler_Async : NUnit.Specifications.ContextSpecification
+    public class When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler_Async : ContextSpecification
     {
         private static Dispatcher s_dispatcher;
         private static FakeChannel s_channel;

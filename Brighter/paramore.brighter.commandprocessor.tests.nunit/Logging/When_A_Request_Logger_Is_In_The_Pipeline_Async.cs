@@ -1,5 +1,4 @@
-﻿using NUnit.Specifications;
-using nUnitShouldAdapter;
+﻿using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using paramore.brighter.commandprocessor.logging.Handlers;
 using paramore.brighter.commandprocessor.Logging;
@@ -7,10 +6,11 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 using paramore.brighter.commandprocessor.tests.nunit.Logging.TestDoubles;
 using TinyIoC;
 using System.Linq;
+using NUnit.Specifications;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.Logging
 {
-    class When_A_Request_Logger_Is_In_The_Pipeline_Async : NUnit.Specifications.ContextSpecification
+    class When_A_Request_Logger_Is_In_The_Pipeline_Async : ContextSpecification
     {
         private static SpyLog s_logger;
         private static MyCommand s_myCommand;

@@ -39,7 +39,7 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 {
     [Subject(typeof(MonitorHandler<>))]
-    public class When_Monitoring_We_Should_Record_But_Rethrow_Exceptions_Async: NUnit.Specifications.ContextSpecification
+    public class When_Monitoring_We_Should_Record_But_Rethrow_Exceptions_Async: ContextSpecification
     {
         private static MyCommand s_command;
         private static Exception s_thrownException;

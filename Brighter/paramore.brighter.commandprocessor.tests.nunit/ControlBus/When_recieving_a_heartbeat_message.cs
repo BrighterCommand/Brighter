@@ -31,10 +31,11 @@ using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Handlers;
 using nUnitShouldAdapter;
+using NUnit.Specifications;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_recieving_a_heartbeat_message : NUnit.Specifications.ContextSpecification
+    public class When_recieving_a_heartbeat_message : ContextSpecification
     {
         private const string TEST_FIRST_CONNECTION_NAME = "Test.First.Connection";
         private const string TEST_SECOND_CONNECTION_NAME = "Test.Second.Connection";

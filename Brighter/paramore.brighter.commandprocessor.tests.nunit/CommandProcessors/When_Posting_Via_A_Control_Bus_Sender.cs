@@ -35,7 +35,7 @@ using Polly;
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(ControlBusSender))]
-    public class When_Posting_Via_A_Control_Bus_Sender : NUnit.Specifications.ContextSpecification
+    public class When_Posting_Via_A_Control_Bus_Sender : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static ControlBusSender s_controlBusSender;

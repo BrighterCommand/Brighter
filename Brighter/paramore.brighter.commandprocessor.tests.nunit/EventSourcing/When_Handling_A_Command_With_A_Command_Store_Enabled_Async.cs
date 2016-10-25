@@ -11,7 +11,7 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
 {
     [Subject(typeof(CommandSourcingHandler<>))]
-    public class When_Handling_A_Command_With_A_Command_Store_Enabled_Async : NUnit.Specifications.ContextSpecification
+    public class When_Handling_A_Command_With_A_Command_Store_Enabled_Async : ContextSpecification
     {
         private static MyCommand s_command;
         private static IAmACommandStoreAsync s_commandStore;

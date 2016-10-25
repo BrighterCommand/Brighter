@@ -24,8 +24,6 @@ THE SOFTWARE. */
 
 using FakeItEasy;
 using NUnit.Specifications;
-using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -35,7 +33,7 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
 {
     [Subject(typeof(TimeoutPolicyHandler<>))]
-    public class When_Sending_A_Command_To_The_Processor_Passing_A_Timeout_Policy_Check : NUnit.Specifications.ContextSpecification
+    public class When_Sending_A_Command_To_The_Processor_Passing_A_Timeout_Policy_Check : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

@@ -37,7 +37,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
 {
     [Subject(typeof(TimeoutPolicyHandler<>))]
 //    [Tags("Requires", new[] { "Fails on AppVeyor" })]
-    public class When_Sending_A_Command_To_The_Processor_Failing_A_Timeout_Policy_Check : NUnit.Specifications.ContextSpecification
+    public class When_Sending_A_Command_To_The_Processor_Failing_A_Timeout_Policy_Check : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();

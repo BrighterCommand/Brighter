@@ -32,11 +32,11 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(PipelineBuilder<>))]
-    public class When_Building_A_Handler_For_A_Command : NUnit.Specifications.ContextSpecification
+    public class When_Building_A_Handler_For_A_Command : ContextSpecification
     {
-        private static PipelineBuilder<MyCommand> s_chain_Builder;
-        private static IHandleRequests<MyCommand> s_chain_Of_Responsibility;
-        private static RequestContext s_request_context;
+        private static PipelineBuilder<MyCommand> s_chainBuilder;
+        private static IHandleRequests<MyCommand> s_chainOfResponsibility;
+        private static RequestContext s_requestContext;
 
         private Establish _context = () =>
         {
@@ -44,14 +44,14 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler(logger));
-            s_request_context = new RequestContext();
+            s_requestContext = new RequestContext();
 
-            s_chain_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
+            s_chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
         };
 
-        private Because _of = () => s_chain_Of_Responsibility = s_chain_Builder.Build(s_request_context).First();
+        private Because _of = () => s_chainOfResponsibility = s_chainBuilder.Build(s_requestContext).First();
 
-        private It _should_have_set_the_context_on_the_handler = () => s_chain_Of_Responsibility.Context.ShouldNotBeNull();
-        private It _should_use_the_context_that_we_passed_in = () => s_chain_Of_Responsibility.Context.ShouldBeTheSameAs(s_request_context);
+        private It _should_have_set_the_context_on_the_handler = () => s_chainOfResponsibility.Context.ShouldNotBeNull();
+        private It _should_use_the_context_that_we_passed_in = () => s_chainOfResponsibility.Context.ShouldBeTheSameAs(s_requestContext);
     }
 }

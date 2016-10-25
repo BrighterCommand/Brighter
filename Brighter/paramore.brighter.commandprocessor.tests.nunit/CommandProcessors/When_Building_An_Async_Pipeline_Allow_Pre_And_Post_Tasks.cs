@@ -9,7 +9,7 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
     [Subject(typeof(PipelineBuilder<>))]
-    public class When_Building_An_Async_Pipeline_Allow_Pre_And_Post_Tasks : NUnit.Specifications.ContextSpecification
+    public class When_Building_An_Async_Pipeline_Allow_Pre_And_Post_Tasks : ContextSpecification
     {
         private static PipelineBuilder<MyCommand> s_pipeline_Builder;
         private static IHandleRequestsAsync<MyCommand> s_pipeline;
