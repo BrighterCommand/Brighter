@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Data.SqlClient;
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.commandstore.mssql;
@@ -31,7 +30,7 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
 {
-    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
+    [Category("Requires MSSQL")]
     public class When_Writing_A_Message_To_The_Command_Store : NUnit.Specifications.ContextSpecification
     {
         private static MsSqlTestHelper _msSqlTestHelper;
@@ -42,9 +41,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
         private Establish _context = () =>
         {
             _msSqlTestHelper = new MsSqlTestHelper();
-            _sqliteConnection = _msSqlTestHelper.CreateDatabase();
+            _msSqlTestHelper.SetupMessageDb();
 
-            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.Configuration, new LogProvider.NoOpLogger());
+            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration, new LogProvider.NoOpLogger());
             s_raisedCommand = new MyCommand() {Value = "Test"};
             s_sqlCommandStore.Add<MyCommand>(s_raisedCommand);
         };
@@ -57,12 +56,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
 
         private Cleanup _cleanup = () =>
         {
-            if (_sqliteConnection != null)
-                _sqliteConnection.Dispose();
             _msSqlTestHelper.CleanUpDb();
-
         };
-
-        private static SqlConnection _sqliteConnection;
     }
 }

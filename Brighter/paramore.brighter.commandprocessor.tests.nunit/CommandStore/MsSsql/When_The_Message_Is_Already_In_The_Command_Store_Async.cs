@@ -35,7 +35,7 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
 {
 
-    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
+    [Category("Requires MSSQL")]
     internal class When_The_Message_Is_Already_In_The_Command_Store_Async : ContextSpecification
     {
         private static MsSqlTestHelper _msSqlTestHelper;
@@ -46,9 +46,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
         private Establish _context = () =>
         {
             _msSqlTestHelper = new MsSqlTestHelper();
-            _sqliteConnection = _msSqlTestHelper.CreateDatabase();
+            _msSqlTestHelper.SetupCommandDb();
 
-            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.Configuration, new LogProvider.NoOpLogger());
+            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration, new LogProvider.NoOpLogger());
             s_raisedCommand = new MyCommand() {Value = "Test"};
             AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync<MyCommand>(s_raisedCommand));
         };
@@ -65,12 +65,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
 
         private Cleanup _cleanup = () =>
         {
-            if (_sqliteConnection != null)
-                _sqliteConnection.Dispose();
             _msSqlTestHelper.CleanUpDb();
-
         };
-
-        private static SqlConnection _sqliteConnection;
     }
 }

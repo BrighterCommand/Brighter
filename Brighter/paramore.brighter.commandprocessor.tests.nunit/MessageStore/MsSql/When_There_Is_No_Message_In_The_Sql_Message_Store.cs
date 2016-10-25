@@ -33,13 +33,11 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
-    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
+    [Category("Requires MSSQL")]
     [Subject(typeof(MsSqlMessageStore))]
     public class When_There_Is_No_Message_In_The_Sql_Message_Store : ContextSpecification
     {
-        private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
-        private const string TableName = "test_messages";
-        private const string TestDbPath = "test.sdf";
+        private static MsSqlTestHelper _msSqlTestHelper;
         private static Message s_messageEarliest;
         private static MsSqlMessageStore s_sqlMessageStore;
         private static Message s_storedMessage;
@@ -48,12 +46,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 
         private Establish _context = () =>
         {
-            //TODO: fix db
+            _msSqlTestHelper = new MsSqlTestHelper();
+            _msSqlTestHelper.SetupMessageDb();
 
-            s_sqlMessageStore = new MsSqlMessageStore(
-                new MsSqlMessageStoreConfiguration(ConnectionString, TableName,
-                    MsSqlMessageStoreConfiguration.DatabaseType.SqlCe),
-                new LogProvider.NoOpLogger());
+            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration, new LogProvider.NoOpLogger());
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
         };
@@ -65,7 +61,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 
         private static void CleanUpDb()
         {
-            File.Delete(TestDbPath);
+            _msSqlTestHelper.CleanUpDb();
         }
     }
 }

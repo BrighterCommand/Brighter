@@ -33,13 +33,11 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
-    [Ignore("No MsSql ddl etc yet. Also need to add tag")]
+    [Category("Requires MSSQL")]
     [Subject(typeof(MsSqlMessageStore))]
     public class When_Writing_A_Message_To_The_Message_Store_Async : ContextSpecification
     {
-        private const string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
-        private const string TableName = "test_messages";
-        private const string TestDbPath = "test.sdf";
+        private static MsSqlTestHelper _msSqlTestHelper;
         private static readonly string key1 = "name1";
         private static readonly string key2 = "name2";
         private static Message s_messageEarliest;
@@ -52,12 +50,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 
         private Establish _context = () =>
         {
-            //TODO: fix db
+            _msSqlTestHelper = new MsSqlTestHelper();
+            _msSqlTestHelper.SetupMessageDb();
 
-            s_sqlMessageStore = new MsSqlMessageStore(
-                new MsSqlMessageStoreConfiguration(ConnectionString, TableName,
-                    MsSqlMessageStoreConfiguration.DatabaseType.SqlCe),
-                new LogProvider.NoOpLogger());
+            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration, new LogProvider.NoOpLogger());
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,
                 DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(key1, value1);
@@ -98,7 +94,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 
         private static void CleanUpDb()
         {
-            File.Delete(TestDbPath);
+            _msSqlTestHelper.CleanUpDb();
         }
     }
 }

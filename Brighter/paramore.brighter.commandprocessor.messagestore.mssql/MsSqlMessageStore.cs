@@ -42,8 +42,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
-//TODO: sqlce replacement
-//using System.Data.SqlServerCe;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -54,12 +52,12 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
     /// <summary>
     ///     Class MsSqlMessageStore.
     /// </summary>
-    public class MsSqlMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreAsync<Message>,
+    public class MsSqlMessageStore : IAmAMessageStore<Message>, 
+                                     IAmAMessageStoreAsync<Message>,
         IAmAMessageStoreViewer<Message>, IAmAMessageStoreViewerAsync<Message>
     {
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
-        private const int SqlCeDuplicateKeyError = 25016;
         private readonly MsSqlMessageStoreConfiguration _configuration;
         private readonly ILog _log;
 
@@ -96,37 +94,26 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             using (var connection = GetConnection())
             {
                 connection.Open();
-                var command = InitAddDbCommand(connection, parameters);
-
-                try
+                using (var command = InitAddDbCommand(connection, parameters))
                 {
-                    command.ExecuteNonQuery();
-                }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                    try
                     {
-                        _log.WarnFormat(
-                            "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
-                            message.Id);
-                        return;
+                        command.ExecuteNonQuery();
                     }
+                    catch (SqlException sqlException)
+                    {
+                        if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
+                            sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                        {
+                            _log.WarnFormat(
+                                "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                                message.Id);
+                            return;
+                        }
 
-                    throw;
+                        throw;
+                    }
                 }
-                //TODO: sqlce replacement
-                //catch (SqlCeException sqlCeException)
-                //{
-                //    if (sqlCeException.NativeError == SqlCeDuplicateKeyError)
-                //    {
-                //        _log.WarnFormat(
-                //            "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
-                //            message.Id);
-                //        return;
-                //    }
-
-                //    throw;
-                //}
             }
         }
 
@@ -134,10 +121,11 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         ///     Gets the specified message identifier.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
+        /// <param name="messageStoreTimeout"></param>
         /// <returns>Task&lt;Message&gt;.</returns>
         public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
+            var sql = string.Format("SELECT * FROM [{0}] WHERE MessageId = @MessageId",
                 _configuration.MessageStoreTableName);
             var parameters = new[]
             {
@@ -154,39 +142,28 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             using (var connection = GetConnection())
             {
                 await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
-                var command = InitAddDbCommand(connection, parameters);
-
-                try
+                using (var command = InitAddDbCommand(connection, parameters))
                 {
-                    await
-                        command.ExecuteNonQueryAsync(ct ?? CancellationToken.None)
-                            .ConfigureAwait(ContinueOnCapturedContext);
-                }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                    try
                     {
-                        _log.WarnFormat(
-                            "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
-                            message.Id);
-                        return;
+                        await
+                            command.ExecuteNonQueryAsync(ct ?? CancellationToken.None)
+                                .ConfigureAwait(ContinueOnCapturedContext);
                     }
+                    catch (SqlException sqlException)
+                    {
+                        if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
+                            sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                        {
+                            _log.WarnFormat(
+                                "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                                message.Id);
+                            return;
+                        }
 
-                    throw;
+                        throw;
+                    }
                 }
-                //TODO: sqlce replacement
-                //catch (SqlCeException sqlCeException)
-                //{
-                //    if (sqlCeException.NativeError == SqlCeDuplicateKeyError)
-                //    {
-                //        _log.WarnFormat(
-                //            "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
-                //            message.Id);
-                //        return;
-                //    }
-
-                //    throw;
-                //}
             }
         }
 
@@ -209,8 +186,8 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         /// <returns><see cref="Task{Message}" />.</returns>
         public async Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken? ct = null)
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
-                _configuration.MessageStoreTableName);
+            var sql = string.Format("SELECT * FROM [{0}] WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
+
             var parameters = new[]
             {
                 CreateSqlParameter("MessageId", messageId)
@@ -285,21 +262,18 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             }
         }
 
+        //Fold this code back in as there is only one choice
         private DbParameter CreateSqlParameter(string parameterName, object value)
         {
             switch (_configuration.Type)
             {
                 case MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer:
                     return new SqlParameter(parameterName, value);
-                //TODO: sqlce replacement
-                //case MsSqlMessageStoreConfiguration.DatabaseType.SqlCe:
-                //    return new SqlCeParameter(parameterName, value);
             }
             return null;
         }
 
-        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int messageStoreTimeout,
-            params DbParameter[] parameters)
+        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int messageStoreTimeout, params DbParameter[] parameters)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -341,9 +315,6 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             {
                 case MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer:
                     return new SqlConnection(_configuration.ConnectionString);
-                //TODO: sqlce replacement
-                //case MsSqlMessageStoreConfiguration.DatabaseType.SqlCe:
-                //    return new SqlCeConnection(_configuration.ConnectionString);
             }
             return null;
         }
@@ -353,7 +324,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
             var command = connection.CreateCommand();
             var sql =
                 string.Format(
-                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
+                    "INSERT INTO [{0}] (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
                     _configuration.MessageStoreTableName);
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
@@ -422,34 +393,12 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
         private void SetPagingCommandFor(DbCommand command, MsSqlMessageStoreConfiguration configuration, int pageSize,
             int pageNumber)
         {
-            string pagingSqlFormat;
-            DbParameter[] parameters;
-            switch (configuration.Type)
+            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM [{0}]) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
             {
-                case MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer:
-                    //works 2005+
-                    pagingSqlFormat =
-                        "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-                    parameters = new[]
-                    {
-                        CreateSqlParameter("PageNumber", pageNumber)
-                        , CreateSqlParameter("PageSize", pageSize)
-                    };
-                    break;
-                case MsSqlMessageStoreConfiguration.DatabaseType.SqlCe:
-                    //2012+/ce only
-                    pagingSqlFormat =
-                        "SELECT * FROM {0} ORDER BY Timestamp DESC OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
-                    parameters = new[]
-                    {
-                        CreateSqlParameter("Offset", (pageNumber - 1)*pageSize)
-                        //sqlce doesn't like arithmetic in offset...
-                        , CreateSqlParameter("PageSize", pageSize)
-                    };
-                    break;
-                default:
-                    throw new ArgumentException("Cannot generate command for sql env " + configuration.Type);
-            }
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize)
+            };
 
             var sql = string.Format(pagingSqlFormat, _configuration.MessageStoreTableName);
 

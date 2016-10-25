@@ -131,7 +131,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         /// <returns>T.</returns>
         public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
         {
-            var sql = string.Format("select * from {0} where CommandId = @commandId",
+            var sql = string.Format("select * from [{0}] where CommandId = @commandId",
                 _configuration.MessageStoreTableName);
             var parameters = new[]
             {
@@ -209,7 +209,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken? ct = null)
             where T : class, IRequest, new()
         {
-            var sql = string.Format("select * from {0} where CommandId = @commandId",
+            var sql = string.Format("select * from [{0}] where CommandId = @commandId",
                 _configuration.MessageStoreTableName);
             var parameters = new[]
             {
@@ -298,7 +298,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         {
             var sqlAdd =
                 string.Format(
-                    "insert into {0} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)",
+                    "insert into [{0}] (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)",
                     _configuration.MessageStoreTableName);
 
             var sqlcmd = connection.CreateCommand();

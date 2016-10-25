@@ -26,18 +26,23 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
 {
     public class SqlMessageStoreBuilder
     {
-        const string _messageStoreDDL = "CREATE TABLE {0} (" +
-                "MessageId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
-                "Topic nvarchar(255)," +
-                "MessageType nvarchar(32)," +
-                "Timestamp dateTime," +
-                "HeaderBag ntext," +
-                "Body ntext" +
-                ")";
+        const string MessageStoreDdl = @"
+        CREATE TABLE [{0}]
+            (
+              [Id] [BIGINT] NOT NULL IDENTITY ,
+              [MessageId] UNIQUEIDENTIFIER NOT NULL ,
+              [Topic] NVARCHAR(255) NULL ,
+              [MessageType] NVARCHAR(32) NULL ,
+              [Timestamp] DATETIME NULL ,
+              [HeaderBag] NTEXT NULL ,
+              [Body] NTEXT NULL ,
+              PRIMARY KEY ( [Id] )
+            );
+        ";
 
         public static string GetDDL(string tableName)
         {
-            return string.Format(_messageStoreDDL, tableName);
+            return string.Format(MessageStoreDdl, tableName);
         }
 
     }

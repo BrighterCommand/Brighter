@@ -28,8 +28,11 @@
     "Release": {
       "buildOptions": {
         "define": [ "RELEASE", "TRACE" ],
-        "optimize": true
-      }
+        "optimize": true,
+        "embed": {
+          "include": [ "./DDL Scripts/MSSQL/MessageStore.sql" ] 
+          }
+        }
     }
   }
 }
