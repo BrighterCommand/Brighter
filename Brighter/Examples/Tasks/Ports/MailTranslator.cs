@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using MimeKit;
 using Tasks.Model;
 
@@ -34,6 +35,7 @@ namespace Tasks.Ports
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress("Tasks Reminder", "tasks@paramorebrighter.com"));
             message.To.Add(new MailboxAddress(taskReminder.ReminderTo, taskReminder.ReminderTo));
+            message.Cc.Add(new MailboxAddress(taskReminder.CopyReminderTo, taskReminder.CopyReminderTo));
             message.Subject = string.Format("Task Reminder! Task {0} is due on {1}", taskReminder.TaskName,
                 taskReminder.DueDate);
             message.Body = new TextPart("plain")

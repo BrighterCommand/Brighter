@@ -81,7 +81,7 @@ namespace Tasks.Adapters.DataAccess
         {
             using (var context = TasksContextFactory.Create(_connectionString))
             {
-                return context.Tasks.First(t => t.Id == taskId);
+                return context.Tasks.FirstOrDefault(t => t.Id == taskId);
 
             }
         }
@@ -91,7 +91,7 @@ namespace Tasks.Adapters.DataAccess
 
             using (var context = TasksContextFactory.Create(_connectionString))
             {
-                return context.Tasks.First(t => t.TaskName == taskName);
+                return context.Tasks.FirstOrDefault(t => t.TaskName == taskName);
             }
 
         }

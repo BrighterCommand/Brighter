@@ -175,14 +175,6 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messagestore.mssql\paramore.brighter.commandprocessor.messagestore.mssql.csproj">
-      <Project>{C1FC780B-4BAD-47AE-9A0D-FE216239AFD8}</Project>
-      <Name>paramore.brighter.commandprocessor.messagestore.mssql</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\paramore.brighter.commandprocessor.messaginggateway.rmq\paramore.brighter.commandprocessor.messaginggateway.rmq.csproj">
-      <Project>{380af497-d2b5-49b2-aa7a-b0d86991b390}</Project>
-      <Name>paramore.brighter.commandprocessor.messaginggateway.rmq</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Tasks\Tasks.csproj">
       <Project>{e7900a56-da88-46ca-8418-fb4c2bc2d326}</Project>
       <Name>Tasks</Name>

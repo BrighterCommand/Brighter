@@ -1,0 +1,29 @@
+﻿{
+  "testRunner": "nunit",
+  "version": "1.0.0-*",
+
+  "dependencies": {
+    "Tasks": {
+      "target": "project"
+    },
+    "NUnit.Specifications.NUnit3.coreCLR": {
+      "target": "project"
+    },
+    "nUnitShouldAdapter": {
+      "target": "project"
+    },
+    "dotnet-test-nunit": "3.4.0-beta-2",
+    "FakeItEasy": "2.3.0-coreclr-beta57",
+    "Microsoft.NETCore.App": {
+      "type": "platform",
+      "version": "1.0.1"
+    },
+    "NUnit": "3.5.0"
+  },
+
+  "frameworks": {
+    "netcoreapp1.0": {
+      "imports": "dnxcore50"
+    }
+  }
+}
