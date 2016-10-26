@@ -1,4 +1,7 @@
 ﻿{
+  "buildOptions": {
+    "debugType": "portable"
+  },
   "testRunner": "nunit",
   "dependencies": {
    "paramore.brighter.commandprocessor": {

@@ -3,6 +3,9 @@
   "title": "Paramore.Brighter.CommandProcessor",
   "description": "The Command Dispatcher pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers",
   "authors": [ "Ian Cooper" ],
+  "buildOptions": {
+    "debugType": "portable"
+  },
   "packOptions": {
     "summary": "Brighter is a .NET implementation of the Command Processor and Command Dispatcher patterns. It decouples invoker from target and provides common services to the command pipeline.",
     "tags": ["RabbitMQ","Messaging","AMQP","ServiceBus","PubSub","Publish","Subscribe","Queue","Topic","Relay","Service","Bus","CQRS","Command Dispatcher","Command Processor","Command","Event","Broker","Task Queue","Work Queue","Retry","Circuit Breaker","Availability"],

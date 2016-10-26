@@ -1,4 +1,7 @@
 {
+  "buildOptions": {
+     "debugType": "portable"
+  },
   "dependencies": {
     "Microsoft.NETCore.App": {
       "version": "1.0.0",

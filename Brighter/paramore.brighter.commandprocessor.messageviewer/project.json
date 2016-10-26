@@ -22,6 +22,7 @@
     }
   },
   "buildOptions": {
+    "debugType": "portable",
     "embed": [
       "assets/**",
       "Content/**",
@@ -34,4 +35,4 @@
       //, "Scripts/**" - include this and build fiels with errors in *.targets (!)
     ]
   }
-}
+ }

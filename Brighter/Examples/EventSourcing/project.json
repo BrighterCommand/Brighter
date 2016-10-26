@@ -1,7 +1,8 @@
 {
   "version": "1.0.0-*",
   "buildOptions": {
-    "emitEntryPoint": true
+     "debugType": "portable",
+     "emitEntryPoint": true
   },
   "dependencies": {
     "paramore.brighter.commandprocessor": { "target": "project" },

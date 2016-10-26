@@ -35,7 +35,7 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Ignore("Removed as test crashes dotnet test")]
+    [Ignore("Breaks dotnet test runner")]
     [Subject(typeof(Dispatcher))]
     public class When_A_Message_Dispatcher_Restarts_A_Connection : ContextSpecification
     {

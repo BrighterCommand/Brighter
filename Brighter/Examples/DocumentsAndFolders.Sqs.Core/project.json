@@ -1,5 +1,8 @@
 {
   "version": "1.0.0-*",
+  "buildOptions": {
+    "debugType": "portable"
+  },
   "dependencies": {
     "paramore.brighter.commandprocessor": { "target": "project" },
     "paramore.brighter.commandprocessor.messaginggateway.awssqs": { "target": "project" },

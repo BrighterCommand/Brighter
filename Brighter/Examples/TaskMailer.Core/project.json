@@ -1,6 +1,9 @@
 {
   "version": "1.0.0-*",
-  "dependencies": {
+  "buildOptions": {
+     "debugType": "portable"
+  },
+   "dependencies": {
     "paramore.brighter.commandprocessor": { "target": "project" },
     "Tasks": { "target": "project" }
   },
