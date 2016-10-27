@@ -21,18 +21,18 @@ nuget:
 before_build:
 #- appveyor-retry dotnet restore -v Minimal
   # dotnet info
-  - ps: dotnet --info
-  - ps: cd Brighter
-  - ps: dotnet restore
+  - cmd: dotnet --info
+  - cmd: cd Brighter
+  - cmd: dotnet restore
 build_script:
 
   #- ps: dotnet version
-  - ps: dotnet build */**/project.json
+  - cmd: dotnet build */**/project.json
 
 test_script:
-  - ps: dotnet test paramore.brighter.commandprocessor.tests.nunit/project.json
-  - ps: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json
-  - ps: dotnet test Examples/TasksTests/project.json
+  - cmd: dotnet test paramore.brighter.commandprocessor.tests.nunit/project.json
+  - cmd: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json
+  - cmd: dotnet test Examples/TasksTests/project.json
 
 cache:
 - '%USERPROFILE%\.nuget\packages'
