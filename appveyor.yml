@@ -34,11 +34,6 @@ test_script:
   - ps: dotnet test Brighter/paramore.brighter.commandprocessor.viewer.tests/project.json
   - ps: dotnet test Brighter/Examples/TasksTests/project.json
 
-artifacts:
-
-
-on_finish:
-
 cache:
 - '%USERPROFILE%\.nuget\packages'
 
