@@ -30,7 +30,7 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
 {
-    [Category("Requires MSSQL")]
+    [Category("MSSQL")]
     public class When_Writing_A_Message_To_The_Command_Store : NUnit.Specifications.ContextSpecification
     {
         private static MsSqlTestHelper _msSqlTestHelper;

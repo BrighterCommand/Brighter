@@ -44,7 +44,7 @@ using NUnit.Framework;
 namespace paramore.commandprocessor.tests.MessageStore.EventStore
 {
     [Subject(typeof(EventStoreMessageStore))]
-    [Category("Requires Waiting on EventStore release")]
+    [Category("EventStore")]
     public class When_Writing_Messages_To_The_Message_Store_Async : ContextSpecification
     {
         private static IList<Message> s_messages;

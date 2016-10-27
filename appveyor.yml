@@ -27,12 +27,14 @@ before_build:
 build_script:
 
   #- ps: dotnet version
-  - cmd: dotnet build */**/project.json
+  - cmd: dotnet build -c Release */**/project.json
 
 test_script:
-  - cmd: dotnet test paramore.brighter.commandprocessor.tests.nunit/project.json
-  - cmd: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json
-  - cmd: dotnet test Examples/TasksTests/project.json
+  - cmd: dotnet test paramore.brighter.commandprocessor.tests.nunit/project.json --where "cat!=MSSQL || cat!=EventStore || cat!=AWS || cat!=RESTMS || cat!=RMQ" --result=myresults.xml;format=AppVeyor
+  - cmd: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json --where "cat!=MSSQL || cat!=EventStore || cat!=AWS || cat!=RESTMS || cat!=RMQ" --result=myresults.xml;format=AppVeyor
+  - cmd: dotnet test Examples/TasksTests/project.json --where "cat!=MSSQL || cat!=EventStore || cat!=AWS || cat!=RESTMS || cat!=RMQ" --result=myresults.xml;format=AppVeyor
+
+test: off
 
 cache:
 - '%USERPROFILE%\.nuget\packages'

@@ -26,6 +26,7 @@ using System;
 using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using Tasks.Adapters.DataAccess;

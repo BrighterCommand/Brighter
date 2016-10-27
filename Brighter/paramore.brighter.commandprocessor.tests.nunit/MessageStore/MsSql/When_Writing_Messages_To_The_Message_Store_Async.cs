@@ -36,7 +36,7 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
-    [Category("Requires MSSQL")]
+    [Category("MSSQL")]
     [Subject(typeof(MsSqlMessageStore))]
     public class When_Writing_Messages_To_The_Message_Store_Async : ContextSpecification
     {

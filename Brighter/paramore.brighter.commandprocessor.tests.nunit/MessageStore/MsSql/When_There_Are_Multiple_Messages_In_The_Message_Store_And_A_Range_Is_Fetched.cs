@@ -35,7 +35,7 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
-    [Category("Requires MSSQL")]
+    [Category("MSSQL")]
     [Subject(typeof(MsSqlMessageStore))]
     public class When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched : ContextSpecification
     {
