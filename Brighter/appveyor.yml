@@ -1,0 +1,53 @@
+version: 7.0.{build}
+pull_requests:
+  do_not_increment_build_number: true
+branches:
+  only:
+  - master
+skip_tags: true
+configuration: 
+#- Debug
+- Release
+platform: Any CPU
+enviroment:
+  # Don't report back to the mothership
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+assembly_info:
+  patch: true
+  file: '**\AssemblyInfo.*'
+  assembly_version: 7.0.0.0
+  assembly_file_version: '{version}'
+  assembly_informational_version: '{version}'
+nuget:
+  project_feed: true
+  disable_publish_on_pr: true
+before_build:
+#- appveyor-retry dotnet restore -v Minimal
+  # dotnet info
+  - ps: dotnet --info
+  - ps: cd Brighter
+  - ps: dotnet restore
+build_script:
+
+  #- ps: dotnet version
+  - ps: dotnet build Brighter/*/**/project.json
+
+test_script:
+  - ps: dotnet test Brighter/paramore.brighter.commandprocessor.tests.nunit/project.json
+  - ps: dotnet test Brighter/paramore.brighter.commandprocessor.viewer.tests/project.json
+  - ps: dotnet test Brighter/Examples/TasksTests/project.json
+
+artifacts:
+
+
+on_finish:
+
+cache:
+- '%USERPROFILE%\.nuget\packages'
+
+notifications:
+- provider: Webhook
+  url: https://webhooks.gitter.im/e/182838afa865c8e16f72
+  on_build_success: true
+  on_build_failure: true
+  on_build_status_changed: true
