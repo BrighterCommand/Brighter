@@ -34,8 +34,6 @@ test_script:
   - cmd: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json --where "cat!=MSSQL || cat!=EventStore || cat!=AWS || cat!=RESTMS || cat!=RMQ" --result=myresults.xml;format=AppVeyor
   - cmd: dotnet test Examples/TasksTests/project.json --where "cat!=MSSQL || cat!=EventStore || cat!=AWS || cat!=RESTMS || cat!=RMQ" --result=myresults.xml;format=AppVeyor
 
-test: off
-
 cache:
 - '%USERPROFILE%\.nuget\packages'
 
