@@ -27,12 +27,12 @@ before_build:
 build_script:
 
   #- ps: dotnet version
-  - ps: dotnet build Brighter/*/**/project.json
+  - ps: dotnet build */**/project.json
 
 test_script:
-  - ps: dotnet test Brighter/paramore.brighter.commandprocessor.tests.nunit/project.json
-  - ps: dotnet test Brighter/paramore.brighter.commandprocessor.viewer.tests/project.json
-  - ps: dotnet test Brighter/Examples/TasksTests/project.json
+  - ps: dotnet test paramore.brighter.commandprocessor.tests.nunit/project.json
+  - ps: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json
+  - ps: dotnet test Examples/TasksTests/project.json
 
 cache:
 - '%USERPROFILE%\.nuget\packages'
