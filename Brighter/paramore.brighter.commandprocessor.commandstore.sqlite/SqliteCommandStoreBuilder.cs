@@ -22,9 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor.commandstore.sqllite
+namespace paramore.brighter.commandprocessor.commandstore.sqlite
 {
-    public class SqlLiteCommandStoreBuilder
+    public class SqliteCommandStoreBuilder
     {
         const string _messageStoreDDL = "CREATE TABLE {0} (" +
                 "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +

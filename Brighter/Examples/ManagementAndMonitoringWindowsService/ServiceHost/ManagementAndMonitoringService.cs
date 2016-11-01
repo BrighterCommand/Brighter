@@ -32,7 +32,7 @@ using ManagementAndMonitoring.Ports.CommandHandlers;
 using ManagementAndMonitoring.Ports.Commands;
 using ManagementAndMonitoring.Ports.Mappers;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messagestore.sqllite;
+using paramore.brighter.commandprocessor.messagestore.sqlite;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
@@ -130,8 +130,8 @@ namespace ManagementAndMonitoringWindowsService.ServiceHost
             _controlDispatcher = controlBusBuilder.Build(Environment.MachineName + "." + "ManagementAndMonitoring");
 
             container.Register<IAmAControlBusSender>(new ControlBusSenderFactory().Create(
-                new SqlLiteMessageStore(
-                    new SqlLiteMessageStoreConfiguration(
+                new SqliteMessageStore(
+                    new SqliteMessageStoreConfiguration(
                     "DataSource=\"" + Path.Combine(Path.GetDirectoryName(typeof(GreetingCommand).GetTypeInfo().Assembly.CodeBase.Substring(8)), "App_Data\\MessageStore.sdf") + "\"", "Messages")
                     ),
                 new RmqMessageProducer(rmqGatewayMonitoring)));

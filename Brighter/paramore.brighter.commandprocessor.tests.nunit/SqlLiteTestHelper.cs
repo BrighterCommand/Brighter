@@ -1,13 +1,13 @@
 using System;
 using System.IO;
 using Microsoft.Data.Sqlite;
-using paramore.brighter.commandprocessor.commandstore.sqllite;
+using paramore.brighter.commandprocessor.commandstore.sqlite;
 using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messagestore.sqllite;
+using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit
 {
-    public class SqlLiteTestHelper
+    public class SqliteTestHelper
     {
         private const string TestDbPath = "test.db";
         public string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
@@ -21,14 +21,14 @@ namespace paramore.brighter.commandprocessor.tests.nunit
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = "DataSource=\"" + connectionStringPath + "\"";
-            return CreateDatabaseWithTable(ConnectionString, SqlLiteCommandStoreBuilder.GetDDL(TableName));
+            return CreateDatabaseWithTable(ConnectionString, SqliteCommandStoreBuilder.GetDDL(TableName));
         }
 
         public SqliteConnection CreateMessageStoreConnection()
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = "DataSource=\"" + connectionStringPath + "\"";
-            return CreateDatabaseWithTable(ConnectionString, SqlLiteMessageStoreBuilder.GetDDL(TableName_Messages));
+            return CreateDatabaseWithTable(ConnectionString, SqliteMessageStoreBuilder.GetDDL(TableName_Messages));
         }
 
         private string GetUniqueTestDbPathAndCreateDir()

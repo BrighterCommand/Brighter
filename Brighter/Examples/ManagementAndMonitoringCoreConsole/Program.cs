@@ -39,7 +39,7 @@ using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
 using Connection = paramore.brighter.serviceactivator.Connection;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
-using paramore.brighter.commandprocessor.messagestore.sqllite;
+using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace ManagementAndMonitoringCoreConsole
 {
@@ -127,8 +127,8 @@ namespace ManagementAndMonitoringCoreConsole
             var controlDispatcher = controlBusBuilder.Build(Environment.MachineName + "." + "ManagementAndMonitoring");
 
             container.Register<IAmAControlBusSender>(new ControlBusSenderFactory().Create(
-                new SqlLiteMessageStore(
-                    new SqlLiteMessageStoreConfiguration(
+                new SqliteMessageStore(
+                    new SqliteMessageStoreConfiguration(
                     "DataSource=\"" + Path.Combine(Path.GetDirectoryName(typeof(GreetingCommand).GetTypeInfo().Assembly.CodeBase.Substring(8)), "App_Data\\MessageStore.sdf") + "\"", "Messages")
                     ),
                 new RmqMessageProducer(RmqGatewayBuilder.With

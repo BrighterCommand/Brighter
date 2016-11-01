@@ -31,24 +31,24 @@ using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messagestore.sqllite;
+using paramore.brighter.commandprocessor.messagestore.sqlite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
+namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 {
 
     public class when_writing_a_message_with_minimal_header_information_to_the_message_store : ContextSpecification
     {
-        private static SqlLiteMessageStore s_sqlMessageStore;
+        private static SqliteMessageStore s_sqlMessageStore;
         private static Message s_message;
         private static Message s_storedMessage;
         private static SqliteConnection _sqliteConnection;
-        private static SqlLiteTestHelper _sqlLiteTestHelper;
+        private static SqliteTestHelper _sqliteTestHelper;
 
         private Establish _context = () =>
         {
-            _sqlLiteTestHelper = new SqlLiteTestHelper();
-            _sqliteConnection = _sqlLiteTestHelper.CreateMessageStoreConnection();
-            s_sqlMessageStore  = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
+            _sqliteTestHelper = new SqliteTestHelper();
+            _sqliteConnection = _sqliteTestHelper.CreateMessageStoreConnection();
+            s_sqlMessageStore  = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
 
             s_message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
             AddHistoricMessage(s_message).Wait();
@@ -56,7 +56,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 
         private static async Task AddHistoricMessage(Message message)
         {
-            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)", _sqlLiteTestHelper.TableName_Messages);
+            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)", _sqliteTestHelper.TableName_Messages);
             var parameters = new[]
             {
                 new SqliteParameter("MessageId", message.Id.ToString()),
@@ -67,13 +67,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
                 new SqliteParameter("Body", message.Body.Value),
             };
 
-            using (var connection = new SqliteConnection(_sqlLiteTestHelper.ConnectionString))
+            using (var connection = new SqliteConnection(_sqliteTestHelper.ConnectionString))
             using (var command = connection.CreateCommand())
             {
                 await connection.OpenAsync();
 
                 command.CommandText = sql;
-                //command.Parameters.AddRange(parameters); used to work... but can't with current sqllite lib. Iterator issue
+                //command.Parameters.AddRange(parameters); used to work... but can't with current Sqlite lib. Iterator issue
                 for (var index = 0; index < parameters.Length; index++)
                 {
                     command.Parameters.Add(parameters[index]);
@@ -92,7 +92,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 
         private Cleanup _cleanup = () =>
         {
-            _sqlLiteTestHelper.CleanUpDb();
+            _sqliteTestHelper.CleanUpDb();
         };
     }
 }

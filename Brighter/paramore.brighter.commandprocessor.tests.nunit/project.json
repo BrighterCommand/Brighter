@@ -10,13 +10,13 @@
     "paramore.brighter.commandprocessor.commandstore.mssql": {
       "target": "project"
     },
-    "paramore.brighter.commandprocessor.commandstore.sqllite": {
+    "paramore.brighter.commandprocessor.commandstore.sqlite": {
       "target": "project"
     },
     "paramore.brighter.commandprocessor.messagestore.mssql": {
       "target": "project"
     },
-    "paramore.brighter.commandprocessor.messagestore.sqllite": {
+    "paramore.brighter.commandprocessor.messagestore.sqlite": {
       "target": "project"
     },
     "paramore.brighter.commandprocessor.messaginggateway.awssqs": {

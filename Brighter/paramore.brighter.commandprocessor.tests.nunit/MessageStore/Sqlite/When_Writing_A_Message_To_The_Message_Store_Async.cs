@@ -28,16 +28,16 @@ using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messagestore.sqllite;
+using paramore.brighter.commandprocessor.messagestore.sqlite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
+namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 {
-    [Subject(typeof(SqlLiteMessageStore))]
+    [Subject(typeof(SqliteMessageStore))]
     public class When_Writing_A_Message_To_The_Message_Store_Async : ContextSpecification
     {
-        private static SqlLiteTestHelper _sqlLiteTestHelper;
+        private static SqliteTestHelper _sqliteTestHelper;
         private static SqliteConnection _sqliteConnection;
-        private static SqlLiteMessageStore _sSqlMessageStore;
+        private static SqliteMessageStore _sSqlMessageStore;
         private static readonly string key1 = "name1";
         private static readonly string key2 = "name2";
         private static Message s_messageEarliest;
@@ -49,9 +49,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 
         private Establish _context = () =>
         {
-            _sqlLiteTestHelper = new SqlLiteTestHelper();
-            _sqliteConnection = _sqlLiteTestHelper.CreateMessageStoreConnection();
-            _sSqlMessageStore = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
+            _sqliteTestHelper = new SqliteTestHelper();
+            _sqliteConnection = _sqliteTestHelper.CreateMessageStoreConnection();
+            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,
                 DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(key1, value1);
@@ -92,7 +92,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 
         private static void CleanUpDb()
         {
-            _sqlLiteTestHelper.CleanUpDb();
+            _sqliteTestHelper.CleanUpDb();
         }
     }
 }

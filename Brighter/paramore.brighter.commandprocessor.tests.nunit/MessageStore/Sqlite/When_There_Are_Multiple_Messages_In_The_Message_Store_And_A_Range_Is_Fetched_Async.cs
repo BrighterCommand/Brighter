@@ -28,18 +28,19 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
+using Nito.AsyncEx;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messagestore.sqllite;
+using paramore.brighter.commandprocessor.messagestore.sqlite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
+namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 {
-    [Subject(typeof(SqlLiteMessageStore))]
-    public class When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched : ContextSpecification
+    [Subject(typeof(SqliteMessageStore))]
+    public class When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched_Async : ContextSpecification
     {
-        private static SqlLiteTestHelper _sqlLiteTestHelper;
+        private static SqliteTestHelper _sqliteTestHelper;
         private static SqliteConnection _sqliteConnection;
-        private static SqlLiteMessageStore _sSqlMessageStore;
+        private static SqliteMessageStore _sSqlMessageStore;
         private static readonly string _TopicFirstMessage = "test_topic";
         private static readonly string _TopicLastMessage = "test_topic3";
         private static IEnumerable<Message> messages;
@@ -52,9 +53,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 
         private Establish _context = () =>
         {
-            _sqlLiteTestHelper = new SqlLiteTestHelper();
-            _sqliteConnection = _sqlLiteTestHelper.CreateMessageStoreConnection();
-            _sSqlMessageStore = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
+            _sqliteTestHelper = new SqliteTestHelper();
+            _sqliteConnection = _sqliteTestHelper.CreateMessageStoreConnection();
+            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             s_messageEarliest =
                 new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT),
                     new MessageBody("message body"));
@@ -62,19 +63,19 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
                 new MessageBody("message body2"));
             s_message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT),
                 new MessageBody("message body3"));
-            _sSqlMessageStore.Add(s_messageEarliest);
-            _sSqlMessageStore.Add(s_message1);
-            _sSqlMessageStore.Add(s_message2);
+            AsyncContext.Run( async () => await _sSqlMessageStore.AddAsync(s_messageEarliest));
+            AsyncContext.Run( async () => await _sSqlMessageStore.AddAsync(s_message1));
+            AsyncContext.Run( async () => await _sSqlMessageStore.AddAsync(s_message2));
         };
 
-        private Because _of = () => { messages = _sSqlMessageStore.Get(1, 3); };
+        private Because _of = () =>  AsyncContext.Run(async () => messages = await _sSqlMessageStore.GetAsync(1, 3)); 
         private It _should_fetch_1_message = () => { messages.Count().ShouldEqual(1); };
         private It _should_fetch_expected_message = () => { messages.First().Header.Topic.ShouldEqual(_TopicLastMessage); };
         private It _should_not_fetch_null_messages = () => { messages.ShouldNotBeNull(); };
 
         private static void CleanUpDb()
         {
-            _sqlLiteTestHelper.CleanUpDb();
+            _sqliteTestHelper.CleanUpDb();
         }
     }
 }

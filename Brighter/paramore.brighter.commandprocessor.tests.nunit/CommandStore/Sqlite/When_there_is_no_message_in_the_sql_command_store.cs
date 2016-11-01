@@ -26,24 +26,24 @@ using System;
 using Microsoft.Data.Sqlite;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.commandstore.sqllite;
+using paramore.brighter.commandprocessor.commandstore.sqlite;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.Sqlite
+namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
 {
     public class When_There_Is_No_Message_In_The_Sql_Command_Store : ContextSpecification
     {
-        private static SqlLiteTestHelper _sqlLiteTestHelper;
-        private static SqlLiteCommandStore s_sqlCommandStore;
+        private static SqliteTestHelper _sqliteTestHelper;
+        private static SqliteCommandStore s_sqlCommandStore;
         private static MyCommand s_raisedCommand;
         private static MyCommand s_storedCommand;
 
         private Establish _context = () =>
         {
-            _sqlLiteTestHelper = new SqlLiteTestHelper();
-            _sqliteConnection = _sqlLiteTestHelper.CreateDatabase();
-            s_sqlCommandStore = new SqlLiteCommandStore(new SqlLiteCommandStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName), new LogProvider.NoOpLogger());
+            _sqliteTestHelper = new SqliteTestHelper();
+            _sqliteConnection = _sqliteTestHelper.CreateDatabase();
+            s_sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName), new LogProvider.NoOpLogger());
         };
 
         private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(Guid.NewGuid()); };
@@ -53,7 +53,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.Sqlite
 
         private Cleanup _cleanup = () =>
         {
-            _sqlLiteTestHelper.CleanUpDb();
+            _sqliteTestHelper.CleanUpDb();
         };
 
         private static SqliteConnection _sqliteConnection;

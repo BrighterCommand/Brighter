@@ -6,8 +6,8 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\DotNet\Microsoft.DotNet.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>5a8f1495-b8d2-4018-8b3d-6da25a14290f</ProjectGuid>
-    <RootNamespace>paramore.brighter.commandprocessor.commandstore.sqllite</RootNamespace>
+    <ProjectGuid>24e3ee6d-ba0a-41e5-8370-bbd30da61df4</ProjectGuid>
+    <RootNamespace>paramore.brighter.commandprocessor.messagestore.sqlite</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">.\obj</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">.\bin\</OutputPath>
   </PropertyGroup>

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messagestore.sqllite;
+using paramore.brighter.commandprocessor.messagestore.sqlite;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using Polly;
@@ -64,7 +64,7 @@ namespace TasksApi
             var messagingGatewayConfiguration = RmqGatewayBuilder.With.Uri(new Uri(Configuration["RabbitMQ:Uri"])).Exchange(Configuration["RabbitMQ:Exchange"]).DefaultQueues();
 
             var gateway = new RmqMessageProducer(messagingGatewayConfiguration);
-            IAmAMessageStore<Message> sqlMessageStore = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration("Data Source = tasks.db", "MessageStores"));
+            IAmAMessageStore<Message> sqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration("Data Source = tasks.db", "MessageStores"));
 
             var container = new Container();
             container.Configure(config =>

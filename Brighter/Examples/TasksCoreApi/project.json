@@ -27,7 +27,7 @@
     "paramore.brighter.commandprocessor.messaginggateway.rmq": {
       "target": "project"
     },
-    "paramore.brighter.commandprocessor.messagestore.sqllite": {
+    "paramore.brighter.commandprocessor.messagestore.sqlite": {
       "target": "project"
     },
     "StructureMap.Microsoft.DependencyInjection": "1.0.1",

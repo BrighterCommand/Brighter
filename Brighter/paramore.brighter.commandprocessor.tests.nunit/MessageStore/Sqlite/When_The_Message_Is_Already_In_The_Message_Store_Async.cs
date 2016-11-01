@@ -26,18 +26,20 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
+using Nito.AsyncEx;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.messagestore.sqllite;
+using paramore.brighter.commandprocessor.messagestore.sqlite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
+namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 {
-    [Subject(typeof(SqlLiteMessageStore))]
-    public class When_There_Is_No_Message_In_The_Sql_Message_Store : ContextSpecification
+    [Subject(typeof(SqliteMessageStore))]
+    public class When_The_Message_Is_Already_In_The_Message_Store_Async : ContextSpecification
     {
-        private static SqlLiteTestHelper _sqlLiteTestHelper;
+        private static SqliteTestHelper _sqliteTestHelper;
         private static SqliteConnection _sqliteConnection;
-        private static SqlLiteMessageStore _sSqlMessageStore;
+        private static SqliteMessageStore _sSqlMessageStore;
+        private static Exception s_exception;
         private static Message s_messageEarliest;
         private static Message s_storedMessage;
 
@@ -45,21 +47,21 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.SqlLite
 
         private Establish _context = () =>
         {
-            _sqlLiteTestHelper = new SqlLiteTestHelper();
-            _sqliteConnection = _sqlLiteTestHelper.CreateMessageStoreConnection();
-            _sSqlMessageStore = new SqlLiteMessageStore(new SqlLiteMessageStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
+            _sqliteTestHelper = new SqliteTestHelper();
+            _sqliteConnection = _sqliteTestHelper.CreateMessageStoreConnection();
+            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
+            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(s_messageEarliest));
         };
 
-        private Because _of = () => { s_storedMessage = _sSqlMessageStore.Get(s_messageEarliest.Id); };
-
-        private It _should_return_a_empty_message =
-            () => s_storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+        private Because _of = () =>  s_exception = Catch.Exception(() => AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(s_messageEarliest)));
+        private It _should_ignore_the_duplcate_key_and_still_succeed = () => { s_exception.ShouldBeNull(); };
 
         private static void CleanUpDb()
         {
-            _sqlLiteTestHelper.CleanUpDb();
+            _sqliteConnection?.Dispose();
+            _sqliteTestHelper.CleanUpDb();
         }
     }
 }

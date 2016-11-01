@@ -59,9 +59,9 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "ManagementAndMonitoringCore
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "ManagementAndMonitoringWindowsService", "Examples\ManagementAndMonitoringWindowsService\ManagementAndMonitoringWindowsService.xproj", "{02D2B8B7-0926-4893-9812-CDE195A02215}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "paramore.brighter.commandprocessor.messagestore.sqllite", "paramore.brighter.commandprocessor.messagestore.sqllite\paramore.brighter.commandprocessor.messagestore.sqllite.xproj", "{24E3EE6D-BA0A-41E5-8370-BBD30DA61DF4}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "paramore.brighter.commandprocessor.messagestore.sqlite", "paramore.brighter.commandprocessor.messagestore.sqlite\paramore.brighter.commandprocessor.messagestore.sqlite.xproj", "{24E3EE6D-BA0A-41E5-8370-BBD30DA61DF4}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "paramore.brighter.commandprocessor.commandstore.sqllite", "paramore.brighter.commandprocessor.commandstore.sqllite\paramore.brighter.commandprocessor.commandstore.sqllite.xproj", "{5A8F1495-B8D2-4018-8B3D-6DA25A14290F}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "paramore.brighter.commandprocessor.commandstore.sqlite", "paramore.brighter.commandprocessor.commandstore.sqlite\paramore.brighter.commandprocessor.commandstore.sqlite.xproj", "{5A8F1495-B8D2-4018-8B3D-6DA25A14290F}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "paramore.brighter.commandprocessor.messageviewer", "paramore.brighter.commandprocessor.messageviewer\paramore.brighter.commandprocessor.messageviewer.xproj", "{97AF4A5C-9A84-496B-AA83-C36D8B0E53F8}"
 EndProject

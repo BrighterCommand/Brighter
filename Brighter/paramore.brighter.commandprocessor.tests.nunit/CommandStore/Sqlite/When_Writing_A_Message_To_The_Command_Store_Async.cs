@@ -26,26 +26,26 @@ using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.commandstore.sqllite;
+using paramore.brighter.commandprocessor.commandstore.sqlite;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.Sqlite
+namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
 {
     public class When_Writing_A_Message_To_The_Command_Store_Async : ContextSpecification
     {
-        private static SqlLiteTestHelper _sqlLiteTestHelper;
-        private static SqlLiteCommandStore s_sqlCommandStore;
+        private static SqliteTestHelper _sqliteTestHelper;
+        private static SqliteCommandStore s_sqlCommandStore;
         private static MyCommand s_raisedCommand;
         private static MyCommand s_storedCommand;
         private static SqliteConnection _sqliteConnection;
 
         private Establish _context = () =>
         {
-            _sqlLiteTestHelper = new SqlLiteTestHelper();
-            _sqliteConnection = _sqlLiteTestHelper.CreateDatabase();
+            _sqliteTestHelper = new SqliteTestHelper();
+            _sqliteConnection = _sqliteTestHelper.CreateDatabase();
 
-            s_sqlCommandStore = new SqlLiteCommandStore(new SqlLiteCommandStoreConfiguration(_sqlLiteTestHelper.ConnectionString, _sqlLiteTestHelper.TableName), new LogProvider.NoOpLogger());
+            s_sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName), new LogProvider.NoOpLogger());
             s_raisedCommand = new MyCommand {Value = "Test"};
             AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync(s_raisedCommand));
         };
@@ -58,7 +58,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.Sqlite
 
         private Cleanup _cleanup = () =>
         {
-            _sqlLiteTestHelper.CleanUpDb();
+            _sqliteTestHelper.CleanUpDb();
         };
     }
 }

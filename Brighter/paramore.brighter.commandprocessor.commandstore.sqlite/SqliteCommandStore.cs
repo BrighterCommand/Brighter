@@ -46,31 +46,31 @@ using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.Logging;
 
-namespace paramore.brighter.commandprocessor.commandstore.sqllite
+namespace paramore.brighter.commandprocessor.commandstore.sqlite
 {
     /// <summary>
-    ///     Class SqlLiteCommandStore.
+    ///     Class SqliteCommandStore.
     /// </summary>
-    public class SqlLiteCommandStore : IAmACommandStore, IAmACommandStoreAsync
+    public class SqliteCommandStore : IAmACommandStore, IAmACommandStoreAsync
     {
-        private const int SqlliteDuplicateKeyError = 1555;
-        private const int SqlliteUniqueKeyError = 19;
-        private readonly SqlLiteCommandStoreConfiguration _configuration;
+        private const int SqliteDuplicateKeyError = 1555;
+        private const int SqliteUniqueKeyError = 19;
+        private readonly SqliteCommandStoreConfiguration _configuration;
         private readonly ILog _log;
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="SqlLiteCommandStore" /> class.
+        ///     Initializes a new instance of the <see cref="SqliteCommandStore" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public SqlLiteCommandStore(SqlLiteCommandStoreConfiguration configuration)
-            : this(configuration, LogProvider.For<SqlLiteCommandStore>()) {}
+        public SqliteCommandStore(SqliteCommandStoreConfiguration configuration)
+            : this(configuration, LogProvider.For<SqliteCommandStore>()) {}
         
         /// <summary>
-        ///     Initializes a new instance of the <see cref="SqlLiteCommandStore" /> class.
+        ///     Initializes a new instance of the <see cref="SqliteCommandStore" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="log">The log.</param>
-        public SqlLiteCommandStore(SqlLiteCommandStoreConfiguration configuration, ILog log)
+        public SqliteCommandStore(SqliteCommandStoreConfiguration configuration, ILog log)
         {
             _configuration = configuration;
             _log = log;
@@ -107,8 +107,8 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
 
         private static bool IsExceptionUnqiueOrDuplicateIssue(SqliteException sqlException)
         {
-            return sqlException.SqliteErrorCode == SqlliteDuplicateKeyError ||
-                   sqlException.SqliteErrorCode == SqlliteUniqueKeyError;
+            return sqlException.SqliteErrorCode == SqliteDuplicateKeyError ||
+                   sqlException.SqliteErrorCode == SqliteUniqueKeyError;
         }
 
         public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
@@ -185,7 +185,7 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
             get { return _log; }
         }
         
-        public SqlLiteCommandStoreConfiguration Configuration
+        public SqliteCommandStoreConfiguration Configuration
         {
             get { return _configuration; }
         }
@@ -279,7 +279,7 @@ namespace paramore.brighter.commandprocessor.commandstore.sqllite
 
         public void AddParamtersParamArrayToCollection(DbParameter[] parameters, DbCommand command)
         {
-            //command.Parameters.AddRange(parameters); used to work... but can't with current sqllite lib. Iterator issue
+            //command.Parameters.AddRange(parameters); used to work... but can't with current Sqlite lib. Iterator issue
             for (var index = 0; index < parameters.Length; index++)
             {
                 command.Parameters.Add(parameters[index]);

@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "ManagementAndMonitoring": { "target": "project" },
-    "paramore.brighter.commandprocessor.messagestore.sqllite": { "target": "project" },
+    "paramore.brighter.commandprocessor.messagestore.sqlite": { "target": "project" },
     "log4net": "2.0.5"
   },
   "frameworks": {
