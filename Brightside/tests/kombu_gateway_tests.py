@@ -37,21 +37,24 @@ from uuid import uuid4
 
 
 class KombuGatewayTests(unittest.TestCase):
+
+    test_topic = "kombu_gateway_tests"
+
     def setUp(self):
         self._connection = KombuConnection("amqp://guest:guest@localhost:5672//", "paramore.brighter.exchange")
         self._producer = KombuProducer(self._connection)
-        self._consumer = KombuConsumer()
+        self._consumer = KombuConsumer(self._connection, "brightside_tests", self.test_topic)
 
     def test_posting_a_message(self):
         """Given that I have an RMQ message producer
             when I send that message via the produecer
             then I should be able to read that message via the consumer
         """
-        header = MessageHeader(uuid4(), "test 1", MessageType.command, uuid4())
+        header = MessageHeader(uuid4(), self.test_topic, MessageType.command, uuid4())
         body = MessageBody("test content")
         message = Message(header, body)
 
-        self._consumer.purge()
+        # self._consumer.purge()
 
         self._producer.send(message)
 

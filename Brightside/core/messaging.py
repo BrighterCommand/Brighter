@@ -39,7 +39,7 @@ class MessageBody:
     """The body of our message. Note that this must use the same binary payload approach as Paramore Brighter to
         ensure that payload is binary compatible. plain/text should be encoded as a UTF8 byte array for example
     """
-    def __init__(self, body: str, body_type: str) -> None:
+    def __init__(self, body: str, body_type: str = "text/plain") -> None:
         self._encoded_body = body.encode()
         self._body_type = body_type
 

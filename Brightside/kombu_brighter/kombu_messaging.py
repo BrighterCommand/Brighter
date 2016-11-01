@@ -35,7 +35,11 @@ from uuid import UUID, uuid4
 
 
 class ReadError:
-    pass
+    def __init__(self, error_message: str) -> None:
+        self.error_message = error_message
+
+    def __str__(self) -> str:
+        return self.error_message
 
 
 class KombuMessageFactory:
@@ -45,37 +49,94 @@ class KombuMessageFactory:
     in what you do, be liberal in what you accept
     """
 
+    message_type_header = "MessageType"
+    message_id_header = "MessageId"
+    message_correlation_id_header = "CorrelationId"
+    message_topic_name_header = "Topic"
+    message_handled_count_header = "HandledCount"
+    message_delay_milliseconds_header = "x-delay"
+    message_delayed_milliseconds_header = "x-delay"
+    message_original_message_id_header = "x-original-message-id"
+    message_delivery_tag_header = "DeliveryTag"
+
     def create_message(self, message: KombuMessage) -> Message:
 
+
+        has_read_errors = False
+
         def _get_correlation_id() -> UUID:
-            pass
+            header, err = self._read_header(self.message_correlation_id_header, message)
+            if err is None:
+                return header
+            else:
+                has_read_errors = True
+                return ""
 
         def _get_message_type() -> MessageType:
-            pass
+            header, err = self._read_header(self.message_type_header, message)
+            if err is None:
+                return header
+            else:
+                has_read_errors = True
+                return MessageType.unacceptable
 
         def _get_payload() -> str:
-            pass
+            body, err = self._read_payload(message)
+            if err is None:
+                return body
+            else:
+                has_read_errors = True
+                return ""
 
         def _get_payload_type() -> str:
-            pass
+            payload_type, err = self._read_payload_type(message)
+            if err is None:
+                return payload_type
+            else:
+                has_read_errors = True
+                return ""
 
-        def _getTopic() -> str:
-            pass
+        def _get_topic() -> str:
+            header, err = self._read_header(self.message_topic_name_header, message)
+            if err is None:
+                return header
+            else:
+                has_read_errors = True
+                return ""
 
-        id = uuid4()
-        topic = _getTopic()
-        message_type = _get_message_type()
+        message_id = uuid4()
+        topic = _get_topic()
+        message_type = _get_message_type() if not message.errors or has_read_errors else MessageType.unacceptable
         correlation_id = _get_correlation_id()
         payload = _get_payload()
         payload_type = _get_payload_type()
 
-        message_header = MessageHeader(identity=id, topic=topic, message_type=message_type,
-                correlation_id=correlation_id, content_type=type)
+        message_header = MessageHeader(identity=message_id, topic=topic, message_type=message_type,
+                                       correlation_id=correlation_id, content_type="json")
 
         message_body =  MessageBody(body=payload, body_type=payload_type)
 
         return Message(message_header, message_body)
 
+    # All of these methods are warned as static, implies they should be helper classes that take state in constructor
+
     def _read_header(self, header_key: str, message: KombuMessage) -> (str, ReadError):
-        pass
+        if header_key not in message.headers.keys():
+            return "", ReadError("Could not read header with key: {}".format(header_key))
+        else:
+            return message.headers.get(header_key), None
+
+    def _read_payload(self, message: KombuMessage) -> (str, ReadError):
+        if not message.errors:
+            return message.body, None
+        else:
+            errors = ", ".join(message.errors)
+            return "", ReadError("Could not parse message. Errors: {}".format(errors))
+
+    def _read_payload_type(self, message: KombuMessage) -> (str, ReadError):
+        if not message.errors:
+            return message.content_type, None
+        else:
+            errors = ", ".join(message.errors)
+            return "", ReadError("Could not read payload type. Errors: {}".format(errors))
 
