@@ -103,7 +103,7 @@ class KombuProducer(Producer):
         logger = self._logger
 
         def _build_message_header():
-            return {'MessageType': message.header.message_type}
+            return {'MessageType': message.header.message_type.value}
 
         def _publish(sender):
             logger.debug("Send message {body} to broker {amqpuri} with routing key {routing_key}"
