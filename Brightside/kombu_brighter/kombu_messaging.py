@@ -61,7 +61,6 @@ class KombuMessageFactory:
 
     def create_message(self, message: KombuMessage) -> Message:
 
-
         has_read_errors = False
 
         def _get_correlation_id() -> UUID:

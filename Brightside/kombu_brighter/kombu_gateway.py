@@ -150,7 +150,8 @@ class KombuConsumer(Consumer):
         self._is_durable = is_durable
         self._message_factory = KombuMessageFactory()
         self._logger = logger or logging.getLogger(__name__)
-        
+        self._queue = Queue(self._queue_name, exchange=self._exchange, routing_key=self._routing_key)
+
         # TODO: Need to fix the argument types with default types issue
 
     def purge(self, timeout: int = 250):
@@ -161,12 +162,10 @@ class KombuConsumer(Consumer):
         def _purge_messages(consumer: Consumer):
             consumer.purge()
 
-        self._ensure_consumer()
-
         connection = BrokerConnection(hostname=self._amqp_uri)
         with connections[connection].acquire(block=True) as conn:
             self._logger.debug('Got connection: %s', conn.as_uri())
-            with Consumer(conn, [self._queue], callbacks=[_purge_messages]) as consumer:
+            with conn.Consumer([self._queue], callbacks=[_purge_messages]) as consumer:
                 ensure_kwargs = self.RETRY_OPTIONS.copy()
                 ensure_kwargs['errback'] = _purge_errors
                 safe_purge = conn.ensure(consumer, _purge_messages, **ensure_kwargs)
@@ -187,20 +186,15 @@ class KombuConsumer(Consumer):
             self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), message.headers, message.payload)
             return self._message_factory.create(message)
 
-        self._ensure_consumer()
-
         connection = BrokerConnection(hostname=self._amqp_uri)
         with connections[connection].acquire(block=True) as conn:
             self._logger.debug('Got connection: %s', conn.as_uri())
-            with Consumer(conn, [self._queue], callbacks=[_read_message], accept=['json', 'text/plain']) as consumer:
+            with conn.Consumer([self._queue], callbacks=[_read_message], accept=['json', 'text/plain']) as consumer:
                 consumer.qos(prefetch_count=1)
                 ensure_kwargs = self.RETRY_OPTIONS.copy()
                 ensure_kwargs['errback'] = _consume_errors
                 safe_drain = conn.ensure(consumer, _consume, **ensure_kwargs)
                 safe_drain(conn, timeout)
-
-    def _ensure_consumer(self):
-        self._queue = Queue(self._queue_name, exchange=self._exchange, routing_key=self._routing_key)
 
 
 

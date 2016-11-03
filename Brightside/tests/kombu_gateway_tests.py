@@ -58,7 +58,7 @@ class KombuGatewayTests(unittest.TestCase):
 
         self._producer.send(message)
 
-        read_message = self._consumer.receive(500)
+        read_message = self._consumer.receive(3)
 
         self.assertEqual(message.id, read_message.id)
         self.assertEqual(message.body.value, read_message.body.value)
