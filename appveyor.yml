@@ -34,13 +34,13 @@ after_build:
   - cmd: dotnet pack paramore.brighter.commandprocessor.messaginggateway.rmq/project.json --configuration Release --no-build --output nupkgs
 
 test_script:
-  - cmd: dotnet test paramore.brighter.commandprocessor.tests.nunit/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=myresults.xml;format=AppVeyor
-  - cmd: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=myresults.xml;format=AppVeyor
-  - cmd: dotnet test Examples/TasksTests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=myresults.xml;format=AppVeyor
+  - cmd: dotnet test paramore.brighter.commandprocessor.tests.nunit/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=brightertestresults.xml;format=AppVeyor
+  - cmd: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=viewertestresults.xml;format=AppVeyor
+  - cmd: dotnet test Examples/TasksTests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=tasttestresults.xml;format=AppVeyor
 
 artifacts:
   # pushing all *.nupkg files in build directory recursively
-  - path: 'nupkgs/*.nupkg'
+  - path: '/**/nupkgs/*.nupkg'
 
 cache:
 - '%USERPROFILE%\.nuget\packages'
