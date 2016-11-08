@@ -34,12 +34,12 @@ after_build:
   - cmd: dotnet pack paramore.brighter.commandprocessor.messaginggateway.rmq/project.json --configuration Release --no-build --output nupkgs
 
 test_script:
-  - cmd: dotnet test paramore.brighter.commandprocessor.tests.nunit/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=brightertestresults.xml;format=AppVeyor
-  - ps: (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\brightertestresults.xml))
-  - cmd: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=viewertestresults.xml;format=AppVeyor
-  - ps: (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\viewertestresults.xml))
-  - cmd: dotnet test Examples/TasksTests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=tasktestresults.xml;format=AppVeyor
-  - ps: (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\tasktestresults.xml))
+  - cmd: dotnet test paramore.brighter.commandprocessor.tests.nunit/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=brightertestresults.xml
+  - cmd: powershell (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\brightertestresults.xml))
+  - cmd: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=viewertestresults.xml
+  - cmd: powershell (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\viewertestresults.xml))
+  - cmd: dotnet test Examples/TasksTests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=tasktestresults.xml
+  - cmd: powershell (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\tasktestresults.xml))
 
 artifacts:
   # pushing all *.nupkg files in build directory recursively
