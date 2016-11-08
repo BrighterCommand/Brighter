@@ -6,10 +6,8 @@
   },
 
   "dependencies": {
-    "Microsoft.NETCore.App": {
-      "type": "platform",
-      "version": "1.0.0"
-    },
+    "Microsoft.AspNetCore.Server.Kestrel": "1.0.1",
+    "Microsoft.NETCore.App": "1.0.1",
     "paramore.brighter.commandprocessor.messageviewer": { "target": "project" },
     "Serilog": "2.3.0",
     "Serilog.Sinks.Console": "2.1.0"
@@ -19,7 +17,6 @@
     "netcoreapp1.0": {
       "dependencies": {
         "Microsoft.AspNetCore.Hosting": "1.0.0",
-        "Microsoft.AspNetCore.Server.Kestrel": "1.0.0",
         "Microsoft.AspNetCore.Owin": "1.0.0",
         "Microsoft.Extensions.Configuration.Binder": "1.0.0",
         "Microsoft.Extensions.Configuration.Json": "1.0.0"

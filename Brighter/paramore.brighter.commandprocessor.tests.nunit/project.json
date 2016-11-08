@@ -52,10 +52,7 @@
         "portable-net45+win8"
       ],
       "dependencies": {
-        "Microsoft.NETCore.App": {
-          "type": "platform",
-          "version": "1.0.0"
-        },
+        "Microsoft.NETCore.App": "1.0.1",
         "System.Diagnostics.TextWriterTraceListener": "4.0.0",
         "System.Diagnostics.TraceSource": "4.0.0",
         "System.Linq": "4.1.0",
