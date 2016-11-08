@@ -35,8 +35,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 {
     [Subject("Messaging Gateway")]
     [Category("RMQ")]
-    [Property("Requires", "RabbitMQ")]
-
     public class When_posting_a_message_via_the_messaging_gateway : ContextSpecification
     {
         private static IAmAMessageProducer s_messageProducer;

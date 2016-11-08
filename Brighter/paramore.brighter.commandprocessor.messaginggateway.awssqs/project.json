@@ -10,18 +10,14 @@
     "Microsoft.Bcl.Build" : "1.0.21",
     "Microsoft.Net.Http" : "2.2.29",
     "PCLStorage" : "1.0.2",
-    "PInvoke.Windows.Core" : "0.3.2",
-    "PInvoke.BCrypt":"0.3.2",
-    "PInvoke.NCrypt" : "0.3.2",
-    "Validation": "2.2.8",
     "PCLCrypto" : "2.0.147",
-    "AWSSDK.Core": "3.1.11", 
-    "AWSSDK.SQS":"3.1.0.12",
-    "AWSSDK.SimpleNotificationService":"3.1.1.1",
     "paramore.brighter.commandprocessor": {
       "target": "project"
-    }
-  },
+    },
+    "AWSSDK.Core": "3.3.4",
+    "AWSSDK.SimpleNotificationService": "3.3.0.2",
+    "AWSSDK.SQS": "3.3.0.2",
+    "Validation": "2.3.7" },
   "frameworks": {
     "netstandard1.6": {
       "imports": [
@@ -32,7 +28,13 @@
         "System.Threading.Thread": "4.0.0"
       }
     },
-   "net452": {}
+    "net452": {
+      "dependencies": {
+        "PInvoke.BCrypt": "0.3.152",
+        "PInvoke.NCrypt": "0.3.152",
+        "PInvoke.Windows.Core": "0.3.152"
+      }
+    }
   }, 
   "configurations": {
     "Debug": {

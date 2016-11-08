@@ -1,13 +1,13 @@
-﻿{
+{
   "buildOptions": {
     "debugType": "portable"
   },
   "dependencies": {
-    "AMQPNetLite": "1.2.0",
+    "AMQPNetLite": "1.2.1",
     "NETStandard.Library": "1.6.0",
     "Newtonsoft.Json": "9.0.1",
     "paramore.brighter.commandprocessor": {
-    "target": "project"
+      "target": "project"
     }
  },
   "frameworks": {

@@ -11,8 +11,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     [Subject("Messaging Gateway")]
     [Category("AWS")]
-    [Property("Requires", "SQS")]
-    [Property("Requires", "SNS")]
     public class When_rejecting_a_message_through_gateway_without_requeue : ContextSpecification
     {
         private static TestAWSQueueListener testQueueListener;

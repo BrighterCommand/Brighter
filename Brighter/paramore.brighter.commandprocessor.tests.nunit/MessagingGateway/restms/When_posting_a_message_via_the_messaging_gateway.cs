@@ -35,7 +35,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
 {
     [Subject("Messaging Gateway")]
     [Category("RESTMS")]
-    [Property("Requires", "RESTMS")]
     public class When_posting_a_message_via_the_messaging_gateway : ContextSpecification
     {
         private const string TOPIC = "test";

@@ -5,7 +5,7 @@
      "emitEntryPoint": true
   },
   "dependencies": {
-    "EventStore.Client": "3.8.0",
+    "EventStore.Client": "3.9.2",
     "log4net": "2.0.5",
     "paramore.brighter.commandprocessor": {
       "target": "project"
@@ -19,12 +19,12 @@
     "Tasks": {
       "target": "project"
     },
-    "Topshelf.Log4Net": "4.0.1"
+    "Topshelf": "4.0.3",
+    "Topshelf.Log4Net": "4.0.3"
   },
   "frameworks": {
     "net452": {
       "dependencies": {
-        "Topshelf": "4.0.1"
       }
     }
   }

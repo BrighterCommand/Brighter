@@ -1,10 +1,11 @@
 {
   "dependencies": {
-    "NUnit": "3.4.1"
+    "NUnit": "3.5.0"
   },
   "frameworks": {
     "netstandard1.6": {
-      "imports": "dnxcore50",
+      "imports": [ "dnxcore50", "portable-net45+win8" ],
+
       "dependencies": {
         "System.Reflection.TypeExtensions": "4.1.0",
         "System.Collections": "4.0.11",

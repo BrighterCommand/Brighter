@@ -1,4 +1,4 @@
-﻿{
+{
   "version": "1.0.0-*",
   "buildOptions": {
      "debugType": "portable",
@@ -11,8 +11,8 @@
       "version": "1.0.0"
     },
     "Greetings": { "target": "project" },
-    "Serilog": "2.0.0",
-    "Serilog.Sinks.Console": "2.1.0"
+    "Serilog.Sinks.Console": "2.1.0",
+    "Serilog": "2.3.0"
   },
 
   "frameworks": {

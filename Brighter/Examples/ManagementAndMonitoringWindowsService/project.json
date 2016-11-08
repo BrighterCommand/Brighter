@@ -1,4 +1,4 @@
-﻿ {
+ {
   "version": "1.0.0-*",
   "buildOptions": {
      "debugType": "portable",
@@ -7,12 +7,12 @@
   "dependencies": {
     "ManagementAndMonitoring": { "target": "project" },
     "paramore.brighter.commandprocessor.messagestore.sqlite": { "target": "project" },
-    "log4net": "2.0.5"
+    "log4net": "2.0.5",
+    "Topshelf": "4.0.3"
   },
   "frameworks": {
     "net452": {
       "dependencies": {
-        "Topshelf": "4.0.1"
       },
       "frameworkAssemblies": {
         "System.Xml": "4.0.0"

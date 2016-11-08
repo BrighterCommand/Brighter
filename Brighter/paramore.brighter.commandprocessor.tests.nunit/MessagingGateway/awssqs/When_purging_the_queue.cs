@@ -11,8 +11,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     [Subject("Messaging Gateway")]
     [Category("AWS")]
-    [Property("Requires", "SQS")]
-    [Property("Requires", "SNS")]
     public class When_purging_the_queue : ContextSpecification
     {
         private static TestAWSQueueListener testQueueListener;

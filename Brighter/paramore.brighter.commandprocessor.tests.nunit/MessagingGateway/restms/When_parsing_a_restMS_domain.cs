@@ -32,7 +32,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
 {
     [Subject("Messaging Gateway")]
     [Category("RESTMS")]
-    [Property("Requires", "RESTMS")]
     public class When_parsing_a_restMS_domain : ContextSpecification
     {
         private const string BODY = "<domain xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" name=\"default\" title=\"title\" href=\"http://localhost/restms/domain/default\" xmlns=\"http://www.restms.org/schema/restms\"><feed type=\"Default\" name=\"default\" title=\"Default feed\" href=\"http://localhost/restms/feed/default\" /><profile name=\"3/Defaults\" href=\"href://www.restms.org/spec:3/Defaults\" /></domain>";

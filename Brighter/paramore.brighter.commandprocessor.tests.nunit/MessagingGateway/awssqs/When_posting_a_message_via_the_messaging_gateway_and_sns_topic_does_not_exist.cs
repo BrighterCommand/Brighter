@@ -12,8 +12,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     [Subject("Messaging Gateway")]
     [Category("AWS")]
-    [Property("Requires", "SQS")]
-    [Property("Requires", "SNS")]
     public class When_posting_a_message_via_the_messaging_gateway_and_sns_topic_does_not_exist : ContextSpecification
     {
         private static Message _message;
