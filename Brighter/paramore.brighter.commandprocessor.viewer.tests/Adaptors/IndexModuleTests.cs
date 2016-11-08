@@ -43,20 +43,23 @@ using Nancy.TinyIoc;
 using NUnit.Framework;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
+using Nancy.ViewEngines;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
 {
-    //    [Subject(typeof(IndexModule))]
-    [Category("IndexModule")]
+    [Subject(typeof(IndexModule))]
     public class When_retrieving_home :  NUnit.Specifications.ContextSpecification
     {
         private Establish _context = () =>
         {
-            //var configurableBootstrapper = new TestConfigurableBootstrapper(with => with.Module<IndexModule>());
-            var configurableBootstrapper = new NancyBootstrapper(new MessageViewerConfiguration());
-  //          configurableBootstrapper.Initialise();
+            var configurableBootstrapper = new TestConfigurableBootstrapper(with =>
+            {
+                with.Module<IndexModule>();
+                with.ViewLocationProvider<ResourceViewLocationProvider>();
+            });
+
             browser = new Browser(configurableBootstrapper);
         };
 
@@ -81,17 +84,14 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors
 
         protected override void ConfigureConventions(NancyConventions nancyConventions)
         {
-    //        base.ConfigureConventions(nancyConventions);
-            Console.WriteLine("Registering static embedded");
+            base.ConfigureConventions(nancyConventions);
             BootstrapperEmbeddedHelper.RegisterStaticEmbedded(nancyConventions);
         }
 
         protected override void ConfigureApplicationContainer(TinyIoCContainer container)
         {
-  //          base.ConfigureApplicationContainer(container);
-            Console.WriteLine("Registering view locations");
+            base.ConfigureApplicationContainer(container);
             BootstrapperEmbeddedHelper.RegisterViewLocationEmbedded();
         }
     }
-
 }
