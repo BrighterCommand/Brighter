@@ -35,6 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using paramore.brighter.commandprocessor;
@@ -117,6 +118,7 @@ namespace paramore.brighter.serviceactivator
         ///// </summary>
         ///// <param name="connections"></param>
         ///// <returns>IAmADispatchBuilder.</returns>
+        [Obsolete]
         public IAmADispatchBuilder ConnectionsFromSubscriptions(Subscriptions subscriptions)
         {
             var connectionElements = from ConnectionElement connection in subscriptions.Connections select connection;
@@ -128,6 +130,7 @@ namespace paramore.brighter.serviceactivator
         /// </summary>
         /// <param name="connectionElements">The connection elements.</param>
         /// <returns>IAmADispatchBuilder.</returns>
+        [Obsolete] 
         public IAmADispatchBuilder ConnectionsFromElements(IEnumerable<ConnectionElement> connectionElements)
         {
             var connectionFactory = new ConnectionFactory(_channelFactory);
