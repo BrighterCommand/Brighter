@@ -1,9 +1,12 @@
-version: 7.0.{build}
+version: 7.0.{build}-beta
 pull_requests:
   do_not_increment_build_number: true
 branches:
   only:
   - master
+  # blacklist
+  except:
+    - gh-pages
 skip_tags: true
 configuration: 
 #- Debug
@@ -13,26 +16,31 @@ assembly_info:
   patch: true
   file: '**\AssemblyInfo.*'
   assembly_version: 7.0.0.0
-  assembly_file_version: '{version}'
+  assembly_file_version: 7.0.{build}
   assembly_informational_version: '{version}'
 nuget:
   project_feed: true
   disable_publish_on_pr: true
 before_build:
-#- appveyor-retry dotnet restore -v Minimal
-  # dotnet info
   - cmd: dotnet --info
   - cmd: cd Brighter
-  - cmd: dotnet restore
+  - cmd: dotnet restore -v Minimal
 build_script:
-
-  #- ps: dotnet version
   - cmd: dotnet build -c Release */**/project.json
+
+after_build:
+  - cmd: dotnet pack paramore.brighter.commandprocessor/project.json --configuration Release --no-build --output nupkgs
+  - cmd: dotnet pack paramore.brighter.serviceactivator/project.json --configuration Release --no-build --output nupkgs 
+  - cmd: dotnet pack paramore.brighter.commandprocessor.messaginggateway.rmq/project.json --configuration Release --no-build --output nupkgs
 
 test_script:
   - cmd: dotnet test paramore.brighter.commandprocessor.tests.nunit/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=myresults.xml;format=AppVeyor
   - cmd: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=myresults.xml;format=AppVeyor
   - cmd: dotnet test Examples/TasksTests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=myresults.xml;format=AppVeyor
+
+artifacts:
+  # pushing all *.nupkg files in build directory recursively
+  - path: 'nupkgs/*.nupkg'
 
 cache:
 - '%USERPROFILE%\.nuget\packages'
