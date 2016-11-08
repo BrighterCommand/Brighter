@@ -10,7 +10,7 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     public partial class AWSSQSMessagingGatewayTests {
-        [Subject("Messaging Gateway")]
+        
         [Category("AWS")]
         public class when_rejecting_a_message_through_gateway_with_requeue : ContextSpecification
         {

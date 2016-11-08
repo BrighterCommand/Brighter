@@ -30,7 +30,7 @@ using paramore.brighter.commandprocessor.messaginggateway.restms.Parsers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
 {
-    [Subject("Messaging Gateway")]
+    
     [Category("RESTMS")]
     public class When_parsing_a_restMS_domain : ContextSpecification
     {

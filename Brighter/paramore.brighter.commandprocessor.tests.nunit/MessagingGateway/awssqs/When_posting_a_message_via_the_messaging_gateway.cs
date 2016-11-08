@@ -12,7 +12,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
     public partial class AWSSQSMessagingGatewayTests {}
 
     public partial class AWSSQSMessagingGatewayTests {
-        [Subject("Messaging Gateway")]
+        
         [Category("AWS")]
         public class When_posting_a_message_via_the_messaging_gateway : ContextSpecification
         {

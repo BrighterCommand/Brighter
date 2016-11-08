@@ -9,7 +9,7 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
-    [Subject("Messaging Gateway")]
+    
     [Category("AWS")]
     public class When_requeueing_a_message : ContextSpecification
     {

@@ -33,7 +33,7 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
 {
-    [Subject("Messaging Gateway")]
+    
     [Category("RESTMS")]
     public class When_posting_a_message_via_the_messaging_gateway : ContextSpecification
     {
