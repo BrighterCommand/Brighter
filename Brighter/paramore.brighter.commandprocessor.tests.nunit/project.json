@@ -43,7 +43,9 @@
     "Nito.AsyncEx.Context": "1.1.0",
     "Microsoft.Data.Sqlite": "1.0.0",
     "FakeItEasy": "2.3.0-coreclr-beta57",
-    "FluentAssertions": "4.16.0"
+    "FluentAssertions": "4.16.0",
+    "NUnit": "3.5.0",
+    "dotnet-test-nunit": "3.4.0-beta-3"
   },
   "frameworks": {
     "netcoreapp1.0": {
@@ -52,7 +54,10 @@
         "portable-net45+win8"
       ],
       "dependencies": {
-        "Microsoft.NETCore.App": "1.0.1",
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.1"
+        },
         "System.Diagnostics.TextWriterTraceListener": "4.0.0",
         "System.Diagnostics.TraceSource": "4.0.0",
         "System.Linq": "4.1.0",
@@ -64,7 +69,7 @@
         "paramore.brighter.commandprocessor.messagestore.eventstore": {
           "target": "project"
         },
-        "NUnit": "3.5.0",
+
         "EventStore.Client": "3.9.2",
         "EventStore.Client.Embedded": "3.9.2"
       }

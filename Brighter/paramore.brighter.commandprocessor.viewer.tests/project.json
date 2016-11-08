@@ -4,7 +4,7 @@
   },
   "testRunner": "nunit",
   "dependencies": {
-   "paramore.brighter.commandprocessor": {
+    "paramore.brighter.commandprocessor": {
       "target": "project"
     },
     "paramore.brighter.commandprocessor.messageviewer": {
@@ -21,7 +21,8 @@
     },
     "Nancy.Testing": "2.0.0-barneyrubble",
     "dotnet-test-nunit": "3.4.0-beta-3",
-   },
+    "NUnit": "3.5.0"
+  },
   "frameworks": {
     "netcoreapp1.0": {
       "imports": [
@@ -29,13 +30,13 @@
         "portable-net45+win8"
       ],
       "dependencies": {
-        "Microsoft.NETCore.App": "1.0.1"
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.1"
+        }
       }
     },
     "net46": {
-      "dependencies": {
-        "NUnit": "3.5.0"
-      }
     }
   },
   "configurations": {

@@ -15,7 +15,11 @@
     "FakeItEasy": "2.3.0-coreclr-beta57",
     "dotnet-test-nunit": "3.4.0-beta-3",
     "NUnit": "3.5.0",
-    "Microsoft.NETCore.App": "1.0.1" },
+    "Microsoft.NETCore.App": {
+      "type": "platform",
+      "version": "1.0.1"
+    }
+  },
 
   "frameworks": {
     "netcoreapp1.0": {

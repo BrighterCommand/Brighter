@@ -7,7 +7,10 @@
 
   "dependencies": {
     "Microsoft.AspNetCore.Server.Kestrel": "1.0.1",
-    "Microsoft.NETCore.App": "1.0.1",
+    "Microsoft.NETCore.App": {
+      "type": "platform",
+      "version": "1.0.1"
+    },
     "paramore.brighter.commandprocessor.messageviewer": { "target": "project" },
     "Serilog": "2.3.0",
     "Serilog.Sinks.Console": "2.1.0"

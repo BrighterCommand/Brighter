@@ -1,6 +1,8 @@
 {
   "buildOptions": {
-     "debugType": "portable"
+    "emitEntryPoint": true,
+    "preserveCompilationContext": true,
+    "debugType": "portable"
   },
   "dependencies": {
     "Microsoft.AspNetCore.Server.IISIntegration": "1.0.0",
@@ -25,7 +27,6 @@
       "target": "project"
     },
     "StructureMap.Microsoft.DependencyInjection": "1.2.0",
-    "Microsoft.NETCore.App": "1.0.1",
     "Microsoft.AspNetCore.Server.Kestrel": "1.0.1",
     "Microsoft.AspNetCore.Mvc.Formatters.Xml": "1.0.1",
     "Microsoft.AspNetCore.Mvc": "1.0.1"
@@ -40,14 +41,17 @@
       "imports": [
         "dotnet5.6",
         "portable-net45+win8"
-      ]
+      ],
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.1"
+        }
+      }
     }
   },
 
-  "buildOptions": {
-    "emitEntryPoint": true,
-    "preserveCompilationContext": true
-  },
+
 
   "runtimeOptions": {
     "configProperties": {
