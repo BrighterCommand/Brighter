@@ -25,7 +25,7 @@ before_build:
   - cmd: dotnet --info
   - cmd: cd Brighter
   - cmd: dotnet restore -v Minimal
-  - ps: Get-ChildItem . -Recurse -Include project.json | ForEach-Object {(Get-Content $PSItem) -Replace """version"": ""1.0.0-*""", """version"": ""{version}""" | Set-Content -Path $PSItem;}
+  - cmd: powershell Get-ChildItem . -Recurse -Include project.json | ForEach-Object {(Get-Content $PSItem) -Replace """version"": ""1.0.0-*""", """version"": ""$env:APPVEYOR_BUILD_VERSION""" | Set-Content -Path $PSItem;}
 
 
 build_script:
