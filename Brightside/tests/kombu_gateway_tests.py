@@ -54,7 +54,7 @@ class KombuGatewayTests(unittest.TestCase):
         body = MessageBody("test content")
         message = Message(header, body)
 
-        # self._consumer.purge()
+        self._consumer.purge()
 
         self._producer.send(message)
 

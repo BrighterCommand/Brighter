@@ -35,8 +35,9 @@ from kombu.pools import connections
 from kombu import exceptions as kombu_exceptions
 from kombu.message import Message as KombuMessage
 from datetime import datetime
-from core.messaging import Consumer, Message, Producer
+from core.messaging import Consumer, Message, Producer, MessageHeader, MessageBody
 from kombu_brighter.kombu_messaging import KombuMessageFactory
+from typing import Dict
 import logging
 
 
@@ -102,10 +103,10 @@ class KombuProducer(Producer):
 
         logger = self._logger
 
-        def _build_message_header():
+        def _build_message_header() -> Dict:
             return {'MessageType': message.header.message_type.value}
 
-        def _publish(sender):
+        def _publish(sender) -> None:
             logger.debug("Send message {body} to broker {amqpuri} with routing key {routing_key}"
                          .format(body=message, amqpuri=self._amqp_uri, routing_key=message.header.topic))
             sender.publish(message.body.value,
@@ -115,7 +116,7 @@ class KombuProducer(Producer):
                            routing_key=message.header.topic,
                            declare=[self._exchange])
 
-        def _error_callback(e, interval):
+        def _error_callback(e, interval) -> None:
             logger.debug('Publishing error: {e}. Will retry in {interval} seconds', e, interval)
 
         self._logger.debug("Connect to broker {amqpuri}".format(amqpuri=self._amqp_uri))
@@ -154,7 +155,7 @@ class KombuConsumer(Consumer):
 
         # TODO: Need to fix the argument types with default types issue
 
-    def purge(self, timeout: int = 250):
+    def purge(self, timeout: int = 250) -> None:
 
         def _purge_errors(exc, interval):
             self._logger.error('Purging error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)
@@ -169,22 +170,22 @@ class KombuConsumer(Consumer):
                 ensure_kwargs = self.RETRY_OPTIONS.copy()
                 ensure_kwargs['errback'] = _purge_errors
                 safe_purge = conn.ensure(consumer, _purge_messages, **ensure_kwargs)
-                safe_purge(conn, timeout)
+                safe_purge(consumer)
 
     def receive(self, timeout: int) -> Message:
 
-        def _consume(cnx, timesup):
+        def _consume(cnx: BrokerConnection, timesup: int) -> Message:
             try:
-                cnx.drain_events(timeout=timesup)
+                return cnx.drain_events(timeout=timesup)
             except kombu_exceptions.TimeoutError:
-                pass
+                return Message(MessageHeader(), MessageBody())
 
-        def _consume_errors(exc, interval):
+        def _consume_errors(exc, interval: int)-> None:
             self._logger.error('Draining error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)
 
         def _read_message(body, message: KombuMessage) -> Message:
             self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), message.headers, message.payload)
-            return self._message_factory.create(message)
+            return self._message_factory.create_message(message)
 
         connection = BrokerConnection(hostname=self._amqp_uri)
         with connections[connection].acquire(block=True) as conn:
