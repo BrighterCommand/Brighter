@@ -35,9 +35,10 @@ from kombu.pools import connections
 from kombu import exceptions as kombu_exceptions
 from kombu.message import Message as KombuMessage
 from datetime import datetime
-from core.messaging import Consumer, Message, Producer, MessageHeader, MessageBody
+from core.messaging import Consumer, Message, Producer, MessageHeader, MessageBody, MessageType
 from kombu_brighter.kombu_messaging import KombuMessageFactory
 from typing import Dict
+from uuid import uuid4
 import logging
 
 
@@ -155,7 +156,7 @@ class KombuConsumer(Consumer):
 
         # TODO: Need to fix the argument types with default types issue
 
-    def purge(self, timeout: int = 250) -> None:
+    def purge(self, timeout: int = 5) -> None:
 
         def _purge_errors(exc, interval):
             self._logger.error('Purging error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)
@@ -174,26 +175,29 @@ class KombuConsumer(Consumer):
 
     def receive(self, timeout: int) -> Message:
 
-        def _consume(cnx: BrokerConnection, timesup: int) -> Message:
+        def _consume(cnx: BrokerConnection, timesup: int) -> None:
             try:
-                return cnx.drain_events(timeout=timesup)
-            except kombu_exceptions.TimeoutError:
-                return Message(MessageHeader(), MessageBody())
+                cnx.drain_events(timeout=timesup)
+            except kombu_exceptions.TimeoutError as te:
+                self._logger.error("Error receiving message", exc_info=te)
+                return Message(MessageHeader(uuid4(), "", MessageType.unacceptable), MessageBody(""))
 
         def _consume_errors(exc, interval: int)-> None:
             self._logger.error('Draining error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)
 
-        def _read_message(body, message: KombuMessage) -> Message:
-            self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), message.headers, message.payload)
-            return self._message_factory.create_message(message)
+        def _read_message(body: str, message: KombuMessage) -> None:
+            self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), message.headers, body)
+            message = self._message_factory.create_message(message)
+            return message
 
         connection = BrokerConnection(hostname=self._amqp_uri)
         with connections[connection].acquire(block=True) as conn:
             self._logger.debug('Got connection: %s', conn.as_uri())
-            with conn.Consumer([self._queue], callbacks=[_read_message], accept=['json', 'text/plain']) as consumer:
+            with conn.Consumer(channel=conn.channel(), queues=[self._queue], callbacks=[_read_message]) as consumer:
                 consumer.qos(prefetch_count=1)
                 ensure_kwargs = self.RETRY_OPTIONS.copy()
                 ensure_kwargs['errback'] = _consume_errors
+                consumer.consume()
                 safe_drain = conn.ensure(consumer, _consume, **ensure_kwargs)
                 safe_drain(conn, timeout)
 
