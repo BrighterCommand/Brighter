@@ -32,6 +32,7 @@ THE SOFTWARE.
 from core.handler import Handler, Command, Event, Request
 from core.messaging import BrightsideMessageBody, BrightsideMessageHeader, BrightsideMessage
 from poll import retry, circuitbreaker
+import json
 
 
 class MyCommand(Command):
@@ -172,6 +173,6 @@ class MyHandlerBreakingCircuitAfterThreeFailures(Handler):
 
 
 def map_to_message(request: Request) -> BrightsideMessage:
-    message_body = BrightsideMessageBody()
+    message_body = BrightsideMessageBody(json.dumps(request.__dict__))
     message = BrightsideMessage(BrightsideMessageHeader(request.id), message_body)
     return message
