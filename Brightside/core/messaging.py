@@ -35,7 +35,7 @@ from abc import ABCMeta, abstractmethod
 from enum import Enum, unique
 
 
-class MessageBody:
+class BrightsideMessageBody:
     """The body of our message. Note that this must use the same binary payload approach as Paramore Brighter to
         ensure that payload is binary compatible. plain/text should be encoded as a UTF8 byte array for example
     """
@@ -50,7 +50,7 @@ class MessageBody:
 
 
 @unique
-class MessageType(Enum):
+class BrightsideMessageType(Enum):
     unacceptable = 1
     none = 2
     command = 3
@@ -58,12 +58,12 @@ class MessageType(Enum):
     quit = 5
 
 
-class MessageHeader:
+class BrightsideMessageHeader:
     """The header for our message. Note that this should agree with the Paramore.Brighter definition to ensure that
         different language implementations are compatible
     """
-    def __init__(self, identity: UUID, topic: str, message_type: MessageType, correlation_id: UUID = None,
-                reply_to: str = None, content_type: str = "text/plain") -> None:
+    def __init__(self, identity: UUID, topic: str, message_type: BrightsideMessageType, correlation_id: UUID = None,
+                 reply_to: str = None, content_type: str = "text/plain") -> None:
         self._id = identity
         self._topic = topic
         self._message_type = message_type
@@ -84,7 +84,7 @@ class MessageHeader:
         self._topic = value
 
     @property
-    def message_type(self) -> MessageType:
+    def message_type(self) -> BrightsideMessageType:
         return self._message_type
 
     @property
@@ -108,21 +108,21 @@ class MessageHeader:
         self._content_type = value
 
 
-class Message:
+class BrightsideMessage:
     """The representation of an on the wire message in Brighter. It abstracts the message typeof the underlying
     implementation and thus acts as a anti-corruption layer between us and an implementation specific message
     type
     """
-    def __init__(self, message_header: MessageHeader, message_body: MessageBody) -> None:
+    def __init__(self, message_header: BrightsideMessageHeader, message_body: BrightsideMessageBody) -> None:
         self._message_header = message_header
         self._message_body = message_body
 
     @property
-    def header(self) -> MessageHeader:
+    def header(self) -> BrightsideMessageHeader:
         return self._message_header
 
     @property
-    def body(self) -> MessageBody:
+    def body(self) -> BrightsideMessageBody:
         return self._message_body
 
     @property
@@ -130,14 +130,14 @@ class Message:
         return self._message_header.id
 
 
-class MessageStore(metaclass=ABCMeta):
+class BrightsideMessageStore(metaclass=ABCMeta):
     """ Brighter stores messages that it sends to a broker (before sending). This allows us to replay messages sent
     from a publisher to its subscribers. As a result, you can use non-durable queues (which are often more performant)
     if you are willing to trade 'at least once' delivery for 'retry on fail' and cope with duplicates.
 
     """
     @abstractmethod
-    def add(self, message: Message):
+    def add(self, message: BrightsideMessage):
         pass
 
     @abstractmethod
@@ -145,16 +145,16 @@ class MessageStore(metaclass=ABCMeta):
         pass
 
 
-class Producer(metaclass=ABCMeta):
+class BrightsideProducer(metaclass=ABCMeta):
     """ The component that sends messages to a broker. Usually abstracts a socket connection to the broker, using
     a vendor specific client library.
     """
     @abstractmethod
-    def send(self, message: Message):
+    def send(self, message: BrightsideMessage):
         pass
 
 
-class Consumer(metaclass=ABCMeta):
+class BrightsideConsumer(metaclass=ABCMeta):
     """The comoonent that receives messages from a broker. Usually abstracts a queue for subscribing to a topic on the
     broker i.e. a dynamic recepient list.
     """
@@ -164,5 +164,5 @@ class Consumer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def receive(self, timeout: int) -> Message:
+    def receive(self, timeout: int) -> BrightsideMessage:
         pass

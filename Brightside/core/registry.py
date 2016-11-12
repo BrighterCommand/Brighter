@@ -31,7 +31,7 @@ THE SOFTWARE.
 """
 from typing import Callable, Dict, List, TypeVar
 from core.handler import Handler, Request
-from core.messaging import Message
+from core.messaging import BrightsideMessage
 from core.exceptions import ConfigurationException
 
 
@@ -83,11 +83,11 @@ class MessageMapperRegistry:
         Provides a registry of message mappers, used to serialize a command to a message, which a producer can send over the wire
     """
     def __init__(self) -> None:
-        self._registry = dict()  # type: Dict[str, Callable[[Request], Message]]
+        self._registry = dict()  # type: Dict[str, Callable[[Request], BrightsideMessage]]
 
-    def register(self, request_class: Request, mapper_func: Callable[[Request], Message]) -> None:
+    def register(self, request_class: Request, mapper_func: Callable[[Request], BrightsideMessage]) -> None:
         """Adds a message mapper to a factory, using the requests key
-        :param mapper_func: A callback that creates a Message from a Request
+        :param mapper_func: A callback that creates a BrightsideMessage from a Request
         :param request_class: A request type
         """
 
@@ -97,10 +97,10 @@ class MessageMapperRegistry:
         else:
             raise ConfigurationException("There is already a message mapper defined for this key; there can be only one")
 
-    def lookup(self, request_class: Request) -> Callable[[Request], Message]:
+    def lookup(self, request_class: Request) -> Callable[[Request], BrightsideMessage]:
         """
         Looks up the message mapper function associated with this class. Function should take in a Request derived class
-         and return a Message derived class, for sending on the wire
+         and return a BrightsideMessage derived class, for sending on the wire
         :param request_class:
         :return:
         """

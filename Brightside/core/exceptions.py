@@ -34,3 +34,6 @@ THE SOFTWARE.
 class ConfigurationException(Exception):
     pass
 
+
+class MessagingException(Exception):
+    pass

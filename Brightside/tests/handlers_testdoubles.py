@@ -30,7 +30,7 @@ THE SOFTWARE.
 """
 
 from core.handler import Handler, Command, Event, Request
-from core.messaging import MessageBody, MessageHeader, Message
+from core.messaging import BrightsideMessageBody, BrightsideMessageHeader, BrightsideMessage
 from poll import retry, circuitbreaker
 
 
@@ -171,7 +171,7 @@ class MyHandlerBreakingCircuitAfterThreeFailures(Handler):
         self._callCount = value
 
 
-def map_to_message(request: Request) -> Message:
-    message_body = MessageBody()
-    message = Message(MessageHeader(request.id), message_body)
+def map_to_message(request: Request) -> BrightsideMessage:
+    message_body = BrightsideMessageBody()
+    message = BrightsideMessage(BrightsideMessageHeader(request.id), message_body)
     return message

@@ -31,34 +31,34 @@ THE SOFTWARE.
 """
 
 import uuid
-from core.messaging import Message, MessageStore, Producer
+from core.messaging import BrightsideMessage, BrightsideMessageStore, BrightsideProducer
 
 
-class FakeMessageStore(MessageStore):
+class FakeMessageStore(BrightsideMessageStore):
     def __init__(self):
         self._message_was_added = None
-        self._messages = []  # type: List[Message]
+        self._messages = []  # type: List[BrightsideMessage]
 
     @property
     def message_was_added(self):
         return self._message_was_added
 
-    def add(self, message: Message):
+    def add(self, message: BrightsideMessage):
         self._messages.append(message)
         self._message_was_added = True
 
-    def get_message(self, key: uuid) -> Message:
+    def get_message(self, key: uuid) -> BrightsideMessage:
         for msg in self._messages:
             if msg.id == key:
                 return msg
         return None
 
 
-class FakeProducer(Producer):
+class FakeProducer(BrightsideProducer):
     def __init__(self):
         self._was_sent_message = False
 
-    def send(self, message: Message):
+    def send(self, message: BrightsideMessage):
         self._was_sent_message = True
 
     @property

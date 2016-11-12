@@ -32,7 +32,7 @@ THE SOFTWARE.
 from typing import Optional
 from core.exceptions import ConfigurationException
 from core.registry import Registry, MessageMapperRegistry
-from core.messaging import MessageStore, Producer
+from core.messaging import BrightsideMessageStore, BrightsideProducer
 from core.handler import Request
 
 
@@ -44,8 +44,8 @@ class CommandProcessor:
     def __init__(self,
                  registry: Optional[Registry]=None,
                  message_mapper_registry: Optional[MessageMapperRegistry]=None,
-                 message_store: Optional[MessageStore]=None,
-                 producer: Optional[Producer]=None) -> None:
+                 message_store: Optional[BrightsideMessageStore]=None,
+                 producer: Optional[BrightsideProducer]=None) -> None:
         self._registry = registry
         self._message_mapper_registry = message_mapper_registry
         self._message_store = message_store
@@ -84,9 +84,9 @@ class CommandProcessor:
         """
 
         if self._producer is None:
-            raise ConfigurationException("Command Processor requires a Producer to post to a Broker")
+            raise ConfigurationException("Command Processor requires a BrightsideProducer to post to a Broker")
         if self._message_mapper_registry is None:
-            raise ConfigurationException("Command Processor requires a Message Mapper Registry to post to a Broker")
+            raise ConfigurationException("Command Processor requires a BrightsideMessage Mapper Registry to post to a Broker")
 
         message_mapper= self._message_mapper_registry.lookup(request)
         message = message_mapper(request)

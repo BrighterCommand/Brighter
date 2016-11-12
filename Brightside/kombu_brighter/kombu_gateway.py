@@ -30,19 +30,19 @@ THE SOFTWARE.
 **********************************************************************i*
 """
 
-from kombu import BrokerConnection, Consumer, Exchange, Queue
+from kombu import BrokerConnection, Consumer, Exchange, Producer as Producer, Queue
 from kombu.pools import connections
 from kombu import exceptions as kombu_exceptions
 from kombu.message import Message as KombuMessage
 from datetime import datetime
-from core.messaging import Consumer, Message, Producer, MessageHeader, MessageBody, MessageType
-from kombu_brighter.kombu_messaging import KombuMessageFactory
+from core.messaging import BrightsideConsumer, BrightsideMessage, BrightsideProducer, BrightsideMessageHeader, BrightsideMessageBody, BrightsideMessageType
+from kombu_brighter.kombu_messaging import BrightsideMessageFactory, KombuMessageFactory
 from typing import Dict
 from uuid import uuid4
 import logging
 
 
-class KombuConnection:
+class BrightsideKombuConnection:
     """Contains the details required to connect to a RMQ broker: the amqp uri and the exchange"""
     def __init__(self, amqp_uri: str, exchange: str, exchange_type: str = "direct", is_durable: bool = False) -> None:
         self._amqp_uri = amqp_uri
@@ -83,7 +83,7 @@ class KombuConnection:
         self._is_durable = value
 
 
-class KombuProducer(Producer):
+class BrightsideKombuProducer(BrightsideProducer):
     """Implements sending a message to a RMQ broker. It does not use a queue, just a connection to the broker
     """
     RETRY_OPTIONS = {
@@ -93,25 +93,25 @@ class KombuProducer(Producer):
         'max_retries': 3,
     }
 
-    def __init__(self, connection: KombuConnection, logger:logging.Logger=None) -> None:
+    def __init__(self, connection: BrightsideKombuConnection, logger:logging.Logger=None) -> None:
         self._amqp_uri = connection.amqp_uri
         self._cnx = BrokerConnection(hostname=connection.amqp_uri)
         self._exchange = Exchange(connection.exchange, type=connection.exchange_type, durable=connection.is_durable)
         self._logger = logger or logging.getLogger(__name__)
 
-    def send(self, message: Message):
+    def send(self, message: BrightsideMessage):
         # we want to expose our logger to the functions defined in inner scope, so put it in their outer scope
 
         logger = self._logger
 
-        def _build_message_header() -> Dict:
-            return {'MessageType': message.header.message_type.value}
+        def _build_message_header(msg: BrightsideMessage) -> Dict:
+            return KombuMessageFactory(msg).create_message_header()
 
         def _publish(sender) -> None:
             logger.debug("Send message {body} to broker {amqpuri} with routing key {routing_key}"
                          .format(body=message, amqpuri=self._amqp_uri, routing_key=message.header.topic))
             sender.publish(message.body.value,
-                           headers=_build_message_header(),
+                           headers=_build_message_header(message),
                            exchange=self._exchange,
                            serializer='json',   # todo: fix this for the mime type of the message
                            routing_key=message.header.topic,
@@ -123,14 +123,14 @@ class KombuProducer(Producer):
         self._logger.debug("Connect to broker {amqpuri}".format(amqpuri=self._amqp_uri))
 
         with connections[self._cnx].acquire(block=True) as conn:
-            with conn.Producer() as producer:
+            with Producer(conn) as producer:
                 ensure_kwargs = self.RETRY_OPTIONS.copy()
                 ensure_kwargs['errback'] = _error_callback
                 safe_publish = conn.ensure(producer, _publish, **ensure_kwargs)
                 safe_publish(producer)
 
 
-class KombuConsumer(Consumer):
+class BrightsideKombuConsumer(BrightsideConsumer):
     """ Implements reading a message from an RMQ broker. It uses a queue, created by subscribing to a message topic
 
     """
@@ -141,7 +141,7 @@ class KombuConsumer(Consumer):
         'max_retries': 3,
     }
 
-    def __init__(self, connection: KombuConnection, queue_name: str, routing_key: str, prefetch_count: int=1,
+    def __init__(self, connection: BrightsideKombuConnection, queue_name: str, routing_key: str, prefetch_count: int=1,
                  is_durable: bool=False, logger: logging.Logger=None) -> None:
         self._exchange = Exchange(connection.exchange, type=connection.exchange_type, durable=connection.is_durable)
         self._routing_key = routing_key
@@ -150,9 +150,10 @@ class KombuConsumer(Consumer):
         self._routing_key = routing_key
         self._prefetch_count = prefetch_count
         self._is_durable = is_durable
-        self._message_factory = KombuMessageFactory()
+        self._message_factory = BrightsideMessageFactory()
         self._logger = logger or logging.getLogger(__name__)
         self._queue = Queue(self._queue_name, exchange=self._exchange, routing_key=self._routing_key)
+        self._message = None
 
         # TODO: Need to fix the argument types with default types issue
 
@@ -161,45 +162,48 @@ class KombuConsumer(Consumer):
         def _purge_errors(exc, interval):
             self._logger.error('Purging error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)
 
-        def _purge_messages(consumer: Consumer):
-            consumer.purge()
+        def _purge_messages(cnsmr: BrightsideConsumer):
+            cnsmr.purge()
+            self._message = None
 
         connection = BrokerConnection(hostname=self._amqp_uri)
         with connections[connection].acquire(block=True) as conn:
             self._logger.debug('Got connection: %s', conn.as_uri())
-            with conn.Consumer([self._queue], callbacks=[_purge_messages]) as consumer:
+            with Consumer([self._queue], callbacks=[_purge_messages]) as consumer:
                 ensure_kwargs = self.RETRY_OPTIONS.copy()
                 ensure_kwargs['errback'] = _purge_errors
                 safe_purge = conn.ensure(consumer, _purge_messages, **ensure_kwargs)
                 safe_purge(consumer)
 
-    def receive(self, timeout: int) -> Message:
+    def receive(self, timeout: int) -> BrightsideMessage:
+
+        self._message = BrightsideMessage(BrightsideMessageHeader(uuid4(), "", BrightsideMessageType.none), BrightsideMessageBody(""))
 
         def _consume(cnx: BrokerConnection, timesup: int) -> None:
             try:
                 cnx.drain_events(timeout=timesup)
             except kombu_exceptions.TimeoutError as te:
                 self._logger.error("Error receiving message", exc_info=te)
-                return Message(MessageHeader(uuid4(), "", MessageType.unacceptable), MessageBody(""))
 
         def _consume_errors(exc, interval: int)-> None:
             self._logger.error('Draining error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)
 
-        def _read_message(body: str, message: KombuMessage) -> None:
-            self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), message.headers, body)
-            message = self._message_factory.create_message(message)
-            return message
+        def _read_message(body: str, msg: KombuMessage) -> None:
+            self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), msg.headers, body)
+            self._message = self._message_factory.create_message(msg)
+            msg.ack()
 
         connection = BrokerConnection(hostname=self._amqp_uri)
         with connections[connection].acquire(block=True) as conn:
             self._logger.debug('Got connection: %s', conn.as_uri())
-            with conn.Consumer(channel=conn.channel(), queues=[self._queue], callbacks=[_read_message]) as consumer:
+            with Consumer(conn, queues=[self._queue], callbacks=[_read_message]) as consumer:
                 consumer.qos(prefetch_count=1)
                 ensure_kwargs = self.RETRY_OPTIONS.copy()
                 ensure_kwargs['errback'] = _consume_errors
-                consumer.consume()
                 safe_drain = conn.ensure(consumer, _consume, **ensure_kwargs)
                 safe_drain(conn, timeout)
+
+        return self._message
 
 
 

@@ -31,8 +31,8 @@ THE SOFTWARE.
 """
 
 import unittest
-from kombu_brighter.kombu_gateway import KombuConsumer, KombuConnection, KombuProducer
-from core.messaging import Message, MessageBody, MessageHeader, MessageType
+from kombu_brighter.kombu_gateway import BrightsideKombuConsumer, BrightsideKombuConnection, BrightsideKombuProducer
+from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageHeader, BrightsideMessageType
 from uuid import uuid4
 
 
@@ -41,18 +41,18 @@ class KombuGatewayTests(unittest.TestCase):
     test_topic = "kombu_gateway_tests"
 
     def setUp(self):
-        self._connection = KombuConnection("amqp://guest:guest@localhost:5672//", "paramore.brighter.exchange")
-        self._producer = KombuProducer(self._connection)
-        self._consumer = KombuConsumer(self._connection, "brightside_tests", self.test_topic)
+        self._connection = BrightsideKombuConnection("amqp://guest:guest@localhost:5672//", "paramore.brighter.exchange")
+        self._producer = BrightsideKombuProducer(self._connection)
+        self._consumer = BrightsideKombuConsumer(self._connection, "brightside_tests", self.test_topic)
 
     def test_posting_a_message(self):
         """Given that I have an RMQ message producer
             when I send that message via the produecer
             then I should be able to read that message via the consumer
         """
-        header = MessageHeader(uuid4(), self.test_topic, MessageType.command, uuid4())
-        body = MessageBody("test content")
-        message = Message(header, body)
+        header = BrightsideMessageHeader(uuid4(), self.test_topic, BrightsideMessageType.command, uuid4())
+        body = BrightsideMessageBody("test content")
+        message = BrightsideMessage(header, body)
 
         self._consumer.purge()
 
