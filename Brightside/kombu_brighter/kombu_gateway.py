@@ -181,8 +181,8 @@ class BrightsideKombuConsumer(BrightsideConsumer):
         def _consume(cnx: BrokerConnection, timesup: int) -> None:
             try:
                 cnx.drain_events(timeout=timesup)
-            except kombu_exceptions.TimeoutError as te:
-                self._logger.error("Error receiving message", exc_info=te)
+            except kombu_exceptions.TimeoutError:
+                pass
 
         def _consume_errors(exc, interval: int)-> None:
             self._logger.error('Draining error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)
