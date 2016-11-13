@@ -36,18 +36,15 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
     public class When_The_Message_Is_Already_In_The_Message_Store : ContextSpecification
     {
         private static SqliteTestHelper _sqliteTestHelper;
-        private static SqliteConnection _sqliteConnection;
         private static SqliteMessageStore _sSqlMessageStore;
         private static Exception s_exception;
         private static Message s_messageEarliest;
-        private static Message s_storedMessage;
 
         private Cleanup _cleanup = () => CleanUpDb();
 
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
-            _sqliteConnection = _sqliteTestHelper.CreateMessageStoreConnection();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
@@ -59,7 +56,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 
         private static void CleanUpDb()
         {
-            _sqliteConnection?.Dispose();
             _sqliteTestHelper.CleanUpDb();
         }
     }

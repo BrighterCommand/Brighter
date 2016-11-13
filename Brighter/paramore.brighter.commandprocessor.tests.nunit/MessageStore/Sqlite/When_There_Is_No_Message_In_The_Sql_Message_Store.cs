@@ -36,7 +36,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
     public class When_There_Is_No_Message_In_The_Sql_Message_Store : ContextSpecification
     {
         private static SqliteTestHelper _sqliteTestHelper;
-        private static SqliteConnection _sqliteConnection;
         private static SqliteMessageStore _sSqlMessageStore;
         private static Message s_messageEarliest;
         private static Message s_storedMessage;
@@ -46,7 +45,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
-            _sqliteConnection = _sqliteTestHelper.CreateMessageStoreConnection();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));

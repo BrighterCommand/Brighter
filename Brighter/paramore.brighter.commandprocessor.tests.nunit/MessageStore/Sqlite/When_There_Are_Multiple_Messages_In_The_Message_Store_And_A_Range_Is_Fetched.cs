@@ -38,7 +38,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
     public class When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched : ContextSpecification
     {
         private static SqliteTestHelper _sqliteTestHelper;
-        private static SqliteConnection _sqliteConnection;
         private static SqliteMessageStore _sSqlMessageStore;
         private static readonly string _TopicFirstMessage = "test_topic";
         private static readonly string _TopicLastMessage = "test_topic3";
@@ -46,14 +45,12 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
         private static Message s_message1;
         private static Message s_message2;
         private static Message s_messageEarliest;
-        private static Message s_storedMessage;
 
         private Cleanup _cleanup = () => CleanUpDb();
 
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
-            _sqliteConnection = _sqliteTestHelper.CreateMessageStoreConnection();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             s_messageEarliest =
                 new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT),
@@ -68,6 +65,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
         };
 
         private Because _of = () => { messages = _sSqlMessageStore.Get(1, 3); };
+
         private It _should_fetch_1_message = () => { messages.Count().ShouldEqual(1); };
         private It _should_fetch_expected_message = () => { messages.First().Header.Topic.ShouldEqual(_TopicLastMessage); };
         private It _should_not_fetch_null_messages = () => { messages.ShouldNotBeNull(); };

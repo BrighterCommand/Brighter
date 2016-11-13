@@ -38,20 +38,17 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
     public class When_Writing_Messages_To_The_Message_Store : ContextSpecification
     {
         private static SqliteTestHelper _sqliteTestHelper;
-        private static SqliteConnection _sqliteConnection;
         private static SqliteMessageStore _sSqlMessageStore;
         private static Message s_message2;
         private static Message s_messageEarliest;
         private static Message s_messageLatest;
         private static IEnumerable<Message> s_retrievedMessages;
-        private static Message s_storedMessage;
 
         private Cleanup _cleanup = () => CleanUpDb();
 
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
-            _sqliteConnection = _sqliteTestHelper.CreateMessageStoreConnection();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND),

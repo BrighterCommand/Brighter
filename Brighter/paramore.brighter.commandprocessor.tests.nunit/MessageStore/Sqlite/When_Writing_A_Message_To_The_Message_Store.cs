@@ -39,7 +39,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
     public class When_Writing_A_Message_To_The_Message_Store : ContextSpecification
     {
         private static SqliteTestHelper _sqliteTestHelper;
-        private static SqliteConnection _sqliteConnection;
         private static SqliteMessageStore _sSqlMessageStore;
         private static readonly string key1 = "name1";
         private static readonly string key2 = "name2";
@@ -53,7 +52,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
-            _sqliteConnection = _sqliteTestHelper.CreateMessageStoreConnection();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,
                 DateTime.UtcNow.AddDays(-1), 5, 5);
