@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """"
 File         : handler.py
 Author           : ian

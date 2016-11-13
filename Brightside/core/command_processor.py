@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 File         : command_processor.py
 Author           : ian

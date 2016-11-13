@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """"
 File         : kombu_gateway_tests.py
 Author           : ian

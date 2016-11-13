@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """"
 File         : kombu_messaging.py
 Author           : ian
