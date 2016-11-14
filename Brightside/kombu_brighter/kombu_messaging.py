@@ -139,7 +139,7 @@ class BrightsideMessageFactory:
 
     def _read_payload(self, message: Message) -> (str, ReadError):
         if not message.errors:
-            return message.body.strip('\'"'), None
+            return message.body[1:-1], None
         else:
             errors = ", ".join(message.errors)
             return "", ReadError("Could not parse message. Errors: {}".format(errors))
