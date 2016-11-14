@@ -34,6 +34,14 @@ build_script:
 after_build:
   - cmd: dotnet pack paramore.brighter.commandprocessor/project.json --configuration Release --no-build --output nupkgs
   - cmd: dotnet pack paramore.brighter.serviceactivator/project.json --configuration Release --no-build --output nupkgs 
+  - cmd: dotnet pack paramore.brighter.commandprocessor.commandstore.mssql/project.json --configuration Release --no-build --output nupkgs
+  - cmd: dotnet pack paramore.brighter.commandprocessor.commandstore.sqlite/project.json --configuration Release --no-build --output nupkgs
+  - cmd: dotnet pack paramore.brighter.commandprocessor.messagestore.eventstore/project.json --configuration Release --no-build --output nupkgs
+  - cmd: dotnet pack paramore.brighter.commandprocessor.messagestore.mssql/project.json --configuration Release --no-build --output nupkgs
+  - cmd: dotnet pack paramore.brighter.commandprocessor.messagestore.sqlite/project.json --configuration Release --no-build --output nupkgs
+  - cmd: dotnet pack paramore.brighter.commandprocessor.messaginggateway.awssqs/project.json --configuration Release --no-build --output nupkgs
+  - cmd: dotnet pack paramore.brighter.commandprocessor.messaginggateway.azureservicebus/project.json --configuration Release --no-build --output nupkgs
+  - cmd: dotnet pack paramore.brighter.commandprocessor.messaginggateway.restms/project.json --configuration Release --no-build --output nupkgs
   - cmd: dotnet pack paramore.brighter.commandprocessor.messaginggateway.rmq/project.json --configuration Release --no-build --output nupkgs
 
 test_script:
