@@ -17,6 +17,11 @@
       /* Using this to signify a Core build, best way rather than nominating ind frameworks */
       "buildOptions": { "define": [ "NET_STANDARD" ] }
     },
+    "net451": {
+      "dependencies": {
+        "System.Diagnostics.Debug": "4.0.0"
+      }
+    },
     "net452": {
       "dependencies": {
         "System.Diagnostics.Debug": "4.0.0"

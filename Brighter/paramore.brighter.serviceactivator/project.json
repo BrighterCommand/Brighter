@@ -18,6 +18,9 @@
         "System.Threading.Thread": "4.0.0"
       }
     },
+    "net451": {
+      "dependencies": {}
+    },
     "net452": {
       "dependencies": {}
     }

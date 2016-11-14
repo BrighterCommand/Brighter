@@ -29,6 +29,7 @@
     "netstandard1.6": {
       "imports": "dnxcore50"
     },
+    "net451": {},
     "net452": {}
   },
   "configurations": {

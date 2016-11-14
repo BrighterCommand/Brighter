@@ -1,8 +1,8 @@
 {
   "version": "1.0.0-*",
   "buildOptions": {
-     "debugType": "portable",
-     "emitEntryPoint": true
+    "debugType": "portable",
+    "emitEntryPoint": true
   },
   "dependencies": {
     "paramore.brighter.commandprocessor": "1.0.0-*"
@@ -17,6 +17,7 @@
         }
       }
     },
+    "net451": {},
     "net452": {}
   }
 }

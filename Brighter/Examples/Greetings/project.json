@@ -13,6 +13,7 @@
         "System.Reflection.TypeExtensions": "4.1.0"
       }
     },
+    "net451": {},
     "net452": {}
   }
 }
