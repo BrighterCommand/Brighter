@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
@@ -45,6 +44,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
+            _sqliteTestHelper.SetupMessageDb();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));

@@ -24,13 +24,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.IO;
-using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.Logging;
-// ReSharper disable once RedundantUsingDirective
-using paramore.brighter.commandprocessor.messagestore.mssql;
 using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
@@ -52,6 +48,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
+            _sqliteTestHelper.SetupMessageDb();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,
                 DateTime.UtcNow.AddDays(-1), 5, 5);

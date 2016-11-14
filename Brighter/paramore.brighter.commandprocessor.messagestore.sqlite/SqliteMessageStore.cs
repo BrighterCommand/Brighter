@@ -182,7 +182,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
 
                         throw;
                     }
-                };
+                }
             }
         }
 
@@ -282,13 +282,13 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
             }
         }
 
-        private DbParameter CreateSqlParameter(string parameterName, object value)
+        private SqliteParameter CreateSqlParameter(string parameterName, object value)
         {
             return new SqliteParameter(parameterName, value);
         }
 
-        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int messageStoreTimeout,
-            params DbParameter[] parameters)
+        private T ExecuteCommand<T>(Func<SqliteCommand, T> execute, string sql, int messageStoreTimeout,
+            params SqliteParameter[] parameters)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -305,11 +305,11 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
         }
 
         private async Task<T> ExecuteCommandAsync<T>(
-            Func<DbCommand, Task<T>> execute,
+            Func<SqliteCommand, Task<T>> execute,
             string sql,
             int timeoutInMilliseconds,
             CancellationToken? ct = null,
-            params DbParameter[] parameters)
+            params SqliteParameter[] parameters)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -389,9 +389,9 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
             return new Message();
         }
 
-        private void SetPagingCommandFor(DbCommand command, int pageSize, int pageNumber)
+        private void SetPagingCommandFor(SqliteCommand command, int pageSize, int pageNumber)
         {
-            var parameters = new[]
+            SqliteParameter[] parameters = new[]
             {
                 CreateSqlParameter("PageNumber", pageNumber-1)
                 , CreateSqlParameter("PageSize", pageSize)
@@ -403,14 +403,9 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
             AddParamtersParamArrayToCollection(parameters, command);
         }
 
-        public void AddParamtersParamArrayToCollection(DbParameter[] parameters, DbCommand command)
+        public void AddParamtersParamArrayToCollection(SqliteParameter[] parameters, SqliteCommand command)
         {
-            //command.Parameters.AddRange(parameters); used to work... but can't with current Sqlite lib. Iterator issue
-            for (var index = 0; index < parameters.Length; index++)
-            {
-                command.Parameters.Add(parameters[index]);
-            }
+                command.Parameters.AddRange(parameters);
         }
-
     }
 }

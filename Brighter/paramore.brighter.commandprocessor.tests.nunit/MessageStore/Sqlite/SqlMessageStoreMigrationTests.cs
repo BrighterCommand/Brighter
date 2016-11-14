@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -41,20 +40,19 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
         private static SqliteMessageStore s_sqlMessageStore;
         private static Message s_message;
         private static Message s_storedMessage;
-        private static SqliteConnection _sqliteConnection;
         private static SqliteTestHelper _sqliteTestHelper;
 
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
-            _sqliteConnection = _sqliteTestHelper.CreateMessageStoreConnection();
+            _sqliteTestHelper.SetupMessageDb();
             s_sqlMessageStore  = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
 
             s_message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            AddHistoricMessage(s_message).Wait();
+            AddHistoricMessage(s_message);
         };
 
-        private static async Task AddHistoricMessage(Message message)
+        private static void AddHistoricMessage(Message message)
         {
             var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)", _sqliteTestHelper.TableName_Messages);
             var parameters = new[]
@@ -70,7 +68,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
             using (var connection = new SqliteConnection(_sqliteTestHelper.ConnectionString))
             using (var command = connection.CreateCommand())
             {
-                await connection.OpenAsync();
+                connection.Open();
 
                 command.CommandText = sql;
                 //command.Parameters.AddRange(parameters); used to work... but can't with current Sqlite lib. Iterator issue
@@ -78,7 +76,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
                 {
                     command.Parameters.Add(parameters[index]);
                 }
-                await command.ExecuteNonQueryAsync();
+                command.ExecuteNonQuery();
             }
         }
 

@@ -17,14 +17,14 @@ namespace paramore.brighter.commandprocessor.tests.nunit
         private SqliteConnection _sqlConnection;
         private string connectionStringPathDir;
 
-        public SqliteConnection CreateDatabase()
+        public SqliteConnection SetupCommandDb()
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = "DataSource=\"" + connectionStringPath + "\"";
             return CreateDatabaseWithTable(ConnectionString, SqliteCommandStoreBuilder.GetDDL(TableName));
         }
 
-        public SqliteConnection CreateMessageStoreConnection()
+        public SqliteConnection SetupMessageDb()
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = "DataSource=\"" + connectionStringPath + "\"";
