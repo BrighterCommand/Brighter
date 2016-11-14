@@ -106,7 +106,7 @@ class BrightsideKombuProducer(BrightsideProducer):
         def _build_message_header(msg: BrightsideMessage) -> Dict:
             return KombuMessageFactory(msg).create_message_header()
 
-        def _publish(sender) -> None:
+        def _publish(sender: Producer) -> None:
             logger.debug("Send message {body} to broker {amqpuri} with routing key {routing_key}"
                          .format(body=message, amqpuri=self._amqp_uri, routing_key=message.header.topic))
             sender.publish(message.body.value,
