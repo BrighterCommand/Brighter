@@ -26,9 +26,7 @@ before_build:
   - cmd: cd Brighter
   - cmd: dotnet restore --verbosity Minimal
   - ps: |
-        Get-ChildItem . -Recurse -Include project.json | ForEach-Object {
-          (Get-Content $PSItem) -Replace "`"version`": `"1\.0\.0-\*`"","`"version`": `"$env:APPVEYOR_BUILD_VERSION`"" | Set-Content -Path $PSItem;
-          }
+        Get-ChildItem . -Recurse -Include project.json | ForEach-Object {(Get-Content $PSItem) -Replace "`"version`": `"1\.0\.0-\*`"","`"version`": `"$env:APPVEYOR_BUILD_VERSION`"" | Set-Content -Path $PSItem;}
 
 build_script:
   - cmd: dotnet build -c Release */**/project.json
