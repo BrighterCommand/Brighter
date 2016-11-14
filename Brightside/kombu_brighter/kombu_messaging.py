@@ -33,6 +33,8 @@ from core.messaging import BrightsideMessage, BrightsideMessageHeader, Brightsid
 from core.exceptions import MessagingException
 from uuid import UUID, uuid4
 from typing import Dict
+import re
+import codecs
 
 message_type_header = "MessageType"
 message_id_header = "MessageId"
@@ -43,6 +45,23 @@ message_delay_milliseconds_header = "x-delay"
 message_delayed_milliseconds_header = "x-delay"
 message_original_message_id_header = "x-original-message-id"
 message_delivery_tag_header = "DeliveryTag"
+
+# See http://stackoverflow.com/questions/4020539/process-escape-sequences-in-a-string-in-python
+ESCAPE_SEQUENCE_RE = re.compile(r'''
+    ( \\U........      # 8-digit hex escapes
+    | \\u....          # 4-digit hex escapes
+    | \\x..            # 2-digit hex escapes
+    | \\[0-7]{1,3}     # Octal escapes
+    | \\N\{[^}]+\}     # Unicode characters by name
+    | \\[\\'"abfnrtv]  # Single-character escapes
+    )''', re.UNICODE | re.VERBOSE)
+
+
+def decode_escapes(s):
+    def decode_match(match):
+        return codecs.decode(match.group(0), 'unicode-escape')
+
+    return ESCAPE_SEQUENCE_RE.sub(decode_match, s)
 
 
 class ReadError:
@@ -139,7 +158,8 @@ class BrightsideMessageFactory:
 
     def _read_payload(self, message: Message) -> (str, ReadError):
         if not message.errors:
-            return message.body[1:-1], None
+            body_text = decode_escapes(message.body)
+            return body_text[1:-1], None
         else:
             errors = ", ".join(message.errors)
             return "", ReadError("Could not parse message. Errors: {}".format(errors))
