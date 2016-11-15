@@ -74,3 +74,19 @@ class TestMessage(Command):
         self._float_value = 3.14
         self._string_value = "fubar"
         self._bool_value = True
+
+    @property
+    def integer_value(self):
+        return self._integer_value
+
+    @property
+    def float_value(self):
+        return self._float_value
+
+    @property
+    def string_value(self):
+        return self._string_value
+
+    @property
+    def bool_value(self):
+        return self._bool_value

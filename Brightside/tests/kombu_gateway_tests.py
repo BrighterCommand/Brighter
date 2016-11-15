@@ -36,7 +36,7 @@ import json
 
 from tests.messaging_testdoubles import TestMessage
 from kombu_brighter.kombu_gateway import BrightsideKombuConsumer, BrightsideKombuConnection, BrightsideKombuProducer
-from kombu_brighter.kombu_messaging import RequestSerializer
+from kombu_brighter.kombu_messaging import JsonRequestSerializer
 from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageBodyType, BrightsideMessageHeader, BrightsideMessageType
 
 
@@ -74,7 +74,7 @@ class KombuGatewayTests(unittest.TestCase):
         """
         request = TestMessage()
         header = BrightsideMessageHeader(uuid4(), self.test_topic, BrightsideMessageType.command, uuid4())
-        body = BrightsideMessageBody(RequestSerializer(request).serialize_to_json(), BrightsideMessageBodyType.application_json)
+        body = BrightsideMessageBody(JsonRequestSerializer(request=request).serialize_to_json(), BrightsideMessageBodyType.application_json)
         message = BrightsideMessage(header, body)
 
         self._consumer.purge()
@@ -83,7 +83,12 @@ class KombuGatewayTests(unittest.TestCase):
 
         read_message = self._consumer.receive(3)
 
-        deserialized_request = RequestSerializer(None).deserialize_from_json(read_message.body.value)
-        self.assertIsNotNone(deserialized_request)
+        deserialized_request = JsonRequestSerializer(request=TestMessage(), serialized_request=read_message.body.value)\
+            .deserialize_from_json()
 
+        self.assertIsNotNone(deserialized_request)
+        self.assertEqual(request.bool_value, deserialized_request.bool_value)
+        self.assertEqual(request.float_value, deserialized_request.float_value)
+        self.assertEqual(request.integer_value, deserialized_request.integer_value)
+        self.assertEqual(request.id, deserialized_request.id)
 

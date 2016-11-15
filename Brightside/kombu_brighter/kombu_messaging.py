@@ -203,35 +203,29 @@ class KombuMessageFactory:
 
         return header
 
-# TODO: This wire format won't match what JSON.NET produces, so we need to agree a wire format that matches C#
 
+class JsonRequestSerializer:
+    def __init__(self, request: Request=None, serialized_request: str=None):
+        if request is None and serialized_request is None:
+            raise MessagingException("You must provide either an object to serialize, or a dictionary of object properties and an object to hydrate")
 
-def serialize_instance(obj: object) -> Dict:
-    # See The Python Cookbook by Beazley and Jones
-    d = {'__classname__': type(obj).__name__}
-    d.update(vars(obj))
-    return d
-
-
-def unserialize_instance(d: Dict) -> object:
-    # See The Python Cookbook by Beazley and Jones
-    clsname = d.pop('__classname__', None)
-    if clsname:
-        obj = clsname.__new__(clsname)  # Make instance without calling __init__
-        for key, value in d.items():
-            setattr(obj, key, value)
-            return obj
-    else:
-        return d
-
-
-class RequestSerializer:
-    def __init__(self, request: Request):
         self._request = request
+        self._serialized_request = serialized_request
 
     def serialize_to_json(self):
-        return json.dumps(self._request, default=serialize_instance)
+        def _serialize_instance(obj: object) -> Dict:
+            d = {}
+            d.update(vars(obj))
+            return d
 
-    @staticmethod
-    def deserialize_from_json(serialized_request: str):
-        return json.loads(serialized_request, object_hook=unserialize_instance)
+        if self._request is None:
+            raise MessagingException("You must provide a request to serialize")
+        return json.dumps(self._request, default=_serialize_instance)
+
+    def deserialize_from_json(self):
+        def _unserialize_instance(d: Dict) -> object:
+            for key, value in d.items():
+                setattr(self._request, key, value)
+            return self._request
+
+        return json.loads(self._serialized_request, object_hook=_unserialize_instance)
