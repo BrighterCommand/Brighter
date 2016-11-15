@@ -31,9 +31,12 @@ THE SOFTWARE.
 """
 
 import unittest
+from uuid import uuid4
+import json
+
+from tests.messaging_testdoubles import TestMessage
 from kombu_brighter.kombu_gateway import BrightsideKombuConsumer, BrightsideKombuConnection, BrightsideKombuProducer
 from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageHeader, BrightsideMessageType
-from uuid import uuid4
 
 
 class KombuGatewayTests(unittest.TestCase):
@@ -47,7 +50,7 @@ class KombuGatewayTests(unittest.TestCase):
 
     def test_posting_a_message(self):
         """Given that I have an RMQ message producer
-            when I send that message via the produecer
+            when I send that message via the producer
             then I should be able to read that message via the consumer
         """
         header = BrightsideMessageHeader(uuid4(), self.test_topic, BrightsideMessageType.command, uuid4())
@@ -62,4 +65,20 @@ class KombuGatewayTests(unittest.TestCase):
 
         self.assertEqual(message.id, read_message.id)
         self.assertEqual(message.body.value, read_message.body.value)
+
+    def test_posting_object_state(self):
+        """Given that I have an RMQ producer
+            when I deserialize an object via the producer
+            then I should be able to re-hydrate it via the consumer
+        """
+        request = TestMessage()
+        header = BrightsideMessageHeader(uuid4(), self.test_topic, BrightsideMessageType.command, uuid4())
+        body = BrightsideMessageBody(request, "application/json")
+        message = BrightsideMessage(header, body)
+
+        self._consumer.purge()
+
+        self._producer.send(message)
+
+        read_message = self._consumer.receive(3)
 

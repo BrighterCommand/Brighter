@@ -29,10 +29,12 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
+import json
+
+from poll import retry, circuitbreaker
+
 from core.handler import Handler, Command, Event, Request
 from core.messaging import BrightsideMessageBody, BrightsideMessageHeader, BrightsideMessage
-from poll import retry, circuitbreaker
-import json
 
 
 class MyCommand(Command):

@@ -31,6 +31,7 @@ THE SOFTWARE.
 """
 
 import unittest
+
 from core.registry import MessageMapperRegistry
 from tests.messaging_testdoubles import FakeMessageStore, FakeProducer
 from core.command_processor import CommandProcessor

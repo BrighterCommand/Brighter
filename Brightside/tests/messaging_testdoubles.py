@@ -31,6 +31,8 @@ THE SOFTWARE.
 """
 
 import uuid
+
+from core.handler import Command
 from core.messaging import BrightsideMessage, BrightsideMessageStore, BrightsideProducer
 
 
@@ -64,3 +66,11 @@ class FakeProducer(BrightsideProducer):
     @property
     def was_sent_message(self):
         return self._was_sent_message
+
+
+class TestMessage(Command):
+    def __init__(self):
+        self._integer_value = 99
+        self._float_value = 3.14
+        self._string_value = "fubar"
+        self._bool_value = True

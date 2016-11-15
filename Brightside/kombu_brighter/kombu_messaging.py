@@ -28,13 +28,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **********************************************************************i*
 """
-from kombu.message import Message as Message
-from core.messaging import BrightsideMessage, BrightsideMessageHeader, BrightsideMessageBody, BrightsideMessageType
-from core.exceptions import MessagingException
 from uuid import UUID, uuid4
 from typing import Dict
 import re
 import codecs
+
+from kombu.message import Message as Message
+
+from core.messaging import BrightsideMessage, BrightsideMessageHeader, BrightsideMessageBody, BrightsideMessageType
+from core.exceptions import MessagingException
 
 message_type_header = "MessageType"
 message_id_header = "MessageId"

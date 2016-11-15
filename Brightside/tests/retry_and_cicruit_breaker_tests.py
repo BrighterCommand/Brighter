@@ -30,10 +30,12 @@ THE SOFTWARE.
 ***********************************************************************
 """
 import unittest
+
+from poll import CircuitBrokenError
+
 from tests.handlers_testdoubles import MyHandlerSupportingRetry, MyHandlerBreakingAfterRetry, MyHandlerBreakingCircuitAfterThreeFailures, MyCommand
 from core.command_processor import CommandProcessor
 from core.registry import Registry
-from poll import CircuitBrokenError
 
 class PipelineTests(unittest.TestCase):
 

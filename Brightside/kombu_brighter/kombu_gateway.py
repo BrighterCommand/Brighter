@@ -29,16 +29,18 @@ THE SOFTWARE.
 **********************************************************************i*
 """
 
+from typing import Dict
+from uuid import uuid4
+import logging
+from datetime import datetime
+
 from kombu import BrokerConnection, Consumer, Exchange, Producer as Producer, Queue
 from kombu.pools import connections
 from kombu import exceptions as kombu_exceptions
 from kombu.message import Message as KombuMessage
-from datetime import datetime
+
 from core.messaging import BrightsideConsumer, BrightsideMessage, BrightsideProducer, BrightsideMessageHeader, BrightsideMessageBody, BrightsideMessageType
 from kombu_brighter.kombu_messaging import BrightsideMessageFactory, KombuMessageFactory
-from typing import Dict
-from uuid import uuid4
-import logging
 
 
 class BrightsideKombuConnection:

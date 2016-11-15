@@ -29,6 +29,7 @@ THE SOFTWARE.
 ***********************************************************************
 """
 from typing import Optional
+
 from core.exceptions import ConfigurationException
 from core.registry import Registry, MessageMapperRegistry
 from core.messaging import BrightsideMessageStore, BrightsideProducer
