@@ -36,7 +36,8 @@ import json
 
 from tests.messaging_testdoubles import TestMessage
 from kombu_brighter.kombu_gateway import BrightsideKombuConsumer, BrightsideKombuConnection, BrightsideKombuProducer
-from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageHeader, BrightsideMessageType
+from kombu_brighter.kombu_messaging import RequestSerializer
+from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageBodyType, BrightsideMessageHeader, BrightsideMessageType
 
 
 class KombuGatewayTests(unittest.TestCase):
@@ -73,7 +74,7 @@ class KombuGatewayTests(unittest.TestCase):
         """
         request = TestMessage()
         header = BrightsideMessageHeader(uuid4(), self.test_topic, BrightsideMessageType.command, uuid4())
-        body = BrightsideMessageBody(request, "application/json")
+        body = BrightsideMessageBody(RequestSerializer(request).serialize_to_json(), BrightsideMessageBodyType.application_json)
         message = BrightsideMessage(header, body)
 
         self._consumer.purge()
@@ -81,4 +82,8 @@ class KombuGatewayTests(unittest.TestCase):
         self._producer.send(message)
 
         read_message = self._consumer.receive(3)
+
+        deserialized_request = RequestSerializer(None).deserialize_from_json(read_message.body.value)
+        self.assertIsNotNone(deserialized_request)
+
 

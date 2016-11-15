@@ -34,11 +34,18 @@ from abc import ABCMeta, abstractmethod
 from enum import Enum, unique
 
 
+class BrightsideMessageBodyType:
+    application_json = "application/json"
+    application_xml = "application/xml"
+    text_plain = "text/plain"
+    text_xml = "text/xml"
+
+
 class BrightsideMessageBody:
     """The body of our message. Note that this must use the same binary payload approach as Paramore Brighter to
         ensure that payload is binary compatible. plain/text should be encoded as a UTF8 byte array for example
     """
-    def __init__(self, body: str, body_type: str = "text/plain") -> None:
+    def __init__(self, body: str, body_type: str = BrightsideMessageBodyType.text_plain) -> None:
         self._encoded_body = body.encode()
         self._body_type = body_type
 

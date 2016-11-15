@@ -28,13 +28,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 **********************************************************************i*
 """
-from uuid import UUID, uuid4
-from typing import Dict
-import re
 import codecs
+import json
+import re
+from typing import Dict
+from uuid import UUID, uuid4
 
 from kombu.message import Message as Message
 
+from core.handler import Request
 from core.messaging import BrightsideMessage, BrightsideMessageHeader, BrightsideMessageBody, BrightsideMessageType
 from core.exceptions import MessagingException
 
@@ -174,7 +176,7 @@ class BrightsideMessageFactory:
             return "", ReadError("Could not read payload type. Errors: {}".format(errors))
 
 
-class KombuMessageFactory():
+class KombuMessageFactory:
     def __init__(self, message: BrightsideMessage) -> None:
         self._message = message
 
@@ -200,3 +202,36 @@ class KombuMessageFactory():
         _add_correlation_id(header, str(self._message.header.correlation_id))
 
         return header
+
+# TODO: This wire format won't match what JSON.NET produces, so we need to agree a wire format that matches C#
+
+
+def serialize_instance(obj: object) -> Dict:
+    # See The Python Cookbook by Beazley and Jones
+    d = {'__classname__': type(obj).__name__}
+    d.update(vars(obj))
+    return d
+
+
+def unserialize_instance(d: Dict) -> object:
+    # See The Python Cookbook by Beazley and Jones
+    clsname = d.pop('__classname__', None)
+    if clsname:
+        obj = clsname.__new__(clsname)  # Make instance without calling __init__
+        for key, value in d.items():
+            setattr(obj, key, value)
+            return obj
+    else:
+        return d
+
+
+class RequestSerializer:
+    def __init__(self, request: Request):
+        self._request = request
+
+    def serialize_to_json(self):
+        return json.dumps(self._request, default=serialize_instance)
+
+    @staticmethod
+    def deserialize_from_json(serialized_request: str):
+        return json.loads(serialized_request, object_hook=unserialize_instance)
