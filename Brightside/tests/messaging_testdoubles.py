@@ -74,6 +74,7 @@ class TestMessage(Command):
         self._float_value = 3.14
         self._string_value = "fubar"
         self._bool_value = True
+        super().__init__()
 
     @property
     def integer_value(self):

@@ -60,6 +60,9 @@ class Command(Request):
     """ A command is a task to be done, it has affinity with a transaction, it encapsulates the arguments of the call
         to a handler
     """
+    def __init__(self) -> None:
+        super().__init__()
+
     @staticmethod
     def is_command() -> bool:
         return True
@@ -73,6 +76,9 @@ class Event(Request):
     """ An event is a notification that something ha happened, it has affinity with a transaction, it encapsulates the
     call to a handler
     """
+    def __init__(self) -> None:
+        super().__init__()
+
     @staticmethod
     def is_command() -> bool:
         return False

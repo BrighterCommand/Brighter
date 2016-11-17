@@ -38,11 +38,13 @@ from core.messaging import BrightsideMessageBody, BrightsideMessageHeader, Brigh
 
 
 class MyCommand(Command):
-    pass
+    def __init__(self) -> None:
+        super().__init__()
 
 
 class MyOtherCommand(Command):
-    pass
+    def __init__(self) -> None:
+        super().__init__()
 
 
 class MyCommandHandler(Handler):
@@ -62,7 +64,8 @@ class MyCommandHandler(Handler):
 
 
 class MyEvent(Event):
-    pass
+    def __init__(self) -> None:
+        super().__init__()
 
 
 class MyEventHandler(Handler):
