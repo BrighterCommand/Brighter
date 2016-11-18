@@ -216,6 +216,9 @@ class JsonRequestSerializer:
         def _serialize_instance(obj: object) -> Dict:
             d = {}
             d.update(vars(obj))
+            for key, value in d.items():
+                if isinstance(value, UUID):
+                    d[key] = str(value)
             return d
 
         if self._request is None:
