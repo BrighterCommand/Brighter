@@ -217,7 +217,7 @@ class JsonRequestSerializer:
             d = {}
             d.update(vars(obj))
             for key, value in d.items():
-                if isinstance(value, UUID):
+                if isinstance(value, UUID): # json does not know how to serliaze a UUID, so convince it is a string instead
                     d[key] = str(value)
             return d
 
@@ -228,6 +228,12 @@ class JsonRequestSerializer:
     def deserialize_from_json(self):
         def _unserialize_instance(d: Dict) -> object:
             for key, value in d.items():
+                if isinstance(value, str):  # We need to check if the string on the wire is actually a UUID, by conversion
+                    try:
+                        guid = UUID(value)
+                        value = guid
+                    except ValueError:
+                        pass
                 setattr(self._request, key, value)
             return self._request
 
