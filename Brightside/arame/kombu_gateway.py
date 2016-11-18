@@ -40,7 +40,7 @@ from kombu import exceptions as kombu_exceptions
 from kombu.message import Message as KombuMessage
 
 from core.messaging import BrightsideConsumer, BrightsideMessage, BrightsideProducer, BrightsideMessageHeader, BrightsideMessageBody, BrightsideMessageType
-from kombu_brighter.kombu_messaging import BrightsideMessageFactory, KombuMessageFactory
+from arame.kombu_messaging import BrightsideMessageFactory, KombuMessageFactory
 
 
 class BrightsideKombuConnection:

@@ -35,8 +35,8 @@ from uuid import uuid4
 import json
 
 from tests.messaging_testdoubles import TestMessage
-from kombu_brighter.kombu_gateway import BrightsideKombuConsumer, BrightsideKombuConnection, BrightsideKombuProducer
-from kombu_brighter.kombu_messaging import JsonRequestSerializer
+from arame.kombu_gateway import BrightsideKombuConsumer, BrightsideKombuConnection, BrightsideKombuProducer
+from arame.kombu_messaging import JsonRequestSerializer
 from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageBodyType, BrightsideMessageHeader, BrightsideMessageType
 
 
