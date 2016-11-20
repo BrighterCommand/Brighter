@@ -12,6 +12,7 @@
     }
   },
   "frameworks": {
+    "net451": {},
     "net452": {
       "dependencies": {
       }

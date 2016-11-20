@@ -21,6 +21,7 @@
         "System.Threading.Thread": "4.0.0"
       }
     },
+   "net451": {},
    "net452": {}
   }, 
   "configurations": {

@@ -29,6 +29,13 @@
         "System.Threading.Thread": "4.0.0"
       }
     },
+    "net451": {
+      "dependencies": {
+        "PInvoke.BCrypt": "0.3.152",
+        "PInvoke.NCrypt": "0.3.152",
+        "PInvoke.Windows.Core": "0.3.152"
+      }
+    },
     "net452": {
       "dependencies": {
         "PInvoke.BCrypt": "0.3.152",

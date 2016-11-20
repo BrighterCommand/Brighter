@@ -6,18 +6,27 @@
   },
 
   "dependencies": {
-    "Greetings": { "target": "project" },
-    "Serilog.Sinks.Console": "2.1.0",
-    "Serilog": "2.3.0",
-    "Microsoft.NETCore.App": {
-      "type": "platform",
-      "version": "1.0.1"
-    }
+    "Greetings": { "target": "project" }
   },
 
   "frameworks": {
     "netcoreapp1.0": {
-      "imports": "dnxcore50"
+      "imports": "dnxcore50",
+      "dependencies": {
+        "Serilog.Sinks.Console": "2.1.0",
+        "Serilog": "2.3.0",
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.1"
+        }
+      }
+    },
+    "net452": {
+      "imports": "dnxcore50",
+      "dependencies": {
+        "Serilog.Sinks.Console": "2.1.0",
+        "Serilog": "2.3.0"
+      }
     }
   }
 }

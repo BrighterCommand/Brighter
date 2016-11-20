@@ -19,7 +19,8 @@
         "portable-net45+win8"
       ]
     },
-    "net452": {    }
+    "net451": {},
+    "net452": {}
   }, 
   "configurations": {
     "Debug": {
