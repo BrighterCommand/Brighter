@@ -37,7 +37,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 {
     
     [Category("RMQ")]
-    public class When_a_message_consumer_throws_an_already_closed_exception_when_connecting_should_retry_until_circuit_breaks: ContextSpecification
+    public class When_a_message_consumer_throws_an_already_closed_exception_when_connecting: ContextSpecification
     {
         private static IAmAMessageProducer s_sender;
         private static IAmAMessageConsumer s_receiver;
