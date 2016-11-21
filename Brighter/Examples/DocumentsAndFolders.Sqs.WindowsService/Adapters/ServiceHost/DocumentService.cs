@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using Amazon.Runtime;
 using DocumentsAndFolders.Sqs.Core.Ports.CommandHandlers;
 using DocumentsAndFolders.Sqs.Core.Ports.Events;
@@ -31,7 +32,6 @@ using Greetings.Adapters.ServiceHost;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 using paramore.brighter.serviceactivator;
-using paramore.brighter.serviceactivator.Configuration;
 using Polly;
 
 using TinyIoC;
@@ -97,10 +97,35 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
             var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(awsCredentials );
             var sqsMessageProducerFactory = new SqsMessageProducerFactory(awsCredentials );
 
-            var subscriptions = new Subscriptions();
-            subscriptions.Add(new ConnectionElement {ConnectionName = "paramore.example.documentsandfolders.documentcreatedevent", ChannelName = "https://sqs.eu-west-1.amazonaws.com/027649620536/DocumentCreatedEvent", RoutingKey = "DocumentCreatedEvent", DataType = "DocumentsAndFolders.Sqs.Core.Ports.Events.DocumentCreatedEvent", TimeoutInMiliseconds = 5000, NoOfPerformers = 10});
-            subscriptions.Add(new ConnectionElement {ConnectionName = "paramore.example.documentsandfolders.documentupdatedevent", ChannelName = "https://sqs.eu-west-1.amazonaws.com/027649620536/DocumentUpdatedEvent", RoutingKey = "DocumentUpdatedEvent", DataType = "DocumentsAndFolders.Sqs.Core.Ports.Events.DocumentUpdatedEvent", TimeoutInMiliseconds = 5000, NoOfPerformers = 10});
-            subscriptions.Add(new ConnectionElement {ConnectionName = "paramore.example.documentsandfolders.foldercreateddevent", ChannelName = "https://sqs.eu-west-1.amazonaws.com/027649620536/FolderCreatedEvent", RoutingKey = "FolderCreatedEvent", DataType = "DocumentsAndFolders.Sqs.Ports.Core.Events.FolderCreatedEvent", TimeoutInMiliseconds = 5000, NoOfPerformers = 10});
+            var connections = new List<paramore.brighter.serviceactivator.Connection>
+            {
+                new paramore.brighter.serviceactivator.Connection(
+                    new ConnectionName("paramore.example.documentsandfolders.documentcreatedevent"),
+                    new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
+                    typeof(DocumentCreatedEvent),
+                    new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/DocumentCreatedEvent"),
+                    "DocumentCreatedEvent",
+                    timeoutInMilliseconds: 5000,
+                    noOfPerformers: 10),
+                new paramore.brighter.serviceactivator.Connection(
+                    new ConnectionName("paramore.example.documentsandfolders.documentupdatedevent"),
+                    new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
+                    typeof(DocumentUpdatedEvent),
+                    new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/DocumentUpdatedEvent"),
+                    "DocumentUpdatedEvent",
+                    timeoutInMilliseconds: 5000,
+                    noOfPerformers: 10),
+                new paramore.brighter.serviceactivator.Connection(
+                    new ConnectionName("paramore.example.documentsandfolders.foldercreateddevent"),
+                    new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
+                    typeof(FolderCreatedEvent),
+                    new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/FolderCreatedEvent"),
+                    "FolderCreatedEvent",
+                    timeoutInMilliseconds: 5000,
+                    noOfPerformers: 10)
+            };
+
+
 
             var builder = DispatchBuilder
                 .With()
@@ -113,7 +138,7 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
                 )
                 .MessageMappers(messageMapperRegistry)
                 .ChannelFactory(new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory))
-                .ConnectionsFromSubscriptions(subscriptions);
+                .Connections(connections);
             _dispatcher = builder.Build();
         }
 

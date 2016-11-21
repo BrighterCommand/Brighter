@@ -35,11 +35,8 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator.Configuration;
 
 namespace paramore.brighter.serviceactivator
 {
@@ -51,7 +48,6 @@ namespace paramore.brighter.serviceactivator
     /// </summary>
     public class DispatchBuilder : INeedACommandProcessor, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfConnections, IAmADispatchBuilder
     {
-        private IAmAChannelFactory _channelFactory;
         private IEnumerable<Connection> _connections;
         private CommandProcessor _commandProcessor;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
@@ -98,7 +94,6 @@ namespace paramore.brighter.serviceactivator
         /// <returns>INeedAListOfConnections.</returns>
         public INeedAListOfConnections ChannelFactory(IAmAChannelFactory channelFactory)
         {
-            _channelFactory = channelFactory;
             return this;
         }
 
@@ -112,31 +107,6 @@ namespace paramore.brighter.serviceactivator
             _connections = connections;
             return this;
         }
-
-        ///// <summary>
-        ///// Obtains a list of connections i.e. mappings of channels to commands or events via the configuration file for the application
-        ///// </summary>
-        ///// <param name="connections"></param>
-        ///// <returns>IAmADispatchBuilder.</returns>
-        [Obsolete]
-        public IAmADispatchBuilder ConnectionsFromSubscriptions(Subscriptions subscriptions)
-        {
-            var connectionElements = from ConnectionElement connection in subscriptions.Connections select connection;
-            return ConnectionsFromElements(connectionElements);
-        }
-
-        /// <summary>
-        /// Create connections from configuration elements.
-        /// </summary>
-        /// <param name="connectionElements">The connection elements.</param>
-        /// <returns>IAmADispatchBuilder.</returns>
-        [Obsolete] 
-        public IAmADispatchBuilder ConnectionsFromElements(IEnumerable<ConnectionElement> connectionElements)
-        {
-            var connectionFactory = new ConnectionFactory(_channelFactory);
-            return Connections(connectionFactory.Create(connectionElements));
-        }
-
 
         /// <summary>
         /// Builds this instance.
@@ -195,21 +165,7 @@ namespace paramore.brighter.serviceactivator
     /// </summary>
     public interface INeedAListOfConnections
     {
-        /// <summary>
-        /// Initialize the Dispatcher from a list of connection elements       
-        /// </summary>
-        /// <param name="connections">The connections.</param>
-        /// <returns>IAmADispatchBuilder.</returns>
-        IAmADispatchBuilder ConnectionsFromElements(IEnumerable<ConnectionElement> connections);
-
-        ///// <summary>
-        ///// Obtains a list of connections i.e. mappings of channels to commands or events via the configuration file for the application
-        ///// </summary>
-        ///// <param name="connectionsConfiguration">The connection elements.</param>
-        ///// <returns>IAmADispatchBuilder.</returns>
-        IAmADispatchBuilder ConnectionsFromSubscriptions(Subscriptions subscriptions);
-
-        ///// <summary>
+           ///// <summary>
         ///// A list of connections i.e. mappings of channels to commands or events
         ///// </summary>
         ///// <param name="connections"></param>
