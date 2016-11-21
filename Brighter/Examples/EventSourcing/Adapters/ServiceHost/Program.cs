@@ -42,7 +42,7 @@ namespace EventSourcing.Adapters.ServiceHost
             //var dbPath = Path.Combine(Path.GetDirectoryName(typeof(GreetingCommandHandler).GetTypeInfo().Assembly.GetName().FullName), "App_Data\\CommandStore.sdf");
             //var connectionString = "DataSource=\"" + dbPath + "\"";
             string connectionString = "";
-             var configuration = new MsSqlCommandStoreConfiguration(connectionString, "Commands", MsSqlCommandStoreConfiguration.DatabaseType.SqlCe);
+             var configuration = new MsSqlCommandStoreConfiguration(connectionString, "Commands");
             var commandStore = new MsSqlCommandStore(configuration);
 
             var registry = new SubscriberRegistry();
