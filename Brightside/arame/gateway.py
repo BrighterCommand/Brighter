@@ -40,10 +40,10 @@ from kombu import exceptions as kombu_exceptions
 from kombu.message import Message as KombuMessage
 
 from core.messaging import BrightsideConsumer, BrightsideMessage, BrightsideProducer, BrightsideMessageHeader, BrightsideMessageBody, BrightsideMessageType
-from arame.kombu_messaging import BrightsideMessageFactory, KombuMessageFactory
+from arame.messaging import BrightsideMessageFactory, KombuMessageFactory
 
 
-class BrightsideKombuConnection:
+class ArameConnection:
     """Contains the details required to connect to a RMQ broker: the amqp uri and the exchange"""
     def __init__(self, amqp_uri: str, exchange: str, exchange_type: str = "direct", is_durable: bool = False) -> None:
         self._amqp_uri = amqp_uri
@@ -84,7 +84,7 @@ class BrightsideKombuConnection:
         self._is_durable = value
 
 
-class BrightsideKombuProducer(BrightsideProducer):
+class ArameProducer(BrightsideProducer):
     """Implements sending a message to a RMQ broker. It does not use a queue, just a connection to the broker
     """
     RETRY_OPTIONS = {
@@ -94,7 +94,7 @@ class BrightsideKombuProducer(BrightsideProducer):
         'max_retries': 3,
     }
 
-    def __init__(self, connection: BrightsideKombuConnection, logger:logging.Logger=None) -> None:
+    def __init__(self, connection: ArameConnection, logger:logging.Logger=None) -> None:
         self._amqp_uri = connection.amqp_uri
         self._cnx = BrokerConnection(hostname=connection.amqp_uri)
         self._exchange = Exchange(connection.exchange, type=connection.exchange_type, durable=connection.is_durable)
@@ -131,7 +131,7 @@ class BrightsideKombuProducer(BrightsideProducer):
                 safe_publish(producer)
 
 
-class BrightsideKombuConsumer(BrightsideConsumer):
+class ArameConsumer(BrightsideConsumer):
     """ Implements reading a message from an RMQ broker. It uses a queue, created by subscribing to a message topic
 
     """
@@ -142,7 +142,7 @@ class BrightsideKombuConsumer(BrightsideConsumer):
         'max_retries': 3,
     }
 
-    def __init__(self, connection: BrightsideKombuConnection, queue_name: str, routing_key: str, prefetch_count: int=1,
+    def __init__(self, connection: ArameConnection, queue_name: str, routing_key: str, prefetch_count: int=1,
                  is_durable: bool=False, logger: logging.Logger=None) -> None:
         self._exchange = Exchange(connection.exchange, type=connection.exchange_type, durable=connection.is_durable)
         self._routing_key = routing_key

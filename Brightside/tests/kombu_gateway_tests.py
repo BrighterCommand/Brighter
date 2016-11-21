@@ -35,8 +35,8 @@ from uuid import uuid4
 import json
 
 from tests.messaging_testdoubles import TestMessage
-from arame.kombu_gateway import BrightsideKombuConsumer, BrightsideKombuConnection, BrightsideKombuProducer
-from arame.kombu_messaging import JsonRequestSerializer
+from arame.gateway import ArameConsumer, ArameConnection, ArameProducer
+from arame.messaging import JsonRequestSerializer
 from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageBodyType, BrightsideMessageHeader, BrightsideMessageType
 
 
@@ -45,9 +45,9 @@ class KombuGatewayTests(unittest.TestCase):
     test_topic = "kombu_gateway_tests"
 
     def setUp(self):
-        self._connection = BrightsideKombuConnection("amqp://guest:guest@localhost:5672//", "paramore.brighter.exchange")
-        self._producer = BrightsideKombuProducer(self._connection)
-        self._consumer = BrightsideKombuConsumer(self._connection, "brightside_tests", self.test_topic)
+        self._connection = ArameConnection("amqp://guest:guest@localhost:5672//", "paramore.brighter.exchange")
+        self._producer = ArameProducer(self._connection)
+        self._consumer = ArameConsumer(self._connection, "brightside_tests", self.test_topic)
 
     def test_posting_a_message(self):
         """Given that I have an RMQ message producer
