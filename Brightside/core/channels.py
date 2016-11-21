@@ -1,11 +1,10 @@
-#!/usr/bin/env python
-""""
-File             : logging_and_monitoring_tests.py
+"""
+File             : channels.py
 Author           : ian
-Created          : 04-26-2016
+Created          : 11-21-2016
 
 Last Modified By : ian
-Last Modified On : 04-26-2016
+Last Modified On : 11-21-2016
 ***********************************************************************
 The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -29,5 +28,39 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ***********************************************************************
 """
+from enum import Enum
+from queue import Queue
 
-import unittest
+from core.messaging import BrightsideConsumer
+
+
+class ChannelState(Enum):
+    initialized = 0
+    started = 1
+    stopped = 2
+
+
+class Channel:
+    def __init__(self, name: str, consumer: BrightsideConsumer) -> None:
+        self._consumer = BrightsideConsumer
+        self._name = name
+        self._queue = Queue()
+        self._state = ChannelState.initialized
+
+    @property
+    def length(self) -> int:
+        return self._queue.qsize()
+
+    def receive(self, timeout: int):
+        pass
+
+    @property
+    def state(self) -> ChannelState:
+        return self._state
+
+    def stop(self):
+        pass
+
+
+
+

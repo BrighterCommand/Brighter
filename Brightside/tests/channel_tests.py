@@ -1,11 +1,10 @@
-#!/usr/bin/env python
-""""
-File             : logging_and_monitoring_tests.py
+"""
+File             : channel_tests.py
 Author           : ian
-Created          : 04-26-2016
+Created          : 02-15-2016
 
 Last Modified By : ian
-Last Modified On : 04-26-2016
+Last Modified On : 02-15-2016
 ***********************************************************************
 The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -30,4 +29,42 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
+
 import unittest
+from uuid import uuid4
+
+from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageHeader, BrightsideMessageType
+from core.channels import Channel, ChannelState
+from tests.channels_testdoubles import FakeConsumer
+
+
+class ChannelFixture(unittest.TestCase):
+    def test_handle_stop(self):
+        """
+        Given that I have a channel
+        When I receive a stop on that channel
+        Then I should not process any further messages on that channel
+        :return:
+        """
+
+        body = BrightsideMessageBody("test message")
+        header = BrightsideMessageHeader(uuid4(), "test topic", BrightsideMessageType.command)
+        message = BrightsideMessage(header, body)
+
+        consumer = FakeConsumer()
+        consumer.queue.put(message)
+
+        channel = Channel("test", consumer)
+
+        channel.stop()
+
+        channel.receive(1)
+
+        self.assertFalse(consumer.queue.empty())  # Consumer is not empty as we have not read the queue
+        self.assertTrue(channel.state == ChannelState.stopped)
+
+
+
+
+
+

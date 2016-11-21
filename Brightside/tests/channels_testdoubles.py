@@ -1,11 +1,10 @@
-#!/usr/bin/env python
-""""
-File             : logging_and_monitoring_tests.py
+"""
+File             : handlers_testdoubles.py
 Author           : ian
-Created          : 04-26-2016
+Created          : 11-21-2016
 
 Last Modified By : ian
-Last Modified On : 04-26-2016
+Last Modified On : 11-21-2016
 ***********************************************************************
 The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -30,4 +29,28 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-import unittest
+from queue import Queue
+
+from core.messaging import BrightsideConsumer, BrightsideMessage
+
+
+class FakeConsumer(BrightsideConsumer):
+    """The fake consumer is a test double for a consumer wrapping messaging middleware.
+        To use it, just add BrighsideMessage(s) to the queue and the call receive to pop
+        then off the stack. Purge, will clean the queue
+    """
+    def __init__(self):
+        self._queue = Queue()
+
+    @property
+    def queue(self):
+        return self._queue
+
+    def purge(self):
+        while not self._queue.empty():
+            self._queue.get(block=False)
+
+        assert self._queue.empty()
+
+    def receive(self, timeout: int):
+        return self._queue.get(block=True,timeout=timeout)

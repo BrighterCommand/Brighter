@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """"
-File         : kombu_gateway_tests.py
+File             : arame_gateway_tests.py
 Author           : ian
 Created          : 09-01-2016
 
@@ -32,7 +32,6 @@ THE SOFTWARE.
 
 import unittest
 from uuid import uuid4
-import json
 
 from tests.messaging_testdoubles import TestMessage
 from arame.gateway import ArameConsumer, ArameConnection, ArameProducer
