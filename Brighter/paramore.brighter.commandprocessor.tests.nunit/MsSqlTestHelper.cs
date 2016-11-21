@@ -53,7 +53,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit
         {
             get
             {
-                return new MsSqlCommandStoreConfiguration(ConnectionString, _tableName, MsSqlCommandStoreConfiguration.DatabaseType.MsSqlServer);
+                return new MsSqlCommandStoreConfiguration(ConnectionString, _tableName);
             }
         }
 

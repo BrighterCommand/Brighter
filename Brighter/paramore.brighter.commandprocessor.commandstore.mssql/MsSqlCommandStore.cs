@@ -41,8 +41,6 @@ using System;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
-//TODO: sqlce replacement
-//using System.Data.SqlServerCe;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -57,7 +55,6 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
     {
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
-        private const int SqlCeDuplicateKeyError = 25016;
         private readonly MsSqlCommandStoreConfiguration _configuration;
         private readonly ILog _log;
 
@@ -111,14 +108,6 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
 
                     throw;
                 }
-                //TODO: sqlce replacement
-                //catch (SqlCeException sqlCeException)
-                //{
-                //    if (sqlCeException.NativeError != SqlCeDuplicateKeyError) throw;
-                //    _log.WarnFormat(
-                //        "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
-                //        command.Id);
-                //}
             }
         }
 
@@ -177,14 +166,6 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
 
                     throw;
                 }
-                //TODO: sqlce replacement
-                //catch (SqlCeException sqlCeException)
-                //{
-                //    if (sqlCeException.NativeError != SqlCeDuplicateKeyError) throw;
-                //    _log.WarnFormat(
-                //        "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
-                //        command.Id);
-                //}
             }
         }
 
@@ -234,15 +215,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
 
         private DbParameter CreateSqlParameter(string parameterName, object value)
         {
-            switch (_configuration.Type)
-            {
-                case MsSqlCommandStoreConfiguration.DatabaseType.MsSqlServer:
-                    return new SqlParameter(parameterName, value);
-                //TODO: sqlce replacement
-                //case MsSqlCommandStoreConfiguration.DatabaseType.SqlCe:
-                //    return new SqlCeParameter(parameterName, value);
-            }
-            return null;
+            return new SqlParameter(parameterName, value);
         }
 
         private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,
@@ -283,15 +256,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
 
         private DbConnection GetConnection()
         {
-            switch (_configuration.Type)
-            {
-                case MsSqlCommandStoreConfiguration.DatabaseType.MsSqlServer:
-                    return new SqlConnection(_configuration.ConnectionString);
-                //TODO: sqlce replacement
-                //case MsSqlCommandStoreConfiguration.DatabaseType.SqlCe:
-                //    return new SqlCeConnection(_configuration.ConnectionString);
-            }
-            return null;
+            return new SqlConnection(_configuration.ConnectionString);
         }
 
         private DbCommand InitAddDbCommand(int timeoutInMilliseconds, DbConnection connection, DbParameter[] parameters)

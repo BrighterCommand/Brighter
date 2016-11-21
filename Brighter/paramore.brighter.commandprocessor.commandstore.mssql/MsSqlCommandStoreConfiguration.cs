@@ -36,8 +36,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-
 namespace paramore.brighter.commandprocessor.commandstore.mssql
 {
     /// <summary>
@@ -50,10 +48,8 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         /// </summary>
         /// <param name="connectionString">The connection string.</param>
         /// <param name="messageStoreTableName">Name of the message store table.</param>
-        /// <param name="databaseType">Type of the database.</param>
-        public MsSqlCommandStoreConfiguration(string connectionString, string messageStoreTableName, DatabaseType databaseType)
+        public MsSqlCommandStoreConfiguration(string connectionString, string messageStoreTableName)
         {
-            Type = databaseType;
             MessageStoreTableName = messageStoreTableName;
             ConnectionString = connectionString;
         }
@@ -68,26 +64,5 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         /// </summary>
         /// <value>The name of the message store table.</value>
         public string MessageStoreTableName { get; private set; }
-        /// <summary>
-        /// Gets the type.
-        /// </summary>
-        /// <value>The type.</value>
-        public DatabaseType Type { get; private set; }
-
-        /// <summary>
-        /// Enum DatabaseType
-        /// </summary>
-        public enum DatabaseType
-        {
-            /// <summary>
-            /// The ms SQL server
-            /// </summary>
-            MsSqlServer,
-            /// <summary>
-            /// The SQL ce
-            /// </summary>
-            [Obsolete]
-            SqlCe
-        }
     }
 }
