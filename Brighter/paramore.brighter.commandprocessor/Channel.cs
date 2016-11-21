@@ -54,7 +54,6 @@ namespace paramore.brighter.commandprocessor
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly bool _messageConsumerSupportsDelay;
         private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
-        private int _numberOfMessagesToCache;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Channel" /> class.
