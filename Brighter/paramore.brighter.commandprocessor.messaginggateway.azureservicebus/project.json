@@ -5,20 +5,20 @@
   },
   "dependencies": {
     "AMQPNetLite": "1.2.1",
-    "NETStandard.Library": "1.6.0",
+    "NETStandard.Library": "1.6.1",
     "Newtonsoft.Json": "9.0.1",
     "paramore.brighter.commandprocessor": {
       "target": "project"
     }
  },
   "frameworks": {
-    "netstandard1.6": {
+    "netstandard1.5": {
       "imports": [
         "dnxcore50",
         "portable-net45+win8"
       ],
       "dependencies": {
-        "System.Threading.Thread": "4.0.0"
+        "System.Threading.Thread": "4.3.0"
       }
     },
    "net452": {}

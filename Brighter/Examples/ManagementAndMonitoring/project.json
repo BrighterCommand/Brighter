@@ -7,10 +7,10 @@
     "paramore.brighter.serviceactivator": { "target": "project" }
   },
   "frameworks": {
-    "netstandard1.6": {
+    "netstandard1.5": {
       "imports": "dnxcore50",
       "dependencies": {
-        "System.Reflection.TypeExtensions": "4.1.0"
+        "System.Reflection.TypeExtensions": "4.3.0"
       }
     },
     "net452": {}

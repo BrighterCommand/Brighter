@@ -5,10 +5,10 @@
      "emitEntryPoint": true
   },
   "dependencies": {
-    "paramore.brighter.commandprocessor": "1.0.0-*"
+    "paramore.brighter.commandprocessor": { "target": "project" }
   },
   "frameworks": {
-    "netcoreapp1.0": {
+    "netcoreapp1.1": {
       "imports": "dnxcore50",
       "dependencies": {
         "Microsoft.NETCore.App": {

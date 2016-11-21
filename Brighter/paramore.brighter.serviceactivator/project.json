@@ -4,18 +4,17 @@
     "debugType": "portable"
   },
   "dependencies": {
-    "Microsoft.Extensions.DependencyModel": "1.0.0",
-    "NETStandard.Library": "1.6.0",
+    "paramore.brighter.commandprocessor": { "target": "project" },
+    "NETStandard.Library": "1.6.1",
     "Newtonsoft.Json": "9.0.1",
-    "paramore.brighter.commandprocessor": "1.0.0-*",
     "Polly": "4.3.0"
   },
 
   "frameworks": {
-    "netstandard1.6": {
+    "netstandard1.5": {
       "imports": "dnxcore50",
       "dependencies": {
-        "System.Threading.Thread": "4.0.0"
+        "System.Threading.Thread": "4.3.0"
       }
     },
     "net452": {

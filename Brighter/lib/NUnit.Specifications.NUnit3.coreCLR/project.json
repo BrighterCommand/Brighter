@@ -3,25 +3,21 @@
     "NUnit": "3.5.0"
   },
   "frameworks": {
-    "netstandard1.6": {
+    "netstandard1.5": {
       "imports": [ "dnxcore50", "portable-net45+win8" ],
 
       "dependencies": {
-        "System.Reflection.TypeExtensions": "4.1.0",
-        "System.Collections": "4.0.11",
-        "System.Linq": "4.1.0",
-        "System.Runtime": "4.1.0",
-        "System.Console": "4.0.0",
-        "System.Diagnostics.Debug": "4.0.11"
+        "System.Reflection.TypeExtensions": "4.3.0",
+        "System.Collections": "4.3.0",
+        "System.Linq": "4.3.0",
+        "System.Runtime": "4.3.0",
+        "System.Console": "4.3.0",
+        "System.Diagnostics.Debug": "4.3.0"
       },
       /* Using this to signify a Core build, best way rather than nominating ind frameworks */
       "buildOptions": { "define": [ "NET_STANDARD" ] }
     },
-    "net452": {
-      "dependencies": {
-        "System.Diagnostics.Debug": "4.0.0"
-      }
-    }
+    "net452": {}
   },
   "buildOptions": {
     "compile": [

@@ -5,13 +5,13 @@
   },
   "dependencies": {
     "MailKit": "1.10.0",
-    "Microsoft.EntityFrameworkCore.Sqlite": "1.0.1",
+    "Microsoft.EntityFrameworkCore.Sqlite": "1.1.0",
     "paramore.brighter.commandprocessor": {
       "target": "project"
     }
   },
   "frameworks": {
-    "netstandard1.6": {
+    "netstandard1.5": {
       "imports": "dnxcore50"
     },
     "net452": {}

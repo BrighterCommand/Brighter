@@ -8,18 +8,12 @@
     "Nancy": "2.0.0-barneyrubble",
     "Nancy.Embedded": "2.0.0-barneyrubble",
     "Polly": "4.3.0"
-    // ,"Humanizer": "2.0.1"
   },
   "frameworks": {
     "netstandard1.6": {
        "imports": "dnxcore50"
-      // "dependencies": {
-      //   "System.Reflection.TypeExtensions": "4.1.0"
-      // }
     },
-    "net452": {
-
-    }
+    "net452": {}
   },
   "buildOptions": {
     "debugType": "portable",

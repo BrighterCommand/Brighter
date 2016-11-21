@@ -9,7 +9,7 @@
     "paramore.brighter.commandprocessor.commandstore.mssql": { "target": "project" }
   },
   "frameworks": {
-    "netcoreapp1.0": {
+    "netcoreapp1.1": {
       "imports": "dnxcore50",
       "dependencies": {
         "Microsoft.NETCore.App": {

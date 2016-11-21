@@ -78,7 +78,7 @@
 #endif
 
 
-#if NETSTANDARD1_6
+#if NETSTANDARD1_5
 #undef SERIALIZABLE
 #undef APPDOMAIN_GETASSEMBLIES
 #endif
@@ -4036,7 +4036,7 @@ namespace Greetings.TinyIoc
             {
                 if (registerType.IsInterface())
                 {
-#if (PORTABLE || NETSTANDARD1_6)
+#if (PORTABLE || NETSTANDARD1_5)
                     if (!registerImplementation.GetInterfaces().Any(t => t.Name == registerType.Name))
                         return false;
 #else
@@ -4072,7 +4072,7 @@ namespace Greetings.TinyIoc
         #endregion
     }
 
-#if NETSTANDARD1_6
+#if NETSTANDARD1_5
     static class ReverseTypeExtender
     {
         public static bool IsClass(this Type type)
@@ -4127,7 +4127,7 @@ namespace Greetings.TinyIoc
     }
 #endif
     // reverse shim for WinRT SR changes...
-#if (!NETFX_CORE && !NETSTANDARD1_6)
+#if (!NETFX_CORE && !NETSTANDARD1_5)
     static class ReverseTypeExtender
     {
         public static bool IsClass(this Type type)

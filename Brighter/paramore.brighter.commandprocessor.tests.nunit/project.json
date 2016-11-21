@@ -49,7 +49,7 @@
     "dotnet-test-nunit": "3.4.0-beta-3"
   },
   "frameworks": {
-    "netcoreapp1.0": {
+    "netcoreapp1.1": {
       "imports": [
         "dnxcore50",
         "portable-net45+win8"
@@ -59,10 +59,10 @@
           "type": "platform",
           "version": "1.0.1"
         },
-        "System.Diagnostics.TextWriterTraceListener": "4.0.0",
-        "System.Diagnostics.TraceSource": "4.0.0",
-        "System.Linq": "4.1.0",
-        "System.Reflection.TypeExtensions": "4.1.0"
+        "System.Diagnostics.TextWriterTraceListener": "4.3.0",
+        "System.Diagnostics.TraceSource": "4.3.0",
+        "System.Linq": "4.3.0",
+        "System.Reflection.TypeExtensions": "4.3.0"
       }
     },
     "net46": {

@@ -25,7 +25,7 @@
     "NUnit": "3.5.0"
   },
   "frameworks": {
-    "netcoreapp1.0": {
+    "netcoreapp1.1": {
       "imports": [
         "dnxcore50",
         "portable-net45+win8"

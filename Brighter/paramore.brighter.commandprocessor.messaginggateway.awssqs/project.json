@@ -4,7 +4,7 @@
     "debugType": "portable"
   },
   "dependencies": {
-    "NETStandard.Library": "1.6.0",
+    "NETStandard.Library": "1.6.1",
     "Newtonsoft.Json": "9.0.1",
     "Microsoft.Bcl" : "1.1.10",
     "Microsoft.Bcl.Async" : "1.0.168",
@@ -20,13 +20,13 @@
     "AWSSDK.SQS": "3.3.0.2",
     "Validation": "2.3.7" },
   "frameworks": {
-    "netstandard1.6": {
+    "netstandard1.5": {
       "imports": [
         "dnxcore50",
         "portable-net45+win8"
       ],
       "dependencies": {
-        "System.Threading.Thread": "4.0.0"
+        "System.Threading.Thread": "4.3.0"
       }
     },
     "net452": {
