@@ -39,12 +39,36 @@ from tests.channels_testdoubles import FakeConsumer
 
 
 class ChannelFixture(unittest.TestCase):
+
+    def test_handle_receive_on_a_channel(self):
+        """
+        Given that I have a channel
+        When I receive on that channel
+        Then I should get a message via the consumer
+        """
+
+        body = BrightsideMessageBody("test message")
+        header = BrightsideMessageHeader(uuid4(), "test topic", BrightsideMessageType.command)
+        message = BrightsideMessage(header, body)
+
+        consumer = FakeConsumer()
+        consumer.queue.put(message)
+
+        channel = Channel("test", consumer)
+
+        msg = channel.receive(1)
+
+        self.assertEqual(message.body.value, msg.body.value)
+        self.assertEqual(message.header.topic, msg.header.topic)
+        self.assertEqual(message.header.message_type, msg.header.message_type)
+        self.assertTrue(consumer.queue.empty())  # Consumer is empty as we have read the queue
+        self.assertTrue(channel.state == ChannelState.started)  # We don't stop because we consume a message
+
     def test_handle_stop(self):
         """
         Given that I have a channel
         When I receive a stop on that channel
         Then I should not process any further messages on that channel
-        :return:
         """
 
         body = BrightsideMessageBody("test message")
@@ -62,6 +86,25 @@ class ChannelFixture(unittest.TestCase):
 
         self.assertFalse(consumer.queue.empty())  # Consumer is not empty as we have not read the queue
         self.assertTrue(channel.state == ChannelState.stopping)
+
+
+    def test_handle_acknowledge(self):
+        """
+        Given that I have a channel
+        When I acknowlege a message on that channel
+        Then I should acknowledge the message on the consumer
+        """
+
+        body = BrightsideMessageBody("test message")
+        header = BrightsideMessageHeader(uuid4(), "test topic", BrightsideMessageType.command)
+        message = BrightsideMessage(header, body)
+
+        consumer = FakeConsumer()
+        consumer.queue.put(message)
+
+        channel = Channel("test", consumer)
+
+        channel.acknowledge(message)
 
 
 

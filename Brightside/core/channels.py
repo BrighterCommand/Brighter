@@ -52,6 +52,9 @@ class Channel:
         return self._queue.qsize()
 
     def receive(self, timeout: int) -> BrightsideMessage:
+        if self._state is ChannelState.initialized:
+            self._state = ChannelState.started
+
         if not self._queue.empty():
             return self._queue.get(block=True, timeout=timeout)
 
