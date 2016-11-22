@@ -87,7 +87,6 @@ class ChannelFixture(unittest.TestCase):
         self.assertFalse(consumer.queue.empty())  # Consumer is not empty as we have not read the queue
         self.assertTrue(channel.state == ChannelState.stopping)
 
-
     def test_handle_acknowledge(self):
         """
         Given that I have a channel
@@ -105,6 +104,8 @@ class ChannelFixture(unittest.TestCase):
         channel = Channel("test", consumer)
 
         channel.acknowledge(message)
+
+        self.assertTrue(consumer.has_acknowledged(message))
 
 
 

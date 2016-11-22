@@ -47,6 +47,9 @@ class Channel:
         self._queue = Queue()
         self._state = ChannelState.initialized
 
+    def acknowledge(self, message: BrightsideMessage):
+        self._consumer.acknowledge(message)
+
     @property
     def length(self) -> int:
         return self._queue.qsize()

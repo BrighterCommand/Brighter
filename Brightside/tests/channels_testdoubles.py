@@ -31,7 +31,7 @@ THE SOFTWARE.
 
 from queue import Queue
 
-from core.messaging import BrightsideConsumer
+from core.messaging import BrightsideConsumer, BrightsideMessage
 
 
 class FakeConsumer(BrightsideConsumer):
@@ -41,6 +41,13 @@ class FakeConsumer(BrightsideConsumer):
     """
     def __init__(self):
         self._queue = Queue()
+        self._acknowledged_message = None
+
+    def acknowledge(self, message):
+        self._acknowledged_message = message
+
+    def has_acknowledged(self, message):
+        return (self._acknowledged_message is not None) and (self._acknowledged_message.id == message.id)
 
     @property
     def queue(self):
@@ -54,3 +61,4 @@ class FakeConsumer(BrightsideConsumer):
 
     def receive(self, timeout: int):
         return self._queue.get(block=True,timeout=timeout)
+

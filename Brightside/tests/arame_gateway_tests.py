@@ -39,7 +39,7 @@ from arame.messaging import JsonRequestSerializer
 from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageBodyType, BrightsideMessageHeader, BrightsideMessageType
 
 
-class KombuGatewayTests(unittest.TestCase):
+class ArameGatewayTests(unittest.TestCase):
 
     test_topic = "kombu_gateway_tests"
 
@@ -62,9 +62,11 @@ class KombuGatewayTests(unittest.TestCase):
         self._producer.send(message)
 
         read_message = self._consumer.receive(3)
+        self._consumer.acknowledge(read_message)
 
         self.assertEqual(message.id, read_message.id)
         self.assertEqual(message.body.value, read_message.body.value)
+        self.assertTrue(self._consumer.has_acknowledged(read_message))
 
     def test_posting_object_state(self):
         """Given that I have an RMQ producer
@@ -81,6 +83,7 @@ class KombuGatewayTests(unittest.TestCase):
         self._producer.send(message)
 
         read_message = self._consumer.receive(3)
+        self._consumer.acknowledge(read_message)
 
         deserialized_request = JsonRequestSerializer(request=TestMessage(), serialized_request=read_message.body.value)\
             .deserialize_from_json()
@@ -90,4 +93,5 @@ class KombuGatewayTests(unittest.TestCase):
         self.assertEqual(request.float_value, deserialized_request.float_value)
         self.assertEqual(request.integer_value, deserialized_request.integer_value)
         self.assertEqual(request.id, deserialized_request.id)
+
 

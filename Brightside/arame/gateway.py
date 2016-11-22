@@ -154,9 +154,22 @@ class ArameConsumer(BrightsideConsumer):
         self._message_factory = BrightsideMessageFactory()
         self._logger = logger or logging.getLogger(__name__)
         self._queue = Queue(self._queue_name, exchange=self._exchange, routing_key=self._routing_key)
-        self._message = None
+        self._msg = None  # Kombu Message
+        self._message = None # Brightside Message
 
         # TODO: Need to fix the argument types with default types issue
+
+    def acknowledge(self, message: BrightsideMessage):
+        if (self._message is not None) and self._message.id == message.id:
+            self._msg.ack()
+            self._msg = None
+
+    def has_acknowledged(self, message):
+        if (self._message is not None) and self._message.id == message.id:
+            if self._msg is None:
+                return True
+            else:
+                return False
 
     def purge(self, timeout: int = 5) -> None:
 
@@ -191,8 +204,8 @@ class ArameConsumer(BrightsideConsumer):
 
         def _read_message(body: str, msg: KombuMessage) -> None:
             self._logger.debug("Monitoring event received at: %s headers: %s payload: %s", datetime.utcnow().isoformat(), msg.headers, body)
+            self._msg = msg
             self._message = self._message_factory.create_message(msg)
-            msg.ack()
 
         connection = BrokerConnection(hostname=self._amqp_uri)
         with connections[connection].acquire(block=True) as conn:

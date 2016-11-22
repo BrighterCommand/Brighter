@@ -166,6 +166,14 @@ class BrightsideConsumer(metaclass=ABCMeta):
     """
 
     @abstractmethod
+    def acknowledge(self, message: BrightsideMessage):
+        pass
+
+    @abstractmethod
+    def has_acknowledged(self, message):
+        pass
+
+    @abstractmethod
     def purge(self):
         pass
 
