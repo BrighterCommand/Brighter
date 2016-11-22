@@ -31,18 +31,18 @@ THE SOFTWARE.
 from enum import Enum
 from queue import Queue
 
-from core.messaging import BrightsideConsumer
+from core.messaging import BrightsideConsumer, BrightsideMessage, BrightsideMessageFactory
 
 
 class ChannelState(Enum):
     initialized = 0
     started = 1
-    stopped = 2
+    stopping = 2
 
 
 class Channel:
     def __init__(self, name: str, consumer: BrightsideConsumer) -> None:
-        self._consumer = BrightsideConsumer
+        self._consumer = consumer
         self._name = name
         self._queue = Queue()
         self._state = ChannelState.initialized
@@ -51,15 +51,20 @@ class Channel:
     def length(self) -> int:
         return self._queue.qsize()
 
-    def receive(self, timeout: int):
-        pass
+    def receive(self, timeout: int) -> BrightsideMessage:
+        if not self._queue.empty():
+            return self._queue.get(block=True, timeout=timeout)
+
+        return self._consumer.receive(timeout=timeout)
 
     @property
     def state(self) -> ChannelState:
         return self._state
 
     def stop(self):
-        pass
+        self._queue.put(BrightsideMessageFactory.create_quit_message())
+        self._state = ChannelState.stopping
+
 
 
 

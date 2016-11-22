@@ -29,7 +29,7 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-from uuid import UUID
+from uuid import UUID, uuid4
 from abc import ABCMeta, abstractmethod
 from enum import Enum, unique
 
@@ -172,3 +172,12 @@ class BrightsideConsumer(metaclass=ABCMeta):
     @abstractmethod
     def receive(self, timeout: int) -> BrightsideMessage:
         pass
+
+
+class BrightsideMessageFactory:
+    """Used to create specific message, particularly the quit message used to terminate a channel"""
+    @staticmethod
+    def create_quit_message():
+        body = BrightsideMessageBody(body="")
+        header = BrightsideMessageHeader(uuid4(), topic="", message_type=BrightsideMessageType.quit)
+        return BrightsideMessage(header, body)

@@ -31,7 +31,7 @@ THE SOFTWARE.
 
 from queue import Queue
 
-from core.messaging import BrightsideConsumer, BrightsideMessage
+from core.messaging import BrightsideConsumer
 
 
 class FakeConsumer(BrightsideConsumer):
