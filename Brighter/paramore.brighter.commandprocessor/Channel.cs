@@ -58,7 +58,7 @@ namespace paramore.brighter.commandprocessor
         /// <summary>
         ///     Initializes a new instance of the <see cref="Channel" /> class.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="channelName">Name of the queue.</param>
         /// <param name="messageConsumer">The messageConsumer.</param>
         public Channel(string channelName, IAmAMessageConsumer messageConsumer)
         {
@@ -118,6 +118,7 @@ namespace paramore.brighter.commandprocessor
         ///     Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
+        /// <param name="delayMilliseconds">How long should we delay before requeueing</param>
         public void Requeue(Message message, int delayMilliseconds = 0)
         {
             if (delayMilliseconds > 0 && !_messageConsumerSupportsDelay)
