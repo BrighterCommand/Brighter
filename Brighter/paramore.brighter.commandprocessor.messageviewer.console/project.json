@@ -4,21 +4,21 @@
     "emitEntryPoint": true,
     "debugType": "portable"
   },
-
   "dependencies": {
     "Microsoft.AspNetCore.Server.Kestrel": "1.1.0",
-    "Microsoft.NETCore.App": {
-      "type": "platform",
-      "version": "1.1.0"
+    "paramore.brighter.commandprocessor.messageviewer": {
+      "target": "project"
     },
-    "paramore.brighter.commandprocessor.messageviewer": { "target": "project" },
     "Serilog": "2.3.0",
     "Serilog.Sinks.Console": "2.1.0"
   },
-
   "frameworks": {
-    "netcoreapp1.1": {
+    "netcoreapp1.0": {
       "dependencies": {
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.1"
+        },
         "Microsoft.AspNetCore.Hosting": "1.1.0",
         "Microsoft.AspNetCore.Owin": "1.1.0",
         "Microsoft.Extensions.Configuration.Binder": "1.1.0",

@@ -9,14 +9,13 @@
     "paramore.brighter.commandprocessor.commandstore.mssql": { "target": "project" }
   },
   "frameworks": {
-    "netcoreapp1.1": {
+    "netcoreapp1.0": {
       "imports": "dnxcore50",
       "dependencies": {
         "Microsoft.NETCore.App": {
           "type": "platform",
-          "version": "1.1.0"
+          "version": "1.0.1"
         }
-
       }
     },
     "net452": {}
