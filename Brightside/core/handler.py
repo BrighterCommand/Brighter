@@ -53,7 +53,7 @@ class Request(metaclass=ABCMeta):
 
     def __str__(self):
         """override in subclasses to provide details of parameters"""
-        return "Request: id: %i, is_command: %s is_event: %s" % (self.id, self.is_command(), self.is_event())
+        return "Request: id: %s, is_command: %s is_event: %s" % (self.id, self.is_command(), self.is_event())
 
 
 class Command(Request):

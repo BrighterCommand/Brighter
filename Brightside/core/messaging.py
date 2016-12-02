@@ -82,7 +82,7 @@ class BrightsideMessageHeader:
         return self._id
 
     @property
-    def topic(self) -> None:
+    def topic(self) -> str:
         return self._topic
 
     @topic.setter

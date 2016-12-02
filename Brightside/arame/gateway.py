@@ -79,7 +79,7 @@ class ArameConnection:
     def is_durable(self):
         return self._is_durable
 
-    @exchange_type.setter
+    @is_durable.setter
     def is_durable(self, value):
         self._is_durable = value
 

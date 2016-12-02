@@ -197,9 +197,9 @@ class KombuMessageFactory:
             brightside_message_header[message_type_header] = brightside_message_type
 
         header = {}
-        _add_message_id(header, str(self._message.header.id))
+        _add_message_id(header, self._message.header.id)
         _add_message_type(header, self._message.header.message_type.value)
-        _add_correlation_id(header, str(self._message.header.correlation_id))
+        _add_correlation_id(header, self._message.header.correlation_id)
 
         return header
 
