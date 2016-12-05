@@ -31,3 +31,8 @@ THE SOFTWARE.
 """
 
 import unittest
+
+
+class LoggingAndMonitoringFixture(unittest.TestCase):
+    def test_logging_a_handler(self):
+        self.assertTrue(False)   # implement logging
