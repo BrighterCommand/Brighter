@@ -40,7 +40,7 @@ from kombu import exceptions as kombu_exceptions
 from kombu.message import Message as KombuMessage
 
 from core.messaging import BrightsideConsumer, BrightsideMessage, BrightsideProducer, BrightsideMessageHeader, BrightsideMessageBody, BrightsideMessageType
-from arame.messaging import BrightsideMessageFactory, KombuMessageFactory
+from arame.messaging import ArameMessageFactory, KombuMessageFactory
 
 
 class ArameConnection:
@@ -151,7 +151,7 @@ class ArameConsumer(BrightsideConsumer):
         self._routing_key = routing_key
         self._prefetch_count = prefetch_count
         self._is_durable = is_durable
-        self._message_factory = BrightsideMessageFactory()
+        self._message_factory = ArameMessageFactory()
         self._logger = logger or logging.getLogger(__name__)
         self._queue = Queue(self._queue_name, exchange=self._exchange, routing_key=self._routing_key)
         self._msg = None  # Kombu Message

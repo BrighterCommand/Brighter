@@ -53,7 +53,7 @@ class ArameGatewayTests(unittest.TestCase):
             when I send that message via the producer
             then I should be able to read that message via the consumer
         """
-        header = BrightsideMessageHeader(uuid4(), self.test_topic, BrightsideMessageType.command, uuid4())
+        header = BrightsideMessageHeader(uuid4(), self.test_topic, BrightsideMessageType.command)
         body = BrightsideMessageBody("test content")
         message = BrightsideMessage(header, body)
 
@@ -74,7 +74,7 @@ class ArameGatewayTests(unittest.TestCase):
             then I should be able to re-hydrate it via the consumer
         """
         request = TestMessage()
-        header = BrightsideMessageHeader(uuid4(), self.test_topic, BrightsideMessageType.command, uuid4())
+        header = BrightsideMessageHeader(uuid4(), self.test_topic, BrightsideMessageType.command)
         body = BrightsideMessageBody(JsonRequestSerializer(request=request).serialize_to_json(), BrightsideMessageBodyType.application_json)
         message = BrightsideMessage(header, body)
 

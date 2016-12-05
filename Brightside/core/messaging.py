@@ -76,6 +76,7 @@ class BrightsideMessageHeader:
         self._correlation_id = correlation_id
         self._reply_to = reply_to
         self._content_type = content_type
+        self._msg = None
 
     @property
     def id (self) -> UUID:

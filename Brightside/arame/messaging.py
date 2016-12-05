@@ -76,7 +76,7 @@ class ReadError:
         return self.error_message
 
 
-class BrightsideMessageFactory:
+class ArameMessageFactory:
     """
     The message factory turn an 'on-the-wire' message into our internal representation. We try to be as
     tolerant as possible (following Postel's Law: https://en.wikipedia.org/wiki/Robustness_principle) Be conservative
