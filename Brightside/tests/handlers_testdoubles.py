@@ -35,6 +35,7 @@ from poll import retry, circuitbreaker
 
 from core.handler import Handler, Command, Event, Request
 from core.messaging import BrightsideMessageBody, BrightsideMessageHeader, BrightsideMessage
+from core.logging import log_handler
 
 
 class MyCommand(Command):
@@ -51,6 +52,7 @@ class MyCommandHandler(Handler):
     def __init__(self):
         self._called = False
 
+    @log_handler
     def handle(self, request):
         self._called = True
 

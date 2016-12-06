@@ -31,8 +31,30 @@ THE SOFTWARE.
 """
 
 import unittest
+from mock import patch
+
+from core.command_processor import CommandProcessor, Registry
+
+from tests.handlers_testdoubles import MyCommand, MyCommandHandler
 
 
 class LoggingAndMonitoringFixture(unittest.TestCase):
-    def test_logging_a_handler(self):
-        self.assertTrue(False)   # implement logging
+
+    def setUp(self):
+        self._subscriber_registry = Registry()
+        self._commandProcessor = CommandProcessor(registry=self._subscriber_registry)
+
+    @patch('core.logging.logging')
+    def test_logging_a_handler(self, mock_logging):
+        """
+        Given that I have a handler decorated for logging
+        When I call that handler
+        Then I should receive logs indicating the call and return of the handler
+        * N.b. This is an example of using decorators to extend the Brightside pipeline
+        """
+        self._handler = MyCommandHandler()
+        self._request = MyCommand()
+        self._subscriber_registry.register(MyCommand, lambda: self._handler)
+        self._commandProcessor.send(self._request)
+
+        self.assertTrue(mock_logging.log.called)
