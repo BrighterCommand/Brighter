@@ -40,10 +40,22 @@ class ChannelState(Enum):
     stopping = 2
 
 
+class ChannelName:
+    def __init__(self, name: str) -> None:
+        self._name = name
+
+    @property
+    def value(self) -> str:
+        return self._name
+
+    def __str__(self) -> str:
+        return self._name
+
+
 class Channel:
     def __init__(self, name: str, consumer: BrightsideConsumer) -> None:
         self._consumer = consumer
-        self._name = name
+        self._name = ChannelName(name)
         self._queue = Queue()
         self._state = ChannelState.initialized
 
@@ -53,6 +65,9 @@ class Channel:
     @property
     def length(self) -> int:
         return self._queue.qsize()
+
+    def name(self):
+        return self._name
 
     def receive(self, timeout: int) -> BrightsideMessage:
         if self._state is ChannelState.initialized:

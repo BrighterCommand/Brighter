@@ -84,6 +84,7 @@ class ChannelFixture(unittest.TestCase):
 
         channel.receive(1)
 
+        self.assertEqual(str(channel.name()), "test")
         self.assertFalse(consumer.queue.empty())  # Consumer is not empty as we have not read the queue
         self.assertTrue(channel.state == ChannelState.stopping)
 
