@@ -31,7 +31,8 @@ THE SOFTWARE.
 """
 
 import unittest
-from mock import patch
+import logging
+from mock import call, patch
 
 from core.command_processor import CommandProcessor, Registry
 
@@ -44,9 +45,8 @@ class LoggingAndMonitoringFixture(unittest.TestCase):
         self._subscriber_registry = Registry()
         self._commandProcessor = CommandProcessor(registry=self._subscriber_registry)
 
-    @patch('core.logging.logging')
-    def test_logging_a_handler(self, mock_logging):
-        """
+    def test_logging_a_handler(self):
+        """s
         Given that I have a handler decorated for logging
         When I call that handler
         Then I should receive logs indicating the call and return of the handler
@@ -55,6 +55,8 @@ class LoggingAndMonitoringFixture(unittest.TestCase):
         self._handler = MyCommandHandler()
         self._request = MyCommand()
         self._subscriber_registry.register(MyCommand, lambda: self._handler)
-        self._commandProcessor.send(self._request)
+        logger = logging.getLogger("tests.handlers_testdoubles")
+        with patch.object(logger, 'log') as mock_log:
+            self._commandProcessor.send(self._request)
 
-        self.assertTrue(mock_logging.log.called)
+        mock_log.assert_has_calls([call(logging.DEBUG, "Entering handle"), call(logging.DEBUG, 'Exiting handle')])
