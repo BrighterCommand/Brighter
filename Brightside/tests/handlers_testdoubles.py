@@ -29,14 +29,14 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-import json
 import logging
 
 from poll import retry, circuitbreaker
 
 from core.handler import Handler, Command, Event, Request
-from core.messaging import BrightsideMessageBody, BrightsideMessageHeader, BrightsideMessage
+from core.messaging import BrightsideMessageBody, BrightsideMessageHeader, BrightsideMessage, BrightsideMessageType
 from core.log_handler import log_handler
+from arame.messaging import JsonRequestSerializer
 
 
 class MyCommand(Command):
@@ -181,6 +181,6 @@ class MyHandlerBreakingCircuitAfterThreeFailures(Handler):
 
 
 def map_to_message(request: Request) -> BrightsideMessage:
-    message_body = BrightsideMessageBody(json.dumps(request.__dict__))
-    message = BrightsideMessage(BrightsideMessageHeader(request.id), message_body)
+    message_body = BrightsideMessageBody(JsonRequestSerializer(request=request).serialize_to_json())
+    message = BrightsideMessage(BrightsideMessageHeader(request.id, "topic", BrightsideMessageType.command), message_body)
     return message
