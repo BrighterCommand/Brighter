@@ -30,28 +30,25 @@ THE SOFTWARE.
 """
 
 import unittest
+from unittest.mock import create_autospec
 
 from tests.handlers_testdoubles import MyCommandHandler, MyCommand
 from core.command_processor import CommandProcessor
-from core.registry import Registry
 from serviceactivator.message_pump import MessagePump
 
 
 class MessagePumpFixture(unittest.TestCase):
-    def setUp(self):
-        self._subscriber_registry = Registry()
-        self._commandProcessor = CommandProcessor(registry=self._subscriber_registry)
 
-    def test_the_pump_should_dispatch_to_a_handler(self):
+    def test_the_pump_should_dispatch_a_command_processor(self):
         """
             Given that I have a message pump for a channel
              When I read a message from that channel
              Then the message should be dispatched to a handler
         """
-        self._handler = MyCommandHandler()
-        self._request = MyCommand()
-        self._subscriber_registry.register(MyCommand, lambda: self._handler)
+        handler = MyCommandHandler()
+        request = MyCommand()
+        command_processor = create_autospec(CommandProcessor)
 
-        message_pump = MessagePump(self._commandProcessor)
+        message_pump = MessagePump(command_processor)
         message_pump.run()
 

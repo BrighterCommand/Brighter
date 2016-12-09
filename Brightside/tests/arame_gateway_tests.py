@@ -44,7 +44,7 @@ class ArameGatewayTests(unittest.TestCase):
     test_topic = "kombu_gateway_tests"
 
     def setUp(self):
-        self._connection = ArameConnection("amqp://guest:guest@localhost:5672//", "paramore.brighter.exchange")
+        self._connection = ArameConnection("amqp://guest:guest@localhost:5672//", "paramore.brighter.exchange", is_durable=True)
         self._producer = ArameProducer(self._connection)
         self._consumer = ArameConsumer(self._connection, "brightside_tests", self.test_topic)
 

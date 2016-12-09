@@ -56,24 +56,24 @@ class PostTests(unittest.TestCase):
             when we post a command,
             it should send via the producer
         """
-        self._request = MyCommand()
-        self._commandProcessor.post(self._request)
+        request = MyCommand()
+        self._commandProcessor.post(request)
 
         self.assertTrue(self._message_store.message_was_added, "Expected a message to be added")
-        self.assertTrue(self._message_store.get_message(self._request.id), "Expected the command to be converted into a message")
+        self.assertTrue(self._message_store.get_message(request.id), "Expected the command to be converted into a message")
         self.assertTrue(self._producer.was_sent_message, "Expected a message to be sent via the producer")
-        self.assertTrue(str(self._message_store.get_message(self._request.id).body), "")
+        self.assertTrue(str(self._message_store.get_message(request.id).body), "")
 
     def test_missing_message_mapper(self):
         """given that we have no message mapper registered for a command
             when we post a command
             it should raise an error
         """
-        self._request = MyOtherCommand()
+        request = MyOtherCommand()
 
         was_exception_thrown = False
         try:
-            self._commandProcessor.post(self._request)
+            self._commandProcessor.post(request)
         except ConfigurationException:
             was_exception_thrown = True
 
@@ -92,8 +92,8 @@ class PostTests(unittest.TestCase):
 
         was_exception_thrown = False
         try:
-            self._request = MyCommand()
-            self._commandProcessor.post(self._request)
+            request = MyCommand()
+            self._commandProcessor.post(request)
         except ConfigurationException:
             was_exception_thrown = True
 
@@ -112,8 +112,8 @@ class PostTests(unittest.TestCase):
 
         was_exception_thrown = False
         try:
-            self._request = MyCommand()
-            self._commandProcessor.post(self._request)
+            request = MyCommand()
+            self._commandProcessor.post(request)
         except ConfigurationException:
             was_exception_thrown = True
 

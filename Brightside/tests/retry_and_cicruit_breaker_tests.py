@@ -55,51 +55,51 @@ class PipelineTests(unittest.TestCase):
 
     def test_handle_retry_on_command(self):
         """ given that we have a retry plocy for a command, when we raise an exception, then we should retry n times or until succeeds """
-        self._handler = MyHandlerSupportingRetry()
-        self._request = MyCommand()
-        self._subscriber_registry.register(MyCommand, lambda: self._handler)
-        self._commandProcessor.send(self._request)
+        handler = MyHandlerSupportingRetry()
+        request = MyCommand()
+        self._subscriber_registry.register(MyCommand, lambda: handler)
+        self._commandProcessor.send(request)
 
-        self.assertTrue(self._handler.called, "Expected the handle method on the handler to be called with the message")
-        self.assertTrue(self._handler.call_count == 3, "Expected two retries of the pipeline")
+        self.assertTrue(handler.called, "Expected the handle method on the handler to be called with the message")
+        self.assertTrue(handler.call_count == 3, "Expected two retries of the pipeline")
 
     def test_exceed_retry_on_command(self):
         """ given that we have a retry policy for a command, when we raise an exception, then we should bubble the exception out after n retries"""
-        self._handler = MyHandlerBreakingAfterRetry()
-        self._request = MyCommand()
-        self._subscriber_registry.register(MyCommand, lambda: self._handler)
+        handler = MyHandlerBreakingAfterRetry()
+        request = MyCommand()
+        self._subscriber_registry.register(MyCommand, lambda: handler)
 
         exception_raised = False
         try:
-            self._commandProcessor.send(self._request)
+            self._commandProcessor.send(request)
         except RuntimeError:
             exception_raised = True
 
         self.assertTrue(exception_raised, "Exepcted the exception to bubble out, when we run out of retries")
-        self.assertFalse(self._handler.called, "Did not expect the handle method on the handler to be called with the message")
-        self.assertTrue(self._handler.call_count == 3, "Expected two retries of the pipeline")
+        self.assertFalse(handler.called, "Did not expect the handle method on the handler to be called with the message")
+        self.assertTrue(handler.call_count == 3, "Expected two retries of the pipeline")
 
     def test_handle_circuit_breaker_on_command(self):
         """ given that we have a circuit breaker policy for a command, when we raise an exception, then we should break the circuit after n retries"""
-        self._handler = MyHandlerBreakingCircuitAfterThreeFailures()
-        self._request = MyCommand()
-        self._subscriber_registry.register(MyCommand, lambda: self._handler)
+        handler = MyHandlerBreakingCircuitAfterThreeFailures()
+        request = MyCommand()
+        self._subscriber_registry.register(MyCommand, lambda: handler)
 
         exception_raised = False
         try:
-            self._commandProcessor.send(self._request)
+            self._commandProcessor.send(request)
         except RuntimeError:
             exception_raised = True
 
         # Now see if the circuit is broken following the failed call
         circuit_broken = False
         try:
-            self._commandProcessor.send(self._request)
+            self._commandProcessor.send(request)
         except CircuitBrokenError:
             circuit_broken = True
 
         self.assertTrue(exception_raised, "Exepcted an exception to be raised, when we run out of retries")
         self.assertTrue(circuit_broken, "Expected the circuit to be broken to further calls")
-        self.assertFalse(self._handler.called, "Did not expect the handle method on the handler to be called with the message")
-        self.assertTrue(self._handler.call_count == 3, "Expected two retries of the pipeline")
+        self.assertFalse(handler.called, "Did not expect the handle method on the handler to be called with the message")
+        self.assertTrue(handler.call_count == 3, "Expected two retries of the pipeline")
 

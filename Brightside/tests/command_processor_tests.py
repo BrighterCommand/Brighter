@@ -45,35 +45,35 @@ class CommandProcessorFixture(unittest.TestCase):
 
     def test_handle_command(self):
         """ given that we have a handler registered for a command, when we send a command, it should call the handler"""
-        self._handler = MyCommandHandler()
-        self._request = MyCommand()
-        self._subscriber_registry.register(MyCommand, lambda: self._handler)
-        self._commandProcessor.send(self._request)
+        handler = MyCommandHandler()
+        request = MyCommand()
+        self._subscriber_registry.register(MyCommand, lambda: handler)
+        self._commandProcessor.send(request)
 
-        self.assertTrue(self._handler.called, "Expected the handle method on the handler to be called with the message")
+        self.assertTrue(handler.called, "Expected the handle method on the handler to be called with the message")
 
     def test_handle_event(self):
         """ Given that we have many handlers registered of an event, when we raise an event, it should call all the handlers"""
 
-        self._handler = MyEventHandler()
-        self._other_handler = MyEventHandler()
-        self._request = MyEvent()
-        self._subscriber_registry.register(MyEvent, lambda: self._handler)
-        self._subscriber_registry.register(MyEvent, lambda: self._other_handler)
-        self._commandProcessor.publish(self._request)
+        handler = MyEventHandler()
+        other_handler = MyEventHandler()
+        request = MyEvent()
+        self._subscriber_registry.register(MyEvent, lambda: handler)
+        self._subscriber_registry.register(MyEvent, lambda: other_handler)
+        self._commandProcessor.publish(request)
 
-        self.assertTrue(self._handler.called, "The first handler should be called with the message")
-        self.assertTrue((self._other_handler, "The second handler should also be called with the message"))
+        self.assertTrue(handler.called, "The first handler should be called with the message")
+        self.assertTrue((other_handler, "The second handler should also be called with the message"))
 
     def test_missing_command_handler_registration(self):
         """Given that we are missing a handler for a command, when we send a command, it should throw an exception"""
 
-        self._handler = MyCommandHandler()
-        self._request = MyCommand()
+        handler = MyCommandHandler()
+        request = MyCommand()
 
         exception_thrown = False
         try:
-            self._commandProcessor.send(self._request)
+            self._commandProcessor.send(request)
         except:
             exception_thrown = True
 
@@ -82,13 +82,13 @@ class CommandProcessorFixture(unittest.TestCase):
     def test_missing_event_handler_registration(self):
         """Given that we have no handlers register for an event, when we raise an event, it should not error """
 
-        self._handler = MyEventHandler()
-        self._other_handler = MyEventHandler()
-        self._request = MyEvent()
+        handler = MyEventHandler()
+        other_handler = MyEventHandler()
+        request = MyEvent()
 
         exception_thrown = False
         try:
-            self._commandProcessor.publish(self._request)
+            self._commandProcessor.publish(request)
         except:
             exception_thrown = True
 
