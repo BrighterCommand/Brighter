@@ -30,6 +30,7 @@ THE SOFTWARE.
 """
 
 import json
+import logging
 
 from poll import retry, circuitbreaker
 
@@ -52,7 +53,7 @@ class MyCommandHandler(Handler):
     def __init__(self):
         self._called = False
 
-    @log_handler()
+    @log_handler(level=logging.DEBUG)
     def handle(self, request):
         self._called = True
 
