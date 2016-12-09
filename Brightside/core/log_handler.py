@@ -47,16 +47,19 @@ def log_handler(level=logging.DEBUG, name=None, entry_message=None, exit_message
             entry_log_msg = entry_message if entry_message else ENTRY_MESSAGE.format(func.__name__)
             exit_log_msg = exit_message if exit_message else EXIT_MESSAGE.format(func.__name__)
 
-            # add serialization of command to log_msg
-            # we assume that the command is always the first positional argument
+            # we assume that the request is always the first positional argument
             # as it should be only argument, and we check for its type to be sure
+            # We also assume that the command has a __str__ method if more detailed
+            # diagnostic information; we don't rely on a message mapper here
             request = args[1]
             if not isinstance(request, Request):
                 raise ConfigurationException("A handler must take a Request derived class as its first positional argument {}", func.__name__)
 
-            log.log(level, entry_log_msg)
+            request_info = " {}".format(str(request))
+
+            log.log(level, entry_log_msg + request_info)
             response = func(*args, **kwargs)
-            log.log(level, exit_log_msg)
+            log.log(level, exit_log_msg + request_info)
             return response
 
         return wrapper

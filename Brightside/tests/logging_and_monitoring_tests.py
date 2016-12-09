@@ -52,11 +52,12 @@ class LoggingAndMonitoringFixture(unittest.TestCase):
         Then I should receive logs indicating the call and return of the handler
         * N.b. This is an example of using decorators to extend the Brightside pipeline
         """
-        self._handler = MyCommandHandler()
-        self._request = MyCommand()
-        self._subscriber_registry.register(MyCommand, lambda: self._handler)
+        handler = MyCommandHandler()
+        request = MyCommand()
+        self._subscriber_registry.register(MyCommand, lambda: handler)
         logger = logging.getLogger("tests.handlers_testdoubles")
         with patch.object(logger, 'log') as mock_log:
-            self._commandProcessor.send(self._request)
+            self._commandProcessor.send(request)
 
-        mock_log.assert_has_calls([call(logging.DEBUG, "Entering handle"), call(logging.DEBUG, 'Exiting handle')])
+        mock_log.assert_has_calls([call(logging.DEBUG, "Entering handle " + str(request)),
+                                   call(logging.DEBUG, "Exiting handle " + str(request))])
