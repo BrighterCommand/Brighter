@@ -30,11 +30,16 @@ THE SOFTWARE.
 """
 
 import unittest
-from unittest.mock import create_autospec
+from unittest.mock import Mock
+from uuid import uuid4
 
-from tests.handlers_testdoubles import MyCommandHandler, MyCommand
+from arame.messaging import JsonRequestSerializer
 from core.command_processor import CommandProcessor
+from core.channels import Channel
+from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageBodyType, BrightsideMessageHeader, BrightsideMessageType
 from serviceactivator.message_pump import MessagePump
+
+from tests.handlers_testdoubles import MyCommandHandler, MyCommand, map_to_message
 
 
 class MessagePumpFixture(unittest.TestCase):
@@ -47,8 +52,17 @@ class MessagePumpFixture(unittest.TestCase):
         """
         handler = MyCommandHandler()
         request = MyCommand()
-        command_processor = create_autospec(CommandProcessor)
+        channel = Mock(spec=Channel)
+        command_processor = Mock(spec=CommandProcessor)
 
-        message_pump = MessagePump(command_processor)
+        message_pump = MessagePump(command_processor, channel, map_to_message)
+
+        header = BrightsideMessageHeader(uuid4(), request.__name__, BrightsideMessageType.command)
+        body = BrightsideMessageBody(JsonRequestSerializer(request=request).serialize_to_json(),
+                                     BrightsideMessageBodyType.application_json)
+        message = BrightsideMessage(header, body)
+
+        # add messages to that when channel is called it returns first message then qui tmessage
+
         message_pump.run()
 
