@@ -29,11 +29,15 @@ THE SOFTWARE.
 ***********************************************************************
 """
 
-from core.command_processor import CommandProcessor
+from typing import Callable
+
+from core.command_processor import CommandProcessor, Request
+from core.channels import Channel
+from core.messaging import BrightsideMessage
 
 
 class MessagePump:
-    def __init__(self, command_processor: CommandProcessor):
+    def __init__(self, command_processor: CommandProcessor, channel: Channel, mapper_func: Callable[[Request], BrightsideMessage]):
         self._command_processor = command_processor
 
 

@@ -66,7 +66,7 @@ class Channel:
     def length(self) -> int:
         return self._queue.qsize()
 
-    def name(self):
+    def name(self) -> ChannelName:
         return self._name
 
     def receive(self, timeout: int) -> BrightsideMessage:

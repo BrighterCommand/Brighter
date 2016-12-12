@@ -36,7 +36,7 @@ from uuid import uuid4
 from arame.messaging import JsonRequestSerializer
 from core.command_processor import CommandProcessor
 from core.channels import Channel
-from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageBodyType, BrightsideMessageHeader, BrightsideMessageType
+from core.messaging import BrightsideMessage, BrightsideMessageBody, BrightsideMessageBodyType, BrightsideMessageHeader, BrightsideMessageType, BrightsideMessageFactory
 from serviceactivator.message_pump import MessagePump
 
 from tests.handlers_testdoubles import MyCommandHandler, MyCommand, map_to_message
@@ -62,7 +62,12 @@ class MessagePumpFixture(unittest.TestCase):
                                      BrightsideMessageBodyType.application_json)
         message = BrightsideMessage(header, body)
 
+        quit_message = BrightsideMessageFactory.create_quit_message()
+
         # add messages to that when channel is called it returns first message then qui tmessage
+        response_queue = [message, quit_message]
+        channel_spec = {"receive.side_effect" : response_queue}
+        channel.configure_mock(**channel_spec)
 
         message_pump.run()
 
