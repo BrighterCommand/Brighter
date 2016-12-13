@@ -57,7 +57,7 @@ class MessagePumpFixture(unittest.TestCase):
 
         message_pump = MessagePump(command_processor, channel, map_to_message)
 
-        header = BrightsideMessageHeader(uuid4(), request.__name__, BrightsideMessageType.command)
+        header = BrightsideMessageHeader(uuid4(), request.__class__.__name__, BrightsideMessageType.command)
         body = BrightsideMessageBody(JsonRequestSerializer(request=request).serialize_to_json(),
                                      BrightsideMessageBodyType.application_json)
         message = BrightsideMessage(header, body)
