@@ -39,6 +39,7 @@ from kombu.pools import connections
 from kombu import exceptions as kombu_exceptions
 from kombu.message import Message as KombuMessage
 
+from core.exceptions import ChannelFailureException
 from core.messaging import BrightsideConsumer, BrightsideMessage, BrightsideProducer, BrightsideMessageHeader, BrightsideMessageBody, BrightsideMessageType
 from arame.messaging import ArameMessageFactory, KombuMessageFactory
 
@@ -198,6 +199,13 @@ class ArameConsumer(BrightsideConsumer):
                 cnx.drain_events(timeout=timesup)
             except kombu_exceptions.TimeoutError:
                 pass
+            except(kombu_exceptions.ChannelLimitExceeded,
+                   kombu_exceptions.ConnectionLimitExceeded,
+                   kombu_exceptions.OperationalError,
+                   kombu_exceptions.NotBoundError,
+                   kombu_exceptions.MessageStateError,
+                   kombu_exceptions.LimitExceeded) as err:
+                raise ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", err)
 
         def _consume_errors(exc, interval: int)-> None:
             self._logger.error('Draining error: %s, will retry triggering in %s seconds', exc, interval, exc_info=True)

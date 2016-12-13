@@ -36,3 +36,6 @@ class ConfigurationException(Exception):
 
 class MessagingException(Exception):
     pass
+
+class ChannelFailureException(Exception):
+    pass

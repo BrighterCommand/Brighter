@@ -33,19 +33,28 @@ from typing import Callable
 
 from core.command_processor import CommandProcessor, Request
 from core.channels import Channel
+from core.exceptions import ChannelFailureException
 from core.messaging import BrightsideMessage
 
 
 class MessagePump:
     def __init__(self, command_processor: CommandProcessor,
                  channel: Channel,
-                 mapper_func: Callable[[Request], BrightsideMessage]) -> None:
+                 mapper_func: Callable[[Request], BrightsideMessage],
+                 timeout: int = None) -> None:
         self._command_processor = command_processor
         self._channel = channel
         self._mapper_func = mapper_func
+        self._timeout = timeout if timeout is not None else 100
 
     def run(self) -> None:
-        pass
+        while True:
+            try:
+                self._channel.receive(self._timeout)
+            except ChannelFailureException:
+                break
+
+
 
 
 
