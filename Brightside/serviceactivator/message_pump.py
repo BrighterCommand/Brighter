@@ -37,8 +37,15 @@ from core.messaging import BrightsideMessage
 
 
 class MessagePump:
-    def __init__(self, command_processor: CommandProcessor, channel: Channel, mapper_func: Callable[[Request], BrightsideMessage]):
+    def __init__(self, command_processor: CommandProcessor,
+                 channel: Channel,
+                 mapper_func: Callable[[Request], BrightsideMessage]) -> None:
         self._command_processor = command_processor
+        self._channel = channel
+        self._mapper_func = mapper_func
+
+    def run(self) -> None:
+        pass
 
 
 

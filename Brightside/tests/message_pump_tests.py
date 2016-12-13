@@ -30,7 +30,7 @@ THE SOFTWARE.
 """
 
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 from uuid import uuid4
 
 from arame.messaging import JsonRequestSerializer
@@ -71,3 +71,7 @@ class MessagePumpFixture(unittest.TestCase):
 
         message_pump.run()
 
+        channel_calls = [call.receive(), call.receive]
+        channel.assert_has_calls(channel_calls)
+        cp_calls = [call.send(request)]
+        command_processor.assert_has_calls(cp_calls)
