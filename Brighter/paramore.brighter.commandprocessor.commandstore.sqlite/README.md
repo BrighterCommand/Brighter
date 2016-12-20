@@ -1,8 +1,8 @@
-# Brighter MSSQL message store
+# Brighter Sqlite command store
 
 ## Setup
 
-To setup Brighter with a SQL Server or SQL CE message store, some steps are required:
+To setup Brighter with a Sqlite command store, some steps are required:
 
 #### Create a table with the schema in the example
 

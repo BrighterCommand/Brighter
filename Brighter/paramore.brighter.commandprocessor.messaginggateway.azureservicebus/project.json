@@ -3,6 +3,46 @@
   "buildOptions": {
     "debugType": "portable"
   },
+   "title": "paramore.brighter.commandprocessor.messaginggateway.azureservicebus",
+  "description": "Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter.CommandProcessor pipeline, using azureservicebus",
+  "authors": [
+    "Yiannis Triantafyllopoulos"
+  ],
+  "packOptions": {
+    "summary": "Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter.CommandProcessor pipeline, using azureservicebus",
+    "tags": [
+      "awssqs",
+      "AMQP",
+      "Command",
+      "Event",
+      "Service Activator",
+      "Decoupled",
+      "Invocation",
+      "Messaging",
+      "Remote",
+      "Command Dispatcher",
+      "Command Processor",
+      "Request",
+      "Service",
+      "Task Queue",
+      "Work Queue",
+      "Retry",
+      "Circuit Breaker",
+      "Availability"
+    ],
+    "owners": [
+      "Ian Cooper"
+    ],
+    "releaseNotes": "https://github.com/iancooper/Paramore/blob/master/release_notes.md",
+    "iconUrl": "http://iancooper.github.io/Paramore/images/brightercanon-nuget.png",
+    "projectUrl": "http://iancooper.github.io/Paramore",
+    "licenseUrl": "http://ianhammondcooper.mit-license.org",
+    "requireLicenseAcceptance": false,
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/iancooper/Paramore/tree/master/Brighterparamore.brighter.commandprocessor.messaginggateway.azureservicebus"
+    }
+  },
   "dependencies": {
     "AMQPNetLite": "1.2.1",
     "NETStandard.Library": "1.6.1",
