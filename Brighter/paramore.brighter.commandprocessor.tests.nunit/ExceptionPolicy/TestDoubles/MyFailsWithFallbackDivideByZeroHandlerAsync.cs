@@ -44,21 +44,21 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDou
 
         [FallbackPolicyAsync(backstop: true, circuitBreaker: false, step: 1)]
         [UsePolicyAsync("MyDivideByZeroPolicy", step:2)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 return command;
             }
 
             ReceivedCommand = true;
-            await Task.Delay(0);
+            await Task.Delay(0, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             throw new DivideByZeroException();
         }
 
-        public override async Task<MyCommand> FallbackAsync(MyCommand command, CancellationToken? ct = null)
+        public override async Task<MyCommand> FallbackAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 return command;
             }
@@ -66,7 +66,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDou
             FallbackCalled = true;
             if (Context.Bag.ContainsKey(FallbackPolicyHandler<MyCommand>.CAUSE_OF_FALLBACK_EXCEPTION))
                 SetException = true;
-            return await base.FallbackAsync(command, ct);
+
+            return await base.FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         public static bool ShouldFallback(MyCommand command)

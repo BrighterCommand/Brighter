@@ -27,14 +27,14 @@ namespace HelloAsyncListeners
             _endpoint = endpoint;
         }
 
-        public async Task<IpFyApiResult> GetAsync(CancellationToken? ct = null)
+        public async Task<IpFyApiResult> GetAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             using (var client = new HttpClient())
             {
                 client.BaseAddress = _endpoint;
                 client.DefaultRequestHeaders.Clear();
 
-                var response = await client.GetAsync("", ct ?? CancellationToken.None);
+                var response = await client.GetAsync("", cancellationToken);
                 string result;
                 if (response.IsSuccessStatusCode)
                     result = await response.Content.ReadAsStringAsync();

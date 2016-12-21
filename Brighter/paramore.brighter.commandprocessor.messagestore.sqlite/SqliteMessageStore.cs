@@ -145,13 +145,13 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
             return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, messageStoreTimeout, parameters);
         }
 
-        public async Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        public async Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             var parameters = InitAddDbParameters(message);
 
             using (var connection = GetConnection())
             {
-                await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 using (var command = connection.CreateCommand())
                 {
                     var sql = GetAddSql();
@@ -160,9 +160,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
 
                     try
                     {
-                        await
-                            command.ExecuteNonQueryAsync(ct ?? CancellationToken.None)
-                                .ConfigureAwait(ContinueOnCapturedContext);
+                        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                     }
                     catch (SqliteException sqlException)
                     {
@@ -194,9 +192,9 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="messageStoreTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
-        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}" />.</returns>
-        public async Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        public async Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
             var parameters = new[]
@@ -204,21 +202,13 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
                 CreateSqlParameter("@MessageId", messageId.ToString())
             };
 
-            var result =
-                await
-                    ExecuteCommandAsync(
-                        async command =>
-                            MapFunction(
-                                await
-                                    command.ExecuteReaderAsync(ct ?? CancellationToken.None)
-                                        .ConfigureAwait(ContinueOnCapturedContext)),
-                        sql,
-                        messageStoreTimeout,
-                        ct,
-                        parameters
-                        )
-                        .ConfigureAwait(ContinueOnCapturedContext);
-            return result;
+            return await ExecuteCommandAsync(
+                async command => MapFunction(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)),
+                sql,
+                messageStoreTimeout,
+                cancellationToken,
+                parameters)
+                .ConfigureAwait(ContinueOnCapturedContext);
         }
 
         /// <summary>
@@ -253,20 +243,21 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns></returns>
-        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,CancellationToken? ct = null)
+        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,CancellationToken cancellationToken = default(CancellationToken))
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
                 SetPagingCommandFor(command, pageSize, pageNumber);
 
-                await connection.OpenAsync().ConfigureAwait(ContinueOnCapturedContext);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
                 var messages = new List<Message>();
-                using (var dbDataReader = await command.ExecuteReaderAsync())
+                using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
                 {
-                    while (await dbDataReader.ReadAsync(ct ?? CancellationToken.None))
+                    while (await dbDataReader.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
                     {
                         messages.Add(MapAMessage(dbDataReader));
                     }
@@ -301,7 +292,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
             Func<SqliteCommand, Task<T>> execute,
             string sql,
             int timeoutInMilliseconds,
-            CancellationToken? ct = null,
+            CancellationToken cancellationToken = default(CancellationToken),
             params SqliteParameter[] parameters)
         {
             using (var connection = GetConnection())
@@ -311,7 +302,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
                 command.CommandText = sql;
                 AddParamtersParamArrayToCollection(parameters, command);
 
-                await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 return item;
             }
@@ -325,7 +316,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
         private SqliteParameter[] InitAddDbParameters(Message message)
         {
             var bagJson = JsonConvert.SerializeObject(message.Header.Bag);
-            var parameters = new[]
+            return new[]
             {
                 new SqliteParameter("@MessageId", SqliteType.Text) { Value = message.Id.ToString()},
                 new SqliteParameter("@MessageType", SqliteType.Text) { Value = message.Header.MessageType.ToString()},
@@ -334,7 +325,6 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
                 new SqliteParameter("@HeaderBag",SqliteType.Text) { Value = bagJson},
                 new SqliteParameter("@Body", SqliteType.Text) { Value = message.Body.Value}
             };
-            return parameters;
         }
 
         private Message MapAMessage(IDataReader dr)
@@ -386,8 +376,8 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
         {
             SqliteParameter[] parameters = new[]
             {
-                CreateSqlParameter("PageNumber", pageNumber-1)
-                , CreateSqlParameter("PageSize", pageSize)
+                CreateSqlParameter("PageNumber", pageNumber-1),
+                CreateSqlParameter("PageSize", pageSize)
             };
 
             var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber", _configuration.MessageStoreTableName);
@@ -398,7 +388,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
 
         public void AddParamtersParamArrayToCollection(SqliteParameter[] parameters, SqliteCommand command)
         {
-                command.Parameters.AddRange(parameters);
+            command.Parameters.AddRange(parameters);
         }
     }
 }

@@ -129,22 +129,20 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="ct">Allow the sender to cancel the request, optional</param>
+        /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <returns><see cref="Task" />.</returns>
-        public async Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken? ct = null)
+        public async Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken))
             where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command);
 
             using (var connection = GetConnection())
             {
-                await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlcmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
                 try
                 {
-                    await
-                        sqlcmd.ExecuteNonQueryAsync(ct ?? CancellationToken.None)
-                            .ConfigureAwait(ContinueOnCapturedContext);
+                    await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 }
                 catch (SqlException sqlException)
                 {
@@ -177,32 +175,25 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="ct">Allow the sender to cancel the request</param>
+        /// <param name="cancellationToken">Allow the sender to cancel the request</param>
         /// <returns><see cref="Task{T}" />.</returns>
-        public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken? ct = null)
+        public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken))
             where T : class, IRequest, new()
         {
-            var sql = string.Format("select * from [{0}] where CommandId = @commandId",
-                _configuration.MessageStoreTableName);
+            var sql = string.Format("select * from [{0}] where CommandId = @commandId", _configuration.MessageStoreTableName);
+
             var parameters = new[]
             {
                 CreateSqlParameter("CommandId", id)
             };
-            var result =
-                await
-                    ExecuteCommandAsync(
-                        async command =>
-                            ReadCommand<T>(
-                                await
-                                    command.ExecuteReaderAsync(ct ?? CancellationToken.None)
-                                        .ConfigureAwait(ContinueOnCapturedContext)),
-                        sql,
-                        timeoutInMilliseconds,
-                        ct,
-                        parameters
-                        )
-                        .ConfigureAwait(ContinueOnCapturedContext);
-            return result;
+
+            return await ExecuteCommandAsync(
+                async command => ReadCommand<T>(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)),
+                sql,
+                timeoutInMilliseconds,
+                cancellationToken,
+                parameters)
+                .ConfigureAwait(ContinueOnCapturedContext);
         }
 
         private DbParameter CreateSqlParameter(string parameterName, object value)
@@ -230,7 +221,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
             Func<DbCommand, Task<T>> execute,
             string sql,
             int timeoutInMilliseconds,
-            CancellationToken? ct = null,
+            CancellationToken cancellationToken = default(CancellationToken),
             params DbParameter[] parameters)
         {
             using (var connection = GetConnection())
@@ -240,7 +231,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 command.CommandText = sql;
                 command.Parameters.AddRange(parameters);
 
-                await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 return item;
             }

@@ -113,9 +113,9 @@ namespace paramore.brighter.commandprocessor
         /// Handles the specified command.
         /// </summary>
         /// <param name="request">The request.</param>
-        /// <param name="ct">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
+        /// <param name="cancellationToken">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        Task<TRequest> HandleAsync(TRequest request, CancellationToken? ct = null);
+        Task<TRequest> HandleAsync(TRequest request, CancellationToken cancellationToken = default(CancellationToken));
 
 
         /// <summary>
@@ -123,9 +123,9 @@ namespace paramore.brighter.commandprocessor
         /// This allows for graceful  degradation.  
         /// </summary>
         /// <param name="request">The request.</param>
-        /// <param name="ct">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
+        /// <param name="cancellationToken">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        Task<TRequest> FallbackAsync(TRequest request, CancellationToken? ct = null);
+        Task<TRequest> FallbackAsync(TRequest request, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Sets the successor.

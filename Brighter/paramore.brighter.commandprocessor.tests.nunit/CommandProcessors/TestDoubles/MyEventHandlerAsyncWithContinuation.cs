@@ -17,14 +17,14 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
             s_receivedEvent = null;
         }
 
-        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken? ct = null)
+        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken cancellationToken = default(CancellationToken))
         {
             LoopCounter = new ThreadLocal<int>(() => 0);
             WorkThreadId = 0;
             ContinuationThreadId = 0;
             LoopCounter.Value = 1;
 
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 return command;
             }
@@ -32,7 +32,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
             WorkThreadId = Thread.CurrentThread.ManagedThreadId;
 
             LogEvent(command);
-            await Task.Delay(30);
+            await Task.Delay(30, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             //this will run on the continuation
             LoopCounter.Value = 2;

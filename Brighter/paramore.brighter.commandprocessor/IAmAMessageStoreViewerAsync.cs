@@ -17,7 +17,7 @@ namespace paramore.brighter.commandprocessor
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <returns></returns>
-        Task<IList<T>> GetAsync(int pageSize = 100, int pageNumber = 1, CancellationToken? ct = null);
+        Task<IList<T>> GetAsync(int pageSize = 100, int pageNumber = 1, CancellationToken cancellationToken = default(CancellationToken));
          
     }
 }

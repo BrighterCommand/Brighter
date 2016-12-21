@@ -22,8 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor;
-
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
     internal class MyUnusedCommandHandler : RequestHandler<MyCommand>

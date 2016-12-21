@@ -99,8 +99,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
             var headerBagJson = JsonConvert.SerializeObject(header, new KeyValuePairConverter());
             var eventHeader = Encoding.UTF8.GetBytes(headerBagJson);
 
-            var eventData = new[] {new EventData(message.Id, message.Header.Topic, true, eventBody, eventHeader)};
-            return eventData;
+            return new[] { new EventData(message.Id, message.Header.Topic, true, eventBody, eventHeader) };
         }
 
         /// <summary>
@@ -119,9 +118,9 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="messageStoreTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task"/>.</returns>
-        public async Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        public async Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             _logger.Value.DebugFormat("Adding message to Event Store Message Store: {0}", JsonConvert.SerializeObject(message));
 
@@ -147,9 +146,9 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="messageStoreTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
-        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
-        public Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        public Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             throw new NotImplementedException();
         }
@@ -188,8 +187,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
             messageHeader.Bag.Add("streamId", stream);
             messageHeader.Bag.Add("eventNumber", eventNumber);
 
-            var metadataJson =
-                JsonConvert.DeserializeObject<Dictionary<string, object>>(Encoding.UTF8.GetString(metadata));
+            var metadataJson = JsonConvert.DeserializeObject<Dictionary<string, object>>(Encoding.UTF8.GetString(metadata));
             foreach (var entry in metadataJson)
             {
                 messageHeader.Bag.Add(entry.Key, entry.Value);

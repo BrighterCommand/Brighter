@@ -323,9 +323,9 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
-        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
+        public async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             if (_asyncHandlerFactory == null)
                 throw new InvalidOperationException("No async handler factory defined.");
@@ -340,7 +340,7 @@ namespace paramore.brighter.commandprocessor
 
                 AssertValidSendPipeline(command, handlerChain.Count());
 
-                await handlerChain.First().HandleAsync(command, ct).ConfigureAwait(continueOnCapturedContext);
+                await handlerChain.First().HandleAsync(command, cancellationToken).ConfigureAwait(continueOnCapturedContext);
             }
         }
 
@@ -400,9 +400,9 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
-        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
+        public async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             if (_asyncHandlerFactory == null)
                 throw new InvalidOperationException("No async handler factory defined.");
@@ -424,7 +424,7 @@ namespace paramore.brighter.commandprocessor
                 {
                     try
                     {
-                        await handler.HandleAsync(@event, ct);
+                        await handler.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
                     }
                     catch (Exception e)
                     {
@@ -482,10 +482,10 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="request">The request.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
-        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
+        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             _logger.Value.InfoFormat("Async decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
 
@@ -499,12 +499,14 @@ namespace paramore.brighter.commandprocessor
                 throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
 
             var message = messageMapper.MapToMessage(request);
+
             await RetryAndBreakCircuitAsync(async () =>
             {
-                await _asyncMessageStore.AddAsync(message, _messageStoreTimeout);
-                await _asyncMessageProducer.SendAsync(message);
-            });
-            await Task.Delay(0);
+                await _asyncMessageStore.AddAsync(message, _messageStoreTimeout, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+                await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext);
+            }).ConfigureAwait(continueOnCapturedContext);
+
+            await Task.Delay(0, cancellationToken).ConfigureAwait(continueOnCapturedContext);
         }
 
         /// <summary>
