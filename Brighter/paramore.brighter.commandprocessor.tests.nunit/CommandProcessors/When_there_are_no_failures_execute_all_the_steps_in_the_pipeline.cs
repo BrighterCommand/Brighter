@@ -38,7 +38,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
 
@@ -47,8 +46,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>();
             container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
-            container.Register<ILog>(logger);
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            container.Register<ILog>(A.Fake<ILog>());
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         };
 
         private Because _of = () => s_commandProcessor.Send(s_myCommand);

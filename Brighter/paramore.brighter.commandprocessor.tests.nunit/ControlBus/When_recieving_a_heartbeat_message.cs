@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using FakeItEasy;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
@@ -50,7 +49,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 
         private Establish context = () =>
         {
-            var logger = A.Fake<ILog>();
             var dispatcher = A.Fake<IDispatcher>();
 
             s_firstConsumer = A.Fake<IAmAConsumer>();
@@ -70,7 +68,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 
             s_heartbeatRequest = new HeartbeatRequest(new ReplyAddress(TEST_ROUTING_KEY, s_CorrelationId));
 
-            s_handler = new HeartbeatRequestCommandHandler(logger, s_spyCommandProcessor, dispatcher);
+            s_handler = new HeartbeatRequestCommandHandler(s_spyCommandProcessor, dispatcher);
 
         };
 

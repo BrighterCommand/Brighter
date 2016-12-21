@@ -40,8 +40,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyImplicitHandlerAsync>();
 
@@ -49,9 +47,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyImplicitHandlerAsync>();
             container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
-            container.Register<ILog>(logger);
+            container.Register<ILog>(A.Fake<ILog>());
 
-            s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
+            s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         };
 
         private Because _of = () => s_pipeline = s_pipelineBuilder.BuildAsync(new RequestContext(), false).First();

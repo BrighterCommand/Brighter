@@ -40,8 +40,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             //Handler is decorated with UsePolicy 
             registry.Register<MyCommand, MyPassesTimeoutHandler>();
@@ -50,9 +48,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyPassesTimeoutHandler>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, TimeoutPolicyHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog>(logger);
+            container.Register<ILog>(A.Fake<ILog>());
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         };
 
         //We have to catch the final exception that bubbles out after retry

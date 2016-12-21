@@ -23,12 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using Polly;
 
@@ -46,7 +44,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_myCommand.Value = "Hello World";
 
             s_fakeMessageStore = new FakeMessageStore();
@@ -54,8 +51,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
             s_message = new Message(
                 header: new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
-                body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
-                );
+                body: new MessageBody(JsonConvert.SerializeObject(s_myCommand)));
 
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
@@ -73,8 +69,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 (IAmAMessageStoreAsync<Message>) s_fakeMessageStore,
-                (IAmAMessageProducerAsync)s_fakeMessageProducer,
-                logger);
+                (IAmAMessageProducerAsync)s_fakeMessageProducer);
         };
 
         private Because _of = () => s_exception = Catch.Exception(() =>  AsyncContext.Run(async () => await s_commandProcessor.PostAsync(s_myCommand)));

@@ -27,7 +27,7 @@ THE SOFTWARE. */
 #endregion
 using System;
 using System.Linq;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 
@@ -35,6 +35,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {
     internal class Pipe
     {
+        private static readonly ILog _logger = LogProvider.For<Pipe>();
+
         private readonly RestMSMessageGateway _gateway;
         private readonly Join _join;
 
@@ -49,7 +51,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         public void EnsurePipeExists(string pipeTitle, string routingKey, RestMSDomain domain)
         {
-            _gateway.Logger.DebugFormat("Checking for existence of the pipe {0} on the RestMS server: {1}", pipeTitle, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            _logger.DebugFormat("Checking for existence of the pipe {0} on the RestMS server: {1}", pipeTitle, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var pipeExists = PipeExists(pipeTitle, domain);
             if (!pipeExists)
             {
@@ -70,7 +72,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             /*TODO: Optimize this by using a repository approach with the repository checking for modification 
             through etag and serving existing version if not modified and grabbing new version if changed*/
 
-            _gateway.Logger.DebugFormat("Getting the pipe from the RestMS server: {0}", PipeUri);
+            _logger.DebugFormat("Getting the pipe from the RestMS server: {0}", PipeUri);
             var client = _gateway.Client();
 
             try
@@ -83,16 +85,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    _gateway.Logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", PipeUri, exception.Message);
+                    _logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", PipeUri, exception.Message);
                 }
 
-                throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
+                throw new RestMSClientException("Error retrieving the domain from the RestMS server, see log for details");
             }
         }
 
         private RestMSDomain CreatePipe(string domainUri, string title)
         {
-            _gateway.Logger.DebugFormat("Creating the pipe {0} on the RestMS server: {1}", title, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            _logger.DebugFormat("Creating the pipe {0} on the RestMS server: {1}", title, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var client = _gateway.Client();
             try
             {
@@ -114,7 +116,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    _gateway.Logger.ErrorFormat("Threw exception adding Pipe {0} to RestMS Server {1}", title, exception.Message);
+                    _logger.ErrorFormat("Threw exception adding Pipe {0} to RestMS Server {1}", title, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error adding the Feed {0} to the RestMS server, see log for details", title));
@@ -123,7 +125,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         private bool PipeExists(string pipeTitle, RestMSDomain domain)
         {
-            return domain != null && domain.Pipes != null && domain.Pipes.Any(p => p.Title == pipeTitle);
+            return domain?.Pipes != null && domain.Pipes.Any(p => p.Title == pipeTitle);
         }
     }
 }

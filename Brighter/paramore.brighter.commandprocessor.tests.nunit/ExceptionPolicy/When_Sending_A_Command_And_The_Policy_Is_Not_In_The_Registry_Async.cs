@@ -45,8 +45,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyDoesNotFailPolicyHandlerAsync>();
 
@@ -54,13 +52,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyDoesNotFailPolicyHandlerAsync>("MyDoesNotFailPolicyHandler");
             container.Register<IHandleRequestsAsync<MyCommand>, ExceptionPolicyHandlerAsync<MyCommand>>("MyExceptionPolicyHandler");
-            container.Register<ILog>(logger);
+            container.Register<ILog>(A.Fake<ILog>());
 
             var policyRegistry = new PolicyRegistry();
 
             MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
         };
 
         //We have to catch the final exception that bubbles out after retry

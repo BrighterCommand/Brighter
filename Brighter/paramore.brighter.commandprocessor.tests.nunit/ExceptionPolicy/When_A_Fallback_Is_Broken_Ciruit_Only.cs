@@ -43,8 +43,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsWithUnsupportedExceptionForFallback>();
             var policyRegistry = new PolicyRegistry();
@@ -53,12 +51,12 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyFailsWithUnsupportedExceptionForFallback>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, FallbackPolicyHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog>(logger);
+            container.Register<ILog>(A.Fake<ILog>());
 
 
             MyFailsWithFallbackDivideByZeroHandler.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
         };
 
         private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));

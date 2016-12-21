@@ -26,9 +26,7 @@ using System;
 using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using NUnit.Framework;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
 using Tasks.Ports.Commands;
@@ -51,7 +49,6 @@ namespace TasksTests
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_tasksDAO = new TasksDAO();
             s_tasksDAO.Clear();
 
@@ -87,7 +84,6 @@ namespace TasksTests
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_taskToBeEdited = new Task("My Task", "My Task Description", DateTime.Now);
             s_tasksDAO = new TasksDAO();
             s_tasksDAO.Clear();
@@ -124,7 +120,6 @@ namespace TasksTests
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_taskToBeCompleted = new Task("My Task", "My Task Description", DateTime.Now);
             s_tasksDAO = new TasksDAO();
             s_tasksDAO.Clear();
@@ -160,7 +155,6 @@ namespace TasksTests
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_tasksDAO = new TasksDAO();
             s_tasksDAO.Clear();
             s_cmd = new CompleteTaskCommand(TASK_ID, s_COMPLETION_DATE);

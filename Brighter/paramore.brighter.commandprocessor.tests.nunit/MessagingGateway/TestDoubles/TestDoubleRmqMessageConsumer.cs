@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
@@ -37,7 +36,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.TestDo
 
     internal class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
     {
-        public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability, ILog logger) : base(connection, queueName, routingKey, isDurable, preFetchSize, isHighAvailability, logger) { }
+        public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable, preFetchSize, isHighAvailability) { }
 
         protected override void ConnectToBroker()
         {
@@ -47,7 +46,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.TestDo
 
     internal class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
     {
-        public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability, ILog logger) : base(connection, queueName, routingKey, isDurable, preFetchSize, isHighAvailability, logger) { }
+        public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable, preFetchSize, isHighAvailability) { }
 
         protected override void CreateConsumer()
         {
@@ -57,7 +56,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.TestDo
 
     internal class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer
     {
-        public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability, ILog logger) : base(connection, queueName, routingKey, isDurable,preFetchSize,isHighAvailability, logger) { }
+        public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable,preFetchSize,isHighAvailability) { }
 
         protected override void CreateConsumer()
         {
@@ -67,7 +66,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.TestDo
 
     internal class NotSupportedRmqMessageConsumer : RmqMessageConsumer
     {
-        public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability, ILog logger) : base(connection, queueName, routingKey, isDurable, preFetchSize, isHighAvailability, logger) { }
+        public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable, preFetchSize, isHighAvailability) { }
 
         protected override void CreateConsumer()
         {

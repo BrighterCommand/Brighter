@@ -27,7 +27,6 @@ using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.commandstore.sqlite;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
@@ -45,7 +44,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
 
-            s_sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName), new LogProvider.NoOpLogger());
+            s_sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
             s_raisedCommand = new MyCommand {Value = "Test"};
             AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync(s_raisedCommand));
         };
@@ -56,9 +55,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
         private It _should_read_the_command_value = () => s_storedCommand.Value.ShouldEqual(s_raisedCommand.Value);
         private It _should_read_the_command_id = () => s_storedCommand.Id.ShouldEqual(s_raisedCommand.Id);
 
-        private Cleanup _cleanup = () =>
-        {
-            _sqliteTestHelper.CleanUpDb();
-        };
+        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
     }
 }

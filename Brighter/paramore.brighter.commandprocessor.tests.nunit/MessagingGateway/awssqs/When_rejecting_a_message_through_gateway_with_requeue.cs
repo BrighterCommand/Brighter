@@ -3,14 +3,12 @@ using Amazon.Runtime;
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
-    public partial class AWSSQSMessagingGatewayTests {
-        
+    public partial class AWSSQSMessagingGatewayTests
+    {
         [Category("AWS")]
         public class when_rejecting_a_message_through_gateway_with_requeue : ContextSpecification
         {
@@ -22,18 +20,15 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
             private static Message _listenedMessage;
             Establish context = () =>
             {
-                var logger = LogProvider.For<RmqMessageConsumer>();
-
                 var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
                 messageHeader.UpdateHandledCount();
                 message = new Message(header: messageHeader, body: new MessageBody("test content"));
 
                 var credentials = new AnonymousAWSCredentials();
-                sender = new SqsMessageProducer(credentials, logger);
-                receiver = new SqsMessageConsumer(credentials, queueUrl, logger);
+                sender = new SqsMessageProducer(credentials);
+                receiver = new SqsMessageConsumer(credentials, queueUrl);
                 testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
-
 
                 sender.Send(message);
 
@@ -49,7 +44,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
             };
 
             Cleanup the_queue = () => testQueueListener.DeleteMessage(_listenedMessage.Header.Bag["ReceiptHandle"].ToString());
-
         }
     }
 }

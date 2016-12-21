@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
@@ -33,9 +32,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
     internal class MyFailsWithDivideByZeroHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        public MyFailsWithDivideByZeroHandlerAsync(ILog logger) : base(logger)
-        { }
-
         public static bool ReceivedCommand { get; set; }
 
         static MyFailsWithDivideByZeroHandlerAsync()

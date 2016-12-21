@@ -47,8 +47,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyFailsWithDivideByZeroHandlerAsync>();
 
@@ -56,7 +54,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyFailsWithDivideByZeroHandlerAsync>().AsSingleton();
             container.Register<IHandleRequestsAsync<MyCommand>, ExceptionPolicyHandlerAsync<MyCommand>>().AsSingleton();
-            container.Register<ILog>(logger);
+            container.Register<ILog>(A.Fake<ILog>());
 
             var policyRegistry = new PolicyRegistry();
 
@@ -68,7 +66,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 
             MyFailsWithDivideByZeroHandlerAsync.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
         };
 
         //We have to catch the final exception that bubbles out after retry

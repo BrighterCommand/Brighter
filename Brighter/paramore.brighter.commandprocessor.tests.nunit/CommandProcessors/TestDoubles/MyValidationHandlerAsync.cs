@@ -24,8 +24,6 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
@@ -33,8 +31,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
     {
         private static TRequest s_command;
 
-        public MyValidationHandlerAsync(ILog logger)
-            : base(logger)
+        public MyValidationHandlerAsync()
         {
             s_command = null;
         }

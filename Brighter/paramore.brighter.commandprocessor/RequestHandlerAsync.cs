@@ -65,33 +65,9 @@ namespace paramore.brighter.commandprocessor
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public abstract class RequestHandlerAsync<TRequest> : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
     {
-
-        /// <summary>
-        /// The logger
-        /// </summary>
-        protected readonly ILog logger;
-
+        private static readonly ILog _logger = LogProvider.For<RequestHandlerAsync<TRequest>>();
 
         private IHandleRequestsAsync<TRequest> _successor;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandlerAsync{TRequest}"/> class.
-        /// </summary>
-        protected RequestHandlerAsync() 
-            : this(LogProvider.For<RequestHandlerAsync<TRequest>>())
-        { }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandlerAsync{TRequest}"/> class.
-        /// Generally you can should prefer the default constructor, and we will grab the logger from your log provider rather than take a direct dependency.
-        /// This can be helpful for testing.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        protected RequestHandlerAsync(ILog logger)
-        {
-            ContinueOnCapturedContext = false;
-            this.logger = logger;
-        }
 
         /// <summary>
         /// Gets or sets the context.
@@ -112,10 +88,7 @@ namespace paramore.brighter.commandprocessor
         /// Gets the name.
         /// </summary>
         /// <value>The name.</value>
-        public HandlerName Name
-        {
-            get { return new HandlerName(GetType().Name); }
-        }
+        public HandlerName Name => new HandlerName(GetType().Name);
 
         /// <summary>
         /// Sets the successor.
@@ -133,9 +106,7 @@ namespace paramore.brighter.commandprocessor
         public void AddToLifetime(IAmALifetime instanceScope)
         {
             instanceScope.Add(this);
-
-            if (_successor != null)
-                _successor.AddToLifetime(instanceScope);
+            _successor?.AddToLifetime(instanceScope);
         }
 
         /// <summary>
@@ -145,8 +116,7 @@ namespace paramore.brighter.commandprocessor
         public void DescribePath(IAmAPipelineTracer pathExplorer)
         {
             pathExplorer.AddToPath(Name);
-            if (_successor != null)
-                _successor.DescribePath(pathExplorer);
+            _successor?.DescribePath(pathExplorer);
         }
 
         /// <summary>
@@ -159,7 +129,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
+                _logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
                 return await _successor.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
             }
 
@@ -190,9 +160,10 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
+                _logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
                 return await _successor.FallbackAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
             }
+
             return command;
         }
 
@@ -203,13 +174,12 @@ namespace paramore.brighter.commandprocessor
         /// <param name="initializerList">The initializer list.</param>
         public virtual void InitializeFromAttributeParams(params object[] initializerList) { }
 
-
         internal MethodInfo FindHandlerMethod()
         {
             var methods = GetType().GetTypeInfo().GetMethods();
             return methods
-                .Where(method => method.Name == "HandleAsync")
-                .SingleOrDefault(method => method.GetParameters().Count() == 2 
+                .Where(method => method.Name == nameof(HandleAsync))
+                .SingleOrDefault(method => method.GetParameters().Length == 2 
                     && method.GetParameters()[0].ParameterType == typeof(TRequest)
                     && method.GetParameters()[1].ParameterType == typeof(CancellationToken?));
         }

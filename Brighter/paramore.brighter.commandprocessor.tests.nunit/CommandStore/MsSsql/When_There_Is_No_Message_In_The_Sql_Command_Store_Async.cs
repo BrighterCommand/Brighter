@@ -23,13 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Data.SqlClient;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.commandstore.mssql;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
@@ -47,16 +45,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
 
-            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration, new LogProvider.NoOpLogger());
+            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
         };
 
-        private Because _of = () => { s_storedCommand = AsyncContext.Run<MyCommand>(async () => await s_sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid())); };
+        private Because _of = () => s_storedCommand = AsyncContext.Run<MyCommand>(async () => await s_sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid()));
 
         private It _should_return_an_empty_command_on_a_missing_command = () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
 
-        private Cleanup _cleanup = () =>
-        {
-            _msSqlTestHelper.CleanUpDb();
-        };
+        private Cleanup _cleanup = () => _msSqlTestHelper.CleanUpDb();
     }
 }

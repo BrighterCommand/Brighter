@@ -23,11 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using Polly;
 
@@ -44,7 +42,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_myCommand.Value = "Hello World";
 
             s_MessageStore = new InMemoryMessageStore();
@@ -71,8 +68,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 (IAmAMessageStore<Message>)s_MessageStore,
-                (IAmAMessageProducer)s_fakeMessageProducer,
-                logger);
+                (IAmAMessageProducer)s_fakeMessageProducer);
         };
 
         private Because _of = () => s_commandProcessor.Post(s_myCommand);

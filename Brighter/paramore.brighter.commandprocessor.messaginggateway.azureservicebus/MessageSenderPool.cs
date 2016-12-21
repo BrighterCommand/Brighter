@@ -25,20 +25,16 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using Amqp;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.azureservicebus.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
 {
     public class MessageSenderPool : IDisposable
     {
-        private readonly ILog _logger;
+        private static readonly ILog _logger = LogProvider.For<MessageSenderPool>();
+
         private readonly ConcurrentDictionary<string, SenderLink> _senders = new ConcurrentDictionary<string, SenderLink>();
         private bool _closing;
-
-        public MessageSenderPool(ILog logger)
-        {
-            this._logger = logger;
-        }
 
         public SenderLink GetMessageSender(string topic)
         {

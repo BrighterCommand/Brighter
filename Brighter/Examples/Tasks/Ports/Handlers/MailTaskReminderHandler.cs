@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.logging.Attributes;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using Tasks.Adapters.MailGateway;
 using Tasks.Ports.Commands;
@@ -38,11 +37,6 @@ namespace Tasks.Ports.Handlers
         private readonly IAmACommandProcessor _commandProcessor;
 
         public MailTaskReminderHandler(IAmAMailGateway mailGateway, IAmACommandProcessor commandProcessor) 
-            : this(mailGateway, commandProcessor, LogProvider.For<MailTaskReminderHandler>())
-        {}
-
-        public MailTaskReminderHandler(IAmAMailGateway mailGateway, IAmACommandProcessor commandProcessor, ILog logger)
-            :base(logger)
         {
             _mailGateway = mailGateway;
             _commandProcessor = commandProcessor;

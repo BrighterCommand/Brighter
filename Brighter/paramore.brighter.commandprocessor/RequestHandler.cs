@@ -35,10 +35,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Linq;
 using System.Reflection;
 using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.policy.Attributes;
+using paramore.brighter.commandprocessor.policy.Handlers;
+using Polly.CircuitBreaker;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -58,32 +60,9 @@ namespace paramore.brighter.commandprocessor
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public abstract class RequestHandler<TRequest> : IHandleRequests<TRequest> where TRequest : class, IRequest
     {
-        private static Lazy<ILog> s_logger;
+        private static readonly ILog _logger = LogProvider.For<RequestHandler<TRequest>>();
+
         private IHandleRequests<TRequest> _successor;
-
-        /// <summary>
-        /// The logger
-        /// </summary>
-        protected ILog Logger { get { return s_logger.Value; }}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
-        /// </summary>
-        protected RequestHandler()
-        {
-            s_logger = new Lazy<ILog>(() => LogProvider.For<RequestHandler<TRequest>>());
-        }
-        
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
-        /// Generally you can should prefer the default constructor, and we will grab the logger from your log provider rather than take a direct dependency.
-        /// This can be helpful for testing.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        protected RequestHandler(ILog logger)
-        {
-            s_logger = new Lazy<ILog>(() => logger);
-        }
 
         /// <summary>
         /// Gets or sets the context.
@@ -95,10 +74,7 @@ namespace paramore.brighter.commandprocessor
         /// Gets the name.
         /// </summary>
         /// <value>The name.</value>
-        public HandlerName Name
-        {
-            get { return new HandlerName(GetType().Name); }
-        }
+        public HandlerName Name => new HandlerName(GetType().Name);
 
         /// <summary>
         /// Sets the successor.
@@ -116,9 +92,7 @@ namespace paramore.brighter.commandprocessor
         public void AddToLifetime(IAmALifetime instanceScope)
         {
             instanceScope.Add(this);
-
-            if (_successor != null)
-                _successor.AddToLifetime(instanceScope);
+            _successor?.AddToLifetime(instanceScope);
         }
 
         /// <summary>
@@ -128,8 +102,7 @@ namespace paramore.brighter.commandprocessor
         public void DescribePath(IAmAPipelineTracer pathExplorer)
         {
             pathExplorer.AddToPath(Name);
-            if (_successor != null)
-                _successor.DescribePath(pathExplorer);
+            _successor?.DescribePath(pathExplorer);
         }
 
         /// <summary>
@@ -141,7 +114,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                Logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
+                _logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
                 return _successor.Handle(command);
             }
 
@@ -160,7 +133,7 @@ namespace paramore.brighter.commandprocessor
         /// Note that a Fallback handler implementation should not catch exceptions in the <see cref="Fallback"/> chain to avoid an infinite loop.
         /// Call <see cref="Successor"/>.<see cref="Handle"/> if having provided a Fallback you want the chain to return to the 'happy' path. Excerise caution here though
         /// as you do not know who generated the exception that caused the fallback chain.
-        /// For this reason, the <see cref="FallbackPolicyHandler"/> puts the exception in the request context.
+        /// For this reason, the <see cref="FallbackPolicyHandler{TRequest}"/> puts the exception in the request context.
         /// When the <see cref="FallbackPolicyAttribute"/> is set on the <see cref="Handle"/> method of a derived class
         /// The <see cref="FallbackPolicyHandler{TRequest}"/> will catch either all failures (backstop) or <see cref="BrokenCircuitException"/> depending on configuration
         /// and call the <see cref="RequestHandler{TRequest}"/>'s <see cref="Fallback"/> method
@@ -171,9 +144,10 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                Logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
+                _logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
                 return _successor.Fallback(command);
             }
+
             return command;
         }
 
@@ -189,9 +163,8 @@ namespace paramore.brighter.commandprocessor
         {
             var methods = GetType().GetTypeInfo().GetMethods();
             return methods
-                .Where(method => method.Name == "Handle")
-                .SingleOrDefault(method => method.GetParameters().Count() == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest));
+                .Where(method => method.Name == nameof(Handle))
+                .SingleOrDefault(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest));
         }
-
     }
 }

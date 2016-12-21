@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
@@ -32,24 +31,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessageProducerFactory : IAmAMessageProducerFactory
     {
-        private readonly ILog _logger;
         private readonly RmqMessagingGatewayConnection  _connection;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
         /// </summary>
-        public RmqMessageProducerFactory(RmqMessagingGatewayConnection  configuration)
-            :this(configuration, LogProvider.For<RmqMessageProducerFactory>())
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
-        /// </summary>
         /// <param name="connection"></param>
-        /// <param name="logger">The logger.</param>
-        public RmqMessageProducerFactory(RmqMessagingGatewayConnection connection, ILog logger)
+        public RmqMessageProducerFactory(RmqMessagingGatewayConnection connection)
         {
-            _logger = logger;
             _connection = connection;
         }
 
@@ -59,7 +48,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAMessageProducer.</returns>
         public IAmAMessageProducer Create()
         {
-            return new RmqMessageProducer(_connection, _logger);
+            return new RmqMessageProducer(_connection);
         }
     }
 }

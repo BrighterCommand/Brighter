@@ -1,19 +1,19 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.serviceactivator.Logging;
 
 namespace paramore.brighter.serviceactivator
 {
     internal class MessagePumpAsync<TRequest> : MessagePumpBase<TRequest>, IAmAMessagePump where TRequest : class, IRequest
     {
         public MessagePumpAsync(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
-            : base(commandProcessor, messageMapper) {}
+            : base(commandProcessor, messageMapper)
+        {}
 
         protected override async Task DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
-            if (Logger != null) Logger.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            _logger.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
             if (messageHeader.MessageType == MessageType.MT_COMMAND && request is IEvent)
             {

@@ -26,14 +26,12 @@ using System;
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 {
-    
     [Category("RMQ")]
     public class When_a_message_consumer_throws_an_not_supported_exception_when_connecting: ContextSpecification
     {
@@ -45,23 +43,20 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 
         private Establish _context = () =>
         {
-            var logger = LogProvider.For<BrokerUnreachableRmqMessageConsumer>();
-
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
             s_sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
-            var rmqConnection = new RmqMessagingGatewayConnection()
+            var rmqConnection = new RmqMessagingGatewayConnection
             {
-                AmpqUri = new AmqpUriSpecification(uri: new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange")
             };
 
-
-            s_sender = new RmqMessageProducer(rmqConnection, logger);
-            s_receiver = new RmqMessageConsumer(rmqConnection, s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, 1, false, logger);
-            s_badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection, s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, 1, false, logger);
+            s_sender = new RmqMessageProducer(rmqConnection);
+            s_receiver = new RmqMessageConsumer(rmqConnection, s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, 1, false);
+            s_badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection, s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, 1, false);
 
             s_receiver.Purge();
             s_sender.Send(s_sentMessage);

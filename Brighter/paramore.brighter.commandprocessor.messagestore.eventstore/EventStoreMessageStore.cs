@@ -46,7 +46,7 @@ using System.Threading.Tasks;
 using EventStore.ClientAPI;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messagestore.eventstore.Logging;
 
 namespace paramore.brighter.commandprocessor.messagestore.eventstore
 {
@@ -55,26 +55,17 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
     /// </summary>
     public class EventStoreMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreAsync<Message>
     {
+        private static readonly ILog _logger = LogProvider.For<EventStoreMessageStore>();
+
         private readonly IEventStoreConnection _eventStore;
-        private readonly ILog _logger;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="EventStoreMessageStore" /> class.
         /// </summary>
         /// <param name="eventStore">The active connection to an Event Store instance.</param>
         public EventStoreMessageStore(IEventStoreConnection eventStore)
-            : this(eventStore, LogProvider.For<EventStoreMessageStore>()) {}
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="EventStoreMessageStore" /> class.
-        ///     Use this constructor if you need to inject the logger, for example for testing
-        /// </summary>
-        /// <param name="eventStore">The active connection to an Event Store instance.</param>
-        /// <param name="logger">The logger.</param>
-        public EventStoreMessageStore(IEventStoreConnection eventStore, ILog logger)
         {
             _eventStore = eventStore;
-            _logger = logger;
         }
 
         /// <summary>
@@ -84,10 +75,12 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         ///     The 'eventNumber' should be one greater than the last event in the stream.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="messageStoreTimeout">The messageStoreTimeout.</param>
         /// <returns>Task.</returns>
         public void Add(Message message, int messageStoreTimeout = -1)
         {
             _logger.DebugFormat("Adding message to Event Store Message Store: {0}", JsonConvert.SerializeObject(message));
+
             var headerBag = message.Header.Bag;
             var streamId = ExtractStreamIdFromHeader(headerBag, message.Id);
             var eventNumber = ExtractEventNumberFromHeader(headerBag, message.Id);
@@ -114,6 +107,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         ///     Gets the specified message by identifier. Currently not implemented.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
+        /// <param name="messageStoreTimeout">The messageStoreTimeout.</param>
         /// <returns>Task&lt;Message&gt;.</returns>
         public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
@@ -130,6 +124,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         public async Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken? ct = null)
         {
             _logger.DebugFormat("Adding message to Event Store Message Store: {0}", JsonConvert.SerializeObject(message));
+
             var headerBag = message.Header.Bag;
             var streamId = ExtractStreamIdFromHeader(headerBag, message.Id);
             var eventNumber = ExtractEventNumberFromHeader(headerBag, message.Id);
@@ -169,8 +164,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         /// <returns></returns>
         public IList<Message> Get(string stream, int fromEventNumber, int numberOfEvents)
         {
-            var eventStreamSlice =
-                _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, numberOfEvents, true).Result;
+            var eventStreamSlice = _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, numberOfEvents, true).Result;
             return eventStreamSlice.Events.Select(e => ConvertEventToMessage(e.Event, stream)).ToList();
         }
 
@@ -216,10 +210,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         {
             object version;
             if (!headerBag.TryGetValue("eventNumber", out version))
-                throw new FormatException(
-                    string.Format(
-                        "Message, with MessageId {0}, does not have an 'eventNumber' in the message header bag.",
-                        messageId));
+                throw new FormatException($"Message, with MessageId {messageId}, does not have an 'eventNumber' in the message header bag.");
             return int.Parse(version.ToString());
         }
 
@@ -227,14 +218,11 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         {
             object streamId;
             if (!headerBag.TryGetValue("streamId", out streamId))
-                throw new FormatException(
-                    string.Format("Message, with MessageId {0}, does not have a 'streamId' in the message header bag.",
-                        messageId));
+                throw new FormatException($"Message, with MessageId {messageId}, does not have a 'streamId' in the message header bag.");
             return (string) streamId;
         }
 
-        private static Dictionary<string, object> IdempotentlyRemoveEventStoreHeaderItems(
-            Dictionary<string, object> headerBag)
+        private static Dictionary<string, object> IdempotentlyRemoveEventStoreHeaderItems(Dictionary<string, object> headerBag)
         {
             var headerBagWithoutExtras = new Dictionary<string, object>(headerBag);
             headerBagWithoutExtras.Remove("streamId");

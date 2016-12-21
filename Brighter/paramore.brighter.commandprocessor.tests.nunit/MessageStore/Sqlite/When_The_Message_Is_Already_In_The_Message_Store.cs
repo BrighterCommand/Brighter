@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
@@ -39,24 +38,20 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
         private static Exception s_exception;
         private static Message s_messageEarliest;
 
-        private Cleanup _cleanup = () => CleanUpDb();
-
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
+            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
             _sSqlMessageStore.Add(s_messageEarliest);
         };
 
-        private Because _of = () => { s_exception = Catch.Exception(() => _sSqlMessageStore.Add(s_messageEarliest)); };
-        private It _should_ignore_the_duplcate_key_and_still_succeed = () => { s_exception.ShouldBeNull(); };
+        private Because _of = () => s_exception = Catch.Exception(() => _sSqlMessageStore.Add(s_messageEarliest));
 
-        private static void CleanUpDb()
-        {
-            _sqliteTestHelper.CleanUpDb();
-        }
+        private It _should_ignore_the_duplcate_key_and_still_succeed = () => s_exception.ShouldBeNull();
+
+        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
     }
 }

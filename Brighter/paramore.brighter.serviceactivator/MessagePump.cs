@@ -38,7 +38,7 @@ THE SOFTWARE. */
 using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.serviceactivator.Logging;
 
 namespace paramore.brighter.serviceactivator
 {
@@ -53,7 +53,7 @@ namespace paramore.brighter.serviceactivator
         {
             var tcs = new TaskCompletionSource<object>();
 
-            if (Logger != null) Logger.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            _logger.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
             if (messageHeader.MessageType == MessageType.MT_COMMAND && request is IEvent)
             {
@@ -83,5 +83,4 @@ namespace paramore.brighter.serviceactivator
             return tcs.Task;
         }
     }
-
 }

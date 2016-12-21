@@ -1,9 +1,7 @@
 using System;
 using System.Linq;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
@@ -17,8 +15,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         private Establish _context = () =>
         {
             s_released = string.Empty;
-            var logger = A.Fake<ILog>();
-
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
@@ -26,7 +22,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
             var handlerFactory = new CheapHandlerFactory();
 
-            s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
+            s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
             s_pipeline_Builder.Build(new RequestContext()).Any();
         };
 
@@ -34,18 +30,17 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         {
             public IHandleRequests Create(Type handlerType)
             {
-                var logger = A.Fake<ILog>();
                 if (handlerType == typeof(MyPreAndPostDecoratedHandler))
                 {
-                    return new MyPreAndPostDecoratedHandler(logger);
+                    return new MyPreAndPostDecoratedHandler();
                 }
                 if (handlerType == typeof(MyLoggingHandler<MyCommand>))
                 {
-                    return new MyLoggingHandler<MyCommand>(logger);
+                    return new MyLoggingHandler<MyCommand>();
                 }
                 if (handlerType == typeof(MyValidationHandler<MyCommand>))
                 {
-                    return new MyValidationHandler<MyCommand>(logger);
+                    return new MyValidationHandler<MyCommand>();
                 }
                 return null;
             }
@@ -53,8 +48,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             public void Release(IHandleRequests handler)
             {
                 var disposable = handler as IDisposable;
-                if (disposable != null)
-                    disposable.Dispose();
+                disposable?.Dispose();
 
                 s_released += "|" + handler.Name;
             }

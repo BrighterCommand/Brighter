@@ -16,7 +16,7 @@ using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.awssqs.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
 {
@@ -25,30 +25,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
     /// </summary>
     public class SqsMessageProducer : IAmAMessageProducer
     {
-        private readonly AWSCredentials _credentials;
+        private static readonly ILog _logger = LogProvider.For<SqsMessageProducer>();
 
-        /// <summary>
-        /// The _logger
-        /// </summary>
-        private readonly ILog _logger;
+        private readonly AWSCredentials _credentials;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>
         /// <param name="credentials">The credentials for the AWS account being used</param>
         public SqsMessageProducer(AWSCredentials credentials) 
-            : this(credentials, LogProvider.For<SqsMessageProducer>())
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
-        /// </summary>
-        /// <param name="credentials">The credentials for the AWS account being used</param>
-        /// <param name="logger">The logger.</param>
-        public SqsMessageProducer(AWSCredentials credentials, ILog logger)
         {
             _credentials = credentials;
-            _logger = logger;
         }
 
         /// <summary>

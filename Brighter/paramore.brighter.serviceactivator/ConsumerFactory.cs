@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.serviceactivator
 {
@@ -32,19 +31,12 @@ namespace paramore.brighter.serviceactivator
         private readonly IAmACommandProcessor _commandProcessor;
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
         private readonly Connection _connection;
-        private readonly ILog _logger;
 
-        public ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry,
-            Connection connection) 
-            : this(commandProcessor, messageMapperRegistry, connection, LogProvider.For<ConsumerFactory<TRequest>>()) 
-        {}
-
-        public ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, Connection connection, ILog logger)
+        public ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, Connection connection)
         {
             _commandProcessor = commandProcessor;
             _messageMapperRegistry = messageMapperRegistry;
             _connection = connection;
-            _logger = logger;
         }
 
         public Consumer Create()
@@ -57,11 +49,9 @@ namespace paramore.brighter.serviceactivator
                 RequeueCount = _connection.RequeueCount,
                 RequeueDelayInMilliseconds = _connection.RequeueDelayInMilliseconds,
                 UnacceptableMessageLimit = _connection.UnacceptableMessageLimit,
-                Logger = _logger
             };
 
-            var consumer = new Consumer(_connection.Name, channel, messagePump);
-            return consumer;
+            return new Consumer(_connection.Name, channel, messagePump);
         }
 
         public Consumer CreateAsync()
@@ -73,12 +63,10 @@ namespace paramore.brighter.serviceactivator
                 TimeoutInMilliseconds = _connection.TimeoutInMiliseconds,
                 RequeueCount = _connection.RequeueCount,
                 RequeueDelayInMilliseconds = _connection.RequeueDelayInMilliseconds,
-                UnacceptableMessageLimit = _connection.UnacceptableMessageLimit,
-                Logger = _logger
+                UnacceptableMessageLimit = _connection.UnacceptableMessageLimit
             };
 
-            var consumer = new Consumer(_connection.Name, channel, messagePump);
-            return consumer;
+            return new Consumer(_connection.Name, channel, messagePump);
         }
     }
 }

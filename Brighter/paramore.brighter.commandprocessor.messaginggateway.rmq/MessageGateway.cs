@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using Polly;
 using RabbitMQ.Client;
@@ -57,6 +57,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class MessageGateway : IDisposable
     {
+        private static readonly ILog _logger = LogProvider.For<MessageGateway>();
+
         private readonly ConnectionFactory _connectionFactory;
         private readonly ContextualPolicy _retryPolicy;
         private readonly Policy _circuitBreakerPolicy;
@@ -66,36 +68,19 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Use if you need to inject a test logger
         /// <param name="connection">The amqp uri and exchange to connect to</param>
         /// </summary>
-        protected MessageGateway(RmqMessagingGatewayConnection  connection) :
-            this(connection, LogProvider.For<MessageGateway>())
-        {}
-
-        /// <summary>
-        ///  Initializes a new instance of the <see cref="MessageGateway"/> class.
-        ///  Use if you need to inject a test logger
-        ///  </summary>
-        /// <param name="connection">The amqp uri and exchange to connect to</param>
-        /// <param name="logger">The logger.</param>
-        protected MessageGateway(RmqMessagingGatewayConnection connection, ILog logger)
+        protected MessageGateway(RmqMessagingGatewayConnection connection)
         {
-            Logger = logger;
             Connection = connection;
 
-            var connectionPolicyFactory = new ConnectionPolicyFactory(Connection, logger);
+            var connectionPolicyFactory = new ConnectionPolicyFactory(Connection);
 
             _retryPolicy = connectionPolicyFactory.RetryPolicy;
             _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicy;
 
             _connectionFactory = new ConnectionFactory { Uri = Connection.AmpqUri.Uri.ToString(), RequestedHeartbeat = 30 };
 
-            DelaySupported = (this is IAmAMessageGatewaySupportingDelay) && Connection.Exchange.SupportDelay;
-
+            DelaySupported = this is IAmAMessageGatewaySupportingDelay && Connection.Exchange.SupportDelay;
         }
-
-        /// <summary>
-        /// The logger
-        /// </summary>
-        protected readonly ILog Logger;
 
         /// <summary>
         /// The configuration
@@ -110,7 +95,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <summary>
         /// Gets if the current provider configuration is able to support delayed delivery of messages.
         /// </summary>
-        public bool DelaySupported { get; private set; }
+        public bool DelaySupported { get; }
 
         /// <summary>
         /// Connects the specified queue name.
@@ -138,7 +123,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             {
                 var connection = new MessageGatewayConnectionPool().GetConnection(_connectionFactory);
 
-                Logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Connection.AmpqUri.GetSanitizedUri());
+                _logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Connection.AmpqUri.GetSanitizedUri());
 
                 Channel = connection.CreateModel();
 
@@ -149,8 +134,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     connection.AutoClose = true;
                 }
 
-
-                Logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+                _logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
                 //desired state configuration of the exchange
                 Channel.DeclareExchangeForConnection(Connection);

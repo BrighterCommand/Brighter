@@ -28,7 +28,6 @@ using System.Collections.Generic;
 using System.Linq;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
@@ -43,13 +42,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
         private static Message s_messageLatest;
         private static IEnumerable<Message> s_retrievedMessages;
 
-        private Cleanup _cleanup = () => CleanUpDb();
+        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
 
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
+            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND),
                 new MessageBody("Body"));
@@ -68,7 +67,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
             _sSqlMessageStore.Add(s_messageLatest);
         };
 
-        private Because _of = () => { s_retrievedMessages = _sSqlMessageStore.Get(); };
+        private Because _of = () => s_retrievedMessages = _sSqlMessageStore.Get();
 
         private It _should_read_first_message_last_from_the__message_store =
             () => s_retrievedMessages.Last().Id.ShouldEqual(s_messageEarliest.Id);
@@ -77,10 +76,5 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
             () => s_retrievedMessages.First().Id.ShouldEqual(s_messageLatest.Id);
 
         private It _should_read_the_messages_from_the__message_store = () => s_retrievedMessages.Count().ShouldEqual(3);
-
-        private static void CleanUpDb()
-        {
-            _sqliteTestHelper.CleanUpDb();
-        }
     }
 }

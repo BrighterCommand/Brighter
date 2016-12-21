@@ -36,7 +36,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -48,33 +47,23 @@ namespace paramore.brighter.commandprocessor
     internal class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>
         where TRequest : class, IRequest
     {
+        private static readonly ILog _logger = LogProvider.For<PipelineBuilder<TRequest>>();
+
         private readonly IAmAHandlerFactory _handlerFactory;
-        private readonly ILog _logger;
         private readonly Interpreter<TRequest> _interpreter;
         private readonly IAmALifetime _instanceScope;
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
-        internal PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory) 
-            :this(registry, handlerFactory, LogProvider.For<PipelineBuilder<TRequest>>())
-        {}
-
-
-        internal PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory, ILog logger)
+        public PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory) 
         {
             _handlerFactory = handlerFactory;
-            _logger = logger;
-            _instanceScope = new LifetimeScope(handlerFactory, logger);
+            _instanceScope = new LifetimeScope(handlerFactory);
             _interpreter = new Interpreter<TRequest>(registry, handlerFactory);
         }
 
-        internal PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactoryAsync asyncHandlerFactory)
-            : this(registry, asyncHandlerFactory, LogProvider.For<PipelineBuilder<TRequest>>())
-        { }
-
-        public PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactoryAsync asyncHandlerFactory, ILog logger)
+        public PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactoryAsync asyncHandlerFactory)
         {
             _asyncHandlerFactory = asyncHandlerFactory;
-            _logger = logger;
             _instanceScope = new LifetimeScope(asyncHandlerFactory);
             _interpreter = new Interpreter<TRequest>(registry, asyncHandlerFactory);
         }
@@ -84,9 +73,9 @@ namespace paramore.brighter.commandprocessor
             var handlers = _interpreter.GetHandlers(typeof(TRequest));
 
             var pipelines = new Pipelines<TRequest>();
-            handlers.Each((handler) => pipelines.Add(BuildPipeline(handler, requestContext)));
+            handlers.Each(handler => pipelines.Add(BuildPipeline(handler, requestContext)));
 
-            pipelines.Each((handler) => handler.AddToLifetime(_instanceScope));
+            pipelines.Each(handler => handler.AddToLifetime(_instanceScope));
 
             return pipelines;
         }
@@ -122,7 +111,7 @@ namespace paramore.brighter.commandprocessor
         private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
         {
             IHandleRequests<TRequest> lastInPipeline = implicitHandler;
-            attributes.Each((attribute) =>
+            attributes.Each(attribute =>
             {
                 var handlerType = attribute.GetHandlerType();
                 if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))
@@ -142,7 +131,7 @@ namespace paramore.brighter.commandprocessor
 
         private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
         {
-            attributes.Each((attribute) =>
+            attributes.Each(attribute =>
             {
                 var handlerType = attribute.GetHandlerType();
                 if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))

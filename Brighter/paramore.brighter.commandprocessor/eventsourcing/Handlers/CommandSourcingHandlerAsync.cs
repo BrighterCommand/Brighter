@@ -53,6 +53,8 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
     /// <typeparam name="T"></typeparam>
     public class CommandSourcingHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
     {
+        private static readonly ILog _logger = LogProvider.For<CommandSourcingHandlerAsync<T>>();
+
         private readonly IAmACommandStoreAsync _commandStore;
 
         /// <summary>
@@ -60,16 +62,6 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
         /// </summary>
         /// <param name="commandStore">The store for commands that pass into the system</param>
         public CommandSourcingHandlerAsync(IAmACommandStoreAsync commandStore)
-            : this(commandStore, LogProvider.For<CommandSourcingHandlerAsync<T>>())
-        { }
-
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandSourcingHandlerAsync{T}" /> class.
-        /// </summary>
-        /// <param name="commandStore">The store for commands that pass into the system</param>
-        /// <param name="logger">The logger.</param>
-        public CommandSourcingHandlerAsync(IAmACommandStoreAsync commandStore, ILog logger) : base(logger)
         {
             _commandStore = commandStore;
         }
@@ -82,7 +74,7 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
         public override async Task<T> HandleAsync(T command, CancellationToken? ct = null)
         {
-            logger.DebugFormat("Writing command {0} to the Command Store", command.Id);
+            _logger.DebugFormat("Writing command {0} to the Command Store", command.Id);
 
             //TODO: We should not use an infinite timeout here - how to configure
             await _commandStore.AddAsync(command, -1, ct).ConfigureAwait(ContinueOnCapturedContext);

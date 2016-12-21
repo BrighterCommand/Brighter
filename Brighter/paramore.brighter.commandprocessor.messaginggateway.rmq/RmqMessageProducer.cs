@@ -38,7 +38,7 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
@@ -50,15 +50,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessageProducer : MessageGateway, IAmAMessageProducerSupportingDelay
     {
-        static readonly object _lock = new object();
+        private static readonly ILog _logger = LogProvider.For<RmqMessageProducer>();
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MessageGateway" /> class.
-        /// </summary>
-        /// <param name="connection">The connection information needed to talk to RMQ</param>
-        /// <param name="logger">The logger.</param>
-        // public RmqMessageProducer(ILog logger) : base(logger) { }
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection, ILog logger) : base(connection, logger) { }
+        static readonly object _lock = new object();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
@@ -87,12 +81,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             lock (_lock)
             {
-                Logger.DebugFormat("RmqMessageProducer: Preparing  to sending message via exchange {0}", Connection.Exchange.Name);
+                _logger.DebugFormat("RmqMessageProducer: Preparing  to sending message via exchange {0}", Connection.Exchange.Name);
                 EnsureChannel();
-                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name, Logger);
-                Logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and body: {4}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic, message.Id, message.Body.Value, delayMilliseconds);
+                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name);
+                _logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and body: {4}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic, message.Id, message.Body.Value, delayMilliseconds);
                 rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
-                Logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and message: {4} at {5}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds);
+                _logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and message: {4} at {5}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds);
             }
         }
     }

@@ -1,10 +1,8 @@
 ﻿using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -21,7 +19,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsyncWithContinuation>();
 
@@ -29,8 +26,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
                 subscriberRegistry,
                 new CheapHandlerFactoryAsync(), 
                 new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), 
-                logger);
+                new PolicyRegistry());
 
             s_channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
@@ -55,10 +51,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
         {
             public IHandleRequestsAsync Create(Type handlerType)
             {
-                var logger = A.Fake<ILog>();
                 if (handlerType == typeof(MyEventHandlerAsyncWithContinuation))
                 {
-                    return new MyEventHandlerAsyncWithContinuation(logger);
+                    return new MyEventHandlerAsyncWithContinuation();
                 }
                 return null;
             }
@@ -66,8 +61,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             public void Release(IHandleRequestsAsync handler)
             {
                 var disposable = handler as IDisposable;
-                if (disposable != null)
-                    disposable.Dispose();
+                disposable?.Dispose();
             }
         }
     }

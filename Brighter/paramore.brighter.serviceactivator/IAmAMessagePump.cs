@@ -37,7 +37,6 @@ THE SOFTWARE. */
 
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.serviceactivator
 {
@@ -54,20 +53,17 @@ namespace paramore.brighter.serviceactivator
         /// Runs the message loop
         /// </summary>
         Task Run();
+
         /// <summary>
         /// Gets or sets the timeout in milliseconds, that the pump waits for a message on the queue before it yields control for an interval, prior to resuming.
         /// </summary>
         /// <value>The timeout in milliseconds.</value>
         int TimeoutInMilliseconds { get; set; }
+
         /// <summary>
         /// Gets or sets the channel to read messages from.
         /// </summary>
         /// <value>The channel.</value>
         IAmAChannel Channel { get; set; }
-        /// <summary>
-        /// Gets or sets the logger.
-        /// </summary>
-        /// <value>The logger.</value>
-        ILog Logger { get; set; }
     }
 }

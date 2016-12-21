@@ -58,21 +58,6 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         private Policy _policy;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ExceptionPolicyHandler{TRequest}"/> class.
-        /// </summary>
-        public ExceptionPolicyHandler()
-            : this(LogProvider.For<ExceptionPolicyHandler<TRequest>>())
-        {}
-
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ExceptionPolicyHandler{TRequest}"/> class.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        public ExceptionPolicyHandler(ILog logger) : base(logger)
-        { }
-
-        /// <summary>
         /// Initializes from attribute parameters. This will get the <see cref="IAmAPolicyRegistry"/> from the <see cref="IRequestContext"/> and query it for the
         /// policy identified in <see cref="UsePolicyAttribute"/>
         /// </summary>

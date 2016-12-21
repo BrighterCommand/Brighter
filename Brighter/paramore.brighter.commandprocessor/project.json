@@ -53,8 +53,7 @@
         "define": [
           "DEBUG",
           "TRACE",
-          "LIBLOG_PORTABLE",
-          "LIBLOG_PUBLIC"
+          "LIBLOG_PORTABLE"
         ]
       }
     },
@@ -63,8 +62,7 @@
         "define": [
           "RELEASE",
           "TRACE",
-          "LIBLOG_PORTABLE",
-          "LIBLOG_PUBLIC"
+          "LIBLOG_PORTABLE"
         ],
         "optimize": true
       }

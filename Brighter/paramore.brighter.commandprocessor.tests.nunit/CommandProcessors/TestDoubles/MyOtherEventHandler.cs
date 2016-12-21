@@ -22,16 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
-
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
     internal class MyOtherEventHandler : RequestHandler<MyEvent>
     {
         private static MyEvent s_receivedEvent;
 
-        public MyOtherEventHandler(ILog logger) : base(logger)
+        public MyOtherEventHandler()
         {
             s_receivedEvent = null;
         }

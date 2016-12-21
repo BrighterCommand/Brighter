@@ -37,7 +37,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
 using RabbitMQ.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq

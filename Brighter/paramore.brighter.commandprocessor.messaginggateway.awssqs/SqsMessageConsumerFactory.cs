@@ -13,7 +13,6 @@
 // ***********************************************************************
 
 using Amazon.Runtime;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
 {
@@ -25,28 +24,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
         private readonly AWSCredentials _credentials;
 
         /// <summary>
-        /// The _logger
-        /// </summary>
-        private readonly ILog _logger;
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageConsumerFactory"/> class.
         /// </summary>
         public SqsMessageConsumerFactory(AWSCredentials credentials) 
-           : this(credentials, LogProvider.For<SqsMessageConsumerFactory>())
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SqsMessageConsumerFactory"/> class.
-        /// Use this if you need to inject the logger, for example for testing
-        /// </summary>
-        /// <param name="credentials">The AWS credentials to access the queues</param>
-        /// <param name="logger">The logger.</param>
-        public SqsMessageConsumerFactory(AWSCredentials credentials, ILog logger)
         {
             _credentials = credentials;
-            _logger = logger;
         }
 
         /// <summary>
@@ -60,7 +42,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create(string channelName, string routingKey, bool isDurable, ushort preFetchSize = 1, bool highAvailability = false)
         {
-            return new SqsMessageConsumer(_credentials, channelName, _logger);
+            return new SqsMessageConsumer(_credentials, channelName);
         }
     }
 }

@@ -50,7 +50,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 
         private Establish _context = () => 
         {
-            var logger = A.Fake<ILog>();
             s_controlBusSender = new SpyControlBusSender();
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyMonitoredHandlerThatThrows>();
@@ -59,11 +58,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyMonitoredHandlerThatThrows>();
             container.Register<IHandleRequests<MyCommand>, MonitorHandler<MyCommand>>();
-            container.Register<ILog>(logger);
+            container.Register<ILog>(A.Fake<ILog>());
             container.Register<IAmAControlBusSender>(s_controlBusSender);
             container.Register<MonitorConfiguration>(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
             s_command = new MyCommand();
 

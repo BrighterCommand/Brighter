@@ -42,8 +42,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
 
         private Establish context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             s_commandstore = new InMemoryCommandStore();
 
             var registry = new SubscriberRegistry();
@@ -53,11 +51,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyStoredCommandHandler>();
             container.Register<IAmACommandStore>(s_commandstore);
-            container.Register<ILog>(logger);
+            container.Register<ILog>(A.Fake<ILog>());
 
             s_command = new MyCommand {Value = "My Test String"};
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
         };
 

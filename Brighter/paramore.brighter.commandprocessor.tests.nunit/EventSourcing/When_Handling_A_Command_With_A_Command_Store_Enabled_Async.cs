@@ -19,8 +19,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
 
         private Establish context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             s_commandStore = new InMemoryCommandStore();
 
             var registry = new SubscriberRegistry();
@@ -30,12 +28,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandHandlerAsync>();
             container.Register<IAmACommandStoreAsync>(s_commandStore);
-            container.Register<ILog>(logger);
+            container.Register<ILog>(A.Fake<ILog>());
 
             s_command = new MyCommand {Value = "My Test String"};
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
-
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         };
 
         private Because of = () => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_command));

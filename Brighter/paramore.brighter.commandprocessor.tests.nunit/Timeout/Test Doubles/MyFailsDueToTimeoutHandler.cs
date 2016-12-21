@@ -26,7 +26,6 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -35,8 +34,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles
 {
     internal class MyFailsDueToTimeoutHandler : RequestHandler<MyCommand>
     {
-        public MyFailsDueToTimeoutHandler(ILog logger) : base(logger) { }
-
         [TimeoutPolicy(milliseconds: 300, step: 1, timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
@@ -73,7 +70,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles
             return base.Handle(command);
         }
     }
-
 
     public static class MyFailsDueToTimeoutHandlerStateTracker
     {

@@ -44,7 +44,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.commandstore.sqlite.Logging;
 
 namespace paramore.brighter.commandprocessor.commandstore.sqlite
 {
@@ -53,27 +53,18 @@ namespace paramore.brighter.commandprocessor.commandstore.sqlite
     /// </summary>
     public class SqliteCommandStore : IAmACommandStore, IAmACommandStoreAsync
     {
+        private static readonly ILog _logger = LogProvider.For<SqliteCommandStore>();
+
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
-        private readonly SqliteCommandStoreConfiguration _configuration;
-        private readonly ILog _log;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="SqliteCommandStore" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         public SqliteCommandStore(SqliteCommandStoreConfiguration configuration)
-            : this(configuration, LogProvider.For<SqliteCommandStore>()) {}
-        
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="SqliteCommandStore" /> class.
-        /// </summary>
-        /// <param name="configuration">The configuration.</param>
-        /// <param name="log">The log.</param>
-        public SqliteCommandStore(SqliteCommandStoreConfiguration configuration, ILog log)
         {
-            _configuration = configuration;
-            _log = log;
+            Configuration = configuration;
             ContinueOnCapturedContext = false;
         }
 
@@ -81,7 +72,7 @@ namespace paramore.brighter.commandprocessor.commandstore.sqlite
         {
             var parameters = InitAddDbParameters(command);
 
-            using (var connection = this.GetConnection())
+            using (var connection = GetConnection())
             {
                 connection.Open();
                 var sqlAdd = GetAddSql();
@@ -96,7 +87,7 @@ namespace paramore.brighter.commandprocessor.commandstore.sqlite
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqliteException))
                         {
-                            _log.WarnFormat(
+                            _logger.WarnFormat(
                                 "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
                                 command.Id);
                         }
@@ -126,7 +117,7 @@ namespace paramore.brighter.commandprocessor.commandstore.sqlite
         {
             var parameters = InitAddDbParameters(command);
 
-            using (var connection = this.GetConnection())
+            using (var connection = GetConnection())
             {
                 await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlAdd = GetAddSql();
@@ -142,13 +133,11 @@ namespace paramore.brighter.commandprocessor.commandstore.sqlite
                     catch (SqliteException sqliteException)
                     {
                         if (!IsExceptionUnqiueOrDuplicateIssue(sqliteException)) throw;
-                        _log.WarnFormat(
+                        _logger.WarnFormat(
                             "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
                             command.Id);
                     }
-
                 }
-
             }
         }
 
@@ -180,20 +169,9 @@ namespace paramore.brighter.commandprocessor.commandstore.sqlite
         /// </summary>
         public bool ContinueOnCapturedContext { get; set; }
 
-        public ILog Log
-        {
-            get { return _log; }
-        }
-        
-        public SqliteCommandStoreConfiguration Configuration
-        {
-            get { return _configuration; }
-        }
+        public SqliteCommandStoreConfiguration Configuration { get; }
 
-        public string MessageStoreTableName
-        {
-            get { return Configuration.MessageStoreTableName; }
-        }
+        public string MessageStoreTableName => Configuration.MessageStoreTableName;
 
         public DbParameter CreateSqlParameter(string parameterName, object value)
         {
@@ -202,7 +180,7 @@ namespace paramore.brighter.commandprocessor.commandstore.sqlite
 
         public DbConnection GetConnection()
         {
-            return new SqliteConnection(_configuration.ConnectionString);
+            return new SqliteConnection(Configuration.ConnectionString);
         }
         
         public T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, 

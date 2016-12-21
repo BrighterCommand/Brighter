@@ -25,12 +25,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
@@ -56,7 +54,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration, new LogProvider.NoOpLogger());
+            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
             s_messageEarliest =
                 new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT),
                     new MessageBody("message body"));
@@ -69,7 +67,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
             s_sqlMessageStore.Add(s_message2);
         };
 
-        private Because _of = () => { messages = s_sqlMessageStore.Get(1, 3); };
+        private Because _of = () => messages = s_sqlMessageStore.Get(1, 3);
+
         private It _should_fetch_1_message = () => { messages.Count().ShouldEqual(1); };
         private It _should_fetch_expected_message = () => { messages.First().Header.Topic.ShouldEqual(_TopicLastMessage); };
         private It _should_not_fetch_null_messages = () => { messages.ShouldNotBeNull(); };
@@ -78,6 +77,5 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
         {
             _msSqlTestHelper.CleanUpDb();
         }
-
     }
 }

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
@@ -10,8 +8,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
     {
         private static MyCommand s_command;
 
-        public MyObsoleteCommandHandlerAsync (ILog logger)
-            : base(logger)
+        public MyObsoleteCommandHandlerAsync()
         {
             s_command = null;
         }

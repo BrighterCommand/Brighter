@@ -28,7 +28,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.azureservicebus.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
 {
@@ -39,15 +39,14 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
     /// </summary>
     public class MessageGateway : IDisposable
     {
-        private readonly ILog _logger;
+        private static readonly ILog _logger = LogProvider.For<MessageGateway>();
+
         private readonly AzureServiceBusMessagingGatewayConfiguration _configuration;
         private readonly HttpClient _client = new HttpClient();
 
-        public MessageGateway(AzureServiceBusMessagingGatewayConfiguration configuration, ILog logger)
+        public MessageGateway(AzureServiceBusMessagingGatewayConfiguration configuration)
         {
             _configuration = configuration;
-            _logger = logger;
-
             _client.BaseAddress = _configuration.Namespace.BaseAddress;
         }
 

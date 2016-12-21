@@ -22,19 +22,19 @@ THE SOFTWARE. */
 #endregion
 
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.azureservicebus.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
 {
     public class AzureServiceBusMessageProducer : MessageGateway, IAmAMessageProducerSupportingDelay
     {
-        private readonly ILog _logger;
+        private static readonly ILog _logger = LogProvider.For<AzureServiceBusMessageProducer>();
+
         private readonly MessageSenderPool _pool;
 
-        public AzureServiceBusMessageProducer(AzureServiceBusMessagingGatewayConfiguration configuration, ILog logger)
-            : base(configuration, logger)
+        public AzureServiceBusMessageProducer(AzureServiceBusMessagingGatewayConfiguration configuration)
+            : base(configuration)
         {
-            this._logger = logger;
         }
 
         public void Send(Message message)

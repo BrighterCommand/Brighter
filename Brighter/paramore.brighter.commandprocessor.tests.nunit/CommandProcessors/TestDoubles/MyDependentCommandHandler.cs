@@ -22,9 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
-
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
     internal class MyDependentCommandHandler : RequestHandler<MyCommand>
@@ -32,7 +29,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
         private readonly IRepository<MyAggregate> _repository;
         private static MyCommand s_command;
 
-        public MyDependentCommandHandler(IRepository<MyAggregate> repository, ILog logger) : base(logger)
+        public MyDependentCommandHandler(IRepository<MyAggregate> repository)
         {
             _repository = repository;
             s_command = null;

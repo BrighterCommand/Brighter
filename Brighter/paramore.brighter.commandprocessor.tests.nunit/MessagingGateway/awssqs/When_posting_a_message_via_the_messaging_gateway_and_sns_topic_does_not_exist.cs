@@ -4,13 +4,10 @@ using Amazon.SimpleNotificationService.Model;
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
-    
     [Category("AWS")]
     public class When_posting_a_message_via_the_messaging_gateway_and_sns_topic_does_not_exist : ContextSpecification
     {
@@ -21,11 +18,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
         private Establish context = () =>
         {
             _queueListener = new TestAWSQueueListener(new AnonymousAWSCredentials());
-            var logger = LogProvider.For<RmqMessageConsumer>();
             _message = new Message(header: new MessageHeader(Guid.NewGuid(), "AnotherTestSqsTopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
             var credentials = new AnonymousAWSCredentials();
-            _messageProducer = new SqsMessageProducer(credentials, logger);
+            _messageProducer = new SqsMessageProducer(credentials);
         };
 
         private Because of = () =>

@@ -27,7 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using paramore.brighter.commandprocessor.extensions;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -35,17 +35,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     internal class RmqMessageCreator
     {
-        private readonly ILog _logger;
-
-        public RmqMessageCreator()
-            : this(LogProvider.For<RmqMessageCreator>())
-        {}
-
-
-        public RmqMessageCreator(ILog logger)
-        {
-            _logger = logger;
-        }
+        private static readonly ILog _logger = LogProvider.For<RmqMessageCreator>();
 
         private HeaderResult<string> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
         {

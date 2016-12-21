@@ -23,11 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -45,7 +43,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyEvent, MyEventHandler>();
 
@@ -53,8 +50,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
                 subscriberRegistry,
                 new CheapHandlerFactory(), 
                 new InMemoryRequestContextFactory(), 
-                new PolicyRegistry(), 
-                logger);
+                new PolicyRegistry());
 
             s_channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
@@ -76,10 +72,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
         {
             public IHandleRequests Create(Type handlerType)
             {
-                var logger = A.Fake<ILog>();
                 if (handlerType == typeof(MyEventHandler))
                 {
-                    return new MyEventHandler(logger);
+                    return new MyEventHandler();
                 }
                 return null;
             }
@@ -87,8 +82,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             public void Release(IHandleRequests handler)
             {
                 var disposable = handler as IDisposable;
-                if (disposable != null)
-                    disposable.Dispose();
+                disposable?.Dispose();
             }
         }
     }

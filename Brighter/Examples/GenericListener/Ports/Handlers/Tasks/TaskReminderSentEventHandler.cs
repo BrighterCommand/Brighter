@@ -1,12 +1,14 @@
 ﻿using GenericListener.Ports.Indexers;
+using log4net;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using Tasks.Ports.Events;
 
 namespace GenericListener.Ports.Handlers.Tasks
 {
     public class TaskReminderSentEventHandler : RequestHandler<TaskReminderSentEvent>
     {
+        private static readonly ILog _logger = LogManager.GetLogger(typeof(TaskReminderSentEventHandler));
+
         private readonly ITaskReminderSentEventIndexer _indexer;
 
         public TaskReminderSentEventHandler(ITaskReminderSentEventIndexer indexer)
@@ -16,7 +18,7 @@ namespace GenericListener.Ports.Handlers.Tasks
 
         public override TaskReminderSentEvent Handle(TaskReminderSentEvent command)
         {
-            Logger.InfoFormat("Received TaskReminderSentEvent {0}", command.Id);
+            _logger.InfoFormat("Received TaskReminderSentEvent {0}", command.Id);
 
             _indexer.Index(command);
 

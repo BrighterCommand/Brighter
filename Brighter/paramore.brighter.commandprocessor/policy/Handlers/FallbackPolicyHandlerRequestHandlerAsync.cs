@@ -41,20 +41,6 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         private Func<TRequest, CancellationToken?, Task<TRequest>> _exceptionHandlerFunc;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
-        /// </summary>
-        public FallbackPolicyHandlerRequestHandlerAsync() 
-            : this(LogProvider.For<FallbackPolicyHandlerRequestHandlerAsync<TRequest>>()) 
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
-        /// Use this if you need to inject a logger, for testing
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        public FallbackPolicyHandlerRequestHandlerAsync(ILog logger) : base(logger) {}
-
-        /// <summary>
         /// Initializes from attribute parameters.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>

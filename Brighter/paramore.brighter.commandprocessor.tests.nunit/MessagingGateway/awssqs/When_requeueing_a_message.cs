@@ -3,9 +3,7 @@ using Amazon.Runtime;
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
@@ -24,16 +22,14 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 
         private Establish context = () =>
         {
-            var logger = LogProvider.For<RmqMessageConsumer>();
-
             var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
             sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
             var credentials = new AnonymousAWSCredentials();
-            sender = new SqsMessageProducer(credentials,logger);
-            receiver = new SqsMessageConsumer(credentials, queueUrl, logger);
+            sender = new SqsMessageProducer(credentials);
+            receiver = new SqsMessageConsumer(credentials, queueUrl);
             testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
         };
 
@@ -53,6 +49,5 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
         };
 
         Cleanup the_queue = () => testQueueListener.DeleteMessage(requeuedMessage.Header.Bag["ReceiptHandle"].ToString());
-
     }
 }

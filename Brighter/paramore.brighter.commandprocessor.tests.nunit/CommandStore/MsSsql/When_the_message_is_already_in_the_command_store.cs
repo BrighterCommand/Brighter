@@ -23,12 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Data.SqlClient;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.commandstore.mssql;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
@@ -46,18 +44,15 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
 
-            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration, new LogProvider.NoOpLogger());
-            s_raisedCommand = new MyCommand() { Value = "Test" };
+            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
+            s_raisedCommand = new MyCommand { Value = "Test" };
             s_sqlCommandStore.Add<MyCommand>(s_raisedCommand);
         };
 
-        private Because _of = () => { s_exception = Catch.Exception(() => s_sqlCommandStore.Add(s_raisedCommand)); };
+        private Because _of = () => s_exception = Catch.Exception(() => s_sqlCommandStore.Add(s_raisedCommand));
 
         private It _should_succeed_even_if_the_message_is_a_duplicate = () => s_exception.ShouldBeNull();
 
-        private Cleanup _cleanup = () =>
-        {
-            _msSqlTestHelper.CleanUpDb();
-        };
+        private Cleanup _cleanup = () => _msSqlTestHelper.CleanUpDb();
     }
 }

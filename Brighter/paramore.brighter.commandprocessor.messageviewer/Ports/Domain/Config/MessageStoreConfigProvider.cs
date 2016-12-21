@@ -35,7 +35,6 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config
@@ -43,8 +42,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config
     public class MessageStoreConfigProvider : IMessageStoreConfigProvider
     {
         private readonly MessageViewerConfiguration _config;
-        private List<MessageStoreConfig> _stores=null;
-        private readonly ILog _logger = LogProvider.GetLogger("MessageStoreConfigProvider");
+        private List<MessageStoreConfig> _stores;
 
         public MessageStoreConfigProvider(MessageViewerConfiguration config)
         {
@@ -62,8 +60,6 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config
 
         private void LoadStores()
         {
-            _logger.Log(LogLevel.Debug, () => "Initialising MessageStoreConfigProvider. Checking config sections");
-
             _stores = new List<MessageStoreConfig>();
 //            var configSection = MessageViewerConfiguration.Create();
             foreach (object store in _config.Stores)

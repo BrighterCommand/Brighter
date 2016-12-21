@@ -41,8 +41,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
             registry.Register<MyEvent, MyOtherEventHandler>();
@@ -53,9 +51,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequests<MyEvent>, MyEventHandler>("MyEventHandler");
             container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("MyOtherHandler");
             container.Register<IHandleRequests<MyEvent>, MyThrowingEventHandler>("MyThrowingHandler");
-            container.Register<ILog>(logger);
+            container.Register<ILog>(A.Fake<ILog>());
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         };
 
         private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Publish(s_myEvent));

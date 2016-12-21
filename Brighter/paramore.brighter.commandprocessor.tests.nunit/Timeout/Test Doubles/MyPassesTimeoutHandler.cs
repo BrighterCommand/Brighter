@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -33,9 +32,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles
 {
     internal class MyPassesTimeoutHandler : RequestHandler<MyCommand>
     {
-        public MyPassesTimeoutHandler(ILog logger) : base(logger)
-        { }
-
         public static bool Commandreceived { get; set; }
 
         [TimeoutPolicy(milliseconds: 10000, step: 0, timing: HandlerTiming.Before)]

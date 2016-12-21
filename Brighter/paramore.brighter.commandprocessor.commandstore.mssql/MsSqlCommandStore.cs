@@ -44,7 +44,7 @@ using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.commandstore.mssql.Logging;
 
 namespace paramore.brighter.commandprocessor.commandstore.mssql
 {
@@ -53,27 +53,19 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
     /// </summary>
     public class MsSqlCommandStore : IAmACommandStore, IAmACommandStoreAsync
     {
+        private static readonly ILog _logger = LogProvider.For<MsSqlCommandStore>();
+
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
         private readonly MsSqlCommandStoreConfiguration _configuration;
-        private readonly ILog _log;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlCommandStore" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         public MsSqlCommandStore(MsSqlCommandStoreConfiguration configuration)
-            : this(configuration, LogProvider.For<MsSqlCommandStore>()) {}
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="MsSqlCommandStore" /> class.
-        /// </summary>
-        /// <param name="configuration">The configuration.</param>
-        /// <param name="log">The log.</param>
-        public MsSqlCommandStore(MsSqlCommandStoreConfiguration configuration, ILog log)
         {
             _configuration = configuration;
-            _log = log;
             ContinueOnCapturedContext = false;
         }
 
@@ -100,7 +92,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 {
                     if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
-                        _log.WarnFormat(
+                        _logger.WarnFormat(
                             "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
                             command.Id);
                         return;
@@ -158,7 +150,7 @@ namespace paramore.brighter.commandprocessor.commandstore.mssql
                 {
                     if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
-                        _log.WarnFormat(
+                        _logger.WarnFormat(
                             "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
                             command.Id);
                         return;

@@ -37,20 +37,6 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
 
         private Func<TRequest, TRequest> _exceptionHandlerFunc;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
-        /// </summary>
-        public FallbackPolicyHandler() 
-            : this(LogProvider.For<FallbackPolicyHandler<TRequest>>()) 
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
-        /// Use this if you need to inject a logger, for testing
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        public FallbackPolicyHandler(ILog logger) : base(logger) {}
-
         #region Overrides of RequestHandler<TRequest>
 
         /// <summary>

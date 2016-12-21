@@ -32,24 +32,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
-        private readonly ILog _logger;
         private readonly RmqMessagingGatewayConnection _connection;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
         /// </summary>
         public RmqMessageConsumerFactory(RmqMessagingGatewayConnection  connection)
-            :this(connection, LogProvider.For<RmqMessageConsumerFactory>())
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class, with a test logger.
-        /// </summary>
-        /// <param name="connection"></param>
-        /// <param name="logger">The logger.</param>
-        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection connection, ILog logger)
         {
-            _logger = logger;
             _connection = connection;
         }
 
@@ -64,7 +53,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create(string queueName, string routingKey, bool isDurable, ushort preFetchSize = 1, bool highAvailability = false)
         {
-            return new RmqMessageConsumer(_connection, queueName, routingKey, isDurable, preFetchSize, highAvailability, _logger);
+            return new RmqMessageConsumer(_connection, queueName, routingKey, isDurable, preFetchSize, highAvailability);
         }
     }
 }

@@ -27,13 +27,11 @@ using System.Collections.Generic;
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 {
-    
     [Category("RMQ")]
     public class When_posting_a_message_via_a_named_messaging_gateway : ContextSpecification
     {
@@ -50,14 +48,12 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
-                AmpqUri = new AmqpUriSpecification(uri: new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange")
             };
 
             s_messageProducer = new RmqMessageProducer(rmqConnection);
-
-            var logger = LogProvider.For<RmqMessageConsumer>();
-            s_messageConsumer = new RmqMessageConsumer(rmqConnection, s_message.Header.Topic, s_message.Header.Topic, false, 1, false, logger);
+            s_messageConsumer = new RmqMessageConsumer(rmqConnection, s_message.Header.Topic, s_message.Header.Topic, false, 1, false);
             s_messageConsumer.Purge();
 
             s_client = new TestRMQListener(rmqConnection, s_message.Header.Topic);

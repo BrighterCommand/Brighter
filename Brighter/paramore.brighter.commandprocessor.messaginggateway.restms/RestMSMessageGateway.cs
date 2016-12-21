@@ -39,7 +39,7 @@ using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Parsers;
 using Thinktecture.IdentityModel.Hawk.Client;
@@ -53,13 +53,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMSMessageGateway
     {
+        private static readonly ILog _logger = LogProvider.For<RestMSMessageGateway>();
+
         private ThreadLocal<HttpClient> _client;
         private readonly double _timeout;
 
-        /// <summary>
-        /// The logger
-        /// </summary>
-        public readonly ILog Logger;
         /// <summary>
         /// The configuration
         /// </summary>
@@ -70,19 +68,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="configuration">The configuration to use with RestMS.</param>
         /// </summary>
         public RestMSMessageGateway(RestMSMessagingGatewayConfiguration configuration) 
-            :this(configuration, LogProvider.For<RestMSMessageGateway>())
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="T:System.Object" /> class.
-        /// Use this if you need to provide the logger, for example for testing
-        /// </summary>
-        /// <param name="configuration">The configuration to use with RestMS.</param>
-        /// <param name="logger">The logger.</param>
-        public RestMSMessageGateway(RestMSMessagingGatewayConfiguration configuration, ILog logger)
         {
             Configuration = configuration; 
-            Logger = logger;
             _timeout = Configuration.RestMS.Timeout;
         }
 
@@ -131,7 +118,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             if (!XmlResultParser.TryParse(entityBody, out domainObject))
             {
                 var errorString = string.Format("Could not parse entity body as a domain => {0}", entityBody);
-                Logger.ErrorFormat(errorString);
+                _logger.ErrorFormat(errorString);
                 throw new ResultParserException(errorString);
             }
             return domainObject;
@@ -157,7 +144,6 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             };
             return options;
         }
-
 
         private HttpClient CreateClient(ClientOptions options, double timeout)
         {

@@ -1,7 +1,6 @@
 using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
@@ -16,8 +15,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyContextAwareCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyContextAwareCommandHandler>(() => new MyContextAwareCommandHandler());
@@ -28,11 +25,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             var requestContextFactory = A.Fake<IAmARequestContextFactory>();
             A.CallTo(() => requestContextFactory.Create()).Returns(s_request_context);
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, requestContextFactory, new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, requestContextFactory, new PolicyRegistry());
 
             s_request_context.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
         };
-
 
         private Because _of = () => s_commandProcessor.Send(s_myCommand);
 

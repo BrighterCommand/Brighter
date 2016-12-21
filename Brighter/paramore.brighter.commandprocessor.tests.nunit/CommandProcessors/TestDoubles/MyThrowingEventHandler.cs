@@ -23,8 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
@@ -33,7 +31,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
         private static MyEvent s_receivedEvent;
 
 
-        public MyThrowingEventHandler(ILog logger) : base(logger)
+        public MyThrowingEventHandler()
         {
             s_receivedEvent = null;
         }

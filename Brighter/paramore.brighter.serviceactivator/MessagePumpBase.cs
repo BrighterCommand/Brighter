@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.actions;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.serviceactivator.Logging;
 
 namespace paramore.brighter.serviceactivator
 {
@@ -16,12 +16,14 @@ namespace paramore.brighter.serviceactivator
     // Retry and circuit breaker should be provided by exception policy using an attribute on the handler
     // Timeout on the handler should be provided by timeout policy using an attribute on the handler
     internal abstract class MessagePumpBase<TRequest> where TRequest : class, IRequest
-    {     
+    {
+        protected static readonly ILog _logger = LogProvider.For<MessagePumpBase<TRequest>>();
         protected IAmACommandProcessor _commandProcessor;
-        private IAmAMessageMapper<TRequest> _messageMapper;
+
+        private readonly IAmAMessageMapper<TRequest> _messageMapper;
         private int _unacceptableMessageCount = 0;
 
-        public MessagePumpBase(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
+        protected MessagePumpBase(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
         {
             _commandProcessor = commandProcessor;
             _messageMapper = messageMapper;
@@ -37,8 +39,6 @@ namespace paramore.brighter.serviceactivator
 
         public IAmAChannel Channel { get; set; }
 
-        public ILog Logger { get; set; }
-
         public async Task Run()
         {
             do
@@ -48,8 +48,8 @@ namespace paramore.brighter.serviceactivator
                     Channel.Dispose();
                     break;
                 }
-                
-                if (Logger != null) Logger.DebugFormat("MessagePump: Receiving messages from channel {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
+
+                _logger.DebugFormat("MessagePump: Receiving messages from channel {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
                 Message message = null;
                 try
@@ -58,12 +58,12 @@ namespace paramore.brighter.serviceactivator
                 }
                 catch (ChannelFailureException)
                 {
-                    if (Logger != null) Logger.WarnFormat("MessagePump: ChannelFailureException messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.WarnFormat("MessagePump: ChannelFailureException messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
                     continue;
                 }
                 catch (Exception exception)
                 {
-                    if (Logger != null) Logger.ErrorException("MessagePump: Exception receiving messages from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.ErrorException("MessagePump: Exception receiving messages from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
                 }
 
                 if (message == null)
@@ -82,7 +82,7 @@ namespace paramore.brighter.serviceactivator
                 // failed to parse a message from the incoming data
                 if (message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
                 {
-                    if (Logger != null) Logger.WarnFormat("MessagePump: Failed to parse a message from the incoming message with id {1} from {2} on thread # {0}", Thread.CurrentThread.ManagedThreadId, message.Id, Channel.Name);
+                    _logger.WarnFormat("MessagePump: Failed to parse a message from the incoming message with id {1} from {2} on thread # {0}", Thread.CurrentThread.ManagedThreadId, message.Id, Channel.Name);
 
                     IncrementUnacceptableMessageLimit();
                     AcknowledgeMessage(message);
@@ -93,7 +93,7 @@ namespace paramore.brighter.serviceactivator
                 // QUIT command
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                 {
-                    if (Logger != null) Logger.DebugFormat("MessagePump: Quit receiving messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.DebugFormat("MessagePump: Quit receiving messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
                     Channel.Dispose();
                     break;
                 }
@@ -106,7 +106,7 @@ namespace paramore.brighter.serviceactivator
                 }
                 catch (ConfigurationException configurationException)
                 {
-                    if (Logger != null) Logger.DebugException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", configurationException, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.DebugException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", configurationException, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
                     RejectMessage(message);
                     Channel.Dispose();
@@ -136,26 +136,26 @@ namespace paramore.brighter.serviceactivator
                 }
                 catch (MessageMappingException messageMappingException)
                 {
-                    if (Logger != null) Logger.WarnException("MessagePump: Failed to map the message from {1} on thread # {0}", messageMappingException, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.WarnException("MessagePump: Failed to map the message from {1} on thread # {0}", messageMappingException, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
                     IncrementUnacceptableMessageLimit();
                 }
                 catch (Exception e)
                 {
-                    if (Logger != null) Logger.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", e, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", e, Thread.CurrentThread.ManagedThreadId, Channel.Name);
                 }
 
                 AcknowledgeMessage(message);
 
             } while (true);
 
-            if (Logger != null) Logger.DebugFormat("MessagePump: Finished running message loop, no longer receiving messages from {0} on thread # {1}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
+            _logger.DebugFormat("MessagePump: Finished running message loop, no longer receiving messages from {0} on thread # {1}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
         }
 
 
         protected void AcknowledgeMessage(Message message)
         {
-            if (Logger != null) Logger.DebugFormat("MessagePump: Acknowledge message {0} read from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            _logger.DebugFormat("MessagePump: Acknowledge message {0} read from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
             Channel.Acknowledge(message);
         }
@@ -177,16 +177,15 @@ namespace paramore.brighter.serviceactivator
 
                 if (exception is ConfigurationException)
                 {
-                    if (Logger != null) Logger.DebugException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.DebugException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
                     stop = true;
                     break;
                 }
 
-                if (Logger != null) Logger.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                _logger.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
             }
 
             return new Tuple<bool, bool>(stop, requeue);
-  
         }
 
         protected void IncrementUnacceptableMessageLimit()
@@ -196,7 +195,7 @@ namespace paramore.brighter.serviceactivator
 
         protected void RejectMessage(Message message)
         {
-            if (Logger != null) Logger.DebugFormat("MessagePump: Rejecting message {0} from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            _logger.DebugFormat("MessagePump: Rejecting message {0} from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
             Channel.Reject(message);
         }
@@ -211,23 +210,22 @@ namespace paramore.brighter.serviceactivator
                 {
                     var originalMessageId = message.Header.Bag.ContainsKey(Message.OriginalMessageIdHeaderName) ? message.Header.Bag[Message.OriginalMessageIdHeaderName].ToString() : null;
 
-                    if (Logger != null) 
-                        Logger.ErrorFormat(
-                            "MessagePump: Have tried {2} times to handle this message {0}{4} from {3} on thread # {1}, dropping message.{5}Message Body:{6}", 
-                            message.Id, 
-                            Thread.CurrentThread.ManagedThreadId, 
-                            RequeueCount, 
-                            Channel.Name,
-                            string.IsNullOrEmpty(originalMessageId) ? string.Empty : string.Format(" (original message id {0})", originalMessageId),
-                            Environment.NewLine,
-                            message.Body.Value);
+                    _logger.ErrorFormat(
+                        "MessagePump: Have tried {2} times to handle this message {0}{4} from {3} on thread # {1}, dropping message.{5}Message Body:{6}", 
+                        message.Id, 
+                        Thread.CurrentThread.ManagedThreadId, 
+                        RequeueCount, 
+                        Channel.Name,
+                        string.IsNullOrEmpty(originalMessageId) ? string.Empty : string.Format(" (original message id {0})", originalMessageId),
+                        Environment.NewLine,
+                        message.Body.Value);
 
                     AcknowledgeMessage(message);
                     return;
                 }
             }
 
-            if (Logger != null) Logger.DebugFormat("MessagePump: Re-queueing message {0} from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            _logger.DebugFormat("MessagePump: Re-queueing message {0} from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
             Channel.Requeue(message, RequeueDelayInMilliseconds);
         }
@@ -239,7 +237,7 @@ namespace paramore.brighter.serviceactivator
                 throw new ConfigurationException(string.Format("No message mapper found for type {0} for message {1}.", typeof(TRequest).FullName, message.Id));
             }
 
-            if (Logger != null) Logger.DebugFormat("MessagePump: Translate message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId);
+            _logger.DebugFormat("MessagePump: Translate message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId);
 
             TRequest request;
 
@@ -261,14 +259,12 @@ namespace paramore.brighter.serviceactivator
 
             if (_unacceptableMessageCount >= UnacceptableMessageLimit)
             {
-                if (Logger != null)
-                {
-                    Logger.ErrorFormat(
-                        "MessagePump: Unacceptable message limit of {2} reached, stopping reading messages from {0} on thread # {1}",
-                        Channel.Name,
-                        Thread.CurrentThread.ManagedThreadId,
-                        UnacceptableMessageLimit);
-                }
+                _logger.ErrorFormat(
+                    "MessagePump: Unacceptable message limit of {2} reached, stopping reading messages from {0} on thread # {1}",
+                    Channel.Name,
+                    Thread.CurrentThread.ManagedThreadId,
+                    UnacceptableMessageLimit);
+                
                 return true;
             }
             return false;
