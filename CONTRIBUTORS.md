@@ -65,6 +65,8 @@ Paramore contributors (sorted alphabeticaly)
 
 **[Daniel Stockhammer](https://github.com/dstockhammer?tab=activity)** 
   * Various fixes
+  * Clean up the ILog constructor
+  * Clean up the CancellationToken
 
 **[Richard Tappenden](https://github.com/tapmantwo)**
   * Various fixes
