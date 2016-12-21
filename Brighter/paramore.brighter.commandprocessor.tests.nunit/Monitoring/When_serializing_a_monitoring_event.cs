@@ -52,9 +52,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 
             s_originalRequestAsJson = JsonConvert.SerializeObject(new MyCommand());
             _elapsedMilliseconds = 34;
-            var @event = new MonitorEvent(InstanceName, MonitorEventType.EnterHandler, HandlerName, HandlerFullAssemblyName, s_originalRequestAsJson, Clock.Now().Value, _elapsedMilliseconds);
+            var @event = new MonitorEvent(InstanceName, MonitorEventType.EnterHandler, HandlerName, HandlerFullAssemblyName, s_originalRequestAsJson, Clock.Now(), _elapsedMilliseconds);
             s_message = s_monitorEventMessageMapper.MapToMessage(@event);
-
         };
 
         private Because of = () => s_monitorEvent = s_monitorEventMessageMapper.MapToRequest(s_message);

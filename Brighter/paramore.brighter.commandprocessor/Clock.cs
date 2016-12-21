@@ -2,22 +2,20 @@
 
 namespace paramore.brighter.commandprocessor
 {
-    public class Clock
+    internal static class Clock
     {
         public static DateTime? OverrideTime { get; set; }
 
-        public static DateTime? Now()
+        public static DateTime Now()
         {
             if (OverrideTime.HasValue)
             {
                 var overrideTime = OverrideTime;
                 OverrideTime = OverrideTime.Value.AddMilliseconds(50);
-                return overrideTime;
+                return overrideTime.Value;
             }
-            else
-            {
-                return DateTime.UtcNow;
-            }
+
+            return DateTime.UtcNow;
         }
 
         public static void Clear()

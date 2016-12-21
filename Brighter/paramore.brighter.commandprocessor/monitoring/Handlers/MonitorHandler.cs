@@ -74,7 +74,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         {
             if (_isMonitoringEnabled)
             {
-                var timeBeforeHandle = Clock.Now().GetValueOrDefault();
+                var timeBeforeHandle = Clock.Now();
                 try
                 {
                     _controlBusSender.Post(
@@ -89,7 +89,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
 
                     base.Handle(command);
 
-                    var timeAfterHandle = Clock.Now().GetValueOrDefault();
+                    var timeAfterHandle = Clock.Now();
                     _controlBusSender.Post(
                         new MonitorEvent(
                             _instanceName, 
@@ -104,7 +104,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
                 }
                 catch (Exception e)
                 {
-                    var timeOnException = Clock.Now().GetValueOrDefault();
+                    var timeOnException = Clock.Now();
                     _controlBusSender.Post(
                         new MonitorEvent(
                             _instanceName, 

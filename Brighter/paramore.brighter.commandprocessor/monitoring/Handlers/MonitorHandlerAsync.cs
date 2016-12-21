@@ -74,7 +74,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
             if (!_isMonitoringEnabled) return await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
 
             ExceptionDispatchInfo capturedException = null;
-            var timeBeforeHandle = Clock.Now().GetValueOrDefault();
+            var timeBeforeHandle = Clock.Now();
             try
             {
                 if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
@@ -96,7 +96,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
 
                 if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
                 {
-                    var timeAfterHandle = Clock.Now().GetValueOrDefault();
+                    var timeAfterHandle = Clock.Now();
                     await _controlBusSender.PostAsync(
                         new MonitorEvent(
                             _instanceName,
@@ -122,7 +122,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
             {
                 if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
                 {
-                    var timeOnException = Clock.Now().GetValueOrDefault();
+                    var timeOnException = Clock.Now();
                     //can't await inside a catch block
                     await _controlBusSender.PostAsync(
                         new MonitorEvent(
