@@ -36,6 +36,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -47,7 +48,7 @@ namespace paramore.brighter.commandprocessor
     internal class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>
         where TRequest : class, IRequest
     {
-        private static readonly ILog _logger = LogProvider.For<PipelineBuilder<TRequest>>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<PipelineBuilder<TRequest>>);
 
         private readonly IAmAHandlerFactory _handlerFactory;
         private readonly Interpreter<TRequest> _interpreter;
@@ -104,7 +105,7 @@ namespace paramore.brighter.commandprocessor
                 .OrderByDescending(attribute => attribute.Step);
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext);
-            _logger.DebugFormat("New handler pipeline created: {0}", TracePipeline(firstInPipeline));
+            _logger.Value.DebugFormat("New handler pipeline created: {0}", TracePipeline(firstInPipeline));
             return firstInPipeline;
         }
 
@@ -182,7 +183,7 @@ namespace paramore.brighter.commandprocessor
                 .OrderByDescending(attribute => attribute.Step);
 
             AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext);
-            _logger.DebugFormat("New async handler pipeline created: {0}", TracePipeline(firstInPipeline));
+            _logger.Value.DebugFormat("New async handler pipeline created: {0}", TracePipeline(firstInPipeline));
             return firstInPipeline;
         }
 

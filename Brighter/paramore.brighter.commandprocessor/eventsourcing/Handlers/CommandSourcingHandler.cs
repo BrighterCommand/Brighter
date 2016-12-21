@@ -36,6 +36,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
@@ -52,7 +53,7 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
     /// <typeparam name="T"></typeparam>
     public class CommandSourcingHandler<T> : RequestHandler<T> where T: class, IRequest
     {
-        private static readonly ILog _logger = LogProvider.For<CommandSourcingHandler<T>>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<CommandSourcingHandler<T>>);
 
         private readonly IAmACommandStore _commandStore;
 
@@ -72,7 +73,7 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
         public override T Handle(T command) 
         {
-            _logger.DebugFormat("Writing command {0} to the Command Store", command.Id);
+            _logger.Value.DebugFormat("Writing command {0} to the Command Store", command.Id);
 
             _commandStore.Add(command);
 

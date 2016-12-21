@@ -11,6 +11,8 @@
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
+
+using System;
 using System.Net;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
@@ -25,7 +27,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
     /// </summary>
     public class SqsMessageProducer : IAmAMessageProducer
     {
-        private static readonly ILog _logger = LogProvider.For<SqsMessageProducer>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageProducer>);
 
         private readonly AWSCredentials _credentials;
 
@@ -45,7 +47,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
         public void Send(Message message)
         {
             var messageString = JsonConvert.SerializeObject(message);
-            _logger.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", message.Header.Topic, message.Id, messageString);
+            _logger.Value.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", message.Header.Topic, message.Id, messageString);
 
             using (var client = new AmazonSimpleNotificationServiceClient(_credentials))
             {
@@ -64,7 +66,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
         /// <returns>System.String.</returns>
         private string EnsureTopic(string topicName, AmazonSimpleNotificationServiceClient client)
         {
-            _logger.DebugFormat("Topic with name {0} does not exist. Creating new topic", topicName);
+            _logger.Value.DebugFormat("Topic with name {0} does not exist. Creating new topic", topicName);
             var topicResult = client.CreateTopicAsync(new CreateTopicRequest(topicName)).Result;
             return topicResult.HttpStatusCode == HttpStatusCode.OK ? topicResult.TopicArn : string.Empty;
         }

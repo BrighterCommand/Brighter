@@ -45,7 +45,7 @@ namespace paramore.brighter.commandprocessor
 {
     internal class LifetimeScope : IAmALifetime
     {
-        private static readonly ILog _logger = LogProvider.For<LifetimeScope>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<LifetimeScope>);
 
         private readonly IAmAHandlerFactory _handlerFactory;
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
@@ -73,7 +73,7 @@ namespace paramore.brighter.commandprocessor
             if (_handlerFactory == null)
                 throw new ArgumentException("An instance of a handler can not be added without a HandlerFactory.");
             _trackedObjects.Add(instance);
-            _logger.DebugFormat("Tracking instance {0} of type {1}", instance.GetHashCode(), instance.GetType());
+            _logger.Value.DebugFormat("Tracking instance {0} of type {1}", instance.GetHashCode(), instance.GetType());
         }
 
         public void Add(IHandleRequestsAsync instance)
@@ -81,7 +81,7 @@ namespace paramore.brighter.commandprocessor
             if (_asyncHandlerFactory == null)
                 throw new ArgumentException("An instance of an async handler can not be added without an AsyncHandlerFactory.");
             _trackedAsyncObjects.Add(instance);
-            _logger.DebugFormat("Tracking async handler instance {0} of type {1}", instance.GetHashCode(), instance.GetType());
+            _logger.Value.DebugFormat("Tracking async handler instance {0} of type {1}", instance.GetHashCode(), instance.GetType());
         }
 
         public void Dispose()
@@ -90,14 +90,14 @@ namespace paramore.brighter.commandprocessor
             {
                 //free disposable items
                 _handlerFactory.Release(trackedItem);
-                _logger.DebugFormat("Releasing handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType());
+                _logger.Value.DebugFormat("Releasing handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             _trackedAsyncObjects.Each(trackedItem =>
             {
                 //free disposable items
                 _asyncHandlerFactory.Release(trackedItem);
-                _logger.DebugFormat("Releasing async handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType());
+                _logger.Value.DebugFormat("Releasing async handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             //clear our tracking

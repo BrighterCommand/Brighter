@@ -58,7 +58,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
         IAmAMessageStoreViewer<Message>,
         IAmAMessageStoreViewerAsync<Message>
     {
-        private static readonly ILog _logger = LogProvider.For<SqliteMessageStore>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqliteMessageStore>);
 
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
@@ -101,7 +101,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
-                            _logger.WarnFormat(
+                            _logger.Value.WarnFormat(
                                 "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
                                 message.Id);
                             return;
@@ -168,7 +168,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
-                            _logger.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                            _logger.Value.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
                                 message.Id);
                             return;
                         }

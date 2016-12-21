@@ -53,7 +53,7 @@ namespace paramore.brighter.serviceactivator
         {
             var tcs = new TaskCompletionSource<object>();
 
-            _logger.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            _logger.Value.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
             if (messageHeader.MessageType == MessageType.MT_COMMAND && request is IEvent)
             {

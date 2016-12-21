@@ -33,7 +33,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {
     internal class Join
     {
-        private static readonly ILog _logger = LogProvider.For<Join>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<Join>);
 
         private readonly RestMSMessageGateway _gateway;
         private readonly Feed _feed;
@@ -46,7 +46,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         public RestMSJoin CreateJoin(string pipeUri, string routingKey)
         {
-            _logger.DebugFormat("Creating the join with key {0} for pipe {1}", routingKey, pipeUri);
+            _logger.Value.DebugFormat("Creating the join with key {0} for pipe {1}", routingKey, pipeUri);
             var client = _gateway.Client();
             try
             {
@@ -73,7 +73,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    _logger.ErrorFormat("Threw exception adding join with routingKey {0} to Pipe {1} on RestMS Server {2}", routingKey, pipeUri, exception.Message);
+                    _logger.Value.ErrorFormat("Threw exception adding join with routingKey {0} to Pipe {1} on RestMS Server {2}", routingKey, pipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error adding the join with routingKey {0} to Pipe {1} to the RestMS server, see log for details", routingKey, pipeUri));

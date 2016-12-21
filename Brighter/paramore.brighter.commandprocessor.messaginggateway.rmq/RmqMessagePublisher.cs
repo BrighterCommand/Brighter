@@ -38,7 +38,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessagePublisher
     {
-        private static readonly ILog _logger = LogProvider.For<RmqMessagePublisher>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessagePublisher>);
         private static readonly string[] _headersToReset =
         {
             HeaderNames.DELAY_MILLISECONDS,
@@ -127,7 +127,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var messageId = Guid.NewGuid() ;
             const string deliveryTag = "1";
 
-            _logger.InfoFormat("RmqMessagePublisher: Regenerating message {0} with DeliveryTag of {1} to {2} with DeliveryTag of {3}", message.Id, deliveryTag, messageId, 1);
+            _logger.Value.InfoFormat("RmqMessagePublisher: Regenerating message {0} with DeliveryTag of {1} to {2} with DeliveryTag of {3}", message.Id, deliveryTag, messageId, 1);
 
             var headers = new Dictionary<string, object>
             {

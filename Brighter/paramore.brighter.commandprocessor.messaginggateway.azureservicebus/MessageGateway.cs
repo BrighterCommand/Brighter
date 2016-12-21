@@ -39,7 +39,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
     /// </summary>
     public class MessageGateway : IDisposable
     {
-        private static readonly ILog _logger = LogProvider.For<MessageGateway>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MessageGateway>);
 
         private readonly AzureServiceBusMessagingGatewayConfiguration _configuration;
         private readonly HttpClient _client = new HttpClient();
@@ -97,7 +97,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
                 GetSASToken(_configuration.SharedAccessPolicy.Name, _configuration.SharedAccessPolicy.Key)
                 );
 
-            _logger.DebugFormat("\nCreating topic {0}", topicName);
+            _logger.Value.DebugFormat("\nCreating topic {0}", topicName);
 
             // Prepare the body of the create queue request 
             var requestBody = @"<entry xmlns=""http://www.w3.org/2005/Atom""> <title type=""text"">" + topicName + @"</title> <content type=""application/xml""> <TopicDescription xmlns:i=""http://www.w3.org/2001/XMLSchema-instance"" xmlns=""http://schemas.microsoft.com/netservices/2010/10/servicebus/connect"" /> </content> </entry>";
@@ -116,7 +116,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
                 GetSASToken(_configuration.SharedAccessPolicy.Name, _configuration.SharedAccessPolicy.Key)
                 );
 
-            _logger.DebugFormat("\nCreating topic {0}", topicName);
+            _logger.Value.DebugFormat("\nCreating topic {0}", topicName);
 
             var response = _client.GetAsync(topicName).Result;
 

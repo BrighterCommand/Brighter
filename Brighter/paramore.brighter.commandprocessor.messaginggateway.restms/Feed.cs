@@ -33,7 +33,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {
     internal class Feed
     {
-        private static readonly ILog _logger = LogProvider.For<Feed>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<Feed>);
 
         private readonly RestMSMessageGateway _gateway;
 
@@ -52,12 +52,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// Ensures the feed exists.
         /// </summary>
         /// <param name="domain">The domain.</param>
-        /// <param name="options">The options.</param>
         /// <exception cref="RestMSClientException"></exception>
         public void EnsureFeedExists(RestMSDomain domain)
         {
             var feedName = _gateway.Configuration.Feed.Name;
-            _logger.DebugFormat("Checking for existence of the feed {0} on the RestMS server: {1}", feedName, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            _logger.Value.DebugFormat("Checking for existence of the feed {0} on the RestMS server: {1}", feedName, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var isFeedDeclared = IsFeedDeclared(domain, feedName);
             if (!isFeedDeclared)
             {
@@ -72,7 +71,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         private RestMSDomain CreateFeed(string domainUri, string name)
         {
-            _logger.DebugFormat("Creating the feed {0} on the RestMS server: {1}", name, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            _logger.Value.DebugFormat("Creating the feed {0} on the RestMS server: {1}", name, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var client = _gateway.Client();
             try
             {
@@ -93,7 +92,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    _logger.ErrorFormat("Threw exception adding Feed {0} to RestMS Server {1}", name, exception.Message);
+                    _logger.Value.ErrorFormat("Threw exception adding Feed {0} to RestMS Server {1}", name, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error adding the Feed {0} to the RestMS server, see log for details", name));

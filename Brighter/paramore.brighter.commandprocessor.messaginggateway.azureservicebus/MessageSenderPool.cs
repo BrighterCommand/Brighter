@@ -31,7 +31,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
 {
     public class MessageSenderPool : IDisposable
     {
-        private static readonly ILog _logger = LogProvider.For<MessageSenderPool>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MessageSenderPool>);
 
         private readonly ConcurrentDictionary<string, SenderLink> _senders = new ConcurrentDictionary<string, SenderLink>();
         private bool _closing;

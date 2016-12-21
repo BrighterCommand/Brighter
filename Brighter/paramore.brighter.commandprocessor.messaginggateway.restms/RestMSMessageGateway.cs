@@ -53,7 +53,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMSMessageGateway
     {
-        private static readonly ILog _logger = LogProvider.For<RestMSMessageGateway>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RestMSMessageGateway>);
 
         private ThreadLocal<HttpClient> _client;
         private readonly double _timeout;
@@ -118,7 +118,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             if (!XmlResultParser.TryParse(entityBody, out domainObject))
             {
                 var errorString = string.Format("Could not parse entity body as a domain => {0}", entityBody);
-                _logger.ErrorFormat(errorString);
+                _logger.Value.ErrorFormat(errorString);
                 throw new ResultParserException(errorString);
             }
             return domainObject;

@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor.messaginggateway.azureservicebus.Logging;
 
@@ -28,7 +29,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
 {
     public class AzureServiceBusMessageProducer : MessageGateway, IAmAMessageProducerSupportingDelay
     {
-        private static readonly ILog _logger = LogProvider.For<AzureServiceBusMessageProducer>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<AzureServiceBusMessageProducer>);
 
         private readonly MessageSenderPool _pool;
 
@@ -44,11 +45,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
 
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
-            _logger.DebugFormat("AzureServiceBusMessageProducer: Publishing message to topic {0}", message.Header.Topic);
+            _logger.Value.DebugFormat("AzureServiceBusMessageProducer: Publishing message to topic {0}", message.Header.Topic);
             var messageSender = _pool.GetMessageSender(message.Header.Topic);
             EnsureTopicExists(message.Header.Topic);
             messageSender.Send(new Amqp.Message(message.Body.Value));
-            _logger.DebugFormat("AzureServiceBusMessageProducer: Published message with id {0} to topic '{1}' with a delay of {2}ms and content: {3}", message.Id, message.Header.Topic, delayMilliseconds, JsonConvert.SerializeObject(message));
+            _logger.Value.DebugFormat("AzureServiceBusMessageProducer: Published message with id {0} to topic '{1}' with a delay of {2}ms and content: {3}", message.Id, message.Header.Topic, delayMilliseconds, JsonConvert.SerializeObject(message));
         }
 
         public bool DelaySupported => false;

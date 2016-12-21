@@ -57,7 +57,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class MessageGateway : IDisposable
     {
-        private static readonly ILog _logger = LogProvider.For<MessageGateway>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MessageGateway>);
 
         private readonly ConnectionFactory _connectionFactory;
         private readonly ContextualPolicy _retryPolicy;
@@ -123,7 +123,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             {
                 var connection = new MessageGatewayConnectionPool().GetConnection(_connectionFactory);
 
-                _logger.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Connection.AmpqUri.GetSanitizedUri());
+                _logger.Value.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Connection.AmpqUri.GetSanitizedUri());
 
                 Channel = connection.CreateModel();
 
@@ -134,7 +134,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     connection.AutoClose = true;
                 }
 
-                _logger.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+                _logger.Value.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
                 //desired state configuration of the exchange
                 Channel.DeclareExchangeForConnection(Connection);

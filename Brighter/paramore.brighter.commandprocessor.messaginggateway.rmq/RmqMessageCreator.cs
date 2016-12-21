@@ -35,7 +35,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 {
     internal class RmqMessageCreator
     {
-        private static readonly ILog _logger = LogProvider.For<RmqMessageCreator>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageCreator>);
 
         private HeaderResult<string> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
         {
@@ -47,7 +47,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var bytes = dict[key] as byte[];
             if (null == bytes)
             {
-                _logger.WarnFormat("The value of header" + key + " could not be cast to a byte array");
+                _logger.Value.WarnFormat("The value of header" + key + " could not be cast to a byte array");
                 return new HeaderResult<string>(null, false);
             }
 
@@ -59,7 +59,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             catch (Exception e)
             {
                 var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
-                _logger.WarnFormat("Failed to read the value of header " + key + " as UTF-8, first 20 byes follow: \n\t" + firstTwentyBytes, e);
+                _logger.Value.WarnFormat("Failed to read the value of header " + key + " as UTF-8, first 20 byes follow: \n\t" + firstTwentyBytes, e);
                 return new HeaderResult<string>(null, false);
             }
         }
@@ -100,7 +100,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
             catch (Exception e)
             {
-                _logger.WarnException("Failed to create message from amqp message", e);
+                _logger.Value.WarnException("Failed to create message from amqp message", e);
                 message = FailureMessage(topic, messageId);
             }
 
@@ -194,11 +194,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
         private HeaderResult<Guid> ReadMessageId(string messageId)
         {
-            Guid newMessageId = Guid.NewGuid();
+            var newMessageId = Guid.NewGuid();
 
             if (string.IsNullOrEmpty(messageId))
             {
-                _logger.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
+                _logger.Value.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
@@ -207,7 +207,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
-            _logger.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
+            _logger.Value.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
             return new HeaderResult<Guid>(Guid.Empty, false);
         }
 

@@ -53,7 +53,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMsMessageProducer : RestMSMessageGateway, IAmAMessageProducer
     {
-        private static readonly ILog _logger = LogProvider.For<RestMsMessageProducer>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RestMsMessageProducer>);
 
         private readonly Feed _feed;
         private readonly Domain _domain;
@@ -82,12 +82,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
             catch (RestMSClientException rmse)
             {
-                _logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                _logger.Value.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                _logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                _logger.Value.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
         }
@@ -158,7 +158,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    _logger.ErrorFormat("Threw exception sending message to feed {0} with Id {1} due to {2}", feedName, message.Header.Id, exception.Message);
+                    _logger.Value.ErrorFormat("Threw exception sending message to feed {0} with Id {1} due to {2}", feedName, message.Header.Id, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error sending message to feed {0} with Id {1} , see log for details", feedName, message.Header.Id));

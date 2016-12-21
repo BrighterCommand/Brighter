@@ -65,7 +65,7 @@ namespace paramore.brighter.commandprocessor
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public abstract class RequestHandlerAsync<TRequest> : IHandleRequestsAsync<TRequest> where TRequest : class, IRequest
     {
-        private static readonly ILog _logger = LogProvider.For<RequestHandlerAsync<TRequest>>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RequestHandlerAsync<TRequest>>);
 
         private IHandleRequestsAsync<TRequest> _successor;
 
@@ -129,7 +129,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                _logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
+                _logger.Value.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
                 return await _successor.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
             }
 
@@ -160,7 +160,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                _logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
+                _logger.Value.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
                 return await _successor.FallbackAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
             }
 

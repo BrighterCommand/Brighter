@@ -35,6 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using System.Reflection;
 using paramore.brighter.commandprocessor.Logging;
@@ -60,7 +61,7 @@ namespace paramore.brighter.commandprocessor
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public abstract class RequestHandler<TRequest> : IHandleRequests<TRequest> where TRequest : class, IRequest
     {
-        private static readonly ILog _logger = LogProvider.For<RequestHandler<TRequest>>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RequestHandler<TRequest>>);
 
         private IHandleRequests<TRequest> _successor;
 
@@ -114,7 +115,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                _logger.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
+                _logger.Value.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
                 return _successor.Handle(command);
             }
 
@@ -144,7 +145,7 @@ namespace paramore.brighter.commandprocessor
         {
             if (_successor != null)
             {
-                _logger.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
+                _logger.Value.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
                 return _successor.Fallback(command);
             }
 

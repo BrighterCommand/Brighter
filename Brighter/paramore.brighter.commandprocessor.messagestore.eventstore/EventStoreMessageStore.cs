@@ -55,7 +55,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
     /// </summary>
     public class EventStoreMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreAsync<Message>
     {
-        private static readonly ILog _logger = LogProvider.For<EventStoreMessageStore>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<EventStoreMessageStore>);
 
         private readonly IEventStoreConnection _eventStore;
 
@@ -79,7 +79,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         /// <returns>Task.</returns>
         public void Add(Message message, int messageStoreTimeout = -1)
         {
-            _logger.DebugFormat("Adding message to Event Store Message Store: {0}", JsonConvert.SerializeObject(message));
+            _logger.Value.DebugFormat("Adding message to Event Store Message Store: {0}", JsonConvert.SerializeObject(message));
 
             var headerBag = message.Header.Bag;
             var streamId = ExtractStreamIdFromHeader(headerBag, message.Id);
@@ -123,7 +123,7 @@ namespace paramore.brighter.commandprocessor.messagestore.eventstore
         /// <returns><see cref="Task"/>.</returns>
         public async Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken? ct = null)
         {
-            _logger.DebugFormat("Adding message to Event Store Message Store: {0}", JsonConvert.SerializeObject(message));
+            _logger.Value.DebugFormat("Adding message to Event Store Message Store: {0}", JsonConvert.SerializeObject(message));
 
             var headerBag = message.Header.Bag;
             var streamId = ExtractStreamIdFromHeader(headerBag, message.Id);

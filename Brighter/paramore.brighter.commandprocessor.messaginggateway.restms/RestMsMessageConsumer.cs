@@ -50,7 +50,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMsMessageConsumer : RestMSMessageGateway, IAmAMessageConsumer
     {
-        private static readonly ILog _logger = LogProvider.For<RestMsMessageConsumer>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RestMsMessageConsumer>);
 
         private readonly string _queueName;
         private readonly string _routingKey;
@@ -99,12 +99,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
             catch (RestMSClientException rmse)
             {
-                _logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                _logger.Value.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                _logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                _logger.Value.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
         }
@@ -135,12 +135,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
             catch (RestMSClientException rmse)
             {
-                _logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                _logger.Value.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                _logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                _logger.Value.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
         }
@@ -169,12 +169,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
             catch (RestMSClientException rmse)
             {
-                _logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                _logger.Value.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                _logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                _logger.Value.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
         }
@@ -207,7 +207,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 return;
             }
 
-            _logger.DebugFormat("Deleting the message {0} from the pipe: {0}", message.Id, pipe.Href);
+            _logger.Value.DebugFormat("Deleting the message {0} from the pipe: {0}", message.Id, pipe.Href);
             SendDeleteMessage(matchingMessage);
         }
 
@@ -218,7 +218,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 return new Message();
             }
 
-            _logger.DebugFormat("Getting the message from the RestMS server: {0}", messageUri);
+            _logger.Value.DebugFormat("Getting the message from the RestMS server: {0}", messageUri);
             var client = Client();
 
             try
@@ -232,7 +232,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    _logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", _pipe.PipeUri, exception.Message);
+                    _logger.Value.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", _pipe.PipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));

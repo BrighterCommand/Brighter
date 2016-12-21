@@ -47,7 +47,7 @@ namespace paramore.brighter.serviceactivator.Ports.Handlers
     /// </summary>
     public class ConfigurationCommandHandler : RequestHandler<ConfigurationCommand>
     {
-        private static readonly ILog _logger = LogProvider.For<ConfigurationCommandHandler>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<ConfigurationCommandHandler>);
 
         private readonly IDispatcher _dispatcher;
 
@@ -67,34 +67,34 @@ namespace paramore.brighter.serviceactivator.Ports.Handlers
         /// <returns>TRequest.</returns>
         public override ConfigurationCommand Handle(ConfigurationCommand command)
         {
-            _logger.DebugFormat("Handling Configuration Command of Type: {0}", command.Type);
+            _logger.Value.DebugFormat("Handling Configuration Command of Type: {0}", command.Type);
 
             switch (command.Type)
             {
                 case ConfigurationCommandType.CM_STOPALL:
-                    _logger.DebugFormat("Configuration Command received and now stopping all consumers. Begin at {0}", DateTime.UtcNow.ToString("o"));
-                    _logger.Debug("--------------------------------------------------------------------------");
-                    _logger.Debug("...");
+                    _logger.Value.DebugFormat("Configuration Command received and now stopping all consumers. Begin at {0}", DateTime.UtcNow.ToString("o"));
+                    _logger.Value.Debug("--------------------------------------------------------------------------");
+                    _logger.Value.Debug("...");
                     _dispatcher.End().Wait();
-                    _logger.DebugFormat("All consumers stopped in response to configuration command. Stopped at {0}", DateTime.UtcNow.ToString("o"));
-                    _logger.Debug("--------------------------------------------------------------------------");
+                    _logger.Value.DebugFormat("All consumers stopped in response to configuration command. Stopped at {0}", DateTime.UtcNow.ToString("o"));
+                    _logger.Value.Debug("--------------------------------------------------------------------------");
                     break;
                 case ConfigurationCommandType.CM_STARTALL:
-                    _logger.Debug("--------------------------------------------------------------------------");
-                    _logger.DebugFormat("Configuration Command received and now starting all consumers. Begin at {0}", DateTime.UtcNow.ToString("o"));
-                    _logger.Debug("--------------------------------------------------------------------------");
+                    _logger.Value.Debug("--------------------------------------------------------------------------");
+                    _logger.Value.DebugFormat("Configuration Command received and now starting all consumers. Begin at {0}", DateTime.UtcNow.ToString("o"));
+                    _logger.Value.Debug("--------------------------------------------------------------------------");
                     _dispatcher.Receive();
                     break;
                 case ConfigurationCommandType.CM_STOPCHANNEL:
-                    _logger.Debug("--------------------------------------------------------------------------");
-                    _logger.DebugFormat("Configuration Command received and now stopping channel {0}", command.ConnectionName);
-                    _logger.Debug("--------------------------------------------------------------------------");
+                    _logger.Value.Debug("--------------------------------------------------------------------------");
+                    _logger.Value.DebugFormat("Configuration Command received and now stopping channel {0}", command.ConnectionName);
+                    _logger.Value.Debug("--------------------------------------------------------------------------");
                     _dispatcher.Shut(command.ConnectionName);
                     break;
                 case ConfigurationCommandType.CM_STARTCHANNEL:
-                    _logger.Debug("--------------------------------------------------------------------------");
-                    _logger.DebugFormat("Configuration Command received and now starting channel {0}", command.ConnectionName);
-                    _logger.Debug("--------------------------------------------------------------------------");
+                    _logger.Value.Debug("--------------------------------------------------------------------------");
+                    _logger.Value.DebugFormat("Configuration Command received and now starting channel {0}", command.ConnectionName);
+                    _logger.Value.Debug("--------------------------------------------------------------------------");
                     _dispatcher.Open(command.ConnectionName);
                     break;
                 default:

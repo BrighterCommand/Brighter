@@ -52,7 +52,7 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class CommandProcessor : IAmACommandProcessor, IDisposable
     {
-        private static readonly ILog _logger = LogProvider.For<CommandProcessor>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<CommandProcessor>);
 
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
@@ -308,7 +308,7 @@ namespace paramore.brighter.commandprocessor
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory))
             {
-                _logger.InfoFormat("Building send pipeline for command: {0} {1}", command.GetType(), command.Id);
+                _logger.Value.InfoFormat("Building send pipeline for command: {0} {1}", command.GetType(), command.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -335,7 +335,7 @@ namespace paramore.brighter.commandprocessor
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory))
             {
-                _logger.InfoFormat("Building send async pipeline for command: {0} {1}", command.GetType(), command.Id);
+                _logger.Value.InfoFormat("Building send async pipeline for command: {0} {1}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -363,12 +363,12 @@ namespace paramore.brighter.commandprocessor
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory))
             {
-                _logger.InfoFormat("Building send pipeline for event: {0} {1}", @event.GetType(), @event.Id);
+                _logger.Value.InfoFormat("Building send pipeline for event: {0} {1}", @event.GetType(), @event.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 var handlerCount = handlerChain.Count();
 
-                _logger.InfoFormat("Found {0} pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
+                _logger.Value.InfoFormat("Found {0} pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new List<Exception>();
                 foreach (var handleRequests in handlerChain)
@@ -412,12 +412,12 @@ namespace paramore.brighter.commandprocessor
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory))
             {
-                _logger.InfoFormat("Building send async pipeline for event: {0} {1}", @event.GetType(), @event.Id);
+                _logger.Value.InfoFormat("Building send async pipeline for event: {0} {1}", @event.GetType(), @event.Id);
 
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
                 var handlerCount = handlerChain.Count();
 
-                _logger.InfoFormat("Found {0} async pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
+                _logger.Value.InfoFormat("Found {0} async pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new List<Exception>();
                 foreach (var handler in handlerChain)
@@ -451,7 +451,7 @@ namespace paramore.brighter.commandprocessor
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(T request) where T : class, IRequest
         {
-            _logger.InfoFormat("Decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
+            _logger.Value.InfoFormat("Decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
 
             if (_messageStore == null)
                 throw new InvalidOperationException("No message store defined.");
@@ -487,7 +487,7 @@ namespace paramore.brighter.commandprocessor
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
         {
-            _logger.InfoFormat("Async decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
+            _logger.Value.InfoFormat("Async decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
 
             if (_asyncMessageStore == null)
                 throw new InvalidOperationException("No async message store defined.");
@@ -535,7 +535,7 @@ namespace paramore.brighter.commandprocessor
 
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
-            _logger.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id);
+            _logger.Value.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id);
             if (handlerCount > 1)
                 throw new ArgumentException(
                     string.Format(

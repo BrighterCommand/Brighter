@@ -50,7 +50,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessageProducer : MessageGateway, IAmAMessageProducerSupportingDelay
     {
-        private static readonly ILog _logger = LogProvider.For<RmqMessageProducer>();
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
 
         static readonly object _lock = new object();
 
@@ -81,12 +81,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             lock (_lock)
             {
-                _logger.DebugFormat("RmqMessageProducer: Preparing  to sending message via exchange {0}", Connection.Exchange.Name);
+                _logger.Value.DebugFormat("RmqMessageProducer: Preparing  to sending message via exchange {0}", Connection.Exchange.Name);
                 EnsureChannel();
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name);
-                _logger.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and body: {4}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic, message.Id, message.Body.Value, delayMilliseconds);
+                _logger.Value.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and body: {4}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic, message.Id, message.Body.Value, delayMilliseconds);
                 rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
-                _logger.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and message: {4} at {5}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds);
+                _logger.Value.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and message: {4} at {5}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds);
             }
         }
     }
