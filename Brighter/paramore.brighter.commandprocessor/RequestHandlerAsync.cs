@@ -123,14 +123,14 @@ namespace paramore.brighter.commandprocessor
         /// Awaitably handles the specified command.
         /// </summary>
         /// <param name="command">The command.</param>
-        /// <param name="ct">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
+        /// <param name="cancellationToken">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        public virtual async Task<TRequest> HandleAsync(TRequest command, CancellationToken? ct = null)
+        public virtual async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_successor != null)
             {
                 _logger.Value.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
-                return await _successor.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
+                return await _successor.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
 
             return command;
@@ -154,14 +154,14 @@ namespace paramore.brighter.commandprocessor
         /// and call the <see cref="RequestHandler{TRequest}"/>'s <see cref="FallbackAsync"/> method
         /// </summary>
         /// <param name="command">The command.</param>
-        /// <param name="ct">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
+        /// <param name="cancellationToken">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        public virtual async Task<TRequest> FallbackAsync(TRequest command, CancellationToken? ct = null)
+        public virtual async Task<TRequest> FallbackAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_successor != null)
             {
                 _logger.Value.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
-                return await _successor.FallbackAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
+                return await _successor.FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
 
             return command;
@@ -181,7 +181,7 @@ namespace paramore.brighter.commandprocessor
                 .Where(method => method.Name == nameof(HandleAsync))
                 .SingleOrDefault(method => method.GetParameters().Length == 2 
                     && method.GetParameters()[0].ParameterType == typeof(TRequest)
-                    && method.GetParameters()[1].ParameterType == typeof(CancellationToken?));
+                    && method.GetParameters()[1].ParameterType == typeof(CancellationToken));
         }
 
     }

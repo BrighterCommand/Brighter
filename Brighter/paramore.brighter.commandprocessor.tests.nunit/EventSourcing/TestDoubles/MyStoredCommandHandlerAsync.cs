@@ -8,9 +8,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing.TestDoubl
     internal class MyStoredCommandHandlerAsync : RequestHandlerAsync<MyCommand> 
     {
         [UseCommandSourcingAsync(step: 1, timing: HandlerTiming.Before)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await base.HandleAsync(command, ct);
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
     }
 }

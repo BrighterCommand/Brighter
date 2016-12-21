@@ -53,7 +53,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDou
             Commands.Add(CommandType.Send);
         }
 
-        public virtual async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
+        public virtual async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             _requests.Enqueue(command);
             Commands.Add(CommandType.SendAsync);
@@ -66,7 +66,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDou
             Commands.Add(CommandType.Publish);
         }
 
-        public virtual async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
+        public virtual async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             _requests.Enqueue(@event);
             Commands.Add(CommandType.PublishAsync);
@@ -86,7 +86,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDou
         /// <param name="request">The request.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public virtual async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
+        public virtual async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             _requests.Enqueue(request);
             Commands.Add(CommandType.PostAsync);

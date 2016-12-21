@@ -75,9 +75,9 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="message">Message to add. Will be ignored. </param>
         /// <param name="messageStoreTimeout">Timeout</param>
-        /// <param name="ct">Cancelation Token for async operation</param>
+        /// <param name="cancellationToken">Cancelation Token for async operation</param>
         /// <returns>Task.FromResult<object>(null)</object></returns>
-        public Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        public Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             return Task.FromResult<object>(null);
         }
@@ -87,9 +87,9 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="messageId">Id of Message to Get</param>
         /// <param name="messageStoreTimeout">Timeout for message store</param>
-        /// <param name="ct">Cancelation token for async operation</param>
+        /// <param name="cancellationToken">Cancelation token for async operation</param>
         /// <returns>Task.FromResult<Message>(null)</returns>
-        public Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        public Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             return Task.FromResult<Message>(null);
         }
@@ -115,9 +115,9 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="pageSize">size of page of messages</param>
         /// <param name="pageNumber">page number</param>
-        /// <param name="ct">Caancelation token for Task</param>
+        /// <param name="cancellationToken">Caancelation token for Task</param>
         /// <returns>Empty List of Messages</returns>
-        public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, CancellationToken? ct = null)
+        public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, CancellationToken cancellationToken = default(CancellationToken))
         {
             return Task.FromResult<IList<Message>>(new List<Message>());
         }

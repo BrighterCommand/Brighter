@@ -16,20 +16,20 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
         [MyPreValidationHandlerAsyncAttribute(step: 2, timing: HandlerTiming.Before)]
         [MyPostLoggingHandlerAsyncAttribute(step: 1, timing: HandlerTiming.After)]
         [Obsolete] // even with attributes non inheriting from MessageHandlerDecoratorAttribute it should not fail
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 return command;
             }
 
             LogCommand(command);
-            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         public static bool Shouldreceive(MyCommand expectedCommand)
         {
-            return (s_command != null) && (expectedCommand.Id == s_command.Id);
+            return s_command != null && expectedCommand.Id == s_command.Id;
         }
 
         private void LogCommand(MyCommand request)

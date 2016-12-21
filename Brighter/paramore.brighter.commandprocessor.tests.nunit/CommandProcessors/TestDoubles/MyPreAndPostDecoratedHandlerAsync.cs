@@ -41,20 +41,20 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
 
         [MyPreValidationHandlerAsync(step: 2, timing: HandlerTiming.Before)]
         [MyPostLoggingHandlerAsync(step: 1, timing: HandlerTiming.After)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 return command;
             }
 
             LogCommand(command);
-            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         public static bool ShouldReceive(MyCommand expectedCommand)
         {
-            return (s_command != null) && (expectedCommand.Id == s_command.Id);
+            return s_command != null && expectedCommand.Id == s_command.Id;
         }
 
         private void LogCommand(MyCommand request)

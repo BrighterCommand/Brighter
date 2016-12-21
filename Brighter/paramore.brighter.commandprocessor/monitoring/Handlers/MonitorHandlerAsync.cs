@@ -67,17 +67,17 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
         /// Awaitably handles the specified command.
         /// </summary>
         /// <param name="command">The command.</param>
-        /// <param name="ct">Allow the caller to cancel the operation (optional)</param>
+        /// <param name="cancellationToken">Allow the caller to cancel the operation (optional)</param>
         /// <returns><see cref="Task"/>.</returns>
-        public override async Task<T> HandleAsync(T command, CancellationToken? ct = null)
+        public override async Task<T> HandleAsync(T command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (!_isMonitoringEnabled) return await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
+            if (!_isMonitoringEnabled) return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             ExceptionDispatchInfo capturedException = null;
             var timeBeforeHandle = Clock.Now().GetValueOrDefault();
             try
             {
-                if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
+                if (!cancellationToken.IsCancellationRequested)
                 {
                     await _controlBusSender.PostAsync(
                         new MonitorEvent(
@@ -88,13 +88,13 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
                             JsonConvert.SerializeObject(command),
                             timeBeforeHandle,
                             0),
-                        ContinueOnCapturedContext,
-                        ct).ConfigureAwait(ContinueOnCapturedContext);
+                        ContinueOnCapturedContext, cancellationToken)
+                        .ConfigureAwait(ContinueOnCapturedContext);
                 }
 
-                await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
+                await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-                if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
+                if (!cancellationToken.IsCancellationRequested)
                 {
                     var timeAfterHandle = Clock.Now().GetValueOrDefault();
                     await _controlBusSender.PostAsync(
@@ -106,8 +106,8 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
                             JsonConvert.SerializeObject(command),
                             timeAfterHandle,
                             (timeAfterHandle - timeBeforeHandle).Milliseconds),
-                        ContinueOnCapturedContext,
-                        ct).ConfigureAwait(ContinueOnCapturedContext);
+                        ContinueOnCapturedContext, cancellationToken)
+                        .ConfigureAwait(ContinueOnCapturedContext);
                 }
 
                 return command;
@@ -120,7 +120,7 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
             //C#5 does not support await in a catch block; once we move to C#6 we can re-inline and drop use of ExceptionDispatchInfo
             if (capturedException != null)
             {
-                if (!ct.HasValue || ct.HasValue && !ct.Value.IsCancellationRequested)
+                if (!cancellationToken.IsCancellationRequested)
                 {
                     var timeOnException = Clock.Now().GetValueOrDefault();
                     //can't await inside a catch block
@@ -134,14 +134,14 @@ namespace paramore.brighter.commandprocessor.monitoring.Handlers
                             timeOnException,
                             (timeOnException - timeBeforeHandle).Milliseconds,
                             capturedException.SourceException),
-                        ContinueOnCapturedContext,
-                        ct).ConfigureAwait(ContinueOnCapturedContext);
+                        ContinueOnCapturedContext, cancellationToken)
+                        .ConfigureAwait(ContinueOnCapturedContext);
                 }
 
                 capturedException.Throw();
             }
 
-            return await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
     }
 }

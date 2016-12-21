@@ -27,7 +27,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
@@ -36,6 +35,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
         private readonly List<Message> _messages = new List<Message>(); 
 
         public bool MessageWasAdded { get; set; }
+
         public void Add(Message message, int messageStoreTimeout = -1)
         {
             MessageWasAdded = true;
@@ -60,25 +60,22 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
             return _messages.Take(pageSize);
         }
 
-        public async Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        public Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
-            {
-                return;
-            }
+            if (cancellationToken.IsCancellationRequested)
+                return Task.FromCanceled(cancellationToken);
 
             Add(message, messageStoreTimeout);
+
+            return Task.FromResult(0);
         }
 
-        public async Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        public Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
-            {
-                throw new ArgumentOutOfRangeException();
-            }
+            if (cancellationToken.IsCancellationRequested)
+                return Task.FromCanceled<Message>(cancellationToken);
 
-            return Get(messageId, messageStoreTimeout);
+            return Task.FromResult(Get(messageId, messageStoreTimeout));
         }
 
         public bool ContinueOnCapturedContext { get; set; }

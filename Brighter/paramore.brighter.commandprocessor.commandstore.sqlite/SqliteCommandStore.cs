@@ -113,22 +113,20 @@ namespace paramore.brighter.commandprocessor.commandstore.sqlite
             return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, timeoutInMilliseconds, parameters);
         }
 
-        public async Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken? ct = null) where T : class, IRequest
+        public async Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command);
 
             using (var connection = GetConnection())
             {
-                await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlAdd = GetAddSql();
                 using (var sqlcmd = connection.CreateCommand())
                 {
                     FormatAddCommand(timeoutInMilliseconds, parameters, sqlcmd, sqlAdd);
                     try
                     {
-                        await
-                            sqlcmd.ExecuteNonQueryAsync(ct ?? CancellationToken.None)
-                                .ConfigureAwait(ContinueOnCapturedContext);
+                        await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                     }
                     catch (SqliteException sqliteException)
                     {
@@ -141,22 +139,21 @@ namespace paramore.brighter.commandprocessor.commandstore.sqlite
             }
         }
 
-        public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken? ct = null) where T : class, IRequest, new()
+        public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
         {
-            var sql = string.Format("select * from {0} where CommandId = @CommandId", this.MessageStoreTableName);
+            var sql = string.Format("select * from {0} where CommandId = @CommandId", MessageStoreTableName);
             var parameters = new[]
             {
-                this.CreateSqlParameter("@CommandId", id)
+                CreateSqlParameter("@CommandId", id)
             };
-            var result = await ExecuteCommandAsync(
-                        async command => ReadCommand<T>(
-                            await
-                                command.ExecuteReaderAsync(ct ?? CancellationToken.None)
-                                    .ConfigureAwait(ContinueOnCapturedContext)),
-                        sql,
-                        timeoutInMilliseconds, parameters, ct)
-                    .ConfigureAwait(ContinueOnCapturedContext);
-            return result;
+
+            return await ExecuteCommandAsync(
+                async command => ReadCommand<T>(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)),
+                sql,
+                timeoutInMilliseconds,
+                parameters,
+                cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
         }
 
         /// <summary>
@@ -200,7 +197,7 @@ namespace paramore.brighter.commandprocessor.commandstore.sqlite
         }
 
         public async Task<T> ExecuteCommandAsync<T>(Func<DbCommand, Task<T>> execute, 
-            string sql, int timeoutInMilliseconds, DbParameter[] parameters, CancellationToken? ct = null)
+            string sql, int timeoutInMilliseconds, DbParameter[] parameters, CancellationToken cancellationToken = default(CancellationToken))
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -209,9 +206,8 @@ namespace paramore.brighter.commandprocessor.commandstore.sqlite
                 command.CommandText = sql;
                 AddParamtersParamArrayToCollection(parameters, command);
 
-                await connection.OpenAsync(ct ?? CancellationToken.None).ConfigureAwait(ContinueOnCapturedContext);
-                var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-                return item;
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                return await execute(command).ConfigureAwait(ContinueOnCapturedContext);
             }
         }
 

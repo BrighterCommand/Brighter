@@ -71,16 +71,16 @@ namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
         /// Awaitably logs the command we received to the command store.
         /// </summary>
         /// <param name="command">The command that we want to store.</param>
-        /// <param name="ct">Allows the caller to cancel the pipeline if desired</param>
+        /// <param name="cancellationToken">Allows the caller to cancel the pipeline if desired</param>
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
-        public override async Task<T> HandleAsync(T command, CancellationToken? ct = null)
+        public override async Task<T> HandleAsync(T command, CancellationToken cancellationToken = default(CancellationToken))
         {
             _logger.Value.DebugFormat("Writing command {0} to the Command Store", command.Id);
 
             //TODO: We should not use an infinite timeout here - how to configure
-            await _commandStore.AddAsync(command, -1, ct).ConfigureAwait(ContinueOnCapturedContext);
+            await _commandStore.AddAsync(command, -1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-            return await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
     }
 }

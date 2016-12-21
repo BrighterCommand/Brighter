@@ -36,15 +36,15 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
             s_receivedEvent = null;
         }
 
-        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken? ct = null)
+        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 return command;
             }
 
             LogEvent(command);
-            await Task.Delay(0);
+            await Task.Delay(0, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             return command;
         }
 

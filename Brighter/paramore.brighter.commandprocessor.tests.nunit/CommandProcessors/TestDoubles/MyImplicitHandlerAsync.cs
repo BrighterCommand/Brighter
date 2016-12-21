@@ -30,9 +30,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
     internal class MyImplicitHandlerAsync : RequestHandlerAsync<MyCommand>
     {
         [MyLoggingHandlerAsync(step: 1)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
     }
 }

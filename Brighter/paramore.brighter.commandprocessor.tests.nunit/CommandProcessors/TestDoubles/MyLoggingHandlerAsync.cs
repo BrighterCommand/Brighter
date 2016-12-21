@@ -39,20 +39,20 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
             DisposeWasCalled = false;
         }
 
-        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken? ct = null)
+        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 return command;
             }
 
             LogCommand(command);
-            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         public static bool Shouldreceive(TRequest expectedCommand)
         {
-            return (expectedCommand != null);
+            return expectedCommand != null;
         }
 
         private void LogCommand(TRequest request)

@@ -85,21 +85,21 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <param name="ct"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken? ct = null) where T : class, IRequest
+        public Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<object>();
 
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 tcs.SetCanceled();
                 return tcs.Task;
             }
 
             Add(command, timeoutInMilliseconds);
-            
+
             tcs.SetResult(new object());
             return tcs.Task;
         }
@@ -131,22 +131,22 @@ namespace paramore.brighter.commandprocessor
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <param name="ct"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns><see cref="Task{T}" />.</returns>
         /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken? ct = null) where T : class, IRequest, new()
+        public Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
         {
             var tcs = new TaskCompletionSource<T>();
 
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 tcs.SetCanceled();
                 return tcs.Task;
             }
 
             var command = Get<T>(id, timeoutInMilliseconds);
-                
+
             tcs.SetResult(command);
             return tcs.Task;
         }

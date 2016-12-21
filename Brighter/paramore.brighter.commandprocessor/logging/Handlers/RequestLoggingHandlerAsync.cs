@@ -70,11 +70,12 @@ namespace paramore.brighter.commandprocessor.logging.Handlers
         /// Awaitably handles the specified command.
         /// </summary>
         /// <param name="command">The command.</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request. Optional.</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken? ct = null)
+        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
         {
             LogCommand(command);
-            return await base.HandleAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         /// <summary>
@@ -95,12 +96,12 @@ namespace paramore.brighter.commandprocessor.logging.Handlers
         /// and call the <see cref="RequestHandlerAsync{TRequest}"/>'s <see cref="RequestHandlerAsync{TRequest}.FallbackAsync"/> method
         /// </summary>
         /// <param name="command">The command.</param>
-        /// <param name="ct">Allows the sender to cancel the request. Optional.</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request. Optional.</param>
         /// <returns>TRequest.</returns>
-        public override async Task<TRequest> FallbackAsync(TRequest command, CancellationToken? ct = null)
+        public override async Task<TRequest> FallbackAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
         {
             LogFailure(command);
-            return await base.FallbackAsync(command, ct).ConfigureAwait(ContinueOnCapturedContext);
+            return await base.FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         private void LogCommand(TRequest request)

@@ -31,16 +31,16 @@ namespace HelloWorldAsync
 {
     internal class GreetingCommandRequestHandlerAsync : RequestHandlerAsync<GreetingCommand>
     {
-        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken? ct = null)
+        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
             var api = new IpFyApi(new Uri("https://api.ipify.org"));
 
-            var result = await api.GetAsync(ct);
+            var result = await api.GetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             Console.WriteLine("Hello {0}", command.Name);
-            Console.WriteLine(result.Success ? "Your public IP addres is {0}" : "Call to IpFy API failed : {0}",
-                result.Message);
-            return await base.HandleAsync(command, ct).ConfigureAwait(base.ContinueOnCapturedContext);
+            Console.WriteLine(result.Success ? "Your public IP addres is {0}" : "Call to IpFy API failed : {0}", result.Message);
+
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
     }
 }

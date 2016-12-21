@@ -33,7 +33,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring.TestDoubles
     internal class MyMonitoredHandlerThatThrowsAsync : RequestHandlerAsync<MyCommand>
     {
         [MonitorAsync(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandlerThatThrowsAsync))]
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
             throw new Exception("I am an exception in a monitored pipeline");
         }

@@ -39,10 +39,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDou
         }
 
         [UsePolicyAsync(policy: "MyDivideByZeroPolicy", step: 1)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
             ReceivedCommand = true;
-            return await base.HandleAsync(command, ct);
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         public static bool Shouldreceive(MyCommand myCommand)

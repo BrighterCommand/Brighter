@@ -60,7 +60,7 @@ namespace paramore.brighter.commandprocessor
     public class ControlBusSender : IAmAControlBusSender, IAmAControlBusSenderAsync, IDisposable
     {
         /// <summary>
-        /// The command processor tat underlies the control bus; we only use the Post method
+        /// The command processor that underlies the control bus; we only use the Post method
         /// </summary>
         private readonly CommandProcessor _commandProcessor;
         private bool _disposed;
@@ -84,9 +84,9 @@ namespace paramore.brighter.commandprocessor
             _commandProcessor.Post(request);
         }
 
-        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
+        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            await _commandProcessor.PostAsync(request, continueOnCapturedContext, ct);
+            await _commandProcessor.PostAsync(request, continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
         }
 
         public void Dispose()

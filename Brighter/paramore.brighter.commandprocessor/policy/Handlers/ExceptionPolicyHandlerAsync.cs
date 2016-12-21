@@ -77,11 +77,11 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         /// Handles the specified command asynchronously.
         /// </summary>
         /// <param name="command">The command.</param>
-        /// <param name="ct">Allow the sender to cancel the reques (optional) </param>
+        /// <param name="cancellationToken">Allow the sender to cancel the reques (optional) </param>
         /// <returns>AA Task<TRequest> that wraps the asynchonous call to the policy, which itself wraps the handler chain</TRequest></returns>
-        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken? ct = null)
+        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await _policy.ExecuteAsync(async () => await base.HandleAsync(command, ct)).ConfigureAwait(base.ContinueOnCapturedContext);
+            return await _policy.ExecuteAsync(async () => await base.HandleAsync(command, cancellationToken)).ConfigureAwait(ContinueOnCapturedContext);
         }
     }
 }

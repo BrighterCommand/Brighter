@@ -80,13 +80,13 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="message"></param>
         /// <param name="messageStoreTimeout"></param>
-        /// <param name="ct"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        public Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             var tcs = new TaskCompletionSource<object>();
 
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 tcs.SetCanceled();
                 return tcs.Task;
@@ -103,13 +103,13 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="messageId"></param>
         /// <param name="messageStoreTimeout"></param>
-        /// <param name="ct"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken? ct = null)
+        public Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             var tcs = new TaskCompletionSource<Message>();
 
-            if (ct.HasValue && ct.Value.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
                 tcs.SetCanceled();
                 return tcs.Task;

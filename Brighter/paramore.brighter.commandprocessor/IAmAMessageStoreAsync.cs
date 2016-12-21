@@ -57,18 +57,18 @@ namespace paramore.brighter.commandprocessor
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="messageStoreTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync(T message, int messageStoreTimeout = -1, CancellationToken? ct = null);
+        Task AddAsync(T message, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Awaitable Get the specified message identifier.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="messageStoreTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
-        /// <param name="ct">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
-        Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken? ct = null);
+        Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.

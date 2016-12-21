@@ -5,12 +5,12 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 
 namespace paramore.brighter.commandprocessor.tests.nunit.Logging.TestDoubles
 {
-    class MyLoggedHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal class MyLoggedHandlerAsync : RequestHandlerAsync<MyCommand>
     {
         [RequestLoggingAsync(step:0, timing: HandlerTiming.Before)]
-        public override Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)
+        public override Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return base.HandleAsync(command, ct);
+            return base.HandleAsync(command, cancellationToken);
         }
     }
 }
