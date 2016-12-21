@@ -23,12 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Configuration;
 using paramore.brighter.commandprocessor.monitoring.Events;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
@@ -59,7 +57,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyMonitoredHandlerThatThrowsAsync>();
             container.Register<IHandleRequestsAsync<MyCommand>, MonitorHandlerAsync<MyCommand>>();
-            container.Register<ILog>(A.Fake<ILog>());
             container.Register<IAmAControlBusSenderAsync>(s_controlBusSender);
             container.Register<MonitorConfiguration>(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
 

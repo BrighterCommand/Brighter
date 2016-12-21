@@ -22,9 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using FakeItEasy;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;
@@ -48,8 +46,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyFailsWithFallbackMultipleHandlers>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, FallbackPolicyHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog>(A.Fake<ILog>());
-
 
             MyFailsWithFallbackMultipleHandlers.ReceivedCommand = false;
 

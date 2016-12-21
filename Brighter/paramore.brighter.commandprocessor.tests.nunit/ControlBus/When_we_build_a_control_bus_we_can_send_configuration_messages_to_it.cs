@@ -26,7 +26,6 @@ using System;
 using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
 using paramore.brighter.serviceactivator.Ports.Commands;
@@ -44,7 +43,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
             var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
 

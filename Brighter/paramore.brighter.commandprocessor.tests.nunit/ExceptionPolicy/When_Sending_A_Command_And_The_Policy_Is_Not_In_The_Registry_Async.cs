@@ -23,11 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;
@@ -52,13 +50,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyDoesNotFailPolicyHandlerAsync>("MyDoesNotFailPolicyHandler");
             container.Register<IHandleRequestsAsync<MyCommand>, ExceptionPolicyHandlerAsync<MyCommand>>("MyExceptionPolicyHandler");
-            container.Register<ILog>(A.Fake<ILog>());
-
-            var policyRegistry = new PolicyRegistry();
 
             MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         };
 
         //We have to catch the final exception that bubbles out after retry

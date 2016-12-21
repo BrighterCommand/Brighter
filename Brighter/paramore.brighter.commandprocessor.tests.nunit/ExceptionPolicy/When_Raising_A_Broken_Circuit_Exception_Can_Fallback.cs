@@ -22,10 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using FakeItEasy;
 using NUnit.Specifications;
-using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;
@@ -34,7 +31,7 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
     [Subject(typeof(ExceptionPolicyHandler<>))]
-    public class When_Raising_A_Broken_Circuit_Exception_Can_Fallback : NUnit.Specifications.ContextSpecification
+    public class When_Raising_A_Broken_Circuit_Exception_Can_Fallback : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();
@@ -49,8 +46,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyFailsWithFallbackBrokenCircuitHandler>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, FallbackPolicyHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog>(A.Fake<ILog>());
-
 
             MyFailsWithFallbackDivideByZeroHandler.ReceivedCommand = false;
 

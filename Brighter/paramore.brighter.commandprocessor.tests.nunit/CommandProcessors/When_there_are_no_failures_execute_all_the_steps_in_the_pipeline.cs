@@ -22,10 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
-using FakeItEasy;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
@@ -46,7 +44,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>();
             container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
-            container.Register<ILog>(A.Fake<ILog>());
+
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         };
 

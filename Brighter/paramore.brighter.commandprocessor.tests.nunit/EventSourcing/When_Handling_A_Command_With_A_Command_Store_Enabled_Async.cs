@@ -1,9 +1,7 @@
-﻿using FakeItEasy;
-using NUnit.Specifications;
+﻿using NUnit.Specifications;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using paramore.brighter.commandprocessor.eventsourcing.Handlers;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.EventSourcing.TestDoubles;
 using TinyIoC;
@@ -28,7 +26,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandHandlerAsync>();
             container.Register<IAmACommandStoreAsync>(s_commandStore);
-            container.Register<ILog>(A.Fake<ILog>());
 
             s_command = new MyCommand {Value = "My Test String"};
 

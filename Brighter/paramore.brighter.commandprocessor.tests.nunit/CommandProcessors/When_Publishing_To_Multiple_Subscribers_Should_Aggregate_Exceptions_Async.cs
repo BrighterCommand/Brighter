@@ -23,11 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
@@ -51,7 +49,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequestsAsync<MyEvent>, MyEventHandlerAsync>("MyEventHandler");
             container.Register<IHandleRequestsAsync<MyEvent>, MyOtherEventHandlerAsync>("MyOtherHandler");
             container.Register<IHandleRequestsAsync<MyEvent>, MyThrowingEventHandlerAsync>("MyThrowingHandler");
-            container.Register<ILog>(A.Fake<ILog>());
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         };

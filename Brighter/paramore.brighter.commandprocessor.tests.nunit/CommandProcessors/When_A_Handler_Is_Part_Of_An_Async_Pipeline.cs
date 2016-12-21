@@ -23,10 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
@@ -47,7 +45,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyImplicitHandlerAsync>();
             container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
-            container.Register<ILog>(A.Fake<ILog>());
 
             s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         };

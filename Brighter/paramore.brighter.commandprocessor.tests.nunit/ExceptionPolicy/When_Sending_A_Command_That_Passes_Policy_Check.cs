@@ -23,11 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using FluentAssertions;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;
@@ -52,7 +50,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler>("MyDoesNotFailPolicyHandler");
             container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>("MyExceptionPolicyHandler");
-            container.Register<ILog>(A.Fake<ILog>());
 
             var policyRegistry = new PolicyRegistry();
 

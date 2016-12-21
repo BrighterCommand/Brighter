@@ -23,10 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
@@ -49,7 +47,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyEvent>, MyEventHandler>("MyEventHandler");
             container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("MyOtherHandler");
-            container.Register<ILog>(A.Fake<ILog>());
 
             s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         };
