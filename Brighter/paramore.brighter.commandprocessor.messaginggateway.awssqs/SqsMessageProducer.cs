@@ -46,11 +46,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
         {
             var messageString = JsonConvert.SerializeObject(message);
             _logger.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", message.Header.Topic, message.Id, messageString);
-            
+
             using (var client = new AmazonSimpleNotificationServiceClient(_credentials))
             {
                 var topicArn = EnsureTopic(message.Header.Topic, client);
-
                 var publishRequest = new PublishRequest(topicArn, messageString);
                 client.PublishAsync(publishRequest).Wait();
             }

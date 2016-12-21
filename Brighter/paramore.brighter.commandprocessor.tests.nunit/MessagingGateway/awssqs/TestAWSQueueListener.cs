@@ -33,7 +33,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
             {
                 return client.ListTopicsAsync().Result.Topics.SingleOrDefault(topic => topic.TopicArn == topicName);
             }
-
         }
 
         public void Purge(string queueUrl)
