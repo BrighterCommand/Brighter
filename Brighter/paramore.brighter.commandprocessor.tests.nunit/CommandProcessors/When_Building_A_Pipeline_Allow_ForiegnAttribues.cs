@@ -23,10 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
@@ -40,8 +38,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyObsoleteCommandHandler>();
 
@@ -50,9 +46,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyObsoleteCommandHandler>();
             container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
-            container.Register(logger);
 
-            s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
+            s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         };
 
         private Because _of = () => s_pipeline = s_pipelineBuilder.Build(new RequestContext()).First();

@@ -3,14 +3,10 @@ using Amazon.Runtime;
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
-    public partial class AWSSQSMessagingGatewayTests {}
-
     public partial class AWSSQSMessagingGatewayTests {
         
         [Category("AWS")]
@@ -25,11 +21,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
             private Establish context = () =>
             {
                 _queueListener = new TestAWSQueueListener(new AnonymousAWSCredentials(), queueUrl);
-                var logger = LogProvider.For<RmqMessageConsumer>();
                 _message = new Message(header: new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
                 var credentials = new AnonymousAWSCredentials();
-                _messageProducer = new SqsMessageProducer(credentials, logger);
+                _messageProducer = new SqsMessageProducer(credentials);
             };
 
             private Because of = () =>
@@ -41,7 +36,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
             private It should_send_the_message_to_aws_sqs = () => _listenedMessage.Body.ShouldNotBeNull();
 
             private Cleanup queue = () => _queueListener.DeleteMessage(_listenedMessage.ReceiptHandle);
-
         }
     }
 }

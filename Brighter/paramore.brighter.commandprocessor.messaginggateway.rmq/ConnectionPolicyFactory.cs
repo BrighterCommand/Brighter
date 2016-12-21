@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using Polly;
 using RabbitMQ.Client.Exceptions;
@@ -36,14 +36,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class ConnectionPolicyFactory
     {
-        private readonly ILog _logger;
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<ConnectionPolicyFactory>);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConnectionPolicyFactory"/> class.
         /// </summary>
-        /// <param name="logger">The logger.</param>
         public ConnectionPolicyFactory()
-           : this(new RmqMessagingGatewayConnection (), LogProvider.For<ConnectionPolicyFactory>())
+           : this(new RmqMessagingGatewayConnection())
         {}
 
         /// <summary>
@@ -51,11 +50,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// Use if you need to inject a test logger
         /// </summary>
         /// <param name="connection"></param>
-        /// <param name="logger">The logger.</param>
-        public ConnectionPolicyFactory(RmqMessagingGatewayConnection connection, ILog logger)
+        public ConnectionPolicyFactory(RmqMessagingGatewayConnection connection)
         {
-            _logger = logger;
-
             int retries = connection.AmpqUri.ConnectionRetryCount;
             int retryWaitInMilliseconds = connection.AmpqUri.RetryWaitInMilliseconds;
             int circuitBreakerTimeout = connection.AmpqUri.CircuitBreakTimeInMilliseconds;
@@ -69,7 +65,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                     {
                         if (exception is BrokerUnreachableException)
                         {
-                            _logger.WarnException(
+                            _logger.Value.WarnException(
                                 "RMQMessagingGateway: BrokerUnreachableException error on connecting to queue {0} exchange {1} on connection {2}. Will retry {3} times",
                                 exception,
                                 context["queueName"],
@@ -79,7 +75,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                         }
                         else
                         {
-                            logger.WarnException(
+                            _logger.Value.WarnException(
                                 "RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2}",
                                 exception,
                                 context["queueName"],
@@ -97,6 +93,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// </summary>
         /// <value>The retry policy.</value>
         public ContextualPolicy RetryPolicy { get; private set; }
+
         /// <summary>
         /// Gets the circuit breaker policy.
         /// </summary>

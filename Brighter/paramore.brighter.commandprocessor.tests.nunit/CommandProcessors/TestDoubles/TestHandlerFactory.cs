@@ -23,11 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
-    internal class TestHandlerFactory<TRequest, TRequestHandler> : IAmAHandlerFactory where TRequest : class, IRequest where TRequestHandler : class, IHandleRequests<TRequest>
+    internal class TestHandlerFactory<TRequest, TRequestHandler> : IAmAHandlerFactory
+        where TRequest : class, IRequest
+        where TRequestHandler : class, IHandleRequests<TRequest>
     {
         private readonly Func<TRequestHandler> _factoryMethod;
 
@@ -44,10 +45,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
         public void Release(IHandleRequests handler)
         {
             var disposable = handler as IDisposable;
-            if (disposable != null)
-            {
-                disposable.Dispose();
-            }
+            disposable?.Dispose();
             handler = null;
         }
     }

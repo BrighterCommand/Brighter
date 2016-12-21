@@ -38,7 +38,7 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Net.Http;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
@@ -50,6 +50,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMsMessageConsumer : RestMSMessageGateway, IAmAMessageConsumer
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RestMsMessageConsumer>);
+
         private readonly string _queueName;
         private readonly string _routingKey;
         private Pipe _pipe;
@@ -63,27 +65,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="routingKey">The routing key.</param>
         public RestMsMessageConsumer(RestMSMessagingGatewayConfiguration configuration, string queueName, string routingKey) 
-            :this(configuration, queueName, routingKey, LogProvider.For<RestMsMessageConsumer>())
-        {}
-
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RestMsMessageConsumer"/> class.
-        /// Use this if you need to override the logger, for example in a test
-        /// </summary>
-        /// <param name="configuration">The configuration of the RestMS broker</param>
-        /// <param name="queueName">Name of the queue.</param>
-        /// <param name="routingKey">The routing key.</param>
-        /// <param name="logger">The logger.</param>
-        public RestMsMessageConsumer(RestMSMessagingGatewayConfiguration configuration, string queueName, string routingKey, ILog logger)
-            : base(configuration, logger)
+            : base(configuration)
         {
             _queueName = queueName;
             _routingKey = routingKey;
             _feed = new Feed(this);
             _domain = new Domain(this);
         }
-
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -111,12 +99,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
             catch (RestMSClientException rmse)
             {
-                Logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                _logger.Value.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                Logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                _logger.Value.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
         }
@@ -143,16 +131,16 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 _pipe.EnsurePipeExists(_queueName, _routingKey, _domain.GetDomain());
                 var pipe = _pipe.GetPipe();
-                return pipe.Messages != null ? pipe.Messages.Count() : 0;
+                return pipe.Messages?.Length ?? 0;
             }
             catch (RestMSClientException rmse)
             {
-                Logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                _logger.Value.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                Logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                _logger.Value.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
         }
@@ -166,7 +154,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             try
             {
                 var pipe = _pipe.GetPipe();
-                if (pipe != null && pipe.Messages != null)
+                if (pipe?.Messages != null)
                 {
                     var message = pipe.Messages.FirstOrDefault();
                     do
@@ -181,12 +169,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
             catch (RestMSClientException rmse)
             {
-                Logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                _logger.Value.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                Logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                _logger.Value.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
         }
@@ -219,7 +207,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 return;
             }
 
-            Logger.DebugFormat("Deleting the message {0} from the pipe: {0}", message.Id, pipe.Href);
+            _logger.Value.DebugFormat("Deleting the message {0} from the pipe: {0}", message.Id, pipe.Href);
             SendDeleteMessage(matchingMessage);
         }
 
@@ -230,7 +218,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                 return new Message();
             }
 
-            Logger.DebugFormat("Getting the message from the RestMS server: {0}", messageUri);
+            _logger.Value.DebugFormat("Getting the message from the RestMS server: {0}", messageUri);
             var client = Client();
 
             try
@@ -244,7 +232,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    Logger.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", _pipe.PipeUri, exception.Message);
+                    _logger.Value.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", _pipe.PipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
@@ -254,7 +242,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         private Message ReadMessage()
         {
             var pipe = _pipe.GetPipe();
-            return GetMessage(pipe.Messages != null ? pipe.Messages.FirstOrDefault() : null);
+            return GetMessage(pipe.Messages?.FirstOrDefault());
         }
 
         private void SendDeleteMessage(RestMSMessageLink matchingMessage)

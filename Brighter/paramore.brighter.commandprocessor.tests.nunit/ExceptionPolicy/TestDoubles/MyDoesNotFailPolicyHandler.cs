@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
@@ -30,9 +29,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDou
 {
     internal class MyDoesNotFailPolicyHandler : RequestHandler<MyCommand>
     {
-        public MyDoesNotFailPolicyHandler(ILog logger) : base(logger)
-        { }
-
         public static bool ReceivedCommand { get; set; }
 
         static MyDoesNotFailPolicyHandler()

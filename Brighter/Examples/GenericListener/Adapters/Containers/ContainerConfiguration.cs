@@ -25,7 +25,7 @@ namespace GenericListener.Adapters.Containers
                     .KeepReconnecting()
                     .EnableVerboseLogging()
                     .SetDefaultUserCredentials(new UserCredentials("admin", "changeit"))
-                    .UseCustomLogger(new EventStoreLogger(c.Resolve<ILog>()))
+                    .UseCustomLogger(new EventStoreLogger())
                     .WithConnectionTimeoutOf(TimeSpan.FromSeconds(30))
                     .Build();
 

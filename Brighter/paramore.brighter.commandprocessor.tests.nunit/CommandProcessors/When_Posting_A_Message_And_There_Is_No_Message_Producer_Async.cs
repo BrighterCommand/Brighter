@@ -23,12 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using Polly;
 
@@ -46,7 +44,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_myCommand.Value = "Hello World";
 
             s_fakeMessageStore = new FakeMessageStore();
@@ -72,8 +69,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 (IAmAMessageStoreAsync<Message>)s_fakeMessageStore,
-                (IAmAMessageProducerAsync)null,
-                logger);
+                (IAmAMessageProducerAsync)null);
         };
 
         private Because _of = () => s_exception = Catch.Exception(() => AsyncContext.Run(() => s_commandProcessor.PostAsync(s_myCommand)));

@@ -22,10 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using FakeItEasy;
 using NUnit.Specifications;
-using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;
@@ -34,15 +31,13 @@ using TinyIoC;
 namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
     [Subject(typeof(ExceptionPolicyHandler<>))]
-    public class When_Raising_A_Broken_Circuit_Exception_Can_Fallback : NUnit.Specifications.ContextSpecification
+    public class When_Raising_A_Broken_Circuit_Exception_Can_Fallback : ContextSpecification
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsWithFallbackBrokenCircuitHandler>();
             var policyRegistry = new PolicyRegistry();
@@ -51,12 +46,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyFailsWithFallbackBrokenCircuitHandler>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, FallbackPolicyHandler<MyCommand>>().AsSingleton();
-            container.Register<ILog>(logger);
-
 
             MyFailsWithFallbackDivideByZeroHandler.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
         };
 
         private Because _of = () => s_commandProcessor.Send(s_myCommand);

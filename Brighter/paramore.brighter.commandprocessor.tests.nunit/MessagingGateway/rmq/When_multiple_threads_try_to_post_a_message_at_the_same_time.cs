@@ -28,13 +28,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 {
-    
     [Category("RMQ")]
     public class When_multiple_threads_try_to_post_a_message_at_the_same_time : ContextSpecification
     {
@@ -45,17 +43,15 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 
         private Establish _context = () =>
         {
-            var logger = LogProvider.For<RmqMessageConsumer>();
-
             s_message = new Message(header: new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
-                AmpqUri = new AmqpUriSpecification(uri: new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange")
             };
 
-            s_messageProducer = new RmqMessageProducer(rmqConnection, logger);
+            s_messageProducer = new RmqMessageProducer(rmqConnection);
         };
 
         private Because _of = () =>

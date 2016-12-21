@@ -41,6 +41,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using paramore.brighter.commandprocessor.Logging;
+using Polly;
 
 namespace paramore.brighter.commandprocessor
 {
@@ -51,13 +52,14 @@ namespace paramore.brighter.commandprocessor
     /// </summary>
     public class CommandProcessor : IAmACommandProcessor, IDisposable
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<CommandProcessor>);
+
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
         private readonly IAmAHandlerFactory _handlerFactory;
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmAPolicyRegistry _policyRegistry;
-        private readonly ILog _logger;
         private readonly int _messageStoreTimeout;
         private readonly IAmAMessageStore<Message> _messageStore;
         private readonly IAmAMessageStoreAsync<Message> _asyncMessageStore;
@@ -94,8 +96,13 @@ namespace paramore.brighter.commandprocessor
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry)
-            : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.For<CommandProcessor>())
-        {}
+        {
+            _subscriberRegistry = subscriberRegistry;
+            _handlerFactory = handlerFactory;
+            _asyncHandlerFactory = asyncHandlerFactory;
+            _requestContextFactory = requestContextFactory;
+            _policyRegistry = policyRegistry;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
@@ -110,8 +117,12 @@ namespace paramore.brighter.commandprocessor
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry)
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, LogProvider.For<CommandProcessor>())
-        {}
+        {
+            _subscriberRegistry = subscriberRegistry;
+            _handlerFactory = handlerFactory;
+            _requestContextFactory = requestContextFactory;
+            _policyRegistry = policyRegistry;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
@@ -126,80 +137,11 @@ namespace paramore.brighter.commandprocessor
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry)
-            : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, LogProvider.For<CommandProcessor>())
-        { }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when no task queue support is required, and you want to inject a test logger
-        /// </summary>
-        /// <param name="subscriberRegistry">The subscriber registry.</param>
-        /// <param name="handlerFactory">The handler factory.</param>
-        /// <param name="requestContextFactory">The request context factory.</param>
-        /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="logger">The logger.</param>
-        public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry,
-            IAmAHandlerFactory handlerFactory,
-            IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
-            ILog logger)
-        {
-            _subscriberRegistry = subscriberRegistry;
-            _handlerFactory = handlerFactory;
-            _requestContextFactory = requestContextFactory;
-            _policyRegistry = policyRegistry;
-            _logger = logger;
-        }
-
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when no task queue support is required and only async handlers are used
-        /// </summary>
-        /// <param name="subscriberRegistry">The subscriber registry.</param>
-        /// <param name="asyncHandlerFactory">The async handler factory.</param>
-        /// <param name="requestContextFactory">The request context factory.</param>
-        /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="logger">The logger.</param>
-        public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry,
-            IAmAHandlerFactoryAsync asyncHandlerFactory,
-            IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
-            ILog logger)
         {
             _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
-            _logger = logger;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when no task queue support is required, and you want to inject a test logger
-        /// </summary>
-        /// <param name="subscriberRegistry">The subscriber registry.</param>
-        /// <param name="handlerFactory">The handler factory.</param>
-        /// <param name="asyncHandlerFactory">The async handler factory.</param>
-        /// <param name="requestContextFactory">The request context factory.</param>
-        /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="logger">The logger.</param>
-        public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry,
-            IAmAHandlerFactory handlerFactory,
-            IAmAHandlerFactoryAsync asyncHandlerFactory,
-            IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
-            ILog logger)
-        {
-            _subscriberRegistry = subscriberRegistry;
-            _handlerFactory = handlerFactory;
-            _asyncHandlerFactory = asyncHandlerFactory;
-            _requestContextFactory = requestContextFactory;
-            _policyRegistry = policyRegistry;
-            _logger = logger;
         }
 
         /// <summary>
@@ -218,57 +160,10 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
-            int messageStoreTimeout = 300
-            ) : this(requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.For<CommandProcessor>(), messageStoreTimeout) 
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when only task queue support is required
-        /// </summary>
-        /// <param name="requestContextFactory">The request context factory.</param>
-        /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="asyncMessageStore">The message store supporting async/await.</param>
-        /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
-        /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        public CommandProcessor(
-            IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
-            IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStoreAsync<Message> asyncMessageStore,
-            IAmAMessageProducerAsync asyncMessageProducer,
-            int messageStoreTimeout = 300
-            )
-            : this(
-                requestContextFactory, policyRegistry, mapperRegistry, asyncMessageStore, asyncMessageProducer,
-                LogProvider.For<CommandProcessor>(), messageStoreTimeout)
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when only task queue support is required, and you wish to inject a test logger
-        /// </summary>
-        /// <param name="requestContextFactory">The request context factory.</param>
-        /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="messageStore">The message store.</param>
-        /// <param name="messageProducer">The messaging gateway.</param>
-        /// <param name="logger">The logger.</param>
-        /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        public CommandProcessor(
-            IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
-            IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStore<Message> messageStore,
-            IAmAMessageProducer messageProducer,
-            ILog logger,
-            int messageStoreTimeout = 300
-            )
+            int messageStoreTimeout = 300)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
-            _logger = logger;
             _messageStoreTimeout = messageStoreTimeout;
             _mapperRegistry = mapperRegistry;
             _messageStore = messageStore;
@@ -277,14 +172,13 @@ namespace paramore.brighter.commandprocessor
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when only task queue support is required, and you wish to inject a test logger
+        /// Use this constructor when only task queue support is required
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="asyncMessageStore">The message store supporting async/await.</param>
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
-        /// <param name="logger">The logger.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
@@ -292,13 +186,10 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducerAsync asyncMessageProducer,
-            ILog logger,
-            int messageStoreTimeout = 300
-            )
+            int messageStoreTimeout = 300)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
-            _logger = logger;
             _messageStoreTimeout = messageStoreTimeout;
             _mapperRegistry = mapperRegistry;
             _asyncMessageStore = asyncMessageStore;
@@ -317,7 +208,6 @@ namespace paramore.brighter.commandprocessor
         /// <param name="messageStore">The message store.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        /// <param name="messageGatewaySendTimeout">How long should we wait to post to the message store</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -326,9 +216,14 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
-            int messageStoreTimeout = 300
-            )
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, mapperRegistry, messageStore, messageProducer, LogProvider.For<CommandProcessor>(), messageStoreTimeout) {}
+            int messageStoreTimeout = 300)
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
+        {
+            _mapperRegistry = mapperRegistry;
+            _messageStore = messageStore;
+            _messageProducer = messageProducer;
+            _messageStoreTimeout = messageStoreTimeout;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
@@ -350,70 +245,8 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducerAsync asyncMessageProducer,
-            int messageStoreTimeout = 300
-            )
-            : this(
-                subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, mapperRegistry,
-                asyncMessageStore, asyncMessageProducer, LogProvider.For<CommandProcessor>(), messageStoreTimeout)
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when both task queue and command processor support is required, and you want to inject a test logger
-        /// </summary>
-        /// <param name="subscriberRegistry">The subscriber registry.</param>
-        /// <param name="handlerFactory">The handler factory.</param>
-        /// <param name="requestContextFactory">The request context factory.</param>
-        /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="messageStore">The message store.</param>
-        /// <param name="messageProducer">The messaging gateway.</param>
-        /// <param name="logger">The logger.</param>
-        /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry,
-            IAmAHandlerFactory handlerFactory,
-            IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
-            IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStore<Message> messageStore,
-            IAmAMessageProducer messageProducer,
-            ILog logger,
-            int messageStoreTimeout = 300
-            )
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, logger)
-        {
-            _mapperRegistry = mapperRegistry;
-            _messageStore = messageStore;
-            _messageProducer = messageProducer;
-            _messageStoreTimeout = messageStoreTimeout;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when both task queue and command processor support is required, and you want to inject a test logger
-        /// </summary>
-        /// <param name="subscriberRegistry">The subscriber registry.</param>
-        /// <param name="asyncHandlerFactory">The async handler factory.</param>
-        /// <param name="requestContextFactory">The request context factory.</param>
-        /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="asyncMessageStore">The message store supporting async/await.</param>
-        /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
-        /// <param name="logger">The logger.</param>
-        /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry,
-            IAmAHandlerFactoryAsync asyncHandlerFactory,
-            IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
-            IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStoreAsync<Message> asyncMessageStore,
-            IAmAMessageProducerAsync asyncMessageProducer,
-            ILog logger,
-            int messageStoreTimeout = 300
-            )
-            : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, logger)
+            int messageStoreTimeout = 300)
+            : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _asyncMessageStore = asyncMessageStore;
@@ -447,45 +280,8 @@ namespace paramore.brighter.commandprocessor
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducer messageProducer,
             IAmAMessageProducerAsync asyncMessageProducer,
-            int messageStoreTimeout = 300
-            )
-            : this(
-                subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry,
-                mapperRegistry, messageStore, asyncMessageStore, messageProducer, asyncMessageProducer,
-                LogProvider.For<CommandProcessor>(), messageStoreTimeout)
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when both task queue and command processor support is required, and you want to inject a test logger
-        /// </summary>
-        /// <param name="subscriberRegistry">The subscriber registry.</param>
-        /// <param name="handlerFactory">The handler factory.</param>
-        /// <param name="asyncHandlerFactory">The async handler factory.</param>
-        /// <param name="requestContextFactory">The request context factory.</param>
-        /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="messageStore">The message store.</param>
-        /// <param name="asyncMessageStore">The message store supporting async/await.</param>
-        /// <param name="messageProducer">The messaging gateway.</param>
-        /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
-        /// <param name="logger">The logger.</param>
-        /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
-        public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry,
-            IAmAHandlerFactory handlerFactory,
-            IAmAHandlerFactoryAsync asyncHandlerFactory,
-            IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
-            IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStore<Message> messageStore,
-            IAmAMessageStoreAsync<Message> asyncMessageStore,
-            IAmAMessageProducer messageProducer,
-            IAmAMessageProducerAsync asyncMessageProducer,
-            ILog logger,
-            int messageStoreTimeout = 300
-            )
-            : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, logger)
+            int messageStoreTimeout = 300)
+            : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _messageStore = messageStore;
@@ -494,7 +290,6 @@ namespace paramore.brighter.commandprocessor
             _asyncMessageProducer = asyncMessageProducer;
             _messageStoreTimeout = messageStoreTimeout;
         }
-
 
         /// <summary>
         /// Sends the specified command. We expect only one handler. The command is handled synchronously.
@@ -511,9 +306,9 @@ namespace paramore.brighter.commandprocessor
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _logger))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory))
             {
-                _logger.InfoFormat("Building send pipeline for command: {0} {1}", command.GetType(), command.Id);
+                _logger.Value.InfoFormat("Building send pipeline for command: {0} {1}", command.GetType(), command.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -538,9 +333,9 @@ namespace paramore.brighter.commandprocessor
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _logger))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory))
             {
-                _logger.InfoFormat("Building send async pipeline for command: {0} {1}", command.GetType(), command.Id);
+                _logger.Value.InfoFormat("Building send async pipeline for command: {0} {1}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -566,14 +361,14 @@ namespace paramore.brighter.commandprocessor
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _logger))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory))
             {
-                _logger.InfoFormat("Building send pipeline for event: {0} {1}", @event.GetType(),  @event.Id);
+                _logger.Value.InfoFormat("Building send pipeline for event: {0} {1}", @event.GetType(), @event.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 var handlerCount = handlerChain.Count();
 
-                _logger.InfoFormat("Found {0} pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
+                _logger.Value.InfoFormat("Found {0} pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new List<Exception>();
                 foreach (var handleRequests in handlerChain)
@@ -615,14 +410,14 @@ namespace paramore.brighter.commandprocessor
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _logger))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory))
             {
-                _logger.InfoFormat("Building send async pipeline for event: {0} {1}", @event.GetType(), @event.Id);
-                var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
+                _logger.Value.InfoFormat("Building send async pipeline for event: {0} {1}", @event.GetType(), @event.Id);
 
+                var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
                 var handlerCount = handlerChain.Count();
-                
-                _logger.InfoFormat("Found {0} async pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
+
+                _logger.Value.InfoFormat("Found {0} async pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new List<Exception>();
                 foreach (var handler in handlerChain)
@@ -656,7 +451,8 @@ namespace paramore.brighter.commandprocessor
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(T request) where T : class, IRequest
         {
-            _logger.InfoFormat("Decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
+            _logger.Value.InfoFormat("Decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
+
             if (_messageStore == null)
                 throw new InvalidOperationException("No message store defined.");
             if (_messageProducer == null)
@@ -669,10 +465,10 @@ namespace paramore.brighter.commandprocessor
             var message = messageMapper.MapToMessage(request);
 
             RetryAndBreakCircuit(() =>
-                {
-                    _messageStore.Add(message, _messageStoreTimeout);
-                    _messageProducer.Send(message);
-                });
+            {
+                _messageStore.Add(message, _messageStoreTimeout);
+                _messageProducer.Send(message);
+            });
         }
 
         /// <summary>
@@ -691,7 +487,8 @@ namespace paramore.brighter.commandprocessor
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
         {
-            _logger.InfoFormat("Async decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
+            _logger.Value.InfoFormat("Async decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
+
             if (_asyncMessageStore == null)
                 throw new InvalidOperationException("No async message store defined.");
             if (_asyncMessageProducer == null)
@@ -726,31 +523,29 @@ namespace paramore.brighter.commandprocessor
 
             if (disposing)
             {
-                if (_messageProducer != null )
-                    _messageProducer.Dispose();
-                if (_asyncMessageProducer != null)
-                    _asyncMessageProducer.Dispose();
+                _messageProducer?.Dispose();
+                _asyncMessageProducer?.Dispose();
             }
 
             _messageProducer = null;
             _asyncMessageProducer = null;
 
             _disposed = true;
-        } 
+        }
 
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
-            _logger.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof (T), command.Id);
+            _logger.Value.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id);
             if (handlerCount > 1)
                 throw new ArgumentException(
                     string.Format(
                         "More than one handler was found for the typeof command {0} - a command should only have one handler.",
-                        typeof (T)));
+                        typeof(T)));
             if (handlerCount == 0)
                 throw new ArgumentException(
                     string.Format(
                         "No command handler was found for the typeof command {0} - a command should have exactly one handler.",
-                        typeof (T)));
+                        typeof(T)));
         }
 
         private void CheckCircuit(Action send)

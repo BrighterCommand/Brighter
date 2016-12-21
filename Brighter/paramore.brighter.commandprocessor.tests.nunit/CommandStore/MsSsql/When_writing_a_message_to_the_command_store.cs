@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.commandstore.mssql;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
@@ -43,20 +42,17 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration, new LogProvider.NoOpLogger());
-            s_raisedCommand = new MyCommand() {Value = "Test"};
+            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
+            s_raisedCommand = new MyCommand {Value = "Test"};
             s_sqlCommandStore.Add<MyCommand>(s_raisedCommand);
         };
 
-        private Because _of = () => { s_storedCommand = s_sqlCommandStore.Get<MyCommand>(s_raisedCommand.Id); };
+        private Because _of = () => s_storedCommand = s_sqlCommandStore.Get<MyCommand>(s_raisedCommand.Id);
 
         private It _should_read_the_command_from_the__sql_command_store = () => s_storedCommand.ShouldNotBeNull();
         private It _should_read_the_command_value = () => s_storedCommand.Value.ShouldEqual(s_raisedCommand.Value);
         private It _should_read_the_command_id = () => s_storedCommand.Id.ShouldEqual(s_raisedCommand.Id);
 
-        private Cleanup _cleanup = () =>
-        {
-            _msSqlTestHelper.CleanUpDb();
-        };
+        private Cleanup _cleanup = () => _msSqlTestHelper.CleanUpDb();
     }
 }

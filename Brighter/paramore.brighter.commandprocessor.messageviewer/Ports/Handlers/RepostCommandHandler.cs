@@ -36,7 +36,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
@@ -51,7 +50,6 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
     {
         private readonly IMessageStoreViewerFactory _messageStoreViewerFactory;
         private readonly IMessageProducerFactoryProvider _messageProducerFactoryProvider;
-        private readonly ILog _logger = LogProvider.GetLogger("RepostCommandHandler");
         private readonly IAmAMessageRecoverer _messageRecoverer;
 
         public RepostCommandHandler(IMessageStoreViewerFactory messageStoreViewerFactory,
@@ -75,7 +73,7 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
 
         private IAmAMessageProducer GetMessageProducerFromConfig(IMessageProducerFactoryProvider messageProducerFactoryProvider)
         {
-            var messageProducerFactory = messageProducerFactoryProvider.Get(_logger);
+            var messageProducerFactory = messageProducerFactoryProvider.Get();
             if (messageProducerFactory == null)
             {
                 throw new Exception("Mis-configured viewer - no message producer found");

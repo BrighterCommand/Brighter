@@ -25,8 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
@@ -35,7 +33,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
     {
         private static MyEvent s_receivedEvent;
 
-        public MyThrowingEventHandlerAsync (ILog logger) : base(logger)
+        public MyThrowingEventHandlerAsync()
         {
             s_receivedEvent = null;
         }

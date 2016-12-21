@@ -24,12 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.logging;
 using paramore.brighter.commandprocessor.logging.Attributes;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using Tasks.Adapters.DataAccess;
-using Tasks.Model;
 using Tasks.Ports.Commands;
 using Tasks.Ports.Events;
 
@@ -41,11 +38,6 @@ namespace Tasks.Ports.Handlers
         private readonly IAmACommandProcessor _commandProcessor;
 
         public CompleteTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor)
-            :this(tasksDAO, commandProcessor, LogProvider.For<CompleteTaskCommandHandler>())
-        {}
-
-        public CompleteTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor, ILog logger)
-             :base(logger)
         {
             _tasksDAO = tasksDAO;
             _commandProcessor = commandProcessor;
@@ -56,17 +48,16 @@ namespace Tasks.Ports.Handlers
         [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
         public override CompleteTaskCommand Handle(CompleteTaskCommand completeTaskCommand)
         {
-           
-                Task task = _tasksDAO.FindById(completeTaskCommand.TaskId);
-                if (task != null)
-                {
-                    task.CompletionDate = completeTaskCommand.CompletionDate;
-                    _tasksDAO.Update(task);
-                }
-                else
-                {
-                    throw new ArgumentOutOfRangeException("completeTaskCommand", completeTaskCommand, "Could not find the task to complete");
-                }
+            var task = _tasksDAO.FindById(completeTaskCommand.TaskId);
+            if (task != null)
+            {
+                task.CompletionDate = completeTaskCommand.CompletionDate;
+                _tasksDAO.Update(task);
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException(nameof(completeTaskCommand), completeTaskCommand, "Could not find the task to complete");
+            }
 
             _commandProcessor.Post(new TaskCompletedEvent(completeTaskCommand.Id, completeTaskCommand.TaskId, completeTaskCommand.CompletionDate));
 

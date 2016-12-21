@@ -45,39 +45,32 @@ using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messagestore.mssql.Logging;
 
 namespace paramore.brighter.commandprocessor.messagestore.mssql
 {
     /// <summary>
     ///     Class MsSqlMessageStore.
     /// </summary>
-    public class MsSqlMessageStore : IAmAMessageStore<Message>, 
-                                     IAmAMessageStoreAsync<Message>,
-        IAmAMessageStoreViewer<Message>, IAmAMessageStoreViewerAsync<Message>
+    public class MsSqlMessageStore :
+        IAmAMessageStore<Message>, 
+        IAmAMessageStoreAsync<Message>,
+        IAmAMessageStoreViewer<Message>,
+        IAmAMessageStoreViewerAsync<Message>
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MsSqlMessageStore>);
+
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
         private readonly MsSqlMessageStoreConfiguration _configuration;
-        private readonly ILog _log;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlMessageStore" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         public MsSqlMessageStore(MsSqlMessageStoreConfiguration configuration)
-            : this(configuration, LogProvider.For<MsSqlMessageStore>()) {}
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="MsSqlMessageStore" /> class.
-        ///     Use this constructor if you need to pass in the logger
-        /// </summary>
-        /// <param name="configuration">The configuration.</param>
-        /// <param name="log">The log.</param>
-        public MsSqlMessageStore(MsSqlMessageStoreConfiguration configuration, ILog log)
         {
             _configuration = configuration;
-            _log = log;
             ContinueOnCapturedContext = false;
         }
 
@@ -105,7 +98,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                         if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
                             sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                         {
-                            _log.WarnFormat(
+                            _logger.Value.WarnFormat(
                                 "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
                                 message.Id);
                             return;
@@ -155,7 +148,7 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql
                         if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
                             sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                         {
-                            _log.WarnFormat(
+                            _logger.Value.WarnFormat(
                                 "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
                                 message.Id);
                             return;

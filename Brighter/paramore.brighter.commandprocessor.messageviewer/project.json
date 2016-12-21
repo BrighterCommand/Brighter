@@ -4,14 +4,14 @@
     "Newtonsoft.Json": "9.0.1",
     "paramore.brighter.commandprocessor": { "target": "project" },
     "paramore.brighter.commandprocessor.messagestore.mssql": { "target": "project" },
-    "paramore.brighter.commandprocessor.messaginggateway.rmq": { "target": "project"},
+    "paramore.brighter.commandprocessor.messaginggateway.rmq": { "target": "project" },
     "Nancy": "2.0.0-barneyrubble",
     "Nancy.Embedded": "2.0.0-barneyrubble",
     "Polly": "4.3.0"
   },
   "frameworks": {
     "netstandard1.6": {
-       "imports": "dnxcore50"
+      "imports": "dnxcore50"
     },
     "net452": {}
   },
@@ -28,5 +28,18 @@
 
       //, "Scripts/**" - include this and build fiels with errors in *.targets (!)
     ]
+  },
+  "configurations": {
+    "Debug": {
+      "buildOptions": {
+        "define": [ "DEBUG", "TRACE" ]
+      }
+    },
+    "Release": {
+      "buildOptions": {
+        "define": [ "RELEASE", "TRACE" ],
+        "optimize": true
+      }
+    }
   }
- }
+}

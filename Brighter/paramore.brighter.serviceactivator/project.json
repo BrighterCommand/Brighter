@@ -63,22 +63,12 @@
   "configurations": {
     "Debug": {
       "buildOptions": {
-        "define": [
-          "DEBUG",
-          "TRACE",
-          "LIBLOG_PORTABLE",
-          "LIBLOG_PUBLIC"
-        ]
+        "define": [ "DEBUG", "TRACE", "LIBLOG_PORTABLE" ]
       }
     },
     "Release": {
       "buildOptions": {
-        "define": [
-          "RELEASE",
-          "TRACE",
-          "LIBLOG_PORTABLE",
-          "LIBLOG_PUBLIC"
-        ],
+        "define": [ "RELEASE", "TRACE", "LIBLOG_PORTABLE" ],
         "optimize": true
       }
     }

@@ -27,7 +27,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using paramore.brighter.commandprocessor.extensions;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
 
 using RabbitMQ.Client;
 
@@ -38,11 +38,19 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessagePublisher
     {
-        private static string[] HeadersToReset = { HeaderNames.DELAY_MILLISECONDS, HeaderNames.MESSAGE_TYPE, HeaderNames.TOPIC, HeaderNames.HANDLED_COUNT, HeaderNames.DELIVERY_TAG, HeaderNames.CORRELATION_ID };
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessagePublisher>);
+        private static readonly string[] _headersToReset =
+        {
+            HeaderNames.DELAY_MILLISECONDS,
+            HeaderNames.MESSAGE_TYPE,
+            HeaderNames.TOPIC,
+            HeaderNames.HANDLED_COUNT,
+            HeaderNames.DELIVERY_TAG,
+            HeaderNames.CORRELATION_ID
+        };
 
         private readonly IModel _channel;
         private readonly string _exchangeName;
-        private readonly ILog _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessagePublisher"/> class.
@@ -55,35 +63,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// exchangeName
         /// </exception>
         public RmqMessagePublisher(IModel channel, string exchangeName) 
-            : this(channel, exchangeName, LogProvider.For<RmqMessagePublisher>())
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RmqMessagePublisher"/> class.
-        /// Use this if you need to inject the logger for tests
-        /// </summary>
-        /// <param name="channel">The channel.</param>
-        /// <param name="exchangeName">Name of the exchange.</param>
-        /// <param name="logger">The logger to use</param>
-        /// <exception cref="System.ArgumentNullException">
-        /// channel
-        /// or
-        /// exchangeName
-        /// </exception>
-        public RmqMessagePublisher(IModel channel, string exchangeName, ILog logger)
         {
             if (channel == null)
             {
-                throw new ArgumentNullException("channel");
+                throw new ArgumentNullException(nameof(channel));
             }
             if (exchangeName == null)
             {
-                throw new ArgumentNullException("exchangeName");
+                throw new ArgumentNullException(nameof(exchangeName));
             }
 
             _channel = channel;
             _exchangeName = exchangeName;
-            _logger = logger;
         }
 
         /// <summary>
@@ -98,9 +89,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             var headers = new Dictionary<string, object>
             {
-                {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
-                {HeaderNames.TOPIC, message.Header.Topic},
-                {HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString(CultureInfo.InvariantCulture)}
+                { HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString() },
+                { HeaderNames.TOPIC, message.Header.Topic },
+                { HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString(CultureInfo.InvariantCulture) }
             };
 
             if (message.Header.CorrelationId != Guid.Empty)
@@ -108,7 +99,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             message.Header.Bag.Each(header =>
             {
-                if (!HeadersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
+                if (!_headersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
             });
 
             if (!string.IsNullOrEmpty(deliveryTag))
@@ -134,10 +125,9 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         public void RequeueMessage(Message message, string queueName, int delayMilliseconds)
         {
             var messageId = Guid.NewGuid() ;
-            const string DeliveryTag = "1";
+            const string deliveryTag = "1";
 
-            if (_logger != null)
-                _logger.InfoFormat("RmqMessagePublisher: Regenerating message {0} with DeliveryTag of {1} to {2} with DeliveryTag of {3}", message.Id, DeliveryTag, messageId, 1);
+            _logger.Value.InfoFormat("RmqMessagePublisher: Regenerating message {0} with DeliveryTag of {1} to {2} with DeliveryTag of {3}", message.Id, deliveryTag, messageId, 1);
 
             var headers = new Dictionary<string, object>
             {
@@ -151,10 +141,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             message.Header.Bag.Each((header) =>
             {
-                if (!HeadersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
+                if (!_headersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
             });
 
-            headers.Add(HeaderNames.DELIVERY_TAG, DeliveryTag);
+            headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
 
             if (delayMilliseconds > 0)
                 headers.Add(HeaderNames.DELAY_MILLISECONDS, delayMilliseconds);
@@ -164,7 +154,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             // To send it to the right queue use the default (empty) exchange
             _channel.BasicPublish(
-                String.Empty,
+                string.Empty,
                 queueName,
                 false,
                 CreateBasicProperties(messageId, message.Header.TimeStamp, message.Body.BodyType, message.Header.ContentType, headers),

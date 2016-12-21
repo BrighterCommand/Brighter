@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 
@@ -33,6 +33,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {
     internal class Feed
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<Feed>);
+
         private readonly RestMSMessageGateway _gateway;
 
         /// <summary>
@@ -50,12 +52,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// Ensures the feed exists.
         /// </summary>
         /// <param name="domain">The domain.</param>
-        /// <param name="options">The options.</param>
         /// <exception cref="RestMSClientException"></exception>
         public void EnsureFeedExists(RestMSDomain domain)
         {
             var feedName = _gateway.Configuration.Feed.Name;
-            _gateway.Logger.DebugFormat("Checking for existence of the feed {0} on the RestMS server: {1}", feedName, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            _logger.Value.DebugFormat("Checking for existence of the feed {0} on the RestMS server: {1}", feedName, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var isFeedDeclared = IsFeedDeclared(domain, feedName);
             if (!isFeedDeclared)
             {
@@ -70,7 +71,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         private RestMSDomain CreateFeed(string domainUri, string name)
         {
-            _gateway.Logger.DebugFormat("Creating the feed {0} on the RestMS server: {1}", name, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            _logger.Value.DebugFormat("Creating the feed {0} on the RestMS server: {1}", name, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var client = _gateway.Client();
             try
             {
@@ -81,10 +82,8 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
                             Name = name,
                             Type = "Default",
                             Title = name
-                        })
-                                                    )
-                    )
-                                     .Result;
+                        }))
+                    ).Result;
 
                 response.EnsureSuccessStatusCode();
                 return _gateway.ParseResponse<RestMSDomain>(response);
@@ -93,7 +92,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    _gateway.Logger.ErrorFormat("Threw exception adding Feed {0} to RestMS Server {1}", name, exception.Message);
+                    _logger.Value.ErrorFormat("Threw exception adding Feed {0} to RestMS Server {1}", name, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error adding the Feed {0} to the RestMS server, see log for details", name));
@@ -102,7 +101,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
 
         private bool IsFeedDeclared(RestMSDomain domain, string feedName)
         {
-            return domain != null && domain.Feeds != null && domain.Feeds.Any(feed => feed.Name == feedName);
+            return domain?.Feeds != null && domain.Feeds.Any(feed => feed.Name == feedName);
         }
     }
 }

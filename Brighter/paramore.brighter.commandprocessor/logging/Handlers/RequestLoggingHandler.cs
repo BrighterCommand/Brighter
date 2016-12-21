@@ -52,23 +52,9 @@ namespace paramore.brighter.commandprocessor.logging.Handlers
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class RequestLoggingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RequestLoggingHandler<TRequest>>);
+
         private HandlerTiming _timing;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestLoggingHandler{TRequest}"/> class.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        public RequestLoggingHandler()
-            : this(LogProvider.For<RequestLoggingHandler<TRequest>>())
-        { }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestLoggingHandler{TRequest}"/> class.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        public RequestLoggingHandler(ILog logger)
-            : base(logger)
-        { }
 
         /// <summary>
         /// Initializes from attribute parameters.
@@ -115,15 +101,14 @@ namespace paramore.brighter.commandprocessor.logging.Handlers
             return base.Fallback(command);
         }
 
-
         private void LogCommand(TRequest request)
         {
-            Logger.InfoFormat("Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}", _timing.ToString(), typeof(TRequest), JsonConvert.SerializeObject(request), DateTime.UtcNow);
+            _logger.Value.InfoFormat("Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}", _timing.ToString(), typeof(TRequest), JsonConvert.SerializeObject(request), DateTime.UtcNow);
         }
 
         private void LogFailure(TRequest request)
         {
-            Logger.InfoFormat("Failure in pipeline call for {0} with values of {1} at: {2}", typeof(TRequest), JsonConvert.SerializeObject(request), DateTime.UtcNow);
+            _logger.Value.InfoFormat("Failure in pipeline call for {0} with values of {1} at: {2}", typeof(TRequest), JsonConvert.SerializeObject(request), DateTime.UtcNow);
         }
     }
 }

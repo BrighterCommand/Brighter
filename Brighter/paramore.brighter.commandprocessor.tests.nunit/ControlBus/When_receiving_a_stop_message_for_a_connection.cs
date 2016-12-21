@@ -1,6 +1,5 @@
 ﻿using FakeItEasy;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Handlers;
@@ -16,11 +15,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_dispatcher = A.Fake<IDispatcher>();
-
-            s_configurationCommandHandler = new ConfigurationCommandHandler(s_dispatcher, logger);
-
+            s_configurationCommandHandler = new ConfigurationCommandHandler(s_dispatcher);
             s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPCHANNEL) {ConnectionName = CONNECTION_NAME};
         };
 

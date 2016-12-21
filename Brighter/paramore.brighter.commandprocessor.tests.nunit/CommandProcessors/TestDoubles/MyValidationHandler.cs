@@ -22,16 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
-
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
     internal class MyValidationHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         private static TRequest s_command;
 
-        public MyValidationHandler(ILog logger) : base(logger)
+        public MyValidationHandler()
         {
             s_command = null;
         }

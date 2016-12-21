@@ -27,7 +27,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -50,7 +49,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             s_commandChannel = new FakeChannel();
             s_commandProcessor = new SpyCommandProcessor();
 
-            var logger = LogProvider.For<Dispatcher>();
             var container = new TinyIoCContainer();
             container.Register<MyEventMessageMapper>();
             container.Register<MyCommandMessageMapper>();
@@ -62,7 +60,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 
             var myEventConnection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_eventChannel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
             var myCommandConnection = new Connection(name: new ConnectionName("anothertest"), dataType: typeof(MyCommand), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_commandChannel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
-            s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { myEventConnection, myCommandConnection }, logger);
+            s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { myEventConnection, myCommandConnection });
 
             var @event = new MyEvent();
             var eventMessage = new MyEventMessageMapper().MapToMessage(@event);

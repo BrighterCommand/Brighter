@@ -1,9 +1,7 @@
-﻿using FakeItEasy;
-using NUnit.Specifications;
+﻿using NUnit.Specifications;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using paramore.brighter.commandprocessor.eventsourcing.Handlers;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.EventSourcing.TestDoubles;
 using TinyIoC;
@@ -19,8 +17,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
 
         private Establish context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             s_commandStore = new InMemoryCommandStore();
 
             var registry = new SubscriberRegistry();
@@ -30,12 +26,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandHandlerAsync>();
             container.Register<IAmACommandStoreAsync>(s_commandStore);
-            container.Register<ILog>(logger);
 
             s_command = new MyCommand {Value = "My Test String"};
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
-
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         };
 
         private Because of = () => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_command));

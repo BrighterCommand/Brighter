@@ -45,38 +45,32 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messagestore.sqlite.Logging;
 
 namespace paramore.brighter.commandprocessor.messagestore.sqlite
 {
     /// <summary>
     ///     Class SqliteMessageStore.
     /// </summary>
-    public class SqliteMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreAsync<Message>,
-        IAmAMessageStoreViewer<Message>, IAmAMessageStoreViewerAsync<Message>
+    public class SqliteMessageStore :
+        IAmAMessageStore<Message>,
+        IAmAMessageStoreAsync<Message>,
+        IAmAMessageStoreViewer<Message>,
+        IAmAMessageStoreViewerAsync<Message>
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqliteMessageStore>);
+
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
         private readonly SqliteMessageStoreConfiguration _configuration;
-        private readonly ILog _log;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="SqliteMessageStore" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         public SqliteMessageStore(SqliteMessageStoreConfiguration configuration)
-            : this(configuration, LogProvider.For<SqliteMessageStore>()) { }
-
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="SqliteMessageStore" /> class.
-        ///     Use this constructor if you need to pass in the logger
-        /// </summary>
-        /// <param name="configuration">The configuration.</param>
-        /// <param name="log">The log.</param>
-        public SqliteMessageStore(SqliteMessageStoreConfiguration configuration, ILog log)
         {
             _configuration = configuration;
-            _log = log;
             ContinueOnCapturedContext = false;
         }
 
@@ -107,7 +101,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
-                            _log.WarnFormat(
+                            _logger.Value.WarnFormat(
                                 "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
                                 message.Id);
                             return;
@@ -174,7 +168,7 @@ namespace paramore.brighter.commandprocessor.messagestore.sqlite
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
-                            _log.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                            _logger.Value.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
                                 message.Id);
                             return;
                         }

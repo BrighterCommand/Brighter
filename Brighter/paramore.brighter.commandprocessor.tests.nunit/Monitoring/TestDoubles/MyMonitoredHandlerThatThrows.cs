@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Attributes;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
@@ -31,15 +30,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring.TestDoubles
 {
     internal class MyMonitoredHandlerThatThrows : RequestHandler<MyCommand>
     {
-        public MyMonitoredHandlerThatThrows (ILog logger) : base(logger)
-        {
-        }
-
         [Monitor(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandler))]
         public override MyCommand Handle(MyCommand command)
         {
             throw new Exception("I am an exception in a monitored pipeline");
         }
-
     }
 }

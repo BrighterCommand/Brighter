@@ -95,19 +95,6 @@ namespace paramore.brighter.commandprocessor.policy.Handlers
         private int _milliseconds;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="TimeoutPolicyHandler{TRequest}"/> class.
-        /// </summary>
-        public TimeoutPolicyHandler()
-            : this(LogProvider.For<TimeoutPolicyHandler<TRequest>>()) {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="TimeoutPolicyHandler{TRequest}"/> class.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        public TimeoutPolicyHandler(ILog logger) : base(logger)
-        { }
-
-        /// <summary>
         /// Initializes from attribute parameters.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>

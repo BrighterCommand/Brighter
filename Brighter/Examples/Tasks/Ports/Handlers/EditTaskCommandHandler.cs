@@ -23,9 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.logging;
 using paramore.brighter.commandprocessor.logging.Attributes;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
@@ -40,12 +38,6 @@ namespace Tasks.Ports.Handlers
         private readonly IAmACommandProcessor _commandProcessor;
 
         public EditTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor)
-            :this(tasksDAO, commandProcessor, LogProvider.For<EditTaskCommandHandler>())
-        {}
-
-
-        public EditTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor, ILog logger)
-            :base(logger)
         {
             _tasksDAO = tasksDAO;
             _commandProcessor = commandProcessor;
@@ -56,14 +48,13 @@ namespace Tasks.Ports.Handlers
         [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
         public override EditTaskCommand Handle(EditTaskCommand editTaskCommand)
         {
-           
-                Task task = _tasksDAO.FindById(editTaskCommand.TaskId);
+            var task = _tasksDAO.FindById(editTaskCommand.TaskId);
 
-                task.TaskName = editTaskCommand.TaskName;
-                task.TaskDescription = editTaskCommand.TaskDescription;
-                task.DueDate = editTaskCommand.TaskDueDate;
+            task.TaskName = editTaskCommand.TaskName;
+            task.TaskDescription = editTaskCommand.TaskDescription;
+            task.DueDate = editTaskCommand.TaskDueDate;
 
-                _tasksDAO.Update(task);
+            _tasksDAO.Update(task);
 
             _commandProcessor.Post(new TaskEditedEvent(editTaskCommand.Id, editTaskCommand.TaskId, editTaskCommand.TaskName, editTaskCommand.TaskDescription, editTaskCommand.TaskDueDate));
 

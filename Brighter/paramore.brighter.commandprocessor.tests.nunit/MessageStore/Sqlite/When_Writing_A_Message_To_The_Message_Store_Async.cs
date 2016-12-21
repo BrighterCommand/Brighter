@@ -23,11 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
@@ -44,13 +42,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
         private static readonly string value1 = "value1";
         private static readonly string value2 = "value2";
 
-        private Cleanup _cleanup = () => CleanUpDb();
+        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
 
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
+            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,
                 DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(key1, value1);
@@ -60,10 +58,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
             AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(s_messageEarliest));
         };
 
-        private Because _of = () =>
-        {
-            AsyncContext.Run(async () => s_storedMessage = await _sSqlMessageStore.GetAsync(s_messageEarliest.Id));
-        };
+        private Because _of = () => AsyncContext.Run(async () => s_storedMessage = await _sSqlMessageStore.GetAsync(s_messageEarliest.Id));
 
         private It _should_read_the_message_from_the__sql_message_store =
             () => s_storedMessage.Body.Value.ShouldEqual(s_messageEarliest.Body.Value);
@@ -88,10 +83,5 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 
         private It _should_read_the_message_header_type_from_the__sql_message_store =
             () => s_storedMessage.Header.MessageType.ShouldEqual(s_messageEarliest.Header.MessageType);
-
-        private static void CleanUpDb()
-        {
-            _sqliteTestHelper.CleanUpDb();
-        }
     }
 }

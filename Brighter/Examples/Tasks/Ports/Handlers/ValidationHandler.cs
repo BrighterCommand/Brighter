@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using Tasks.Ports.Commands;
 
 namespace Tasks.Ports.Handlers
@@ -32,17 +31,9 @@ namespace Tasks.Ports.Handlers
     public class ValidationHandler<TRequest> : RequestHandler<TRequest>
         where TRequest : class, IRequest, ICanBeValidated
     {
-        public ValidationHandler()
-            : this(LogProvider.For<ValidationHandler<TRequest>>())
-        {}
-
-        public ValidationHandler(ILog logger)
-            :base(logger)
-        {}
-
         public override TRequest Handle(TRequest command)
         {
-            if (!((ICanBeValidated)command).IsValid())
+            if (!command.IsValid())
             {
                 throw new ArgumentException("The commmand was not valid");
             }

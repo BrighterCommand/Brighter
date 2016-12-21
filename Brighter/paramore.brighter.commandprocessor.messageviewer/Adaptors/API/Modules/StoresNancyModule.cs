@@ -46,20 +46,14 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules
 {
     public class StoresNancyModule : NancyModule
     {
-        private readonly ILog _logger;
-
         public StoresNancyModule(
             IMessageStoreActivationStateListViewModelRetriever messageStoreActivationStateListViewModelRetriever,
             IMessageStoreViewerModelRetriever messageStoreViewerModelRetriever,
             IMessageListViewModelRetriever messageSearchListItemRetriever)
             : base("/stores")
         {
-            _logger = LogProvider.GetLogger("StoresNancyModule");
-
             Get("/", x =>
             {
-                _logger.Log(LogLevel.Debug, () => "GET on stores");
-
                 var result = messageStoreActivationStateListViewModelRetriever.Get();
                 if (!result.IsError)
                 {
@@ -77,7 +71,6 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules
             Get("/{name}", parameters =>
             {
                 string storeName = parameters.Name;
-                _logger.Log(LogLevel.Debug, () => "GET store " + storeName);
 
                 var result = messageStoreViewerModelRetriever.Get(storeName);
                 if (!result.IsError)
@@ -110,7 +103,6 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules
             {
                 string messageStoreName = parameters.storeName;
                 string searchTerm = parameters.searchTerm;
-                _logger.Log(LogLevel.Debug, () => string.Format("SEARCH store {0} with '{1}'", messageStoreName, searchTerm));
 
                 ViewModelRetrieverResult<MessageListModel, MessageListModelError> searchModelResult = messageSearchListItemRetriever.Filter(messageStoreName, searchTerm);
                 if (!searchModelResult.IsError)

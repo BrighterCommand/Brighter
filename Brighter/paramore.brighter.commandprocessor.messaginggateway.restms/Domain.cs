@@ -24,14 +24,16 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
+using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms
 {
     internal class Domain
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<Domain>);
+
         private readonly RestMSMessageGateway _gateway;
 
         public Domain(RestMSMessageGateway gateway)
@@ -42,12 +44,11 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
         /// <summary>
         /// Gets the default domain.
         /// </summary>
-        /// <param name="client"></param>
         /// <returns>RestMSDomain.</returns>
         /// <exception cref="RestMSClientException"></exception>
         public RestMSDomain GetDomain()
         {
-            _gateway.Logger.DebugFormat("Getting the default domain from the RestMS server: {0}", _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            _logger.Value.DebugFormat("Getting the default domain from the RestMS server: {0}", _gateway.Configuration.RestMS.Uri.AbsoluteUri);
 
             try
             {
@@ -59,10 +60,10 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    _gateway.Logger.ErrorFormat("Threw exception getting Domain from RestMS Server {0}", exception.Message);
+                    _logger.Value.ErrorFormat("Threw exception getting Domain from RestMS Server {0}", exception.Message);
                 }
 
-                throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
+                throw new RestMSClientException("Error retrieving the domain from the RestMS server, see log for details");
             }
         }
     }

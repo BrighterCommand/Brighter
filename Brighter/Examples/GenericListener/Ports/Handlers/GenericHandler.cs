@@ -1,12 +1,14 @@
 ﻿using GenericListener.Ports.Events;
 using GenericListener.Ports.Indexers;
+using log4net;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace GenericListener.Ports.Handlers
 {
     public class GenericHandler<T> : RequestHandler<T> where T : EventStoredEvent
     {
+        private static readonly ILog _logger = LogManager.GetLogger(typeof(GenericHandler<T>));
+
         private readonly IGenericFeedEventIndexer<T> _indexer;
 
         public GenericHandler(IGenericFeedEventIndexer<T> indexer)
@@ -16,7 +18,7 @@ namespace GenericListener.Ports.Handlers
 
         public override T Handle(T command)
         {
-            Logger.InfoFormat("Received {1} {0}", command.Id, typeof(T).FullName);
+            _logger.InfoFormat("Received {1} {0}", command.Id, typeof(T).FullName);
 
             _indexer.Index(command);
 

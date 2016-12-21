@@ -35,7 +35,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 
@@ -48,7 +47,6 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
 
     public class MessageStoreListCacheLoader : IMessageStoreListCacheLoader
     {
-        private ILog _logger = LogProvider.GetLogger("MessageStoreListCacheLoader");
         private readonly IMessageStoreConfigCache _messageStoreConfigCache;
 
         public MessageStoreListCacheLoader(IMessageStoreConfigCache messageStoreConfigCache)
@@ -59,14 +57,15 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
         public IMessageStoreConfigCache Load()
         {
             _messageStoreConfigCache.Set(MessageStoreType.SqlServer,
-                (storeConfig) => new MsSqlMessageStore(
+                storeConfig => new MsSqlMessageStore(
                     new MsSqlMessageStoreConfiguration(storeConfig.ConnectionString, storeConfig.TableName,
-                        MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer), _logger));
+                        MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer)));
 
             _messageStoreConfigCache.Set(MessageStoreType.SqlCe,
-                (storeConfig) => new MsSqlMessageStore(
+                storeConfig => new MsSqlMessageStore(
                     new MsSqlMessageStoreConfiguration(storeConfig.ConnectionString, storeConfig.TableName,
-                        MsSqlMessageStoreConfiguration.DatabaseType.SqlCe), _logger));
+                        MsSqlMessageStoreConfiguration.DatabaseType.SqlCe)));
+
             return _messageStoreConfigCache;
         }
     }

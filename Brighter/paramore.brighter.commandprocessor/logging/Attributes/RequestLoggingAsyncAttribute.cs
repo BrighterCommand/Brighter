@@ -70,7 +70,7 @@ namespace paramore.brighter.commandprocessor.logging.Attributes
         /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
-            return typeof(RequestLoggingHandlerRequestHandlerAsync<>);
+            return typeof(RequestLoggingHandlerAsync<>);
         }
     }
 }

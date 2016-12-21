@@ -23,9 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.logging;
 using paramore.brighter.commandprocessor.logging.Attributes;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
@@ -39,13 +37,7 @@ namespace Tasks.Ports.Handlers
         private readonly ITasksDAO _tasksDAO;
         private readonly IAmACommandProcessor _commandProcessor;
 
-        public AddTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor) 
-            : this(tasksDAO, commandProcessor, LogProvider.For<AddTaskCommandHandler>())
-        {}
-
-
-        public AddTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor, ILog logger)
-            : base(logger)
+        public AddTaskCommandHandler(ITasksDAO tasksDAO, IAmACommandProcessor commandProcessor)
         {
             _tasksDAO = tasksDAO;
             _commandProcessor = commandProcessor;
@@ -56,17 +48,15 @@ namespace Tasks.Ports.Handlers
         [UsePolicy(CommandProcessor.RETRYPOLICY, step: 3)]
         public override AddTaskCommand Handle(AddTaskCommand addTaskCommand)
         {
-            
-                var inserted = _tasksDAO.Add(
-                    new Task(
-                        taskName: addTaskCommand.TaskName,
-                        taskDecription: addTaskCommand.TaskDescription,
-                        dueDate: addTaskCommand.TaskDueDate
-                        )
-                    );
+            var inserted = _tasksDAO.Add(
+                new Task(
+                    taskName: addTaskCommand.TaskName,
+                    taskDecription: addTaskCommand.TaskDescription,
+                    dueDate: addTaskCommand.TaskDueDate
+                    )
+                );
 
             addTaskCommand.TaskId = inserted.Id;
-            
 
             _commandProcessor.Post(new TaskAddedEvent(addTaskCommand.Id, addTaskCommand.TaskId, addTaskCommand.TaskName, addTaskCommand.TaskDescription, addTaskCommand.TaskDueDate));
 

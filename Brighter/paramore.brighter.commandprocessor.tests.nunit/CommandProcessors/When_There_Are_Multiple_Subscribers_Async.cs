@@ -23,11 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
@@ -42,8 +40,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
             registry.RegisterAsync<MyEvent, MyOtherEventHandlerAsync>();
@@ -52,9 +48,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyEvent>, MyEventHandlerAsync>("MyEventHandlerAsync");
             container.Register<IHandleRequestsAsync<MyEvent>, MyOtherEventHandlerAsync>("MyOtherHandlerAsync");
-            container.Register<ILog>(logger);
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         };
 
         //Ignore any errors about adding System.Runtime from the IDE. See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow

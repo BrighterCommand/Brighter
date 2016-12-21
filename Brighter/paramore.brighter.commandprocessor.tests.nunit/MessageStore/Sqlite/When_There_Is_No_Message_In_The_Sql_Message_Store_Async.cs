@@ -27,7 +27,6 @@ using System;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
@@ -40,13 +39,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
         private static Message s_messageEarliest;
         private static Message s_storedMessage;
 
-        private Cleanup _cleanup = () => CleanUpDb();
-
         private Establish _context = () =>
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages), new LogProvider.NoOpLogger());
+            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
         };
@@ -55,9 +52,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 
         private It _should_return_a_empty_message = () => s_storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
 
-        private static void CleanUpDb()
-        {
-            _sqliteTestHelper.CleanUpDb();
-        }
+        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
     }    
 }

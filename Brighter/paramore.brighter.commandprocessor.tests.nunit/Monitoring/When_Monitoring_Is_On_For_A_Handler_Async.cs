@@ -23,12 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Configuration;
 using paramore.brighter.commandprocessor.monitoring.Events;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
@@ -51,7 +49,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_controlBusSender = new SpyControlBusSender();
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyMonitoredHandlerAsync>();
@@ -60,11 +57,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyMonitoredHandlerAsync>();
             container.Register<IHandleRequestsAsync<MyCommand>, MonitorHandlerAsync<MyCommand>>();
-            container.Register<ILog>(logger);
             container.Register<IAmAControlBusSenderAsync>(s_controlBusSender);
             container.Register<MonitorConfiguration>(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
             s_command = new MyCommand();
 

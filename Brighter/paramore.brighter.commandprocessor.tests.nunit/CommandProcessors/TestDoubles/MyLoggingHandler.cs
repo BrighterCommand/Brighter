@@ -23,8 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
@@ -33,7 +31,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
         private TRequest _command;
         public static bool DisposeWasCalled { get; set; }
 
-        public MyLoggingHandler(ILog logger) : base(logger)
+        public MyLoggingHandler()
         {
             _command = null;
             DisposeWasCalled = false;

@@ -24,16 +24,11 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
     internal class MyDoubleDecoratedHandlerAsync: RequestHandlerAsync<MyCommand>
     {
-        public MyDoubleDecoratedHandlerAsync(ILog logger) : base(logger)
-        { }
-
         [MyValidationHandlerAsync(step: 2)]
         [MyLoggingHandlerAsync(step: 1)]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken? ct = null)

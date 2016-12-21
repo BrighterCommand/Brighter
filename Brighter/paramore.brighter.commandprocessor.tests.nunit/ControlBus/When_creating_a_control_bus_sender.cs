@@ -1,7 +1,6 @@
 ﻿using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
@@ -10,7 +9,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
         private static IAmAControlBusSender s_sender;
         private static IAmAControlBusSenderFactory s_senderFactory;
         private static MessagingConfiguration s_configuration;
-        private static ILog s_logger;
         private static IAmAMessageStore<Message> s_fakeMessageStore;
         private static IAmAMessageProducer s_fakeGateway;
 

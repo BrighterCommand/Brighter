@@ -36,7 +36,6 @@ THE SOFTWARE. */
 #endregion
 
 using Nancy.TinyIoc;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
@@ -48,13 +47,10 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configur
     {
         internal static void ConfigureDependencies(TinyIoCContainer container, MessageViewerConfiguration config)
         {
-            var logger = LogProvider.GetLogger("MainNancyModule");
-            logger.Log(LogLevel.Debug, () => "GET on messages");
-
             var messageStore =
                 new MsSqlMessageStore(
                     new MsSqlMessageStoreConfiguration("Server=.;Database=brighterMessageStore;Trusted_Connection=True",
-                        "messages", MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer), logger);
+                        "messages", MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer));
 
             container.Register(messageStore);
             container.Register(typeof (IMessageStoreConfigProvider), typeof (MessageStoreConfigProvider));

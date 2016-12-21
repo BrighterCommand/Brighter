@@ -24,11 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
@@ -44,7 +42,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_myCommand.Value = "Hello World";
 
             s_fakeMessageStore = new FakeMessageStore();

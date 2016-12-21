@@ -40,7 +40,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client;
@@ -57,38 +57,18 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     /// </summary>
     public class RmqMessageConsumer : MessageGateway, IAmAMessageConsumerSupportingDelay
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageConsumer>);
+
         private readonly string _queueName;
         private readonly string _routingKey;
         private readonly bool _isDurable;
         private readonly ushort _preFetchSize;
         private const bool AutoAck = false;
-        /// <summary>
-        /// The consumer
-        /// </summary>
-        private QueueingBasicConsumer _consumer;
         private readonly RmqMessageCreator _messageCreator;
+        private QueueingBasicConsumer _consumer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageGateway" /> class.
-        /// </summary>
-        /// <param name="connection">Details of how we connect to the broker</param>
-        /// <param name="queueName">The queue name.</param>
-        /// <param name="routingKey">The routing key.</param>
-        /// <param name="isDurable">Is the queue persisted to disk</param>
-        /// <param name="preFetchSize">0="Don't send me a new message until I?ve finished",  1= "Send me one message at a time", n = number to grab (take care with competing consumers)</param>
-        /// <param name="highAvailability"></param>
-        public RmqMessageConsumer(
-            RmqMessagingGatewayConnection connection, 
-            string queueName, 
-            string routingKey, 
-            bool isDurable, 
-            ushort preFetchSize = 1, 
-            bool highAvailability = false ) 
-            : this(connection, queueName, routingKey, isDurable, preFetchSize, highAvailability, LogProvider.For<RmqMessageConsumer>()) {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MessageGateway" /> class.
-        /// Use this if you need to override the logger in tests.
         /// </summary>
         /// <param name="connection"></param>
         /// <param name="queueName">The queue name.</param>
@@ -96,23 +76,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <param name="isDurable">Is the queue persisted to disk</param>
         /// <param name="preFetchSize">0="Don't send me a new message until I?ve finished",  1= "Send me one message at a time", n = number to grab (take care with competing consumers)</param>
         /// <param name="highAvailability"></param>
-        /// <param name="logger">The logger.</param>
         public RmqMessageConsumer(
             RmqMessagingGatewayConnection connection, 
             string queueName, 
             string routingKey, 
             bool isDurable, 
             ushort preFetchSize = 1, 
-            bool highAvailability = false, 
-            ILog logger = null) 
-            : base(connection, logger)
+            bool highAvailability = false) 
+            : base(connection)
         {
             _queueName = queueName;
             _routingKey = routingKey;
             _isDurable = isDurable;
             _preFetchSize = preFetchSize;
             IsQueueMirroredAcrossAllNodesInTheCluster = highAvailability;
-            _messageCreator = new RmqMessageCreator(logger);
+            _messageCreator = new RmqMessageCreator();
         }
 
         /// <summary>
@@ -125,12 +103,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             try
             {
                 EnsureChannel(_queueName);
-                Logger.InfoFormat("RmqMessageConsumer: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag);
+                _logger.Value.InfoFormat("RmqMessageConsumer: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag);
                 Channel.BasicAck(deliveryTag, false);
             }
             catch (Exception exception)
             {
-                Logger.ErrorException("RmqMessageConsumer: Error acknowledging message {0} as completed with delivery tag {1}", exception, message.Id, deliveryTag);
+                _logger.Value.ErrorException("RmqMessageConsumer: Error acknowledging message {0} as completed with delivery tag {1}", exception, message.Id, deliveryTag);
                 throw;
             }
         }
@@ -143,7 +121,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             try
             {
                 EnsureChannel(_queueName);
-                Logger.DebugFormat("RmqMessageConsumer: Purging channel {0}", _queueName);
+                _logger.Value.DebugFormat("RmqMessageConsumer: Purging channel {0}", _queueName);
 
                 try { Channel.QueuePurge(_queueName); }
                 catch (OperationInterruptedException operationInterruptedException)
@@ -154,29 +132,29 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
             catch (Exception exception)
             {
-                Logger.ErrorException("RmqMessageConsumer: Error purging channel {0}", exception, _queueName);
+                _logger.Value.ErrorException("RmqMessageConsumer: Error purging channel {0}", exception, _queueName);
                 throw;
             }
         }
 
         public void Requeue(Message message)
         {
-            this.Requeue(message, 0);
+            Requeue(message, 0);
         }
 
         public void Requeue(Message message, int delayMilliseconds)
         {
             try
             {
-                Logger.DebugFormat("RmqMessageConsumer: Re-queueing message {0} with a delay of {1} milliseconds", message.Id, delayMilliseconds);
+                _logger.Value.DebugFormat("RmqMessageConsumer: Re-queueing message {0} with a delay of {1} milliseconds", message.Id, delayMilliseconds);
                 EnsureChannel(_queueName);
-                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name, Logger);
+                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name);
                 rmqMessagePublisher.RequeueMessage(message, _queueName, delayMilliseconds);
                 Reject(message, false);
             }
             catch (Exception exception)
             {
-                Logger.ErrorException("RmqMessageConsumer: Error re-queueing message {0}", exception, message.Id);
+                _logger.Value.ErrorException("RmqMessageConsumer: Error re-queueing message {0}", exception, message.Id);
                 throw;
             }
         }
@@ -191,12 +169,12 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             try
             {
                 EnsureChannel(_queueName);
-                Logger.InfoFormat("RmqMessageConsumer: NoAck message {0} with delivery tag {1}", message.Id, message.GetDeliveryTag());
+                _logger.Value.InfoFormat("RmqMessageConsumer: NoAck message {0} with delivery tag {1}", message.Id, message.GetDeliveryTag());
                 Channel.BasicNack(message.GetDeliveryTag(), false, requeue);
             }
             catch (Exception exception)
             {
-                Logger.ErrorException("RmqMessageConsumer: Error try to NoAck message {0}", exception, message.Id);
+                _logger.Value.ErrorException("RmqMessageConsumer: Error try to NoAck message {0}", exception, message.Id);
                 throw;
             }
         }
@@ -208,7 +186,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         /// <returns>Message.</returns>
         public Message Receive(int timeoutInMilliseconds)
         {
-            Logger.DebugFormat("RmqMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName, _routingKey, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+            _logger.Value.DebugFormat("RmqMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName, _routingKey, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
             var message = new Message();
             try
@@ -218,21 +196,21 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
                 if (_consumer.Queue.Dequeue(timeoutInMilliseconds, out fromQueue))
                 {
                     message = _messageCreator.CreateMessage(fromQueue);
-                    Logger.InfoFormat(
+                    _logger.Value.InfoFormat(
                         "RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {5}{4}",
                         _queueName, _routingKey, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), JsonConvert.SerializeObject(message),
                         Environment.NewLine);
                 }
                 else
                 {
-                    Logger.DebugFormat(
+                    _logger.Value.DebugFormat(
                         "RmqMessageConsumer: Time out without receiving message from queue {0} with routing key {1} via exchange {2} on connection {3}",
                         _queueName, _routingKey, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
                 }
             }
             catch (EndOfStreamException endOfStreamException)
             {
-                Logger.DebugException(
+                _logger.Value.DebugException(
                     "RmqMessageConsumer: The consumer {4} was canceled, the model closed, or the connection went away. Listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
                     endOfStreamException,
                     _queueName,
@@ -243,47 +221,47 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
             catch (BrokerUnreachableException bue)
             {
-                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
-                                      bue,
-                                      _queueName,
-                                      _routingKey,
-                                      Connection.Exchange.Name,
-                                      Connection.AmpqUri.GetSanitizedUri());
+                _logger.Value.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    bue,
+                    _queueName,
+                    _routingKey,
+                    Connection.Exchange.Name,
+                    Connection.AmpqUri.GetSanitizedUri());
                 throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", bue);
             }
             catch (AlreadyClosedException ace)
             {
-                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
-                                      ace,
-                                      _queueName,
-                                      _routingKey,
-                                      Connection.Exchange.Name,
-                                      Connection.AmpqUri.GetSanitizedUri());
+                _logger.Value.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    ace,
+                    _queueName,
+                    _routingKey,
+                    Connection.Exchange.Name,
+                    Connection.AmpqUri.GetSanitizedUri());
                 throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", ace);
             }
             catch (OperationInterruptedException oie)
             {
-                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
-                                      oie,
-                                      _queueName,
-                                      _routingKey,
-                                      Connection.Exchange.Name,
-                                      Connection.AmpqUri.GetSanitizedUri());
+                _logger.Value.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    oie,
+                    _queueName,
+                    _routingKey,
+                    Connection.Exchange.Name,
+                    Connection.AmpqUri.GetSanitizedUri());
                 throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", oie);
             }
             catch (NotSupportedException nse)
             {
-                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
-                                      nse,
-                                      _queueName,
-                                      _routingKey,
-                                      Connection.Exchange.Name,
-                                      Connection.AmpqUri.GetSanitizedUri());
+                _logger.Value.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    nse,
+                    _queueName,
+                    _routingKey,
+                    Connection.Exchange.Name,
+                    Connection.AmpqUri.GetSanitizedUri());
                 throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", nse);
             }
             catch (BrokenCircuitException bce)
             {
-                Logger.WarnFormat("CIRCUIT BROKEN: RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                _logger.Value.WarnFormat("CIRCUIT BROKEN: RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
                     _queueName,
                     _routingKey,
                     Connection.Exchange.Name,
@@ -292,7 +270,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             }
             catch (Exception exception)
             {
-                Logger.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", exception, _queueName, _routingKey, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+                _logger.Value.ErrorException("RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", exception, _queueName, _routingKey, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
                 throw;
             }
 
@@ -308,13 +286,13 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             Channel.BasicConsume(_queueName, AutoAck, string.Empty, SetConsumerArguments(), _consumer);
 
             _consumer.HandleBasicConsumeOk(string.Empty);
-            
-            Logger.InfoFormat("RmqMessageConsumer: Created consumer with ConsumerTag {4} for queue {0} with routing key {1} via exchange {2} on connection {3}",
-                              _queueName,
-                              _routingKey,
-                              Connection.Exchange.Name,
-                              Connection.AmpqUri.GetSanitizedUri(),
-                              _consumer.ConsumerTag);
+
+            _logger.Value.InfoFormat("RmqMessageConsumer: Created consumer with ConsumerTag {4} for queue {0} with routing key {1} via exchange {2} on connection {3}",
+                _queueName,
+                _routingKey,
+                Connection.Exchange.Name,
+                Connection.AmpqUri.GetSanitizedUri(),
+                _consumer.ConsumerTag);
         }
 
         private void EnsureConsumer()
@@ -330,7 +308,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
         {
             EnsureChannel(_queueName);
 
-            Logger.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", _queueName, Connection.AmpqUri.GetSanitizedUri());
+            _logger.Value.DebugFormat("RMQMessagingGateway: Creating queue {0} on connection {1}", _queueName, Connection.AmpqUri.GetSanitizedUri());
 
             Channel.QueueDeclare(_queueName, _isDurable, false, false, SetQueueArguments());
 

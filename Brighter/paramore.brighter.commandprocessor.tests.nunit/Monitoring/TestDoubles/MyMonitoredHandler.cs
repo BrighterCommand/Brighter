@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.monitoring.Attributes;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
@@ -30,15 +29,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring.TestDoubles
 {
     internal class MyMonitoredHandler : RequestHandler<MyCommand>
     {
-        public MyMonitoredHandler(ILog logger) : base(logger)
-        {
-        }
-
         [Monitor(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandler))]
         public override MyCommand Handle(MyCommand command)
         {
             return base.Handle(command);
         }
-
     }
 }

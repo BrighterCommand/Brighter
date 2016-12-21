@@ -29,7 +29,6 @@ using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
@@ -51,20 +50,19 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration,
-                new LogProvider.NoOpLogger());
+            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
             AsyncContext.Run(async () => await s_sqlMessageStore.AddAsync(s_messageEarliest));
         };
 
         private Because _of = () =>  s_exception = Catch.Exception(() => AsyncContext.Run(async () => await s_sqlMessageStore.AddAsync(s_messageEarliest)));
+
         private It _should_ignore_the_duplcate_key_and_still_succeed = () => { s_exception.ShouldBeNull(); };
 
         private static void CleanUpDb()
         {
             _msSqlTestHelper.CleanUpDb();
         }
-
     }
 }

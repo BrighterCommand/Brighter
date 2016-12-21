@@ -34,7 +34,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 using System.Linq;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
@@ -50,14 +49,12 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
     {
         private readonly IMessageStoreConfigProvider _messageStoreConfigProvider;
         private readonly IMessageStoreListCacheLoader _messageStoreListCache;
-        private readonly ILog _logger = LogProvider.GetLogger("MessageStoreViewerFactory");
         private IMessageStoreConfigCache _messageStoreList;
 
         public MessageStoreViewerFactory(IMessageStoreConfigProvider messageStoreConfigProvider, 
             IMessageStoreListCacheLoader messageStoreListCache)
         {
             _messageStoreConfigProvider = messageStoreConfigProvider;
-            _logger.Log(LogLevel.Debug, () => "Loading store from cache");
             _messageStoreListCache = messageStoreListCache;
         }
 

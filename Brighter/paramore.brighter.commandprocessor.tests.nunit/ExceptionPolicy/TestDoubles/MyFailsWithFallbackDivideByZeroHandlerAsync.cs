@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -34,9 +33,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDou
 {
     internal class MyFailsWithFallbackDivideByZeroHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        public MyFailsWithFallbackDivideByZeroHandlerAsync(ILog logger) : base(logger)
-        { }
-
         public static bool FallbackCalled { get; set; }
         public static bool ReceivedCommand { get; set; }
         public static bool SetException { get; set; }
@@ -54,7 +50,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDou
             {
                 return command;
             }
-
 
             ReceivedCommand = true;
             await Task.Delay(0);

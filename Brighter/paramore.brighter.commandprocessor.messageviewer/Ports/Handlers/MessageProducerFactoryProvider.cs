@@ -35,23 +35,21 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 
 namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
 {
     public class MessageProducerFactoryProvider : IMessageProducerFactoryProvider
     {
-        private MessageViewerConfigurationProducer _producer;
+        private readonly MessageViewerConfigurationProducer _producer;
 
         public MessageProducerFactoryProvider(MessageViewerConfiguration config)
         {
             _producer = config.Producer;
         }
 
-        public IAmAMessageProducerFactory Get(ILog logger)
+        public IAmAMessageProducerFactory Get()
         {
-            //ToDo: assume always needs a logger!!!
             //ToDo: factory or actual producer???
 
             var orType = Type.GetType(_producer.AssemblyQualifiedName);
@@ -59,9 +57,8 @@ namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
             {
                 throw new Exception("Cannot find ProducerFactory " + _producer.AssemblyQualifiedName);
             }
-            
-            var factory = Activator.CreateInstance(orType, logger);
-            return factory as IAmAMessageProducerFactory;
+
+            return Activator.CreateInstance(orType) as IAmAMessageProducerFactory;
         }
     }
 }

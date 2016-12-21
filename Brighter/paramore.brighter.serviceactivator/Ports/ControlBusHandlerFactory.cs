@@ -1,6 +1,5 @@
 ﻿using System;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator.Ports.Handlers;
 
 namespace paramore.brighter.serviceactivator.Ports
@@ -9,17 +8,10 @@ namespace paramore.brighter.serviceactivator.Ports
     {
         private readonly Func<IAmACommandProcessor> _commandProcessorFactory;
         private readonly IDispatcher _worker;
-        private readonly ILog _logger;
 
         public ControlBusHandlerFactory(IDispatcher worker, Func<IAmACommandProcessor> commandProcessorFactory) 
-            : this(worker, LogProvider.For<ControlBusHandlerFactory>(), commandProcessorFactory)
-        {
-        }
-
-        public ControlBusHandlerFactory(IDispatcher worker, ILog logger, Func<IAmACommandProcessor> commandProcessorFactory)
         {
             _worker = worker;
-            _logger = logger;
             _commandProcessorFactory = commandProcessorFactory;
         }
 
@@ -31,15 +23,12 @@ namespace paramore.brighter.serviceactivator.Ports
         public IHandleRequests Create(Type handlerType)
         {
             if (handlerType == typeof(ConfigurationCommandHandler))
-            {
-                return new  ConfigurationCommandHandler(_worker, _logger);               
-            }
-            else if (handlerType == typeof (HeartbeatRequestCommandHandler))
-            {
-                return new HeartbeatRequestCommandHandler(_logger, _commandProcessorFactory(), _worker);
-            }
+                return new ConfigurationCommandHandler(_worker);
 
-            throw new ArgumentOutOfRangeException("handlerType");
+            if (handlerType == typeof(HeartbeatRequestCommandHandler))
+                return new HeartbeatRequestCommandHandler(_commandProcessorFactory(), _worker);
+
+            throw new ArgumentOutOfRangeException(nameof(handlerType));
         }
 
         /// <summary>
@@ -49,6 +38,5 @@ namespace paramore.brighter.serviceactivator.Ports
         public void Release(IHandleRequests handler)
         {
         }
-
     }
 }

@@ -37,7 +37,6 @@ THE SOFTWARE. */
 
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.extensions;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.serviceactivator.Ports.Commands;
 
 namespace paramore.brighter.serviceactivator.Ports.Handlers
@@ -47,13 +46,7 @@ namespace paramore.brighter.serviceactivator.Ports.Handlers
     /// </summary>
     public class HeartbeatRequestCommandHandler : RequestHandler<HeartbeatRequest>
     {
-        /// <summary>
-        /// The _command processor
-        /// </summary>
         private readonly IAmACommandProcessor _commandProcessor;
-        /// <summary>
-        /// The _dispatcher
-        /// </summary>
         private readonly IDispatcher _dispatcher;
 
         /// <summary>
@@ -62,16 +55,6 @@ namespace paramore.brighter.serviceactivator.Ports.Handlers
         /// <param name="commandProcessor">The command processor.</param>
         /// <param name="dispatcher">The dispatcher.</param>
         public HeartbeatRequestCommandHandler(IAmACommandProcessor commandProcessor, IDispatcher dispatcher)
-            : this(LogProvider.For<HeartbeatRequestCommandHandler>(), commandProcessor, dispatcher) {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="HeartbeatRequestCommandHandler"/> class.
-        /// </summary>
-        /// <param name="logger">The logger.</param>
-        /// <param name="commandProcessor">The command processor.</param>
-        /// <param name="dispatcher">The dispatcher.</param>
-        public HeartbeatRequestCommandHandler(ILog logger, IAmACommandProcessor commandProcessor, IDispatcher dispatcher)
-            : base(logger)
         {
             _commandProcessor = commandProcessor;
             _dispatcher = dispatcher;

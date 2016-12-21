@@ -30,7 +30,6 @@ using System.Linq;
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
@@ -54,7 +53,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration, new LogProvider.NoOpLogger());
+            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
             s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND),
                 new MessageBody("Body"));

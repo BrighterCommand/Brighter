@@ -1,6 +1,5 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
@@ -13,8 +12,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
         public static int WorkThreadId { get; set; }
         public static int ContinuationThreadId { get; set; }
 
-
-        public MyEventHandlerAsyncWithContinuation(ILog logger) : base(logger)
+        public MyEventHandlerAsyncWithContinuation()
         {
             s_receivedEvent = null;
         }

@@ -28,7 +28,6 @@ using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.commandstore.sqlite;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
@@ -46,26 +45,16 @@ namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
 
             s_sqlCommandStore =
-                new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName), new LogProvider.NoOpLogger());
-            s_raisedCommand = new MyCommand() {Value = "Test"};
+                new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
+            s_raisedCommand = new MyCommand {Value = "Test"};
             AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync<MyCommand>(s_raisedCommand));
         };
 
-        private Because _of =
-            () =>
-            {
-                s_exception =
-                    Catch.Exception(
-                        () => AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync(s_raisedCommand)));
-            };
+        private Because _of = () => s_exception = Catch.Exception(() => AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync(s_raisedCommand)));
 
         private It _should_succeed_even_if_the_message_is_a_duplicate = () => s_exception.ShouldBeNull();
 
-        private Cleanup _cleanup = () =>
-        {
-            _sqliteTestHelper.CleanUpDb();
-
-        };
+        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
 
         private static SqliteConnection _sqliteConnection;
     }

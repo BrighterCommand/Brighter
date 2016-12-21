@@ -44,39 +44,39 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDou
     internal class SpyCommandProcessor : IAmACommandProcessor
     {
         private readonly Queue<IRequest> _requests = new Queue<IRequest>();
-        private readonly IList<CommandType> _commands = new List<CommandType>();
-        public IList<CommandType> Commands { get { return _commands; } }
+
+        public IList<CommandType> Commands { get; } = new List<CommandType>();
 
         public virtual void Send<T>(T command) where T : class, IRequest
         {
             _requests.Enqueue(command);
-            _commands.Add(CommandType.Send);
+            Commands.Add(CommandType.Send);
         }
 
         public virtual async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
         {
             _requests.Enqueue(command);
-            _commands.Add(CommandType.SendAsync);
+            Commands.Add(CommandType.SendAsync);
             await Task.Delay(0).ConfigureAwait(false);
         }
 
         public virtual void Publish<T>(T @event) where T : class, IRequest
         {
             _requests.Enqueue(@event);
-            _commands.Add(CommandType.Publish);
+            Commands.Add(CommandType.Publish);
         }
 
         public virtual async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
         {
             _requests.Enqueue(@event);
-            _commands.Add(CommandType.PublishAsync);
+            Commands.Add(CommandType.PublishAsync);
             await Task.Delay(0).ConfigureAwait(false);
         }
 
         public virtual void Post<T>(T request) where T : class, IRequest
         {
             _requests.Enqueue(request);
-            _commands.Add(CommandType.Post);
+            Commands.Add(CommandType.Post);
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDou
         public virtual async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken? ct = null) where T : class, IRequest
         {
             _requests.Enqueue(request);
-            _commands.Add(CommandType.PostAsync);
+            Commands.Add(CommandType.PostAsync);
             await Task.Delay(0);
         }
 

@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.Xml.Serialization;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
 {
@@ -56,8 +56,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
             }
             finally
             {
-                if (ms != null)
-                    ms.Dispose();
+                ms?.Dispose();
             }
         }
     }

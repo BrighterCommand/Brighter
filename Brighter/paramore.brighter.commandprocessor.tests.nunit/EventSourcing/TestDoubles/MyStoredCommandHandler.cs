@@ -23,26 +23,16 @@ THE SOFTWARE. */
 #endregion
 
 using paramore.brighter.commandprocessor.eventsourcing.Attributes;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing.TestDoubles
 {
     internal class MyStoredCommandHandler : RequestHandler<MyCommand>
     {
-        private readonly ILog _logger;
-
-        public MyStoredCommandHandler(ILog logger)
-            : base(logger)
-        {
-            _logger = logger;
-        }
-
         [UseCommandSourcing(step: 1, timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
             return base.Handle(command);
         }
-
     }
 }

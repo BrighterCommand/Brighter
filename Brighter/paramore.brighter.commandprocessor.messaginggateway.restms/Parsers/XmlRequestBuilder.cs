@@ -39,7 +39,7 @@ using System;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
 {

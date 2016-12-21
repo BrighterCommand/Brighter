@@ -25,8 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
@@ -35,8 +33,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
         private static MyCommand s_command;
         public static bool DisposeWasCalled { get; set; }
 
-        public MyPreAndPostDecoratedHandlerAsync(ILog logger)
-            : base(logger)
+        public MyPreAndPostDecoratedHandlerAsync()
         {
             s_command = null;
             DisposeWasCalled = false;

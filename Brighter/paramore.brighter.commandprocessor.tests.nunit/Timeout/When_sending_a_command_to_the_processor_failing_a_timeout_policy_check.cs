@@ -24,8 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using FakeItEasy;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles;
@@ -45,21 +43,18 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsDueToTimeoutHandler>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<ILog>(logger);
             container.Register<IHandleRequests<MyCommand>, MyFailsDueToTimeoutHandler>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, TimeoutPolicyHandler<MyCommand>>().AsSingleton();
 
             MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = false;
             MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted = true;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         };
 
         //We have to catch the final exception that bubbles out after retry

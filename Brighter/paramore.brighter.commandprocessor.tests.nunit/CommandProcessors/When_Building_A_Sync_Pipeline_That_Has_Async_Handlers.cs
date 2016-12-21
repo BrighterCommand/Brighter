@@ -24,10 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
@@ -42,8 +40,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyMixedImplicitHandler>();
 
@@ -51,9 +47,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyMixedImplicitHandler>();
             container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
-            container.Register(logger);
 
-            s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory, logger);
+            s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         };
 
         private Because _of = () => s_exception = Catch.Exception(() => s_pipeline = s_pipelineBuilder.Build(new RequestContext()).First());

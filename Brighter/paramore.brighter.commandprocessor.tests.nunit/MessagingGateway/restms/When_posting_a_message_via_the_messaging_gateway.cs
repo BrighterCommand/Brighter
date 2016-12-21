@@ -26,14 +26,11 @@ using System;
 using nUnitShouldAdapter;
 using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms;
 using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
 {
-    
     [Category("RESTMS")]
     public class When_posting_a_message_via_the_messaging_gateway : ContextSpecification
     {
@@ -47,18 +44,16 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
 
         private Establish _context = () =>
         {
-            var logger = LogProvider.For<RmqMessageConsumer>();
             var configuration = new RestMSMessagingGatewayConfiguration
             {
                 Feed = new Feed { Name = "test", Type = "Default"},
                 RestMS = new RestMsSpecification { Uri = new Uri("http://localhost:3416/restms/domain/default"),  Id = "dh37fgj492je", User ="Guest", Key ="wBgvhp1lZTr4Tb6K6+5OQa1bL9fxK7j8wBsepjqVNiQ=", Timeout=2000}
             };
-            s_messageProducer = new RestMsMessageProducer(configuration, logger);
-            s_messageConsumer = new RestMsMessageConsumer(configuration, QUEUE_NAME, TOPIC, logger);
+            s_messageProducer = new RestMsMessageProducer(configuration);
+            s_messageConsumer = new RestMsMessageConsumer(configuration, QUEUE_NAME, TOPIC);
             s_message = new Message(
                 header: new MessageHeader(Guid.NewGuid(), TOPIC, MessageType.MT_COMMAND),
-                body: new MessageBody("test content")
-                );
+                body: new MessageBody("test content"));
         };
 
         private Because _of = () =>

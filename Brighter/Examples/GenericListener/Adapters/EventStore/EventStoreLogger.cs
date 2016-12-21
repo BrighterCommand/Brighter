@@ -1,17 +1,12 @@
 ﻿using System;
 using EventStore.ClientAPI;
-using paramore.brighter.commandprocessor.Logging;
+using log4net;
 
 namespace GenericListener.Adapters.EventStore
 {
     public class EventStoreLogger : ILogger
     {
-        private readonly ILog _logger;
-
-        public EventStoreLogger(ILog logger)
-        {
-            _logger = logger;
-        }
+        private static readonly ILog _logger = LogManager.GetLogger(typeof(EventStoreLogger));
 
         public void Error(string format, params object[] args)
         {

@@ -242,14 +242,15 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports
 
         public FakeMessageProducerFactoryProvider(IAmAMessageProducerFactory aFactory)
         {
-            this._aFactory = aFactory;
+            _aFactory = aFactory;
         }
 
-        public IAmAMessageProducerFactory Get(ILog logger)
+        public IAmAMessageProducerFactory Get()
         {
             return _aFactory;
         }
     }
+
     internal class FakeErrorProducingMessageProducerFactory : IAmAMessageProducerFactory
     {
         public IAmAMessageProducer Create()

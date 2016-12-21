@@ -24,10 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using FakeItEasy;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -46,11 +44,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
-            var messageMapperRegistry =
-                new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            var policyRegistry = new PolicyRegistry()
+            var policyRegistry = new PolicyRegistry
             {
                 {
                     CommandProcessor.RETRYPOLICY, Policy
@@ -66,13 +62,12 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 
             var connection = new RmqMessagingGatewayConnection
             {
-                AmpqUri = new AmqpUriSpecification(uri: new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange")
             };
 
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(connection, logger);
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(connection, logger);
-
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(connection);
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory(connection);
 
             var connections = new List<Connection>
             {

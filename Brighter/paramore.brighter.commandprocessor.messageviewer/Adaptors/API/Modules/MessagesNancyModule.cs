@@ -38,7 +38,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Nancy;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
@@ -48,22 +47,18 @@ namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules
 {
     public class MessagesNancyModule : NancyModule
     {
-        public MessagesNancyModule(IMessageListViewModelRetriever messageListViewModelRetriever
-                                    , IHandlerFactory handlerFactory)
+        public MessagesNancyModule(IMessageListViewModelRetriever messageListViewModelRetriever, IHandlerFactory handlerFactory)
             : base("/messages")
         {
             Get("/{storeName}/{pageNumber?1}", parameters =>
             {
-                var logger = LogProvider.GetLogger("MessagesNancyModule");
-                logger.Log(LogLevel.Debug, () => "GET on messages");
-
                 string storeName = parameters.storeName;
                 int pageNumber = parameters.pageNumber;
                 ViewModelRetrieverResult<MessageListModel, MessageListModelError> messageListModelResult = messageListViewModelRetriever.Get(storeName, pageNumber);
 
                 if (!messageListModelResult.IsError)
                 {
-                    return Response.AsJson(messageListModelResult.Result);                    
+                    return Response.AsJson(messageListModelResult.Result);
                 }
                 switch (messageListModelResult.Error)
                 {

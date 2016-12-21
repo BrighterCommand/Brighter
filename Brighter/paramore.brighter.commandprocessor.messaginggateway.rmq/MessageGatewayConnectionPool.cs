@@ -36,8 +36,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
 using RabbitMQ.Client;
 
 namespace paramore.brighter.commandprocessor.messaginggateway.rmq
@@ -49,7 +50,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
     {
         private static readonly Dictionary<string, IConnection> s_connectionPool = new Dictionary<string, IConnection>();
         private static readonly object s_lock = new object();
-        private static readonly ILog s_logger = LogProvider.For<MessageGatewayConnectionPool>();
+        private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<MessageGatewayConnectionPool>);
 
         /// <summary>
         /// Return matching RabbitMQ connection if exist (match by amqp scheme)
@@ -86,7 +87,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
 
             TryRemoveConnection(connectionId);
 
-            s_logger.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ endpoint {0}", connectionFactory.Endpoint);
+            s_logger.Value.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ endpoint {0}", connectionFactory.Endpoint);
 
             var connection = connectionFactory.CreateConnection();
 

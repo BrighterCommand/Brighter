@@ -1,9 +1,7 @@
 using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using Polly;
 using Polly.CircuitBreaker;
@@ -22,7 +20,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
         private Establish _context = () =>
         {
-            var logger = A.Fake<ILog>();
             s_myCommand.Value = "Hello World";
             s_messageStore = new FakeMessageStore();
 
@@ -47,14 +44,12 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMinutes(1));
 
-
             s_commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
+                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 s_messageStore,
-                s_messagingProducer,
-                logger);
+                s_messagingProducer);
         };
 
         private Because _of = () =>

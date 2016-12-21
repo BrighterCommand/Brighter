@@ -40,7 +40,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using paramore.brighter.commandprocessor.Logging;
+using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
 using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
@@ -53,23 +53,17 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
     /// </summary>
     public class RestMsMessageProducer : RestMSMessageGateway, IAmAMessageProducer
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RestMsMessageProducer>);
+
         private readonly Feed _feed;
         private readonly Domain _domain;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RestMsMessageProducer"/> class.
+        /// <param name="configuration">The configuration of the RestMS broker we need to contact</param>
         /// </summary>
         public RestMsMessageProducer(RestMSMessagingGatewayConfiguration configuration)
-            : this(configuration, LogProvider.For<RestMsMessageProducer>()) 
-        {}
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RestMsMessageProducer"/> class.
-        /// Use this if you need to inject the logger, for example for testing
-        /// </summary>
-        /// <param name="configuration">The configuration of the RestMS broker we need to contact</param>
-        /// <param name="logger">The logger.</param>
-        public RestMsMessageProducer(RestMSMessagingGatewayConfiguration configuration, ILog logger) : base(configuration, logger)
+            : base(configuration)
         {
             _feed = new Feed(this);
             _domain = new Domain(this);
@@ -88,16 +82,15 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             }
             catch (RestMSClientException rmse)
             {
-                Logger.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                _logger.Value.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                Logger.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                _logger.Value.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
         }
-
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -165,7 +158,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.restms
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    Logger.ErrorFormat("Threw exception sending message to feed {0} with Id {1} due to {2}", feedName, message.Header.Id, exception.Message);
+                    _logger.Value.ErrorFormat("Threw exception sending message to feed {0} with Id {1} due to {2}", feedName, message.Header.Id, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error sending message to feed {0} with Id {1} , see log for details", feedName, message.Header.Id));

@@ -65,13 +65,6 @@ namespace paramore.brighter.commandprocessor
     ///      </item>
     ///     <item>
     ///         <description>
-    ///             A <see cref="ILog"/> that is the logger to use for diagnostic feedback. <see cref="ILog"/> is defined by 
-    ///             LibLog <see cref="!:hhttps://github.com/damianh/LibLog"/> as an abstraction over logging frameworks and allows us to support your
-    ///             preferred logging framework
-    ///         </description>
-    ///     </item>
-    ///     <item>
-    ///         <description>
     ///             A <see cref="MessagingConfiguration"/> describing how you want to configure Task Queues for the <see cref="CommandProcessor"/>. We store messages in a <see cref="IAmAMessageStore"/>
     ///             for later replay (in case we need to compensate by trying a message again). We send messages to a Task Queue via a <see cref="IAmAMessageProducer"/> and we  want to know how
     ///             to map the <see cref="IRequest"/> (<see cref="Command"/> or <see cref="Event"/>) to a <see cref="Message"/> using a <see cref="IAmAMessageMapper"/> using 

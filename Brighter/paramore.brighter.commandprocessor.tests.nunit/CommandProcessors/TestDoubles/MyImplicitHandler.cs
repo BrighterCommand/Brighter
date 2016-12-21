@@ -22,16 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
-
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
     internal class MyImplicitHandler : RequestHandler<MyCommand>
     {
-        public MyImplicitHandler(ILog logger) : base(logger)
-        { }
-
         [MyLoggingHandler(step: 1)]
         public override MyCommand Handle(MyCommand command)
         {

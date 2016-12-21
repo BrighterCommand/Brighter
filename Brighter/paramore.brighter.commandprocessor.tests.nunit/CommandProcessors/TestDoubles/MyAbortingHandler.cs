@@ -23,16 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
 {
     public class MyAbortingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
-        public MyAbortingHandler(ILog logger) : base(logger)
-        { }
-
         public override TRequest Handle(TRequest command)
         {
             throw new Exception("Aborting chain");

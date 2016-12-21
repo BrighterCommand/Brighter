@@ -22,11 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
-using FakeItEasy;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
 using paramore.brighter.commandprocessor.eventsourcing.Handlers;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.EventSourcing.TestDoubles;
 using TinyIoC;
@@ -42,8 +40,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
 
         private Establish context = () =>
         {
-            var logger = A.Fake<ILog>();
-
             s_commandstore = new InMemoryCommandStore();
 
             var registry = new SubscriberRegistry();
@@ -53,11 +49,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyStoredCommandHandler>();
             container.Register<IAmACommandStore>(s_commandstore);
-            container.Register<ILog>(logger);
 
             s_command = new MyCommand {Value = "My Test String"};
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), logger);
+            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
         };
 
