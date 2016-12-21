@@ -150,10 +150,10 @@ namespace paramore.brighter.commandprocessor
             Topic = topic;
             MessageType = messageType;
             Bag = new Dictionary<string, object>();
-            TimeStamp = RoundToSeconds(Clock.Now().Value);
+            TimeStamp = RoundToSeconds(Clock.Now());
             HandledCount = 0;
             DelayedMilliseconds = 0;
-            CorrelationId = correlationId.HasValue ? correlationId.Value : Guid.Empty ;
+            CorrelationId = correlationId ?? Guid.Empty ;
             ReplyTo = replyTo;
             ContentType = contentType;
         }
