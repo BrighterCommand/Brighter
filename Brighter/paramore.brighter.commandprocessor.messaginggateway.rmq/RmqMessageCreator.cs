@@ -47,7 +47,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             var bytes = dict[key] as byte[];
             if (null == bytes)
             {
-                _logger.Value.WarnFormat("The value of header" + key + " could not be cast to a byte array");
+                _logger.Value.WarnFormat("The value of header {0} could not be cast to a byte array", key);
                 return new HeaderResult<string>(null, false);
             }
 
@@ -59,7 +59,7 @@ namespace paramore.brighter.commandprocessor.messaginggateway.rmq
             catch (Exception e)
             {
                 var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
-                _logger.Value.WarnFormat("Failed to read the value of header " + key + " as UTF-8, first 20 byes follow: \n\t" + firstTwentyBytes, e);
+                _logger.Value.WarnException("Failed to read the value of header {0} as UTF-8, first 20 byes follow: \n\t{1}", e, key, firstTwentyBytes);
                 return new HeaderResult<string>(null, false);
             }
         }
