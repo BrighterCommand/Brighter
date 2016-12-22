@@ -31,6 +31,7 @@ using paramore.brighter.commandprocessor.monitoring.Events;
 using paramore.brighter.commandprocessor.monitoring.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.Monitoring.TestDoubles;
+using paramore.brighter.commandprocessor.time;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring

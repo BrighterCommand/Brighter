@@ -31,6 +31,7 @@ using nUnitShouldAdapter;
 using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.messagestore.mssql;
+using paramore.brighter.commandprocessor.time;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {

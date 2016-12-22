@@ -30,6 +30,7 @@ using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.messagestore.sqlite;
+using paramore.brighter.commandprocessor.time;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 {
