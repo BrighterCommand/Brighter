@@ -15,3 +15,8 @@
 *.PDF	 diff=astextplain
 *.rtf	 diff=astextplain
 *.RTF	 diff=astextplain
+
+# Fix issues with githu/linguist
+**/*.html linguist-documentation
+**/*.css linguist-documentation
+**/*.js linguist-documentation
