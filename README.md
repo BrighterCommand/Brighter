@@ -41,4 +41,4 @@ We release the build artefacts (NuGet packages) to [Nuget](http://nuget.org) on 
        src="https://scan.coverity.com/projects/2900/badge.svg"/>
 </a>
 
-[![Build status](https://ci.appveyor.com/api/projects/status/kuigla5ifar07r1v?svg=true)](https://ci.appveyor.com/project/IanCooper/paramore)
+[![Build status](https://ci.appveyor.com/api/projects/status/kuigla5ifar07r1v?svg=true)](https://ci.appveyor.com/nuget/paramore-brighter-m289d49fraww)
