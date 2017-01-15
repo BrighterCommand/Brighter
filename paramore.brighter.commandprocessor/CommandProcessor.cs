@@ -82,6 +82,19 @@ namespace paramore.brighter.commandprocessor
         public const string RETRYPOLICY = "Paramore.Brighter.CommandProcessor.RetryPolicy";
 
         /// <summary>
+        /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
+        /// Register that policy with your <see cref="IAmAPolicyRegistry"/> such as <see cref="PolicyRegistry"/>
+        /// You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
+        /// </summary>
+        public const string CIRCUITBREAKERASYNC = "Paramore.Brighter.CommandProcessor.CircuitBreaker.Async";
+        /// <summary>
+        /// Use this as an identifier for your <see cref="Policy"/> that determines the retry strategy when communication with the Work Queue fails.
+        /// Register that policy with your <see cref="IAmAPolicyRegistry"/> such as <see cref="PolicyRegistry"/>
+        /// You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
+        /// </summary>
+        public const string RETRYPOLICYASYNC = "Paramore.Brighter.CommandProcessor.RetryPolicy.Async";
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
         /// Use this constructor when no task queue support is required
         /// </summary>
@@ -557,7 +570,7 @@ namespace paramore.brighter.commandprocessor
 
         private async Task CheckCircuitAsync(Func<Task> send)
         {
-            await _policyRegistry.Get(CIRCUITBREAKER).Execute(send);
+            await _policyRegistry.Get(CIRCUITBREAKERASYNC).Execute(send);
         }
 
         private void RetryAndBreakCircuit(Action send)
@@ -577,7 +590,7 @@ namespace paramore.brighter.commandprocessor
 
         private async Task RetryAsync(Func<Task> send)
         {
-            await _policyRegistry.Get(RETRYPOLICY).Execute(send);
+            await _policyRegistry.Get(RETRYPOLICYASYNC).Execute(send);
         }
     }
 }

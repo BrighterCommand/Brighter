@@ -66,7 +66,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
             s_commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
+                new PolicyRegistry() { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 (IAmAMessageStoreAsync<Message>)s_MessageStore,
                 (IAmAMessageProducerAsync)s_fakeMessageProducer);
