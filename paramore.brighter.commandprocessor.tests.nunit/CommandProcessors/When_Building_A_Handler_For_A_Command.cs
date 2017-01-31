@@ -24,31 +24,36 @@ THE SOFTWARE. */
 
 using System.Linq;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(PipelineBuilder<>))]
-    public class When_Building_A_Handler_For_A_Command : ContextSpecification
+    [TestFixture]
+    public class PipelineForCommandTests
     {
-        private static PipelineBuilder<MyCommand> s_chainBuilder;
-        private static IHandleRequests<MyCommand> s_chainOfResponsibility;
-        private static RequestContext s_requestContext;
+        private PipelineBuilder<MyCommand> _chainBuilder;
+        private IHandleRequests<MyCommand> _chainOfResponsibility;
+        private RequestContext _requestContext;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler());
-            s_requestContext = new RequestContext();
+            _requestContext = new RequestContext();
 
-            s_chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
-        };
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+        }
 
-        private Because _of = () => s_chainOfResponsibility = s_chainBuilder.Build(s_requestContext).First();
+        [Test]
+        public void When_Building_A_Handler_For_A_Command()
+        {
+            _chainOfResponsibility = _chainBuilder.Build(_requestContext).First();
 
-        private It _should_have_set_the_context_on_the_handler = () => s_chainOfResponsibility.Context.ShouldNotBeNull();
-        private It _should_use_the_context_that_we_passed_in = () => s_chainOfResponsibility.Context.ShouldBeTheSameAs(s_requestContext);
+            _chainOfResponsibility.Context.ShouldNotBeNull();
+            _chainOfResponsibility.Context.ShouldBeTheSameAs(_requestContext);
+        }
     }
 }

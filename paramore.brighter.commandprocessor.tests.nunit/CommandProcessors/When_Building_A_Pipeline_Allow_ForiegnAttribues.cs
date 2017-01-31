@@ -24,19 +24,20 @@ THE SOFTWARE. */
 
 using System.Linq;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(PipelineBuilder<>))]
-    public class When_Building_A_Pipeline_Allow_ForiegnAttribues : ContextSpecification
+    [TestFixture]
+    public class PipelineForiegnAttributesTests
     {
-        private static PipelineBuilder<MyCommand> s_pipelineBuilder;
-        private static IHandleRequests<MyCommand> s_pipeline;
+        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private IHandleRequests<MyCommand> _pipeline;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyObsoleteCommandHandler>();
@@ -47,17 +48,21 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
 
-            s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
-        };
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+        }
 
-        private Because _of = () => s_pipeline = s_pipelineBuilder.Build(new RequestContext()).First();
+        [Test]
+        public void When_Building_A_Pipeline_Allow_ForiegnAttribues()
+        {
+            _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-        private It _should_add_handlers_in_the_correct_sequence_into_the_chain = () => TraceFilters().ToString().ShouldEqual("MyValidationHandler`1|MyObsoleteCommandHandler|MyLoggingHandler`1|");
+            TraceFilters().ToString().ShouldEqual("MyValidationHandler`1|MyObsoleteCommandHandler|MyLoggingHandler`1|");
+        }
 
-        private static PipelineTracer TraceFilters()
+        private PipelineTracer TraceFilters()
         {
             var pipelineTracer = new PipelineTracer();
-            s_pipeline.DescribePath(pipelineTracer);
+            _pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
     }

@@ -56,6 +56,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         public void When_An_Exception_Is_Thrown_Terminate_The_Pipeline()
         {
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
+
             _exception.ShouldNotBeNull();
             MyUnusedCommandHandler.Shouldreceive(_myCommand).ShouldBeFalse();
         }

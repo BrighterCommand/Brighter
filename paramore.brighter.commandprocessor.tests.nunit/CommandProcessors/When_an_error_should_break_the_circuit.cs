@@ -60,8 +60,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         {
             //break circuit with retries
             _failedException = Catch.Exception(() => _commandProcessor.Post(_myCommand));
-            //now resond with broken ciruit
+
+            //now respond with broken ciruit
             _circuitBrokenException = (BrokenCircuitException)Catch.Exception(() => _commandProcessor.Post(_myCommand));
+
             _messagingProducer.SentCalledCount.ShouldEqual(4);
             _failedException.ShouldBeOfExactType(typeof(Exception));
             _circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));

@@ -24,19 +24,20 @@ THE SOFTWARE. */
 
 using System.Linq;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(PipelineBuilder<>))]
-    public class When_Building_A_Handler_For_An_Async_Command : ContextSpecification
+    [TestFixture]
+    public class  PipelineForCommandAsyncTests
     {
         private static PipelineBuilder<MyCommand> s_chainBuilder;
         private static IHandleRequestsAsync<MyCommand> s_chainOfResponsibility;
         private static RequestContext s_requestContext;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
@@ -44,11 +45,15 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             s_requestContext = new RequestContext();
 
             s_chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
-        };
+        }
 
-        private Because _of = () => s_chainOfResponsibility = s_chainBuilder.BuildAsync(s_requestContext, false).First();
+        [Test]
+        public void When_Building_A_Handler_For_An_Async_Command()
+        {
+            s_chainOfResponsibility = s_chainBuilder.BuildAsync(s_requestContext, false).First();
 
-        private It _should_have_set_the_context_on_the_handler = () => s_chainOfResponsibility.Context.ShouldNotBeNull();
-        private It _should_use_the_context_that_we_passed_in = () => s_chainOfResponsibility.Context.ShouldBeTheSameAs(s_requestContext);
+            s_chainOfResponsibility.Context.ShouldNotBeNull();
+            s_chainOfResponsibility.Context.ShouldBeTheSameAs(s_requestContext);
+        }
     }
 }
