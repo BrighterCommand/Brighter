@@ -8,7 +8,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
     {
         private static IAmAControlBusSender s_sender;
         private static IAmAControlBusSenderFactory s_senderFactory;
-        private static MessagingConfiguration s_configuration;
         private static IAmAMessageStore<Message> s_fakeMessageStore;
         private static IAmAMessageProducer s_fakeGateway;
 

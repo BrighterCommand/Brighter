@@ -49,6 +49,8 @@ namespace paramore.brighter.serviceactivator
             : base(commandProcessor, messageMapper)
         {}
 
+        public bool IsAsync => false;
+
         protected override Task DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
             var tcs = new TaskCompletionSource<object>();
@@ -81,6 +83,12 @@ namespace paramore.brighter.serviceactivator
 
             tcs.SetResult(new object());
             return tcs.Task;
+        }
+
+        protected override void SynchronizationContextHook()
+        {
+            //we use the default synchronization context i.e. the thread pool
+            return;
         }
     }
 }

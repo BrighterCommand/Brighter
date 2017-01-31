@@ -23,20 +23,20 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(PipelineBuilder<>))]
-    public class When_A_Handler_Is_Part_of_A_Pipeline : ContextSpecification
+    public class PipelineBuilderTests
     {
-        private static PipelineBuilder<MyCommand> s_pipelineBuilder;
-        private static IHandleRequests<MyCommand> s_pipeline;
+        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private IHandleRequests<MyCommand> _pipeline;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish ()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyImplicitHandler>();
@@ -46,18 +46,23 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
 
-            s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
-        };
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+        }
 
-        private Because _of = () => s_pipeline = s_pipelineBuilder.Build(new RequestContext()).First();
+        [Test]
+        public void When_A_Handler_Is_Part_of_A_Pipeline()
+        {
+            _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-        private It _should_include_my_command_handler_filter_in_the_chain = () => TracePipeline().ToString().Contains("MyImplicitHandler").ShouldBeTrue();
-        private It _should_include_my_logging_handler_in_the_chain = () => TracePipeline().ToString().Contains("MyLoggingHandler").ShouldBeTrue();
+            TracePipeline().ToString().Contains("MyImplicitHandler").ShouldBeTrue();
+            TracePipeline().ToString().Contains("MyLoggingHandler").ShouldBeTrue();
 
-        private static PipelineTracer TracePipeline()
+        }
+
+        private PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();
-            s_pipeline.DescribePath(pipelineTracer);
+            _pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
     }

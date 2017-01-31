@@ -38,7 +38,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         private static readonly MyCommand s_myCommand = new MyCommand();
         private static Message s_message;
         private static FakeMessageStore s_fakeMessageStore;
-        private static FakeMessageProducer s_fakeMessageProducer;
         private static Exception s_exception;
 
         private Establish _context = () =>

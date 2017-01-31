@@ -45,7 +45,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
         private static Message s_message2;
         private static Message s_messageEarliest;
         private static MsSqlMessageStore s_sqlMessageStore;
-        private static Message s_storedMessage;
 
         private Cleanup _cleanup = () => CleanUpDb();
 

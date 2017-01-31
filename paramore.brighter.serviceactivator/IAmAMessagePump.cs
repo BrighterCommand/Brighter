@@ -65,5 +65,10 @@ namespace paramore.brighter.serviceactivator
         /// </summary>
         /// <value>The channel.</value>
         IAmAChannel Channel { get; set; }
+
+        /// <summary>
+        /// Is this message pump for an async pipeline, or a synchronous pipeline
+        /// </summary>
+        bool IsAsync { get; }
     }
 }

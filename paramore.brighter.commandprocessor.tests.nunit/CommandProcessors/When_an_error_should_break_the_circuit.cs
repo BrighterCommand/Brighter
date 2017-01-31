@@ -1,6 +1,7 @@
 using System;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using Polly;
@@ -8,25 +9,27 @@ using Polly.CircuitBreaker;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    public class When_An_Error_Should_Break_The_Circuit : ContextSpecification
+    [TestFixture]
+    public class CircuitBreakerTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Message s_message;
-        private static FakeMessageStore s_messageStore;
-        private static FakeErroringMessageProducer s_messagingProducer;
-        private static Exception s_failedException;
-        private static BrokenCircuitException s_circuitBrokenException;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private Message _message;
+        private FakeMessageStore _messageStore;
+        private FakeErroringMessageProducer _messagingProducer;
+        private Exception _failedException;
+        private BrokenCircuitException _circuitBrokenException;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_myCommand.Value = "Hello World";
-            s_messageStore = new FakeMessageStore();
+            _myCommand.Value = "Hello World";
+            _messageStore = new FakeMessageStore();
 
-            s_messagingProducer = new FakeErroringMessageProducer();
-            s_message = new Message(
-                header: new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
-                body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
+            _messagingProducer = new FakeErroringMessageProducer();
+            _message = new Message(
+                header: new MessageHeader(messageId: _myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
+                body: new MessageBody(JsonConvert.SerializeObject(_myCommand))
                 );
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
@@ -44,26 +47,30 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMinutes(1));
 
-            s_commandProcessor = new CommandProcessor(
+            _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                s_messageStore,
-                s_messagingProducer);
-        };
+                _messageStore,
+                _messagingProducer);
+        }
 
-        private Because _of = () =>
+        [Test]
+        public void When_An_Error_Should_Break_The_Circuit()
         {
             //break circuit with retries
-            s_failedException = Catch.Exception(() => s_commandProcessor.Post(s_myCommand));
+            _failedException = Catch.Exception(() => _commandProcessor.Post(_myCommand));
             //now resond with broken ciruit
-            s_circuitBrokenException = (BrokenCircuitException)Catch.Exception(() => s_commandProcessor.Post(s_myCommand));
-        };
+            _circuitBrokenException = (BrokenCircuitException)Catch.Exception(() => _commandProcessor.Post(_myCommand));
+            _messagingProducer.SentCalledCount.ShouldEqual(4);
+            _failedException.ShouldBeOfExactType(typeof(Exception));
+            _circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
+         }
 
-        private Cleanup cleanup = () => s_commandProcessor.Dispose();
-
-        private It _should_send_messages_via_the_messaging_gateway = () => s_messagingProducer.SentCalledCount.ShouldEqual(4);
-        private It _should_throw_a_exception_out_once_all_retries_exhausted = () => s_failedException.ShouldBeOfExactType(typeof(Exception));
-        private It _should_throw_a_circuit_broken_exception_once_circuit_broken = () => s_circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
-    }
+        [TearDown]
+        public void Cleanup()
+        {
+            _commandProcessor.Dispose();
+       }
+   }
 }

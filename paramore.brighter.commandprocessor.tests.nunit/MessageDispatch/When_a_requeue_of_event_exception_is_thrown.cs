@@ -40,7 +40,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
         private static FakeChannel s_channel;
         private static SpyCommandProcessor s_commandProcessor;
         private static MyEvent s_event;
-        private static MyCommand s_command;
 
         private Establish _context = () =>
         {

@@ -83,10 +83,17 @@ namespace paramore.brighter.commandprocessor
         void Stop();
         
         /// <summary>
+        /// Adds a message to the queue
+        /// </summary>
+        /// <param name="message"></param>
+        void Enqueue(Message message);
+
+        /// <summary>
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         void Requeue(Message message, int delayMilliseconds = 0);
-    }
+
+   }
 }

@@ -11,6 +11,8 @@ namespace paramore.brighter.serviceactivator
             : base(commandProcessor, messageMapper)
         {}
 
+        public bool IsAsync => true;
+
         protected override async Task DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
             _logger.Value.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
@@ -38,6 +40,13 @@ namespace paramore.brighter.serviceactivator
                         break;
                     }
             }
+        }
+
+        protected override void SynchronizationContextHook()
+        {
+            //we take control of the synchonization context to provide a reactor model i.e. uses one thread, does not use thread pool for callbacks
+            //TODO: We want to support a Single Threaded Apartment, but it needs work
+            //SynchronizationContext.SetSynchronizationContext(new MessagePumpSynchronizationContext(Channel));
         }
     }
 }

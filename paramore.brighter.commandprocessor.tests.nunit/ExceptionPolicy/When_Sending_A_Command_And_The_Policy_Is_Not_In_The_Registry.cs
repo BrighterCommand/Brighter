@@ -37,7 +37,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
     {
         private static CommandProcessor s_commandProcessor;
         private static readonly MyCommand s_myCommand = new MyCommand();
-        private static int s_retryCount;
         private static Exception s_exception;
 
         private Establish _context = () =>

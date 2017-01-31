@@ -24,19 +24,20 @@ THE SOFTWARE. */
 
 using System.Linq;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(PipelineBuilder<>))]
-    public class When_A_Handler_Is_Part_Of_An_Async_Pipeline : ContextSpecification
+    [TestFixture]
+    public class PipelineBuilderAsyncTests
     {
-        private static PipelineBuilder<MyCommand> s_pipelineBuilder;
-        private static IHandleRequestsAsync<MyCommand> s_pipeline;
+        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private IHandleRequestsAsync<MyCommand> _pipeline;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish ()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyImplicitHandlerAsync>();
@@ -46,18 +47,21 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequestsAsync<MyCommand>, MyImplicitHandlerAsync>();
             container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
 
-            s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
-        };
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+        }
 
-        private Because _of = () => s_pipeline = s_pipelineBuilder.BuildAsync(new RequestContext(), false).First();
+        [Test]
+        public void When_A_Handler_Is_Part_Of_An_Async_Pipeline()
+        {
+            _pipeline = _pipelineBuilder.BuildAsync(new RequestContext(), false).First();
+            TracePipeline().ToString().Contains("MyImplicitHandlerAsync").ShouldBeTrue();
+            TracePipeline().ToString().Contains("MyLoggingHandlerAsync").ShouldBeTrue();
+        }
 
-        private It _should_include_my_command_handler_filter_in_the_chain = () => TracePipeline().ToString().Contains("MyImplicitHandlerAsync").ShouldBeTrue();
-        private It _should_include_my_logging_handler_in_the_chain = () => TracePipeline().ToString().Contains("MyLoggingHandlerAsync").ShouldBeTrue();
-
-        private static PipelineTracer TracePipeline()
+        private PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();
-            s_pipeline.DescribePath(pipelineTracer);
+            _pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
     }

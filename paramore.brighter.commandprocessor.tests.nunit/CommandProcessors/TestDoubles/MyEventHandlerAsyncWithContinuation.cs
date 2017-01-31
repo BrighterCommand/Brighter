@@ -6,7 +6,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
     class MyEventHandlerAsyncWithContinuation : RequestHandlerAsync<MyEvent>
     {
         private static MyEvent s_receivedEvent;
-        private int counter = 0;
 
         public static ThreadLocal<int> LoopCounter { get; set; }
         public static int WorkThreadId { get; set; }

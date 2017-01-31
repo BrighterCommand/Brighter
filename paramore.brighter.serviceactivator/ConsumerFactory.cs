@@ -48,7 +48,7 @@ namespace paramore.brighter.serviceactivator
                 TimeoutInMilliseconds = _connection.TimeoutInMiliseconds,
                 RequeueCount = _connection.RequeueCount,
                 RequeueDelayInMilliseconds = _connection.RequeueDelayInMilliseconds,
-                UnacceptableMessageLimit = _connection.UnacceptableMessageLimit,
+                UnacceptableMessageLimit = _connection.UnacceptableMessageLimit
             };
 
             return new Consumer(_connection.Name, channel, messagePump);

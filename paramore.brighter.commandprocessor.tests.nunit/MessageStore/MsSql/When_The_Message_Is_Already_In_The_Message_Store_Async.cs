@@ -40,7 +40,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
         private static Exception s_exception;
         private static Message s_messageEarliest;
         private static MsSqlMessageStore s_sqlMessageStore;
-        private static Message s_storedMessage;
         private static MsSqlTestHelper _msSqlTestHelper;
 
         private Cleanup _cleanup = () => CleanUpDb();

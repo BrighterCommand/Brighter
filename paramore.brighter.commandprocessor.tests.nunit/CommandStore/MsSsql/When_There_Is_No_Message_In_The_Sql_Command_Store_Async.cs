@@ -37,7 +37,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
     {
         private static MsSqlTestHelper _msSqlTestHelper;
         private static MsSqlCommandStore s_sqlCommandStore;
-        private static MyCommand s_raisedCommand;
         private static MyCommand s_storedCommand;
 
         private Establish _context = () =>

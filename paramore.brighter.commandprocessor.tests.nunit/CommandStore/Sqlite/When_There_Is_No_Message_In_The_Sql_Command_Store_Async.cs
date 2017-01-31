@@ -36,7 +36,6 @@ namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
     {
         private static SqliteTestHelper _sqliteTestHelper;
         private static SqliteCommandStore s_sqlCommandStore;
-        private static MyCommand s_raisedCommand;
         private static MyCommand s_storedCommand;
 
         private Establish _context = () =>

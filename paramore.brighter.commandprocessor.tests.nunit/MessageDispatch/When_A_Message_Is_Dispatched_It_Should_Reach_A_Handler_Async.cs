@@ -1,8 +1,8 @@
 ﻿using System;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -10,42 +10,47 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    public class When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async : ContextSpecification
+    [TestFixture]
+    public class MessagePumpRunTestFixtureAsync
     {
-        private static IAmAMessagePump s_messagePump;
-        private static FakeChannel s_channel;
-        private static IAmACommandProcessor s_commandProcessor;
-        private static MyEvent s_event;
+        private IAmAMessagePump _messagePump;
+        private FakeChannel _channel;
+        private IAmACommandProcessor _commandProcessor;
+        private MyEvent _event;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsyncWithContinuation>();
 
-            s_commandProcessor = new CommandProcessor(
+            _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 new CheapHandlerFactoryAsync(), 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry());
 
-            s_channel = new FakeChannel();
+            _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            s_messagePump = new MessagePumpAsync<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000 };
+            _messagePump = new MessagePumpAsync<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000 };
 
-            s_event = new MyEvent();
+            _event = new MyEvent();
 
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
-            s_channel.Add(message);
+            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_event)));
+            _channel.Add(message);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            s_channel.Add(quitMessage);
-        };
-        
-        private Because _of = () => AsyncContext.Run(async () => await s_messagePump.Run());
+            _channel.Add(quitMessage);
+        }
 
-        private It _should_dispatch_the_message_to_a_handler = () => MyEventHandlerAsyncWithContinuation.ShouldReceive(s_event).ShouldBeTrue();
-        private It _should_modify_the_loop_counter_on_the_callback_thread = () => MyEventHandlerAsyncWithContinuation.LoopCounter.Value.ShouldEqual(2);
-        private It _should_use_the_same_thread_for_the_continuation = () => MyEventHandlerAsyncWithContinuation.WorkThreadId.ShouldEqual(MyEventHandlerAsyncWithContinuation.ContinuationThreadId);
+        [Test]
+        public void When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async()
+        {
+            AsyncContext.Run(async () => await _messagePump.Run());
 
+            MyEventHandlerAsyncWithContinuation.ShouldReceive(_event).ShouldBeTrue();
+            MyEventHandlerAsyncWithContinuation.LoopCounter.Value.ShouldEqual(2);
+            MyEventHandlerAsyncWithContinuation.WorkThreadId.ShouldEqual(MyEventHandlerAsyncWithContinuation.ContinuationThreadId);
+        }
 
         internal class CheapHandlerFactoryAsync : IAmAHandlerFactoryAsync
         {
