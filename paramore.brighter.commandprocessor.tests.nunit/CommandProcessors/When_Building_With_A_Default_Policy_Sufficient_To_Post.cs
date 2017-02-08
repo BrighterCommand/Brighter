@@ -26,50 +26,59 @@ using System;
 using System.Linq;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof (CommandProcessorBuilder))]
-    public class When_Building_With_A_Default_Policy_Sufficient_To_Post : ContextSpecification
+    [TestFixture]
+    public class PostCommandTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Message s_message;
-        private static FakeMessageStore s_fakeMessageStore;
-        private static FakeMessageProducer s_fakeMessageProducer;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private Message _message;
+        private FakeMessageStore _fakeMessageStore;
+        private FakeMessageProducer _fakeMessageProducer;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_myCommand.Value = "Hello World";
+            _myCommand.Value = "Hello World";
 
-            s_fakeMessageStore = new FakeMessageStore();
-            s_fakeMessageProducer = new FakeMessageProducer();
+            _fakeMessageStore = new FakeMessageStore();
+            _fakeMessageProducer = new FakeMessageProducer();
 
-            s_message = new Message(
+            _message = new Message(
                 header:
-                    new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
-                body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
+                    new MessageHeader(messageId: _myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
+                body: new MessageBody(JsonConvert.SerializeObject(_myCommand))
                 );
 
             var messageMapperRegistry =
                 new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            s_commandProcessor = CommandProcessorBuilder.With()
+            _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactory()))
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration((IAmAMessageStore<Message>)s_fakeMessageStore, (IAmAMessageProducer) s_fakeMessageProducer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration((IAmAMessageStore<Message>)_fakeMessageStore, (IAmAMessageProducer) _fakeMessageProducer, messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
-        };
+        }
 
-        private Because _of = () => s_commandProcessor.Post(s_myCommand);
+        [Test]
+        public void When_Building_With_A_Default_Policy_Sufficient_To_Post()
+        {
+            _commandProcessor.Post(_myCommand);
 
-        private It _should_store_the_message_in_the_sent_command_message_repository = () => s_fakeMessageStore.MessageWasAdded.ShouldBeTrue();
-        private It _should_send_a_message_via_the_messaging_gateway = () => s_fakeMessageProducer.MessageWasSent.ShouldBeTrue();
-        private It _should_convert_the_command_into_a_message =() => s_fakeMessageStore.Get().First().ShouldEqual(s_message);
+            //_should_store_the_message_in_the_sent_command_message_repository
+            _fakeMessageStore.MessageWasAdded.ShouldBeTrue();
+           //_should_send_a_message_via_the_messaging_gateway
+            _fakeMessageProducer.MessageWasSent.ShouldBeTrue();
+           //_should_convert_the_command_into_a_message
+            _fakeMessageStore.Get().First().ShouldEqual(_message);
+        }
 
         internal class EmptyHandlerFactory : IAmAHandlerFactory
         {

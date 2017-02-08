@@ -24,20 +24,22 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(CommandProcessor))]
-    public class When_There_Are_Multiple_Subscribers : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorPublishMultipleMatchesTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyEvent s_myEvent = new MyEvent();
-        private static Exception s_exception;
+        private CommandProcessor _commandProcessor;
+        private readonly MyEvent _myEvent = new MyEvent();
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
@@ -48,13 +50,20 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequests<MyEvent>, MyEventHandler>("MyEventHandler");
             container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("MyOtherHandler");
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Publish(s_myEvent));
+        [Test]
+        public void When_There_Are_Multiple_Subscribers()
+        {
+            _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
 
-        private It _should_not_throw_an_exception = () => s_exception.ShouldBeNull();
-        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.ShouldReceive(s_myEvent).ShouldBeTrue();
-        private It _should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
+            //_should_not_throw_an_exception
+            _exception.ShouldBeNull();
+           //_should_publish_the_command_to_the_first_event_handler
+            MyEventHandler.ShouldReceive(_myEvent).ShouldBeTrue();
+            //_should_publish_the_command_to_the_second_event_handler
+            MyOtherEventHandler.Shouldreceive(_myEvent).ShouldBeTrue();
+        }
     }
 }

@@ -24,28 +24,35 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(CommandProcessor))]
-    public class When_There_Is_No_Handler_Factory_On_A_Send : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorSendMissingHandlerFactoryTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Exception s_exception;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
 
-            s_commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory) null, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory) null, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
+        [Test]
+        public void When_There_Is_No_Handler_Factory_On_A_Send()
+        {
+            _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
-        private It _should_throw_an_invalid_operation_exception = () => s_exception.ShouldBeOfExactType<InvalidOperationException>();
+            //_should_throw_an_invalid_operation_exception
+            _exception.ShouldBeOfExactType<InvalidOperationException>();
+        }
     }
 }

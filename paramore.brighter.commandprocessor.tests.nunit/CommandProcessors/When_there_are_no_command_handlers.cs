@@ -23,31 +23,36 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(CommandProcessor))]
-    public class When_There_Are_No_Command_Handlers : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorNoHandlersMatchTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Exception s_exception;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_commandProcessor = new CommandProcessor(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer()), new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer()), new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
+        [Test]
+        public void When_There_Are_No_Command_Handlers()
+        {
+            _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
-        private It _should_fail_because_multiple_receivers_found = () => s_exception.ShouldBeAssignableTo(typeof(ArgumentException));
-        private It _should_have_an_error_message_that_tells_you_why = () => s_exception
-            .ShouldContainErrorMessage("No command handler was found for the typeof command paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles.MyCommand - a command should have exactly one handler.");
+            //_should_fail_because_multiple_receivers_found
+            _exception.ShouldBeAssignableTo(typeof(ArgumentException));
+            //_should_have_an_error_message_that_tells_you_why
+            _exception.ShouldContainErrorMessage("No command handler was found for the typeof command paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles.MyCommand - a command should have exactly one handler.");
+        }
     }
 }

@@ -23,29 +23,35 @@ THE SOFTWARE. */
 #endregion
 
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(CommandProcessor))]
-    public class When_Sending_A_Command_To_The_Processor : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorSendTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler());
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
-        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+        [Test]
+        public void When_Sending_A_Command_To_The_Processor()
+        {
+            _commandProcessor.Send(_myCommand);
 
-        private It _should_send_the_command_to_the_command_handler = () => MyCommandHandler.ShouldReceive(s_myCommand).ShouldBeTrue();
+            //_should_send_the_command_to_the_command_handler
+            MyCommandHandler.ShouldReceive(_myCommand).ShouldBeTrue();
+        }
     }
 }
 

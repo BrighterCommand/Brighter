@@ -42,6 +42,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
         {
             LogEvent(command);
 
+            await Task.Delay(5, cancellationToken);
+
             throw new InvalidOperationException();
         }
 

@@ -27,32 +27,34 @@ using System.Linq;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using Polly;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(ControlBusSender))]
-    public class When_Posting_Via_A_Control_Bus_Sender_Async : ContextSpecification
+    [TestFixture]
+    public class ControlBusSenderPostMessageAsyneTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static ControlBusSender s_controlBusSender;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Message s_message;
-        private static FakeMessageStore s_fakeMessageStore;
-        private static FakeMessageProducer s_fakeMessageProducer;
+        private CommandProcessor _commandProcessor;
+        private ControlBusSender _controlBusSender;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private Message _message;
+        private FakeMessageStore _fakeMessageStore;
+        private FakeMessageProducer _fakeMessageProducer;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_myCommand.Value = "Hello World";
+            _myCommand.Value = "Hello World";
 
-            s_fakeMessageStore = new FakeMessageStore();
-            s_fakeMessageProducer = new FakeMessageProducer();
+            _fakeMessageStore = new FakeMessageStore();
+            _fakeMessageProducer = new FakeMessageProducer();
 
-            s_message = new Message(
-                header: new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
-                body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
+            _message = new Message(
+                header: new MessageHeader(messageId: _myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
+                body: new MessageBody(JsonConvert.SerializeObject(_myCommand))
                 );
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
@@ -66,23 +68,33 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            s_commandProcessor = new CommandProcessor(
+            _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAMessageStoreAsync<Message>)s_fakeMessageStore,
-                (IAmAMessageProducerAsync)s_fakeMessageProducer);
+                (IAmAMessageStoreAsync<Message>)_fakeMessageStore,
+                (IAmAMessageProducerAsync)_fakeMessageProducer);
 
-            s_controlBusSender = new ControlBusSender(s_commandProcessor);
-        };
+            _controlBusSender = new ControlBusSender(_commandProcessor);
+        }
 
-        private Because _of = () => AsyncContext.Run(async () => await s_controlBusSender.PostAsync(s_myCommand));
+        [Test]
+        public void When_Posting_Via_A_Control_Bus_Sender_Async()
+        {
+            AsyncContext.Run(async () => await _controlBusSender.PostAsync(_myCommand));
 
-        private Cleanup cleanup = () => s_controlBusSender .Dispose();
+            //_should_store_the_message_in_the_sent_command_message_repository
+            _fakeMessageStore.MessageWasAdded.ShouldBeTrue();
+            //_should_send_a_message_via_the_messaging_gateway
+            _fakeMessageProducer.MessageWasSent.ShouldBeTrue();
+            //_should_convert_the_command_into_a_message
+            _fakeMessageStore.Get().First().ShouldEqual(_message);
+        }
 
-        private It _should_store_the_message_in_the_sent_command_message_repository = () => s_fakeMessageStore.MessageWasAdded.ShouldBeTrue();
-        private It _should_send_a_message_via_the_messaging_gateway = () => s_fakeMessageProducer.MessageWasSent.ShouldBeTrue();
-        private It _should_convert_the_command_into_a_message =() => s_fakeMessageStore.Get().First().ShouldEqual(s_message);
-
+        [TearDown]
+        public void Cleanup()
+        {
+            _controlBusSender.Dispose();
+        }
     }
 }

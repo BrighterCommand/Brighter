@@ -25,25 +25,28 @@ THE SOFTWARE. */
 using System;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using Polly;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(CommandProcessor))]
-    public class When_Posting_A_Message_And_There_Is_No_Message_Store_Async : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorNoMessageStoreAsyncTests
+
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static FakeMessageProducer s_fakeMessageProducer;
-        private static Exception s_exception;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private FakeMessageProducer _fakeMessageProducer;
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_myCommand.Value = "Hello World";
+            _myCommand.Value = "Hello World";
 
-            s_fakeMessageProducer = new FakeMessageProducer();
+            _fakeMessageProducer = new FakeMessageProducer();
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
@@ -56,18 +59,27 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            s_commandProcessor = new CommandProcessor(
+            _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 null,
-                (IAmAMessageProducer)s_fakeMessageProducer);
-        };
+                (IAmAMessageProducer)_fakeMessageProducer);
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.PostAsync(s_myCommand)));
+        [Test]
+        public void When_Posting_A_Message_And_There_Is_No_Message_Store_Async()
+        {
+            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PostAsync(_myCommand)));
+        }
 
-        private Cleanup cleanup = () => s_commandProcessor.Dispose();
+        [TearDown]
+        public void Cleanup()
+        {
+            _commandProcessor.Dispose();
 
-        It _should_throw_an_exception = () => s_exception.ShouldBeOfExactType<InvalidOperationException>();
+            //_should_throw_an_exception
+            _exception.ShouldBeOfExactType<InvalidOperationException>();
+        }
     }
 }

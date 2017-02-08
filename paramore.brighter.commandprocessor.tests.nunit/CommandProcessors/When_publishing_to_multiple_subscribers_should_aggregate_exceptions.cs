@@ -24,20 +24,22 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(CommandProcessor))]
-    public class When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions : ContextSpecification
+    [TestFixture]
+    public class PublishingToMultipleSubscribersTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyEvent s_myEvent = new MyEvent();
-        private static Exception s_exception;
+        private CommandProcessor _commandProcessor;
+        private readonly MyEvent _myEvent = new MyEvent();
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
@@ -50,14 +52,22 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("MyOtherHandler");
             container.Register<IHandleRequests<MyEvent>, MyThrowingEventHandler>("MyThrowingHandler");
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Publish(s_myEvent));
+        [Test]
+        public void When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions()
+        {
+            _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
 
-        private It _should_throw_an_aggregate_exception = () => s_exception.ShouldBeOfExactType(typeof(AggregateException));
-        private It _should_have_an_inner_exception_from_the_handler = () => ((AggregateException)s_exception).InnerException.ShouldBeOfExactType(typeof(InvalidOperationException));
-        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandler.ShouldReceive(s_myEvent).ShouldBeTrue();
-        private It _should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandler.Shouldreceive(s_myEvent).ShouldBeTrue();
+            //_should_throw_an_aggregate_exception
+            _exception.ShouldBeOfExactType(typeof(AggregateException));
+            //_should_have_an_inner_exception_from_the_handler
+            ((AggregateException)_exception).InnerException.ShouldBeOfExactType(typeof(InvalidOperationException));
+            //_should_publish_the_command_to_the_first_event_handler
+            MyEventHandler.ShouldReceive(_myEvent).ShouldBeTrue();
+            //_should_publish_the_command_to_the_second_event_handler
+            MyOtherEventHandler.Shouldreceive(_myEvent).ShouldBeTrue();
+        }
     }
 }

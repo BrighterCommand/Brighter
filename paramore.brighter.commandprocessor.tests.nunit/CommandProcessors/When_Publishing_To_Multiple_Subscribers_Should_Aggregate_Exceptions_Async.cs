@@ -25,19 +25,22 @@ THE SOFTWARE. */
 using System;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    public class When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async : ContextSpecification
+    [TestFixture]
+    public class PublishingToMultipleSubscribersAsyncTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyEvent s_myEvent = new MyEvent();
-        private static Exception s_exception;
+        private CommandProcessor _commandProcessor;
+        private readonly MyEvent _myEvent = new MyEvent();
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
@@ -50,14 +53,22 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequestsAsync<MyEvent>, MyOtherEventHandlerAsync>("MyOtherHandler");
             container.Register<IHandleRequestsAsync<MyEvent>, MyThrowingEventHandlerAsync>("MyThrowingHandler");
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => AsyncContext.Run( async () => await s_commandProcessor.PublishAsync(s_myEvent)));
+        [Test]
+        public void When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async()
+        {
+            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PublishAsync(_myEvent)));
 
-        private It _should_throw_an_aggregate_exception = () => s_exception.ShouldBeOfExactType(typeof(AggregateException));
-        private It _should_have_an_inner_exception_from_the_handler = () => ((AggregateException)s_exception).InnerException.ShouldBeOfExactType(typeof(InvalidOperationException));
-        private It _should_publish_the_command_to_the_first_event_handler = () => MyEventHandlerAsync.ShouldReceive(s_myEvent).ShouldBeTrue();
-        private It _should_publish_the_command_to_the_second_event_handler = () => MyOtherEventHandlerAsync.ShouldReceive(s_myEvent).ShouldBeTrue();
+            //_should_throw_an_aggregate_exception
+            _exception.ShouldBeOfExactType(typeof(AggregateException));
+            //_should_have_an_inner_exception_from_the_handler
+            ((AggregateException)_exception).InnerException.ShouldBeOfExactType(typeof(InvalidOperationException));
+            //_should_publish_the_command_to_the_first_event_handler
+            MyEventHandlerAsync.ShouldReceive(_myEvent).ShouldBeTrue();
+            //_should_publish_the_command_to_the_second_event_handler
+            MyOtherEventHandlerAsync.ShouldReceive(_myEvent).ShouldBeTrue();
+        }
     }
 }

@@ -26,30 +26,32 @@ using System;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using Polly;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(CommandProcessor))]
-    public class When_Posting_A_Message_And_There_Is_No_Message_Producer_Async : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorPostMissingMessageProducerAsyncTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Message s_message;
-        private static FakeMessageStore s_fakeMessageStore;
-        private static Exception s_exception;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private Message _message;
+        private FakeMessageStore _fakeMessageStore;
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_myCommand.Value = "Hello World";
+            _myCommand.Value = "Hello World";
 
-            s_fakeMessageStore = new FakeMessageStore();
+            _fakeMessageStore = new FakeMessageStore();
 
-            s_message = new Message(
-                header: new MessageHeader(messageId: s_myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
-                body: new MessageBody(JsonConvert.SerializeObject(s_myCommand))
+            _message = new Message(
+                header: new MessageHeader(messageId: _myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
+                body: new MessageBody(JsonConvert.SerializeObject(_myCommand))
                 );
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
@@ -63,19 +65,27 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            s_commandProcessor = new CommandProcessor(
+            _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAMessageStoreAsync<Message>)s_fakeMessageStore,
+                (IAmAMessageStoreAsync<Message>)_fakeMessageStore,
                 (IAmAMessageProducerAsync)null);
-        };
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => AsyncContext.Run(() => s_commandProcessor.PostAsync(s_myCommand)));
+        [Test]
+        public void When_Posting_A_Message_And_There_Is_No_Message_Producer_Async()
+        {
+            _exception = Catch.Exception(() => AsyncContext.Run(() => _commandProcessor.PostAsync(_myCommand)));
 
-        private Cleanup cleanup = () => s_commandProcessor.Dispose();
+            //_should_throw_an_exception
+            _exception.ShouldBeOfExactType<InvalidOperationException>();
+        }
 
-        It _should_throw_an_exception = () => s_exception.ShouldBeOfExactType<InvalidOperationException>();
-
+        [TearDown]
+        public void Cleanup()
+        {
+            _commandProcessor.Dispose();
+        }
     }
 }

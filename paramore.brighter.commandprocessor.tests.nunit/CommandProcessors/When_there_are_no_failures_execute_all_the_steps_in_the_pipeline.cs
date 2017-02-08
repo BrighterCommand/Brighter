@@ -22,19 +22,21 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    public class When_There_Are_No_Failures_Execute_All_The_Steps_In_The_Pipeline : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorPipelineStepsTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
@@ -45,13 +47,21 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
-        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+        [Test]
+        public void When_There_Are_No_Failures_Execute_All_The_Steps_In_The_Pipeline()
+        {
+            _commandProcessor.Send(_myCommand);
 
-        private It _should_call_the_pre_validation_handler = () => MyValidationHandler<MyCommand>.ShouldReceive(s_myCommand).ShouldBeTrue();
-        private It _should_send_the_command_to_the_command_handler = () => MyPreAndPostDecoratedHandler.ShouldReceive(s_myCommand).ShouldBeTrue();
-        private It _should_call_the_post_validation_handler = () => MyLoggingHandler<MyCommand>.Shouldreceive(s_myCommand).ShouldBeTrue();
+
+            //_should_call_the_pre_validation_handler
+            MyValidationHandler<MyCommand>.ShouldReceive(_myCommand).ShouldBeTrue();
+            //_should_send_the_command_to_the_command_handler
+            MyPreAndPostDecoratedHandler.ShouldReceive(_myCommand).ShouldBeTrue();
+           // _should_call_the_post_validation_handler
+            MyLoggingHandler<MyCommand>.Shouldreceive(_myCommand).ShouldBeTrue();
+        }
     }
 }

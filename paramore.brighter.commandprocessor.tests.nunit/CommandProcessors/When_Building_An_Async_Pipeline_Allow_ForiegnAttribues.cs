@@ -1,18 +1,19 @@
 ﻿using System.Linq;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(PipelineBuilder<>))]
-    public class When_Building_An_Async_Pipeline_Allow_ForiegnAttribues : ContextSpecification
+    [TestFixture]
+    public class PipelineForiegnAttributesAsyncTests
     {
-        private static PipelineBuilder<MyCommand> s_pipeline_Builder;
-        private static IHandleRequestsAsync<MyCommand> s_pipeline;
+        private PipelineBuilder<MyCommand> _pipeline_Builder;
+        private IHandleRequestsAsync<MyCommand> _pipeline;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyObsoleteCommandHandlerAsync>();
@@ -23,17 +24,20 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequestsAsync<MyCommand>, MyValidationHandlerAsync<MyCommand>>();
             container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
 
-            s_pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
-        };
+            _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+        }
 
-        private Because _of = () => s_pipeline = s_pipeline_Builder.BuildAsync(new RequestContext(), false).First();
+        public void When_Building_An_Async_Pipeline_Allow_ForiegnAttribues()
+        {
+            _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
 
-        private It _should_add_handlers_in_the_correct_sequence_into_the_chain = () => TraceFilters().ToString().ShouldEqual("MyValidationHandlerAsync`1|MyObsoleteCommandHandlerAsync|MyLoggingHandlerAsync`1|");
+           TraceFilters().ToString().ShouldEqual("MyValidationHandlerAsync`1|MyObsoleteCommandHandlerAsync|MyLoggingHandlerAsync`1|");
+        }
 
-        private static PipelineTracer TraceFilters()
+        private PipelineTracer TraceFilters()
         {
             var pipelineTracer = new PipelineTracer();
-            s_pipeline.DescribePath(pipelineTracer);
+            _pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
     }

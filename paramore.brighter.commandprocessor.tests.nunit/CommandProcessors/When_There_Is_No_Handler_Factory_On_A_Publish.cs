@@ -24,25 +24,32 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject("Basic event publishing")]
-    public class When_There_Is_No_Handler_Factory_On_A_Publish : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorPublishMissingHandlerFactoryTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyEvent s_myEvent = new MyEvent();
-        private static Exception s_exception;
+        private CommandProcessor _commandProcessor;
+        private readonly MyEvent _myEvent = new MyEvent();
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_commandProcessor = new CommandProcessor(new SubscriberRegistry(), (IAmAHandlerFactory) null, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(new SubscriberRegistry(), (IAmAHandlerFactory) null, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Publish(s_myEvent));
+        [Test]
+        public void When_There_Is_No_Handler_Factory_On_A_Publish()
+        {
+            _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
 
-        It _should_throw_an_invalid_operation_exception = () => s_exception.ShouldBeOfExactType<InvalidOperationException>();
+           //_should_throw_an_invalid_operation_exception
+            _exception.ShouldBeOfExactType<InvalidOperationException>();
+        }
     }
 }

@@ -24,35 +24,42 @@ THE SOFTWARE. */
 
 using System.Linq;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(PipelineBuilder<>))]
-    public class When_Finding_A_Handler_For_A_Command : ContextSpecification
+    [TestFixture]
+    public class PipelineBuildForCommandTests
     {
-        private static PipelineBuilder<MyCommand> s_pipelineBuilder;
-        private static IHandleRequests<MyCommand> s_pipeline;
+        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private IHandleRequests<MyCommand> _pipeline;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler());
 
-            s_pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
-        };
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+        }
 
-        private Because _of = () => s_pipeline = s_pipelineBuilder.Build(new RequestContext()).First();
+        [Test]
+        public void When_Finding_A_Handler_For_A_Command()
+        {
+            _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-        private It _should_return_the_my_command_handler_as_the_implicit_handler = () => s_pipeline.ShouldBeAssignableTo(typeof(MyCommandHandler));
-        private It _should_be_the_only_element_in_the_chain = () => TracePipeline().ToString().ShouldEqual("MyCommandHandler|");
+           //_should_return_the_my_command_handler_as_the_implicit_handler
+           _pipeline.ShouldBeAssignableTo(typeof(MyCommandHandler));
+           //_should_be_the_only_element_in_the_chain
+            TracePipeline().ToString().ShouldEqual("MyCommandHandler|");
+        }
 
-        private static PipelineTracer TracePipeline()
+        private PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();
-            s_pipeline.DescribePath(pipelineTracer);
+            _pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
     }

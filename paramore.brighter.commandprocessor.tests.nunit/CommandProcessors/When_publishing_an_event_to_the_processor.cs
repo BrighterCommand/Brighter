@@ -23,27 +23,34 @@ THE SOFTWARE. */
 #endregion
 
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(CommandProcessor))]
-    public class When_Publishing_An_Event_To_The_Processor : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorPublishEventTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyEvent s_myEvent = new MyEvent();
+        private CommandProcessor _commandProcessor;
+        private readonly MyEvent _myEvent = new MyEvent();
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
             var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler());
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
-        private Because _of = () => s_commandProcessor.Publish(s_myEvent);
-        private It _should_publish_the_command_to_the_event_handlers = () => MyEventHandler.ShouldReceive(s_myEvent).ShouldBeTrue();
+        [Test]
+        public void When_Publishing_An_Event_To_The_Processor()
+        {
+            _commandProcessor.Publish(_myEvent);
+
+           //_should_publish_the_command_to_the_event_handlers
+            MyEventHandler.ShouldReceive(_myEvent).ShouldBeTrue();
+        }
     }
 }

@@ -24,20 +24,22 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 {
-    [Subject(typeof(CommandProcessor))]
-    public class When_There_Are_Multiple_Possible_Command_Handlers : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorSendWithMultipleMatchesTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Exception s_exception;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
@@ -49,13 +51,18 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>("ImplicitHandler");
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
+        [Test]
+        public void When_There_Are_Multiple_Possible_Command_Handlers()
+        {
+            _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
-        private It _should_fail_because_multiple_receivers_found = () => s_exception.ShouldBeAssignableTo(typeof(ArgumentException));
-        private It _should_have_an_error_message_that_tells_you_why = () => s_exception
-            .ShouldContainErrorMessage("More than one handler was found for the typeof command paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.");
+            //_should_fail_because_multiple_receivers_found
+            _exception.ShouldBeAssignableTo(typeof(ArgumentException));
+            //_should_have_an_error_message_that_tells_you_why
+            _exception.ShouldContainErrorMessage("More than one handler was found for the typeof command paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.");
+         }
     }
 }
