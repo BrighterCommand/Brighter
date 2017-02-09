@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using FakeItEasy;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
@@ -33,35 +34,42 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_we_build_a_control_bus_we_can_send_configuration_messages_to_it : NUnit.Specifications.ContextSpecification
+    [TestFixture]
+    public class ControlBusTests
     {
-        private static IDispatcher s_dispatcher;
-        private static Dispatcher s_controlBus;
-        private static ControlBusReceiverBuilder s_busReceiverBuilder;
-        private static ConfigurationCommand s_configurationCommand;
-        private static Exception s_exception;
+        private IDispatcher _dispatcher;
+        private Dispatcher _controlBus;
+        private ControlBusReceiverBuilder _busReceiverBuilder;
+        private ConfigurationCommand _configurationCommand;
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_dispatcher = A.Fake<IDispatcher>();
+            _dispatcher = A.Fake<IDispatcher>();
             var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
 
-            s_busReceiverBuilder = (ControlBusReceiverBuilder) ControlBusReceiverBuilder
+            _busReceiverBuilder = (ControlBusReceiverBuilder) ControlBusReceiverBuilder
                 .With()
-                .Dispatcher(s_dispatcher)
+                .Dispatcher(_dispatcher)
                 .ProducerFactory(messageProducerFactory)
                 .ChannelFactory(new InMemoryChannelFactory());
 
-            s_controlBus = s_busReceiverBuilder.Build("tests");
+            _controlBus = _busReceiverBuilder.Build("tests");
 
-            s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL);
+            _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL);
 
-        };
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_controlBus.CommandProcessor.Send(s_configurationCommand));
+        [Test]
+        public void When_we_build_a_control_bus_we_can_send_configuration_messages_to_it()
+        {
+            _exception = Catch.Exception(() => _controlBus.CommandProcessor.Send(_configurationCommand));
 
-        private It should_not_raise_exceptions_for_missing_handlers = () => s_exception.ShouldBeNull();
-        private It should_call_the_dispatcher_to_start_it = () => A.CallTo(() => s_dispatcher.Receive()).MustHaveHappened();
-
+            //should_not_raise_exceptions_for_missing_handlers
+            _exception.ShouldBeNull();
+            //should_call_the_dispatcher_to_start_it
+            A.CallTo(() => _dispatcher.Receive()).MustHaveHappened();
+        }
     }
 }

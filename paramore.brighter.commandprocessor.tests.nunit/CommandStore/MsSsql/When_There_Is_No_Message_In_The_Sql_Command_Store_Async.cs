@@ -23,34 +23,44 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Specifications;
-using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Framework;
+using nUnitShouldAdapter;
 using paramore.brighter.commandprocessor.commandstore.mssql;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
 {
     [Category("MSSQL")]
-    public class When_There_Is_No_Message_In_The_Sql_Command_Store_Async : ContextSpecification
+    [TestFixture]
+    public class  SqlCommandStoreEmptyWhenSearchedAsyncTests
     {
-        private static MsSqlTestHelper _msSqlTestHelper;
-        private static MsSqlCommandStore s_sqlCommandStore;
-        private static MyCommand s_storedCommand;
+        private MsSqlTestHelper _msSqlTestHelper;
+        private MsSqlCommandStore _sqlCommandStore;
+        private MyCommand _storedCommand;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
 
-            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
-        };
+            _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
+        }
 
-        private Because _of = () => s_storedCommand = AsyncContext.Run<MyCommand>(async () => await s_sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid()));
+        [Test]
+        public void When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
+        {
+            _storedCommand = AsyncContext.Run<MyCommand>(async () => await _sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid()));
 
-        private It _should_return_an_empty_command_on_a_missing_command = () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
+            //_should_return_an_empty_command_on_a_missing_command
+            _storedCommand.Id.ShouldEqual(Guid.Empty);
+        }
 
-        private Cleanup _cleanup = () => _msSqlTestHelper.CleanUpDb();
+        [TearDown]
+        public void Cleanup()
+        {
+            _msSqlTestHelper.CleanUpDb();
+        }
     }
 }

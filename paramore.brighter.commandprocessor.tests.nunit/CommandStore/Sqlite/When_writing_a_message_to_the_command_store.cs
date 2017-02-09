@@ -24,37 +24,49 @@ THE SOFTWARE. */
 
 using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.commandstore.sqlite;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
 {
-    public class When_Writing_A_Message_To_The_Command_Store : ContextSpecification
+    [TestFixture]
+    public class SqliteCommandStoreAddMessageTests
     {
-        private static SqliteTestHelper _sqliteTestHelper;
-        private static SqliteCommandStore s_sqlCommandStore;
-        private static MyCommand s_raisedCommand;
-        private static MyCommand s_storedCommand;
+        private SqliteTestHelper _sqliteTestHelper;
+        private SqliteCommandStore _sqlCommandStore;
+        private MyCommand _raisedCommand;
+        private MyCommand _storedCommand;
+        private SqliteConnection _sqliteConnection;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
 
-            s_sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
-            s_raisedCommand = new MyCommand() {Value = "Test"};
-            s_sqlCommandStore.Add<MyCommand>(s_raisedCommand);
-        };
+            _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
+            _raisedCommand = new MyCommand() {Value = "Test"};
+            _sqlCommandStore.Add<MyCommand>(_raisedCommand);
+        }
 
-        private Because _of = () => s_storedCommand = s_sqlCommandStore.Get<MyCommand>(s_raisedCommand.Id);
+        [Test]
+        public void When_Writing_A_Message_To_The_Command_Store()
+        {
+            _storedCommand = _sqlCommandStore.Get<MyCommand>(_raisedCommand.Id);
 
-        private It _should_read_the_command_from_the__sql_command_store = () => s_storedCommand.ShouldNotBeNull();
-        private It _should_read_the_command_value = () => s_storedCommand.Value.ShouldEqual(s_raisedCommand.Value);
-        private It _should_read_the_command_id = () => s_storedCommand.Id.ShouldEqual(s_raisedCommand.Id);
+            //_should_read_the_command_from_the__sql_command_store
+            _storedCommand.ShouldNotBeNull();
+            //_should_read_the_command_value
+            _storedCommand.Value.ShouldEqual(_raisedCommand.Value);
+            //_should_read_the_command_id
+            _storedCommand.Id.ShouldEqual(_raisedCommand.Id);
+        }
 
-        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
-
-        private static SqliteConnection _sqliteConnection;
+        [TearDown]
+        public void Cleanup()
+        {
+            _sqliteTestHelper.CleanUpDb();
+        }
     }
 }

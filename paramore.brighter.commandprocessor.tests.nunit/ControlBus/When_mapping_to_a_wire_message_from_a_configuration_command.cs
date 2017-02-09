@@ -23,33 +23,42 @@ THE SOFTWARE. */
 #endregion
 
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Mappers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_mapping_to_a_wire_message_from_a_configuration_command : ContextSpecification
+    [TestFixture]
+    public class ConfigurationCommandToMessageMapperTests
     {
-        private static IAmAMessageMapper<ConfigurationCommand> s_mapper;
-        private static Message s_message;
-        private static ConfigurationCommand s_command;
+        private IAmAMessageMapper<ConfigurationCommand> _mapper;
+        private Message _message;
+        private ConfigurationCommand _command;
 
-
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_mapper = new ConfigurationCommandMessageMapper();
+            _mapper = new ConfigurationCommandMessageMapper();
 
             //"{\"Type\":1,\"ConnectionName\":\"getallthethings\",\"Id\":\"XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX\"}"
-            s_command = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL) {ConnectionName = "getallthethings"};
-        };
+            _command = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL) {ConnectionName = "getallthethings"};
+        }
 
 
-        private Because _of = () => s_message = s_mapper.MapToMessage(s_command);
+        [Test]
+        public void When_mapping_to_a_wire_message_from_a_configuration_command()
+        {
+            _message = _mapper.MapToMessage(_command);
 
-        private It _should_serialize_the_command_type_to_the_message_body = () => s_message.Body.Value.Contains("\"Type\":1").ShouldBeTrue();
-        private It _should_serialize_the_message_type_to_the_header = () => s_message.Header.MessageType.ShouldEqual(MessageType.MT_COMMAND); 
-        private It _should_serialize_the_connection_name_to_the_message_body =() => s_message.Body.Value.Contains("\"ConnectionName\":\"getallthethings\"").ShouldBeTrue();
-        private It _should_serialize_the_message_id_to_the_message_body = () => s_message.Body.Value.Contains(string.Format("\"Id\":\"{0}\"", s_command.Id)).ShouldBeTrue();
+            // _should_serialize_the_command_type_to_the_message_body
+            _message.Body.Value.Contains("\"Type\":1").ShouldBeTrue();
+            //_should_serialize_the_message_type_to_the_header
+            _message.Header.MessageType.ShouldEqual(MessageType.MT_COMMAND);
+            //_should_serialize_the_connection_name_to_the_message_body
+            _message.Body.Value.Contains("\"ConnectionName\":\"getallthethings\"").ShouldBeTrue();
+            //_should_serialize_the_message_id_to_the_message_body
+            _message.Body.Value.Contains(string.Format("\"Id\":\"{0}\"", _command.Id)).ShouldBeTrue();
+        }
     }
 }

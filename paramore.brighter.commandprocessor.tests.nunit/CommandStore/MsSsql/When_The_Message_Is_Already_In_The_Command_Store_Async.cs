@@ -34,27 +34,38 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
 {
 
     [Category("MSSQL")]
-    internal class When_The_Message_Is_Already_In_The_Command_Store_Async : ContextSpecification
+    [TestFixture]
+    public class SqlCommandStoreDuplicateMessageAsyncTests
     {
-        private static MsSqlTestHelper _msSqlTestHelper;
-        private static MsSqlCommandStore s_sqlCommandStore;
-        private static MyCommand s_raisedCommand;
-        private static Exception s_exception;
+        private MsSqlTestHelper _msSqlTestHelper;
+        private MsSqlCommandStore _sqlCommandStore;
+        private MyCommand _raisedCommand;
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
 
-            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
-            s_raisedCommand = new MyCommand {Value = "Test"};
-            AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync<MyCommand>(s_raisedCommand));
-        };
+            _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
+            _raisedCommand = new MyCommand {Value = "Test"};
+            AsyncContext.Run(async () => await _sqlCommandStore.AddAsync<MyCommand>(_raisedCommand));
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync(s_raisedCommand)));
+        [Test]
+        public void When_The_Message_Is_Already_In_The_Command_Store_Async()
+        {
+            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _sqlCommandStore.AddAsync(_raisedCommand)));
 
-        private It _should_succeed_even_if_the_message_is_a_duplicate = () => s_exception.ShouldBeNull();
+           //_should_succeed_even_if_the_message_is_a_duplicate
+            _exception.ShouldBeNull();
+        }
 
-        private Cleanup _cleanup = () => _msSqlTestHelper.CleanUpDb();
+        [TearDown]
+        public void Cleanup()
+        {
+            _msSqlTestHelper.CleanUpDb();
+        }
     }
 }

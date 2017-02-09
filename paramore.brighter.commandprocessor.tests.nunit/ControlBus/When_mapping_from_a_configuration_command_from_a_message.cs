@@ -24,31 +24,39 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Mappers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_mapping_from_a_configuration_command_from_a_message : ContextSpecification
+    [TestFixture]
+    public class ConfigurationCommandMessageMapperTests
     {
-        private static IAmAMessageMapper<ConfigurationCommand> s_mapper;
-        private static Message s_message;
-        private static ConfigurationCommand s_command;
+        private IAmAMessageMapper<ConfigurationCommand> _mapper;
+        private Message _message;
+        private ConfigurationCommand _command;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_mapper = new ConfigurationCommandMessageMapper();
+            _mapper = new ConfigurationCommandMessageMapper();
 
-            s_message = new Message(
+            _message = new Message(
                 new MessageHeader(Guid.NewGuid(), "myTopic", MessageType.MT_COMMAND), 
                 new MessageBody(string.Format("{{\"Type\":1,\"ConnectionName\":\"getallthethings\",\"Id\":\"{0}\"}}", Guid.NewGuid()))
                 );
-        };
+        }
 
-        private Because _of = () => s_command = s_mapper.MapToRequest(s_message);
+        [Test]
+        public void When_mapping_from_a_configuration_command_from_a_message()
+        {
+            _command = _mapper.MapToRequest(_message);
 
-        private It _should_rehydrate_the_command_type = () => s_command.Type.ShouldEqual(ConfigurationCommandType.CM_STARTALL);
-        private It _should_rehydrate_the_connection_name = () => s_command.ConnectionName.ShouldEqual("getallthethings");
+            //_should_rehydrate_the_command_type
+            _command.Type.ShouldEqual(ConfigurationCommandType.CM_STARTALL);
+            // _should_rehydrate_the_connection_name
+            _command.ConnectionName.ShouldEqual("getallthethings");
+        }
     }
 }

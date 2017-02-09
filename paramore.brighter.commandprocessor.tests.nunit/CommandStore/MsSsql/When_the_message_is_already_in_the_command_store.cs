@@ -32,27 +32,38 @@ using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubl
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
 {
     [Category("MSSQL")]
-    public class When_The_Message_Is_Already_In_The_Command_Store : ContextSpecification
+    [TestFixture]
+    public class SqlCommandStoreDuplicateMessageTests
     {
-        private static MsSqlTestHelper _msSqlTestHelper;
-        private static MsSqlCommandStore s_sqlCommandStore;
-        private static MyCommand s_raisedCommand;
-        private static Exception s_exception;
+        private MsSqlTestHelper _msSqlTestHelper;
+        private MsSqlCommandStore _sqlCommandStore;
+        private MyCommand _raisedCommand;
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
 
-            s_sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
-            s_raisedCommand = new MyCommand { Value = "Test" };
-            s_sqlCommandStore.Add<MyCommand>(s_raisedCommand);
-        };
+            _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
+            _raisedCommand = new MyCommand { Value = "Test" };
+            _sqlCommandStore.Add<MyCommand>(_raisedCommand);
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_sqlCommandStore.Add(s_raisedCommand));
+        [Test]
+        public void When_The_Message_Is_Already_In_The_Command_Store()
+        {
+            _exception = Catch.Exception(() => _sqlCommandStore.Add(_raisedCommand));
 
-        private It _should_succeed_even_if_the_message_is_a_duplicate = () => s_exception.ShouldBeNull();
+            //_should_succeed_even_if_the_message_is_a_duplicate
+            _exception.ShouldBeNull();
+        }
 
-        private Cleanup _cleanup = () => _msSqlTestHelper.CleanUpDb();
+        [TearDown]
+        public void Cleanup()
+        {
+            _msSqlTestHelper.CleanUpDb();
+        }
     }
 }

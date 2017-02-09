@@ -24,41 +24,49 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Mappers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_mapping_from_a_message_to_a_heartbeat_request : ContextSpecification
+    [TestFixture]
+    public class HeartbeatMessageToRequestTests
     {
-        private static IAmAMessageMapper<HeartbeatRequest> s_mapper;
-        private static Message s_message;
-        private static HeartbeatRequest s_request;
+        private IAmAMessageMapper<HeartbeatRequest> _mapper;
+        private Message _message;
+        private HeartbeatRequest _request;
         private const string TOPIC = "test.topic";
-        private static readonly Guid s_correlationId = Guid.NewGuid();
-        private static readonly Guid s_commandId = Guid.NewGuid();
+        private readonly Guid _correlationId = Guid.NewGuid();
+        private readonly Guid _commandId = Guid.NewGuid();
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_mapper = new HeartbeatRequestCommandMessageMapper();
+            _mapper = new HeartbeatRequestCommandMessageMapper();
             var messageHeader = new MessageHeader(
                 messageId: Guid.NewGuid(),
                 topic: "Heartbeat",
                 messageType: MessageType.MT_COMMAND,
                 timeStamp: DateTime.UtcNow,
-                correlationId: s_correlationId, replyTo: TOPIC);
+                correlationId: _correlationId, replyTo: TOPIC);
 
-            var body = String.Format("\"Id\": \"{0}\"", s_commandId);
+            var body = String.Format("\"Id\": \"{0}\"", _commandId);
             var messageBody = new MessageBody("{" + body + "}");
-            s_message = new Message(header: messageHeader, body: messageBody);
-        };
+            _message = new Message(header: messageHeader, body: messageBody);
+        }
 
-        private Because _of = () => s_request = s_mapper.MapToRequest(s_message);
+        [Test]
+        public void When_mapping_from_a_message_to_a_heartbeat_request()
+        {
+            _request = _mapper.MapToRequest(_message);
 
-        private It _should_put_the_message_reply_topic_into_the_address = () => s_request.ReplyAddress.Topic.ShouldEqual(TOPIC);
-        private It _should_put_the_message_correlation_id_into_the_address = () => s_request.ReplyAddress.CorrelationId.ShouldEqual(s_correlationId);
-        private It _should_set_the_id_of_the_request = () => s_request.Id.ShouldEqual(s_commandId);
-
+            //_should_put_the_message_reply_topic_into_the_address
+            _request.ReplyAddress.Topic.ShouldEqual(TOPIC);
+            //_should_put_the_message_correlation_id_into_the_address
+            _request.ReplyAddress.CorrelationId.ShouldEqual(_correlationId);
+            //_should_set_the_id_of_the_request
+            _request.Id.ShouldEqual(_commandId);
+        }
     }
 }

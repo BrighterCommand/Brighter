@@ -24,33 +24,42 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Mappers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_mapping_from_a_heartbeat_request_to_a_message : ContextSpecification
+    [TestFixture]
+    public class HearbeatRequestToMessageMapperTests
     {
-        private static IAmAMessageMapper<HeartbeatRequest> s_mapper;
-        private static Message s_message;
-        private static HeartbeatRequest s_request;
+        private IAmAMessageMapper<HeartbeatRequest> _mapper;
+        private Message _message;
+        private HeartbeatRequest _request;
         private const string TOPIC = "test.topic";
-        private static readonly Guid s_correlationId = Guid.NewGuid();
+        private readonly Guid _correlationId = Guid.NewGuid();
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_mapper = new HeartbeatRequestCommandMessageMapper();
+            _mapper = new HeartbeatRequestCommandMessageMapper();
 
-            s_request = new HeartbeatRequest(new ReplyAddress(TOPIC, s_correlationId));
-        };
+            _request = new HeartbeatRequest(new ReplyAddress(TOPIC, _correlationId));
+        }
 
-        private Because _of = () => s_message = s_mapper.MapToMessage(s_request);
+        [Test]
+        public void When_mapping_from_a_heartbeat_request_to_a_message()
+        {
+            _message = _mapper.MapToMessage(_request);
 
-        private It _should_serialize_the_message_type_to_the_header = () => s_message.Header.MessageType.ShouldEqual(MessageType.MT_COMMAND); 
-        private It _should_serialize_the_message_id_to_the_message_body = () => s_message.Body.Value.Contains(string.Format("\"Id\": \"{0}\"", s_request.Id)).ShouldBeTrue();
-        private It _should_serialize_the_topic_to_the_message_body = () => s_message.Header.ReplyTo.ShouldEqual(TOPIC);
-        private It _should_serialize_the_correlation_id_to_the_message_body = () => s_message.Header.CorrelationId.ShouldEqual(s_correlationId);
-
+            //_should_serialize_the_message_type_to_the_header
+            _message.Header.MessageType.ShouldEqual(MessageType.MT_COMMAND);
+            //_should_serialize_the_message_id_to_the_message_body
+            _message.Body.Value.Contains(string.Format("\"Id\": \"{0}\"", _request.Id)).ShouldBeTrue();
+            //_should_serialize_the_topic_to_the_message_body
+            _message.Header.ReplyTo.ShouldEqual(TOPIC);
+            //_should_serialize_the_correlation_id_to_the_message_body
+            _message.Header.CorrelationId.ShouldEqual(_correlationId);
+        }
     }
 }

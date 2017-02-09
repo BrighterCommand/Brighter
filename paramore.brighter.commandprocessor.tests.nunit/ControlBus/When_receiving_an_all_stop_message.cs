@@ -23,28 +23,35 @@ THE SOFTWARE. */
 #endregion
 
 using FakeItEasy;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Handlers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_receiving_an_all_stop_message : ContextSpecification
+    [TestFixture]
+    public class ConfigurationCommandAllStopTests
     {
-        private static ConfigurationCommandHandler s_configurationCommandHandler;
-        private static ConfigurationCommand s_configurationCommand;
-        private static IDispatcher s_dispatcher;
+        private ConfigurationCommandHandler _configurationCommandHandler;
+        private ConfigurationCommand _configurationCommand;
+        private IDispatcher _dispatcher;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_dispatcher = A.Fake<IDispatcher>();
-            s_configurationCommandHandler = new ConfigurationCommandHandler(s_dispatcher);
-            s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPALL);
-        };
+            _dispatcher = A.Fake<IDispatcher>();
+            _configurationCommandHandler = new ConfigurationCommandHandler(_dispatcher);
+            _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPALL);
+        }
 
-        private Because _of = () => s_configurationCommandHandler.Handle(s_configurationCommand);
+        [Test]
+        public void When_receiving_an_all_stop_message()
+        {
+            _configurationCommandHandler.Handle(_configurationCommand);
 
-        private It _should_call_end_on_the_dispatcher = () => A.CallTo(() => s_dispatcher.End()).MustHaveHappened();
+            //_should_call_end_on_the_dispatcher
+            A.CallTo(() => _dispatcher.End()).MustHaveHappened();
+        }
     }
 }

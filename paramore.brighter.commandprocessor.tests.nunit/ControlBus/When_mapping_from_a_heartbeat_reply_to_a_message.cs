@@ -24,45 +24,51 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Mappers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_mapping_from_a_heartbeat_reply_to_a_message : ContextSpecification
+    [TestFixture]
+    public class HeartbeatReplyToMessageMapperTests
     {
-        private static IAmAMessageMapper<HeartbeatReply> s_mapper;
-        private static Message s_message;
-        private static HeartbeatReply s_request;
+        private IAmAMessageMapper<HeartbeatReply> _mapper;
+        private Message _message;
+        private HeartbeatReply _request;
         private const string TOPIC = "test.topic";
-        private static readonly Guid s_correlationId = Guid.NewGuid();
-        private static RunningConsumer s_firstConsumer;
-        private static RunningConsumer s_secondConsumer;
+        private readonly Guid _correlationId = Guid.NewGuid();
+        private RunningConsumer _firstConsumer;
+        private RunningConsumer _secondConsumer;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_mapper = new HeartbeatReplyCommandMessageMapper();
-            s_request = new HeartbeatReply("Test.Hostname", new ReplyAddress(TOPIC, s_correlationId));
-            s_firstConsumer = new RunningConsumer(new ConnectionName("Test.Connection"), ConsumerState.Open);
-            s_request.Consumers.Add(s_firstConsumer);
-            s_secondConsumer = new RunningConsumer(new ConnectionName("More.Consumers"),ConsumerState.Shut );
-            s_request.Consumers.Add(s_secondConsumer);
-        };
+            _mapper = new HeartbeatReplyCommandMessageMapper();
+            _request = new HeartbeatReply("Test.Hostname", new ReplyAddress(TOPIC, _correlationId));
+            _firstConsumer = new RunningConsumer(new ConnectionName("Test.Connection"), ConsumerState.Open);
+            _request.Consumers.Add(_firstConsumer);
+            _secondConsumer = new RunningConsumer(new ConnectionName("More.Consumers"),ConsumerState.Shut );
+            _request.Consumers.Add(_secondConsumer);
+        }
 
-        private Because _of = () => s_message = s_mapper.MapToMessage(s_request);
-
-        private It _should_put_the_reply_to_as_the_topic = () => s_message.Header.Topic.ShouldEqual(TOPIC);
-        private It _should_put_the_correlation_id_in_the_header = () => s_message.Header.CorrelationId.ShouldEqual(s_correlationId);
-        private It _should_put_the_connections_into_the_body = () =>
+        [Test]
+        public void When_mapping_from_a_heartbeat_reply_to_a_message()
         {
-            s_message.Body.ShouldMatch(body => body.Value.Contains("\"ConnectionName\": \"Test.Connection\""));
-            s_message.Body.ShouldMatch(body => body.Value.Contains("\"State\": 1"));
-            s_message.Body.ShouldMatch(body => body.Value.Contains("\"ConnectionName\": \"More.Consumers\""));
-            s_message.Body.ShouldMatch(body => body.Value.Contains("\"State\": 0"));
-        };
+            _message = _mapper.MapToMessage(_request);
 
-        private It _should_put_the_hostname_in_the_message_body = () => s_message.Body.ShouldMatch(body => body.Value.Contains("\"HostName\": \"Test.Hostname\""));
+            //_should_put_the_reply_to_as_the_topic
+            _message.Header.Topic.ShouldEqual(TOPIC);
+            //_should_put_the_correlation_id_in_the_header
+            _message.Header.CorrelationId.ShouldEqual(_correlationId);
+            //_should_put_the_connections_into_the_body
+            _message.Body.ShouldMatch(body => body.Value.Contains("\"ConnectionName\": \"Test.Connection\""));
+            _message.Body.ShouldMatch(body => body.Value.Contains("\"State\": 1"));
+            _message.Body.ShouldMatch(body => body.Value.Contains("\"ConnectionName\": \"More.Consumers\""));
+            _message.Body.ShouldMatch(body => body.Value.Contains("\"State\": 0"));
+            //_should_put_the_hostname_in_the_message_body
+            _message.Body.ShouldMatch(body => body.Value.Contains("\"HostName\": \"Test.Hostname\""));
+        }
     }
 }

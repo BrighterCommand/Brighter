@@ -30,24 +30,27 @@ using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Handlers;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_recieving_a_heartbeat_message : ContextSpecification
+    [TestFixture]
+    public class HeartbeatMessageTests
     {
         private const string TEST_FIRST_CONNECTION_NAME = "Test.First.Connection";
         private const string TEST_SECOND_CONNECTION_NAME = "Test.Second.Connection";
         private const string TEST_ROUTING_KEY = "test.routing.key";
-        private static readonly SpyCommandProcessor s_spyCommandProcessor = new SpyCommandProcessor();
-        private static readonly Guid s_CorrelationId = Guid.NewGuid();
-        private static HeartbeatRequestCommandHandler s_handler;
-        private static HeartbeatRequest s_heartbeatRequest;
-        private static string s_hostName;
-        private static IAmAConsumer s_firstConsumer;
-        private static IAmAConsumer s_secondConsumer;
+        private readonly SpyCommandProcessor s_spyCommandProcessor = new SpyCommandProcessor();
+        private readonly Guid s_CorrelationId = Guid.NewGuid();
+        private HeartbeatRequestCommandHandler s_handler;
+        private HeartbeatRequest s_heartbeatRequest;
+        private string s_hostName;
+        private IAmAConsumer s_firstConsumer;
+        private IAmAConsumer s_secondConsumer;
 
-        private Establish context = () =>
+        [SetUp]
+        public void Establish()
         {
             var dispatcher = A.Fake<IDispatcher>();
 
@@ -70,23 +73,27 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 
             s_handler = new HeartbeatRequestCommandHandler(s_spyCommandProcessor, dispatcher);
 
-        };
+        }
 
-        private Because of = () => s_handler.Handle(s_heartbeatRequest);
-
-        private It _should_post_back_a_heartbeat_response = () => s_spyCommandProcessor.ContainsCommand(CommandType.Post);
-
-        private It _should_have_diagnostic_information_in_the_response = () =>
+        [Test]
+        public void When_recieving_a_heartbeat_message()
         {
+            s_handler.Handle(s_heartbeatRequest);
+
+            //_should_post_back_a_heartbeat_response
+            s_spyCommandProcessor.ContainsCommand(CommandType.Post);
+            //_should_have_diagnostic_information_in_the_response
             var heartbeatEvent = s_spyCommandProcessor.Observe<HeartbeatReply>();
             heartbeatEvent.ShouldMatch(
                 hb => hb.HostName == s_hostName
-                && hb.SendersAddress.Topic == TEST_ROUTING_KEY 
-                && hb.SendersAddress.CorrelationId == s_CorrelationId 
-                && hb.Consumers[0].ConnectionName == TEST_FIRST_CONNECTION_NAME 
+                && hb.SendersAddress.Topic == TEST_ROUTING_KEY
+                && hb.SendersAddress.CorrelationId == s_CorrelationId
+                && hb.Consumers[0].ConnectionName == TEST_FIRST_CONNECTION_NAME
                 && hb.Consumers[0].State == ConsumerState.Open
                 && hb.Consumers[1].ConnectionName == TEST_SECOND_CONNECTION_NAME
                 && hb.Consumers[1].State == ConsumerState.Shut);
-        };
-    }
+
+
+        }
+   }
 }

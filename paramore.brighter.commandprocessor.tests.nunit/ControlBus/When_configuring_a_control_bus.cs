@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Linq;
 using FakeItEasy;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
@@ -33,31 +33,40 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_configuring_a_control_bus : ContextSpecification
+    [TestFixture]
+    public class ControlBusBuilderTests
     {
-        private static Dispatcher s_controlBus;
-        private static ControlBusReceiverBuilder s_busReceiverBuilder;
-        private static IDispatcher s_dispatcher;
-        private static string s_hostName = "tests";
+        private Dispatcher _controlBus;
+        private ControlBusReceiverBuilder _busReceiverBuilder;
+        private IDispatcher _dispatcher;
+        private string _hostName = "tests";
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_dispatcher = A.Fake<IDispatcher>();
+            _dispatcher = A.Fake<IDispatcher>();
             var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
 
             A.CallTo(() => messageProducerFactory.Create()).Returns(new FakeMessageProducer());
 
-            s_busReceiverBuilder = ControlBusReceiverBuilder
+            _busReceiverBuilder = ControlBusReceiverBuilder
                 .With()
-                .Dispatcher(s_dispatcher)
+                .Dispatcher(_dispatcher)
                 .ProducerFactory(messageProducerFactory)
                 .ChannelFactory(new InMemoryChannelFactory()) as ControlBusReceiverBuilder;
-        };
+        }
 
-        private Because _of = () => s_controlBus = s_busReceiverBuilder.Build(s_hostName);
+        [Test]
+        public void When_configuring_a_control_bus()
+        {
+            _controlBus = _busReceiverBuilder.Build(_hostName);
 
-        private It _should_have_a_configuration_channel = () => s_controlBus.Connections.Any(cn => cn.Name == s_hostName  + "." + ControlBusReceiverBuilder.CONFIGURATION).ShouldBeTrue();
-        private It _should_have_a_heartbeat_channel = () => s_controlBus.Connections.Any(cn => cn.Name == s_hostName + "." + ControlBusReceiverBuilder.HEARTBEAT).ShouldBeTrue();
-        private It _should_have_a_command_processor = () => s_controlBus.CommandProcessor.ShouldNotBeNull();
+            //_should_have_a_configuration_channel
+            _controlBus.Connections.Any(cn => cn.Name == _hostName  + "." + ControlBusReceiverBuilder.CONFIGURATION).ShouldBeTrue();
+            //_should_have_a_heartbeat_channel
+            _controlBus.Connections.Any(cn => cn.Name == _hostName + "." + ControlBusReceiverBuilder.HEARTBEAT).ShouldBeTrue();
+            //_should_have_a_command_processor
+            _controlBus.CommandProcessor.ShouldNotBeNull();
+        }
     }
 }

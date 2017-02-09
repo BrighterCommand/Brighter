@@ -24,39 +24,47 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Mappers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_mapping_from_a_message_to_a_heartbeat_reply : ContextSpecification
+    [TestFixture]
+    public class HeartbeatMessageToReplyTests
     {
-        private static IAmAMessageMapper<HeartbeatReply> s_mapper;
-        private static Message s_message;
-        private static HeartbeatReply s_request;
+        private IAmAMessageMapper<HeartbeatReply> _mapper;
+        private Message _message;
+        private HeartbeatReply _request;
         private const string MESSAGE_BODY = "{\r\n  \"HostName\": \"Test.Hostname\",\r\n  \"Consumers\": [\r\n    {\r\n      \"ConnectionName\": \"Test.Connection\",\r\n      \"State\": 1\r\n    },\r\n    {\r\n      \"ConnectionName\": \"More.Consumers\",\r\n      \"State\": 0\r\n    }\r\n  ]\r\n}";
         private const string TOPIC = "test.topic";
-        private static readonly Guid s_correlationId = Guid.NewGuid();
+        private readonly Guid _correlationId = Guid.NewGuid();
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_mapper = new HeartbeatReplyCommandMessageMapper();
-            var header = new MessageHeader(messageId: Guid.NewGuid(), topic: TOPIC, messageType: MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow, correlationId: s_correlationId);
+            _mapper = new HeartbeatReplyCommandMessageMapper();
+            var header = new MessageHeader(messageId: Guid.NewGuid(), topic: TOPIC, messageType: MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow, correlationId: _correlationId);
             var body = new MessageBody(MESSAGE_BODY);
-            s_message = new Message(header, body);
-        };
+            _message = new Message(header, body);
+        }
 
-        private Because _of = () => s_request = s_mapper.MapToRequest(s_message);
-
-        private It _should_set_the_sender_address_topic = () => s_request.SendersAddress.Topic.ShouldEqual(TOPIC);
-        private It _should_set_the_sender_correlation_id = () => s_request.SendersAddress.CorrelationId.ShouldEqual(s_correlationId);
-        private It _should_set_the_hostName = () => s_request.HostName.ShouldEqual("Test.Hostname");
-        private It _should_contain_the_consumers = () =>
+        [Test]
+        public void When_mapping_from_a_message_to_a_heartbeat_reply()
         {
-            s_request.Consumers.ShouldContain(rc => rc.ConnectionName == "Test.Connection" && rc.State == ConsumerState.Open);
-            s_request.Consumers.ShouldContain(rc => rc.ConnectionName == "More.Consumers" && rc.State == ConsumerState.Shut);
-        };
-    }
+            _request = _mapper.MapToRequest(_message);
+
+            // _should_set_the_sender_address_topic
+            _request.SendersAddress.Topic.ShouldEqual(TOPIC);
+            // _should_set_the_sender_correlation_id
+            _request.SendersAddress.CorrelationId.ShouldEqual(_correlationId);
+            // _should_set_the_hostName
+            _request.HostName.ShouldEqual("Test.Hostname");
+            // _should_contain_the_consumers
+            _request.Consumers.ShouldContain(rc => rc.ConnectionName == "Test.Connection" && rc.State == ConsumerState.Open);
+            _request.Consumers.ShouldContain(rc => rc.ConnectionName == "More.Consumers" && rc.State == ConsumerState.Shut);
+
+        }
+   }
 }

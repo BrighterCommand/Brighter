@@ -26,32 +26,42 @@ using System;
 using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.commandstore.sqlite;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
 {
-    public class When_There_Is_No_Message_In_The_Sql_Command_Store_Async : ContextSpecification
+    [TestFixture]
+    public class SqliteCommandStoreEmptyWhenSearchedAsyncTests
     {
-        private static SqliteTestHelper _sqliteTestHelper;
-        private static SqliteCommandStore s_sqlCommandStore;
-        private static MyCommand s_storedCommand;
+        private SqliteTestHelper _sqliteTestHelper;
+        private SqliteCommandStore _sqlCommandStore;
+        private MyCommand _storedCommand;
+        private SqliteConnection _sqliteConnection;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
 
-            s_sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
+            _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
         };
 
-        private Because _of = () => s_storedCommand = AsyncContext.Run<MyCommand>(async () => await s_sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid()));
+        [Test]
+        public void When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
+        {
+            _storedCommand = AsyncContext.Run<MyCommand>(async () => await _sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid()));
 
-        private It _should_return_an_empty_command_on_a_missing_command = () => s_storedCommand.Id.ShouldEqual(Guid.Empty);
+            //_should_return_an_empty_command_on_a_missing_command
+            _storedCommand.Id.ShouldEqual(Guid.Empty);
+        }
 
-        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
-
-        private static SqliteConnection _sqliteConnection;
+        [TearDown]
+        public void Cleanup()
+        {
+            _sqliteTestHelper.CleanUpDb();
+        }
     }
 }

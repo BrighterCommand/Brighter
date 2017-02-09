@@ -25,36 +25,48 @@ THE SOFTWARE. */
 using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.commandstore.sqlite;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
 {
-    public class When_Writing_A_Message_To_The_Command_Store_Async : ContextSpecification
+    [TestFixture]
+    public class SqliteCommandStoreAddMessageAsyncTests
     {
-        private static SqliteTestHelper _sqliteTestHelper;
-        private static SqliteCommandStore s_sqlCommandStore;
-        private static MyCommand s_raisedCommand;
-        private static MyCommand s_storedCommand;
-        private static SqliteConnection _sqliteConnection;
+        private SqliteTestHelper _sqliteTestHelper;
+        private SqliteCommandStore _sqlCommandStore;
+        private MyCommand _raisedCommand;
+        private MyCommand _storedCommand;
+        private SqliteConnection _sqliteConnection;
 
-        private Establish _context = () =>
+        private void Establish()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
 
-            s_sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
-            s_raisedCommand = new MyCommand {Value = "Test"};
-            AsyncContext.Run(async () => await s_sqlCommandStore.AddAsync(s_raisedCommand));
-        };
+            _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
+            _raisedCommand = new MyCommand {Value = "Test"};
+            AsyncContext.Run(async () => await _sqlCommandStore.AddAsync(_raisedCommand));
+        }
 
-        private Because _of = () => AsyncContext.Run(async () => s_storedCommand = await s_sqlCommandStore.GetAsync<MyCommand>(s_raisedCommand.Id));
+        [Test]
+        public void When_Writing_A_Message_To_The_Command_Store_Async()
+        {
+            AsyncContext.Run(async () => _storedCommand =await _sqlCommandStore.GetAsync<MyCommand>(_raisedCommand.Id));
 
-        private It _should_read_the_command_from_the__sql_command_store = () => s_storedCommand.ShouldNotBeNull();
-        private It _should_read_the_command_value = () => s_storedCommand.Value.ShouldEqual(s_raisedCommand.Value);
-        private It _should_read_the_command_id = () => s_storedCommand.Id.ShouldEqual(s_raisedCommand.Id);
+            //_should_read_the_command_from_the__sql_command_store
+            _storedCommand.ShouldNotBeNull();
+            //_should_read_the_command_value
+            _storedCommand.Value.ShouldEqual(_raisedCommand.Value);
+            //_should_read_the_command_id
+            _storedCommand.Id.ShouldEqual(_raisedCommand.Id);
+        }
 
-        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
+        [TearDown]
+        public void Cleanup()
+        {
+            _sqliteTestHelper.CleanUpDb();
+        }
     }
 }

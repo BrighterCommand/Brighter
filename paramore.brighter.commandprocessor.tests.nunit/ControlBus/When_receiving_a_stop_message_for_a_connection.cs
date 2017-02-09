@@ -1,27 +1,34 @@
 ﻿using FakeItEasy;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Handlers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {
-    public class When_receiving_a_stop_message_for_a_connection : ContextSpecification
+    [TestFixture]
+    public class ConfigurationCommandStopTests
     {
         const string CONNECTION_NAME = "Test";
-        private static ConfigurationCommandHandler s_configurationCommandHandler;
-        private static ConfigurationCommand s_configurationCommand;
-        private static IDispatcher s_dispatcher;
+        private ConfigurationCommandHandler _configurationCommandHandler;
+        private ConfigurationCommand _configurationCommand;
+        private IDispatcher _dispatcher;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_dispatcher = A.Fake<IDispatcher>();
-            s_configurationCommandHandler = new ConfigurationCommandHandler(s_dispatcher);
-            s_configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPCHANNEL) {ConnectionName = CONNECTION_NAME};
-        };
+            _dispatcher = A.Fake<IDispatcher>();
+            _configurationCommandHandler = new ConfigurationCommandHandler(_dispatcher);
+            _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPCHANNEL) {ConnectionName = CONNECTION_NAME};
+        }
 
-        private Because _of = () => s_configurationCommandHandler.Handle(s_configurationCommand);
+        [Test]
+        public void When_receiving_a_stop_message_for_a_connection()
+        {
+            _configurationCommandHandler.Handle(_configurationCommand);
 
-        private It _should_call_stop_for_the_given_connection = () => A.CallTo(() => s_dispatcher.Shut(CONNECTION_NAME));
+            //_should_call_stop_for_the_given_connection
+            A.CallTo(() => _dispatcher.Shut(CONNECTION_NAME));
+        }
     }
 }
