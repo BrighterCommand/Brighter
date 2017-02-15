@@ -49,7 +49,8 @@ namespace paramore.brighter.commandprocessor
     /// provide an easy way to do this using the policies that you add to this registry
     /// This is a default implementation of <see cref="IAmAPolicyRegistry"/>
     /// </summary>
-    public class DefaultPolicy : IAmAPolicyRegistry {
+    public class DefaultPolicy : IAmAPolicyRegistry
+    {
         /// <summary>
         /// Gets the default policy of retry once
         /// </summary>
@@ -60,22 +61,29 @@ namespace paramore.brighter.commandprocessor
             switch (policyName)
             {
                 case CommandProcessor.CIRCUITBREAKER:
-                {
                     return Policy.Handle<Exception>().CircuitBreaker(10, new TimeSpan(5000));
-                }
+
+                case CommandProcessor.CIRCUITBREAKERASYNC:
+                    return Policy.Handle<Exception>().CircuitBreakerAsync(10, new TimeSpan(5000));
+
                 case CommandProcessor.RETRYPOLICY:
-                {
                     return Policy.Handle<Exception>().WaitAndRetry(new[]
                     {
                         TimeSpan.FromMilliseconds(50),
                         TimeSpan.FromMilliseconds(100),
                         TimeSpan.FromMilliseconds(150)
                     });
-                }
+
+                case CommandProcessor.RETRYPOLICYASYNC:
+                    return Policy.Handle<Exception>().WaitAndRetryAsync(new[]
+                    {
+                        TimeSpan.FromMilliseconds(50),
+                        TimeSpan.FromMilliseconds(100),
+                        TimeSpan.FromMilliseconds(150)
+                    });
+
                 default:
-                {
                     return Policy.Handle<Exception>().Retry();
-                }
             }
         }
 

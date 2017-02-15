@@ -473,7 +473,7 @@ namespace paramore.brighter.commandprocessor
 
             var messageMapper = _mapperRegistry.Get<T>();
             if (messageMapper == null)
-                throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
+                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
 
             var message = messageMapper.MapToMessage(request);
 
@@ -509,17 +509,15 @@ namespace paramore.brighter.commandprocessor
 
             var messageMapper = _mapperRegistry.Get<T>();
             if (messageMapper == null)
-                throw new ArgumentOutOfRangeException(string.Format("No message mapper registered for messages of type: {0}", typeof(T)));
+                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
 
             var message = messageMapper.MapToMessage(request);
 
-            await RetryAndBreakCircuitAsync(async () =>
+            await RetryAndBreakCircuitAsync(async ct =>
             {
-                await _asyncMessageStore.AddAsync(message, _messageStoreTimeout, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+                await _asyncMessageStore.AddAsync(message, _messageStoreTimeout, ct).ConfigureAwait(continueOnCapturedContext);
                 await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext);
-            }).ConfigureAwait(continueOnCapturedContext);
-
-            await Task.Delay(0, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+            }, continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
         }
 
         /// <summary>
@@ -551,16 +549,11 @@ namespace paramore.brighter.commandprocessor
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
             _logger.Value.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id);
+
             if (handlerCount > 1)
-                throw new ArgumentException(
-                    string.Format(
-                        "More than one handler was found for the typeof command {0} - a command should only have one handler.",
-                        typeof(T)));
+                throw new ArgumentException($"More than one handler was found for the typeof command {typeof(T)} - a command should only have one handler.");
             if (handlerCount == 0)
-                throw new ArgumentException(
-                    string.Format(
-                        "No command handler was found for the typeof command {0} - a command should have exactly one handler.",
-                        typeof(T)));
+                throw new ArgumentException($"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
 
         private void CheckCircuit(Action send)
@@ -568,9 +561,11 @@ namespace paramore.brighter.commandprocessor
             _policyRegistry.Get(CIRCUITBREAKER).Execute(send);
         }
 
-        private async Task CheckCircuitAsync(Func<Task> send)
+        private async Task CheckCircuitAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
         {
-            await _policyRegistry.Get(CIRCUITBREAKERASYNC).Execute(send);
+            await _policyRegistry.Get(CIRCUITBREAKERASYNC)
+                .ExecuteAsync(send, cancellationToken, continueOnCapturedContext)
+                .ConfigureAwait(continueOnCapturedContext);
         }
 
         private void RetryAndBreakCircuit(Action send)
@@ -578,9 +573,10 @@ namespace paramore.brighter.commandprocessor
             CheckCircuit(() => Retry(send));
         }
 
-        private async Task RetryAndBreakCircuitAsync(Func<Task> send)
+        private async Task RetryAndBreakCircuitAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
         {
-            await CheckCircuitAsync(() => RetryAsync(send));
+            await CheckCircuitAsync(ct => RetryAsync(send, continueOnCapturedContext, ct), continueOnCapturedContext, cancellationToken)
+                .ConfigureAwait(continueOnCapturedContext);
         }
 
         private void Retry(Action send)
@@ -588,9 +584,11 @@ namespace paramore.brighter.commandprocessor
             _policyRegistry.Get(RETRYPOLICY).Execute(send);
         }
 
-        private async Task RetryAsync(Func<Task> send)
+        private async Task RetryAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
         {
-            await _policyRegistry.Get(RETRYPOLICYASYNC).Execute(send);
+            await _policyRegistry.Get(RETRYPOLICYASYNC)
+                .ExecuteAsync(send, cancellationToken, continueOnCapturedContext)
+                .ConfigureAwait(continueOnCapturedContext);
         }
     }
 }
