@@ -1,4 +1,4 @@
-Paramore contributors (sorted alphabeticaly)
+Brighter contributors (sorted alphabeticaly)
 ============================================
 
 **[Rudy Alvarez] (https://github.com/rudygt)**
@@ -32,6 +32,9 @@ Paramore contributors (sorted alphabeticaly)
 **[Fred Hoogduin](https://github.com/Red-F)**
   * Various fixes
   * *Async methods on Command Processor
+  
+**[Franck Kambiwa](https://github.com/thynquest)
+  * Various fixes
 
 **[Olivier Kouamé](https://github.com/okouam)**
  * Various fixes
