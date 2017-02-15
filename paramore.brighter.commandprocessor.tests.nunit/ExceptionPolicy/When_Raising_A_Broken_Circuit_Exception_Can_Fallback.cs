@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -30,13 +31,14 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
-    [Subject(typeof(ExceptionPolicyHandler<>))]
-    public class When_Raising_A_Broken_Circuit_Exception_Can_Fallback : ContextSpecification
+    [TestFixture]
+    public class FallbackHandlerBrokenCircuitOnErrorTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsWithFallbackBrokenCircuitHandler>();
@@ -49,14 +51,20 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 
             MyFailsWithFallbackDivideByZeroHandler.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+        }
 
-        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+        [Test]
+        public void When_Raising_A_Broken_Circuit_Exception_Can_Fallback()
+        {
+            _commandProcessor.Send(_myCommand);
 
-        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithFallbackBrokenCircuitHandler.ShouldReceive(s_myCommand);
-        private It _should_call_the_fallback_chain = () => MyFailsWithFallbackBrokenCircuitHandler.ShouldFallback(s_myCommand);
-        private It _should_set_the_exeception_into_context = () => MyFailsWithFallbackBrokenCircuitHandler.ShouldSetException(s_myCommand);
-        
+            //_should_send_the_command_to_the_command_handler
+            MyFailsWithFallbackBrokenCircuitHandler.ShouldReceive(_myCommand);
+            //_should_call_the_fallback_chain
+            MyFailsWithFallbackBrokenCircuitHandler.ShouldFallback(_myCommand);
+            //_should_set_the_exeception_into_context
+            MyFailsWithFallbackBrokenCircuitHandler.ShouldSetException(_myCommand);
+        }
     }
 }

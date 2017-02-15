@@ -24,23 +24,24 @@ THE SOFTWARE. */
 
 using NUnit.Specifications;
 using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.eventsourcing.Handlers;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.EventSourcing.TestDoubles;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
 {
-    [Subject(typeof(CommandSourcingHandler<>))]
-    public class When_Handling_A_Command_With_A_Command_Store_Enabled : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorUsingCommandStoreTests
     {
-        private static MyCommand s_command;
-        private static IAmACommandStore s_commandstore;
-        private static IAmACommandProcessor s_commandProcessor;
+        private MyCommand _command;
+        private IAmACommandStore _commandstore;
+        private IAmACommandProcessor _commandProcessor;
 
-        private Establish context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_commandstore = new InMemoryCommandStore();
+            _commandstore = new InMemoryCommandStore();
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandHandler>();
@@ -48,16 +49,21 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyStoredCommandHandler>();
-            container.Register<IAmACommandStore>(s_commandstore);
+            container.Register<IAmACommandStore>(_commandstore);
 
-            s_command = new MyCommand {Value = "My Test String"};
+            _command = new MyCommand {Value = "My Test String"};
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
-        };
+        }
 
-        private Because of = () => s_commandProcessor.Send(s_command);
+        [Test]
+        public void When_Handling_A_Command_With_A_Command_Store_Enabled()
+        {
+            _commandProcessor.Send(_command);
 
-        private It should_store_the_command_to_the_command_store = () => s_commandstore.Get<MyCommand>(s_command.Id).Value.ShouldEqual(s_command.Value);
+            //should_store_the_command_to_the_command_store
+            _commandstore.Get<MyCommand>(_command.Id).Value.ShouldEqual(_command.Value);
+        }
     }
 }

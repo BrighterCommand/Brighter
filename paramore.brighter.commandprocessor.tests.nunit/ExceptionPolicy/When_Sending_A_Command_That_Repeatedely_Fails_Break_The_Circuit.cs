@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;
@@ -34,16 +35,17 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
-    [Subject(typeof(ExceptionPolicyHandler<>))]
-    public class When_Sending_A_Command_That_Repeatedely_Fails_Break_The_Circuit : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorWithCircuitBreakerTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Exception s_thirdException;
-        private static Exception s_firstException;
-        private static Exception s_secondException;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private Exception _thirdException;
+        private Exception _firstException;
+        private Exception _secondException;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsWithDivideByZeroHandler>();
@@ -63,22 +65,27 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 
             MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+        }
 
         //We have to catch the final exception that bubbles out after retry
-        private Because _of = () =>
-            {
+        [Test]
+        public void When_Sending_A_Command_That_Repeatedely_Fails_Break_The_Circuit()
+        {
                 //First two should be caught, and increment the count
-                s_firstException = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
-                s_secondException = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
+                _firstException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
+                _secondException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
                 //this one should tell us that the circuit is broken
-                s_thirdException = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
-            };
+                _thirdException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
-        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.ShouldReceive(s_myCommand).ShouldBeTrue();
-        private It _should_bubble_up_the_first_exception = () => s_firstException.ShouldBeOfExactType<DivideByZeroException>();
-        private It _should_bubble_up_the_second_exception = () => s_secondException.ShouldBeOfExactType<DivideByZeroException>();
-        private It _should_break_the_circuit_after_two_fails = () => s_thirdException.ShouldBeOfExactType<BrokenCircuitException>();
+                //_should_send_the_command_to_the_command_handler
+                MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand).ShouldBeTrue();
+                //_should_bubble_up_the_first_exception
+                _firstException.ShouldBeOfExactType<DivideByZeroException>();
+                //_should_bubble_up_the_second_exception
+                _secondException.ShouldBeOfExactType<DivideByZeroException>();
+                //_should_break_the_circuit_after_two_fails
+                _thirdException.ShouldBeOfExactType<BrokenCircuitException>();
+        }
     }
 }

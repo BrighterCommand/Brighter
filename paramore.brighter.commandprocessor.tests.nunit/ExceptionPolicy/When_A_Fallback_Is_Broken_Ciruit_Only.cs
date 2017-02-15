@@ -25,6 +25,8 @@ THE SOFTWARE. */
 using System;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Framework;
+using NUnit.Framework.Internal;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;
@@ -32,14 +34,15 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
-    [Subject(typeof(ExceptionPolicyHandler<>))]
-    public class When_A_Fallback_Is_Broken_Ciruit_Only : NUnit.Specifications.ContextSpecification
+    [TestFixture]
+    public class FallbackHandlerBrokenCircuitTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Exception s_exception;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsWithUnsupportedExceptionForFallback>();
@@ -52,12 +55,18 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 
             MyFailsWithFallbackDivideByZeroHandler.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+        }
 
-        private Because _of = () => s_exception = Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
+        [Test]
+        public void When_A_Fallback_Is_Broken_Ciruit_Only()
+        {
+            _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
-        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithUnsupportedExceptionForFallback.ShouldReceive(s_myCommand);
-        private It _should_bubble_out_the_exception = () => s_exception.ShouldNotBeNull();
+            //_should_send_the_command_to_the_command_handler
+            MyFailsWithUnsupportedExceptionForFallback.ShouldReceive(_myCommand);
+            // _should_bubble_out_the_exception
+            _exception.ShouldNotBeNull();
+        }
     }
 }

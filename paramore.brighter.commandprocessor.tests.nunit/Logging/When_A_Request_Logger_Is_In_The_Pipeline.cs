@@ -5,21 +5,23 @@ using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.Logging.TestDoubles;
 using System.Linq;
+using NUnit.Framework;
 using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.Logging
 {
-    [Subject(typeof(RequestLoggingHandler<>))]
-    public class When_A_Request_Logger_Is_In_The_Pipeline : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorWithLoggingInPipelineTests
     {
-        private static SpyLog s_logger;
-        private static MyCommand s_myCommand;
-        private static IAmACommandProcessor s_commandProcessor;
+        private SpyLog _logger;
+        private MyCommand _myCommand;
+        private IAmACommandProcessor _commandProcessor;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_logger = new SpyLog();
-            s_myCommand = new MyCommand();
+            _logger = new SpyLog();
+            _myCommand = new MyCommand();
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyLoggedHandler>();
@@ -30,14 +32,20 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Logging
 
             var handlerFactory = new TinyIocHandlerFactory(container);
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
-            LogProvider.SetCurrentLogProvider(new SpyLogProvider(s_logger));
-        };
+            LogProvider.SetCurrentLogProvider(new SpyLogProvider(_logger));
+        }
 
-        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+        [Test]
+        public void When_A_Request_Logger_Is_In_The_Pipeline()
+        {
+            _commandProcessor.Send(_myCommand);
 
-        private It _should_log_the_request_handler_call = () => s_logger.Logs.ShouldMatch(logs => logs.Any(log => log.Message.Contains("Logging handler pipeline call")));
-        private It _should_log_the_type_of_handler_in_the_call = () => s_logger.Logs.ShouldMatch(logs => logs.Any(log => log.Message.Contains(typeof(MyCommand).ToString())));
+            //_should_log_the_request_handler_call
+            _logger.Logs.ShouldMatch(logs => logs.Any(log => log.Message.Contains("Logging handler pipeline call")));
+            //_should_log_the_type_of_handler_in_the_call
+            _logger.Logs.ShouldMatch(logs => logs.Any(log => log.Message.Contains(typeof(MyCommand).ToString())));
+        }
     }
 }

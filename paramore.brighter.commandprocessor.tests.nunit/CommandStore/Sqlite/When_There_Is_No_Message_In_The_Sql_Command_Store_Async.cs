@@ -47,7 +47,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
 
             _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
-        };
+        }
 
         [Test]
         public void When_There_Is_No_Message_In_The_Sql_Command_Store_Async()

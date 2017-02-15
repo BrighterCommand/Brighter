@@ -26,7 +26,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -35,48 +34,53 @@ using paramore.brighter.serviceactivator.TestHelpers;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
     [Ignore("Breaks dotnet test runner")]
-    [Subject(typeof(Dispatcher))]
-    public class When_A_Message_Dispatcher_Restarts_A_Connection : ContextSpecification
+    [TestFixture]
+    public class MessageDispatcherResetConnection
     {
-        private static Dispatcher s_dispatcher;
-        private static FakeChannel s_channel;
-        private static IAmACommandProcessor s_commandProcessor;
-        private static Connection s_connection;
+        private Dispatcher _dispatcher;
+        private FakeChannel _channel;
+        private IAmACommandProcessor _commandProcessor;
+        private Connection _connection;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish ()
         {
-            s_channel = new FakeChannel();
-            s_commandProcessor = new SpyCommandProcessor();
+            _channel = new FakeChannel();
+            _commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            s_connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
-            s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { s_connection });
+            _connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { _connection });
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
-            s_channel.Add(message);
+            _channel.Add(message);
 
-            s_dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-            s_dispatcher.Receive();
+            _dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+            _dispatcher.Receive();
             Task.Delay(1000).Wait();
-            s_dispatcher.Shut(s_connection);
-        };
+            _dispatcher.Shut(_connection);
+        }
 
 
-        private Because _of = () =>
+        [Test]
+        public void When_A_Message_Dispatcher_Restarts_A_Connection()
         {
-            s_dispatcher.Open(s_connection);
+            _dispatcher.Open(_connection);
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
-            s_channel.Add(message);
+            _channel.Add(message);
 
-            s_dispatcher.End().Wait();
-        };
+            _dispatcher.End().Wait();
 
-        private It _should_have_consumed_the_messages_in_the_event_channel = () => s_channel.Length.ShouldEqual(0);
-        private It _should_have_a_stopped_state = () => s_dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+
+            //_should_have_consumed_the_messages_in_the_event_channel
+            _channel.Length.ShouldEqual(0);
+            //_should_have_a_stopped_state
+            _dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+        }
     }
 }

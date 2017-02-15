@@ -26,6 +26,7 @@ using System;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;
@@ -33,14 +34,15 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
-    [Subject(typeof(ExceptionPolicyHandlerAsync<>))]
-    class When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry_Async : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorMissingPolicyFromRegistryAsyncTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static Exception s_exception;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private Exception _exception;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyDoesNotFailPolicyHandlerAsync>();
@@ -52,14 +54,19 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 
             MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
         //We have to catch the final exception that bubbles out after retry
-        private Because _of = () => s_exception = Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_myCommand)));
+        [Test]
+        public void When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry_Async()
+        {
+            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand)));
 
-        private It _should_throw_an_exception = () => s_exception.ShouldBeOfExactType<ArgumentException>();
-
-        private It _should_give_the_name_of_the_missing_policy = () => s_exception.ShouldContainErrorMessage("There is no policy for MyDivideByZeroPolicy");
+            //_should_throw_an_exception
+            _exception.ShouldBeOfExactType<ArgumentException>();
+            //_should_give_the_name_of_the_missing_policy
+            _exception.ShouldContainErrorMessage("There is no policy for MyDivideByZeroPolicy");
+        }
     }
 }

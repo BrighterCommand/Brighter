@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;
@@ -34,14 +34,15 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
-    [Subject(typeof(ExceptionPolicyHandler<>))]
-    public class When_Sending_A_Command_That_Passes_Policy_Check : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorWithExceptionPolicyNothingThrowTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static int s_retryCount;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private int _retryCount;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDoesNotFailPolicyHandler>();
@@ -62,19 +63,25 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
                     3.Seconds()
                 }, (exception, timeSpan) =>
                 {
-                    s_retryCount++;
+                    _retryCount++;
                 });
             policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
             MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+        }
 
         //We have to catch the final exception that bubbles out after retry
-        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+        [Test]
+        public void When_Sending_A_Command_That_Passes_Policy_Check()
+        {
+            _commandProcessor.Send(_myCommand);
 
-        private It _should_send_the_command_to_the_command_handler = () => MyDoesNotFailPolicyHandler.Shouldreceive(s_myCommand).ShouldBeTrue();
-        private It _should_not_retry = () => s_retryCount.ShouldEqual(0);
+           //_should_send_the_command_to_the_command_handler
+            MyDoesNotFailPolicyHandler.Shouldreceive(_myCommand).ShouldBeTrue();
+           //_should_not_retry
+            _retryCount.ShouldEqual(0);
+        }
     }
 }

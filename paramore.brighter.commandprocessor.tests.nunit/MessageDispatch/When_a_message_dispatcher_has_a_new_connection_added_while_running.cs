@@ -26,7 +26,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -36,55 +35,61 @@ using NUnit.Framework;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
     [Ignore("Breaks dotnet test runner")]
-    [Subject(typeof(Dispatcher))]
-    public class When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running : ContextSpecification
+    [TestFixture]
+    public class DispatcherAddNewConnectionTests
     {
-        private static Dispatcher s_dispatcher;
-        private static FakeChannel s_channel;
-        private static IAmACommandProcessor s_commandProcessor;
-        private static Connection s_connection;
-        private static Connection s_newConnection;
+        private Dispatcher _dispatcher;
+        private FakeChannel _channel;
+        private IAmACommandProcessor _commandProcessor;
+        private Connection _connection;
+        private Connection _newConnection;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_channel = new FakeChannel();
-            s_commandProcessor = new SpyCommandProcessor();
+            _channel = new FakeChannel();
+            _commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            s_connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
-            s_newConnection = new Connection(name: new ConnectionName("newTest"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
-            s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { s_connection });
+            _connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+            _newConnection = new Connection(name: new ConnectionName("newTest"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { _connection });
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
-            s_channel.Add(message);
+            _channel.Add(message);
 
-            s_dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-            s_dispatcher.Receive();
-        };
+            _dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+            _dispatcher.Receive();
+        }
 
 
-        private Because _of = () =>
+        [Test]
+        public void When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running()
         {
-            s_dispatcher.Open(s_newConnection);
+            _dispatcher.Open(_newConnection);
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
-            s_channel.Add(message);
+            _channel.Add(message);
             Task.Delay(1000).Wait();
-        };
 
-        private Cleanup _stop_dispatcher = () =>
+            //_should_have_consumed_the_messages_in_the_event_channel
+            _channel.Length.ShouldEqual(0);
+            //_should_have_a_running_state
+            _dispatcher.State.ShouldEqual(DispatcherState.DS_RUNNING);
+            //_should_have_only_one_consumer
+            _dispatcher.Consumers.Count().ShouldEqual(2);
+            //_should_have_two_connections
+            _dispatcher.Connections.Count().ShouldEqual(2);
+        }
+
+        [TearDown]
+        public void Cleanup()
         {
-            if (s_dispatcher != null) 
-                if (s_dispatcher.State == DispatcherState.DS_RUNNING) 
-                    s_dispatcher.End().Wait();
-        };
-
-        private It _should_have_consumed_the_messages_in_the_event_channel = () => s_channel.Length.ShouldEqual(0);
-        private It _should_have_a_running_state = () => s_dispatcher.State.ShouldEqual(DispatcherState.DS_RUNNING);
-        private It _should_have_only_one_consumer = () => s_dispatcher.Consumers.Count().ShouldEqual(2);
-        private It _should_have_two_connections = () => s_dispatcher.Connections.Count().ShouldEqual(2);
+            if (_dispatcher?.State == DispatcherState.DS_RUNNING)
+                _dispatcher.End().Wait();
+        }
     }
 }

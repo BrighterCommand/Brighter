@@ -26,7 +26,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -35,19 +35,21 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Subject(typeof(Dispatcher))]
-    public class When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers : ContextSpecification
+    [TestFixture]
+    public class MessageDispatcherMultipleConnectionTests
     {
-        private static Dispatcher s_dispatcher;
-        private static FakeChannel s_eventChannel;
-        private static FakeChannel s_commandChannel;
-        private static IAmACommandProcessor s_commandProcessor;
+        private Dispatcher _dispatcher;
+        private FakeChannel _eventChannel;
+        private FakeChannel _commandChannel;
+        private IAmACommandProcessor _commandProcessor;
+        private static int _numberOfConsumers;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_eventChannel = new FakeChannel();
-            s_commandChannel = new FakeChannel();
-            s_commandProcessor = new SpyCommandProcessor();
+            _eventChannel = new FakeChannel();
+            _commandChannel = new FakeChannel();
+            _commandProcessor = new SpyCommandProcessor();
 
             var container = new TinyIoCContainer();
             container.Register<MyEventMessageMapper>();
@@ -58,36 +60,41 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
 
-            var myEventConnection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_eventChannel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
-            var myCommandConnection = new Connection(name: new ConnectionName("anothertest"), dataType: typeof(MyCommand), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_commandChannel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
-            s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { myEventConnection, myCommandConnection });
+            var myEventConnection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_eventChannel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+            var myCommandConnection = new Connection(name: new ConnectionName("anothertest"), dataType: typeof(MyCommand), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_commandChannel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { myEventConnection, myCommandConnection });
 
             var @event = new MyEvent();
             var eventMessage = new MyEventMessageMapper().MapToMessage(@event);
-            s_eventChannel.Add(eventMessage);
+            _eventChannel.Add(eventMessage);
 
             var command = new MyCommand();
             var commandMessage = new MyCommandMessageMapper().MapToMessage(command);
-            s_commandChannel.Add(commandMessage);
+            _commandChannel.Add(commandMessage);
 
-            s_dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-            s_dispatcher.Receive();
-        };
+            _dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+            _dispatcher.Receive();
+        }
 
 
-        private Because _of = () =>
+        [Test]
+        public void When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers()
         {
             Task.Delay(1000).Wait();
-            s_numberOfConsumers = s_dispatcher.Consumers.Count();
-            s_dispatcher.End().Wait();
-        };
+            _numberOfConsumers = _dispatcher.Consumers.Count();
+            _dispatcher.End().Wait();
 
-        private It _should_have_consumed_the_messages_in_the_event_channel = () => s_eventChannel.Length.ShouldEqual(0);
-        private It _should_have_consumed_the_messages_in_the_command_channel = () => s_commandChannel.Length.ShouldEqual(0);
-        private It _should_have_a_stopped_state = () => s_dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
-        private It _should_have_no_consumers = () => s_dispatcher.Consumers.ShouldBeEmpty();
-        private It _should_of_had_2_consumers_when_running = () => s_numberOfConsumers.ShouldEqual(2);
+           //_should_have_consumed_the_messages_in_the_event_channel
+            _eventChannel.Length.ShouldEqual(0);
+           //_should_have_consumed_the_messages_in_the_command_channel
+            _commandChannel.Length.ShouldEqual(0);
+           //_should_have_a_stopped_state
+            _dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+           //_should_have_no_consumers
+            _dispatcher.Consumers.ShouldBeEmpty();
+           //_should_of_had_2_consumers_when_running
+            _numberOfConsumers.ShouldEqual(2);
+        }
 
-        private static int s_numberOfConsumers;
     }
 }

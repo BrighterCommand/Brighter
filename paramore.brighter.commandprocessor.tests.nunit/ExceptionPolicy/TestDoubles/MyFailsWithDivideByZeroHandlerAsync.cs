@@ -28,7 +28,7 @@ using System.Threading.Tasks;
 using paramore.brighter.commandprocessor.policy.Attributes;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
+namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles
 {
     internal class MyFailsWithDivideByZeroHandlerAsync : RequestHandlerAsync<MyCommand>
     {

@@ -24,41 +24,47 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Subject(typeof(MessagePump<>))]
-    public class When_A_Channel_Failure_Exception_Is_Thrown_For_Command_Should_Retry_Until_Connection_Re_established : ContextSpecification
+    [TestFixture]
+    public class MessagePumpRetryCommandOnConnectionFailureTests
     {
-        private static IAmAMessagePump s_messagePump;
-        private static FailingChannel s_channel;
-        private static SpyCommandProcessor s_commandProcessor;
-        private static MyCommand s_command;
+        private IAmAMessagePump _messagePump;
+        private FailingChannel _channel;
+        private SpyCommandProcessor _commandProcessor;
+        private MyCommand _command;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_commandProcessor = new SpyCommandProcessor();
-            s_channel = new FailingChannel { NumberOfRetries = 4 };
+            _commandProcessor = new SpyCommandProcessor();
+            _channel = new FailingChannel { NumberOfRetries = 4 };
             var mapper = new MyCommandMessageMapper();
-            s_messagePump = new MessagePump<MyCommand>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
+            _messagePump = new MessagePump<MyCommand>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
 
-            s_command = new MyCommand();
+            _command = new MyCommand();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_command)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(s_command)));
-            s_channel.Add(message1);
-            s_channel.Add(message2);
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(_command)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(_command)));
+            _channel.Add(message1);
+            _channel.Add(message2);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            s_channel.Add(quitMessage);
-        };
+            _channel.Add(quitMessage);
+        }
 
-        private Because _of = () => s_messagePump.Run();
+        [Test]
+        public void When_A_Channel_Failure_Exception_Is_Thrown_For_Command_Should_Retry_Until_Connection_Re_established()
+        {
+            _messagePump.Run();
 
-        private It _should_send_the_message_via_the_command_processor = () => s_commandProcessor.Commands[0].ShouldEqual(CommandType.Send);
+            //_should_send_the_message_via_the_command_processor
+            _commandProcessor.Commands[0].ShouldEqual(CommandType.Send);
+        }
     }
 }

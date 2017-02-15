@@ -49,7 +49,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
             _sqlCommandStore.Add<MyCommand>(_raisedCommand);
         }
 
-        []
+        [Test]
         public void When_Writing_A_Message_To_The_Command_Store()
         {
             _storedCommand = _sqlCommandStore.Get<MyCommand>(_raisedCommand.Id);

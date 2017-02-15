@@ -26,7 +26,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -34,44 +34,49 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Subject(typeof(Dispatcher))]
-    public class When_A_Message_Dispatcher_Shuts_A_Connection : ContextSpecification
+    [TestFixture]
+    public class MessageDispatcherShutConnectionTests
     {
-        private static Dispatcher s_dispatcher;
-        private static FakeChannel s_channel;
-        private static IAmACommandProcessor s_commandProcessor;
-        private static Connection s_connection;
+        private static Dispatcher _dispatcher;
+        private static FakeChannel _channel;
+        private static IAmACommandProcessor _commandProcessor;
+        private static Connection _connection;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_channel = new FakeChannel();
-            s_commandProcessor = new SpyCommandProcessor();
+            _channel = new FakeChannel();
+            _commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            s_connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(s_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
-            s_dispatcher = new Dispatcher(s_commandProcessor, messageMapperRegistry, new List<Connection> { s_connection });
+            _connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { _connection });
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
             for (var i = 0; i < 6; i++)
-                s_channel.Add(message);
+                _channel.Add(message);
 
-            s_dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-            s_dispatcher.Receive();
-        };
+            _dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+            _dispatcher.Receive();
+        }
 
 
-        private Because _of = () =>
+        [Test]
+        public void When_A_Message_Dispatcher_Shuts_A_Connection()
         {
             Task.Delay(1000).Wait();
-            s_dispatcher.Shut(s_connection);
-            s_dispatcher.End().Wait();
-        };
+            _dispatcher.Shut(_connection);
+            _dispatcher.End().Wait();
 
-        private It _should_have_consumed_the_messages_in_the_channel = () => s_dispatcher.Consumers.Any(consumer => (consumer.Name == s_connection.Name) && (consumer.State == ConsumerState.Open)).ShouldBeFalse();
-        private It _should_have_a_stopped_state = () => s_dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
-        private It _should_have_no_consumers = () => s_dispatcher.Consumers.ShouldBeEmpty();
+            //_should_have_consumed_the_messages_in_the_channel
+            _dispatcher.Consumers.Any(consumer => (consumer.Name == _connection.Name) && (consumer.State == ConsumerState.Open)).ShouldBeFalse();
+            //_should_have_a_stopped_state
+            _dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+            //_should_have_no_consumers
+            _dispatcher.Consumers.ShouldBeEmpty();
+        }
     }
 }

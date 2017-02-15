@@ -26,6 +26,7 @@ using System;
 using FluentAssertions;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;
@@ -34,14 +35,15 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
 {
-    [Subject(typeof(ExceptionPolicyHandler<>))]
-    public class When_Sending_A_Command_That_Should_Retry_Failure : ContextSpecification
+    [TestFixture]
+    public class CommandProcessorWithRetryPolicyTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static int s_retryCount;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private int _retryCount;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsWithDivideByZeroHandler>();
@@ -62,19 +64,25 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
                     3.Seconds()
                 }, (exception, timeSpan) =>
                 {
-                    s_retryCount++;
+                    _retryCount++;
                 });
             policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
             MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+        }
 
         //We have to catch the final exception that bubbles out after retry
-        private Because _of = () => Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
+        [Test]
+        public void When_Sending_A_Command_That_Should_Retry_Failure()
+        {
+            Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
-        private It _should_send_the_command_to_the_command_handler = () => MyFailsWithDivideByZeroHandler.ShouldReceive(s_myCommand).ShouldBeTrue();
-        private It _should_retry_three_times = () => s_retryCount.ShouldEqual(3);
+            //_should_send_the_command_to_the_command_handler
+            MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand).ShouldBeTrue();
+            //_should_retry_three_times
+            _retryCount.ShouldEqual(3);
+        }
     }
 }
