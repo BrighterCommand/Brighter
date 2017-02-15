@@ -33,7 +33,7 @@ Brighter contributors (sorted alphabeticaly)
   * Various fixes
   * *Async methods on Command Processor
   
-**[Franck Kambiwa](https://github.com/thynquest)
+**[Franck Kambiwa](https://github.com/thynquest)**
   * Various fixes
 
 **[Olivier Kouamé](https://github.com/okouam)**
