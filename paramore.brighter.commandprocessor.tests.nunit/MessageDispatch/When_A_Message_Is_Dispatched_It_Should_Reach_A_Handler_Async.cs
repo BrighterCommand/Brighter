@@ -11,7 +11,7 @@ using paramore.brighter.serviceactivator.TestHelpers;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
     [TestFixture]
-    public class MessagePumpRunTestFixtureAsync
+    public class MessagePumpDispatchAsyncTests
     {
         private IAmAMessagePump _messagePump;
         private FakeChannel _channel;

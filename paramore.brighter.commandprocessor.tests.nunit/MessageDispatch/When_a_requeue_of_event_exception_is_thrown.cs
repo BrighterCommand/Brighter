@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -33,35 +33,43 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Subject(typeof(MessagePump<>))]
-    public class When_A_Requeue_Of_Event_Exception_Is_Thrown : ContextSpecification
+    [TestFixture]
+    public class MessagePumpEventRequeueTests
     {
-        private static IAmAMessagePump s_messagePump;
-        private static FakeChannel s_channel;
-        private static SpyCommandProcessor s_commandProcessor;
-        private static MyEvent s_event;
+        private IAmAMessagePump _messagePump;
+        private FakeChannel _channel;
+        private SpyCommandProcessor _commandProcessor;
+        private MyEvent _event;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_commandProcessor = new SpyRequeueCommandProcessor();
-            s_channel = new FakeChannel();
+            _commandProcessor = new SpyRequeueCommandProcessor();
+            _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            s_messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
+            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
 
-            s_event = new MyEvent();
+            _event = new MyEvent();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
-            s_channel.Add(message1);
-            s_channel.Add(message2);
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_event)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_event)));
+            _channel.Add(message1);
+            _channel.Add(message2);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            s_channel.Add(quitMessage);
-        };
+            _channel.Add(quitMessage);
+        }
 
-        private Because _of = () => s_messagePump.Run();
+        [Test]
+        public void When_A_Requeue_Of_Event_Exception_Is_Thrown()
+        {
+            _messagePump.Run();
 
-        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.Commands[0].ShouldEqual(CommandType.Publish);
-        private It _should_requeue_the_messages = () => s_channel.Length.ShouldEqual(2);
-        private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
+            //_should_publish_the_message_via_the_command_processor
+            _commandProcessor.Commands[0].ShouldEqual(CommandType.Publish);
+            //_should_requeue_the_messages
+            _channel.Length.ShouldEqual(2);
+            //_should_dispose_the_input_channel
+            _channel.DisposeHappened.ShouldBeTrue();
+        }
     }
 }

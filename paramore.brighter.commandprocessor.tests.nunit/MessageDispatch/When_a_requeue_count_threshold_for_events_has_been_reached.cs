@@ -24,9 +24,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Specifications;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -34,43 +35,49 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Subject(typeof(MessagePump<>))]
-    public class When_A_Requeue_Count_Threshold_For_Events_Has_Been_Reached : ContextSpecification
+    [TestFixture()]
+    public class MessagePumpEventRequeueCountThresholdTests
     {
-        private static IAmAMessagePump s_messagePump;
-        private static FakeChannel s_channel;
-        private static SpyRequeueCommandProcessor s_commandProcessor;
-        private static MyEvent s_event;
+        private IAmAMessagePump _messagePump;
+        private FakeChannel _channel;
+        private SpyRequeueCommandProcessor _commandProcessor;
+        private MyEvent _event;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_commandProcessor = new SpyRequeueCommandProcessor();
-            s_channel = new FakeChannel();
+            _commandProcessor = new SpyRequeueCommandProcessor();
+            _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            s_messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
+            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
 
-            s_event = new MyEvent();
+            _event = new MyEvent();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
-            s_channel.Add(message1);
-            s_channel.Add(message2);
-        };
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_event)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_event)));
+            _channel.Add(message1);
+            _channel.Add(message2);
+        }
 
-        private Because _of = () =>
+        [Test]
+        public void When_A_Requeue_Count_Threshold_For_Events_Has_Been_Reached()
         {
-            var task = Task.Factory.StartNew(() => s_messagePump.Run(), TaskCreationOptions.LongRunning);
+            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(1000).Wait();
 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            s_channel.Add(quitMessage);
+            _channel.Add(quitMessage);
 
             Task.WaitAll(new[] { task });
-        };
 
-        private It _should_publish_the_message_via_the_command_processor = () => s_commandProcessor.Commands[0].ShouldEqual(CommandType.Publish);
-        private It _should_have_been_handled_6_times_via_publish = () => s_commandProcessor.PublishCount.ShouldEqual(6);
-        private It _should_requeue_the_messages = () => s_channel.Length.ShouldEqual(0);
-        private It _should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
+            //_should_publish_the_message_via_the_command_processor
+            _commandProcessor.Commands[0].ShouldEqual(CommandType.Publish);
+            //_should_have_been_handled_6_times_via_publish
+            _commandProcessor.PublishCount.ShouldEqual(6);
+            //_should_requeue_the_messages
+            _channel.Length.ShouldEqual(0);
+            //_should_dispose_the_input_channel
+            _channel.DisposeHappened.ShouldBeTrue();
+        }
     }
 }

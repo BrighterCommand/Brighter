@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -33,40 +33,46 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Subject(typeof(MessagePump<>))]
-    public class When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler : ContextSpecification
+    [TestFixture]
+    public class MessagePumpDispatchTests
     {
-        private static IAmAMessagePump s_messagePump;
-        private static FakeChannel s_channel;
-        private static IAmACommandProcessor s_commandProcessor;
-        private static MyEvent s_event;
+        private IAmAMessagePump _messagePump;
+        private FakeChannel _channel;
+        private IAmACommandProcessor _commandProcessor;
+        private MyEvent _event;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyEvent, MyEventHandler>();
 
-            s_commandProcessor = new CommandProcessor(
+            _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 new CheapHandlerFactory(), 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry());
 
-            s_channel = new FakeChannel();
+            _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            s_messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000 };
+            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000 };
 
-            s_event = new MyEvent();
+            _event = new MyEvent();
 
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(s_event)));
-            s_channel.Add(message);
+            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_event)));
+            _channel.Add(message);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            s_channel.Add(quitMessage);
-        };
-        
-        private Because _of = () => s_messagePump.Run();
+            _channel.Add(quitMessage);
+        }
 
-        private It _should_dispatch_the_message_to_a_handler = () => MyEventHandler.ShouldReceive(s_event).ShouldBeTrue();
+        [Test]
+        public void When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler()
+        {
+            _messagePump.Run();
+
+            //_should_dispatch_the_message_to_a_handler
+            MyEventHandler.ShouldReceive(_event).ShouldBeTrue();
+        }
 
         internal class CheapHandlerFactory : IAmAHandlerFactory
         {

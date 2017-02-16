@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -38,13 +39,14 @@ using Connection = paramore.brighter.serviceactivator.Connection;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Subject(typeof(DispatchBuilder))]
-    public class When_Building_A_Dispatcher : ContextSpecification
+    [TestFixture]
+    public class DispatchBuilderTests
     {
-        private static IAmADispatchBuilder s_builder;
-        private static Dispatcher s_dispatcher;
+        private IAmADispatchBuilder _builder;
+        private Dispatcher _dispatcher;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -89,7 +91,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
                     timeoutInMilliseconds: 200)
             };
 
-            s_builder = DispatchBuilder.With()
+            _builder = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
                         .Handlers(new HandlerConfiguration(new SubscriberRegistry(),
                             new TinyIocHandlerFactory(new TinyIoCContainer())))
@@ -105,18 +107,26 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
                 .MessageMappers(messageMapperRegistry)
                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
                 .Connections(connections);
-        };
+        }
 
-        private Because _of = () => s_dispatcher = s_builder.Build();
-
-        private It _should_build_a_dispatcher = () => s_dispatcher.ShouldNotBeNull();
-        private It _should_have_a_foo_connection = () => GetConnection("foo").ShouldNotBeNull();
-        private It _should_have_a_bar_connection = () => GetConnection("bar").ShouldNotBeNull();
-        private It _should_be_in_the_awaiting_state = () => s_dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
-
-        private static Connection GetConnection(string name)
+        [Test]
+        public void When_Building_A_Dispatcher()
         {
-            return s_dispatcher.Connections.SingleOrDefault(conn => conn.Name == name);
+            _dispatcher = _builder.Build();
+
+            //_should_build_a_dispatcher
+            _dispatcher.ShouldNotBeNull();
+            //_should_have_a_foo_connection
+            GetConnection("foo").ShouldNotBeNull();
+            //_should_have_a_bar_connection
+            GetConnection("bar").ShouldNotBeNull();
+            //_should_be_in_the_awaiting_state
+            _dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+        }
+
+        private Connection GetConnection(string name)
+        {
+            return _dispatcher.Connections.SingleOrDefault(conn => conn.Name == name);
         }
     }
 }

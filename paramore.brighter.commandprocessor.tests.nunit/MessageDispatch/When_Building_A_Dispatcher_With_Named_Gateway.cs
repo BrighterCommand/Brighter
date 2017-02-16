@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -36,13 +37,14 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Subject(typeof(DispatchBuilder))]
-    public class When_Building_A_Dispatcher_With_Named_Gateway : ContextSpecification
+    [TestFixture]
+    public class DispatchBuilderWithNamedGateway
     {
-        private static IAmADispatchBuilder s_builder;
-        private static Dispatcher s_dispatcher;
+        private IAmADispatchBuilder _builder;
+        private Dispatcher _dispatcher;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -87,7 +89,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
                     timeoutInMilliseconds: 200)
             };
 
-            s_builder = DispatchBuilder.With()
+            _builder = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
                         .Handlers(new HandlerConfiguration(new SubscriberRegistry(),
                             new TinyIocHandlerFactory(new TinyIoCContainer())))
@@ -99,10 +101,15 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
                 .MessageMappers(messageMapperRegistry)
                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
                 .Connections(connections);
-        };
+        }
 
-        private Because _of = () => s_dispatcher = s_builder.Build();
+        [Test]
+        public void When_Building_A_Dispatcher_With_Named_Gateway()
+        {
+            _dispatcher = _builder.Build();
 
-        private It _should_build_a_dispatcher = () => s_dispatcher.ShouldNotBeNull();
+            //_should_build_a_dispatcher
+            _dispatcher.ShouldNotBeNull();
+        }
     }
 }

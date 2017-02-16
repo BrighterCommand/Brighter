@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -33,38 +33,42 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Subject(typeof(MessagePump<>))]
-    public class When_An_Unacceptable_Message_Limit_Is_Reached : ContextSpecification
+    [TestFixture]
+    public class MessagePumpUnacceptableMessageLimitBreachedTests
     {
-        private static IAmAMessagePump s_messagePump;
-        private static FakeChannel s_channel;
-        private static SpyRequeueCommandProcessor s_commandProcessor;
+        private IAmAMessagePump _messagePump;
+        private FakeChannel _channel;
+        private SpyRequeueCommandProcessor _commandProcessor;
 
-        private Establish context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_commandProcessor = new SpyRequeueCommandProcessor();
-            s_channel = new FakeChannel();
+            _commandProcessor = new SpyRequeueCommandProcessor();
+            _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            s_messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3};
+            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3};
 
             var unacceptableMessage1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
             var unacceptableMessage2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
             var unacceptableMessage3 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
 
-            s_channel.Add(unacceptableMessage1);
-            s_channel.Add(unacceptableMessage2);
-            s_channel.Add(unacceptableMessage3);
-        };
+            _channel.Add(unacceptableMessage1);
+            _channel.Add(unacceptableMessage2);
+            _channel.Add(unacceptableMessage3);
+        }
 
-        private Because of = () =>
+        [Test]
+        public void When_An_Unacceptable_Message_Limit_Is_Reached()
         {
-            var task = Task.Factory.StartNew(() => s_messagePump.Run(), TaskCreationOptions.LongRunning);
+            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(1000).Wait();
 
             Task.WaitAll(new[] { task });
-        };
 
-        private It should_have_acknowledge_the_3_messages = () => s_channel.AcknowledgeCount.ShouldEqual(3);
-        private It should_dispose_the_input_channel = () => s_channel.DisposeHappened.ShouldBeTrue();
+            //should_have_acknowledge_the_3_messages
+            _channel.AcknowledgeCount.ShouldEqual(3);
+            //should_dispose_the_input_channel
+            _channel.DisposeHappened.ShouldBeTrue();
+        }
     }
 }

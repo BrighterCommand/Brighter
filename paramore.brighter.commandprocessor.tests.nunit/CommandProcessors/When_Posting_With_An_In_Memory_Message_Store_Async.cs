@@ -59,11 +59,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
             var retryPolicy = Policy
                 .Handle<Exception>()
-                .Retry();
+                .RetryAsync();
 
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),

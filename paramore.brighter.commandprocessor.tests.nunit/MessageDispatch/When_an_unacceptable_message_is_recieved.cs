@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -33,35 +33,39 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Subject(typeof(MessagePump<>))]
-    public class When_An_Unacceptable_Message_Is_Recieved : ContextSpecification
+    [TestFixture]
+    public class MessagePumpUnacceptableMessageTests
     {
-        private static IAmAMessagePump s_messagePump;
-        private static FakeChannel s_channel;
-        private static SpyRequeueCommandProcessor s_commandProcessor;
+        private IAmAMessagePump _messagePump;
+        private FakeChannel _channel;
+        private SpyRequeueCommandProcessor _commandProcessor;
 
-        private Establish context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_commandProcessor = new SpyRequeueCommandProcessor();
-            s_channel = new FakeChannel();
+            _commandProcessor = new SpyRequeueCommandProcessor();
+            _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            s_messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper) { Channel = s_channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
+            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
 
             var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
 
-            s_channel.Add(unacceptableMessage);
-        };
-        private Because of = () =>
+            _channel.Add(unacceptableMessage);
+        }
+
+        [SetUp]
+        public void When_An_Unacceptable_Message_Is_Recieved()
         {
-            var task = Task.Factory.StartNew(() => s_messagePump.Run(), TaskCreationOptions.LongRunning);
+            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(1000).Wait();
 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            s_channel.Add(quitMessage);
+            _channel.Add(quitMessage);
 
             Task.WaitAll(new[] { task });
-        };
 
-        private It should_acknowledge_the_message = () => s_channel.AcknowledgeHappened.ShouldBeTrue();
+            //should_acknowledge_the_message
+            _channel.AcknowledgeHappened.ShouldBeTrue();
+        }
     }
 }

@@ -24,9 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using NUnit.Specifications;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
@@ -34,35 +34,46 @@ using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    public class When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop : ContextSpecification
+    [TestFixture]
+    public class PerformerCanStopTests
     {
-        private static Performer s_performer;
-        private static SpyCommandProcessor s_commandProcessor;
-        private static FakeChannel s_channel;
-        private static Task s_performerTask;
+        private Performer _performer;
+        private SpyCommandProcessor _commandProcessor;
+        private FakeChannel _channel;
+        private Task _performerTask;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_commandProcessor = new SpyCommandProcessor();
-            s_channel = new FakeChannel();
+            _commandProcessor = new SpyCommandProcessor();
+            _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            var messagePump = new MessagePump<MyEvent>(s_commandProcessor, mapper);
-            messagePump.Channel = s_channel;
+            var messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper);
+            messagePump.Channel = _channel;
             messagePump.TimeoutInMilliseconds = 5000;
 
             var @event = new MyEvent();
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
-            s_channel.Add(message);
+            _channel.Add(message);
 
-            s_performer = new Performer(s_channel, messagePump);
-            s_performerTask = s_performer.Run();
-            s_performer.Stop();
-        };
+            _performer = new Performer(_channel, messagePump);
+            _performerTask = _performer.Run();
+            _performer.Stop();
+        }
 
-        private Because _of = () => s_performerTask.Wait();
-        private It _should_terminate_successfully = () => s_performerTask.IsCompleted.ShouldBeTrue();
-        private It _should_not_have_errored = () => s_performerTask.IsFaulted.ShouldBeFalse();
-        private It _should_not_show_as_cancelled = () => s_performerTask.IsCanceled.ShouldBeFalse();
-        private It _should_have_consumed_the_messages_in_the_channel = () => s_channel.Length.ShouldEqual(0);
+        [Test]
+        public void When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop()
+        {
+            _performerTask.Wait();
+
+            //_should_terminate_successfully
+            _performerTask.IsCompleted.ShouldBeTrue();
+            //_should_not_have_errored
+            _performerTask.IsFaulted.ShouldBeFalse();
+            //_should_not_show_as_cancelled
+            _performerTask.IsCanceled.ShouldBeFalse();
+            //_should_have_consumed_the_messages_in_the_channel
+            _channel.Length.ShouldEqual(0);
+        }
     }
 }
