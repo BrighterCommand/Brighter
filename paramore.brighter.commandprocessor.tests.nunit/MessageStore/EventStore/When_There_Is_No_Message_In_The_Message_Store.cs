@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-#if NET452
+#if NET46
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -32,7 +32,6 @@ using EventStore.ClientAPI.Embedded;
 using EventStore.Core;
 using EventStore.Core.Data;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.eventstore;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
@@ -41,28 +40,29 @@ using NUnit.Framework;
 
 namespace paramore.commandprocessor.tests.MessageStore.EventStore
 {
-    [Subject(typeof(EventStoreMessageStore))]
     [Category("EventStore")]
-    public class When_There_Is_No_Message_In_The_Message_Store : ContextSpecification
+    [TestFixture]
+    public class EventStoreEmptyTests
     {
-        private static IList<Message> s_messages;
-        private static Message s_message1;
-        private static Message s_message2;
+        private IList<Message> _messages;
+        private Message _message1;
+        private Message _message2;
         private const string StreamName = "stream-123";
-        private static ClusterVNode s_eventStoreNode;
-        private static IEventStoreConnection s_eventStore;
-        private static bool s_eventStoreNodeStarted;
-        private static bool s_eventStoreClientConnected;
-        private static EventStoreMessageStore s_eventStoreMessageStore;
+        private ClusterVNode _eventStoreNode;
+        private IEventStoreConnection _eventStore;
+        private bool _eventStoreNodeStarted;
+        private bool _eventStoreClientConnected;
+        private EventStoreMessageStore _eventStoreMessageStore;
         private const string EmptyStreamName = "empty-123";
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_eventStoreNodeStarted = false;
-            s_eventStoreClientConnected = false;
+            _eventStoreNodeStarted = false;
+            _eventStoreClientConnected = false;
 
             var noneIp = new IPEndPoint(IPAddress.None, 0);
-            s_eventStoreNode = EmbeddedVNodeBuilder
+            _eventStoreNode = EmbeddedVNodeBuilder
                 .AsSingleNode()
                 .RunInMemory()
                 .WithExternalTcpOn(noneIp)
@@ -70,33 +70,39 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
                 .WithExternalHttpOn(noneIp)
                 .WithInternalHttpOn(noneIp)
                 .Build();
-            s_eventStoreNode.NodeStatusChanged +=
-                (sender, e) => { if (e.NewVNodeState == VNodeState.Master) s_eventStoreNodeStarted = true; };
-            s_eventStoreNode.Start();
+            _eventStoreNode.NodeStatusChanged +=
+                (sender, e) => { if (e.NewVNodeState == VNodeState.Master) _eventStoreNodeStarted = true; };
+            _eventStoreNode.Start();
 
-            s_eventStore = EmbeddedEventStoreConnection.Create(s_eventStoreNode);
-            s_eventStore.Connected += (sender, e) => { s_eventStoreClientConnected = true; };
-            s_eventStore.ConnectAsync().Wait();
+            _eventStore = EmbeddedEventStoreConnection.Create(_eventStoreNode);
+            _eventStore.Connected += (sender, e) => { _eventStoreClientConnected = true; };
+            _eventStore.ConnectAsync().Wait();
 
-            s_eventStoreMessageStore = new EventStoreMessageStore(s_eventStore, new LogProvider.NoOpLogger());
+            _eventStoreMessageStore = new EventStoreMessageStore(_eventStore);
 
-            s_message1 = CreateMessage(0);
-            s_message2 = CreateMessage(1);
+            _message1 = CreateMessage(0);
+            _message2 = CreateMessage(1);
 
             EnsureEventStoreNodeHasStartedAndTheClientHasConnected();
-        };
+        }
 
-        private Cleanup _stop_event_store = () =>
+        [TearDown]
+        public void Cleanup()
         {
-            s_eventStore.Close();
-            s_eventStoreNode.Stop();
-        };
+            _eventStore.Close();
+            _eventStoreNode.Stop();
+        }
 
-        private Because _of = () => s_messages = s_eventStoreMessageStore.Get(EmptyStreamName, 0, 1);
+        [Test]
+        public void When_There_Is_No_Message_In_The_Message_Store()
+        {
+            _messages = _eventStoreMessageStore.Get(EmptyStreamName, 0, 1);
 
-        private It _returns_an_empty_list = () => s_messages.Count.ShouldEqual(0);
+            //_returns_an_empty_list
+            _messages.Count.ShouldEqual(0);
+        }
 
-        private static Message CreateMessage(int eventNumber)
+        private Message CreateMessage(int eventNumber)
         {
             var body = new MessageBody("{companyId:123}");
             var header = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
@@ -106,11 +112,11 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
             return new Message(header, body);
         }
 
-        private static void EnsureEventStoreNodeHasStartedAndTheClientHasConnected()
+        private void EnsureEventStoreNodeHasStartedAndTheClientHasConnected()
         {
             var timer = new Stopwatch();
             timer.Start();
-            while (!s_eventStoreNodeStarted || !s_eventStoreClientConnected)
+            while (!_eventStoreNodeStarted || !_eventStoreClientConnected)
             {
                 if (timer.ElapsedMilliseconds > 10000)
                 {
@@ -118,7 +124,6 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
                 }
             }
         }
-
 
     }
 }

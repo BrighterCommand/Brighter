@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 
-#if NET452
+#if NET46
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -42,9 +42,9 @@ using NUnit.Framework;
 
 namespace paramore.commandprocessor.tests.MessageStore.EventStore
 {
-    [Subject(typeof(EventStoreMessageStore))]
     [Category("EventStore")]
-    public class When_There_Is_No_Message_In_The_Message_Store_Async : ContextSpecification
+    [TestFixture]
+    public class EventStoreEmptyAsyncTests
     {
         private static IList<Message> s_messages;
         private const string StreamName = "stream-123";
@@ -55,7 +55,8 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
         private static EventStoreMessageStore s_eventStoreMessageStore;
         private const string EmptyStreamName = "empty-123";
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             s_eventStoreNodeStarted = false;
             s_eventStoreClientConnected = false;
@@ -77,22 +78,28 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
             s_eventStore.Connected += (sender, e) => { s_eventStoreClientConnected = true; };
             s_eventStore.ConnectAsync().Wait();
 
-            s_eventStoreMessageStore = new EventStoreMessageStore(s_eventStore, new LogProvider.NoOpLogger());
+            s_eventStoreMessageStore = new EventStoreMessageStore(s_eventStore);
 
             EnsureEventStoreNodeHasStartedAndTheClientHasConnected();
-        };
+        }
 
-        private Cleanup _stop_event_store = () =>
+        [TearDown]
+        public void Cleanup()
         {
             s_eventStore.Close();
             s_eventStoreNode.Stop();
-        };
+        }
 
-        private Because _of = () => AsyncContext.Run(async () => s_messages = await s_eventStoreMessageStore.GetAsync(EmptyStreamName, 0, 1));
+        [Test]
+        public void When_There_Is_No_Message_In_The_Message_Store()
+        {
+            AsyncContext.Run(async () => s_messages = await s_eventStoreMessageStore.GetAsync(EmptyStreamName, 0, 1));
 
-        private It _returns_an_empty_list = () => s_messages.Count.ShouldEqual(0);
+            //_returns_an_empty_list
+            s_messages.Count.ShouldEqual(0);
+        }
 
-        private static void EnsureEventStoreNodeHasStartedAndTheClientHasConnected()
+        private void EnsureEventStoreNodeHasStartedAndTheClientHasConnected()
         {
             var timer = new Stopwatch();
             timer.Start();
@@ -104,8 +111,6 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
                 }
             }
         }
-
-
     }
 }
 #endif
