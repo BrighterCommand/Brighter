@@ -4,7 +4,7 @@
 
 |               |               |
 | ------------- | ------------- |
-|![canon] (https://openclipart.org/people/amilo/canon.svg)|Brighter is a command dispatcher, processor, and task queue. It can be used to implement the [Command Invoker] (http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker) pattern |
+|![canon] (https://openclipart.org/people/amilo/canon.svg)|Brighter is a command dispatcher, processor, and task queue. It can be used to implement the [Command Invoker] (http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker) pattern. It can be used for interoperability in a microservices architecture as well. |
 | Version  | [![NuGet Version](http://img.shields.io/nuget/v/paramore.brighter.commandprocessor.svg)](https://www.nuget.org/packages/paramore.brighter.commandprocessor/)  |
 | Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.commandprocessor.svg)](https://www.nuget.org/packages/Paramore.Brighter.CommandProcessor/) |
 | Web  |http://brightercommand.github.io/Paramore.Brighter/  |
