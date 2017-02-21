@@ -16,11 +16,11 @@
     <header>
         <h1>Paramore</h1>
         <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
-        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <p class="view"><a href="https://github.com/BrighterCommand/Paramore.Brighter">View the Project on GitHub <small>BrighterCommand/Paramore.Brighter</small></a></p>
         <ul>
-            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
-            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
-            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter">View On <strong>GitHub</strong></a></li>
         </ul>
         <p><a href="../index.html">Paramore Home</a></p>
         <p><a href="Brighter.html">Brighter Home</a></p>
@@ -76,7 +76,7 @@
             message to the Broker cluster and rely on the Broker to deliver it, eventually.</p>
         <p>Without a Broker, using a point-ot-point solution we have to provide a lot of this infrastructure ourselves, such as routing and distribution and how to do so in a way that is HA.</p>
         <p>For this reason we don't support a point-to-point approach like MSMQ or sending directly to a service via HTTP.</p>
-        <p> (We do have an experimental implementation of an <a href="https://github.com/iancooper/Paramore/tree/master/Renegade">HTTP-based broker</a> using the RESTMS specification but it is not
+        <p> (We do have an experimental implementation of an <a href="https://github.com/BrighterCommand/Paramore.Brighter/tree/master/Renegade">HTTP-based broker</a> using the RESTMS specification but it is not
             production-grade, and only in-memory as of today).</p>
         <h2>What happens when the consumer receives the message?</h2>
         <p>A consumer reads the <strong>Message</strong> using the <a href="http://www.enterpriseintegrationpatterns.com/MessagingAdapter.html">Service Activator</a> pattern to map between an
@@ -120,7 +120,7 @@ public class TaskReminderCommandMessageMapper : IAmAMessageMapper&lt;TaskReminde
         <p>One option is to use a <em>Core</em> assembly that contains your domain model, handlers, message mappers etc. and then pull that assembly into endpoints that consume such as services and
             web endpoints. This makes it easy to move between in-process and out-of-process versions of the handler. It also means you don't end up writing two versions of the mapper
             one on the consumer side and one on the sender side.</p>
-        <p>The <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples">Tasks Example</a> uses this strategy.</p>
+        <p>The <a href="https://github.com/BrighterCommand/Paramore.Brighter/tree/master/Brighter/Examples">Tasks Example</a> uses this strategy.</p>
         <p> This model only works if your library is shared between components that operate on the same bounded context i.e. Continuous Integration that are released together.
             Never share such an assembly between projects that should be released autonomously as it is a shared dependency. In that case you **must** implement the mapper
             on both sides.</p>

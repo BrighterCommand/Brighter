@@ -16,11 +16,11 @@
     <header>
         <h1>Paramore</h1>
         <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
-        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <p class="view"><a href="https://github.com/BrighterCommand/Paramore.Brighter">View the Project on GitHub <small>BrighterCommand/Paramore.Brighter</small></a></p>
         <ul>
-            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
-            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
-            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter">View On <strong>GitHub</strong></a></li>
         </ul>
         <p><a href="../index.html">Paramore Home</a></p>
         <p><a href="Brighter.html">Brighter Home</a></p>
@@ -52,11 +52,11 @@
         that could have side affects. We don't explicitly provide help for that approach.</p>
         <p>For clarity we will use the term Command Sourcing for Brighter's support for Martin Fowler's description of  <a href="http://martinfowler.com/eaaDev/EventSourcing.html">Event Sourcing</a> </p>
         <h2>Command Sourcing in Brighter</h2>
-        <p>The <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples/EventSourcing">EventSourcing</a> example in Brighter shows a version of the simple
+        <p>The <a href="https://github.com/BrighterCommand/Paramore.Brighter/tree/master/Brighter/Examples/EventSourcing">EventSourcing</a> example in Brighter shows a version of the simple
             <a href="HelloWorldExample.html">HelloWorld</a> application that shows how to use Command Sourcing.</p>
         <p>Brighter supports Command Sourcing through the use of its <strong>UseCommandSourcingAttribute</strong>. By adding the attribute to a handler you gain support for logging that <strong>Command</strong> to a
         <strong>Command Store</strong> A Command Store needs to implement <strong>IAmACommandStore</strong> and we provide an
-            <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/paramore.brighter.commandprocessor.commandstore.mssql">MSSQL Command Store</a> implementation. You can choose to persist the Command to
+            <a href="https://github.com/BrighterCommand/Paramore.Brighter/tree/master/Brighter/paramore.brighter.commandprocessor.commandstore.mssql">MSSQL Command Store</a> implementation. You can choose to persist the Command to
         the Store before or after the handler. We recommend Before as this gives you the assurance that if writing the Command to the Store fails, the Handler will not run, meaning that your Store reflects your
         application state.</p>
         <p>The following code shows a handler marked up for Command Sourcing</p>
@@ -71,7 +71,7 @@
     }
  }
  </code></pre>
-        <p>Inerrnally the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/monitoring/Handlers/MonitorHandler.cs">Monitor Handler</a> that Brighter
+        <p>Inerrnally the <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/paramore.brighter.commandprocessor/monitoring/Handlers/MonitorHandler.cs">Monitor Handler</a> that Brighter
             uses to write to the Command Store takes a reference to an <strong>IAmACommandStore</strong>, so you also need to configure your application to provide an implementation at runtime when you
         provide instances of the Handler from your Handler Factory implementation. The example code relies on the TinyIoC Inversion of Control container to hookup the Handler and Command Store.</p>
 <pre><code>

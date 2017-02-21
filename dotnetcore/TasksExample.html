@@ -16,11 +16,11 @@
     <header>
         <h1>Paramore</h1>
         <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
-        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <p class="view"><a href="https://github.com/BrighterCommand/Paramore.Brighter">View the Project on GitHub <small>BrighterCommand/Paramore.Brighter</small></a></p>
         <ul>
-            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
-            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
-            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter">View On <strong>GitHub</strong></a></li>
         </ul>
         <p><a href="../index.html">Paramore Home</a></p>
         <p><a href="Brighter.html">Brighter Home</a></p>
@@ -30,18 +30,18 @@
     <section>
         <h2>Tutorial</h2>
         <p>This tutorial takes you through buiding the TaskList project, which is ToDo MVC and Reminder Mail Service via a Task Queue. The application will manage a user's todo list, and sends notifications about imminent or overdue tasks.
-            The walkthrough will build the examples available in the <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples">Examples folder of Brighter available in the public repo</a> if you want to follow along there.</p>
+            The walkthrough will build the examples available in the <a href="https://github.com/BrighterCommand/Paramore.Brighter/tree/master/Brighter/Examples">Examples folder of Brighter available in the public repo</a> if you want to follow along there.</p>
         <p>Note that you will need to have <a href="https://www.rabbitmq.com/download.html">RabbitMQ</a> installed to step through this example as a tutorial.</p>
 
         <h3>Design Overview</h3>                
         <p>Tasks is intended to give a slightly fuller example of the use of Brighter to support a Web UI with supporting API and Application Service. Whilst we show snippets of code here, you will either want to clone Paramore from GitHub to follow along, or
-            <a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples">browse the code</a> on the web.</p>
+            <a href="https://github.com/BrighterCommand/Paramore.Brighter/tree/master/Brighter/Examples">browse the code</a> on the web.</p>
         <p>The separate components are:</p>
         <ul>
-            <li><a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples/TaskListUI" target="_blank">Tasklist UI</a>: An ASP.NET MVC UI SPA for the Tasklist API - least interesting from a Brighter perspective</li>
-            <li><a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples/TaskList" target="_blank">Tasklist</a>: An HTTP API for tasks. Hosted in OpenRasta, uses <strong>Paramore.Brighter.CommandProcessor</strong></li>
-            <li><a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples/TaskMailer" target="_blank">TaskMailer</a>: As service that notifies task owners of upcoming or overdue tasks, uses <strong>Paramore.Brighter.ServiceActivator</strong></li>
-            <li><a href="https://github.com/iancooper/Paramore/tree/master/Brighter/Examples/Tasks" target="_blank">Tasks</a>: A core library that models Tasks used by both Tasklist and TaskMailer</li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/tree/master/Brighter/Examples/TaskListUI" target="_blank">Tasklist UI</a>: An ASP.NET MVC UI SPA for the Tasklist API - least interesting from a Brighter perspective</li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/tree/master/Brighter/Examples/TaskList" target="_blank">Tasklist</a>: An HTTP API for tasks. Hosted in OpenRasta, uses <strong>Paramore.Brighter.CommandProcessor</strong></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/tree/master/Brighter/Examples/TaskMailer" target="_blank">TaskMailer</a>: As service that notifies task owners of upcoming or overdue tasks, uses <strong>Paramore.Brighter.ServiceActivator</strong></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/tree/master/Brighter/Examples/Tasks" target="_blank">Tasks</a>: A core library that models Tasks used by both Tasklist and TaskMailer</li>
         </ul>
         <p>In a production SOA application we would consider all of these components to be part of the Tasks SOA and would be happy for these Autonomous Components within that  to
             share a model, as we are not crossing an SOA boundary. If we were to cross an SOA boundary we would not share the core library as we do here. </p>
@@ -70,7 +70,7 @@
         </ul>    
         <p>Hosted within iisExpress, uses MVC API to host SPA website written using jQuery, mustache and bootstrap</p>
         <h4>Where does Brighter fit in?</h4>
-        <p>The UI acts as a dumb client to the Tasklist service. As such the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskListUI/app/app.js">app.js</a> file that contains the core logic issues GETs/POSTs that are processed by the TaskList API.</p>
+        <p>The UI acts as a dumb client to the Tasklist service. As such the <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/TaskListUI/app/app.js">app.js</a> file that contains the core logic issues GETs/POSTs that are processed by the TaskList API.</p>
         
         <h3>Tasklist (API)</h3>
         <p>Tasklist uses a Ports and Adapters architecture and the structure of the assembly surfaces that architectural style.</p>
@@ -128,9 +128,9 @@
             </tbody>
         </table>
         <h4>Where does Brighter fit in?</h4>
-<p>Once <a href="http://openrasta.org/">OpenRasta</a> unpacks the Request (in <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskList/Adapters/API/Handlers/TaskEndPointHandler.cs">TaskEndPointHandler</a> and <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskList/Adapters/API/Handlers/TaskReminderEndpointHandler.cs">TaskReminderEndpointHandler</a>) the relevant Port is invoked.</p>
-<p>On the Read-side this is a View Model retriever, and in TaskList this derives from <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskList/Ports/ViewModelRetrievers/SimpleDataRetriever.cs">SimpleDataRetriever</a>.</p>
-<p>The Write-side will invoke a Handler in Tasklist that maps to IHandle&lt;TaskReminderCommand&gt; or IHandle&lt;TaskReminderCommand&gt;. These handlers can be found in Tasks <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/Tasks/Ports/MailTaskReminderHandler.cs">MailTaskReminderHandler</a> and <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/Tasks/Ports/Handlers/AddTaskCommandHandler.cs">AddTaskCommandHandler</a>.</p>
+<p>Once <a href="http://openrasta.org/">OpenRasta</a> unpacks the Request (in <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/TaskList/Adapters/API/Handlers/TaskEndPointHandler.cs">TaskEndPointHandler</a> and <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/TaskList/Adapters/API/Handlers/TaskReminderEndpointHandler.cs">TaskReminderEndpointHandler</a>) the relevant Port is invoked.</p>
+<p>On the Read-side this is a View Model retriever, and in TaskList this derives from <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/TaskList/Ports/ViewModelRetrievers/SimpleDataRetriever.cs">SimpleDataRetriever</a>.</p>
+<p>The Write-side will invoke a Handler in Tasklist that maps to IHandle&lt;TaskReminderCommand&gt; or IHandle&lt;TaskReminderCommand&gt;. These handlers can be found in Tasks <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/Tasks/Ports/MailTaskReminderHandler.cs">MailTaskReminderHandler</a> and <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/Tasks/Ports/Handlers/AddTaskCommandHandler.cs">AddTaskCommandHandler</a>.</p>
 
         <h3>TaskMailer</h3>
         <p>A separate service responsible for sending emails using Azure SendGrid</p>
@@ -156,7 +156,7 @@
             </tbody>
         </table>
         <h4>Where does Brighter fit in?</h4>
-        <p>A standalone service that implements Brighter's Service Activator. This allows <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskMailer/Adapters/ServiceHost/TaskMailerService.cs">mapping of closures to commands (via IoC), specifying Policy and building Dispatcher and CommandProcessor</a>.</p>
+        <p>A standalone service that implements Brighter's Service Activator. This allows <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/TaskMailer/Adapters/ServiceHost/TaskMailerService.cs">mapping of closures to commands (via IoC), specifying Policy and building Dispatcher and CommandProcessor</a>.</p>
 <p>The TaskMailService class achieves all of this in &lt; 100 lines, thanks to <a href="https://www.nuget.org/packages/paramore.brighter.serviceactivator/">Paramore.Brighter.ServiceActivator</a></p>
 
         <h3>Tasks</h3>
@@ -189,7 +189,7 @@
 </code></pre>
     </p>
         <h3>TaskList API</h3>
-        <p>Once received, an OpenRasta translates the GET and invokes the configured handler, <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskList/Adapters/API/Handlers/TaskEndPointHandler.cs">TaskEndPointHandler</a>.</p>
+        <p>Once received, an OpenRasta translates the GET and invokes the configured handler, <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/TaskList/Adapters/API/Handlers/TaskEndPointHandler.cs">TaskEndPointHandler</a>.</p>
         <pre><code>[HttpOperation(HttpMethod.GET)]
 public OperationResult Get()
 {
@@ -198,7 +198,7 @@ public OperationResult Get()
 }
 </code></pre>
 
-        <p>Our read-side is simple, with no adaptor needed (as no input is passed over HTTP). Therefore we can simply invoke the read-side Port, the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskList/Ports/ViewModelRetrievers/TaskListRetriever.cs">TaskList View Model Retriever</a>:</p>
+        <p>Our read-side is simple, with no adaptor needed (as no input is passed over HTTP). Therefore we can simply invoke the read-side Port, the <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/TaskList/Ports/ViewModelRetrievers/TaskListRetriever.cs">TaskList View Model Retriever</a>:</p>
 
         <h4>TaskList View Model Retriever</h4>
         <pre><code>public dynamic RetrieveTasks()
@@ -235,7 +235,7 @@ public OperationResult Get()
 </code></pre>
 </p>
         <h3>TaskList API</h3>
-        <p>Again OpenRasta translates the POST and invokes the configured handler, <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskList/Adapters/API/Handlers/TaskEndPointHandler.cs">TaskEndPointHandler</a>.</p>
+        <p>Again OpenRasta translates the POST and invokes the configured handler, <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/TaskList/Adapters/API/Handlers/TaskEndPointHandler.cs">TaskEndPointHandler</a>.</p>
         <p>Our write-side is more involved. The received data is transformed into a Command that can be understood by the core domain (AddTaskCommand. The command is then posted to the CommandProcessor to locate the approptiate handler:</p>
             <pre><code>[HttpOperation(HttpMethod.POST)]
 public OperationResult Post(TaskModel newTask)
@@ -254,7 +254,7 @@ public OperationResult Post(TaskModel newTask)
     };
 }
 </code></pre>
-        <p>The relevant handler (<a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/Tasks/Ports/Handlers/AddTaskCommandHandler.cs">AddTaskCommandHandler</a>) will handle the command (as it was configured to handle AddTaskCommand in the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskList/Adapters/API/Configuration/DependencyRegistrar.cs">TaskList dependency registrar</a>.</p>
+        <p>The relevant handler (<a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/Tasks/Ports/Handlers/AddTaskCommandHandler.cs">AddTaskCommandHandler</a>) will handle the command (as it was configured to handle AddTaskCommand in the <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/TaskList/Adapters/API/Configuration/DependencyRegistrar.cs">TaskList dependency registrar</a>.</p>
         <p>The handler is very simple - simpyl adding the given state using the TasksDao:</p>
         <pre><code>[RequestLogging(step: 1, timing: HandlerTiming.Before)]
 [Validation(step: 2, timing: HandlerTiming.Before)]
@@ -304,7 +304,7 @@ public override AddTaskCommand Handle(AddTaskCommand addTaskCommand)
 </code></pre>
 
         <h3>TaskList API</h3>
-        <p>OpenRasta translates the DELETE and invokes the configured handler, <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskList/Adapters/API/Handlers/TaskReminderEndPointHandler.cs">TaskReminderEndPointHandler</a>.</p>
+        <p>OpenRasta translates the DELETE and invokes the configured handler, <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/TaskList/Adapters/API/Handlers/TaskReminderEndPointHandler.cs">TaskReminderEndPointHandler</a>.</p>
         <p>The received data is transformed into a Command that can be understood by the core domain (TaskReminderCommand). The command is then posted tp the CommandProcessor to locate the approptiate handler.</p>
             <pre><code>[HttpOperation(HttpMethod.POST)]
 public OperationResult Post(TaskReminderModel reminder)
@@ -320,7 +320,7 @@ public OperationResult Post(TaskReminderModel reminder)
     return new OperationResult.OK(){StatusCode = (int)HttpStatusCode.Accepted};
 }
 </code></pre>
-        <p>The relevant handler (<a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/Tasks/Ports/MailTaskReminderHandler.cs">MailTaskReminderHandler</a>) will pick up the command (as it was configured to handle TaskReminderCommand in the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/Examples/TaskMailer/Adapters/ServiceHost/TaskMailerService.cs">TaskMailerService (that handles it's own dependency registration)</a>.</p>
+        <p>The relevant handler (<a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/Tasks/Ports/MailTaskReminderHandler.cs">MailTaskReminderHandler</a>) will pick up the command (as it was configured to handle TaskReminderCommand in the <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/Examples/TaskMailer/Adapters/ServiceHost/TaskMailerService.cs">TaskMailerService (that handles it's own dependency registration)</a>.</p>
         <p>The handler is very simple - it invokes the MailGateway to send the email:</p>
         <pre><code>
 [RequestLogging(step: 1, timing: HandlerTiming.Before)]

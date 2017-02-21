@@ -16,11 +16,11 @@
     <header>
         <h1>Paramore</h1>
         <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
-        <p class="view"><a href="https://github.com/iancooper/Paramore">View the Project on GitHub <small>iancooper/Paramore</small></a></p>
+        <p class="view"><a href="https://github.com/BrighterCommand/Paramore.Brighter">View the Project on GitHub <small>BrighterCommand/Paramore.Brighter</small></a></p>
         <ul>
-            <li><a href="https://github.com/iancooper/Paramore/zipball/master">Download <strong>ZIP File</strong></a></li>
-            <li><a href="https://github.com/iancooper/Paramore/tarball/master">Download <strong>TAR Ball</strong></a></li>
-            <li><a href="https://github.com/iancooper/Paramore">View On <strong>GitHub</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Paramore.Brighter">View On <strong>GitHub</strong></a></li>
         </ul>
         <p><a href="../index.html">Paramore Home</a></p>
         <p><a href="Brighter.html">Brighter Home</a></p>
@@ -45,8 +45,8 @@
         <p>The limitation here is that you can only make assumptions about the type you receive into the  pipeline from
             the constraints on the generic type.
         </p>
-        <p>Although it is possible to implement the <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/IHandleRequestsAsync.cs">IHandleRequestsAsync</a>
-            interface directly, we recommend deriving your handler from <a href="https://github.com/iancooper/Paramore/blob/master/Brighter/paramore.brighter.commandprocessor/RequestHandlerAsync.cs">RequestHandlerAsync&lt;T&gt;</a>.
+        <p>Although it is possible to implement the <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/paramore.brighter.commandprocessor/IHandleRequestsAsync.cs">IHandleRequestsAsync</a>
+            interface directly, we recommend deriving your handler from <a href="https://github.com/BrighterCommand/Paramore.Brighter/blob/master/Brighter/paramore.brighter.commandprocessor/RequestHandlerAsync.cs">RequestHandlerAsync&lt;T&gt;</a>.
         </p>
         <p>Let us assume that we want to log all requests travelling through the pipeline. (We provide this for you in
             the Paramore.Brighter.CommandProcessor packages so this for illustration only). We could
