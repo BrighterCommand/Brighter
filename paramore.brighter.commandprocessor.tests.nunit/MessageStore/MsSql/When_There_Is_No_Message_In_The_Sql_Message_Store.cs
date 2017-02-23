@@ -32,31 +32,40 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
     [Category("MSSQL")]
-    [Subject(typeof(MsSqlMessageStore))]
-    public class When_There_Is_No_Message_In_The_Sql_Message_Store : ContextSpecification
+    [TestFixture]
+    public class MsSqlMessageStoreEmptyStoreTests
     {
-        private static MsSqlTestHelper _msSqlTestHelper;
-        private static Message s_messageEarliest;
-        private static MsSqlMessageStore s_sqlMessageStore;
-        private static Message s_storedMessage;
+        private MsSqlTestHelper _msSqlTestHelper;
+        private Message _messageEarliest;
+        private MsSqlMessageStore _sqlMessageStore;
+        private Message _storedMessage;
 
-        private Cleanup _cleanup = () => CleanUpDb();
-
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
-            s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
-                new MessageBody("message body"));
-        };
+            _sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+        }
 
-        private Because _of = () => { s_storedMessage = s_sqlMessageStore.Get(s_messageEarliest.Id); };
+        [Test]
+        public void When_There_Is_No_Message_In_The_Sql_Message_Store()
+        {
+            _storedMessage = _sqlMessageStore.Get(_messageEarliest.Id);
 
-        private It _should_return_a_empty_message = () => s_storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+            //_should_return_a_empty_message
+            _storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+        }
 
-        private static void CleanUpDb()
+        [TearDown]
+        public void Cleanup()
+        {
+            CleanUpDb();
+        }
+
+        private void CleanUpDb()
         {
             _msSqlTestHelper.CleanUpDb();
         }

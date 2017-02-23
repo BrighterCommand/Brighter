@@ -32,31 +32,42 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
     [Category("MSSQL")]
-    [Subject(typeof(MsSqlMessageStore))]
-    public class When_The_Message_Is_Already_In_The_Message_Store : ContextSpecification
+    [TestFixture]
+    public class MsSqlMessageStoreMessageAlreadyExistsTests
     {
-        private static Exception s_exception;
-        private static Message s_messageEarliest;
-        private static MsSqlMessageStore s_sqlMessageStore;
-        private static MsSqlTestHelper _msSqlTestHelper;
+        private Exception _exception;
+        private Message _messageEarliest;
+        private MsSqlMessageStore _sqlMessageStore;
+        private MsSqlTestHelper _msSqlTestHelper;
 
-        private Cleanup _cleanup = () => CleanUpDb();
-
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
-            s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
+            _sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
-            s_sqlMessageStore.Add(s_messageEarliest);
-        };
+            _sqlMessageStore.Add(_messageEarliest);
+        }
 
-        private Because _of = () => { s_exception = Catch.Exception(() => s_sqlMessageStore.Add(s_messageEarliest)); };
-        private It _should_ignore_the_duplcate_key_and_still_succeed = () => { s_exception.ShouldBeNull(); };
+        [Test]
+        public void When_The_Message_Is_Already_In_The_Message_Store()
+        {
+            _exception = Catch.Exception(() => _sqlMessageStore.Add(_messageEarliest));
 
-        private static void CleanUpDb()
+            //_should_ignore_the_duplcate_key_and_still_succeed
+            _exception.ShouldBeNull(); ;
+        }
+
+        [TearDown]
+        public void Cleanup()
+        {
+            CleanUpDb();
+        }
+
+        private void CleanUpDb()
         {
             _msSqlTestHelper.CleanUpDb();
         }

@@ -28,46 +28,54 @@ using System.Collections.Generic;
 using System.Linq;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 {
-    [Subject(typeof(SqliteMessageStore))]
-    public class When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched_Async : ContextSpecification
+    [TestFixture]
+    public class SqliteMessageStoreRangeRequestAsyncTests
     {
-        private static SqliteTestHelper _sqliteTestHelper;
-        private static SqliteMessageStore _sSqlMessageStore;
-        private static readonly string _TopicFirstMessage = "test_topic";
-        private static readonly string _TopicLastMessage = "test_topic3";
-        private static IEnumerable<Message> messages;
-        private static Message s_message1;
-        private static Message s_message2;
-        private static Message s_messageEarliest;
+        private SqliteTestHelper _sqliteTestHelper;
+        private SqliteMessageStore _sqlMessageStore;
+        private readonly string _TopicFirstMessage = "test_topic";
+        private readonly string _TopicLastMessage = "test_topic3";
+        private IEnumerable<Message> messages;
+        private Message _message1;
+        private Message _message2;
+        private Message _messageEarliest;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
-            s_messageEarliest =
-                new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT),
-                    new MessageBody("message body"));
-            s_message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT),
-                new MessageBody("message body2"));
-            s_message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT),
-                new MessageBody("message body3"));
-            AsyncContext.Run( async () => await _sSqlMessageStore.AddAsync(s_messageEarliest));
-            AsyncContext.Run( async () => await _sSqlMessageStore.AddAsync(s_message1));
-            AsyncContext.Run( async () => await _sSqlMessageStore.AddAsync(s_message2));
-        };
+            _sqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
+            _message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
+            AsyncContext.Run( async () => await _sqlMessageStore.AddAsync(_messageEarliest));
+            AsyncContext.Run( async () => await _sqlMessageStore.AddAsync(_message1));
+            AsyncContext.Run( async () => await _sqlMessageStore.AddAsync(_message2));
+        }
 
-        private Because _of = () =>  AsyncContext.Run(async () => messages = await _sSqlMessageStore.GetAsync(1, 3)); 
+        [Test]
+        public void When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched_Async()
+        {
+            AsyncContext.Run(async () => messages = await _sqlMessageStore.GetAsync(1, 3));
 
-        private It _should_fetch_1_message = () => messages.Count().ShouldEqual(1);
-        private It _should_fetch_expected_message = () => messages.First().Header.Topic.ShouldEqual(_TopicLastMessage);
-        private It _should_not_fetch_null_messages = () => messages.ShouldNotBeNull();
+            //_should_fetch_1_message
+            messages.Count().ShouldEqual(1);
+            //_should_fetch_expected_message
+            messages.First().Header.Topic.ShouldEqual(_TopicLastMessage);
+            //_should_not_fetch_null_messages
+            messages.ShouldNotBeNull();
+        }
 
-        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
+        [TearDown]
+        public void Cleanup()
+        {
+            _sqliteTestHelper.CleanUpDb();
+        }
     }
 }

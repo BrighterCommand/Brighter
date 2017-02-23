@@ -25,26 +25,32 @@ THE SOFTWARE. */
 
 using System;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.NoOpStore
 {
-    [Subject(typeof(NoOpMessageStore))]
-    public class When_writing_to_noopstore : ContextSpecification
+    [TestFixture]
+    public class NoOpMessageStoreWriteTests
     {
-        private static Message s_messageEarliest;
-        private static NoOpMessageStore s_noOpStore;
-        private static Exception s_exception;
+        private Message _messageEarliest;
+        private NoOpMessageStore _noOpStore;
+        private Exception _exception;
 
-        private Establish _context = () =>
+        public void Establish()
         {
-            s_noOpStore = new NoOpMessageStore();
-            s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            s_noOpStore.Add(s_messageEarliest);
-        };
+            _noOpStore = new NoOpMessageStore();
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _noOpStore.Add(_messageEarliest);
+        }
 
-        private Because _of = () => { s_exception = Catch.Exception(() => s_noOpStore.Add(s_messageEarliest)); };
+        [Test]
+        public void When_writing_to_noopstore()
+        {
+            _exception = Catch.Exception(() => _noOpStore.Add(_messageEarliest));
 
-        private It _should_not_cause_exception = () => s_exception.ShouldBeNull();
+            //_should_not_cause_exception
+            _exception.ShouldBeNull();
+        }
     }
 }

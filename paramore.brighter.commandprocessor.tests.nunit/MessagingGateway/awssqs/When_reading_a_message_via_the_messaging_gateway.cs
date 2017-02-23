@@ -8,43 +8,58 @@ using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     [Category("AWS")]
-    public class When_reading_a_message_via_the_messaging_gateway : ContextSpecification
+    [TestFixture]
+    public class SqsMessageConsumerReceiveTests
     {
-        private static TestAWSQueueListener testQueueListener;
-        private static IAmAMessageProducer sender;
-        private static IAmAMessageConsumer receiver;
-        private static Message sentMessage;
-        private static Message receivedMessage;
-        private static string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
+        private TestAWSQueueListener _testQueueListener;
+        private IAmAMessageProducer _sender;
+        private IAmAMessageConsumer _receiver;
+        private Message _sentMessage;
+        private Message _receivedMessage;
+        private string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
 
-        Establish context = () =>
+        [SetUp]
+        public void Establish ()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+            _sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
             var credentials = new AnonymousAWSCredentials();
-            sender = new SqsMessageProducer(credentials);
-            receiver = new SqsMessageConsumer(credentials, queueUrl);
-            testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
-        };
+            _sender = new SqsMessageProducer(credentials);
+            _receiver = new SqsMessageConsumer(credentials, queueUrl);
+            _testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
+        }
 
-        Because of = () =>
+        [Test]
+        public void When_reading_a_message_via_the_messaging_gateway()
         {
-            sender.Send(sentMessage);
-            receivedMessage = receiver.Receive(2000);
-            receiver.Acknowledge(receivedMessage);
-        };
+            _sender.Send(_sentMessage);
+            _receivedMessage = _receiver.Receive(2000);
+            _receiver.Acknowledge(_receivedMessage);
 
-        It should_send_a_message_via_sqs_with_the_matching_body = () => receivedMessage.Body.ShouldEqual(sentMessage.Body);
-        It should_send_a_message_via_sqs_with_the_matching_header_handled_count = () => receivedMessage.Header.HandledCount.ShouldEqual(sentMessage.Header.HandledCount);
-        It should_send_a_message_via_sqs_with_the_matching_header_id = () => receivedMessage.Header.Id.ShouldEqual(sentMessage.Header.Id);
-        It should_send_a_message_via_sqs_with_the_matching_header_message_type = () => receivedMessage.Header.MessageType.ShouldEqual(sentMessage.Header.MessageType);
-        It should_send_a_message_via_sqs_with_the_matching_header_time_stamp = () => receivedMessage.Header.TimeStamp.ShouldEqual(sentMessage.Header.TimeStamp);
-        It should_send_a_message_via_sqs_with_the_matching_header_topic = () => receivedMessage.Header.Topic.ShouldEqual(sentMessage.Header.Topic);
-        It should_remove_the_message_from_the_queue = () => testQueueListener.Listen().ShouldBeNull();
 
-        Cleanup the_queue = () => testQueueListener.DeleteMessage(receivedMessage.Header.Bag["ReceiptHandle"].ToString());
+            //should_send_a_message_via_sqs_with_the_matching_body
+            _receivedMessage.Body.ShouldEqual(_sentMessage.Body);
+            //should_send_a_message_via_sqs_with_the_matching_header_handled_count
+            _receivedMessage.Header.HandledCount.ShouldEqual(_sentMessage.Header.HandledCount);
+            //should_send_a_message_via_sqs_with_the_matching_header_id
+            _receivedMessage.Header.Id.ShouldEqual(_sentMessage.Header.Id);
+            //should_send_a_message_via_sqs_with_the_matching_header_message_type
+            _receivedMessage.Header.MessageType.ShouldEqual(_sentMessage.Header.MessageType);
+            //should_send_a_message_via_sqs_with_the_matching_header_time_stamp
+            _receivedMessage.Header.TimeStamp.ShouldEqual(_sentMessage.Header.TimeStamp);
+            //should_send_a_message_via_sqs_with_the_matching_header_topic
+            _receivedMessage.Header.Topic.ShouldEqual(_sentMessage.Header.Topic);
+            //should_remove_the_message_from_the_queue
+            _testQueueListener.Listen().ShouldBeNull();
+        }
+
+        [TearDown]
+        public void Cleanup()
+        {
+            _testQueueListener.DeleteMessage(_receivedMessage.Header.Bag["ReceiptHandle"].ToString());
+        }
     }
 }

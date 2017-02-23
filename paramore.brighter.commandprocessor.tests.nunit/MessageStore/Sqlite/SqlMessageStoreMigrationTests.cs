@@ -27,29 +27,30 @@ using System.Linq;
 using Microsoft.Data.Sqlite;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 {
-    public class when_writing_a_message_with_minimal_header_information_to_the_message_store : ContextSpecification
+    public class SQlMessageStoreMigrationTests
     {
-        private static SqliteMessageStore s_sqlMessageStore;
-        private static Message s_message;
-        private static Message s_storedMessage;
-        private static SqliteTestHelper _sqliteTestHelper;
+        private SqliteMessageStore _sqlMessageStore;
+        private Message _message;
+        private Message _storedMessage;
+        private SqliteTestHelper _sqliteTestHelper;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            s_sqlMessageStore  = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlMessageStore  = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
 
-            s_message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            AddHistoricMessage(s_message);
-        };
+            _message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            AddHistoricMessage(_message);
+        }
 
-        private static void AddHistoricMessage(Message message)
+        private void AddHistoricMessage(Message message)
         {
             var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)", _sqliteTestHelper.TableName_Messages);
             var parameters = new[]
@@ -77,14 +78,27 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
             }
         }
 
-        private Because _of = () => s_storedMessage = s_sqlMessageStore.Get(s_message.Id);
+        [Test]
+        public void When_writing_a_message_with_minimal_header_information_to_the_message_store()
+        {
+            _storedMessage = _sqlMessageStore.Get(_message.Id);
 
-        private It _should_read_the_message_from_the__sql_message_store = () => s_storedMessage.Body.Value.ShouldEqual(s_message.Body.Value);
-        private It _should_read_the_message_header_type_from_the__sql_message_store = () => s_storedMessage.Header.MessageType.ShouldEqual(s_message.Header.MessageType);
-        private It _should_read_the_message_header_topic_from_the__sql_message_store = () => s_storedMessage.Header.Topic.ShouldEqual(s_message.Header.Topic);
-        private It _should_default_the_timestamp_from_the__sql_message_store = () => s_storedMessage.Header.TimeStamp.ShouldBeGreaterThanOrEqualTo(s_message.Header.TimeStamp); //DateTime set in ctor on way out
-        private It _should_read_empty_header_bag_from_the__sql_message_store = () => s_storedMessage.Header.Bag.Keys.Any().ShouldBeFalse();
+            //_should_read_the_message_from_the__sql_message_store
+            _storedMessage.Body.Value.ShouldEqual(_message.Body.Value);
+            //_should_read_the_message_header_type_from_the__sql_message_store
+            _storedMessage.Header.MessageType.ShouldEqual(_message.Header.MessageType);
+            //_should_read_the_message_header_topic_from_the__sql_message_store
+            _storedMessage.Header.Topic.ShouldEqual(_message.Header.Topic);
+            //_should_default_the_timestamp_from_the__sql_message_store
+            _storedMessage.Header.TimeStamp.ShouldBeGreaterThanOrEqualTo(_message.Header.TimeStamp); //DateTime set in ctor on way out
+            //_should_read_empty_header_bag_from_the__sql_message_store
+            _storedMessage.Header.Bag.Keys.Any().ShouldBeFalse();
+        }
 
-        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
+        [TearDown]
+        public void Cleanup()
+        {
+            _sqliteTestHelper.CleanUpDb();
+        }
     }
 }

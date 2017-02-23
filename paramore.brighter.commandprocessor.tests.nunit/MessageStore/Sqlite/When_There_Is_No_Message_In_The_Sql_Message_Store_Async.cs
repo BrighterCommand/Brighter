@@ -26,32 +26,45 @@ THE SOFTWARE. */
 using System;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 {
-    [Subject(typeof(SqliteMessageStore))]
-    public class When_There_Is_No_Message_In_The_Sql_Message_Store_Async : ContextSpecification
+    [TestFixture]
+    public class SqliteMessageStoreEmptyStoreAsyncTests
     {
-        private static SqliteTestHelper _sqliteTestHelper;
-        private static SqliteMessageStore _sSqlMessageStore;
-        private static Message s_messageEarliest;
-        private static Message s_storedMessage;
+        private SqliteTestHelper _sqliteTestHelper;
+        private SqliteMessageStore _sSqlMessageStore;
+        private Message _messageEarliest;
+        private Message _storedMessage;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
-            s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
-        };
+        }
 
-        private Because _of = () =>  AsyncContext.Run(async () => s_storedMessage = await _sSqlMessageStore.GetAsync(s_messageEarliest.Id)); 
+        [Test]
+        public void When_There_Is_No_Message_In_The_Sql_Message_Store_Async()
+        {
+            AsyncContext.Run(async () => _storedMessage = await _sSqlMessageStore.GetAsync(_messageEarliest.Id));
 
-        private It _should_return_a_empty_message = () => s_storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+            //_should_return_a_empty_message
+            _storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+        }
 
-        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
+        [TearDown]
+        public void Cleanup()
+        {
+            GC.Collect ();
+            GC.WaitForPendingFinalizers ();
+            _sqliteTestHelper.CleanUpDb();
+        }
+
     }    
 }

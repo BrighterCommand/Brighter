@@ -25,63 +25,64 @@ THE SOFTWARE. */
 using System;
 using nUnitShouldAdapter;
 using Nito.AsyncEx;
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 {
-    [Subject(typeof(SqliteMessageStore))]
-    public class When_Writing_A_Message_To_The_Message_Store_Async : ContextSpecification
+    [TestFixture]
+    public class SqliteMessageStoreWritingMessageAsyncTests
     {
-        private static SqliteTestHelper _sqliteTestHelper;
-        private static SqliteMessageStore _sSqlMessageStore;
-        private static readonly string key1 = "name1";
-        private static readonly string key2 = "name2";
-        private static Message s_messageEarliest;
-        private static Message s_storedMessage;
-        private static readonly string value1 = "value1";
-        private static readonly string value2 = "value2";
+        private SqliteTestHelper _sqliteTestHelper;
+        private SqliteMessageStore _sSqlMessageStore;
+        private readonly string key1 = "name1";
+        private readonly string key2 = "name2";
+        private Message _messageEarliest;
+        private Message _storedMessage;
+        private readonly string value1 = "value1";
+        private readonly string value2 = "value2";
 
-        private Cleanup _cleanup = () => _sqliteTestHelper.CleanUpDb();
-
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,
-                DateTime.UtcNow.AddDays(-1), 5, 5);
+
+            var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(key1, value1);
             messageHeader.Bag.Add(key2, value2);
 
-            s_messageEarliest = new Message(messageHeader, new MessageBody("message body"));
-            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(s_messageEarliest));
-        };
+            _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
+            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_messageEarliest));
+        }
 
-        private Because _of = () => AsyncContext.Run(async () => s_storedMessage = await _sSqlMessageStore.GetAsync(s_messageEarliest.Id));
-
-        private It _should_read_the_message_from_the__sql_message_store =
-            () => s_storedMessage.Body.Value.ShouldEqual(s_messageEarliest.Body.Value);
-
-        private It _should_read_the_message_header_first_bag_item_from_the__sql_message_store = () =>
+        [Test]
+        public void When_Writing_A_Message_To_The_Message_Store_Async()
         {
-            s_storedMessage.Header.Bag.ContainsKey(key1).ShouldBeTrue();
-            s_storedMessage.Header.Bag[key1].ShouldEqual(value1);
-        };
+            AsyncContext.Run(async () => _storedMessage = await _sSqlMessageStore.GetAsync(_messageEarliest.Id));
 
-        private It _should_read_the_message_header_second_bag_item_from_the__sql_message_store = () =>
+
+            //_should_read_the_message_from_the__sql_message_store
+            _storedMessage.Body.Value.ShouldEqual(_messageEarliest.Body.Value);
+            //_should_read_the_message_header_first_bag_item_from_the__sql_message_store
+             _storedMessage.Header.Bag.ContainsKey(key1).ShouldBeTrue();
+            _storedMessage.Header.Bag[key1].ShouldEqual(value1);
+            //_should_read_the_message_header_second_bag_item_from_the__sql_message_store
+            _storedMessage.Header.Bag.ContainsKey(key2).ShouldBeTrue();
+            _storedMessage.Header.Bag[key2].ShouldEqual(value2);
+            //_should_read_the_message_header_timestamp_from_the__sql_message_store
+            _storedMessage.Header.TimeStamp.ShouldEqual(_messageEarliest.Header.TimeStamp);
+            //_should_read_the_message_header_topic_from_the__sql_message_store =
+            _storedMessage.Header.Topic.ShouldEqual(_messageEarliest.Header.Topic);
+            //_should_read_the_message_header_type_from_the__sql_message_store
+            _storedMessage.Header.MessageType.ShouldEqual(_messageEarliest.Header.MessageType);
+        }
+
+        [TearDown]
+        public void Cleanup()
         {
-            s_storedMessage.Header.Bag.ContainsKey(key2).ShouldBeTrue();
-            s_storedMessage.Header.Bag[key2].ShouldEqual(value2);
-        };
-
-        private It _should_read_the_message_header_timestamp_from_the__sql_message_store =
-            () => s_storedMessage.Header.TimeStamp.ShouldEqual(s_messageEarliest.Header.TimeStamp);
-
-        private It _should_read_the_message_header_topic_from_the__sql_message_store =
-            () => s_storedMessage.Header.Topic.ShouldEqual(s_messageEarliest.Header.Topic);
-
-        private It _should_read_the_message_header_type_from_the__sql_message_store =
-            () => s_storedMessage.Header.MessageType.ShouldEqual(s_messageEarliest.Header.MessageType);
+            _sqliteTestHelper.CleanUpDb();
+        }
     }
 }

@@ -2,39 +2,42 @@
 using Amazon.Runtime;
 using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     [Category("AWS")]
-    public class When_purging_the_queue : ContextSpecification
+    [TestFixture]
+    public class SqsMessageConsumerTests
     {
-        private static TestAWSQueueListener testQueueListener;
-        private static IAmAMessageProducer sender;
-        private static IAmAMessageConsumer receiver;
-        private static Message sentMessage;
-        private static string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
+        private TestAWSQueueListener _testQueueListener;
+        private IAmAMessageProducer _sender;
+        private IAmAMessageConsumer _receiver;
+        private Message _sentMessage;
+        private string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
 
-        private Establish context = () =>
+        [SetUp]
+        public void Establish()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+            _sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
             var credentials = new AnonymousAWSCredentials();
-            sender = new SqsMessageProducer(credentials);
-            receiver = new SqsMessageConsumer(credentials, queueUrl);
-            testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
-        };
+            _sender = new SqsMessageProducer(credentials);
+            _receiver = new SqsMessageConsumer(credentials, queueUrl);
+            _testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
+        }
 
-        private Because of = () =>
+        [Test]
+        public void When_purging_the_queue()
         {
-            sender.Send(sentMessage);
-            receiver.Purge();
-        };
+            _sender.Send(_sentMessage);
+            _receiver.Purge();
 
-        It should_clean_the_queue = () => testQueueListener.Listen().ShouldBeNull();
+           //should_clean_the_queue
+            _testQueueListener.Listen().ShouldBeNull();
+        }
     }
 }

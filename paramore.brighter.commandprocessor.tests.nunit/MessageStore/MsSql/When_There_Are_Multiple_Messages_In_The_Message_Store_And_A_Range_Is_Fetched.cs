@@ -28,51 +28,59 @@ using System.Collections.Generic;
 using System.Linq;
 using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
     [Category("MSSQL")]
-    [Subject(typeof(MsSqlMessageStore))]
-    public class When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched : ContextSpecification
+    [TestFixture]
+    public class MsSqlMessageStoreRangeRequestTests
     {
-        private static MsSqlTestHelper _msSqlTestHelper;
-        private static readonly string _TopicFirstMessage = "test_topic";
-        private static readonly string _TopicLastMessage = "test_topic3";
-        private static IEnumerable<Message> messages;
-        private static Message s_message1;
-        private static Message s_message2;
-        private static Message s_messageEarliest;
-        private static MsSqlMessageStore s_sqlMessageStore;
+        private MsSqlTestHelper _msSqlTestHelper;
+        private readonly string _TopicFirstMessage = "test_topic";
+        private readonly string _TopicLastMessage = "test_topic3";
+        private IEnumerable<Message> messages;
+        private Message s_message1;
+        private Message s_message2;
+        private Message s_messageEarliest;
+        private MsSqlMessageStore s_sqlMessageStore;
 
-        private Cleanup _cleanup = () => CleanUpDb();
-
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
             s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
-            s_messageEarliest =
-                new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT),
-                    new MessageBody("message body"));
-            s_message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT),
-                new MessageBody("message body2"));
-            s_message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT),
-                new MessageBody("message body3"));
+            s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            s_message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
+            s_message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
             s_sqlMessageStore.Add(s_messageEarliest);
             s_sqlMessageStore.Add(s_message1);
             s_sqlMessageStore.Add(s_message2);
-        };
+        }
 
-        private Because _of = () => messages = s_sqlMessageStore.Get(1, 3);
+        [Test]
+        public void When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched()
+        {
+            messages = s_sqlMessageStore.Get(1, 3);
 
-        private It _should_fetch_1_message = () => { messages.Count().ShouldEqual(1); };
-        private It _should_fetch_expected_message = () => { messages.First().Header.Topic.ShouldEqual(_TopicLastMessage); };
-        private It _should_not_fetch_null_messages = () => { messages.ShouldNotBeNull(); };
+            //_should_fetch_1_message
+            messages.Count().ShouldEqual(1);
+            //_should_fetch_expected_message
+            messages.First().Header.Topic.ShouldEqual(_TopicLastMessage);
+            //_should_not_fetch_null_messages
+            messages.ShouldNotBeNull();
+        }
 
-        private static void CleanUpDb()
+
+        [TearDown]
+        public void Cleanup()
+        {
+            CleanUpDb();
+        }
+
+        private void CleanUpDb()
         {
             _msSqlTestHelper.CleanUpDb();
         }

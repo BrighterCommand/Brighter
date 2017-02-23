@@ -40,7 +40,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
         private MyCommand _storedCommand;
         private SqliteConnection _sqliteConnection;
 
-        private void Establish()
+        [SetUp]
+        public void Establish()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();

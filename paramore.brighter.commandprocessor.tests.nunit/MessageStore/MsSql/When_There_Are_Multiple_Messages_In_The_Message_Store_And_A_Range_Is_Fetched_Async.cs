@@ -35,44 +35,54 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
     [Category("MSSQL")]
-    [Subject(typeof(MsSqlMessageStore))]
-    public class When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched_Async : ContextSpecification
+    [TestFixture]
+    public class MsSqlMessageStoreRangeRequestAsyncTests
     {
-        private static MsSqlTestHelper _msSqlTestHelper;
-        private static readonly string _TopicFirstMessage = "test_topic";
-        private static readonly string _TopicLastMessage = "test_topic3";
-        private static IEnumerable<Message> messages;
-        private static Message s_message1;
-        private static Message s_message2;
-        private static Message s_messageEarliest;
-        private static MsSqlMessageStore s_sqlMessageStore;
+        private MsSqlTestHelper _msSqlTestHelper;
+        private readonly string _TopicFirstMessage = "test_topic";
+        private readonly string _TopicLastMessage = "test_topic3";
+        private IEnumerable<Message> messages;
+        private Message _message1;
+        private Message _message2;
+        private Message _messageEarliest;
+        private MsSqlMessageStore _sqlMessageStore;
 
-        private Cleanup _cleanup = () => CleanUpDb();
-
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
-            s_messageEarliest =
-                new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT),
-                    new MessageBody("message body"));
-            s_message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT),
-                new MessageBody("message body2"));
-            s_message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT),
-                new MessageBody("message body3"));
-            AsyncContext.Run( async () => await s_sqlMessageStore.AddAsync(s_messageEarliest));
-            AsyncContext.Run( async () => await s_sqlMessageStore.AddAsync(s_message1));
-            AsyncContext.Run( async () => await s_sqlMessageStore.AddAsync(s_message2));
-        };
+            _sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
+            _message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
 
-        private Because _of = () =>  AsyncContext.Run(async () => messages = await s_sqlMessageStore.GetAsync(1, 3)); 
-        private It _should_fetch_1_message = () => { messages.Count().ShouldEqual(1); };
-        private It _should_fetch_expected_message = () => { messages.First().Header.Topic.ShouldEqual(_TopicLastMessage); };
-        private It _should_not_fetch_null_messages = () => { messages.ShouldNotBeNull(); };
+            AsyncContext.Run( async () => await _sqlMessageStore.AddAsync(_messageEarliest));
+            AsyncContext.Run( async () => await _sqlMessageStore.AddAsync(_message1));
+            AsyncContext.Run( async () => await _sqlMessageStore.AddAsync(_message2));
+        }
 
-        private static void CleanUpDb()
+        [Test]
+        public void When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched_Async()
+        {
+            AsyncContext.Run(async () => messages = await _sqlMessageStore.GetAsync(1, 3));
+
+            //_should_fetch_1_message
+            messages.Count().ShouldEqual(1);
+            //_should_fetch_expected_message
+            messages.First().Header.Topic.ShouldEqual(_TopicLastMessage);
+            //_should_not_fetch_null_messages
+            messages.ShouldNotBeNull();
+        }
+
+        [TearDown]
+        public void Cleanup()
+        {
+            CleanUpDb();
+        }
+
+        private void CleanUpDb()
         {
             _msSqlTestHelper.CleanUpDb();
         }

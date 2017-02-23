@@ -38,6 +38,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
         private MsSqlCommandStore _sqlCommandStore;
         private MyCommand _storedCommand;
 
+        [SetUp]
         public void Establish()
         {
             _msSqlTestHelper = new MsSqlTestHelper();

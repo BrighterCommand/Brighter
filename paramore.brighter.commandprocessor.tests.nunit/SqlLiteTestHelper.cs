@@ -46,6 +46,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit
             {
                 _sqlConnection?.Close();
                 _sqlConnection?.Dispose();
+                GC.Collect ();  // Otherwise we can find the file handle still in use when we delete the file
+                GC.WaitForPendingFinalizers();
                 File.Delete(connectionStringPath);
                 Directory.Delete(connectionStringPathDir, true);
             }
