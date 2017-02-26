@@ -2,52 +2,56 @@
 using Amazon.Runtime;
 using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     
     [Category("AWS")]
-    public class When_requeueing_a_message : ContextSpecification
+    [TestFixture]
+    public class SqsMessageProducerRequeueTests
     {
-        private static TestAWSQueueListener testQueueListener;
-        private static IAmAMessageProducer sender;
-        private static IAmAMessageConsumer receiver;
-        private static Message sentMessage;
-        private static Message requeuedMessage;
-        private static Message receivedMessage;
-        private static string receivedReceiptHandle;
-        private static string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
+        private TestAWSQueueListener _testQueueListener;
+        private IAmAMessageProducer _sender;
+        private IAmAMessageConsumer _receiver;
+        private Message _sentMessage;
+        private Message _requeuedMessage;
+        private Message _receivedMessage;
+        private string _receivedReceiptHandle;
+        private readonly string _queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
 
-        private Establish context = () =>
+        [SetUp]
+        public void Establish()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+            _sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
             var credentials = new AnonymousAWSCredentials();
-            sender = new SqsMessageProducer(credentials);
-            receiver = new SqsMessageConsumer(credentials, queueUrl);
-            testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
-        };
+            _sender = new SqsMessageProducer(credentials);
+            _receiver = new SqsMessageConsumer(credentials, _queueUrl);
+            _testQueueListener = new TestAWSQueueListener(credentials, _queueUrl);
+        }
 
-        private Because of = () =>
+        [Test]
+        public void When_requeueing_a_message()
         {
-            sender.Send(sentMessage);
-            receivedMessage = receiver.Receive(2000);
-            receivedReceiptHandle = receivedMessage.Header.Bag["ReceiptHandle"].ToString();
-            receiver.Requeue(receivedMessage);
-        };
+            _sender.Send(_sentMessage);
+            _receivedMessage = _receiver.Receive(2000);
+            _receivedReceiptHandle = _receivedMessage.Header.Bag["ReceiptHandle"].ToString();
+            _receiver.Requeue(_receivedMessage);
 
-        It should_delete_the_original_message_and_create_new_message = () =>
+            //should_delete_the_original_message_and_create_new_message
+             _requeuedMessage = _receiver.Receive(1000);
+            _requeuedMessage.Body.Value.ShouldEqual(_receivedMessage.Body.Value);
+            _requeuedMessage.Header.Bag["ReceiptHandle"].ToString().ShouldNotEqual(_receivedReceiptHandle);
+        }
+
+        [TearDown]
+        public void Cleanup()
         {
-            requeuedMessage = receiver.Receive(1000);
-            requeuedMessage.Body.Value.ShouldEqual(receivedMessage.Body.Value);
-            requeuedMessage.Header.Bag["ReceiptHandle"].ToString().ShouldNotEqual(receivedReceiptHandle);
-        };
-
-        Cleanup the_queue = () => testQueueListener.DeleteMessage(requeuedMessage.Header.Bag["ReceiptHandle"].ToString());
+            _testQueueListener.DeleteMessage(_requeuedMessage.Header.Bag["ReceiptHandle"].ToString());
+        }
     }
 }

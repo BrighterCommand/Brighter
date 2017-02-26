@@ -32,46 +32,50 @@ using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewa
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
 {
     [Category("RESTMS")]
-    public class When_posting_a_message_via_the_messaging_gateway : ContextSpecification
+    [TestFixture]
+    public class  RestMsMessageProducerSendTests
     {
-        private const string TOPIC = "test";
-        private static IAmAMessageProducer s_messageProducer;
-        private static IAmAMessageConsumer s_messageConsumer;
-        private static Message s_message;
-        private static Message s_sentMessage;
-        private static string s_messageBody;
-        private const string QUEUE_NAME = "test";
+        private const string Topic = "test";
+        private IAmAMessageProducer _messageProducer;
+        private IAmAMessageConsumer _messageConsumer;
+        private Message _message;
+        private Message _sentMessage;
+        private string _messageBody;
+        private const string QueueName = "test";
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var configuration = new RestMSMessagingGatewayConfiguration
             {
                 Feed = new Feed { Name = "test", Type = "Default"},
                 RestMS = new RestMsSpecification { Uri = new Uri("http://localhost:3416/restms/domain/default"),  Id = "dh37fgj492je", User ="Guest", Key ="wBgvhp1lZTr4Tb6K6+5OQa1bL9fxK7j8wBsepjqVNiQ=", Timeout=2000}
             };
-            s_messageProducer = new RestMsMessageProducer(configuration);
-            s_messageConsumer = new RestMsMessageConsumer(configuration, QUEUE_NAME, TOPIC);
-            s_message = new Message(
-                header: new MessageHeader(Guid.NewGuid(), TOPIC, MessageType.MT_COMMAND),
-                body: new MessageBody("test content"));
-        };
+            _messageProducer = new RestMsMessageProducer(configuration);
+            _messageConsumer = new RestMsMessageConsumer(configuration, QueueName, Topic);
+            _message = new Message(header: new MessageHeader(Guid.NewGuid(), Topic, MessageType.MT_COMMAND),body: new MessageBody("test content"));
+        }
 
-        private Because _of = () =>
+        [Test]
+        public void When_posting_a_message_via_the_messaging_gateway()
         {
-            s_messageConsumer.Receive(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
-            s_messageProducer.Send(s_message);
-            s_sentMessage = s_messageConsumer.Receive(30000);
-            s_messageBody = s_sentMessage.Body.Value;
-            s_messageConsumer.Acknowledge(s_sentMessage);
-        };
+            _messageConsumer.Receive(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
+            _messageProducer.Send(_message);
+            _sentMessage = _messageConsumer.Receive(30000);
+            _messageBody = _sentMessage.Body.Value;
+            _messageConsumer.Acknowledge(_sentMessage);
 
-        private It _should_send_a_message_via_restms_with_the_matching_body = () => s_messageBody.ShouldEqual(s_message.Body.Value);
-        private It _should_have_an_empty_pipe_after_acknowledging_the_message = () => ((RestMsMessageConsumer)s_messageConsumer).NoOfOutstandingMessages(30000).ShouldEqual(0);
+            //_should_send_a_message_via_restms_with_the_matching_body
+            _messageBody.ShouldEqual(_message.Body.Value);
+            //_should_have_an_empty_pipe_after_acknowledging_the_message
+            ((RestMsMessageConsumer)_messageConsumer).NoOfOutstandingMessages(30000).ShouldEqual(0);
+        }
 
-        private Cleanup _tearDown = () =>
+        [TearDown]
+        public void Cleanup()
         {
-            s_messageConsumer.Purge();
-            s_messageProducer.Dispose();
-        };
+            _messageConsumer.Purge();
+            _messageProducer.Dispose();
+        }
     }
 }

@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Specifications;
+using NUnit.Framework;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles;
@@ -30,13 +30,14 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
 {
-    [Subject(typeof(TimeoutPolicyHandler<>))]
-    public class When_Sending_A_Command_To_The_Processor_Passing_A_Timeout_Policy_Check : ContextSpecification
+    [TestFixture]
+    public class MyPassesTimeoutHandlerTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var registry = new SubscriberRegistry();
             //Handler is decorated with UsePolicy 
@@ -47,12 +48,17 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
             container.Register<IHandleRequests<MyCommand>, MyPassesTimeoutHandler>().AsSingleton();
             container.Register<IHandleRequests<MyCommand>, TimeoutPolicyHandler<MyCommand>>().AsSingleton();
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
         //We have to catch the final exception that bubbles out after retry
-        private Because _of = () => s_commandProcessor.Send(s_myCommand);
+        [Test]
+        public void When_Sending_A_Command_To_The_Processor_Passing_A_Timeout_Policy_Check()
+        {
+            _commandProcessor.Send(_myCommand);
 
-        private It _should_complete_the_command_before_an_exception = () => MyPassesTimeoutHandler.Shouldreceive(s_myCommand);
+            //_should_complete_the_command_before_an_exception
+            MyPassesTimeoutHandler.Shouldreceive(_myCommand);
+        }
     }
 }

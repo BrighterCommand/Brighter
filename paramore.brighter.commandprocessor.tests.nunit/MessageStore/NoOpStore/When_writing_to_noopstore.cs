@@ -37,6 +37,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.NoOpStore
         private NoOpMessageStore _noOpStore;
         private Exception _exception;
 
+        [SetUp]
         public void Establish()
         {
             _noOpStore = new NoOpMessageStore();

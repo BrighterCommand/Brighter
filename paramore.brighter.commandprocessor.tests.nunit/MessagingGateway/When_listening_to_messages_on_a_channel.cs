@@ -25,34 +25,42 @@ THE SOFTWARE. */
 using System;
 using FakeItEasy;
 using nUnitShouldAdapter;
-using NUnit.Specifications;
+using NUnit.Framework;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
 {
-    [Subject(typeof(Channel))]
-    public class When_Listening_To_Messages_On_A_Channel : ContextSpecification
+    [TestFixture]
+    public class ChannelMessageReceiveTests
     {
-        private static IAmAChannel s_channel;
-        private static IAmAMessageConsumer s_gateway;
-        private static Message s_receivedMessage;
-        private static Message s_sentMessage;
+        private IAmAChannel _channel;
+        private IAmAMessageConsumer _gateway;
+        private Message _receivedMessage;
+        private Message _sentMessage;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_gateway = A.Fake<IAmAMessageConsumer>();
+            _gateway = A.Fake<IAmAMessageConsumer>();
 
-            s_channel = new Channel("test", s_gateway);
+            _channel = new Channel("test", _gateway);
 
-            s_sentMessage = new Message(
+            _sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
-            A.CallTo(() => s_gateway.Receive(1000)).Returns(s_sentMessage);
-        };
+            A.CallTo(() => _gateway.Receive(1000)).Returns(_sentMessage);
+        }
 
-        private Because _of = () => s_receivedMessage = s_channel.Receive(1000);
+        [Test]
+        public void When_Listening_To_Messages_On_A_Channel()
+        {
+            _receivedMessage = _channel.Receive(1000);
 
-        private It _should_call_the_messaging_gateway = () => A.CallTo(() => s_gateway.Receive(1000)).MustHaveHappened();
-        private It _should_return_the_next_message_from_the_gateway = () => s_receivedMessage.ShouldEqual(s_sentMessage);
+            //_should_call_the_messaging_gateway
+            A.CallTo(() => _gateway.Receive(1000)).MustHaveHappened();
+            //_should_return_the_next_message_from_the_gateway
+            _receivedMessage.ShouldEqual(_sentMessage);
+        }
+
     }
 }

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.monitoring.Configuration;
 using paramore.brighter.commandprocessor.monitoring.Events;
@@ -36,20 +37,21 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 {
-    [Subject(typeof(MonitorHandler<>))]
-    public class When_Monitoring_We_Should_Record_But_Rethrow_Exceptions : ContextSpecification
+    [TestFixture]
+    public class MonitorHandlerTests
     {
-        private static MyCommand s_command;
-        private static Exception s_thrownException;
-        private static SpyControlBusSender s_controlBusSender;
-        private static CommandProcessor s_commandProcessor;
-        private static MonitorEvent s_afterEvent;
-        private static string s_originalRequestAsJson;
-        private static DateTime s_at;
+        private MyCommand _command;
+        private Exception _thrownException;
+        private SpyControlBusSender _controlBusSender;
+        private CommandProcessor _commandProcessor;
+        private MonitorEvent _afterEvent;
+        private string _originalRequestAsJson;
+        private DateTime _at;
 
-        private Establish _context = () => 
+        [SetUp]
+        public void Establish()
         {
-            s_controlBusSender = new SpyControlBusSender();
+            _controlBusSender = new SpyControlBusSender();
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyMonitoredHandlerThatThrows>();
 
@@ -57,37 +59,44 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyMonitoredHandlerThatThrows>();
             container.Register<IHandleRequests<MyCommand>, MonitorHandler<MyCommand>>();
-            container.Register<IAmAControlBusSender>(s_controlBusSender);
+            container.Register<IAmAControlBusSender>(_controlBusSender);
             container.Register<MonitorConfiguration>(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
-            s_command = new MyCommand();
+            _command = new MyCommand();
 
-            s_originalRequestAsJson = JsonConvert.SerializeObject(s_command);
+            _originalRequestAsJson = JsonConvert.SerializeObject(_command);
 
-            s_at = DateTime.UtcNow;
-            Clock.OverrideTime = s_at;
-        };
+            _at = DateTime.UtcNow;
+            Clock.OverrideTime = _at;
+        }
 
-        private Because _of = () =>
+        public void When_Monitoring_We_Should_Record_But_Rethrow_Exceptions()
         {
-            s_thrownException = Catch.Exception(() => s_commandProcessor.Send(s_command));
-            s_controlBusSender.Observe<MonitorEvent>(); //pop but don't inspect before.
-            s_afterEvent = s_controlBusSender.Observe<MonitorEvent>();
-        };
+            _thrownException = Catch.Exception(() => _commandProcessor.Send(_command));
+            _controlBusSender.Observe<MonitorEvent>(); //pop but don't inspect before.
+            _afterEvent = _controlBusSender.Observe<MonitorEvent>();
 
-        private It _should_pass_through_the_exception_not_swallow = () => s_thrownException.ShouldNotBeNull();
-        private It _should_monitor_the_exception = () => s_afterEvent.Exception.ShouldBeOfExactType(typeof(Exception));
-        private It _should_surface_the_error_message = () => s_afterEvent.Exception.Message.ShouldContain("monitored");
-        private It _should_have_an_instance_name_after = () => s_afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
-        private It _should_post_the_handler_fullname_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).FullName);
-        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
-        private It _should_include_the_underlying_request_details_after = () => s_afterEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
-        private It should_post_the_time_of_the_request_after = () => s_afterEvent.EventTime.ShouldBeGreaterThan(s_at);
-        private It should_post_the_elapsedtime_of_the_request_after = () =>
-        {
-            s_afterEvent.TimeElapsedMs.ShouldEqual((s_afterEvent.EventTime - s_at).Milliseconds);
-        };
-    }
+            //_should_pass_through_the_exception_not_swallow
+            _thrownException.ShouldNotBeNull();
+            //_should_monitor_the_exception
+            _afterEvent.Exception.ShouldBeOfExactType(typeof(Exception));
+            //_should_surface_the_error_message
+            _afterEvent.Exception.Message.ShouldContain("monitored");
+            //_should_have_an_instance_name_after
+            _afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
+            //_should_post_the_handler_fullname_to_the_control_bus_after
+            _afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).FullName);
+            //_should_post_the_handler_name_to_the_control_bus_after
+            _afterEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+            //should_post_the_time_of_the_request_after
+            _afterEvent.EventTime.ShouldBeGreaterThan(_at);
+            //should_post_the_elapsedtime_of_the_request_after
+            _afterEvent.EventTime.ShouldBeGreaterThan(_at);
+            //should_post_the_elapsedtime_of_the_request_after
+            _afterEvent.TimeElapsedMs.ShouldEqual((_afterEvent.EventTime - _at).Milliseconds);
+
+        }
+   }
 }

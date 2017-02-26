@@ -2,40 +2,44 @@
 using System.Diagnostics;
 using FakeItEasy;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 using NUnit.Specifications;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
 {
     [Subject(typeof(Channel))]
-    public class When_Requeuing_A_Message_With_Supported_But_Disabled_Delay : ContextSpecification
+    public class ChannelRequeueWithDelayTests
     {
-        private static IAmAChannel s_channel;
-        private static IAmAMessageConsumerSupportingDelay s_gateway;
-        private static Message s_requeueMessage;
-        private static Stopwatch s_stopWatch;
+        private IAmAChannel _channel;
+        private IAmAMessageConsumerSupportingDelay _gateway;
+        private Message _requeueMessage;
+        private Stopwatch _stopWatch;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_gateway = A.Fake<IAmAMessageConsumerSupportingDelay>();
-            A.CallTo(() => s_gateway.DelaySupported).Returns(false);
+            _gateway = A.Fake<IAmAMessageConsumerSupportingDelay>();
+            A.CallTo(() => _gateway.DelaySupported).Returns(false);
 
-            s_channel = new Channel("test", s_gateway);
+            _channel = new Channel("test", _gateway);
 
-            s_requeueMessage = new Message(
+            _requeueMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
-            s_stopWatch = new Stopwatch();
-        };
+            _stopWatch = new Stopwatch();
+        }
 
-        private Because _of = () =>
+        public void When_Requeuing_A_Message_With_Supported_But_Disabled_Delay()
         {
-            s_stopWatch.Start();
-            s_channel.Requeue(s_requeueMessage, 1000);
-            s_stopWatch.Stop();
-        };
+            _stopWatch.Start();
+            _channel.Requeue(_requeueMessage, 1000);
+            _stopWatch.Stop();
 
-        private It _should_call_the_messaging_gateway = () => A.CallTo(() => s_gateway.Requeue(s_requeueMessage)).MustHaveHappened();
-        private It _should_have_process_delayed_the_call = () => (s_stopWatch.ElapsedMilliseconds > 900).ShouldBeTrue();
+            //_should_call_the_messaging_gateway
+            A.CallTo(() => _gateway.Requeue(_requeueMessage)).MustHaveHappened();
+            //_should_have_process_delayed_the_call
+            (_stopWatch.ElapsedMilliseconds > 900).ShouldBeTrue();
+        }
     }
 }

@@ -44,7 +44,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
         private readonly string value2 = "value2";
         private MsSqlTestHelper _msSqlTestHelper;
 
-        [TearDown]
+        [SetUp]
         public void Establish()
         {
             _msSqlTestHelper = new MsSqlTestHelper();

@@ -23,25 +23,31 @@ THE SOFTWARE. */
 #endregion
 
 using FakeItEasy;
-using NUnit.Specifications;
+using NUnit.Framework;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
 {
-    [Subject(typeof(Channel))]
-    public class When_Disposing_Input_Channel : ContextSpecification
+    [TestFixture]
+    public class ChannelDisposalTests
     {
-        private static IAmAChannel s_channel;
-        private static IAmAMessageConsumer s_messageConsumer;
+        private IAmAChannel _channel;
+        private IAmAMessageConsumer _messageConsumer;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_messageConsumer = A.Fake<IAmAMessageConsumer>();
+            _messageConsumer = A.Fake<IAmAMessageConsumer>();
 
-            s_channel = new Channel("test", s_messageConsumer);
-        };
+            _channel = new Channel("test", _messageConsumer);
+        }
 
-        private Because _of = () => s_channel.Dispose();
+        [Test]
+        public void When_Disposing_Channel()
+        {
+            _channel.Dispose();
 
-        private It _should_call_dipose_on_messaging_gateway = () => A.CallTo(() => s_messageConsumer.Dispose()).MustHaveHappened();
+            //_should_call_dipose_on_messaging_gateway
+            A.CallTo(() => _messageConsumer.Dispose()).MustHaveHappened();
+        }
     }
 }

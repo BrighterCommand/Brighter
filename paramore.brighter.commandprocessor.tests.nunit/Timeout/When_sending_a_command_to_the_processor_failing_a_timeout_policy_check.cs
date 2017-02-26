@@ -30,18 +30,19 @@ using paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles;
 using TinyIoC;
 using NUnit.Specifications;
 using nUnitShouldAdapter;
+using NUnit.Framework;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
 {
-    [Subject(typeof(TimeoutPolicyHandler<>))]
-//    [Tags("Requires", new[] { "Fails on AppVeyor" })]
-    public class When_Sending_A_Command_To_The_Processor_Failing_A_Timeout_Policy_Check : ContextSpecification
+    [TestFixture]
+    public class TimeoutHandlerFailsCheckTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static AggregateException s_thrownException;
+        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private AggregateException _thrownException;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish ()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsDueToTimeoutHandler>();
@@ -54,17 +55,21 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
             MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = false;
             MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted = true;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        };
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        }
 
         //We have to catch the final exception that bubbles out after retry
-        private Because _of = () =>
+        [Test]
+        public void When_Sending_A_Command_To_The_Processor_Failing_A_Timeout_Policy_Check()
         {
-            s_thrownException = (AggregateException)Catch.Exception(() => s_commandProcessor.Send(s_myCommand));
-        };
+            _thrownException = (AggregateException)Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
-        private It _should_throw_a_timeout_exception = () => s_thrownException.Flatten().InnerExceptions.First().ShouldBeOfExactType<TimeoutException>();
-        private It _should_signal_that_a_timeout_occured_and_handler_should_be_cancelled = () => MyFailsDueToTimeoutHandlerStateTracker.WasCancelled.ShouldBeTrue();
-        private It _should_not_run_to_completion = () => MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted.ShouldBeFalse();
+            //_should_throw_a_timeout_exception
+            _thrownException.Flatten().InnerExceptions.First().ShouldBeOfExactType<TimeoutException>();
+            //_should_signal_that_a_timeout_occured_and_handler_should_be_cancelled
+            MyFailsDueToTimeoutHandlerStateTracker.WasCancelled.ShouldBeTrue();
+            //_should_not_run_to_completion
+            MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted.ShouldBeFalse();
+        }
     }
 }

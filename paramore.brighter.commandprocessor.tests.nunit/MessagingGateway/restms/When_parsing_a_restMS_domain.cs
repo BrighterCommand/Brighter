@@ -32,15 +32,22 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
 {
     
     [Category("RESTMS")]
-    public class When_parsing_a_restMS_domain : ContextSpecification
+    [TestFixture]
+    public class ParseRestMSResultTests
     {
         private const string BODY = "<domain xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" name=\"default\" title=\"title\" href=\"http://localhost/restms/domain/default\" xmlns=\"http://www.restms.org/schema/restms\"><feed type=\"Default\" name=\"default\" title=\"Default feed\" href=\"http://localhost/restms/feed/default\" /><profile name=\"3/Defaults\" href=\"href://www.restms.org/spec:3/Defaults\" /></domain>";
-        private static RestMSDomain s_domain;
-        private static bool s_couldParse;
+        private RestMSDomain _domain;
+        private bool _couldParse;
 
-        private Because _of = () => s_couldParse = XmlResultParser.TryParse(BODY, out s_domain);
+        [Test]
+        public void When_parsing_a_restMS_domain()
+        {
+            _couldParse = XmlResultParser.TryParse(BODY, out _domain);
 
-        private It _should_be_able_to_parse_the_result = () => s_couldParse.ShouldBeTrue();
-        private It _should_have_a_domain_object = () => s_domain.ShouldNotBeNull();
+            //_should_be_able_to_parse_the_result
+            _couldParse.ShouldBeTrue();
+            //_should_have_a_domain_object
+            _domain.ShouldNotBeNull();
+        }
     }
 }

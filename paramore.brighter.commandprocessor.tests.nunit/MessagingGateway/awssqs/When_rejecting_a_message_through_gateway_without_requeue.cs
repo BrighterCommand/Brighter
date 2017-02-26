@@ -8,36 +8,48 @@ using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {
     [Category("AWS")]
-    public class When_rejecting_a_message_through_gateway_without_requeue : ContextSpecification
+    [TestFixture]
+    public class SqsMessageConsumerInvalidMessageTests
     {
-        private static TestAWSQueueListener testQueueListener;
-        private static IAmAMessageProducer sender;
-        private static IAmAMessageConsumer receiver;
-        private static Message message;
-        private static Message _listenedMessage;
-        private static string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
+        private TestAWSQueueListener _testQueueListener;
+        private IAmAMessageProducer _sender;
+        private IAmAMessageConsumer _receiver;
+        private Message _message;
+        private Message _listenedMessage;
+        private readonly string _queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
 
-        Establish context = () =>
+        [SetUp]
+        public void Establish()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            message = new Message(header: messageHeader, body: new MessageBody("test content"));
+            _message = new Message(header: messageHeader, body: new MessageBody("test content"));
 
             var credentials = new AnonymousAWSCredentials();
-            sender = new SqsMessageProducer(credentials);
-            receiver = new SqsMessageConsumer(credentials, queueUrl);
-            testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
+            _sender = new SqsMessageProducer(credentials);
+            _receiver = new SqsMessageConsumer(credentials, _queueUrl);
+            _testQueueListener = new TestAWSQueueListener(credentials, _queueUrl);
 
-            sender.Send(message);
+            _sender.Send(_message);
 
-            _listenedMessage = receiver.Receive(1000);
-        };
+            _listenedMessage = _receiver.Receive(1000);
+        }
 
-        Because i_reject_the_message = () => receiver.Reject(_listenedMessage, false);
+        [Test]
+        public void When_rejecting_a_message_through_gateway_without_requeue()
+        {
+            _receiver.Reject(_listenedMessage, false);
 
-        It should_not_requeue_the_message = () => testQueueListener.Listen().ShouldBeNull();
+            //should_not_requeue_the_message
+            _testQueueListener.Listen().ShouldBeNull();
+        }
 
-        Cleanup the_queue = () => testQueueListener.DeleteMessage(_listenedMessage.Header.Bag["ReceiptHandle"].ToString());
+        [TearDown]
+        public void Cleanup()
+        {
+            _testQueueListener.DeleteMessage(_listenedMessage.Header.Bag["ReceiptHandle"].ToString());
+
+        }
     }
 }

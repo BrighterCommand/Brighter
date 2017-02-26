@@ -34,20 +34,21 @@ using RabbitMQ.Client.Exceptions;
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 {
     [Category("RMQ")]
-    public class When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting : ContextSpecification
+    public class RmqMessageConsumerOperationInterruptedTests
     {
-        private static IAmAMessageProducer s_sender;
-        private static IAmAMessageConsumer s_receiver;
-        private static IAmAMessageConsumer s_badReceiver;
-        private static Message s_sentMessage;
-        private static Exception s_firstException;
+        private IAmAMessageProducer _sender;
+        private IAmAMessageConsumer _receiver;
+        private IAmAMessageConsumer _badReceiver;
+        private Message _sentMessage;
+        private Exception _firstException;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            s_sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+            _sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
@@ -55,27 +56,31 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
                 Exchange = new Exchange("paramore.brighter.exchange")
             };
 
-            s_sender = new RmqMessageProducer(rmqConnection);
-            s_receiver = new RmqMessageConsumer(rmqConnection, s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, 1, false);
-            s_badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, s_sentMessage.Header.Topic, s_sentMessage.Header.Topic, false, 1, false);
+            _sender = new RmqMessageProducer(rmqConnection);
+            _receiver = new RmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, 1, false);
+            _badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, 1, false);
 
-            s_receiver.Purge();
-            s_sender.Send(s_sentMessage);
-        };
+            _receiver.Purge();
+            _sender.Send(_sentMessage);
+        }
 
-        private Because _of = () =>
+        [Test]
+        public void  When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting()
         {
-            s_firstException = Catch.Exception(() => s_badReceiver.Receive(2000));
-        };
+            _firstException = Catch.Exception(() => _badReceiver.Receive(2000));
 
-        private It _should_return_a_channel_failure_exception = () => s_firstException.ShouldBeOfExactType<ChannelFailureException>();
-        private It _should_return_an_explainging_inner_exception = () => s_firstException.InnerException.ShouldBeOfExactType<OperationInterruptedException>();
+            //_should_return_a_channel_failure_exception
+            _firstException.ShouldBeOfExactType<ChannelFailureException>();
+            //_should_return_an_explainging_inner_exception
+            _firstException.InnerException.ShouldBeOfExactType<OperationInterruptedException>();
+        }
 
-        private Cleanup _teardown = () =>
+        [TearDown]
+        public void Cleanup()
         {
-            s_receiver.Purge();
-            s_sender.Dispose();
-            s_receiver.Dispose();
-        };
+            _receiver.Purge();
+            _sender.Dispose();
+            _receiver.Dispose();
+        }
     }
 }

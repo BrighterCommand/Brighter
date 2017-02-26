@@ -1,9 +1,9 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright ï¿½ 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
+of this software and associated documentation files (the ï¿½Softwareï¿½), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
@@ -12,7 +12,7 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+THE SOFTWARE IS PROVIDED ï¿½AS ISï¿½, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -24,30 +24,36 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using NUnit.Specifications;
+using NUnit.Framework;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
 {
-    [Subject(typeof(Channel))]
-    public class When_Requeuing_A_Message_With_No_Delay : ContextSpecification
+    [TestFixture]
+    public class ChannelRequeueWithoutDelayTest
     {
-        private static IAmAChannel s_channel;
-        private static IAmAMessageConsumer s_gateway;
-        private static Message s_requeueMessage;
+        private IAmAChannel _channel;
+        private IAmAMessageConsumer _gateway;
+        private Message _requeueMessage;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_gateway = A.Fake<IAmAMessageConsumer>();
+            _gateway = A.Fake<IAmAMessageConsumer>();
 
-            s_channel = new Channel("test", s_gateway);
+            _channel = new Channel("test", _gateway);
 
-            s_requeueMessage = new Message(
+            _requeueMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
-        };
+        }
 
-        private Because _of = () => s_channel.Requeue(s_requeueMessage);
+        [Test]
+        public void When_Requeuing_A_Message_With_No_Delay()
+        {
+            _channel.Requeue(_requeueMessage);
 
-        private It _should_call_the_messaging_gateway = () => A.CallTo(() => s_gateway.Requeue(s_requeueMessage)).MustHaveHappened();
+            //_should_call_the_messaging_gateway
+            A.CallTo(() => _gateway.Requeue(_requeueMessage)).MustHaveHappened();
+        }
     }
 }

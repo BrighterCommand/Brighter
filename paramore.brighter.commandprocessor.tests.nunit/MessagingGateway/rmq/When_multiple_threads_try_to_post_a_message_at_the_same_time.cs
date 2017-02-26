@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -34,14 +33,16 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayCo
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
 {
     [Category("RMQ")]
-    public class When_multiple_threads_try_to_post_a_message_at_the_same_time : ContextSpecification
+    [TestFixture]
+    public class RmqMessageProducerSupportsMultipleThreadsTests
     {
-        private static IAmAMessageProducer s_messageProducer;
-        private static Message s_message;
+        private IAmAMessageProducer _messageProducer;
+        private Message _message;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_message = new Message(header: new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
+            _message = new Message(header: new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
@@ -49,22 +50,34 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
                 Exchange = new Exchange("paramore.brighter.exchange")
             };
 
-            s_messageProducer = new RmqMessageProducer(rmqConnection);
-        };
+            _messageProducer = new RmqMessageProducer(rmqConnection);
+        }
 
-        private Because _of = () =>
+        [Test]
+        public void When_multiple_threads_try_to_post_a_message_at_the_same_time()
         {
-            Parallel.ForEach(Enumerable.Range(0, 10), _ =>
+            bool exceptionHappened = false;
+            try
             {
-                s_messageProducer.Send(s_message);
-            });
-        };
+                Parallel.ForEach(Enumerable.Range(0, 10), _ =>
+                {
+                    _messageProducer.Send(_message);
+                });
+            }
+            catch (Exception)
+            {
+                exceptionHappened = true;
+            }
 
-        It _should_not_throw = () => { };
+            //_should_not_throw
+            Assert.IsFalse(exceptionHappened);
 
-        private Cleanup _tearDown = () =>
+        }
+
+        [TearDown]
+        public void Cleanup()
         {
-            s_messageProducer.Dispose();
-        };
+            _messageProducer.Dispose();
+        }
     }
 }

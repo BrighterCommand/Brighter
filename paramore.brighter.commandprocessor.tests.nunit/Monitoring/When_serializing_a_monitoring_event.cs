@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.monitoring.Events;
 using paramore.brighter.commandprocessor.monitoring.Mappers;
@@ -33,40 +34,53 @@ using paramore.brighter.commandprocessor.time;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 {
-    [Subject(typeof(MonitorEventMessageMapper))]
-    public class When_Serializing_A_Monitoring_Event : ContextSpecification
+    [TestFixture]
+    public class MonitorEventMessageMapperTests
     {
         private const string InstanceName = "Paramore.Tests";
         private const string HandlerFullAssemblyName = "Paramore.Dummy.Handler, with some Assembly information";
         private const string HandlerName = "Paramore.Dummy.Handler";
-        private static MonitorEventMessageMapper s_monitorEventMessageMapper;
-        private static MonitorEvent s_monitorEvent;
-        private static Message s_message;
-        private static string s_originalRequestAsJson;
+        private MonitorEventMessageMapper _monitorEventMessageMapper;
+        private MonitorEvent _monitorEvent;
+        private Message _message;
+        private string _originalRequestAsJson;
+        private static int _elapsedMilliseconds;
+        private static DateTime _overrideTime;
 
-        private Establish context = () =>
+        [SetUp]
+        public void Establish()
         {
             _overrideTime = DateTime.UtcNow;
             Clock.OverrideTime = _overrideTime;
 
-            s_monitorEventMessageMapper = new MonitorEventMessageMapper();
+            _monitorEventMessageMapper = new MonitorEventMessageMapper();
 
-            s_originalRequestAsJson = JsonConvert.SerializeObject(new MyCommand());
+            _originalRequestAsJson = JsonConvert.SerializeObject(new MyCommand());
             _elapsedMilliseconds = 34;
-            var @event = new MonitorEvent(InstanceName, MonitorEventType.EnterHandler, HandlerName, HandlerFullAssemblyName, s_originalRequestAsJson, Clock.Now(), _elapsedMilliseconds);
-            s_message = s_monitorEventMessageMapper.MapToMessage(@event);
-        };
+            var @event = new MonitorEvent(InstanceName, MonitorEventType.EnterHandler, HandlerName, HandlerFullAssemblyName, _originalRequestAsJson, Clock.Now(), _elapsedMilliseconds);
+            _message = _monitorEventMessageMapper.MapToMessage(@event);
 
-        private Because of = () => s_monitorEvent = s_monitorEventMessageMapper.MapToRequest(s_message);
+       }
 
-        private It _should_have_the_correct_instance_name = () => s_monitorEvent.InstanceName.ShouldEqual(InstanceName);
-        private It _should_have_the_correct_handler_name = () => s_monitorEvent.HandlerName.ShouldEqual(HandlerName);
-        private It _should_have_the_correct_handler_full_assembly_name = () => s_monitorEvent.HandlerFullAssemblyName.ShouldEqual(HandlerFullAssemblyName);
-        private It _should_have_the_correct_monitor_type = () => s_monitorEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
-        private It _should_have_the_original_request_as_json = () => s_monitorEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
-        private It _should_have_the_correct_event_time = () => s_monitorEvent.EventTime.ShouldEqual(_overrideTime);
-        private It _should_have_the_correct_time_elapsed = () => s_monitorEvent.TimeElapsedMs.ShouldEqual(_elapsedMilliseconds);
-        private static int _elapsedMilliseconds;
-        private static DateTime _overrideTime;
-    }
+        [Test]
+        public void When_Serializing_A_Monitoring_Event()
+        {
+            _monitorEvent = _monitorEventMessageMapper.MapToRequest(_message);
+
+            //_should_have_the_correct_instance_name
+            _monitorEvent.InstanceName.ShouldEqual(InstanceName);
+            //_should_have_the_correct_handler_name
+            _monitorEvent.HandlerName.ShouldEqual(HandlerName);
+            //_should_have_the_correct_handler_full_assembly_name
+            _monitorEvent.HandlerFullAssemblyName.ShouldEqual(HandlerFullAssemblyName);
+            //_should_have_the_correct_monitor_type
+            _monitorEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
+            //_should_have_the_original_request_as_json
+            _monitorEvent.RequestBody.ShouldEqual(_originalRequestAsJson);
+            //_should_have_the_correct_event_time
+            _monitorEvent.EventTime.ShouldEqual(_overrideTime);
+            //_should_have_the_correct_time_elapsed
+            _monitorEvent.TimeElapsedMs.ShouldEqual(_elapsedMilliseconds);
+         }
+   }
 }

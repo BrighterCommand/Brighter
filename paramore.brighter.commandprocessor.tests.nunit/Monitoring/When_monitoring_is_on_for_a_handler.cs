@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using nUnitShouldAdapter;
 using Newtonsoft.Json;
+using NUnit.Framework;
 using NUnit.Specifications;
 using paramore.brighter.commandprocessor.monitoring.Configuration;
 using paramore.brighter.commandprocessor.monitoring.Events;
@@ -36,20 +37,21 @@ using TinyIoC;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 {
-    [Subject(typeof(MonitorHandler<>))]
-    public class When_Monitoring_Is_On_For_A_Handler : ContextSpecification
+    [TestFixture]
+    public class MonitorHandlerPipelineTests
     {
-        private static MyCommand s_command;
-        private static IAmACommandProcessor s_commandProcessor;
-        private static SpyControlBusSender s_controlBusSender;
-        private static DateTime s_at;
-        private static MonitorEvent s_beforeEvent;
-        private static MonitorEvent s_afterEvent;
-        private static string s_originalRequestAsJson;
+        private MyCommand _command;
+        private IAmACommandProcessor _commandProcessor;
+        private SpyControlBusSender _controlBusSender;
+        private DateTime _at;
+        private MonitorEvent _beforeEvent;
+        private MonitorEvent _afterEvent;
+        private string _originalRequestAsJson;
 
-        private Establish _context = () =>
+        [SetUp]
+        public void Establish()
         {
-            s_controlBusSender = new SpyControlBusSender();
+            _controlBusSender = new SpyControlBusSender();
             var registry = new SubscriberRegistry();
             
             registry.Register<MyCommand, MyMonitoredHandler>();
@@ -58,41 +60,54 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyMonitoredHandler>();
             container.Register<IHandleRequests<MyCommand>, MonitorHandler<MyCommand>>();
-            container.Register<IAmAControlBusSender>(s_controlBusSender);
+            container.Register<IAmAControlBusSender>(_controlBusSender);
             container.Register<MonitorConfiguration>(new MonitorConfiguration {IsMonitoringEnabled = true, InstanceName = "UnitTests" });
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
-            s_command = new MyCommand();
+            _command = new MyCommand();
 
-            s_originalRequestAsJson = JsonConvert.SerializeObject(s_command);
+            _originalRequestAsJson = JsonConvert.SerializeObject(_command);
 
-            s_at = DateTime.UtcNow;
-            Clock.OverrideTime = s_at;
-        };
+            _at = DateTime.UtcNow;
+            Clock.OverrideTime = _at;
+        }
 
-        private Because _of = () =>
+        [Test]
+        public void When_Monitoring_Is_On_For_A_Handler()
         {
-            s_commandProcessor.Send(s_command);
-            s_beforeEvent = s_controlBusSender.Observe<MonitorEvent>();
-            s_afterEvent = s_controlBusSender.Observe<MonitorEvent>();
-        };
+            _commandProcessor.Send(_command);
+            _beforeEvent = _controlBusSender.Observe<MonitorEvent>();
+            _afterEvent = _controlBusSender.Observe<MonitorEvent>();
 
-        private It _should_have_an_instance_name_before = () => s_beforeEvent.InstanceName.ShouldEqual("UnitTests"); //set in the config
-        private It _should_post_the_event_type_to_the_control_bus_before = () => s_beforeEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
-        private It _should_post_the_handler_fullname_to_the_control_bus_before = () => s_beforeEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
-        private It _should_post_the_handler_name_to_the_control_bus_before = () => s_beforeEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).FullName);
-        private It _should_include_the_underlying_request_details_before = () => s_beforeEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
-        private It _should_post_the_time_of_the_request_before = () => s_beforeEvent.EventTime.ShouldEqual(s_at);
-        private It _should_elapsed_before_as_zero = () => s_beforeEvent.TimeElapsedMs.ShouldEqual(0);
-        private It _should_have_an_instance_name_after = () => s_afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
-        private It _should_post_the_event_type_to_the_control_bus_after= () => s_afterEvent.EventType.ShouldEqual(MonitorEventType.ExitHandler);
-        private It _should_post_the_handler_fullname_to_the_control_bus_after = () => s_afterEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
-        private It _should_post_the_handler_name_to_the_control_bus_after = () => s_afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).FullName);
-        private It _should_include_the_underlying_request_details_after = () => s_afterEvent.RequestBody.ShouldEqual(s_originalRequestAsJson);
-        private It should_post_the_time_of_the_request_after = () => s_afterEvent.EventTime.ShouldBeGreaterThan(s_at);
-        private It should_post_the_elapsedtime_of_the_request_after = () =>
-        {
-            s_afterEvent.TimeElapsedMs.ShouldEqual((s_afterEvent.EventTime - s_beforeEvent.EventTime).Milliseconds);
-        };
-    }
+            //_should_have_an_instance_name_before
+            _beforeEvent.InstanceName.ShouldEqual("UnitTests"); //set in the config
+            //_should_post_the_event_type_to_the_control_bus_before
+            _beforeEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
+            //_should_post_the_handler_fullname_to_the_control_bus_before
+            _beforeEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+            //_should_post_the_handler_name_to_the_control_bus_before
+            _beforeEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).FullName);
+            //_should_include_the_underlying_request_details_before
+            _beforeEvent.RequestBody.ShouldEqual(_originalRequestAsJson);
+            //_should_post_the_time_of_the_request_before
+            _beforeEvent.EventTime.ShouldEqual(_at);
+            //_should_elapsed_before_as_zero
+            _beforeEvent.TimeElapsedMs.ShouldEqual(0);
+            //_should_have_an_instance_name_after
+            _afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
+            //_should_post_the_handler_fullname_to_the_control_bus_after
+            _afterEvent.EventType.ShouldEqual(MonitorEventType.ExitHandler);
+            //_should_post_the_handler_fullname_to_the_control_bus_after
+            _afterEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+            //_should_post_the_handler_name_to_the_control_bus_after
+            _afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).FullName);
+            //_should_include_the_underlying_request_details_after
+            _afterEvent.RequestBody.ShouldEqual(_originalRequestAsJson);
+            //should_post_the_time_of_the_request_after
+            _afterEvent.EventTime.ShouldBeGreaterThan(_at);
+            //should_post_the_elapsedtime_of_the_request_after
+            _afterEvent.TimeElapsedMs.ShouldEqual((_afterEvent.EventTime - _beforeEvent.EventTime).Milliseconds);
+
+        }
+   }
 }
