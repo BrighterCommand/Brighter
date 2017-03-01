@@ -77,13 +77,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
                 _thirdException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
                 //_should_send_the_command_to_the_command_handler
-                MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand).ShouldBeTrue();
-                //_should_bubble_up_the_first_exception
-                _firstException.ShouldBeOfExactType<DivideByZeroException>();
-                //_should_bubble_up_the_second_exception
-                _secondException.ShouldBeOfExactType<DivideByZeroException>();
-                //_should_break_the_circuit_after_two_fails
-                _thirdException.ShouldBeOfExactType<BrokenCircuitException>();
+            Assert.True(MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand));
+            //_should_bubble_up_the_first_exception
+            Assert.IsInstanceOf<DivideByZeroException>(_firstException);
+            //_should_bubble_up_the_second_exception
+            Assert.IsInstanceOf<DivideByZeroException>(_secondException);
+            //_should_break_the_circuit_after_two_fails
+            Assert.IsInstanceOf<BrokenCircuitException>(_thirdException);
         }
     }
 }

@@ -63,11 +63,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
             _thrownException = (AggregateException)Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_throw_a_timeout_exception
-            _thrownException.Flatten().InnerExceptions.First().ShouldBeOfExactType<TimeoutException>();
+            Assert.IsInstanceOf<TimeoutException>(_thrownException.Flatten().InnerExceptions.First());
             //_should_signal_that_a_timeout_occured_and_handler_should_be_cancelled
-            MyFailsDueToTimeoutHandlerStateTracker.WasCancelled.ShouldBeTrue();
+            Assert.True(MyFailsDueToTimeoutHandlerStateTracker.WasCancelled);
             //_should_not_run_to_completion
-            MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted.ShouldBeFalse();
+            Assert.False(MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted);
         }
     }
 }

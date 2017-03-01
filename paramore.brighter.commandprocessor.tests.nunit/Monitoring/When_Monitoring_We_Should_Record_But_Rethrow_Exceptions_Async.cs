@@ -79,23 +79,23 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
             _afterEvent = _controlBusSender.Observe<MonitorEvent>();
 
            //_should_pass_through_the_exception_not_swallow
-           _thrownException.ShouldNotBeNull();
-           //_should_monitor_the_exception
-            _afterEvent.Exception.ShouldBeOfExactType(typeof(Exception));
-           //_should_surface_the_error_message
-            _afterEvent.Exception.Message.ShouldContain("monitored");
-           //_should_have_an_instance_name_after
-            _afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
-           //_should_post_the_handler_fullname_to_the_control_bus_after
-            _afterEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandlerThatThrowsAsync).AssemblyQualifiedName);
-           //_should_post_the_handler_name_to_the_control_bus_after
-            _afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandlerThatThrowsAsync).FullName);
-           //_should_include_the_underlying_request_details_after
-            _afterEvent.RequestBody.ShouldEqual(_originalRequestAsJson);
-           //should_post_the_time_of_the_request_after
-            _afterEvent.EventTime.ShouldBeGreaterThan(_at);
-           //should_post_the_elapsedtime_of_the_request_after
-            _afterEvent.TimeElapsedMs.ShouldEqual((_afterEvent.EventTime - _at).Milliseconds);
+            Assert.NotNull(_thrownException);
+            //_should_monitor_the_exception
+            Assert.IsInstanceOf(typeof(Exception), _afterEvent.Exception);
+            //_should_surface_the_error_message
+            StringAssert.Contains("monitored", _afterEvent.Exception.Message);
+            //_should_have_an_instance_name_after
+            Assert.AreEqual("UnitTests", _afterEvent.InstanceName);
+            //_should_post_the_handler_fullname_to_the_control_bus_after
+            Assert.AreEqual(typeof(MyMonitoredHandlerThatThrowsAsync).AssemblyQualifiedName, _afterEvent.HandlerFullAssemblyName);
+            //_should_post_the_handler_name_to_the_control_bus_after
+            Assert.AreEqual(typeof(MyMonitoredHandlerThatThrowsAsync).FullName, _afterEvent.HandlerName);
+            //_should_include_the_underlying_request_details_after
+            Assert.AreEqual(_originalRequestAsJson, _afterEvent.RequestBody);
+            //should_post_the_time_of_the_request_after
+            Assert.Greater(_afterEvent.EventTime, _at);
+            //should_post_the_elapsedtime_of_the_request_after
+            Assert.AreEqual((_afterEvent.EventTime - _at).Milliseconds, _afterEvent.TimeElapsedMs);
         }
    }
 }

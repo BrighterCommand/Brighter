@@ -28,12 +28,11 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
 
             //should_return_error
             var model = _result.Result;
-            model.ShouldBeNull();
-            _result.IsError.ShouldBeTrue();
-            _result.Error.ShouldEqual(MessageListModelError.StoreMessageViewerGetException);
-            _result.Exception.ShouldNotBeNull();
-            _result.Exception.ShouldBeOfExactType<AggregateException>();
-
+            Assert.Null(model);
+            Assert.True(_result.IsError);
+            Assert.AreEqual(MessageListModelError.StoreMessageViewerGetException, _result.Error);
+            Assert.NotNull(_result.Exception);
+            Assert.IsInstanceOf<AggregateException>(_result.Exception);
         }
 
     }

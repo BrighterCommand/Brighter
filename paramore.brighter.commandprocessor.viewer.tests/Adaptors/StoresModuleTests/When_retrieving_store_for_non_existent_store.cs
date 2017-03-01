@@ -1,4 +1,5 @@
-﻿using Nancy.Json;
+﻿using Nancy;
+using Nancy.Json;
 using Nancy.Testing;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
@@ -34,15 +35,14 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
                 .Result;
 
             //should_return_404_NotFound
-            _result.StatusCode.ShouldEqual(Nancy.HttpStatusCode.NotFound);
+            Assert.AreEqual(Nancy.HttpStatusCode.NotFound, _result.StatusCode);
             //should_return_json
-            _result.ContentType.ShouldContain("application/json");
+            StringAssert.Contains("application/json", _result.ContentType);
             //should_return_error_detail
             var serializer = new JavaScriptSerializer();
             var model = serializer.Deserialize<MessageViewerError>(_result.Body.AsString());
-            model.ShouldNotBeNull();
-            model.Message.ShouldContain("Unknown");
-
+            Assert.NotNull(model);
+            StringAssert.Contains("Unknown", model.Message);
         }
 
         private static void ConfigureStoreModuleForStoreError(ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator with, MessageStoreViewerModelError messageStoreViewerModelError)

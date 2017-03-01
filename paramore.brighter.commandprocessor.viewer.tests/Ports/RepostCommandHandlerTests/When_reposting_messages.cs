@@ -34,7 +34,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.RepostCommandHan
             _repostHandler.Handle(_command);
 
             //should_send_message_to_broker
-            _fakeMessageProducer.MessageWasSent.ShouldBeTrue();
+            Assert.True(_fakeMessageProducer.MessageWasSent);
         }
    }
 }

@@ -37,10 +37,9 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.RepostCommandHan
             _ex = Catch.Exception(() => _repostHandler.Handle(_command));
 
             //should_throw_expected_exception
-            _ex.ShouldBeOfExactType<Exception>();
-            _ex.Message.ShouldContain("messages");
-            _ex.Message.ShouldContain(_messageToRepostMissing.Id.ToString());
-
+            Assert.IsInstanceOf<Exception>(_ex);
+            StringAssert.Contains("messages", _ex.Message);
+            StringAssert.Contains(_messageToRepostMissing.Id.ToString(), _ex.Message);
         }
    }
 }

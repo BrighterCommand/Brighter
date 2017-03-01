@@ -1,4 +1,6 @@
-﻿using paramore.brighter.commandprocessor.logging.Handlers;
+﻿using System;
+using System.Collections.Generic;
+using paramore.brighter.commandprocessor.logging.Handlers;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.Logging.TestDoubles;
@@ -41,9 +43,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Logging
             _commandProcessor.Send(_myCommand);
 
             //_should_log_the_request_handler_call
-            _logger.Logs.ShouldMatch(logs => logs.Any(log => log.Message.Contains("Logging handler pipeline call")));
+            Assert.True(_logger.Logs.Any(log => log.Message.Contains("Logging handler pipeline call")));
             //_should_log_the_type_of_handler_in_the_call
-            _logger.Logs.ShouldMatch(logs => logs.Any(log => log.Message.Contains(typeof(MyCommand).ToString())));
+            Assert.True(_logger.Logs.Any(log => log.Message.Contains(typeof(MyCommand).ToString())));
         }
     }
 }

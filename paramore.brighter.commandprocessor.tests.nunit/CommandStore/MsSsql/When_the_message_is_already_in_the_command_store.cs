@@ -55,7 +55,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
             _exception = Catch.Exception(() => _sqlCommandStore.Add(_raisedCommand));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.ShouldBeNull();
+            Assert.Null(_exception);
         }
 
         [TearDown]

@@ -59,13 +59,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
 
             //_should_throw_an_aggregate_exception
-            _exception.ShouldBeOfExactType(typeof(AggregateException));
+            Assert.IsInstanceOf(typeof(AggregateException), _exception);
             //_should_have_an_inner_exception_from_the_handler
-            ((AggregateException)_exception).InnerException.ShouldBeOfExactType(typeof(InvalidOperationException));
+            Assert.IsInstanceOf(typeof(InvalidOperationException), ((AggregateException)_exception).InnerException);
             //_should_publish_the_command_to_the_first_event_handler
-            MyEventHandler.ShouldReceive(_myEvent).ShouldBeTrue();
+            Assert.True(MyEventHandler.ShouldReceive(_myEvent));
             //_should_publish_the_command_to_the_second_event_handler
-            MyOtherEventHandler.Shouldreceive(_myEvent).ShouldBeTrue();
+            Assert.True(MyOtherEventHandler.Shouldreceive(_myEvent));
         }
     }
 }

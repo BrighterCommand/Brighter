@@ -62,19 +62,19 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
             _storedMessage = _SqlMessageStore.Get(_messageEarliest.Id);
 
             //_should_read_the_message_from_the__sql_message_store
-            _storedMessage.Body.Value.ShouldEqual(_messageEarliest.Body.Value);
+            Assert.AreEqual(_messageEarliest.Body.Value, _storedMessage.Body.Value);
             //_should_read_the_message_header_first_bag_item_from_the__sql_message_store
-            _storedMessage.Header.Bag.ContainsKey(key1).ShouldBeTrue();
-            _storedMessage.Header.Bag[key1].ShouldEqual(value1);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(key1));
+            Assert.AreEqual(value1, _storedMessage.Header.Bag[key1]);
             //_should_read_the_message_header_second_bag_item_from_the__sql_message_store
-            _storedMessage.Header.Bag.ContainsKey(key2).ShouldBeTrue();
-            _storedMessage.Header.Bag[key2].ShouldEqual(value2);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(key2));
+            Assert.AreEqual(value2, _storedMessage.Header.Bag[key2]);
             //_should_read_the_message_header_timestamp_from_the__sql_message_store
-            _storedMessage.Header.TimeStamp.ShouldEqual(_messageEarliest.Header.TimeStamp);
+            Assert.AreEqual(_messageEarliest.Header.TimeStamp, _storedMessage.Header.TimeStamp);
             //_should_read_the_message_header_topic_from_the__sql_message_store
-            _storedMessage.Header.Topic.ShouldEqual(_messageEarliest.Header.Topic);
+            Assert.AreEqual(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);
             //_should_read_the_message_header_type_from_the__sql_message_store
-            _storedMessage.Header.MessageType.ShouldEqual(_messageEarliest.Header.MessageType);
+            Assert.AreEqual(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
         }
 
 

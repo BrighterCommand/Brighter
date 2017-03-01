@@ -113,13 +113,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             _dispatcher = _builder.Build();
 
             //_should_build_a_dispatcher
-            _dispatcher.ShouldNotBeNull();
+            Assert.NotNull(_dispatcher);
             //_should_have_a_foo_connection
-            GetConnection("foo").ShouldNotBeNull();
+            Assert.NotNull(GetConnection("foo"));
             //_should_have_a_bar_connection
-            GetConnection("bar").ShouldNotBeNull();
+            Assert.NotNull(GetConnection("bar"));
             //_should_be_in_the_awaiting_state
-            _dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
         }
 
         private Connection GetConnection(string name)

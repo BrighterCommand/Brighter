@@ -50,7 +50,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
 
             //_should_not_throw_an_exception
-            _exception.ShouldBeNull();
+            Assert.Null(_exception);
         }
     }
 }

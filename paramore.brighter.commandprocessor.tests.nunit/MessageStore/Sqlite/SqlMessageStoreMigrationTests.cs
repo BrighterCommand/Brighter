@@ -83,15 +83,15 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
             _storedMessage = _sqlMessageStore.Get(_message.Id);
 
             //_should_read_the_message_from_the__sql_message_store
-            _storedMessage.Body.Value.ShouldEqual(_message.Body.Value);
+            Assert.AreEqual(_message.Body.Value, _storedMessage.Body.Value);
             //_should_read_the_message_header_type_from_the__sql_message_store
-            _storedMessage.Header.MessageType.ShouldEqual(_message.Header.MessageType);
+            Assert.AreEqual(_message.Header.MessageType, _storedMessage.Header.MessageType);
             //_should_read_the_message_header_topic_from_the__sql_message_store
-            _storedMessage.Header.Topic.ShouldEqual(_message.Header.Topic);
+            Assert.AreEqual(_message.Header.Topic, _storedMessage.Header.Topic);
             //_should_default_the_timestamp_from_the__sql_message_store
-            _storedMessage.Header.TimeStamp.ShouldBeGreaterThanOrEqualTo(_message.Header.TimeStamp); //DateTime set in ctor on way out
+            Assert.GreaterOrEqual(_storedMessage.Header.TimeStamp, _message.Header.TimeStamp);
             //_should_read_empty_header_bag_from_the__sql_message_store
-            _storedMessage.Header.Bag.Keys.Any().ShouldBeFalse();
+            Assert.False(_storedMessage.Header.Bag.Keys.Any());
         }
 
         [TearDown]

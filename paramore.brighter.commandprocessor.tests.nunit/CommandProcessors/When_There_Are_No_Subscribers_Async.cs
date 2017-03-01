@@ -51,7 +51,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PublishAsync(_myEvent)));
 
             //_should_not_throw_an_exception
-            _exception.ShouldBeNull();
+            Assert.Null(_exception);
         }
     }
 }

@@ -71,7 +71,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             var commandMessage = new MyCommandMessageMapper().MapToMessage(command);
             _commandChannel.Add(commandMessage);
 
-            _dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
         }
 
@@ -84,15 +84,15 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             _dispatcher.End().Wait();
 
            //_should_have_consumed_the_messages_in_the_event_channel
-            _eventChannel.Length.ShouldEqual(0);
-           //_should_have_consumed_the_messages_in_the_command_channel
-            _commandChannel.Length.ShouldEqual(0);
-           //_should_have_a_stopped_state
-            _dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
-           //_should_have_no_consumers
-            _dispatcher.Consumers.ShouldBeEmpty();
-           //_should_of_had_2_consumers_when_running
-            _numberOfConsumers.ShouldEqual(2);
+            Assert.AreEqual(0, _eventChannel.Length);
+            //_should_have_consumed_the_messages_in_the_command_channel
+            Assert.AreEqual(0, _commandChannel.Length);
+            //_should_have_a_stopped_state
+            Assert.AreEqual(DispatcherState.DS_STOPPED, _dispatcher.State);
+            //_should_have_no_consumers
+            Assert.False(_dispatcher.Consumers.Any());
+            //_should_of_had_2_consumers_when_running
+            Assert.AreEqual(2, _numberOfConsumers);
         }
 
     }

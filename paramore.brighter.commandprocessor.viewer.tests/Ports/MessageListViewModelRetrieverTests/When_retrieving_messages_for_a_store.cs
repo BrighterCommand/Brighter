@@ -42,24 +42,24 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
             //should_return_MessageListModel
             var model = _result.Result;
 
-            model.ShouldNotBeNull();
-            model.MessageCount.ShouldEqual(_messages.Count);
+            Assert.NotNull(model);
+            Assert.AreEqual(_messages.Count, model.MessageCount);
 
             //should_return_expected_message_state
             var foundMessage = model.Messages.Single(m => m.MessageId == _message1.Id);
-            foundMessage.ShouldNotBeNull();
+            Assert.NotNull(foundMessage);
 
-            foundMessage.HandledCount.ShouldEqual(_message1.Header.HandledCount);
-            foundMessage.MessageType.ShouldEqual(_message1.Header.MessageType.ToString());
-            foundMessage.Topic.ShouldEqual(_message1.Header.Topic);
-            foundMessage.TimeStamp.ShouldEqual(_message1.Header.TimeStamp);
+            Assert.AreEqual(_message1.Header.HandledCount, foundMessage.HandledCount);
+            Assert.AreEqual(_message1.Header.MessageType.ToString(), foundMessage.MessageType);
+            Assert.AreEqual(_message1.Header.Topic, foundMessage.Topic);
+            Assert.AreEqual(_message1.Header.TimeStamp, foundMessage.TimeStamp);
 
             foreach (var key in _message1.Header.Bag.Keys)
             {
                 foundMessage.Bag.Contains(key);
                 foundMessage.Bag.Contains(_message1.Header.Bag[key].ToString());
             }
-            foundMessage.MessageBody.ShouldEqual(_message1.Body.Value);
+            Assert.AreEqual(_message1.Body.Value, foundMessage.MessageBody);
 
             //foundMessage.TimeStampUI.ShouldContain("ago");//fragile time-based
         }

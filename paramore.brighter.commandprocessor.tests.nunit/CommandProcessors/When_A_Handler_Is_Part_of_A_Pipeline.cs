@@ -53,9 +53,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-            TracePipeline().ToString().Contains("MyImplicitHandler").ShouldBeTrue();
-            TracePipeline().ToString().Contains("MyLoggingHandler").ShouldBeTrue();
-
+            Assert.True(TracePipeline().ToString().Contains("MyImplicitHandler"));
+            Assert.True(TracePipeline().ToString().Contains("MyLoggingHandler"));
         }
 
         private PipelineTracer TracePipeline()

@@ -58,7 +58,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
             //_should_call_the_messaging_gateway
             A.CallTo(() => _gateway.Receive(1000)).MustHaveHappened();
             //_should_return_the_next_message_from_the_gateway
-            _receivedMessage.ShouldEqual(_sentMessage);
+            Assert.AreEqual(_sentMessage, _receivedMessage);
         }
 
     }

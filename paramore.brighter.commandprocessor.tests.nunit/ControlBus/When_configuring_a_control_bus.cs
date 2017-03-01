@@ -61,11 +61,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
             _controlBus = _busReceiverBuilder.Build(_hostName);
 
             //_should_have_a_configuration_channel
-            _controlBus.Connections.Any(cn => cn.Name == _hostName  + "." + ControlBusReceiverBuilder.CONFIGURATION).ShouldBeTrue();
+            Assert.True(_controlBus.Connections.Any(cn => cn.Name == _hostName  + "." + ControlBusReceiverBuilder.CONFIGURATION));
             //_should_have_a_heartbeat_channel
-            _controlBus.Connections.Any(cn => cn.Name == _hostName + "." + ControlBusReceiverBuilder.HEARTBEAT).ShouldBeTrue();
+            Assert.True(_controlBus.Connections.Any(cn => cn.Name == _hostName + "." + ControlBusReceiverBuilder.HEARTBEAT));
             //_should_have_a_command_processor
-            _controlBus.CommandProcessor.ShouldNotBeNull();
+            Assert.NotNull(_controlBus.CommandProcessor);
         }
     }
 }

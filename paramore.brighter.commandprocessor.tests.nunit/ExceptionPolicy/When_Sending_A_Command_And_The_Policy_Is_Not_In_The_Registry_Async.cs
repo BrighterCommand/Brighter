@@ -62,9 +62,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand)));
 
             //_should_throw_an_exception
-            _exception.ShouldBeOfExactType<ArgumentException>();
+            Assert.IsInstanceOf<ArgumentException>(_exception);
             //_should_give_the_name_of_the_missing_policy
-            _exception.ShouldContainErrorMessage("There is no policy for MyDivideByZeroPolicy");
+            Assert.NotNull(_exception);
+            StringAssert.Contains("There is no policy for MyDivideByZeroPolicy", _exception.Message);
         }
     }
 }

@@ -101,9 +101,9 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
             AsyncContext.Run(async () => _messages = await _eventStoreMessageStore.GetAsync(StreamName, 0, 2));
 
             //_gets_message1
-            _messages.Count(m => MessagesEqualApartFromTimestamp(m, _message1)).ShouldEqual(1);
+            Assert.AreEqual(_messages.Count(m => MessagesEqualApartFromTimestamp(m, _message1)), 1);
             //_gets_message2
-            _messages.Count(m => MessagesEqualApartFromTimestamp(m, _message2)).ShouldEqual(1);
+            Assert.AreEqual(_messages.Count(m => MessagesEqualApartFromTimestamp(m, _message2)), 1);
 
         }
 

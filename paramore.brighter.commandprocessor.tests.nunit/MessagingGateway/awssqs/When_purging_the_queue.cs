@@ -36,7 +36,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
             _receiver.Purge();
 
            //should_clean_the_queue
-            _testQueueListener.Listen().ShouldBeNull();
+            Assert.Null(_testQueueListener.Listen());
         }
     }
 }

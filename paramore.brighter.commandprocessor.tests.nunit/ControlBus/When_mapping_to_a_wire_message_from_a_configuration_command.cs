@@ -51,13 +51,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
             _message = _mapper.MapToMessage(_command);
 
             // _should_serialize_the_command_type_to_the_message_body
-            _message.Body.Value.Contains("\"Type\":1").ShouldBeTrue();
+            Assert.True(_message.Body.Value.Contains("\"Type\":1"));
             //_should_serialize_the_message_type_to_the_header
-            _message.Header.MessageType.ShouldEqual(MessageType.MT_COMMAND);
+            Assert.AreEqual(MessageType.MT_COMMAND, _message.Header.MessageType);
             //_should_serialize_the_connection_name_to_the_message_body
-            _message.Body.Value.Contains("\"ConnectionName\":\"getallthethings\"").ShouldBeTrue();
+            Assert.True(_message.Body.Value.Contains("\"ConnectionName\":\"getallthethings\""));
             //_should_serialize_the_message_id_to_the_message_body
-            _message.Body.Value.Contains(string.Format("\"Id\":\"{0}\"", _command.Id)).ShouldBeTrue();
+            Assert.True(_message.Body.Value.Contains(string.Format("\"Id\":\"{0}\"", _command.Id)));
         }
     }
 }

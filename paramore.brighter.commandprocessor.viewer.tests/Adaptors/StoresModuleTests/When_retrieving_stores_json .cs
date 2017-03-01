@@ -44,15 +44,15 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
             .Result;
 
              //should_return_200_OK
-             _result.StatusCode.ShouldEqual(HttpStatusCode.OK);
-             //should_return_json
-             _result.ContentType.ShouldContain("application/json");
-             //should_return_StoresListModel
+            Assert.AreEqual(HttpStatusCode.OK, _result.StatusCode);
+            //should_return_json
+            StringAssert.Contains("application/json", _result.ContentType);
+            //should_return_StoresListModel
              var serializer = new JavaScriptSerializer();
              var model = serializer.Deserialize<MessageStoreActivationStateListModel>(_result.Body.AsString());
 
-             model.ShouldNotBeNull();
-             model.stores.Count().ShouldEqual(2);
-         }
+            Assert.NotNull(model);
+            Assert.AreEqual(2, model.stores.Count());
+        }
    }
 }

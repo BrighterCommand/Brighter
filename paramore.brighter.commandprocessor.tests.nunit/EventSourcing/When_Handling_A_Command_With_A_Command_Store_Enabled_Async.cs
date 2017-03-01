@@ -37,7 +37,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
             AsyncContext.Run(async () => await _commandProcessor.SendAsync(_command));
 
            // should_store_the_command_to_the_command_store
-            _commandStore.GetAsync<MyCommand>(_command.Id).Result.Value.ShouldEqual(_command.Value);
+            Assert.AreEqual(_command.Value, _commandStore.GetAsync<MyCommand>(_command.Id).Result.Value);
         }
     }
 }

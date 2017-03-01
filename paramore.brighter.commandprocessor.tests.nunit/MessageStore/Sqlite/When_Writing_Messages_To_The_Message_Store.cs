@@ -71,11 +71,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
             _retrievedMessages = _sSqlMessageStore.Get();
 
             // _should_read_first_message_last_from_the__message_store
-            _retrievedMessages.Last().Id.ShouldEqual(_messageEarliest.Id);
+            Assert.AreEqual(_messageEarliest.Id, _retrievedMessages.Last().Id);
             //_should_read_last_message_first_from_the__message_store
-            _retrievedMessages.First().Id.ShouldEqual(_messageLatest.Id);
+            Assert.AreEqual(_messageLatest.Id, _retrievedMessages.First().Id);
             //_should_read_the_messages_from_the__message_store
-            _retrievedMessages.Count().ShouldEqual(3);
+            Assert.AreEqual(3, _retrievedMessages.Count());
         }
 
         [TearDown]

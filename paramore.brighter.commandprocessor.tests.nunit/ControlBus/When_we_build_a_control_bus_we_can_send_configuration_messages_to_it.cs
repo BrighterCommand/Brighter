@@ -65,7 +65,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
             _exception = Catch.Exception(() => _controlBus.CommandProcessor.Send(_configurationCommand));
 
             //should_not_raise_exceptions_for_missing_handlers
-            _exception.ShouldBeNull();
+            Assert.Null(_exception);
             //should_call_the_dispatcher_to_start_it
             A.CallTo(() => _dispatcher.Receive()).MustHaveHappened();
         }

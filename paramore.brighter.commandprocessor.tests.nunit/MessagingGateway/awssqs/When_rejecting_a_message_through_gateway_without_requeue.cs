@@ -40,7 +40,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
             _receiver.Reject(_listenedMessage, false);
 
             //should_not_requeue_the_message
-            _testQueueListener.Listen().ShouldBeNull();
+            Assert.Null(_testQueueListener.Listen());
         }
 
         [TearDown]

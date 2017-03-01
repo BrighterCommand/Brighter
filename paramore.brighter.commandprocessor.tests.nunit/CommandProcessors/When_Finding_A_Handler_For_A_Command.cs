@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -50,9 +51,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
            //_should_return_the_my_command_handler_as_the_implicit_handler
-           _pipeline.ShouldBeAssignableTo(typeof(MyCommandHandler));
-           //_should_be_the_only_element_in_the_chain
-            TracePipeline().ToString().ShouldEqual("MyCommandHandler|");
+            Assert.IsAssignableFrom(typeof(MyCommandHandler), _pipeline);
+            //_should_be_the_only_element_in_the_chain
+            Assert.AreEqual("MyCommandHandler|", TracePipeline().ToString());
         }
 
         private PipelineTracer TracePipeline()

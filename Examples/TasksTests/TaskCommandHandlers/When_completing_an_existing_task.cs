@@ -42,7 +42,7 @@ namespace TasksTests.TaskCommandHandlers
             _taskToBeCompleted = _tasksDAO.FindById(_cmd.TaskId);
 
             //_should_update_the_tasks_completed_date
-            _taskToBeCompleted.CompletionDate.Value.Date.ShouldEqual(s_COMPLETION_DATE.Date);
+            Assert.AreEqual(s_COMPLETION_DATE.Date, _taskToBeCompleted.CompletionDate.Value.Date);
             //_should_post_event
             A.CallTo(() => s_commandProcessor.Post(A<TaskCompletedEvent>._)).MustHaveHappened(Repeated.Exactly.Once);
         }

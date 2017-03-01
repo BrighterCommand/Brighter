@@ -77,24 +77,23 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
             _afterEvent = _controlBusSender.Observe<MonitorEvent>();
 
             //_should_pass_through_the_exception_not_swallow
-            _thrownException.ShouldNotBeNull();
+            Assert.NotNull(_thrownException);
             //_should_monitor_the_exception
-            _afterEvent.Exception.ShouldBeOfExactType(typeof(Exception));
+            Assert.IsInstanceOf(typeof(Exception), _afterEvent.Exception);
             //_should_surface_the_error_message
-            _afterEvent.Exception.Message.ShouldContain("monitored");
+            StringAssert.Contains("monitored", _afterEvent.Exception.Message);
             //_should_have_an_instance_name_after
-            _afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
+            Assert.AreEqual("UnitTests", _afterEvent.InstanceName);
             //_should_post_the_handler_fullname_to_the_control_bus_after
-            _afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandler).FullName);
+            Assert.AreEqual(typeof(MyMonitoredHandler).FullName, _afterEvent.HandlerName);
             //_should_post_the_handler_name_to_the_control_bus_after
-            _afterEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+            Assert.AreEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName, _afterEvent.HandlerFullAssemblyName);
             //should_post_the_time_of_the_request_after
-            _afterEvent.EventTime.ShouldBeGreaterThan(_at);
+            Assert.Greater(_afterEvent.EventTime, _at);
             //should_post_the_elapsedtime_of_the_request_after
-            _afterEvent.EventTime.ShouldBeGreaterThan(_at);
+            Assert.Greater(_afterEvent.EventTime, _at);
             //should_post_the_elapsedtime_of_the_request_after
-            _afterEvent.TimeElapsedMs.ShouldEqual((_afterEvent.EventTime - _at).Milliseconds);
-
+            Assert.AreEqual((_afterEvent.EventTime - _at).Milliseconds, _afterEvent.TimeElapsedMs);
         }
    }
 }

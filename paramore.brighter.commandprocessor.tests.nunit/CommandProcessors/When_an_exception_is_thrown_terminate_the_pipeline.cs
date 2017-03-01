@@ -55,8 +55,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         {
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
-            _exception.ShouldNotBeNull();
-            MyUnusedCommandHandler.Shouldreceive(_myCommand).ShouldBeFalse();
+            Assert.NotNull(_exception);
+            Assert.False(MyUnusedCommandHandler.Shouldreceive(_myCommand));
         }
 
         [TearDown]

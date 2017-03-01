@@ -51,7 +51,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand));
 
            // _should_send_the_command_to_the_command_handler
-            MyCommandHandlerAsync.ShouldReceive(_myCommand).ShouldBeTrue();
+            Assert.True(MyCommandHandlerAsync.ShouldReceive(_myCommand));
         }
     }
 }

@@ -27,10 +27,9 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
 
            // should_not_return_MessageListModel
             var model = _result.Result;
-            model.ShouldBeNull();
-            _result.IsError.ShouldBeTrue();
-            _result.Error.ShouldEqual(MessageListModelError.StoreMessageViewerNotImplemented);
-
+            Assert.Null(model);
+            Assert.True(_result.IsError);
+            Assert.AreEqual(MessageListModelError.StoreMessageViewerNotImplemented, _result.Error);
         }
    }
 

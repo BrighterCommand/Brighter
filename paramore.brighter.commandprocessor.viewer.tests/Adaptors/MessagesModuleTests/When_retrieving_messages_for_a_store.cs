@@ -37,6 +37,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using Nancy;
 using Nancy.Testing;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
@@ -83,13 +84,12 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.MessagesModul
                 .Result;
 
             //should_return_200_OK
-            _result.StatusCode.ShouldEqual(Nancy.HttpStatusCode.OK);
+            Assert.AreEqual(Nancy.HttpStatusCode.OK, _result.StatusCode);
             //should_return_json
-            _result.ContentType.ShouldContain("application/json");
+            StringAssert.Contains("application/json", _result.ContentType);
             //should_return_MessageListModel
              var model = Newtonsoft.Json.JsonConvert.DeserializeObject<MessageListModel>(_result.Body.AsString());
-            model.ShouldNotBeNull();
-
+            Assert.NotNull(model);
         }
    }
 }

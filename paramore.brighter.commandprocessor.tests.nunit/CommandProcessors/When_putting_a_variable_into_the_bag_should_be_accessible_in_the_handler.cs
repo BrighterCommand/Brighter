@@ -36,9 +36,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _commandProcessor.Send(_myCommand);
 
             //_should_have_seen_the_data_we_pushed_into_the_bag
-            MyContextAwareCommandHandler.TestString.ShouldEqual(I_AM_A_TEST_OF_THE_CONTEXT_BAG);
+            Assert.AreEqual(I_AM_A_TEST_OF_THE_CONTEXT_BAG, MyContextAwareCommandHandler.TestString);
             //_should_have_been_filled_by_the_handler
-            ((string)_request_context.Bag["MyContextAwareCommandHandler"]).ShouldEqual("I was called and set the context");
+            Assert.AreEqual("I was called and set the context", ((string)_request_context.Bag["MyContextAwareCommandHandler"]));
         }
     }
 }

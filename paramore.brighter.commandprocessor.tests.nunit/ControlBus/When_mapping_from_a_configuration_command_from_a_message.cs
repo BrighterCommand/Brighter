@@ -53,9 +53,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
             _command = _mapper.MapToRequest(_message);
 
             //_should_rehydrate_the_command_type
-            _command.Type.ShouldEqual(ConfigurationCommandType.CM_STARTALL);
+            Assert.AreEqual(ConfigurationCommandType.CM_STARTALL, _command.Type);
             // _should_rehydrate_the_connection_name
-            _command.ConnectionName.ShouldEqual("getallthethings");
+            Assert.AreEqual("getallthethings", _command.ConnectionName);
         }
     }
 }

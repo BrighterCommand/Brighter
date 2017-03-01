@@ -41,11 +41,11 @@ namespace TasksTests.TaskCommandHandlers
             _taskToBeAdded = _tasksDAO.FindById(_cmd.TaskId);
 
             //_should_have_the_matching_task_name
-            _taskToBeAdded.TaskName.ShouldEqual(TASK_NAME);
+            Assert.AreEqual(TASK_NAME, _taskToBeAdded.TaskName);
             //_should_have_the_matching_task_description
-            _taskToBeAdded.TaskDescription.ShouldEqual(TASK_DESCRIPTION);
+            Assert.AreEqual(TASK_DESCRIPTION, _taskToBeAdded.TaskDescription);
             //_should_have_the_matching_task_name
-            _taskToBeAdded.DueDate.Value.Date.ShouldEqual(_now.Date);
+            Assert.AreEqual(_now.Date, _taskToBeAdded.DueDate.Value.Date);
         }
     }
 

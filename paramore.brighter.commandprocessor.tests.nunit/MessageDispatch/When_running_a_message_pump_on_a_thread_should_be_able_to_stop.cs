@@ -66,13 +66,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             _performerTask.Wait();
 
             //_should_terminate_successfully
-            _performerTask.IsCompleted.ShouldBeTrue();
+            Assert.True(_performerTask.IsCompleted);
             //_should_not_have_errored
-            _performerTask.IsFaulted.ShouldBeFalse();
+            Assert.False(_performerTask.IsFaulted);
             //_should_not_show_as_cancelled
-            _performerTask.IsCanceled.ShouldBeFalse();
+            Assert.False(_performerTask.IsCanceled);
             //_should_have_consumed_the_messages_in_the_channel
-            _channel.Length.ShouldEqual(0);
+            Assert.AreEqual(0, _channel.Length);
         }
     }
 }

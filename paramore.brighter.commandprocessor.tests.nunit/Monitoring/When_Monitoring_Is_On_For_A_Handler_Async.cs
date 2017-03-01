@@ -80,31 +80,31 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
 
 
             //_should_have_an_instance_name_before
-            _beforeEvent.InstanceName.ShouldEqual("UnitTests"); //set in the config
+            Assert.AreEqual("UnitTests", _beforeEvent.InstanceName);
             //_should_post_the_event_type_to_the_control_bus_before
-            _beforeEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
+            Assert.AreEqual(MonitorEventType.EnterHandler, _beforeEvent.EventType);
             //_should_post_the_handler_fullname_to_the_control_bus_before
-            _beforeEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandlerAsync).AssemblyQualifiedName);
+            Assert.AreEqual(typeof(MyMonitoredHandlerAsync).AssemblyQualifiedName, _beforeEvent.HandlerFullAssemblyName);
             //_should_post_the_handler_name_to_the_control_bus_before
-            _beforeEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandlerAsync).FullName);
+            Assert.AreEqual(typeof(MyMonitoredHandlerAsync).FullName, _beforeEvent.HandlerName);
             //_should_include_the_underlying_request_details_before
-            _beforeEvent.RequestBody.ShouldEqual(_originalRequestAsJson);
+            Assert.AreEqual(_originalRequestAsJson, _beforeEvent.RequestBody);
             //should_post_the_time_of_the_request_before
-            _beforeEvent.EventTime.ShouldEqual(_at);
+            Assert.AreEqual(_at, _beforeEvent.EventTime);
             //_should_have_an_instance_name_after
-            _afterEvent.InstanceName.ShouldEqual("UnitTests");   //set in the config
+            Assert.AreEqual("UnitTests", _afterEvent.InstanceName);
             //_should_post_the_event_type_to_the_control_bus_after
-            _afterEvent.EventType.ShouldEqual(MonitorEventType.ExitHandler);
+            Assert.AreEqual(MonitorEventType.ExitHandler, _afterEvent.EventType);
             //_should_post_the_handler_fullname_to_the_control_bus_after
-            _afterEvent.HandlerFullAssemblyName.ShouldEqual(typeof(MyMonitoredHandlerAsync).AssemblyQualifiedName);
+            Assert.AreEqual(typeof(MyMonitoredHandlerAsync).AssemblyQualifiedName, _afterEvent.HandlerFullAssemblyName);
             //_should_post_the_handler_name_to_the_control_bus_after
-            _afterEvent.HandlerName.ShouldEqual(typeof(MyMonitoredHandlerAsync).FullName);
+            Assert.AreEqual(typeof(MyMonitoredHandlerAsync).FullName, _afterEvent.HandlerName);
             //_should_include_the_underlying_request_details_after
-            _afterEvent.RequestBody.ShouldEqual(_originalRequestAsJson);
+            Assert.AreEqual(_originalRequestAsJson, _afterEvent.RequestBody);
             //should_post_the_time_of_the_request_after
-            _afterEvent.EventTime.ShouldBeGreaterThan(_at);
+            Assert.Greater(_afterEvent.EventTime, _at);
             //should_post_the_elapsedtime_of_the_request_after
-            _afterEvent.TimeElapsedMs.ShouldEqual((_afterEvent.EventTime - _beforeEvent.EventTime).Milliseconds);
+            Assert.AreEqual((_afterEvent.EventTime - _beforeEvent.EventTime).Milliseconds, _afterEvent.TimeElapsedMs);
         }
    }
 }

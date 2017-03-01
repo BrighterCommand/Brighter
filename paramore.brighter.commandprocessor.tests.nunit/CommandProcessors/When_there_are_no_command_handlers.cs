@@ -48,9 +48,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_fail_because_multiple_receivers_found
-            _exception.ShouldBeAssignableTo(typeof(ArgumentException));
+            Assert.IsAssignableFrom(typeof(ArgumentException), _exception);
             //_should_have_an_error_message_that_tells_you_why
-            _exception.ShouldContainErrorMessage("No command handler was found for the typeof command paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles.MyCommand - a command should have exactly one handler.");
+            Assert.NotNull(_exception);
+            StringAssert.Contains("No command handler was found for the typeof command paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles.MyCommand - a command should have exactly one handler.", _exception.Message);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Nancy.Json;
+﻿using Nancy;
+using Nancy.Json;
 using Nancy.Testing;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
@@ -35,16 +36,15 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
                 .Result;
 
             //should_return_500_Server_error
-            _result.StatusCode.ShouldEqual(Nancy.HttpStatusCode.InternalServerError);
+            Assert.AreEqual(Nancy.HttpStatusCode.InternalServerError, _result.StatusCode);
             //should_return_json
-            _result.ContentType.ShouldContain("application/json");
+            StringAssert.Contains("application/json", _result.ContentType);
             //should_return_error
             var serializer = new JavaScriptSerializer();
             var model = serializer.Deserialize<MessageViewerError>(_result.Body.AsString());
 
-            model.ShouldNotBeNull();
-            model.Message.ShouldContain("Unable");
-
+            Assert.NotNull(model);
+            StringAssert.Contains("Unable", model.Message);
         }
 
         private static void ConfigureStoreModuleForStoreError(

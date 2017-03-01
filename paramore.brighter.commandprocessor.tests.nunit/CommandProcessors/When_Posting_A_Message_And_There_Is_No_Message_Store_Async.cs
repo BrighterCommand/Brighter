@@ -77,7 +77,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _commandProcessor.Dispose();
 
             //_should_throw_an_exception
-            _exception.ShouldBeOfExactType<InvalidOperationException>();
+            Assert.IsInstanceOf<InvalidOperationException>(_exception);
         }
     }
 }

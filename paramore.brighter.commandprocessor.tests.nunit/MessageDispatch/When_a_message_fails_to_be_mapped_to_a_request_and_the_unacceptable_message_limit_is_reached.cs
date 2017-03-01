@@ -62,9 +62,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             Task.WaitAll(new[] { task });
 
             //should_have_acknowledge_the_3_messages
-            _channel.AcknowledgeCount.ShouldEqual(3);
+            Assert.AreEqual(3, _channel.AcknowledgeCount);
             //should_dispose_the_input_channel
-            _channel.DisposeHappened.ShouldBeTrue();
+            Assert.True(_channel.DisposeHappened);
         }
     }
 }

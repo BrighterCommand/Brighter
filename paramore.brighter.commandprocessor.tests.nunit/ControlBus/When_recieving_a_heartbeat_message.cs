@@ -82,16 +82,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
             s_spyCommandProcessor.ContainsCommand(CommandType.Post);
             //_should_have_diagnostic_information_in_the_response
             var heartbeatEvent = s_spyCommandProcessor.Observe<HeartbeatReply>();
-            heartbeatEvent.ShouldMatch(
-                hb => hb.HostName == s_hostName
-                && hb.SendersAddress.Topic == TEST_ROUTING_KEY
-                && hb.SendersAddress.CorrelationId == s_CorrelationId
-                && hb.Consumers[0].ConnectionName == TEST_FIRST_CONNECTION_NAME
-                && hb.Consumers[0].State == ConsumerState.Open
-                && hb.Consumers[1].ConnectionName == TEST_SECOND_CONNECTION_NAME
-                && hb.Consumers[1].State == ConsumerState.Shut);
-
-
+            Assert.True(((Func<HeartbeatReply, bool>) (hb => hb.HostName == s_hostName
+                                       && hb.SendersAddress.Topic == TEST_ROUTING_KEY
+                                       && hb.SendersAddress.CorrelationId == s_CorrelationId
+                                       && hb.Consumers[0].ConnectionName == TEST_FIRST_CONNECTION_NAME
+                                       && hb.Consumers[0].State == ConsumerState.Open
+                                       && hb.Consumers[1].ConnectionName == TEST_SECOND_CONNECTION_NAME
+                                       && hb.Consumers[1].State == ConsumerState.Shut)).Invoke(heartbeatEvent));
         }
    }
 }

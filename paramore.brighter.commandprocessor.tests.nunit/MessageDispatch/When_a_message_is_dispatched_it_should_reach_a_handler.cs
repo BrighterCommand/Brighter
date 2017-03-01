@@ -70,7 +70,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             _messagePump.Run();
 
             //_should_dispatch_the_message_to_a_handler
-            MyEventHandler.ShouldReceive(_event).ShouldBeTrue();
+            Assert.True(MyEventHandler.ShouldReceive(_event));
         }
 
         internal class CheapHandlerFactory : IAmAHandlerFactory

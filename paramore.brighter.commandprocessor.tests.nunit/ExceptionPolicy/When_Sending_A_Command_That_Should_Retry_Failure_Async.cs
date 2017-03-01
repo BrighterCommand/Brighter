@@ -55,9 +55,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_myCommand)));
 
             //_should_send_the_command_to_the_command_handler
-            MyFailsWithFallbackDivideByZeroHandlerAsync.ShouldReceive(s_myCommand).ShouldBeTrue();
+            Assert.True(MyFailsWithFallbackDivideByZeroHandlerAsync.ShouldReceive(s_myCommand));
             //_should_retry_three_times
-            s_retryCount.ShouldEqual(3);
+            Assert.AreEqual(3, s_retryCount);
         }
     }
 }

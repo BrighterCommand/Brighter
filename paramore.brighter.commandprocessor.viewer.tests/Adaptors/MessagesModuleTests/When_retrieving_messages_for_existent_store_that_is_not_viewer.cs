@@ -35,6 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Nancy;
 using Nancy.Json;
 using Nancy.Testing;
 using NUnit.Framework;
@@ -76,16 +77,15 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.MessagesModul
                 .Result;
 
             //should_return_404_NotFound
-            _result.StatusCode.ShouldEqual(Nancy.HttpStatusCode.NotFound);
+            Assert.AreEqual(Nancy.HttpStatusCode.NotFound, _result.StatusCode);
             //should_return_json
-            _result.ContentType.ShouldContain("application/json");
+            StringAssert.Contains("application/json", _result.ContentType);
             //should_return_error_detail
             var serializer = new JavaScriptSerializer();
             var model = serializer.Deserialize<MessageViewerError>(_result.Body.AsString());
 
-            model.ShouldNotBeNull();
-            model.Message.ShouldContain("IMessageStoreViewer");
-
+            Assert.NotNull(model);
+            StringAssert.Contains("IMessageStoreViewer", model.Message);
         }
    }
 }

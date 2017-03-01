@@ -48,7 +48,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PublishAsync(_myEvent)));
 
            //_should_throw_an_invalid_operation_exception
-            _exception.ShouldBeOfExactType<InvalidOperationException>();
+            Assert.IsInstanceOf<InvalidOperationException>(_exception);
         }
     }
 }

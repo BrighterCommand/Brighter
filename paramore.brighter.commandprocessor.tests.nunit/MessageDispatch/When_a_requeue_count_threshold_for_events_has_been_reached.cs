@@ -69,13 +69,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             Task.WaitAll(new[] { task });
 
             //_should_publish_the_message_via_the_command_processor
-            _commandProcessor.Commands[0].ShouldEqual(CommandType.Publish);
+            Assert.AreEqual(CommandType.Publish, _commandProcessor.Commands[0]);
             //_should_have_been_handled_6_times_via_publish
-            _commandProcessor.PublishCount.ShouldEqual(6);
+            Assert.AreEqual(6, _commandProcessor.PublishCount);
             //_should_requeue_the_messages
-            _channel.Length.ShouldEqual(0);
+            Assert.AreEqual(0, _channel.Length);
             //_should_dispose_the_input_channel
-            _channel.DisposeHappened.ShouldBeTrue();
+            Assert.True(_channel.DisposeHappened);
         }
     }
 }

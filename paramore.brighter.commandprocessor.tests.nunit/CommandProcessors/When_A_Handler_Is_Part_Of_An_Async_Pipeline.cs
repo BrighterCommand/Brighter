@@ -54,8 +54,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         {
             _pipeline = _pipelineBuilder.BuildAsync(new RequestContext(), false).First();
 
-            TracePipeline().ToString().Contains("MyImplicitHandlerAsync").ShouldBeTrue();
-            TracePipeline().ToString().Contains("MyLoggingHandlerAsync").ShouldBeTrue();
+            Assert.True(TracePipeline().ToString().Contains("MyImplicitHandlerAsync"));
+            Assert.True(TracePipeline().ToString().Contains("MyLoggingHandlerAsync"));
         }
 
         private PipelineTracer TracePipeline()

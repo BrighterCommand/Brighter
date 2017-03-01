@@ -1,4 +1,6 @@
-﻿using Nito.AsyncEx;
+﻿using System;
+using System.Collections.Generic;
+using Nito.AsyncEx;
 using paramore.brighter.commandprocessor.logging.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.Logging.TestDoubles;
@@ -43,9 +45,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Logging
 
 
             //_should_log_the_request_handler_call
-            _logger.Logs.ShouldMatch(logs => logs.Any(log => log.Message.Contains("Logging handler pipeline call")));
+            Assert.True(((Func<IList<SpyLog.LogRecord>, bool>) (logs => logs.Any(log => log.Message.Contains("Logging handler pipeline call")))).Invoke(_logger.Logs));
             //_should_log_the_type_of_handler_in_the_call
-            _logger.Logs.ShouldMatch(logs => logs.Any(log => log.Message.Contains(typeof(MyCommand).ToString())));
+            Assert.True(((Func<IList<SpyLog.LogRecord>, bool>) (logs => logs.Any(log => log.Message.Contains(typeof(MyCommand).ToString())))).Invoke(_logger.Logs));
         }
 
     }

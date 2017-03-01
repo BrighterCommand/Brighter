@@ -67,11 +67,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
             AsyncContext.Run(async () => messages = await _sqlMessageStore.GetAsync(1, 3));
 
             //_should_fetch_1_message
-            messages.Count().ShouldEqual(1);
+            Assert.AreEqual(1, messages.Count());
             //_should_fetch_expected_message
-            messages.First().Header.Topic.ShouldEqual(_TopicLastMessage);
+            Assert.AreEqual(_TopicLastMessage, messages.First().Header.Topic);
             //_should_not_fetch_null_messages
-            messages.ShouldNotBeNull();
+            Assert.NotNull(messages);
         }
 
         [TearDown]

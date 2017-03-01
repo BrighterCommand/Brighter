@@ -33,7 +33,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
             _topic = _queueListener.CheckSnsTopic(_message.Header.Topic);
 
             //should_create_topic_and_send_the_message
-            _topic.ShouldNotBeNull();
+            Assert.NotNull(_topic);
         }
 
         [TearDown]

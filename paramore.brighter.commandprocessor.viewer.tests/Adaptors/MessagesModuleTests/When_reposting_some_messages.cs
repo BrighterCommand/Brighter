@@ -100,16 +100,15 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.MessagesModul
                 .Result;
 
             //should_return_200_OK
-            _result.StatusCode.ShouldEqual(HttpStatusCode.OK);
+            Assert.AreEqual(HttpStatusCode.OK, _result.StatusCode);
             //should_invoke_handler_from_factory
-            _fakeRepostHandler.WasHandled.ShouldBeTrue();
+            Assert.True(_fakeRepostHandler.WasHandled);
             //should_invoke_handler_with_store_and_passed_ids
             var command = _fakeRepostHandler.InvokedCommand;
-            command.ShouldNotBeNull();
-            command.StoreName.ShouldEqual(_storeName);
-            command.MessageIds.Contains(_messages[0].Id.ToString()).ShouldBeTrue();
-            command.MessageIds.Contains(_messages[1].Id.ToString()).ShouldBeTrue();
-
+            Assert.NotNull(command);
+            Assert.AreEqual(_storeName, command.StoreName);
+            Assert.True(command.MessageIds.Contains(_messages[0].Id.ToString()));
+            Assert.True(command.MessageIds.Contains(_messages[1].Id.ToString()));
         }
    }
 }

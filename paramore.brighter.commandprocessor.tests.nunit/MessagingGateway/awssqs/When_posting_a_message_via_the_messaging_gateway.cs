@@ -33,7 +33,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
             _listenedMessage = _queueListener.Listen();
 
             //should_send_the_message_to_aws_sqs
-            _listenedMessage.Body.ShouldNotBeNull();
+            Assert.NotNull(_listenedMessage.Body);
         }
 
         [TearDown]

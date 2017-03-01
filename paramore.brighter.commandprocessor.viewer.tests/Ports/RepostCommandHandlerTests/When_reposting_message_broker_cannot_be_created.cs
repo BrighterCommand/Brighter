@@ -31,8 +31,8 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.RepostCommandHan
             var ex = Catch.Exception(() => _repostHandler.Handle(_command));
 
             //should_throw_expected_exception
-            ex.ShouldBeOfExactType<Exception>();
-            ex.Message.ShouldContain("Mis-configured");
+            Assert.IsInstanceOf<Exception>(ex);
+            StringAssert.Contains("Mis-configured", ex.Message);
         }
    }
 }

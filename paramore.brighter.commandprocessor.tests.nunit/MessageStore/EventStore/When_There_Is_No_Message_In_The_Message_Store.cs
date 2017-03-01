@@ -98,7 +98,7 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
             _messages = _eventStoreMessageStore.Get(EmptyStreamName, 0, 1);
 
             //_returns_an_empty_list
-            _messages.Count.ShouldEqual(0);
+            Assert.AreEqual(_messages.Count,0);
         }
 
         private Message CreateMessage(int eventNumber)

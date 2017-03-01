@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -25,9 +26,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
            // _should_return_the_command_handler_as_the_implicit_handler
-            _pipeline.ShouldBeAssignableTo(typeof(MyDependentCommandHandler));
-           //  _should_be_the_only_element_in_the_chain
-            TracePipeline().ToString().ShouldEqual("MyDependentCommandHandler|");
+            Assert.IsAssignableFrom(typeof(MyDependentCommandHandler), _pipeline);
+            //  _should_be_the_only_element_in_the_chain
+            Assert.AreEqual("MyDependentCommandHandler|", TracePipeline().ToString());
         }
 
         private PipelineTracer TracePipeline()

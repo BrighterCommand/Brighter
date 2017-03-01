@@ -46,9 +46,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
         {
             AsyncContext.Run(async () => await _messagePump.Run());
 
-            MyEventHandlerAsyncWithContinuation.ShouldReceive(_event).ShouldBeTrue();
-            MyEventHandlerAsyncWithContinuation.LoopCounter.Value.ShouldEqual(2);
-            MyEventHandlerAsyncWithContinuation.WorkThreadId.ShouldEqual(MyEventHandlerAsyncWithContinuation.ContinuationThreadId);
+            Assert.True(MyEventHandlerAsyncWithContinuation.ShouldReceive(_event));
+            Assert.AreEqual(2, MyEventHandlerAsyncWithContinuation.LoopCounter.Value);
+            Assert.AreEqual(MyEventHandlerAsyncWithContinuation.ContinuationThreadId, MyEventHandlerAsyncWithContinuation.WorkThreadId);
         }
 
         internal class CheapHandlerFactoryAsync : IAmAHandlerFactoryAsync

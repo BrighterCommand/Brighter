@@ -58,15 +58,15 @@ namespace TasksTests.TasksDAO
             _dao.Update(_addedTask);
 
             //_should_add_the_task_into_the_list
-            GetTask().ShouldNotBeNull();
+            Assert.NotNull(GetTask());
             //_should_set_the_task_name
-            GetTask().TaskName.ShouldEqual(NEW_TASK_NAME);
+            Assert.AreEqual(NEW_TASK_NAME, GetTask().TaskName);
             //_should_set_the_task_description
-            GetTask().TaskDescription.ShouldEqual(NEW_TASK_DESCRIPTION);
+            Assert.AreEqual(NEW_TASK_DESCRIPTION, GetTask().TaskDescription);
             //_should_set_the_task_duedate
-            GetTask().DueDate.Value.Date.ShouldEqual(s_NEW_DUE_DATE.Value.Date);
+            Assert.AreEqual(s_NEW_DUE_DATE.Value.Date, GetTask().DueDate.Value.Date);
             //_should_set_the_task_completion_date
-            GetTask().CompletionDate.Value.Date.ShouldEqual(s_NEW_COMPLETION_DATE.Value.Date);
+            Assert.AreEqual(s_NEW_COMPLETION_DATE.Value.Date, GetTask().CompletionDate.Value.Date);
         }
 
         private Task GetTask()

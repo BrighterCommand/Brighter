@@ -66,19 +66,19 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
             _monitorEvent = _monitorEventMessageMapper.MapToRequest(_message);
 
             //_should_have_the_correct_instance_name
-            _monitorEvent.InstanceName.ShouldEqual(InstanceName);
+            Assert.AreEqual(InstanceName, _monitorEvent.InstanceName);
             //_should_have_the_correct_handler_name
-            _monitorEvent.HandlerName.ShouldEqual(HandlerName);
+            Assert.AreEqual(HandlerName, _monitorEvent.HandlerName);
             //_should_have_the_correct_handler_full_assembly_name
-            _monitorEvent.HandlerFullAssemblyName.ShouldEqual(HandlerFullAssemblyName);
+            Assert.AreEqual(HandlerFullAssemblyName, _monitorEvent.HandlerFullAssemblyName);
             //_should_have_the_correct_monitor_type
-            _monitorEvent.EventType.ShouldEqual(MonitorEventType.EnterHandler);
+            Assert.AreEqual(MonitorEventType.EnterHandler, _monitorEvent.EventType);
             //_should_have_the_original_request_as_json
-            _monitorEvent.RequestBody.ShouldEqual(_originalRequestAsJson);
+            Assert.AreEqual(_originalRequestAsJson, _monitorEvent.RequestBody);
             //_should_have_the_correct_event_time
-            _monitorEvent.EventTime.ShouldEqual(_overrideTime);
+            Assert.AreEqual(_overrideTime, _monitorEvent.EventTime);
             //_should_have_the_correct_time_elapsed
-            _monitorEvent.TimeElapsedMs.ShouldEqual(_elapsedMilliseconds);
-         }
+            Assert.AreEqual(_elapsedMilliseconds, _monitorEvent.TimeElapsedMs);
+        }
    }
 }

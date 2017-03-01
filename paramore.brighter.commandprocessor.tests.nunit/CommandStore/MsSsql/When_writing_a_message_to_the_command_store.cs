@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.commandstore.mssql;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
@@ -54,11 +55,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
             _storedCommand = _sqlCommandStore.Get<MyCommand>(_raisedCommand.Id);
 
             //_should_read_the_command_from_the__sql_command_store
-            _storedCommand.ShouldNotBeNull();
+            Assert.NotNull(_storedCommand);
             //_should_read_the_command_value
-            _storedCommand.Value.ShouldEqual(_raisedCommand.Value);
+            Assert.AreEqual(_raisedCommand.Value, _storedCommand.Value);
             //_should_read_the_command_id
-            _storedCommand.Id.ShouldEqual(_raisedCommand.Id);
+            Assert.AreEqual(_raisedCommand.Id, _storedCommand.Id);
         }
 
         [TearDown]

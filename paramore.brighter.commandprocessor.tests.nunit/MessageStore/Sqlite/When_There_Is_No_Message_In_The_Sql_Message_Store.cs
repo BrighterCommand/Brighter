@@ -53,7 +53,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
             _storedMessage = _SqlMessageStore.Get(_messageEarliest.Id);
 
             //_should_return_a_empty_message
-            _storedMessage.Header.MessageType.ShouldEqual(MessageType.MT_NONE);
+            Assert.AreEqual(MessageType.MT_NONE, _storedMessage.Header.MessageType);
         }
 
 

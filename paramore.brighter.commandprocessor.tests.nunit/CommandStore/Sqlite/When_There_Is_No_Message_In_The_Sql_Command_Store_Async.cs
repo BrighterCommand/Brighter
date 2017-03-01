@@ -54,7 +54,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
             _storedCommand = AsyncContext.Run<MyCommand>(async () => await _sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid()));
 
             //_should_return_an_empty_command_on_a_missing_command
-            _storedCommand.Id.ShouldEqual(Guid.Empty);
+            Assert.AreEqual(Guid.Empty, _storedCommand.Id);
         }
 
         [TearDown]

@@ -58,7 +58,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _sqlMessageStore.AddAsync(_messageEarliest)));
 
             //_should_ignore_the_duplcate_key_and_still_succeed
-            _exception.ShouldBeNull();
+            Assert.Null(_exception);
         }
 
         [TearDown]

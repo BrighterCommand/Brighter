@@ -61,7 +61,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
             _commandProcessor.Send(_command);
 
             //should_store_the_command_to_the_command_store
-            _commandstore.Get<MyCommand>(_command.Id).Value.ShouldEqual(_command.Value);
+            Assert.AreEqual(_command.Value, _commandstore.Get<MyCommand>(_command.Id).Value);
         }
     }
 }

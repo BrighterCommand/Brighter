@@ -37,9 +37,8 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
            //should_return_expected_model
            var model = _result.Result;
 
-           model.ShouldNotBeNull();
-           model.MessageCount.ShouldEqual(_messages.Count);
-
+            Assert.NotNull(model);
+            Assert.AreEqual(_messages.Count, model.MessageCount);
         }
    }
 }

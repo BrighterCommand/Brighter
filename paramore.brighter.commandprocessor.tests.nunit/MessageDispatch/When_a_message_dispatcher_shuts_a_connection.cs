@@ -58,7 +58,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             for (var i = 0; i < 6; i++)
                 _channel.Add(message);
 
-            _dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
         }
 
@@ -71,11 +71,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             _dispatcher.End().Wait();
 
             //_should_have_consumed_the_messages_in_the_channel
-            _dispatcher.Consumers.Any(consumer => (consumer.Name == _connection.Name) && (consumer.State == ConsumerState.Open)).ShouldBeFalse();
+            Assert.False(_dispatcher.Consumers.Any(consumer => (consumer.Name == _connection.Name) && (consumer.State == ConsumerState.Open)));
             //_should_have_a_stopped_state
-            _dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+            Assert.AreEqual(DispatcherState.DS_STOPPED, _dispatcher.State);
             //_should_have_no_consumers
-            _dispatcher.Consumers.ShouldBeEmpty();
+            Assert.False(_dispatcher.Consumers.Any());
         }
     }
 }

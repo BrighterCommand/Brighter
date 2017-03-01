@@ -70,9 +70,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
             _firstException = Catch.Exception(() => _badReceiver.Receive(2000));
 
             //_should_return_a_channel_failure_exception
-            _firstException.ShouldBeOfExactType<ChannelFailureException>();
+            Assert.IsInstanceOf<ChannelFailureException>(_firstException);
             //_should_return_an_explainging_inner_exception
-            _firstException.InnerException.ShouldBeOfExactType<AlreadyClosedException>();
+            Assert.IsInstanceOf<AlreadyClosedException>(_firstException.InnerException);
         }
 
         [TearDown]

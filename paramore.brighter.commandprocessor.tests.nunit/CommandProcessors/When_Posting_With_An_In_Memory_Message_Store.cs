@@ -77,11 +77,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _commandProcessor.Post(_myCommand);
 
             //_should_store_the_message_in_the_sent_command_message_repository
-            _messageStore.Get(_myCommand.Id).ShouldNotBeNull();
+            Assert.NotNull(_messageStore.Get(_myCommand.Id));
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducer.MessageWasSent.ShouldBeTrue();
+            Assert.True(_fakeMessageProducer.MessageWasSent);
             // _should_convert_the_command_into_a_message
-            _messageStore.Get(_myCommand.Id).ShouldEqual(_message);
+            Assert.AreEqual(_message, _messageStore.Get(_myCommand.Id));
         }
 
         [TearDown]

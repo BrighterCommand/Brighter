@@ -64,9 +64,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
             _messageConsumer.Acknowledge(_sentMessage);
 
             //_should_send_a_message_via_restms_with_the_matching_body
-            _messageBody.ShouldEqual(_message.Body.Value);
+            Assert.AreEqual(_message.Body.Value, _messageBody);
             //_should_have_an_empty_pipe_after_acknowledging_the_message
-            ((RestMsMessageConsumer)_messageConsumer).NoOfOutstandingMessages(30000).ShouldEqual(0);
+            Assert.AreEqual(0, ((RestMsMessageConsumer)_messageConsumer).NoOfOutstandingMessages(30000));
         }
 
         [TearDown]

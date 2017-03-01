@@ -49,7 +49,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _commandProcessor.Send(_myCommand);
 
             //_should_send_the_command_to_the_command_handler
-            MyCommandHandler.ShouldReceive(_myCommand).ShouldBeTrue();
+            Assert.True(MyCommandHandler.ShouldReceive(_myCommand));
         }
     }
 }

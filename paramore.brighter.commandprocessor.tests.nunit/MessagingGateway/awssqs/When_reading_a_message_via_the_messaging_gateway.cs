@@ -39,19 +39,19 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 
 
             //should_send_a_message_via_sqs_with_the_matching_body
-            _receivedMessage.Body.ShouldEqual(_sentMessage.Body);
+            Assert.AreEqual(_sentMessage.Body, _receivedMessage.Body);
             //should_send_a_message_via_sqs_with_the_matching_header_handled_count
-            _receivedMessage.Header.HandledCount.ShouldEqual(_sentMessage.Header.HandledCount);
+            Assert.AreEqual(_sentMessage.Header.HandledCount, _receivedMessage.Header.HandledCount);
             //should_send_a_message_via_sqs_with_the_matching_header_id
-            _receivedMessage.Header.Id.ShouldEqual(_sentMessage.Header.Id);
+            Assert.AreEqual(_sentMessage.Header.Id, _receivedMessage.Header.Id);
             //should_send_a_message_via_sqs_with_the_matching_header_message_type
-            _receivedMessage.Header.MessageType.ShouldEqual(_sentMessage.Header.MessageType);
+            Assert.AreEqual(_sentMessage.Header.MessageType, _receivedMessage.Header.MessageType);
             //should_send_a_message_via_sqs_with_the_matching_header_time_stamp
-            _receivedMessage.Header.TimeStamp.ShouldEqual(_sentMessage.Header.TimeStamp);
+            Assert.AreEqual(_sentMessage.Header.TimeStamp, _receivedMessage.Header.TimeStamp);
             //should_send_a_message_via_sqs_with_the_matching_header_topic
-            _receivedMessage.Header.Topic.ShouldEqual(_sentMessage.Header.Topic);
+            Assert.AreEqual(_sentMessage.Header.Topic, _receivedMessage.Header.Topic);
             //should_remove_the_message_from_the_queue
-            _testQueueListener.Listen().ShouldBeNull();
+            Assert.Null(_testQueueListener.Listen());
         }
 
         [TearDown]

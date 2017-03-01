@@ -52,11 +52,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.NoOpStore
             _exception = Catch.Exception(() => _messages = _noOpStore.Get());
 
             //_should_not_cause_exception
-            _exception.ShouldBeNull();
+            Assert.Null(_exception);
             //_should_return_empty_list
-            _messages.ShouldNotBeNull();
-            _messages.Any().ShouldBeFalse();
-
+            Assert.NotNull(_messages);
+            Assert.False(_messages.Any());
         }
    }
 }

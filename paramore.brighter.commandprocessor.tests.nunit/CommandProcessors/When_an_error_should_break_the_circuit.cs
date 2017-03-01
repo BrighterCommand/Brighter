@@ -62,10 +62,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             //now respond with broken ciruit
             _circuitBrokenException = (BrokenCircuitException)Catch.Exception(() => _commandProcessor.Post(_myCommand));
 
-            _messagingProducer.SentCalledCount.ShouldEqual(4);
-            _failedException.ShouldBeOfExactType(typeof(Exception));
-            _circuitBrokenException.ShouldBeOfExactType(typeof(BrokenCircuitException));
-         }
+            Assert.AreEqual(4, _messagingProducer.SentCalledCount);
+            Assert.IsInstanceOf(typeof(Exception), _failedException);
+            Assert.IsInstanceOf(typeof(BrokenCircuitException), _circuitBrokenException);
+        }
 
         [TearDown]
         public void Cleanup()

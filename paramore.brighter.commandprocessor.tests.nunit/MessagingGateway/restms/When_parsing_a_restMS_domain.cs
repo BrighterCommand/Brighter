@@ -43,9 +43,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
             _couldParse = XmlResultParser.TryParse(BODY, out _domain);
 
             //_should_be_able_to_parse_the_result
-            _couldParse.ShouldBeTrue();
+            Assert.True(_couldParse);
             //_should_have_a_domain_object
-            _domain.ShouldNotBeNull();
+            Assert.NotNull(_domain);
         }
     }
 }

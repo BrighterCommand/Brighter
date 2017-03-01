@@ -62,7 +62,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
             //_should_call_the_messaging_gateway
             A.CallTo(() => _gateway.Requeue(_requeueMessage, 1000)).MustHaveHappened();
             //_should_have_used_gateway_delay_support
-            (_stopWatch.ElapsedMilliseconds < 500).ShouldBeTrue();
+            Assert.True((_stopWatch.ElapsedMilliseconds < 500));
         }
    }
 }

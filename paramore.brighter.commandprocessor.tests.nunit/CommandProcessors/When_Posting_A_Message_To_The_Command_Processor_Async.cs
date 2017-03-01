@@ -79,10 +79,10 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             AsyncContext.Run(async () => await _commandProcessor.PostAsync(_myCommand));
 
            //_should_store_the_message_in_the_sent_command_message_repository
-           _fakeMessageStore.MessageWasAdded.ShouldBeTrue();
-           //_should_send_a_message_via_the_messaging_gateway
-           _fakeMessageProducer.MessageWasSent.ShouldBeTrue();
-           //_should_convert_the_command_into_a_message
+            Assert.True(_fakeMessageStore.MessageWasAdded);
+            //_should_send_a_message_via_the_messaging_gateway
+            Assert.True(_fakeMessageProducer.MessageWasSent);
+            //_should_convert_the_command_into_a_message
         }
 
         public void Cleanup()

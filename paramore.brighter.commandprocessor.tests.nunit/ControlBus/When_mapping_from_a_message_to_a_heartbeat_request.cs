@@ -61,11 +61,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
             _request = _mapper.MapToRequest(_message);
 
             //_should_put_the_message_reply_topic_into_the_address
-            _request.ReplyAddress.Topic.ShouldEqual(TOPIC);
+            Assert.AreEqual(TOPIC, _request.ReplyAddress.Topic);
             //_should_put_the_message_correlation_id_into_the_address
-            _request.ReplyAddress.CorrelationId.ShouldEqual(_correlationId);
+            Assert.AreEqual(_correlationId, _request.ReplyAddress.CorrelationId);
             //_should_set_the_id_of_the_request
-            _request.Id.ShouldEqual(_commandId);
+            Assert.AreEqual(_commandId, _request.Id);
         }
     }
 }

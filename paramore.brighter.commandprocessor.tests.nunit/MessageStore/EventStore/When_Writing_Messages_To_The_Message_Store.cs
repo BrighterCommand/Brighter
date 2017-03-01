@@ -33,10 +33,8 @@ using EventStore.ClientAPI.Embedded;
 using EventStore.Core;
 using EventStore.Core.Data;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.eventstore;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit;
 
 namespace paramore.commandprocessor.tests.MessageStore.EventStore
 {
@@ -100,9 +98,9 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
             _messages = _eventStoreMessageStore.Get(StreamName, 0, 2);
 
             //_gets_message1
-            _messages.Count(m => MessagesEqualApartFromTimestamp(m, _message1)).ShouldEqual(1);
+           Assert.AreEqual(_messages.Count(m => MessagesEqualApartFromTimestamp(m, _message1)), 1);
             //_gets_message2
-            _messages.Count(m => MessagesEqualApartFromTimestamp(m, _message2)).ShouldEqual(1);
+           Assert.AreEqual(_messages.Count(m => MessagesEqualApartFromTimestamp(m, _message2)), 1);
 
          }
 

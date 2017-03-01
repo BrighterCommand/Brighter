@@ -30,7 +30,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         {
             _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
 
-           TraceFilters().ToString().ShouldEqual("MyValidationHandlerAsync`1|MyObsoleteCommandHandlerAsync|MyLoggingHandlerAsync`1|");
+            Assert.AreEqual("MyValidationHandlerAsync`1|MyObsoleteCommandHandlerAsync|MyLoggingHandlerAsync`1|", TraceFilters().ToString());
         }
 
         private PipelineTracer TraceFilters()

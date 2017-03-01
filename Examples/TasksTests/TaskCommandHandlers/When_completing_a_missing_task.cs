@@ -40,7 +40,7 @@ namespace TasksTests.TaskCommandHandlers
             _exception = Catch.Exception(() => _handler.Handle(_cmd));
 
             //_should_fail
-            _exception.ShouldBeOfExactType<ArgumentOutOfRangeException>();
+            Assert.IsInstanceOf<ArgumentOutOfRangeException>(_exception);
             //_should_not_post_event
             A.CallTo(() => _commandProcessor.Post(A<TaskCompletedEvent>._)).MustNotHaveHappened();
         }

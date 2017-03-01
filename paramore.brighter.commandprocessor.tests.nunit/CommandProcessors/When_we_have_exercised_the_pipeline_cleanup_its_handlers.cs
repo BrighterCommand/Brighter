@@ -61,11 +61,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _pipeline_Builder.Dispose();
 
             //_should_have_called_dispose_on_instances_from_ioc
-            MyPreAndPostDecoratedHandler.DisposeWasCalled.ShouldBeTrue();
+            Assert.True(MyPreAndPostDecoratedHandler.DisposeWasCalled);
             //_should_have_called_dispose_on_instances_from_pipeline_builder
-            MyLoggingHandler<MyCommand>.DisposeWasCalled.ShouldBeTrue();
+            Assert.True(MyLoggingHandler<MyCommand>.DisposeWasCalled);
             //_should_have_called_release_on_all_handlers
-            s_released.ShouldEqual("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1");
+            Assert.AreEqual("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1", s_released);
         }
     }
 }

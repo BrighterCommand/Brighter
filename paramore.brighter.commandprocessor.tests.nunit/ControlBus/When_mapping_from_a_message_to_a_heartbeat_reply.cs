@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using NUnit.Framework;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
@@ -55,15 +56,14 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
             _request = _mapper.MapToRequest(_message);
 
             // _should_set_the_sender_address_topic
-            _request.SendersAddress.Topic.ShouldEqual(TOPIC);
+            Assert.AreEqual(TOPIC, _request.SendersAddress.Topic);
             // _should_set_the_sender_correlation_id
-            _request.SendersAddress.CorrelationId.ShouldEqual(_correlationId);
+            Assert.AreEqual(_correlationId, _request.SendersAddress.CorrelationId);
             // _should_set_the_hostName
-            _request.HostName.ShouldEqual("Test.Hostname");
+            Assert.AreEqual("Test.Hostname", _request.HostName);
             // _should_contain_the_consumers
-            _request.Consumers.ShouldContain(rc => rc.ConnectionName == "Test.Connection" && rc.State == ConsumerState.Open);
-            _request.Consumers.ShouldContain(rc => rc.ConnectionName == "More.Consumers" && rc.State == ConsumerState.Shut);
-
+            Assert.True((bool) _request.Consumers.Any(rc => rc.ConnectionName == "Test.Connection" && rc.State == ConsumerState.Open));
+            Assert.True(_request.Consumers.Any(rc => rc.ConnectionName == "More.Consumers" && rc.State == ConsumerState.Shut));
         }
    }
 }

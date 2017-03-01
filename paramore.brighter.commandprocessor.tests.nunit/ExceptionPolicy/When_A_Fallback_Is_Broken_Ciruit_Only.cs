@@ -64,7 +64,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             //_should_send_the_command_to_the_command_handler
             MyFailsWithUnsupportedExceptionForFallback.ShouldReceive(_myCommand);
             // _should_bubble_out_the_exception
-            _exception.ShouldNotBeNull();
+            Assert.NotNull(_exception);
         }
     }
 }

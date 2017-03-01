@@ -43,8 +43,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 
             //should_delete_the_original_message_and_create_new_message
              _requeuedMessage = _receiver.Receive(1000);
-            _requeuedMessage.Body.Value.ShouldEqual(_receivedMessage.Body.Value);
-            _requeuedMessage.Header.Bag["ReceiptHandle"].ToString().ShouldNotEqual(_receivedReceiptHandle);
+            Assert.AreEqual(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
+            Assert.AreNotEqual(_requeuedMessage.Header.Bag["ReceiptHandle"].ToString(), _receivedReceiptHandle);
         }
 
         [TearDown]

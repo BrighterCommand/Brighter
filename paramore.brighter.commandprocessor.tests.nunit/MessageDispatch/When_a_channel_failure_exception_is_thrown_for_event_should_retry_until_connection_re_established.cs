@@ -63,7 +63,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             _messagePump.Run();
 
             //_should_publish_the_message_via_the_command_processor
-            _commandProcessor.Commands[0].ShouldEqual(CommandType.Publish);
+            Assert.AreEqual(CommandType.Publish, _commandProcessor.Commands[0]);
         }
 
     }

@@ -107,7 +107,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             _dispatcher = _builder.Build();
 
             //_should_build_a_dispatcher
-            _dispatcher.ShouldNotBeNull();
+            Assert.NotNull(_dispatcher);
         }
     }
 }

@@ -81,11 +81,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
             _controlBusSender.Post(_myCommand);
 
             //_should_store_the_message_in_the_sent_command_message_repository
-            _fakeMessageStore.MessageWasAdded.ShouldBeTrue();
+            Assert.True(_fakeMessageStore.MessageWasAdded);
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducer.MessageWasSent.ShouldBeTrue();
+            Assert.True(_fakeMessageProducer.MessageWasSent);
             //_should_convert_the_command_into_a_message
-            _fakeMessageStore.Get().First().ShouldEqual(_message);
+            Assert.AreEqual(_message, _fakeMessageStore.Get().First());
         }
 
         [TearDown]

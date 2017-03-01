@@ -59,13 +59,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Add(message);
 
-            _dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
             Task.Delay(1000).Wait();
             _dispatcher.Shut("test");
             _dispatcher.Shut("newTest");
             Task.Delay(3000).Wait();
-            _dispatcher.Consumers.Count().ShouldEqual(0); //sanity check
+            Assert.AreEqual(0, _dispatcher.Consumers.Count());
         }
 
 
@@ -80,13 +80,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 
 
             //_should_have_consumed_the_messages_in_the_event_channel
-            _channel.Length.ShouldEqual(0);
+            Assert.AreEqual(0, _channel.Length);
             //_should_have_a_running_state
-            _dispatcher.State.ShouldEqual(DispatcherState.DS_RUNNING);
+            Assert.AreEqual(DispatcherState.DS_RUNNING, _dispatcher.State);
             //_should_have_only_one_consumer
-           _dispatcher.Consumers.Count().ShouldEqual(1);
+            Assert.AreEqual(1, _dispatcher.Consumers.Count());
             //_should_have_two_connections
-           _dispatcher.Connections.Count().ShouldEqual(2);
+            Assert.AreEqual(2, _dispatcher.Connections.Count());
         }
 
         [TearDown]

@@ -55,7 +55,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         {
             _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
 
-            PipelineTracer().ToString().ShouldEqual("MyLoggingHandlerAsync`1|MyValidationHandlerAsync`1|MyDoubleDecoratedHandlerAsync|");
+            Assert.AreEqual("MyLoggingHandlerAsync`1|MyValidationHandlerAsync`1|MyDoubleDecoratedHandlerAsync|", PipelineTracer().ToString());
         }
 
         private PipelineTracer PipelineTracer()

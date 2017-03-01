@@ -64,11 +64,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             _messagePump.Run();
 
             //_should_publish_the_message_via_the_command_processor
-            _commandProcessor.Commands[0].ShouldEqual(CommandType.Publish);
+            Assert.AreEqual(CommandType.Publish, _commandProcessor.Commands[0]);
             //_should_requeue_the_messages
-            _channel.Length.ShouldEqual(2);
+            Assert.AreEqual(2, _channel.Length);
             //_should_dispose_the_input_channel
-            _channel.DisposeHappened.ShouldBeTrue();
+            Assert.True(_channel.DisposeHappened);
         }
     }
 }

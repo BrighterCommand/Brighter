@@ -44,11 +44,11 @@ namespace TasksTests.TaskCommandHandlers
             _taskToBeEdited = _tasksDAO.FindById(_cmd.TaskId);
 
             //_should_update_the_task_with_the_new_task_name
-            _taskToBeEdited.TaskName.ShouldEqual(NEW_TASK_NAME);
+            Assert.AreEqual(NEW_TASK_NAME, _taskToBeEdited.TaskName);
             //_should_update_the_task_with_the_new_task_description
-            _taskToBeEdited.TaskDescription.ShouldEqual(NEW_TASK_DESCRIPTION);
+            Assert.AreEqual(NEW_TASK_DESCRIPTION, _taskToBeEdited.TaskDescription);
             //_should_update_the_task_with_the_new_task_time
-            _taskToBeEdited.DueDate.Value.Date.ShouldEqual(_NEW_TIME.Date);
+            Assert.AreEqual(_NEW_TIME.Date, _taskToBeEdited.DueDate.Value.Date);
             //_should_post_event
             A.CallTo(() => s_commandProcessor.Post(A<TaskEditedEvent>._)).MustHaveHappened(Repeated.Exactly.Once);
         }

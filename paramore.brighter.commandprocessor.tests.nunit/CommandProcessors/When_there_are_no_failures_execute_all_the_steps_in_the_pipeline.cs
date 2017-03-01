@@ -56,11 +56,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
 
 
             //_should_call_the_pre_validation_handler
-            MyValidationHandler<MyCommand>.ShouldReceive(_myCommand).ShouldBeTrue();
+            Assert.True(MyValidationHandler<MyCommand>.ShouldReceive(_myCommand));
             //_should_send_the_command_to_the_command_handler
-            MyPreAndPostDecoratedHandler.ShouldReceive(_myCommand).ShouldBeTrue();
-           // _should_call_the_post_validation_handler
-            MyLoggingHandler<MyCommand>.Shouldreceive(_myCommand).ShouldBeTrue();
+            Assert.True(MyPreAndPostDecoratedHandler.ShouldReceive(_myCommand));
+            // _should_call_the_post_validation_handler
+            Assert.True(MyLoggingHandler<MyCommand>.Shouldreceive(_myCommand));
         }
     }
 }

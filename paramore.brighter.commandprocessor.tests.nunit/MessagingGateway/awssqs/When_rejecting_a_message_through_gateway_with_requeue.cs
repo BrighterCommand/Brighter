@@ -41,8 +41,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 
             //should_requeue_the_message
             var message = _receiver.Receive(1000);
-            message.ShouldEqual(_listenedMessage);
-
+            Assert.AreEqual(_listenedMessage, message);
         }
 
         [TearDown]

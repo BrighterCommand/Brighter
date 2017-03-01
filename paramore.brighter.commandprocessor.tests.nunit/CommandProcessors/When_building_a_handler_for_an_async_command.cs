@@ -51,8 +51,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         {
             s_chainOfResponsibility = s_chainBuilder.BuildAsync(s_requestContext, false).First();
 
-            s_chainOfResponsibility.Context.ShouldNotBeNull();
-            s_chainOfResponsibility.Context.ShouldBeTheSameAs(s_requestContext);
+            Assert.NotNull(s_chainOfResponsibility.Context);
+            Assert.AreSame(s_requestContext, s_chainOfResponsibility.Context);
         }
     }
 }

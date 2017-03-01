@@ -58,16 +58,16 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
             _message = _mapper.MapToMessage(_request);
 
             //_should_put_the_reply_to_as_the_topic
-            _message.Header.Topic.ShouldEqual(TOPIC);
+            Assert.AreEqual(TOPIC, _message.Header.Topic);
             //_should_put_the_correlation_id_in_the_header
-            _message.Header.CorrelationId.ShouldEqual(_correlationId);
+            Assert.AreEqual(_correlationId, _message.Header.CorrelationId);
             //_should_put_the_connections_into_the_body
-            _message.Body.ShouldMatch(body => body.Value.Contains("\"ConnectionName\": \"Test.Connection\""));
-            _message.Body.ShouldMatch(body => body.Value.Contains("\"State\": 1"));
-            _message.Body.ShouldMatch(body => body.Value.Contains("\"ConnectionName\": \"More.Consumers\""));
-            _message.Body.ShouldMatch(body => body.Value.Contains("\"State\": 0"));
+            Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"ConnectionName\": \"Test.Connection\""))).Invoke(_message.Body));
+            Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"State\": 1"))).Invoke(_message.Body));
+            Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"ConnectionName\": \"More.Consumers\""))).Invoke(_message.Body));
+            Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"State\": 0"))).Invoke(_message.Body));
             //_should_put_the_hostname_in_the_message_body
-            _message.Body.ShouldMatch(body => body.Value.Contains("\"HostName\": \"Test.Hostname\""));
+            Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"HostName\": \"Test.Hostname\""))).Invoke(_message.Body));
         }
     }
 }

@@ -78,9 +78,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
             Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_send_the_command_to_the_command_handler
-            MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand).ShouldBeTrue();
+            Assert.True(MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand));
             //_should_retry_three_times
-            _retryCount.ShouldEqual(3);
+            Assert.AreEqual(3, _retryCount);
         }
     }
 }

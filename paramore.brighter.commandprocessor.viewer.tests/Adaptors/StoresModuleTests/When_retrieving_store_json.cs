@@ -8,6 +8,7 @@ using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
 using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
+using HttpStatusCode = Nancy.HttpStatusCode;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleTests
 {
@@ -45,15 +46,14 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
                 .Result;
 
             //should_return_200_OK
-            _result.StatusCode.ShouldEqual(Nancy.HttpStatusCode.OK);
+            Assert.AreEqual(Nancy.HttpStatusCode.OK, _result.StatusCode);
             //should_return_json
-            _result.ContentType.ShouldContain("application/json");
+            StringAssert.Contains("application/json", _result.ContentType);
             //should_return_StoresListModel
             var serializer = new JavaScriptSerializer();
             var model = serializer.Deserialize<MessageStoreViewerModel>(_result.Body.AsString());
 
-            model.ShouldNotBeNull();
-
+            Assert.NotNull(model);
         }
   }
 }

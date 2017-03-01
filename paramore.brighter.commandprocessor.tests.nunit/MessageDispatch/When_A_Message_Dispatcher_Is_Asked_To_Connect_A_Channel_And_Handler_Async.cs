@@ -40,7 +40,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Add(message);
 
-            _dispatcher.State.ShouldEqual(DispatcherState.DS_AWAITING);
+            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
         }
 
@@ -52,13 +52,13 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 
 
             //_should_have_consumed_the_messages_in_the_channel
-            _channel.Length.ShouldEqual(0);
+            Assert.AreEqual(0, _channel.Length);
             //_should_have_a_stopped_state
-            _dispatcher.State.ShouldEqual(DispatcherState.DS_STOPPED);
+            Assert.AreEqual(DispatcherState.DS_STOPPED, _dispatcher.State);
             //_should_have_dispatched_a_request
-            _commandProcessor.Observe<MyEvent>().ShouldNotBeNull();
+            Assert.NotNull(_commandProcessor.Observe<MyEvent>());
             //_should_have_published_async
-            _commandProcessor.Commands.Any(ctype => ctype == CommandType.PublishAsync).ShouldBeTrue();
+            Assert.True(_commandProcessor.Commands.Any(ctype => ctype == CommandType.PublishAsync));
         }
 
     }

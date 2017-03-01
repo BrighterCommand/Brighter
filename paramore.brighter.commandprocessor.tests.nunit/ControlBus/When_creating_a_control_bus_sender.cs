@@ -26,7 +26,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
             s_sender = s_senderFactory.Create(s_fakeMessageStore, s_fakeGateway);
 
             //_should_create_a_control_bus_sender
-            s_sender.ShouldNotBeNull();
+            Assert.NotNull(s_sender);
         }
     }
 }

@@ -56,9 +56,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
         {
             _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.Build(new RequestContext()).First());
 
-            _exception.ShouldNotBeNull();
-            _exception.ShouldBeOfExactType(typeof (ConfigurationException));
-            _exception.Message.ShouldContain(typeof (MyLoggingHandlerAsync<>).Name);
+            Assert.NotNull(_exception);
+            Assert.IsInstanceOf(typeof (ConfigurationException), _exception);
+            StringAssert.Contains(typeof (MyLoggingHandlerAsync<>).Name, _exception.Message);
         }
 
     }

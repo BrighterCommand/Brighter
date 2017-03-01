@@ -69,11 +69,11 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
             _messageHeaders = result.GetHeaders();
 
             //_should_send_a_message_via_rmq_with_the_matching_body
-            _messageBody.ShouldEqual(_message.Body.Value);
+            Assert.AreEqual(_message.Body.Value, _messageBody);
             //_should_send_a_message_via_rmq_without_delay_header
-            _messageHeaders.Keys.ShouldNotContain(HeaderNames.DELAY_MILLISECONDS);
+            CollectionAssert.DoesNotContain(_messageHeaders.Keys, HeaderNames.DELAY_MILLISECONDS);
             //_should_received_a_message_via_rmq_without_delayed_header
-            _messageHeaders.Keys.ShouldNotContain(HeaderNames.DELAYED_MILLISECONDS);
+            CollectionAssert.DoesNotContain(_messageHeaders.Keys, HeaderNames.DELAYED_MILLISECONDS);
         }
 
         [TearDown]
