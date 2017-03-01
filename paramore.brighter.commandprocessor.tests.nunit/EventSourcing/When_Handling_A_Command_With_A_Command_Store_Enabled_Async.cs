@@ -1,6 +1,4 @@
-﻿using NUnit.Specifications;
-using nUnitShouldAdapter;
-using Nito.AsyncEx;
+﻿using Nito.AsyncEx;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.EventSourcing.TestDoubles;

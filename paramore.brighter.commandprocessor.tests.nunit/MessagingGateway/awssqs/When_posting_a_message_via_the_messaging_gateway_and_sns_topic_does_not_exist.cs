@@ -1,7 +1,6 @@
 ﻿using System;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService.Model;
-using nUnitShouldAdapter;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 

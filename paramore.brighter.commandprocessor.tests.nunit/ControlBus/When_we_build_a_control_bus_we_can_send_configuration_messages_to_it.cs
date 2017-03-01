@@ -24,9 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.controlbus;
 using paramore.brighter.serviceactivator.Ports.Commands;

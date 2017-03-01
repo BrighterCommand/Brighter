@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Microsoft.Data.Sqlite;
-using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.messagestore.sqlite;

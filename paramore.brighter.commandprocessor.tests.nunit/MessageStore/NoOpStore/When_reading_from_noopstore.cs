@@ -26,13 +26,10 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.NoOpStore
 {
-    [Subject(typeof(NoOpMessageStore))]
     [TestFixture]
     public class NoOpMessageStoreReadTests
     {

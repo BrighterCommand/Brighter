@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using nUnitShouldAdapter;
 using NUnit.Framework;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;

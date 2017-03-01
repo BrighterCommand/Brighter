@@ -1,5 +1,4 @@
-﻿using nUnitShouldAdapter;
-using Nito.AsyncEx;
+﻿using Nito.AsyncEx;
 using paramore.brighter.commandprocessor.logging.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.Logging.TestDoubles;

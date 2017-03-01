@@ -14,13 +14,7 @@
     "paramore.brighter.commandprocessor.tests.nunit": {
       "target": "project"
     },
-    "NUnit.Specifications.NUnit3.coreCLR": {
-      "target": "project"
-    },
-    "nUnitShouldAdapter": {
-      "target": "project"
-    },
-    "Nancy.Testing": "2.0.0-barneyrubble",
+   "Nancy.Testing": "2.0.0-barneyrubble",
     "dotnet-test-nunit": "3.4.0-beta-3",
     "NUnit": "3.5.0"
   },

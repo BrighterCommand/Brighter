@@ -25,9 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Diagnostics;
 using FakeItEasy;
-using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
 {

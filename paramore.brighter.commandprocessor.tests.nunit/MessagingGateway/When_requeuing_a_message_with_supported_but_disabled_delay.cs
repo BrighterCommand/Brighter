@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
 using FakeItEasy;
-using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
 {
-    [Subject(typeof(Channel))]
+    [TestFixture]
     public class ChannelRequeueWithDelayTests
     {
         private IAmAChannel _channel;
@@ -30,6 +28,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
             _stopWatch = new Stopwatch();
         }
 
+        [Test]
         public void When_Requeuing_A_Message_With_Supported_But_Disabled_Delay()
         {
             _stopWatch.Start();

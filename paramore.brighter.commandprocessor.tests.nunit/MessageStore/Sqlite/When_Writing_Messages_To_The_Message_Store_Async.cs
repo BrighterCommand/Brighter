@@ -26,10 +26,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.messagestore.sqlite;
 using paramore.brighter.commandprocessor.time;
 

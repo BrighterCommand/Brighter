@@ -1,7 +1,5 @@
 ﻿using System;
 using FluentAssertions;
-using NUnit.Specifications;
-using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.policy.Handlers;

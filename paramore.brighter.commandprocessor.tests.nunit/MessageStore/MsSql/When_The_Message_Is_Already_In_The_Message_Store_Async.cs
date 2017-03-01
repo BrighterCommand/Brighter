@@ -25,10 +25,8 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
-using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql

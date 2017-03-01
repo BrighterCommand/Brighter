@@ -1,5 +1,4 @@
 ﻿using FakeItEasy;
-using nUnitShouldAdapter;
 using NUnit.Framework;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus

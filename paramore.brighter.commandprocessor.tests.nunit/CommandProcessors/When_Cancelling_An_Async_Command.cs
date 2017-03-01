@@ -22,8 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Specifications;
-using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;

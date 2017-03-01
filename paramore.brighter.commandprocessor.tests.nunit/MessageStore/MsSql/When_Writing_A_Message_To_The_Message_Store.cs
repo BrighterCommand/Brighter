@@ -24,14 +24,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
-    [Subject(typeof(MsSqlMessageStore))]
     [TestFixture]
     public class SqlMessageStoreWritingMessageTests
     {

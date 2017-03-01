@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;

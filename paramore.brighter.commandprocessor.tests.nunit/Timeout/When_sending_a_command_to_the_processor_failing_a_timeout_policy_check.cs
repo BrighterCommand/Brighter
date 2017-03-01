@@ -28,8 +28,6 @@ using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles;
 using TinyIoC;
-using NUnit.Specifications;
-using nUnitShouldAdapter;
 using NUnit.Framework;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.Timeout

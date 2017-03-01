@@ -35,13 +35,7 @@
     "paramore.brighter.serviceactivator": {
       "target": "project"
     },
-    "NUnit.Specifications.NUnit3.coreCLR": {
-      "target": "project"
-    },
-    "nUnitShouldAdapter": {
-      "target": "project"
-    },
-    "Nito.AsyncEx.Context": "1.1.0",
+   "Nito.AsyncEx.Context": "1.1.0",
     "FakeItEasy": "2.3.0-coreclr-beta57",
     "FluentAssertions": "4.16.0",
     "NUnit": "3.5.0",

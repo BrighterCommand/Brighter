@@ -6,13 +6,7 @@
     "Tasks": {
       "target": "project"
     },
-    "NUnit.Specifications.NUnit3.coreCLR": {
-      "target": "project"
-    },
-    "nUnitShouldAdapter": {
-      "target": "project"
-    },
-    "FakeItEasy": "2.3.0-coreclr-beta57",
+   "FakeItEasy": "2.3.0-coreclr-beta57",
     "dotnet-test-nunit": "3.4.0-beta-3",
     "NUnit": "3.5.0"
   },

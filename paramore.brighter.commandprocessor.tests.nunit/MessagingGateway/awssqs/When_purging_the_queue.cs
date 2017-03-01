@@ -1,6 +1,5 @@
 ﻿using System;
 using Amazon.Runtime;
-using nUnitShouldAdapter;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 

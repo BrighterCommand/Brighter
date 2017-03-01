@@ -23,10 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.monitoring.Configuration;
 using paramore.brighter.commandprocessor.monitoring.Events;
 using paramore.brighter.commandprocessor.monitoring.Handlers;

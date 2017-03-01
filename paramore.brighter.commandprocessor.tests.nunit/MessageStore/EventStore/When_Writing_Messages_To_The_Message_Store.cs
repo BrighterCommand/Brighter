@@ -35,9 +35,8 @@ using EventStore.Core.Data;
 using paramore.brighter.commandprocessor;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.messagestore.eventstore;
-using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
+using paramore.brighter.commandprocessor.tests.nunit;
 
 namespace paramore.commandprocessor.tests.MessageStore.EventStore
 {

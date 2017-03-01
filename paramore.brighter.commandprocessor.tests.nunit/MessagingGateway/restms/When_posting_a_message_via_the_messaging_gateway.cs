@@ -23,9 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.messaginggateway.restms;
 using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
 

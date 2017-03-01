@@ -23,14 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.TestDoubles;
 using RabbitMQ.Client.Exceptions;
-using Catch = NUnit.Specifications.Catch;
+using Catch = paramore.brighter.commandprocessor.tests.nunit.Catch;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq 
 {

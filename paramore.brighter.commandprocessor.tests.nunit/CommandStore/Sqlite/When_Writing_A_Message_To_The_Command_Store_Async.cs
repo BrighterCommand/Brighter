@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using Microsoft.Data.Sqlite;
-using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.commandstore.sqlite;

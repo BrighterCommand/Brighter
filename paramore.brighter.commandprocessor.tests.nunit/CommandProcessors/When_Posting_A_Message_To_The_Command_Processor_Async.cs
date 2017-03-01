@@ -24,11 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using Polly;
 

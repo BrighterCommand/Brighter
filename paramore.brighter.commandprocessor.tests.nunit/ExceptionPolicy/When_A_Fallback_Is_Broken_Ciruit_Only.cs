@@ -23,8 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Specifications;
-using nUnitShouldAdapter;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using paramore.brighter.commandprocessor.policy.Handlers;

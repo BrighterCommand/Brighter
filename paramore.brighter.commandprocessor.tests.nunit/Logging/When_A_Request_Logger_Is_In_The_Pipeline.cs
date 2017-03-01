@@ -1,6 +1,4 @@
-﻿using NUnit.Specifications;
-using nUnitShouldAdapter;
-using paramore.brighter.commandprocessor.logging.Handlers;
+﻿using paramore.brighter.commandprocessor.logging.Handlers;
 using paramore.brighter.commandprocessor.Logging;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.Logging.TestDoubles;

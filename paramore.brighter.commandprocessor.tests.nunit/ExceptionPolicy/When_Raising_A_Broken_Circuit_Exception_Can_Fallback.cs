@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.policy.Handlers;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;

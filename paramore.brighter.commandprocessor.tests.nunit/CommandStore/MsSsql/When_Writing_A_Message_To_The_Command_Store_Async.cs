@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.commandstore.mssql;

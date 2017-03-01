@@ -22,9 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
 using paramore.brighter.commandprocessor.messaginggateway.restms.Parsers;
 

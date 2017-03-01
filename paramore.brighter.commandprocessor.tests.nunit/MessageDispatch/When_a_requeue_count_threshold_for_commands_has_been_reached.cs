@@ -24,8 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using nUnitShouldAdapter;
-using NUnit.Specifications;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;

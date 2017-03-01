@@ -24,10 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Data.Sqlite;
-using nUnitShouldAdapter;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.commandstore.sqlite;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 

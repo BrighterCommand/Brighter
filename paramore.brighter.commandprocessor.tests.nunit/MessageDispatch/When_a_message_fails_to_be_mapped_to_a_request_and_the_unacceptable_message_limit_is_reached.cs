@@ -24,16 +24,14 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {
-    [Subject(typeof(MessagePump<>))]
+    [TestFixture]
     public class MessagePumpUnacceptableMessageLimitTests
     {
         private IAmAMessagePump _messagePump;

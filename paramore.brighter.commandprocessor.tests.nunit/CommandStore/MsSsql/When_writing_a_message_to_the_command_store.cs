@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using nUnitShouldAdapter;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.commandstore.mssql;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;

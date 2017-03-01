@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using nUnitShouldAdapter;
 using paramore.brighter.commandprocessor.commandstore.mssql;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 

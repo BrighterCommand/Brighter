@@ -29,9 +29,7 @@ using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles
 using paramore.brighter.serviceactivator;
 using paramore.brighter.serviceactivator.Ports.Commands;
 using paramore.brighter.serviceactivator.Ports.Handlers;
-using nUnitShouldAdapter;
 using NUnit.Framework;
-using NUnit.Specifications;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {

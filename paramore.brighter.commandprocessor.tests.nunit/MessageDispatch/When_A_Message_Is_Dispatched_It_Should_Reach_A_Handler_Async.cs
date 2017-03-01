@@ -1,5 +1,4 @@
 ﻿using System;
-using nUnitShouldAdapter;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using NUnit.Framework;

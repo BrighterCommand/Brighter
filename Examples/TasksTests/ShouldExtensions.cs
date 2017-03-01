@@ -2,10 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using NUnit.Framework;
 
-namespace nUnitShouldAdapter
+namespace TasksTests
 {
     public static class ShouldExtensions
     {
