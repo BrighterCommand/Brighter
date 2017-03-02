@@ -29,6 +29,7 @@ using paramore.brighter.commandprocessor.messagestore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {
+    [Category("MSSQL")]
     [TestFixture]
     public class SqlMessageStoreWritingMessageTests
     {

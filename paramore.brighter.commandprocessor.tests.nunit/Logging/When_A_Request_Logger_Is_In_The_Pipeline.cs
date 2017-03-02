@@ -43,9 +43,9 @@ namespace paramore.brighter.commandprocessor.tests.nunit.Logging
             _commandProcessor.Send(_myCommand);
 
             //_should_log_the_request_handler_call
-            Assert.True(_logger.Logs.Any(log => log.Message.Contains("Logging handler pipeline call")));
+            Assert.True(_logger.Logs.Any(log => log.Message.Contains("Logging handler pipeline call")), "Could not find the call to the logging pipeline");
             //_should_log_the_type_of_handler_in_the_call
-            Assert.True(_logger.Logs.Any(log => log.Message.Contains(typeof(MyCommand).ToString())));
+            Assert.True(_logger.Logs.Any(log => log.Message.Contains(typeof(MyCommand).ToString())), "Could not find the command in the logs");
         }
     }
 }
