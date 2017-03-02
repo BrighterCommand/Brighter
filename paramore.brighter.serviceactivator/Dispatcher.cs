@@ -250,9 +250,6 @@ namespace paramore.brighter.serviceactivator
                                 _consumers.TryRemove(consumer.Name, out consumer);
                             }
 
-                            //_tasks[index].Dispose();
-                            //_tasks.RemoveAt(index);
-                            //_tasks.TryTake(out )
                             Task removedTask;
                             _tasks.TryRemove(stoppingConsumer.Id, out removedTask);
                         }
