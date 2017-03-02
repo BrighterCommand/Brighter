@@ -47,7 +47,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
             StringAssert.Contains("IMessageStoreViewer", model.Message);
         }
 
-        private static void ConfigureStoreModuleForStoreError(ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator with, MessageStoreViewerModelError messageStoreViewerModelError)
+        private void ConfigureStoreModuleForStoreError(ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator with, MessageStoreViewerModelError messageStoreViewerModelError)
         {
             var listViewRetriever = FakeActivationListModelRetriever.Empty();
             var storeRetriever = new FakeMessageStoreViewerModelRetriever(messageStoreViewerModelError);

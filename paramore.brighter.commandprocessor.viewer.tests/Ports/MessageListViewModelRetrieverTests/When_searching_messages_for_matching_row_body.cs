@@ -16,7 +16,8 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewM
         private List<Message> _messages;
         private readonly string _storeName = "testStore";
 
-        private void Establish()
+        [SetUp]
+        public void Establish()
         {
             _messages = new List<Message>{
                 new Message(new MessageHeader(Guid.NewGuid(), "MyTopic1", MessageType.MT_COMMAND), new MessageBody("topic3")),
