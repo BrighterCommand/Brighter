@@ -26,8 +26,6 @@ using System;
 using System.Linq;
 using NUnit.Framework;
 using paramore.brighter.serviceactivator;
-using paramore.brighter.serviceactivator.Ports.Commands;
-using paramore.brighter.serviceactivator.Ports.Mappers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {

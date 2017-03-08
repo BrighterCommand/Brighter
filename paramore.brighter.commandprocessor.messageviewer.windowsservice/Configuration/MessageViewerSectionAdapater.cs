@@ -1,7 +1,6 @@
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 
-namespace paramore.brighter.comandprocessor.messageviewer.windowsservice.Configuration
+namespace Paramore.Brighter.MessageViewer.WindowsService.Configuration
 {
     public class MessageViewerSectionAdapater
     {

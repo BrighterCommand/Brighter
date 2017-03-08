@@ -24,9 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
-namespace paramore.brighter.commandprocessor.extensions
+namespace Paramore.Brighter.Extensions
 {
     public static class EnumerationExtensions
     {

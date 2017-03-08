@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
-using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.serviceactivator.Ports.Commands
+namespace Paramore.Brighter.ServiceActivator.Ports.Commands
 {
     public class HeartbeatReply : Reply
     {

@@ -36,7 +36,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
+namespace Paramore.Brighter.MessageViewer.Ports.Domain
 {
     public class ViewModelRetrieverResult<TViewModel, TViewModelError> 
     {

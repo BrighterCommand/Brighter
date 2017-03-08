@@ -22,9 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor;
-
-namespace paramore.brighter.serviceactivator.TestHelpers
+namespace Paramore.Brighter.ServiceActivator.TestHelpers
 {
     public class InMemoryChannelFactory : IAmAChannelFactory
     {

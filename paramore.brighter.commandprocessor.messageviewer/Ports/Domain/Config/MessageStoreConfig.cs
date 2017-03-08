@@ -35,10 +35,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
+using Paramore.Brighter.Messagestore.MsSql;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Configuration;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config
+namespace Paramore.Brighter.MessageViewer.Ports.Domain.Config
 {
     public class MessageStoreConfig 
     {

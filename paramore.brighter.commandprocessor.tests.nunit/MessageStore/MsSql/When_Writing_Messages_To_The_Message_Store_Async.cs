@@ -28,8 +28,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messagestore.mssql;
 using paramore.brighter.commandprocessor.time;
+using Paramore.Brighter.Messagestore.MsSql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {

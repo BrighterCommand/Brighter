@@ -34,10 +34,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-using System;
-using System.Runtime.Serialization;
 
-namespace paramore.brighter.commandprocessor
+using System;
+
+namespace Paramore.Brighter
 {
     /// <summary>
     /// A ConfigurationException, thrown when we cannot configure the CommandProcessor.

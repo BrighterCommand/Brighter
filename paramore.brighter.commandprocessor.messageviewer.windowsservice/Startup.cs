@@ -1,11 +1,7 @@
 using System;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Nancy.Owin;
-using paramore.brighter.comandprocessor.messageviewer.windowsservice.Configuration;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
+using Paramore.Brighter.MessageViewer.WindowsService.Configuration;
 
-namespace paramore.brighter.comandprocessor.messageviewer.windowsservice
+namespace Paramore.Brighter.MessageViewer.WindowsService
 {
     public class Startup
     {

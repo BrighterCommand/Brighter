@@ -38,7 +38,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Class SimpleMessageMapperFactory. This allows you to return a simple function that finds a given message mapper. Intended for lightweight messagage mapping,

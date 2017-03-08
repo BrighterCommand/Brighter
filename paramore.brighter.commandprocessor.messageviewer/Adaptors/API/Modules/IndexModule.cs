@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using Nancy;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules
+namespace Paramore.Brighter.MessageViewer.Adaptors.API.Modules
 {   
     public class IndexModule : NancyModule
     {

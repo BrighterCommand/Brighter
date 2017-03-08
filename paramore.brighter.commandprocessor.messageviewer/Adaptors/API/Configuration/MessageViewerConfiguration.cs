@@ -36,7 +36,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration
+namespace Paramore.Brighter.MessageViewer.Adaptors.API.Configuration
 {
     public class MessageViewerConfiguration
     {

@@ -33,7 +33,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources
+namespace Paramore.Brighter.MessageViewer.Adaptors.API.Resources
 {
     public class MessageViewerError
     {

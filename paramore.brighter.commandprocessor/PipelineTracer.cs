@@ -38,7 +38,7 @@ THE SOFTWARE. */
 
 using System.Text;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     internal class PipelineTracer : IAmAPipelineTracer
     {

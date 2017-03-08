@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright � 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,9 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.serviceactivator
+namespace Paramore.Brighter.ServiceActivator
 {
     /// Abstracts the thread that runs a message pump
     internal class Performer : IAmAPerformer

@@ -35,7 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     /// <summary>
     /// Class RMQInputChannelFactory.

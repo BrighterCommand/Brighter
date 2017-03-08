@@ -28,9 +28,9 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
-using paramore.brighter.commandprocessor.messaginggateway.azureservicebus.Logging;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.Logging;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
+namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     /// <summary>
     /// Provides access to Azure Service Bus, ensuring that the required topics exist.

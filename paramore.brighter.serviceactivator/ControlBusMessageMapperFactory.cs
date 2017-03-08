@@ -23,10 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator.Ports.Mappers;
+using Paramore.Brighter.ServiceActivator.Ports;
+using Paramore.Brighter.ServiceActivator.Ports.Mappers;
 
-namespace paramore.brighter.serviceactivator.controlbus
+namespace Paramore.Brighter.ServiceActivator
 {
     public class ControlBusMessageMapperFactory : IAmAMessageMapperFactory
     {

@@ -37,9 +37,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.Logging;
-
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmAControlBusSenderFactory. Helper for creating a control bus sender, which only requires

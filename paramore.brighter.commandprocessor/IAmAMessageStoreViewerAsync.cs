@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Inteface IAmAMessageStoreViewerAsync{T}

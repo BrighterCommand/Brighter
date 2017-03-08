@@ -1,9 +1,8 @@
 ﻿using System.Reflection;
-
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
+namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     /// <summary>
     /// This class is used to deserialize an SQS message to Message class with it's readonly properties

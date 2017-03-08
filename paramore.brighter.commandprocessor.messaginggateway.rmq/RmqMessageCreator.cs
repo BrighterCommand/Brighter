@@ -26,12 +26,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using paramore.brighter.commandprocessor.extensions;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
+using Paramore.Brighter.Extensions;
+using Paramore.Brighter.MessagingGateway.RMQ.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     internal class RmqMessageCreator
     {

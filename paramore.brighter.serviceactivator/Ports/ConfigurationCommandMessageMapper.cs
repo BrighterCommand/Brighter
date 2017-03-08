@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Reflection;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator.Ports.Commands;
+using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
-namespace paramore.brighter.serviceactivator.Ports.Mappers
+namespace Paramore.Brighter.ServiceActivator.Ports
 {
     public class ConfigurationCommandMessageMapper : IAmAMessageMapper<ConfigurationCommand>
     {

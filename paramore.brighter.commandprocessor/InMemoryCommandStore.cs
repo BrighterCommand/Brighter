@@ -43,8 +43,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Class InMemoryCommandStore.

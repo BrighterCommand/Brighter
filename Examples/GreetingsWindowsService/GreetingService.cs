@@ -31,9 +31,9 @@ using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
 using Greetings.TinyIoc;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.serviceactivator;
+using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Polly;
 using Topshelf;
 

@@ -37,7 +37,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
+namespace Paramore.Brighter.MessageViewer.Ports.Handlers
 {
     public class HandlerFactory : IHandlerFactory
     {

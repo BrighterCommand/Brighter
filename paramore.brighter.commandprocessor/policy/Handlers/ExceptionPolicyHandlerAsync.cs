@@ -36,14 +36,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.policy.Attributes;
+using Paramore.Brighter.policy.Attributes;
 using Polly;
 
-namespace paramore.brighter.commandprocessor.policy.Handlers
+namespace Paramore.Brighter.policy.Handlers
 {
     /// <summary>
     /// Class ExceptionPolicyHandlerAsync.

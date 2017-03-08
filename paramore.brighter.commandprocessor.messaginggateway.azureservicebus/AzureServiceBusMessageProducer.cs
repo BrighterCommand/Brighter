@@ -23,9 +23,9 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.messaginggateway.azureservicebus.Logging;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.Logging;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
+namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     public class AzureServiceBusMessageProducer : MessageGateway, IAmAMessageProducerSupportingDelay
     {

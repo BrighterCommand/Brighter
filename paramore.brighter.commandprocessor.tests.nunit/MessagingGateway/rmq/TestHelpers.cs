@@ -25,8 +25,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq

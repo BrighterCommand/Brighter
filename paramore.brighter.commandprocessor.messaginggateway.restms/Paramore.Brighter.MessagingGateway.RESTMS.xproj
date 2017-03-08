@@ -6,8 +6,8 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\DotNet\Microsoft.DotNet.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>97af4a5c-9a84-496b-aa83-c36d8b0e53f8</ProjectGuid>
-    <RootNamespace>paramore.brighter.commandprocessor.messageviewer</RootNamespace>
+    <ProjectGuid>015e1f81-d21b-40b5-ab0f-53785c6eb163</ProjectGuid>
+    <RootNamespace>Paramore.Brighter.MessagingGateway.RESTMS</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">.\obj</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">.\bin\</OutputPath>
   </PropertyGroup>

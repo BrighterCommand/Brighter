@@ -23,7 +23,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
+namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     public class AzureServiceBusMessagingGatewayConfiguration 
     {

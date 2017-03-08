@@ -42,7 +42,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// NoOp Message Store - a pass-through class for the IAmAMessageStore interface(s)

@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     internal class HandlerFactory<TRequest> where TRequest : class, IRequest
     {

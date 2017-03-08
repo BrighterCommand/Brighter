@@ -1,4 +1,4 @@
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-01-2014
@@ -37,9 +37,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.time;
+using Paramore.Brighter.time;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Enum MessageType

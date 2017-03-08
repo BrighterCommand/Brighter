@@ -39,7 +39,7 @@ THE SOFTWARE. */
 using System.Collections;
 using System.Collections.Generic;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     internal class AsyncPipelines<TRequest> : IEnumerable<IHandleRequestsAsync<TRequest>> where TRequest : class, IRequest
     {

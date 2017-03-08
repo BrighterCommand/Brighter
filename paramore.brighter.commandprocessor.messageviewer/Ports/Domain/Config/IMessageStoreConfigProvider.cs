@@ -36,7 +36,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config
+namespace Paramore.Brighter.MessageViewer.Ports.Domain.Config
 {
     public interface IMessageStoreConfigProvider
     {

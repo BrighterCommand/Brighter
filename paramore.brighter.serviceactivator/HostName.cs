@@ -38,7 +38,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.serviceactivator
+namespace Paramore.Brighter.ServiceActivator
 {
     /// <summary>
     /// Class HostName.

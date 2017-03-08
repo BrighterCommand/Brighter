@@ -1,7 +1,6 @@
 ﻿using Amazon.Runtime;
-using paramore.brighter.commandprocessor.Logging;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
+namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     public class SqsMessageProducerFactory : IAmAMessageProducerFactory
     {

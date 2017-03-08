@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Used with the <see cref="MessagePumpSynchronizationContext"/> this class stores the callback to be executed on completion

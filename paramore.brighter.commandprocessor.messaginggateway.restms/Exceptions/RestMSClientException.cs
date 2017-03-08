@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions
+namespace Paramore.Brighter.MessagingGateway.RESTMS.Exceptions
 {
     /// <summary>
     /// Class RestMSClientException.

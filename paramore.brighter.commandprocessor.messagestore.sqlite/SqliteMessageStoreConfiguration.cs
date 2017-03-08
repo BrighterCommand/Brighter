@@ -1,4 +1,4 @@
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messagestore.sqlite
 // Author           : ian
 // Created          : 01-26-2015
@@ -36,7 +36,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor.messagestore.sqlite
+namespace Paramore.Brighter.Messagestore.Sqlite
 {
     /// <summary>
     /// Class SqliteMessageStoreConfiguration.

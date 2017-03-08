@@ -27,12 +27,11 @@ using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.monitoring.Configuration;
-using paramore.brighter.commandprocessor.monitoring.Events;
-using paramore.brighter.commandprocessor.time;
+using Paramore.Brighter.monitoring.Configuration;
+using Paramore.Brighter.monitoring.Events;
+using Paramore.Brighter.time;
 
-namespace paramore.brighter.commandprocessor.monitoring.Handlers
+namespace Paramore.Brighter.monitoring.Handlers
 {
     public class MonitorHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
     {

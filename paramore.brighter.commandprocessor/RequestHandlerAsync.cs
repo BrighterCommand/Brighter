@@ -42,12 +42,12 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.policy.Attributes;
-using paramore.brighter.commandprocessor.policy.Handlers;
+using Paramore.Brighter.Logging;
+using Paramore.Brighter.policy.Attributes;
+using Paramore.Brighter.policy.Handlers;
 using Polly.CircuitBreaker;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Class RequestHandlerAsync    

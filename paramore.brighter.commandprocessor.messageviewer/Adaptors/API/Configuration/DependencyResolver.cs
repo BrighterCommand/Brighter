@@ -36,12 +36,12 @@ THE SOFTWARE. */
 #endregion
 
 using Nancy.TinyIoc;
-using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
+using Paramore.Brighter.Messagestore.MsSql;
+using Paramore.Brighter.MessageViewer.Ports.Domain;
+using Paramore.Brighter.MessageViewer.Ports.Domain.Config;
+using Paramore.Brighter.MessageViewer.Ports.Handlers;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration
+namespace Paramore.Brighter.MessageViewer.Adaptors.API.Configuration
 {
     public class DependencyResolver
     {

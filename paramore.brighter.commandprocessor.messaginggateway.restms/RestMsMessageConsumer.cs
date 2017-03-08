@@ -38,12 +38,12 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Net.Http;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Exceptions;
-using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
+using Paramore.Brighter.MessagingGateway.RESTMS.Exceptions;
+using Paramore.Brighter.MessagingGateway.RESTMS.Logging;
+using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
+using Paramore.Brighter.MessagingGateway.RESTMS.Model;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.restms
+namespace Paramore.Brighter.MessagingGateway.RESTMS
 {
     /// <summary>
     /// Class RestMsMessageConsumer.

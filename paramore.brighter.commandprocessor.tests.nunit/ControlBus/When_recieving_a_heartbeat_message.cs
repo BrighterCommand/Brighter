@@ -27,8 +27,6 @@ using System.Collections.Generic;
 using FakeItEasy;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
-using paramore.brighter.serviceactivator.Ports.Commands;
-using paramore.brighter.serviceactivator.Ports.Handlers;
 using NUnit.Framework;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus

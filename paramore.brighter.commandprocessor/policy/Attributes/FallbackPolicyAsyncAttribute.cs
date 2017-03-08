@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor.policy.Handlers;
+using Paramore.Brighter.policy.Handlers;
 
-namespace paramore.brighter.commandprocessor.policy.Attributes
+namespace Paramore.Brighter.policy.Attributes
 {
     /// <summary>
     /// Class FallbackPolicyAttribute.

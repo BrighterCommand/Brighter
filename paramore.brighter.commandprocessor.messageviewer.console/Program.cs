@@ -38,9 +38,9 @@ THE SOFTWARE. */
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Configuration;
 
-namespace paramore.brighter.comandprocessor.messageviewer.console
+namespace Paramore.Brighter.MessageViewer.Console
 {
     public class Program
     {

@@ -37,9 +37,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor.Logging;
+using Paramore.Brighter.Logging;
 
-namespace paramore.brighter.commandprocessor.eventsourcing.Handlers
+namespace Paramore.Brighter.eventsourcing.Handlers
 {
     /// <summary>
     /// Class CommandSourcingHandler.

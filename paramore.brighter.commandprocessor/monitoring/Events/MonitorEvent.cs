@@ -25,9 +25,9 @@ THE SOFTWARE. */
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using paramore.brighter.commandprocessor.monitoring.Handlers;
+using Paramore.Brighter.monitoring.Handlers;
 
-namespace paramore.brighter.commandprocessor.monitoring.Events
+namespace Paramore.Brighter.monitoring.Events
 {
     /// <summary>
     /// What type of event are we recording

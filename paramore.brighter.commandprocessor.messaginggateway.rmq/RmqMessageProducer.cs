@@ -1,4 +1,4 @@
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
 // Author           : ian
 // Created          : 07-29-2014
@@ -38,10 +38,10 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using Paramore.Brighter.MessagingGateway.RMQ.Logging;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     /// <summary>
     /// Class ClientRequestHandler .

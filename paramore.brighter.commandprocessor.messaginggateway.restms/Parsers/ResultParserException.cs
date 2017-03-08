@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
+namespace Paramore.Brighter.MessagingGateway.RESTMS.Parsers
 {
     internal class ResultParserException : Exception
     {

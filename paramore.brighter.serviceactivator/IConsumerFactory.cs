@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.serviceactivator
+namespace Paramore.Brighter.ServiceActivator
 {
     internal interface IConsumerFactory
     {

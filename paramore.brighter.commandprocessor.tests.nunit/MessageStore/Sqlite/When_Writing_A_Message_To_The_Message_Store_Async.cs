@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messagestore.sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
 {

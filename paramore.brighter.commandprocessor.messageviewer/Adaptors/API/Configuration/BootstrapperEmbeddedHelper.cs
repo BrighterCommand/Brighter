@@ -4,9 +4,9 @@ using Nancy.Bootstrapper;
 using Nancy.Conventions;
 using Nancy.Embedded.Conventions;
 using Nancy.ViewEngines;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
+using Paramore.Brighter.MessageViewer.Ports.Handlers;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration
+namespace Paramore.Brighter.MessageViewer.Adaptors.API.Configuration
 {
     public class BootstrapperEmbeddedHelper
     {

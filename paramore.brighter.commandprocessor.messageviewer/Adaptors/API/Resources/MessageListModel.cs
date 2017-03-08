@@ -38,7 +38,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Linq;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources
+namespace Paramore.Brighter.MessageViewer.Adaptors.API.Resources
 {
     public class MessageListModel
     {

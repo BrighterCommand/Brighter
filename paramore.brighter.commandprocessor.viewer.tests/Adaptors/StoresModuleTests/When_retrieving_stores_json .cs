@@ -4,11 +4,11 @@ using Nancy;
 using Nancy.Json;
 using Nancy.Testing;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messagestore.mssql;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
 using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
 using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
 using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
+using Paramore.Brighter.Messagestore.MsSql;
 
 namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleTests
 {

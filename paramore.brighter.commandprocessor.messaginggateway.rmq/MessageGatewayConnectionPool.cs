@@ -38,10 +38,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
+using Paramore.Brighter.MessagingGateway.RMQ.Logging;
 using RabbitMQ.Client;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     /// <summary>
     /// Class MessageGatewayConnectionPool.

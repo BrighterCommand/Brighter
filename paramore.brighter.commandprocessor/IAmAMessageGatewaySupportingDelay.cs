@@ -22,14 +22,17 @@ THE SOFTWARE. */
 
 #endregion
 
-/// <summary>
-/// Interface IAmAMessagingGatewaySuppotingDelay
-/// Does the Message Broker support the sending of delayed messages
-/// </summary>
-public interface IAmAMessageGatewaySupportingDelay
+namespace Paramore.Brighter
 {
     /// <summary>
-    /// Gets if the current provider configuration is able to support delayed delivery of messages.
+    /// Interface IAmAMessagingGatewaySuppotingDelay
+    /// Does the Message Broker support the sending of delayed messages
     /// </summary>
-    bool DelaySupported { get; }
+    public interface IAmAMessageGatewaySupportingDelay
+    {
+        /// <summary>
+        /// Gets if the current provider configuration is able to support delayed delivery of messages.
+        /// </summary>
+        bool DelaySupported { get; }
+    }
 }

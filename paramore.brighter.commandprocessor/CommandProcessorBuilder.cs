@@ -35,13 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.CodeDom;
-
-using paramore.brighter.commandprocessor.Logging;
-using Polly;
-
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Class CommandProcessorBuilder.

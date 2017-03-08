@@ -1,7 +1,7 @@
 ﻿using System;
 using Amazon.Runtime;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messaginggateway.awssqs;
+using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {

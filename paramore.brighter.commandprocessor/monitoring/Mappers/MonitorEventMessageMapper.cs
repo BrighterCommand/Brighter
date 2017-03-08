@@ -1,8 +1,7 @@
-﻿using System;
-using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.monitoring.Events;
+﻿using Newtonsoft.Json;
+using Paramore.Brighter.monitoring.Events;
 
-namespace paramore.brighter.commandprocessor.monitoring.Mappers
+namespace Paramore.Brighter.monitoring.Mappers
 {
     public class MonitorEventMessageMapper : IAmAMessageMapper<MonitorEvent>
     {

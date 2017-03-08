@@ -8,7 +8,7 @@ using Amazon.Runtime;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
+namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     public class SqsQueuedRetriever
     {

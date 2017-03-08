@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace paramore.brighter.commandprocessor.time
+namespace Paramore.Brighter.time
 {
     public static class Clock
     {

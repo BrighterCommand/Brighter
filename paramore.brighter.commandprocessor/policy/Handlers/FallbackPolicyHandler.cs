@@ -23,10 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor.Logging;
 using Polly.CircuitBreaker;
 
-namespace paramore.brighter.commandprocessor.policy.Handlers
+namespace Paramore.Brighter.policy.Handlers
 {
     public class FallbackPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {

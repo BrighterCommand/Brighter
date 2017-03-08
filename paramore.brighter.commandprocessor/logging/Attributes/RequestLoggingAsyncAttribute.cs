@@ -36,9 +36,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor.logging.Handlers;
+using Paramore.Brighter.logging.Handlers;
 
-namespace paramore.brighter.commandprocessor.logging.Attributes
+namespace Paramore.Brighter.logging.Attributes
 {
     /// <summary>
     /// Class AsyncRequestLoggingAttribute.

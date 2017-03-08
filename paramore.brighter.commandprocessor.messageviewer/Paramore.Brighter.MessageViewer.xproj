@@ -6,12 +6,11 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\DotNet\Microsoft.DotNet.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>61de9904-884b-4e8a-a4df-cd697b5a9cf6</ProjectGuid>
-    <RootNamespace>paramore.brighter.commandprocessor.messaginggateway.rmq</RootNamespace>
+    <ProjectGuid>97af4a5c-9a84-496b-aa83-c36d8b0e53f8</ProjectGuid>
+    <RootNamespace>Paramore.Brighter.MessageViewer</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">.\obj</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">.\bin\</OutputPath>
   </PropertyGroup>
-
   <PropertyGroup>
     <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>

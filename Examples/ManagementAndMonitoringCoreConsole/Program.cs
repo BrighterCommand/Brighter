@@ -36,10 +36,10 @@ using ManagementAndMonitoring.Ports.CommandHandlers;
 using ManagementAndMonitoring.Ports.Mappers;
 using paramore.brighter.commandprocessor.messaginggateway.rmq;
 using paramore.brighter.serviceactivator;
-using paramore.brighter.serviceactivator.controlbus;
-using Connection = paramore.brighter.serviceactivator.Connection;
+using Connection = Paramore.Brighter.ServiceActivator.Connection;
 using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
-using paramore.brighter.commandprocessor.messagestore.sqlite;
+using Paramore.Brighter.Messagestore.Sqlite;
+using Paramore.Brighter.ServiceActivator;
 
 namespace ManagementAndMonitoringCoreConsole
 {

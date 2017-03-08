@@ -1,7 +1,6 @@
 ﻿using System;
-using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.serviceactivator
+namespace Paramore.Brighter.ServiceActivator
 {
     public class ConnectionBuilder : 
         ConnectionBuilder.IConnectionBuilderName,
@@ -59,7 +58,7 @@ namespace paramore.brighter.serviceactivator
 
         public Connection Build()
         {
-            return new paramore.brighter.serviceactivator.Connection(
+            return new Connection(
                 new ConnectionName(_name),
                 _inputChannelFactory,
                 _type,

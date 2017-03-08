@@ -35,7 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// The name of a channel used to wrap communication with a Broker

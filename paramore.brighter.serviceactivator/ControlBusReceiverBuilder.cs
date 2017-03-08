@@ -24,15 +24,14 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator.Ports;
-using paramore.brighter.serviceactivator.Ports.Commands;
-using paramore.brighter.serviceactivator.Ports.Handlers;
-using paramore.brighter.serviceactivator.Ports.Mappers;
+using Paramore.Brighter.ServiceActivator.Ports;
+using Paramore.Brighter.ServiceActivator.Ports.Commands;
+using Paramore.Brighter.ServiceActivator.Ports.Handlers;
+using Paramore.Brighter.ServiceActivator.Ports.Mappers;
 using Polly;
 
 //Needs a different namespace to the DispatchBuilder to avoid collisions
-namespace paramore.brighter.serviceactivator.controlbus
+namespace Paramore.Brighter.ServiceActivator.ControlBus
 {
     /// <summary>
     /// Class ControlBusBuilder.

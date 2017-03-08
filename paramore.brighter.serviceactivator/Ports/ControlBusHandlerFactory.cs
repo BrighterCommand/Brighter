@@ -1,8 +1,7 @@
 ﻿using System;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator.Ports.Handlers;
+using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
-namespace paramore.brighter.serviceactivator.Ports
+namespace Paramore.Brighter.ServiceActivator.Ports
 {
     internal class ControlBusHandlerFactory : IAmAHandlerFactory
     {

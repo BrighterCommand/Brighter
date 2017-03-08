@@ -38,7 +38,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace paramore.brighter.serviceactivator
+namespace Paramore.Brighter.ServiceActivator
 {
     /// <summary>
     /// Interface IDispatcher

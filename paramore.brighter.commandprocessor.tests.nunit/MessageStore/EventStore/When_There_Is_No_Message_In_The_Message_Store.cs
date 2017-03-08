@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright � 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -32,9 +32,9 @@ using EventStore.ClientAPI.Embedded;
 using EventStore.Core;
 using EventStore.Core.Data;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messagestore.eventstore;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit;
+using Paramore.Brighter.Messagestore.Eventstore;
 
 
 namespace paramore.commandprocessor.tests.MessageStore.EventStore

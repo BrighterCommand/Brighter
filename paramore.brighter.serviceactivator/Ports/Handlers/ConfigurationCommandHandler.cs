@@ -36,11 +36,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator.Logging;
-using paramore.brighter.serviceactivator.Ports.Commands;
+using Paramore.Brighter.ServiceActivator.Logging;
+using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
-namespace paramore.brighter.serviceactivator.Ports.Handlers
+namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
 {
     /// <summary>
     /// Class ConfigurationMessageHandler.

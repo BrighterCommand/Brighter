@@ -39,7 +39,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Class MessageRecoverer.

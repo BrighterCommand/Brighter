@@ -35,7 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Class HandlerConfiguration

@@ -14,7 +14,7 @@
 
 using Amazon.Runtime;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
+namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     /// <summary>
     /// Class SqsMessageConsumerFactory.

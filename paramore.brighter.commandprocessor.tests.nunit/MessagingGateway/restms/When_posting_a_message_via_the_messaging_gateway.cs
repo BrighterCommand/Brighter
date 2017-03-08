@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messaginggateway.restms;
-using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
+using Paramore.Brighter.MessagingGateway.RESTMS;
+using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
 {

@@ -22,9 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     /// <summary>
     /// Class RmqMessageProducerFactory.

@@ -1,4 +1,4 @@
-//===============================================================================
+﻿//===============================================================================
 // LibLog
 //
 // https://github.com/damianh/LibLog
@@ -40,23 +40,23 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-[assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "paramore.brighter.commandprocessor.messagestore.mssql.Logging")]
-[assembly: SuppressMessage("Microsoft.Design", "CA1026:DefaultParametersShouldNotBeUsed", Scope = "member", Target = "paramore.brighter.commandprocessor.messagestore.mssql.Logging.Logger.#Invoke(paramore.brighter.commandprocessor.messagestore.mssql.Logging.LogLevel,System.Func`1<System.String>,System.Exception,System.Object[])")]
+[assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Paramore.Brighter.Messagestore.MsSql.Logging")]
+[assembly: SuppressMessage("Microsoft.Design", "CA1026:DefaultParametersShouldNotBeUsed", Scope = "member", Target = "Paramore.Brighter.Messagestore.MsSql.Logging.Logger.#Invoke(Paramore.Brighter.Messagestore.MsSql.Logging.LogLevel,System.Func`1<System.String>,System.Exception,System.Object[])")]
 
 // If you copied this file manually, you need to change all "YourRootNameSpace" so not to clash with other libraries
 // that use LibLog
 #if LIBLOG_PROVIDERS_ONLY
-namespace paramore.brighter.commandprocessor.messagestore.mssql.LibLog
+namespace Paramore.Brighter.Messagestore.MsSql.LibLog
 #else
-namespace paramore.brighter.commandprocessor.messagestore.mssql.Logging
+namespace Paramore.Brighter.Messagestore.MsSql.Logging
 #endif
 {
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
 #if LIBLOG_PROVIDERS_ONLY
-    using paramore.brighter.commandprocessor.messagestore.mssql.LibLog.LogProviders;
+    using Paramore.Brighter.Messagestore.MsSql.LibLog.LogProviders;
 #else
-    using paramore.brighter.commandprocessor.messagestore.mssql.Logging.LogProviders;
+    using Paramore.Brighter.Messagestore.MsSql.Logging.LogProviders;
 #endif
     using System;
 #if !LIBLOG_PROVIDERS_ONLY
@@ -714,9 +714,9 @@ namespace paramore.brighter.commandprocessor.messagestore.mssql.Logging
 }
 
 #if LIBLOG_PROVIDERS_ONLY
-namespace paramore.brighter.commandprocessor.messagestore.mssql.LibLog.LogProviders
+namespace Paramore.Brighter.Messagestore.MsSql.LibLog.LogProviders
 #else
-namespace paramore.brighter.commandprocessor.messagestore.mssql.Logging.LogProviders
+namespace Paramore.Brighter.Messagestore.MsSql.Logging.LogProviders
 #endif
 {
     using System;

@@ -33,9 +33,9 @@ using EventStore.Core;
 using EventStore.Core.Data;
 using Nito.AsyncEx;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messagestore.eventstore;
 using NUnit.Framework;
 using paramore.brighter.commandprocessor.tests.nunit;
+using Paramore.Brighter.Messagestore.Eventstore;
 
 namespace paramore.commandprocessor.tests.MessageStore.EventStore
 {

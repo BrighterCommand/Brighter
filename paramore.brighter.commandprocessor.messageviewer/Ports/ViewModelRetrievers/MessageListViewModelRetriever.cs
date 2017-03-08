@@ -35,12 +35,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
+using System.Linq;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
+using Paramore.Brighter.MessageViewer.Ports.Domain;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers
+namespace Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers
 {
     public enum MessageListModelError
     {

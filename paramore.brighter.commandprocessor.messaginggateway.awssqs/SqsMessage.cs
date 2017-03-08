@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
+namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     /// <summary>
     /// This class is used to deserialize a SNS backed SQS message

@@ -38,7 +38,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// We raise a ChannelFailureException when we are unable to communicate with the work queue channel.

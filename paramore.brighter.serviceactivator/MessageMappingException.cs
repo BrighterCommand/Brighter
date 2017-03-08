@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace paramore.brighter.serviceactivator
+namespace Paramore.Brighter.ServiceActivator
 {
     internal class MessageMappingException : Exception
     {

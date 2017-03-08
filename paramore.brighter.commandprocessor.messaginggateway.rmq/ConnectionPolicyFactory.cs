@@ -23,13 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-
-using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using Paramore.Brighter.MessagingGateway.RMQ.Logging;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Polly;
 using RabbitMQ.Client.Exceptions;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     /// <summary>
     /// Class ConnectionPolicyFactory.

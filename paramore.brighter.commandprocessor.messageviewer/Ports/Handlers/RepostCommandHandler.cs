@@ -36,9 +36,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
+using Paramore.Brighter.MessageViewer.Ports.Domain;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
+namespace Paramore.Brighter.MessageViewer.Ports.Handlers
 {
     public class RepostCommand : ICommand
     {

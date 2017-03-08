@@ -37,16 +37,16 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.Logging;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using Paramore.Brighter.MessagingGateway.RMQ.Logging;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Polly;
 using RabbitMQ.Client;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     /// <summary>
     /// Class RMQMessageGateway.
-    /// Base class for messaging gateway used by a <see cref="commandprocessor.Channel"/> to communicate with a RabbitMQ server, to consume messages from the server or
+    /// Base class for messaging gateway used by a <see cref="Brighter.Channel"/> to communicate with a RabbitMQ server, to consume messages from the server or
     /// <see cref="CommandProcessor.Post{T}"/> to send a message to the RabbitMQ server. 
     /// A channel is associated with a queue name, which binds to a <see cref="MessageHeader.Topic"/> when <see cref="CommandProcessor.Post{T}"/> sends over a task queue. 
     /// So to listen for messages on that Topic you need to bind to the matching queue name. 

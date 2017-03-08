@@ -45,9 +45,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.messagestore.sqlite.Logging;
+using Paramore.Brighter.Messagestore.Sqlite.Logging;
 
-namespace paramore.brighter.commandprocessor.messagestore.sqlite
+namespace Paramore.Brighter.Messagestore.Sqlite
 {
     /// <summary>
     ///     Class SqliteMessageStore.

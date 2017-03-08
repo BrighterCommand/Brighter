@@ -34,11 +34,11 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
 using System.Linq;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Configuration;
+using Paramore.Brighter.MessageViewer.Ports.Domain.Config;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
+namespace Paramore.Brighter.MessageViewer.Ports.Domain
 {
     public interface IMessageStoreViewerFactory
     {

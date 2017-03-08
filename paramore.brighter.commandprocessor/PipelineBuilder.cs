@@ -1,4 +1,4 @@
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-01-2014
@@ -37,13 +37,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Generic;
+using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Logging;
 using System.Reflection;
-using paramore.brighter.commandprocessor.extensions;
-using paramore.brighter.commandprocessor.Logging;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     internal class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>
         where TRequest : class, IRequest

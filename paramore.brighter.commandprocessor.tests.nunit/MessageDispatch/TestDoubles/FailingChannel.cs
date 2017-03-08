@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.serviceactivator.TestHelpers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles
 {

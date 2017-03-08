@@ -37,11 +37,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.monitoring.Events;
-using paramore.brighter.commandprocessor.monitoring.Mappers;
+using Paramore.Brighter.monitoring.Events;
+using Paramore.Brighter.monitoring.Mappers;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Class ControlBusSenderFactory. Helper for creating instances of a control bus (which requires messaging, but not subcribers).

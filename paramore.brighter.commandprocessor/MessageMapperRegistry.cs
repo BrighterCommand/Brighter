@@ -39,7 +39,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Class MessageMapperRegistry

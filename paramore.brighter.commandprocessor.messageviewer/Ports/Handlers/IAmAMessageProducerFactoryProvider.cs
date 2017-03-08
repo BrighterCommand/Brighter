@@ -34,7 +34,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
+namespace Paramore.Brighter.MessageViewer.Ports.Handlers
 {
     public interface IMessageProducerFactoryProvider
     {

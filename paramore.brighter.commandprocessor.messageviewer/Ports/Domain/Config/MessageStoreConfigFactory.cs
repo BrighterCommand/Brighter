@@ -33,7 +33,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config
+namespace Paramore.Brighter.MessageViewer.Ports.Domain.Config
 {
     public class MessageStoreConfigFactory
     {

@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.commandstore.mssql;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using paramore.brighter.commandstore.mssql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
 {

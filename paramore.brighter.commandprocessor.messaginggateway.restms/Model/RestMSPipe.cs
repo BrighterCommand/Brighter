@@ -38,7 +38,7 @@ THE SOFTWARE. */
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.restms.Model
+namespace Paramore.Brighter.MessagingGateway.RESTMS.Model
 {
     [DataContract(Name = "pipe"), XmlRoot(ElementName = "pipe", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSPipe

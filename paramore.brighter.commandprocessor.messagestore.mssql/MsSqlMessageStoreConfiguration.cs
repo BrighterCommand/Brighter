@@ -36,7 +36,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor.messagestore.mssql
+namespace Paramore.Brighter.Messagestore.MsSql
 {
     /// <summary>
     /// Class MsSqlMessageStoreConfiguration.

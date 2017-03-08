@@ -43,7 +43,7 @@ using Nancy.Conventions;
 using Nancy.Diagnostics;
 using Nancy.TinyIoc;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration
+namespace Paramore.Brighter.MessageViewer.Adaptors.API.Configuration
 {
     public class NancyBootstrapper : DefaultNancyBootstrapper
     {

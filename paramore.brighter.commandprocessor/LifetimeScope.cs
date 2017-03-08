@@ -38,10 +38,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.extensions;
-using paramore.brighter.commandprocessor.Logging;
+using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Logging;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     internal class LifetimeScope : IAmALifetime
     {

@@ -30,8 +30,8 @@ using EventSourcing.Ports.CommandHandlers;
 using EventSourcing.Ports.Commands;
 using Newtonsoft.Json;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.commandstore.mssql;
 using paramore.brighter.commandprocessor.Logging;
+using Paramore.Brighter.Commandstore.MsSql;
 
 namespace EventSourcing.Adapters.ServiceHost
 {

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright � 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,8 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using NUnit.Framework;
-using paramore.brighter.serviceactivator.Ports.Commands;
-using paramore.brighter.serviceactivator.Ports.Mappers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {

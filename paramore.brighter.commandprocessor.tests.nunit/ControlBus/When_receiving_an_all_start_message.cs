@@ -25,8 +25,6 @@ THE SOFTWARE. */
 using FakeItEasy;
 using NUnit.Framework;
 using paramore.brighter.serviceactivator;
-using paramore.brighter.serviceactivator.Ports.Commands;
-using paramore.brighter.serviceactivator.Ports.Handlers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 {

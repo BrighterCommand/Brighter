@@ -39,7 +39,7 @@ THE SOFTWARE. */
 using System.Runtime.Serialization;
 using System.Xml.Serialization;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.restms.Model
+namespace Paramore.Brighter.MessagingGateway.RESTMS.Model
 {
     [DataContract(Name = "domain"), XmlRoot(ElementName = "domain", Namespace = "http://www.restms.org/schema/restms")]
     public class RestMSDomain

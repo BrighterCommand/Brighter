@@ -35,9 +35,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Configuration;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Handlers
+namespace Paramore.Brighter.MessageViewer.Ports.Handlers
 {
     public class MessageProducerFactoryProvider : IMessageProducerFactoryProvider
     {

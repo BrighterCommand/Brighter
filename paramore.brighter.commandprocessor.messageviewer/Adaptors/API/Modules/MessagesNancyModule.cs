@@ -38,12 +38,12 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Nancy;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
-using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
+using Paramore.Brighter.MessageViewer.Ports.Domain;
+using Paramore.Brighter.MessageViewer.Ports.Handlers;
+using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules
+namespace Paramore.Brighter.MessageViewer.Adaptors.API.Modules
 {
     public class MessagesNancyModule : NancyModule
     {

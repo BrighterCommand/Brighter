@@ -41,7 +41,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     internal class AsyncRequestHandlers<TRequest> : IEnumerable<RequestHandlerAsync<TRequest>>
         where TRequest : class, IRequest

@@ -38,7 +38,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmASubscriberRegistry

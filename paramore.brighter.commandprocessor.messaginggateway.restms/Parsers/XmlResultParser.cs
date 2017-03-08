@@ -25,9 +25,9 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.Xml.Serialization;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
+using Paramore.Brighter.MessagingGateway.RESTMS.Logging;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
+namespace Paramore.Brighter.MessagingGateway.RESTMS.Parsers
 {
     public class XmlResultParser
     {

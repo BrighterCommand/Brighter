@@ -35,11 +35,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.extensions;
-using paramore.brighter.serviceactivator.Ports.Commands;
+using Paramore.Brighter.ServiceActivator.Ports.Commands;
+using Paramore.Brighter.Extensions;
 
-namespace paramore.brighter.serviceactivator.Ports.Handlers
+namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
 {
     /// <summary>
     /// Class HeartbeatRequestCommandHandler.

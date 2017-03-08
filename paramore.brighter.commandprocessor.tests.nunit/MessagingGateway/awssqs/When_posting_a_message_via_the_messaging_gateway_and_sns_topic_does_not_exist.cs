@@ -2,7 +2,7 @@
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService.Model;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messaginggateway.awssqs;
+using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
 {

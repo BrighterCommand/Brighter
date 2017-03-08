@@ -1,7 +1,7 @@
 using System;
 using System.Data.SqlClient;
-using paramore.brighter.commandprocessor.commandstore.mssql;
-using paramore.brighter.commandprocessor.messagestore.mssql;
+using paramore.brighter.commandstore.mssql;
+using Paramore.Brighter.Messagestore.MsSql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit
 {

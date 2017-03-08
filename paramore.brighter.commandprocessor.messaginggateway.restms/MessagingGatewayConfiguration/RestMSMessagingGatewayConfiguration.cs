@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration
+namespace Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration
 {
     public class RestMSMessagingGatewayConfiguration  
     {

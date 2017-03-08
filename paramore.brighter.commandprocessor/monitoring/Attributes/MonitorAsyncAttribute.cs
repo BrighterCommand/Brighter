@@ -1,7 +1,7 @@
 using System;
-using paramore.brighter.commandprocessor.monitoring.Handlers;
+using Paramore.Brighter.monitoring.Handlers;
 
-namespace paramore.brighter.commandprocessor.monitoring.Attributes
+namespace Paramore.Brighter.monitoring.Attributes
 {
     /// <summary>
     /// Class MonitorAttribute.

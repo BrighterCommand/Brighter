@@ -35,9 +35,9 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Configuration;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config
+namespace Paramore.Brighter.MessageViewer.Ports.Domain.Config
 {
     public class MessageStoreConfigProvider : IMessageStoreConfigProvider
     {

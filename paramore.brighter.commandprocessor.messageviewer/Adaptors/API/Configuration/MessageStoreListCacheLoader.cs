@@ -35,10 +35,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
+using Paramore.Brighter.Messagestore.MsSql;
+using Paramore.Brighter.MessageViewer.Ports.Domain;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration
+namespace Paramore.Brighter.MessageViewer.Adaptors.API.Configuration
 {
     public interface IMessageStoreListCacheLoader
     {

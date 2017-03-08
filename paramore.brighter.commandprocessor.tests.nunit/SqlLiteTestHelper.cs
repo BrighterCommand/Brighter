@@ -1,9 +1,7 @@
 using System;
 using System.IO;
 using Microsoft.Data.Sqlite;
-using paramore.brighter.commandprocessor.commandstore.sqlite;
-using paramore.brighter.commandprocessor.messagestore.mssql;
-using paramore.brighter.commandprocessor.messagestore.sqlite;
+using Paramore.Brighter.Commandstore.Sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit
 {

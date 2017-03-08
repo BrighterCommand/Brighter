@@ -37,10 +37,9 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator.Logging;
+using Paramore.Brighter.ServiceActivator.Logging;
 
-namespace paramore.brighter.serviceactivator
+namespace Paramore.Brighter.ServiceActivator
 {
 
     internal class MessagePump<TRequest> : MessagePumpBase<TRequest>, IAmAMessagePump where TRequest : class, IRequest

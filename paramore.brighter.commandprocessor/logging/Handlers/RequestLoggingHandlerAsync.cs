@@ -39,11 +39,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.policy.Attributes;
-using Polly.CircuitBreaker;
+using Paramore.Brighter.Logging;
 
-namespace paramore.brighter.commandprocessor.logging.Handlers
+namespace Paramore.Brighter.logging.Handlers
 {
     /// <summary>
     /// Class AsyncRequestLoggingHandler.

@@ -1,9 +1,8 @@
 ﻿using System;
 using Newtonsoft.Json.Linq;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator.Ports.Commands;
+using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
-namespace paramore.brighter.serviceactivator.Ports.Mappers
+namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
 {
     public class HeartbeatRequestCommandMessageMapper : IAmAMessageMapper<HeartbeatRequest>
     {

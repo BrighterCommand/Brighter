@@ -37,12 +37,9 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.policy.Attributes;
-using paramore.brighter.commandprocessor.policy.Handlers;
-using Polly.CircuitBreaker;
+using Paramore.Brighter.Logging;
 
-namespace paramore.brighter.commandprocessor.logging.Handlers
+namespace Paramore.Brighter.logging.Handlers
 {
     /// <summary>
     /// Class RequestLoggingHandler.

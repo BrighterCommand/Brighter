@@ -43,11 +43,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.extensions;
-using paramore.brighter.serviceactivator.Logging;
+using Paramore.Brighter.Extensions;
+using Paramore.Brighter.ServiceActivator.Logging;
 
-namespace paramore.brighter.serviceactivator
+namespace Paramore.Brighter.ServiceActivator
 {
     /// <summary>
     /// Class Dispatcher.

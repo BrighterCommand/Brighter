@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor.commandstore.sqlite
+namespace Paramore.Brighter.Commandstore.Sqlite
 {
     public class SqliteCommandStoreBuilder
     {

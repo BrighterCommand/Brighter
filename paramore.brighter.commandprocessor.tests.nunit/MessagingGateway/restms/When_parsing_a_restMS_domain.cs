@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Parsers;
+using Paramore.Brighter.MessagingGateway.RESTMS.Model;
+using Paramore.Brighter.MessagingGateway.RESTMS.Parsers;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
 {

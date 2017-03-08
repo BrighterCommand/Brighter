@@ -1,11 +1,10 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.actions;
-using paramore.brighter.serviceactivator.Logging;
+using Paramore.Brighter.actions;
+using Paramore.Brighter.ServiceActivator.Logging;
 
-namespace paramore.brighter.serviceactivator
+namespace Paramore.Brighter.ServiceActivator
 {
     // The message pump is a classic event loop and is intended to be run on a single-thread
     // The event loop is terminated when reading a MT_QUIT message on the channel

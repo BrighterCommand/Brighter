@@ -37,9 +37,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.serviceactivator.Ports.Commands
+namespace Paramore.Brighter.ServiceActivator.Ports.Commands
 {
     /// <summary>
     /// Enum ConfigurationMessageType

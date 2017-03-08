@@ -36,12 +36,12 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 using System.Linq;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
+using Paramore.Brighter.MessageViewer.Ports.Domain;
+using Paramore.Brighter.MessageViewer.Ports.Domain.Config;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers
+namespace Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers
 {
     public interface IMessageStoreViewerModelRetriever
     {

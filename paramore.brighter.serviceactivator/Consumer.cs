@@ -37,9 +37,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.serviceactivator
+namespace Paramore.Brighter.ServiceActivator
 {
     /// <summary>
     /// Enum ConsumerState

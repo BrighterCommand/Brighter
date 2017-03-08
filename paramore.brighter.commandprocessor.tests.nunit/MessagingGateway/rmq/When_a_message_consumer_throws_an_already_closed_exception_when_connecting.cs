@@ -24,9 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.TestDoubles;
+using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using RabbitMQ.Client.Exceptions;
 using Catch = paramore.brighter.commandprocessor.tests.nunit.Catch;
 

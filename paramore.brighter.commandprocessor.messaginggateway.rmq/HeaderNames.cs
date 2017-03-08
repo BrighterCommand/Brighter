@@ -36,7 +36,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor.messaginggateway.rmq
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     /// <summary>
     /// Class HeaderNames.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}

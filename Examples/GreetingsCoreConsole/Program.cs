@@ -10,6 +10,7 @@ using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayCo
 using paramore.brighter.serviceactivator;
 using Polly;
 using Greetings.TinyIoc;
+using Paramore.Brighter.ServiceActivator;
 using Serilog;
 
 namespace GreetingsCoreConsole
@@ -68,9 +69,9 @@ namespace GreetingsCoreConsole
             var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqConnnection );
 
             // Service Activator connections
-            var connections = new List<paramore.brighter.serviceactivator.Connection>
+            var connections = new List<Connection>
             {
-                new paramore.brighter.serviceactivator.Connection(
+                new Connection(
                     new ConnectionName("paramore.example.greeting"),
                     new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory),
                     typeof(GreetingEvent),

@@ -1,11 +1,10 @@
-using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Nancy.Owin;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Configuration;
 
-namespace paramore.brighter.comandprocessor.messageviewer.console
+namespace Paramore.Brighter.MessageViewer.Console
 {
     public class Startup
     {
@@ -28,7 +27,7 @@ namespace paramore.brighter.comandprocessor.messageviewer.console
             app.UseOwin(x =>
             x.UseNancy(opt => 
                 opt.Bootstrapper = new NancyBootstrapper(Config)));
-            Console.WriteLine("Nancy now listening - " + "" + ". Press ctrl-c to stop");
+            System.Console.WriteLine("Nancy now listening - " + "" + ". Press ctrl-c to stop");
         }
     }
 }

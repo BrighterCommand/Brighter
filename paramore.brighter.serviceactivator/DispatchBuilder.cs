@@ -36,9 +36,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor;
 
-namespace paramore.brighter.serviceactivator
+namespace Paramore.Brighter.ServiceActivator
 {
     /// <summary>
     /// Class DispatchBuilder.

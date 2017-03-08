@@ -40,7 +40,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmASendMessageGateway

@@ -26,10 +26,10 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Text;
-using paramore.brighter.commandprocessor.extensions;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Model;
+using Paramore.Brighter.Extensions;
+using Paramore.Brighter.MessagingGateway.RESTMS.Model;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.restms
+namespace Paramore.Brighter.MessagingGateway.RESTMS
 {
     internal static class RestMSMessageCreator
     {

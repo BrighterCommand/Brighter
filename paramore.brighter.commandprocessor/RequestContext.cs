@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Class RequestContext

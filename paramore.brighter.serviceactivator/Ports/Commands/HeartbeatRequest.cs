@@ -36,9 +36,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor;
-
-namespace paramore.brighter.serviceactivator.Ports.Commands
+namespace Paramore.Brighter.ServiceActivator.Ports.Commands
 {
     /// <summary>
     /// Class HeartbeatRequest.

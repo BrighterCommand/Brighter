@@ -30,8 +30,8 @@ using DocumentsAndFolders.Sqs.Core.Ports.Events;
 using DocumentsAndFolders.Sqs.Core.Ports.Mappers;
 using Greetings.Adapters.ServiceHost;
 using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messaginggateway.awssqs;
 using paramore.brighter.serviceactivator;
+using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Polly;
 
 using TinyIoC;

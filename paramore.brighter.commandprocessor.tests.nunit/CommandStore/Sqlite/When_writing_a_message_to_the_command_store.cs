@@ -25,8 +25,8 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Data.Sqlite;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.commandstore.sqlite;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Commandstore.Sqlite;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
 {

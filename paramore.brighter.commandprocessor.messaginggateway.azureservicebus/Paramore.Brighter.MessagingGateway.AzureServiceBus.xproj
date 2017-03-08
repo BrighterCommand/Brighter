@@ -6,12 +6,11 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\DotNet\Microsoft.DotNet.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>6f7705c6-a4c1-4497-bee5-ba22a7cb2162</ProjectGuid>
-    <RootNamespace>paramore.brighter.commandprocessor.commandstore.mssql</RootNamespace>
+    <ProjectGuid>3a9f4cf4-ac46-4209-aec5-1751403e87ba</ProjectGuid>
+    <RootNamespace>Paramore.Brighter.MessagingGateway.AzureServiceBus</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">.\obj</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">.\bin\</OutputPath>
   </PropertyGroup>
-
   <PropertyGroup>
     <SchemaVersion>2.0</SchemaVersion>
   </PropertyGroup>

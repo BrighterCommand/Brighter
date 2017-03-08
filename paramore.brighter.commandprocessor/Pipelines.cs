@@ -38,7 +38,7 @@ THE SOFTWARE. */
 using System.Collections;
 using System.Collections.Generic;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     internal class Pipelines<TRequest> : IEnumerable<IHandleRequests<TRequest>> where TRequest : class, IRequest
     {

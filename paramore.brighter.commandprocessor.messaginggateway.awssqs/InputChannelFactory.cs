@@ -1,4 +1,4 @@
-﻿namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
+﻿namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     public class InputChannelFactory : IAmAChannelFactory
     {

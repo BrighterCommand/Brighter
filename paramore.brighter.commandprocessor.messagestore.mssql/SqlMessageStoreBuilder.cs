@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace paramore.brighter.commandprocessor.messagestore.mssql
+namespace Paramore.Brighter.Messagestore.MsSql
 {
     public class SqlMessageStoreBuilder
     {

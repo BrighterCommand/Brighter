@@ -25,9 +25,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using Amqp;
-using paramore.brighter.commandprocessor.messaginggateway.azureservicebus.Logging;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.Logging;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.azureservicebus
+namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     public class MessageSenderPool : IDisposable
     {

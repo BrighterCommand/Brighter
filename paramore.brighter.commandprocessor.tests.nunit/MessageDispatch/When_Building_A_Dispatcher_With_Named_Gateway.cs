@@ -25,13 +25,15 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
 using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
 using paramore.brighter.serviceactivator;
+using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
+using Paramore.Brighter.ServiceActivator;
 using Polly;
 using TinyIoC;
+using IAmADispatchBuilder = paramore.brighter.serviceactivator.IAmADispatchBuilder;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
 {

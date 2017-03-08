@@ -36,9 +36,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
+using Paramore.Brighter.MessageViewer.Ports.Domain.Config;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
+namespace Paramore.Brighter.MessageViewer.Ports.Domain
 {
     public interface IMessageStoreConfigCache
     {

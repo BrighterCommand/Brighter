@@ -17,9 +17,9 @@ using Amazon.Runtime;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.messaginggateway.awssqs.Logging;
+using Paramore.Brighter.MessagingGateway.AWSSQS.Logging;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.awssqs
+namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     /// <summary>
     /// Class SqsMessageConsumer.

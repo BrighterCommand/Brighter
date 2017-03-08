@@ -35,9 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Configuration;
-
-namespace paramore.brighter.comandprocessor.messageviewer.windowsservice.Configuration
+namespace Paramore.Brighter.MessageViewer.WindowsService.Configuration
 {
     public class MessageViewerStoresElement : ConfigurationElement
     {

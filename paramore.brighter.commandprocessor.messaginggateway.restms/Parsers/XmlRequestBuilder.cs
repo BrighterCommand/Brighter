@@ -39,9 +39,9 @@ using System;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
+using Paramore.Brighter.MessagingGateway.RESTMS.Logging;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.restms.Parsers
+namespace Paramore.Brighter.MessagingGateway.RESTMS.Parsers
 {
     /// <summary>
     /// Class XmlRequestBuilder.{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}

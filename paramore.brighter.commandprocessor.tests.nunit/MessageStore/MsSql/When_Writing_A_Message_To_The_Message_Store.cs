@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright � 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messagestore.mssql;
+using Paramore.Brighter.Messagestore.MsSql;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
 {

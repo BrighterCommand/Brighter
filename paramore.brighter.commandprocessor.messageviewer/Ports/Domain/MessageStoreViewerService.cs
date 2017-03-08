@@ -35,10 +35,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
-using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
+using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
 
-namespace paramore.brighter.commandprocessor.messageviewer.Ports.Domain
+namespace Paramore.Brighter.MessageViewer.Ports.Domain
 {
     public interface IMessageStoreViewerService
     {

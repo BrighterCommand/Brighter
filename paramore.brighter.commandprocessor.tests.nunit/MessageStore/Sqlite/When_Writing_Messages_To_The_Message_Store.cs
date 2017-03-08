@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright � 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messagestore.sqlite;
 using paramore.brighter.commandprocessor.time;
 
 namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite

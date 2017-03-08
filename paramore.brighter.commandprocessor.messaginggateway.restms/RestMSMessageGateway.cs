@@ -39,14 +39,14 @@ using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Logging;
-using paramore.brighter.commandprocessor.messaginggateway.restms.MessagingGatewayConfiguration;
-using paramore.brighter.commandprocessor.messaginggateway.restms.Parsers;
+using Paramore.Brighter.MessagingGateway.RESTMS.Logging;
+using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
+using Paramore.Brighter.MessagingGateway.RESTMS.Parsers;
 using Thinktecture.IdentityModel.Hawk.Client;
 using Thinktecture.IdentityModel.Hawk.Core;
 using Thinktecture.IdentityModel.Hawk.Core.Helpers;
 
-namespace paramore.brighter.commandprocessor.messaginggateway.restms
+namespace Paramore.Brighter.MessagingGateway.RESTMS
 {
     /// <summary>
     /// Class RestMSMessageGateway.

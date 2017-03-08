@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Any pipeline has a request context that allows you to flow information between instances of <see cref="IHandleRequests"/>

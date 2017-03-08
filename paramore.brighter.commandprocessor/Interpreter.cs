@@ -1,4 +1,4 @@
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
 // Created          : 07-01-2014
@@ -35,11 +35,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace paramore.brighter.commandprocessor
+namespace Paramore.Brighter
 {
     internal class Interpreter<TRequest> where TRequest : class, IRequest
     {
