@@ -27,7 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Polly.CircuitBreaker;
 
-namespace Paramore.Brighter.policy.Handlers
+namespace Paramore.Brighter.Policies.Handlers
 {
     public class FallbackPolicyHandlerRequestHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {

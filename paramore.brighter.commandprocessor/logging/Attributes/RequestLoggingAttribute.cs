@@ -36,13 +36,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter.logging.Handlers;
+using Paramore.Brighter.Logging.Handlers;
 
-namespace Paramore.Brighter.logging.Attributes
+namespace Paramore.Brighter.Logging.Attributes
 {
     /// <summary>
     /// Class RequestLoggingAttribute.
-    /// Provides logging of a request using the <see cref="RequestLoggingHandler{T}"/>
+    /// Provides logging of a request using the <see cref="RequestLoggingHandler{TRequest}"/>
     /// </summary>
     public class RequestLoggingAttribute : RequestHandlerAttribute
     {

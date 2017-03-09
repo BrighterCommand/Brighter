@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Configuration;
 
 namespace Paramore.Brighter.MessageViewer.WindowsService.Configuration
 {

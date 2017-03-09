@@ -34,7 +34,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter.policy.Attributes;
+using Paramore.Brighter.Policies.Attributes;
 using Polly;
 
 namespace Paramore.Brighter

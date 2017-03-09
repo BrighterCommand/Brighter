@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using Polly.CircuitBreaker;
 
-namespace Paramore.Brighter.policy.Handlers
+namespace Paramore.Brighter.Policies.Handlers
 {
     public class FallbackPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {

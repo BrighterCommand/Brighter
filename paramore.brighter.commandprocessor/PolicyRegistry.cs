@@ -38,7 +38,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Paramore.Brighter.policy.Attributes;
+using Paramore.Brighter.Policies.Attributes;
 using Polly;
 
 namespace Paramore.Brighter

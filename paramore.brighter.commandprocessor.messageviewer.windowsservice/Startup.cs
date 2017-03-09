@@ -1,5 +1,9 @@
 using System;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Configuration;
 using Paramore.Brighter.MessageViewer.WindowsService.Configuration;
+using Nancy.Owin;
 
 namespace Paramore.Brighter.MessageViewer.WindowsService
 {

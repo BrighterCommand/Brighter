@@ -35,7 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using Paramore.Brighter.policy.Attributes;
+using Paramore.Brighter.Policies.Attributes;
 using Polly;
 
 namespace Paramore.Brighter
@@ -61,7 +61,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="policyName">Name of the policy.</param>
         /// <returns>Policy.</returns>
-        Policy Get(string policyName);
+        Polly.Policy Get(string policyName);
         bool Has(string policyName);
     }
 }

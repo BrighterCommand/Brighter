@@ -36,9 +36,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter.policy.Handlers;
+using Paramore.Brighter.Policies.Handlers;
 
-namespace Paramore.Brighter.policy.Attributes
+namespace Paramore.Brighter.Policies.Attributes
 {
     /// <summary>
     /// Class TimeoutPolicyAttribute.

@@ -41,7 +41,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Logging;
 
-namespace Paramore.Brighter.eventsourcing.Handlers
+namespace Paramore.Brighter.Eventsourcing.Handlers
 {
     /// <summary>
     /// Used with the Event Sourcing pattern that stores the commands that we send to handlers for replay. 

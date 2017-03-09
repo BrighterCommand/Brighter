@@ -37,8 +37,8 @@ THE SOFTWARE. */
 
 #endregion
 
-using Paramore.Brighter.monitoring.Events;
-using Paramore.Brighter.monitoring.Mappers;
+using Paramore.Brighter.Monitoring.Events;
+using Paramore.Brighter.Monitoring.Mappers;
 
 namespace Paramore.Brighter
 {

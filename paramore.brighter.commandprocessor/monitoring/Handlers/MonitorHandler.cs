@@ -24,11 +24,11 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using Paramore.Brighter.monitoring.Configuration;
-using Paramore.Brighter.monitoring.Events;
-using Paramore.Brighter.time;
+using Paramore.Brighter.Monitoring.Configuration;
+using Paramore.Brighter.Monitoring.Events;
+using Paramore.Brighter.Time;
 
-namespace Paramore.Brighter.monitoring.Handlers
+namespace Paramore.Brighter.Monitoring.Handlers
 {
     /// <summary>
     /// Class MonitorHandler.

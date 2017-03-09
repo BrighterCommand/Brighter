@@ -52,7 +52,7 @@ namespace Paramore.Brighter
     ///         <description>
     ///             A <see cref="IAmAPolicyRegistry"/> containing a list of policies that you want to be accessible to the <see cref="CommandProcessor"/>. You can use
     ///             <see cref="PolicyRegistry"/> to provide the <see cref="IAmAPolicyRegistry"/>. Policies are expected to be Polly <see cref="!:https://github.com/michael-wolfenden/Polly"/> 
-    ///             <see cref="Policy"/> references.
+    ///             <see cref="Paramore.Brighter.Policies"/> references.
     ///             If you do not need any policies around quality of service (QoS) concerns - you do not have Work Queues and/or do not intend to use Polly Policies for 
     ///             QoS concerns - you can use <see cref="DefaultPolicy"/> to indicate you do not need them or just want a simple retry.
     ///         </description>

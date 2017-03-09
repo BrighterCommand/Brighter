@@ -38,10 +38,10 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.policy.Attributes;
+using Paramore.Brighter.Policies.Attributes;
 using Polly;
 
-namespace Paramore.Brighter.policy.Handlers
+namespace Paramore.Brighter.Policies.Handlers
 {
     /// <summary>
     /// Class ExceptionPolicyHandlerAsync.
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.policy.Handlers
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class ExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {
-        private Policy _policy;
+        private Polly.Policy _policy;
 
         /// <summary>
         /// Initializes from attribute parameters. This will get the <see cref="IAmAPolicyRegistry" /> from the <see cref="IRequestContext" /> and query it for the

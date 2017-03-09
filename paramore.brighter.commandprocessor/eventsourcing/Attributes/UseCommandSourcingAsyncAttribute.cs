@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter.eventsourcing.Handlers;
+using Paramore.Brighter.Eventsourcing.Handlers;
 
-namespace Paramore.Brighter.eventsourcing.Attributes
+namespace Paramore.Brighter.Eventsourcing.Attributes
 {
     /// <summary>
     /// Class UseAsyncCommandSourcingAttribute.

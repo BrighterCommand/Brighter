@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Paramore.Brighter.time;
+using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter
 {

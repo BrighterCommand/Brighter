@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.monitoring.Configuration
+namespace Paramore.Brighter.Monitoring.Configuration
 {
     /// <summary>
     /// Class MonitoringConfiguration.

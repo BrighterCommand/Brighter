@@ -39,7 +39,7 @@ using System;
 using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 
-namespace Paramore.Brighter.logging.Handlers
+namespace Paramore.Brighter.Logging.Handlers
 {
     /// <summary>
     /// Class RequestLoggingHandler.

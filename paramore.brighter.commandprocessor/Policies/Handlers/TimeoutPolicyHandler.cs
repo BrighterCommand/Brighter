@@ -75,9 +75,9 @@ THE SOFTWARE.
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.policy.Attributes;
+using Paramore.Brighter.Policies.Attributes;
 
-namespace Paramore.Brighter.policy.Handlers
+namespace Paramore.Brighter.Policies.Handlers
 {
     /// <summary>
     /// Class TimeoutPolicyHandler.

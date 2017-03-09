@@ -43,8 +43,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.policy.Attributes;
-using Paramore.Brighter.policy.Handlers;
+using Paramore.Brighter.Policies.Attributes;
+using Paramore.Brighter.Policies.Handlers;
 using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter

@@ -36,7 +36,9 @@ THE SOFTWARE. */
 #endregion
 
 using System.IO;
+using Microsoft.AspNetCore.Hosting;
 using Paramore.Brighter.MessageViewer.WindowsService.Configuration;
+using Topshelf;
 
 namespace Paramore.Brighter.MessageViewer.WindowsService
 {

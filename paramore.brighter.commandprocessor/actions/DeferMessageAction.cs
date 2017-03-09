@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.actions
+namespace Paramore.Brighter.Actions
 {
     /// <summary>
     /// Class DeferMessageAction.

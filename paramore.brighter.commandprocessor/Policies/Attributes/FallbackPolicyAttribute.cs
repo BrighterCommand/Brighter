@@ -1,12 +1,12 @@
 ﻿// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor
 // Author           : ian
-// Created          : 04-30-2015
+// Created          : 02-26-2015
 //
 // Last Modified By : ian
-// Last Modified On : 04-30-2015
+// Last Modified On : 02-26-2015
 // ***********************************************************************
-// <copyright file="MonitorAttribute.cs" company="">
+// <copyright file="FallbackPolicyAttribute.cs" company="">
 //     Copyright (c) . All rights reserved.
 // </copyright>
 // <summary></summary>
@@ -14,7 +14,7 @@
 
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -37,32 +37,33 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter.Monitoring.Handlers;
+using Paramore.Brighter.Policies.Handlers;
 
-namespace Paramore.Brighter.Monitoring.Attributes
+namespace Paramore.Brighter.Policies.Attributes
 {
     /// <summary>
-    /// Class MonitorAttribute.
-    /// Using this attribute indicates that you intend to monitor the handler. Monitoring implies that diagnostic information will be sent over the ControlBus to any subscribers.
-    /// A configuration setting acts as a 'master switch' to turn monitoring on and off. The <see cref="MonitoringConfigurationSection"/> provides that switch.
+    /// Class FallbackPolicyAttribute.
     /// </summary>
-    public class MonitorAttribute: RequestHandlerAttribute
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public class FallbackPolicyAttribute : RequestHandlerAttribute
     {
-        private readonly string _handlerName;
-        private readonly string _handlerFullAssemblyName;
+        readonly bool _backstop;
+        readonly bool _circuitBreaker;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandlerAttribute" /> class.
         /// </summary>
+        /// <param name="backstop">if set to <c>true</c> [backstop].</param>
+        /// <param name="circuitBreaker">if set to <c>true</c> [circuit breaker].</param>
         /// <param name="step">The step.</param>
         /// <param name="timing">The timing.</param>
-        /// <param name="handlerType">The type of the monitored handler (used to extract the assembly qualified type name for instrumentation purposes)</param>
-        public MonitorAttribute(int step, HandlerTiming timing, Type handlerType)
-            : base(step, timing)
+        public FallbackPolicyAttribute(bool backstop, bool circuitBreaker, int step, HandlerTiming timing = HandlerTiming.Before) : base(step, timing)
         {
-            _handlerName = handlerType.FullName;
-            _handlerFullAssemblyName = handlerType.AssemblyQualifiedName;
+            _backstop = backstop;
+            _circuitBreaker = circuitBreaker;
         }
+
+        #region Overrides of RequestHandlerAttribute
 
         /// <summary>
         /// Initializers the parameters.
@@ -70,8 +71,10 @@ namespace Paramore.Brighter.Monitoring.Attributes
         /// <returns>System.Object[].</returns>
         public override object[] InitializerParams()
         {
-            return new object[] {_handlerName, _handlerFullAssemblyName};
+           return new object[] {_backstop, _circuitBreaker};
         }
+
+        #endregion
 
         /// <summary>
         /// Gets the type of the handler.
@@ -79,7 +82,8 @@ namespace Paramore.Brighter.Monitoring.Attributes
         /// <returns>Type.</returns>
         public override Type GetHandlerType()
         {
-            return typeof(MonitorHandler<>);
+            return typeof (FallbackPolicyHandler<>);
         }
+
     }
 }

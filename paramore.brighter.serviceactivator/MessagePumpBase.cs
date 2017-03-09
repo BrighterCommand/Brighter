@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.actions;
+using Paramore.Brighter.Actions;
 using Paramore.Brighter.ServiceActivator.Logging;
 
 namespace Paramore.Brighter.ServiceActivator

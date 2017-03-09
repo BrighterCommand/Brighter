@@ -39,7 +39,7 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.Logging;
 
-namespace Paramore.Brighter.eventsourcing.Handlers
+namespace Paramore.Brighter.Eventsourcing.Handlers
 {
     /// <summary>
     /// Class CommandSourcingHandler.

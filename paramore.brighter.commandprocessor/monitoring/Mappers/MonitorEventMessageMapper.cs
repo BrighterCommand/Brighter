@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
-using Paramore.Brighter.monitoring.Events;
+using Paramore.Brighter.Monitoring.Events;
 
-namespace Paramore.Brighter.monitoring.Mappers
+namespace Paramore.Brighter.Monitoring.Mappers
 {
     public class MonitorEventMessageMapper : IAmAMessageMapper<MonitorEvent>
     {
