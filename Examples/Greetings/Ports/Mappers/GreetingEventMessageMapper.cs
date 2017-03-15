@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using Greetings.Ports.Commands;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace Greetings.Ports.Mappers
 {

@@ -4,12 +4,11 @@ using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
-using paramore.brighter.serviceactivator;
 using Polly;
 using Greetings.TinyIoc;
+using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.ServiceActivator;
 using Serilog;
 

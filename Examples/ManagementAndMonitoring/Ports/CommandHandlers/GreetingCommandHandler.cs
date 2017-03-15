@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using ManagementAndMonitoring.Ports.Commands;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.monitoring.Attributes;
+using Paramore.Brighter;
+using Paramore.Brighter.Monitoring.Attributes;
 
 namespace ManagementAndMonitoring.Ports.CommandHandlers
 {

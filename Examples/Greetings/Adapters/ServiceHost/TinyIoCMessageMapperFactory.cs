@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Greetings.TinyIoc;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace Greetings.Adapters.ServiceHost
 {

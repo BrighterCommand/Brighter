@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using DocumentsAndFolders.Sqs.Core.Ports.Events;
 using DocumentsAndFolders.Sqs.Core.Ports.Mappers;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Polly;
 using TinyIoC;

@@ -23,14 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.IO;
 using EventSourcing.ManualTinyIoc;
 //using System.Reflection;
 using EventSourcing.Ports.CommandHandlers;
 using EventSourcing.Ports.Commands;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
+using Paramore.Brighter;
 using Paramore.Brighter.Commandstore.MsSql;
 
 namespace EventSourcing.Adapters.ServiceHost

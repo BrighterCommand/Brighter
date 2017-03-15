@@ -1,6 +1,6 @@
 ﻿using System;
 using GenericListener.Infrastructure;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace GenericListener.Adapters.Services
 {

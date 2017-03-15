@@ -31,13 +31,14 @@ using ManagementAndMonitoring.ManualTinyIoc;
 using ManagementAndMonitoring.Ports.CommandHandlers;
 using ManagementAndMonitoring.Ports.Commands;
 using ManagementAndMonitoring.Ports.Mappers;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator;
+using Paramore.Brighter;
+using Paramore.Brighter.Messagestore.Sqlite;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
+using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.ControlBus;
 using Polly;
 using Topshelf;
-using Connection = paramore.brighter.serviceactivator.Connection;
 
 namespace ManagementAndMonitoringWindowsService.ServiceHost
 {

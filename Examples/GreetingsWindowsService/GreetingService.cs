@@ -30,10 +30,10 @@ using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
 using Greetings.TinyIoc;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator;
+using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
+using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Topshelf;
 
@@ -95,9 +95,9 @@ namespace GreetingsWindowsService
 
             // < add connectionName = "paramore.example.greeting" channelName = "greeting." routingKey = "greeting.command" dataType = "Greetings.Ports.Commands.GreetingEvent" timeOutInMilliseconds = "200" />
             // Service Activator connections
-            var connections = new List<paramore.brighter.serviceactivator.Connection>
+            var connections = new List<Connection>
             {
-                new paramore.brighter.serviceactivator.Connection(
+                new Connection(
                     new ConnectionName("paramore.example.greeting"),
                     new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory),
                     typeof(GreetingEvent),

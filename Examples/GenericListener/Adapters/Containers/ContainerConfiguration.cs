@@ -6,7 +6,6 @@ using EventStore.ClientAPI.Exceptions;
 using EventStore.ClientAPI.SystemData;
 using GenericListener.Adapters.EventStore;
 using GenericListener.Ports.Indexers;
-using paramore.brighter.commandprocessor.Logging;
 using Tasks.Ports.Events;
 using TinyIoc;
 

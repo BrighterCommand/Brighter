@@ -1,6 +1,6 @@
 ﻿using System;
 using EventStore.ClientAPI;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace GenericListener.Adapters.EventStore
 {

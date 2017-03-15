@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Greetings.Ports.Commands;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace Greetings.Ports.CommandHandlers
 {

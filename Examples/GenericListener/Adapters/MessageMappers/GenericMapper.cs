@@ -2,7 +2,7 @@
 using System.Text;
 using GenericListener.Ports.Events;
 using Newtonsoft.Json.Linq;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace GenericListener.Adapters.MessageMappers
 {

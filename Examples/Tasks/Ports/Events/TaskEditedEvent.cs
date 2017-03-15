@@ -1,5 +1,5 @@
 ﻿using System;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace Tasks.Ports.Events
 {

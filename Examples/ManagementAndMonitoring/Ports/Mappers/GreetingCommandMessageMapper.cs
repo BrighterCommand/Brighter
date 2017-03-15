@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using ManagementAndMonitoring.Ports.Commands;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace ManagementAndMonitoring.Ports.Mappers
 {

@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using Polly;
@@ -31,15 +30,14 @@ using Serilog;
 using ManagementAndMonitoring.ManualTinyIoc;
 using ManagementAndMonitoring.Adapters.ServiceHost;
 using ManagementAndMonitoring.Ports.Commands;
-using paramore.brighter.commandprocessor;
 using ManagementAndMonitoring.Ports.CommandHandlers;
 using ManagementAndMonitoring.Ports.Mappers;
-using paramore.brighter.commandprocessor.messaginggateway.rmq;
-using paramore.brighter.serviceactivator;
-using Connection = Paramore.Brighter.ServiceActivator.Connection;
-using paramore.brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration;
+using Paramore.Brighter;
 using Paramore.Brighter.Messagestore.Sqlite;
+using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.ControlBus;
 
 namespace ManagementAndMonitoringCoreConsole
 {

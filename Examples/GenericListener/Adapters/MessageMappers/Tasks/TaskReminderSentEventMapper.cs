@@ -1,5 +1,5 @@
 ﻿using Newtonsoft.Json;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 using Tasks.Ports.Events;
 
 namespace GenericListener.Adapters.MessageMappers.Tasks

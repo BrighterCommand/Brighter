@@ -1,6 +1,6 @@
 ﻿using System;
 using Microsoft.AspNetCore.Mvc;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 using Tasks.Ports.Commands;
 using TasksApi.Resources;
 

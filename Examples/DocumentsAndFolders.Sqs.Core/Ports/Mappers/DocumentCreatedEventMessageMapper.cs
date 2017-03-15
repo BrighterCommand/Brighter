@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using DocumentsAndFolders.Sqs.Core.Ports.Events;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace DocumentsAndFolders.Sqs.Core.Ports.Mappers
 {

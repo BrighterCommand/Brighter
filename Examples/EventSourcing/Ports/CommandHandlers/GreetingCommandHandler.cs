@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using EventSourcing.Ports.Commands;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.eventsourcing.Attributes;
+using Paramore.Brighter;
+using Paramore.Brighter.Eventsourcing.Attributes;
 
 namespace EventSourcing.Ports.CommandHandlers
 {

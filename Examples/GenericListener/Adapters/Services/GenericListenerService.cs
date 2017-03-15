@@ -9,15 +9,15 @@ using GenericListener.Ports.Attributes;
 using GenericListener.Ports.Events;
 using GenericListener.Ports.Handlers;
 using GenericListener.Ports.Handlers.Tasks;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator;
+using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
+using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Tasks.Ports.Events;
 using TinyIoc;
 using Topshelf;
-using Connection = paramore.brighter.serviceactivator.Connection;
+using Connection = Paramore.Brighter.ServiceActivator.Connection;
 
 namespace GenericListener.Adapters.Services
 {

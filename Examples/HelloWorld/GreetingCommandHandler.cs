@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.logging.Attributes;
+using Paramore.Brighter;
+using Paramore.Brighter.Logging.Attributes;
 
 namespace HelloWorld
 {

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 using TinyIoc;
 
 namespace GenericListener.Infrastructure

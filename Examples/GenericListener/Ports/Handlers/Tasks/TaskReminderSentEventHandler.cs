@@ -1,6 +1,6 @@
 ﻿using GenericListener.Ports.Indexers;
 using log4net;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 using Tasks.Ports.Events;
 
 namespace GenericListener.Ports.Handlers.Tasks

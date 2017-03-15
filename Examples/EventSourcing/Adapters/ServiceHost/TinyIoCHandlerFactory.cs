@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using EventSourcing.ManualTinyIoc;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace EventSourcing.Adapters.ServiceHost
 {

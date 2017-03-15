@@ -2,7 +2,7 @@
 using System.Text;
 using EventStore.ClientAPI;
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace GenericListener.Adapters.EventStore
 {

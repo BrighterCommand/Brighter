@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 using TinyIoC;
 
 namespace Greetings.Adapters.ServiceHost

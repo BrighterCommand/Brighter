@@ -1,7 +1,7 @@
 ﻿using System;
 using FakeItEasy;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
 using Tasks.Ports.Commands;

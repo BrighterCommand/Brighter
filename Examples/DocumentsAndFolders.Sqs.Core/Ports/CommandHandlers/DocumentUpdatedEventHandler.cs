@@ -1,8 +1,8 @@
 ﻿using System;
 using DocumentsAndFolders.Sqs.Core.Ports.DB;
 using DocumentsAndFolders.Sqs.Core.Ports.Events;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.actions;
+using Paramore.Brighter;
+using Paramore.Brighter.Actions;
 
 namespace DocumentsAndFolders.Sqs.Core.Ports.CommandHandlers
 {

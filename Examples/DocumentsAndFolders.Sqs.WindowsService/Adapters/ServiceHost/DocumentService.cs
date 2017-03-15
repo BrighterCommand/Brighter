@@ -29,9 +29,9 @@ using DocumentsAndFolders.Sqs.Core.Ports.CommandHandlers;
 using DocumentsAndFolders.Sqs.Core.Ports.Events;
 using DocumentsAndFolders.Sqs.Core.Ports.Mappers;
 using Greetings.Adapters.ServiceHost;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator;
+using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.ServiceActivator;
 using Polly;
 
 using TinyIoC;
@@ -97,9 +97,9 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
             var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(awsCredentials );
             var sqsMessageProducerFactory = new SqsMessageProducerFactory(awsCredentials );
 
-            var connections = new List<paramore.brighter.serviceactivator.Connection>
+            var connections = new List<Connection>
             {
-                new paramore.brighter.serviceactivator.Connection(
+                new Connection(
                     new ConnectionName("paramore.example.documentsandfolders.documentcreatedevent"),
                     new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
                     typeof(DocumentCreatedEvent),
@@ -107,7 +107,7 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
                     "DocumentCreatedEvent",
                     timeoutInMilliseconds: 5000,
                     noOfPerformers: 10),
-                new paramore.brighter.serviceactivator.Connection(
+                new Connection(
                     new ConnectionName("paramore.example.documentsandfolders.documentupdatedevent"),
                     new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
                     typeof(DocumentUpdatedEvent),
@@ -115,7 +115,7 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
                     "DocumentUpdatedEvent",
                     timeoutInMilliseconds: 5000,
                     noOfPerformers: 10),
-                new paramore.brighter.serviceactivator.Connection(
+                new Connection(
                     new ConnectionName("paramore.example.documentsandfolders.foldercreateddevent"),
                     new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
                     typeof(FolderCreatedEvent),

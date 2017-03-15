@@ -1,7 +1,7 @@
 ﻿using GenericListener.Ports.Events;
 using GenericListener.Ports.Indexers;
 using log4net;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace GenericListener.Ports.Handlers
 {

@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace HelloWorldAsync
 {

@@ -25,10 +25,10 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.serviceactivator;
+using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
+using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Tasks.Adapters.MailGateway;
 using Tasks.Ports;
