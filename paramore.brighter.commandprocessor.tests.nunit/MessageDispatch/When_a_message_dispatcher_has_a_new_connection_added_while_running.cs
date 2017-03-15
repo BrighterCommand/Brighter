@@ -25,12 +25,13 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
-using paramore.brighter.serviceactivator;
 using NUnit.Framework;
+using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
+namespace Paramore.Brighter.Tests.MessageDispatch
 {
     [Ignore("Breaks dotnet test runner")]
     [TestFixture]

@@ -1,10 +1,10 @@
 ﻿using Nito.AsyncEx;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor.tests.nunit.EventSourcing.TestDoubles;
+using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
+using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing
+namespace Paramore.Brighter.Tests.EventSourcing
 {
     [TestFixture]
     public class CommandProcessorUsingCommandStoreAsyncTests

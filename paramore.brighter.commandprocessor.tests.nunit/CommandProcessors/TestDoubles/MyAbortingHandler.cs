@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
+namespace Paramore.Brighter.Tests.TestDoubles
 {
     public class MyAbortingHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {

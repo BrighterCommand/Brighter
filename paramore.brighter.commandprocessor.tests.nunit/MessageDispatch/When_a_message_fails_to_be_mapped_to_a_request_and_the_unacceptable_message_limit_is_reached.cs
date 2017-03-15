@@ -25,10 +25,11 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
-using paramore.brighter.serviceactivator;
+using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
+namespace Paramore.Brighter.Tests.MessageDispatch
 {
     [TestFixture]
     public class MessagePumpUnacceptableMessageLimitTests

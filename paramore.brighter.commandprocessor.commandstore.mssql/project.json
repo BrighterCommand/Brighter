@@ -3,16 +3,18 @@
   "buildOptions": {
     "debugType": "portable"
   },
-  "title": "paramore.brighter.commandprocessor.commandstore.mssql",
-  "description": "This is an implementation of the command store used for decoupled invocation of commands by Paramore.Brighter.CommandProcessor, using MS Sql Server",
+  "title": "paramore.brighter.commandprocessor.messagestore.mssql",
+  "description": "This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter.CommandProcessor, using MS Sql Server",
   "authors": [
-    "Ian Cooper"
+    "Francesco Pighi"
   ],
   "packOptions": {
     "summary": "",
     "tags": [
-      "MSSQL",
+      "RabbitMQ",
+      "AMQP",
       "Command",
+      "Event",
       "Service Activator",
       "Decoupled",
       "Invocation",
@@ -38,15 +40,15 @@
     "requireLicenseAcceptance": false,
     "repository": {
       "type": "git",
-      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/paramore.brighter.commandprocessor.commandstore.mssql"
+      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/paramore.brighter.commandprocessor.messagestore.mssql"
     }
   },
-  "dependencies": {
+   "dependencies": {
+    "NETStandard.Library": "1.6.1",
+    "Newtonsoft.Json": "9.0.1",
     "paramore.brighter.commandprocessor": {
       "target": "project"
     },
-    "NETStandard.Library": "1.6.1",
-    "Newtonsoft.Json": "9.0.1",
     "System.Data.SqlClient": "4.3.0"
   },
   "frameworks": {
@@ -54,9 +56,12 @@
       "imports": [
         "dnxcore50",
         "portable-net45+win8"
-      ]
+      ],
+      "dependencies": {
+        "System.Threading.Thread": "4.3.0"
+      }
     },
-    "net452": {    }
+   "net452": {}
   }, 
   "configurations": {
     "Debug": {
@@ -66,8 +71,11 @@
     },
     "Release": {
       "buildOptions": {
-        "define": [ "RELEASE", "TRACE", "LIBLOG_PORTABLE" ],
-        "optimize": true
+        "define": ["RELEASE", "TRACE", "LIBLOG_PORTABLE"],
+        "optimize": true,
+        "embed": {
+          "include": ["./DDL Scripts/MSSQL/MessageStore.sql"]
+        }
       }
     }
   }

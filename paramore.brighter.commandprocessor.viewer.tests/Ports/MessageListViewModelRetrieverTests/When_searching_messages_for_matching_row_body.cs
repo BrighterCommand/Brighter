@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
-using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
-using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
+using Paramore.Brighter.MessageViewer.Ports.Domain;
+using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
+using Paramore.Brighter.Viewer.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Ports.MessageListViewModelRetrieverTests
+namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTests
 {
     [TestFixture]
     public class MessageListModelRetrieverFilterOnBodyTests

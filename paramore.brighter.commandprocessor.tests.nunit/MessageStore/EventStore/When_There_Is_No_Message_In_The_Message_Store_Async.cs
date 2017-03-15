@@ -33,13 +33,10 @@ using EventStore.ClientAPI.Embedded;
 using EventStore.Core;
 using EventStore.Core.Data;
 using Nito.AsyncEx;
-using paramore.brighter.commandprocessor;
-using paramore.brighter.commandprocessor.Logging;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit;
 using Paramore.Brighter.Messagestore.Eventstore;
 
-namespace paramore.commandprocessor.tests.MessageStore.EventStore
+namespace Paramore.Brighter.Tests.MessageStore.EventStore
 {
     [Category("EventStore")]
     [TestFixture]

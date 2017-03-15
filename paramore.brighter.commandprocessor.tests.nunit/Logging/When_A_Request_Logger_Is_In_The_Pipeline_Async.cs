@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using Nito.AsyncEx;
-using paramore.brighter.commandprocessor.logging.Handlers;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor.tests.nunit.Logging.TestDoubles;
-using TinyIoC;
 using System.Linq;
+using Nito.AsyncEx;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.Logging;
+using Paramore.Brighter.Logging;
+using Paramore.Brighter.Logging.Handlers;
+using Paramore.Brighter.Tests.Logging.TestDoubles;
+using Paramore.Brighter.Tests.TestDoubles;
+using TinyIoC;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.Logging
+namespace Paramore.Brighter.Tests.Logging
 {
    [TestFixture]
     public class CommandProcessorWithLoggingInPipelineAsyncTests

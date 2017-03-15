@@ -28,9 +28,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.time;
+using Paramore.Brighter.Messagestore.Sqlite;
+using Paramore.Brighter.Time;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
+namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
     [TestFixture]
     public class SqlMessageStoreWritngMessagesAsyncTests

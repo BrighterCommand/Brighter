@@ -36,9 +36,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
+namespace Paramore.Brighter.Viewer.Tests.TestDoubles
 {
     internal class FakeMessageStoreNotViewer : IAmAMessageStore<Message>
     {

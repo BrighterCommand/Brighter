@@ -39,7 +39,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
+namespace Paramore.Brighter.Viewer.Tests.TestDoubles
 {
     internal class FakeMessageStoreWithViewer : IAmAMessageStoreViewer<Message>, IAmAMessageStore<Message>
     {

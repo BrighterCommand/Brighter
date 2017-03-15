@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
-using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
+using Paramore.Brighter.MessageViewer.Ports.Handlers;
+using Paramore.Brighter.Viewer.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Ports.RepostCommandHandlerTests
+namespace Paramore.Brighter.Viewer.Tests.Ports.RepostCommandHandlerTests
 {
    public class RepostCommandHandlerMisConfiguredTests
     {

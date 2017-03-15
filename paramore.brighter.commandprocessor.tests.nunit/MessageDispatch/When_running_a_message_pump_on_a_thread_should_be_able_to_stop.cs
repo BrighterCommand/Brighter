@@ -26,11 +26,12 @@ using System;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
-using paramore.brighter.serviceactivator;
+using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
+namespace Paramore.Brighter.Tests.MessageDispatch
 {
     [TestFixture]
     public class PerformerCanStopTests

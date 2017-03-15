@@ -24,9 +24,11 @@ THE SOFTWARE. */
 
 using FakeItEasy;
 using NUnit.Framework;
-using paramore.brighter.serviceactivator;
+using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.Ports.Commands;
+using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
+namespace Paramore.Brighter.Tests.ControlBus
 {
     [TestFixture]
     public class ConfigurationCommandStartTests

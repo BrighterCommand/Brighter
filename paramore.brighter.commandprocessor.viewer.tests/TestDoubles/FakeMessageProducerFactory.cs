@@ -1,4 +1,4 @@
-﻿namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
+﻿namespace Paramore.Brighter.Viewer.Tests.TestDoubles
 {
     internal class FakeMessageProducerFactory : IAmAMessageProducerFactory
     {

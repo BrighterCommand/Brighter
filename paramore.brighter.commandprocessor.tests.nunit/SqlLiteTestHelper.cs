@@ -2,8 +2,9 @@ using System;
 using System.IO;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Commandstore.Sqlite;
+using Paramore.Brighter.Messagestore.Sqlite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit
+namespace Paramore.Brighter.Tests
 {
     public class SqliteTestHelper
     {

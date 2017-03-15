@@ -3,7 +3,7 @@ using Amazon.Runtime;
 using NUnit.Framework;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.awssqs
+namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
 {
 
     [Category("AWS")]

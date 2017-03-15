@@ -1,6 +1,6 @@
-﻿using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
+﻿using Paramore.Brighter.MessageViewer.Ports.Handlers;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
+namespace Paramore.Brighter.Viewer.Tests.TestDoubles
 {
     internal class FakeMessageProducerFactoryProvider : IMessageProducerFactoryProvider
     {

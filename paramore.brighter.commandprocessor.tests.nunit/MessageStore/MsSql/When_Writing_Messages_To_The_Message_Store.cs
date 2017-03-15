@@ -27,10 +27,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.time;
 using Paramore.Brighter.Messagestore.MsSql;
+using Paramore.Brighter.Time;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.MsSql
+namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
     [Category("MSSQL")]
     [TestFixture]

@@ -25,10 +25,11 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
+namespace Paramore.Brighter.Tests.MessagingGateway.rmq
 {
     internal class TestRMQListener
     {

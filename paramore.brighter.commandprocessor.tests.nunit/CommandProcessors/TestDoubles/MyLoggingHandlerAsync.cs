@@ -26,7 +26,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
+namespace Paramore.Brighter.Tests.TestDoubles
 {
     internal class MyLoggingHandlerAsync<TRequest>: RequestHandlerAsync<TRequest>, IDisposable where TRequest : class, IRequest
     {

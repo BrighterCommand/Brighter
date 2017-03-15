@@ -26,10 +26,10 @@ using System;
 using System.Linq;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
+namespace Paramore.Brighter.Tests
 {
     [TestFixture]
     public class ControlBusSenderPostMessageTests

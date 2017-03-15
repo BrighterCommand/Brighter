@@ -6,6 +6,15 @@ When we push a collection of functionality it is available via [nuget.org](http:
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore), but not yet deployed to [nuget.org](http://www.nuget.org).
 
 ## Master ##
+	- Support for .NET Core (NETSTANDARD 1.5)
+
+	**Breaking Changes**
+	- Configuration no longer supports XML based config sections. We use data structures instead, and expect you to configure mostly in code, initializing those data structures from your config system of choice yourself. We recommend following 12-Factor Apps guidelines and preferring enviroment variables for items that vary by environment over XML or JSON based configuration files. (We may consider providing config sections in Contrib again, please feedback if this is a critical issue for you. PRs welcome.)
+	- Dropped CommandProcessor from namespaces and folder names, to shorten, and remove semantic issue that it is not just a Command Processor
+    - Changed namespaces and folders to be CamelCase
+	- As a result, your using statements will need revision with this release
+	- Some namespaces i.e Paramore.Brighter.Policy changed to avoid clashes now CamelCase (has become Paramore.Brighter.Policies)
+
 
 ## Release 6.1.0 ##
  - Support for binary message payloads i.e. not just text/plain for JSON or XML. Current support is modelled around use of protobuf over RMQ

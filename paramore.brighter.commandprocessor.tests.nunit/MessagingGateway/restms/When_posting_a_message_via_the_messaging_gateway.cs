@@ -27,7 +27,7 @@ using NUnit.Framework;
 using Paramore.Brighter.MessagingGateway.RESTMS;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
+namespace Paramore.Brighter.Tests.MessagingGateway.restms
 {
     [Category("RESTMS")]
     [TestFixture]

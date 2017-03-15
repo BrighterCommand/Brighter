@@ -1,6 +1,6 @@
 using System;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles
+namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
 {
     internal class FailingEventMessageMapper : IAmAMessageMapper<MyFailingMapperEvent>
     {

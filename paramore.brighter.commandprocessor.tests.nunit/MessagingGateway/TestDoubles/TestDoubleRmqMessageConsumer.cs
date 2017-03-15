@@ -23,10 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.TestDoubles
+namespace Paramore.Brighter.Tests.MessagingGateway.TestDoubles
 {
     /*
      * Use to force a failure mirroring a RabbitMQ connection failure for testing flow of failure

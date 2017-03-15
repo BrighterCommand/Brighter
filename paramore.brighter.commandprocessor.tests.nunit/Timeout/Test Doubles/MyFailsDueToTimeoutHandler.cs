@@ -26,11 +26,11 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.policy.Attributes;
-using paramore.brighter.commandprocessor.policy.Handlers;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Policies.Attributes;
+using Paramore.Brighter.Policies.Handlers;
+using Paramore.Brighter.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles
+namespace Paramore.Brighter.Tests.Timeout.Test_Doubles
 {
     internal class MyFailsDueToTimeoutHandler : RequestHandler<MyCommand>
     {

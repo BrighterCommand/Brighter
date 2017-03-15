@@ -24,13 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using paramore.brighter.commandprocessor.policy.Handlers;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor.tests.nunit.Timeout.Test_Doubles;
-using TinyIoC;
 using NUnit.Framework;
+using Paramore.Brighter.Policies.Handlers;
+using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.Timeout.Test_Doubles;
+using TinyIoC;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.Timeout
+namespace Paramore.Brighter.Tests.Timeout
 {
     [TestFixture]
     public class TimeoutHandlerFailsCheckTests

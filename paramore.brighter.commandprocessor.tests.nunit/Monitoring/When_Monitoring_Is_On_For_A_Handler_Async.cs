@@ -26,15 +26,15 @@ using System;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.monitoring.Configuration;
-using paramore.brighter.commandprocessor.monitoring.Events;
-using paramore.brighter.commandprocessor.monitoring.Handlers;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor.tests.nunit.Monitoring.TestDoubles;
-using paramore.brighter.commandprocessor.time;
+using Paramore.Brighter.Monitoring.Configuration;
+using Paramore.Brighter.Monitoring.Events;
+using Paramore.Brighter.Monitoring.Handlers;
+using Paramore.Brighter.Tests.Monitoring.TestDoubles;
+using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Time;
 using TinyIoC;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring
+namespace Paramore.Brighter.Tests.Monitoring
 {
     [TestFixture]
     public class MonitorHandlerPipelineAsyncTests

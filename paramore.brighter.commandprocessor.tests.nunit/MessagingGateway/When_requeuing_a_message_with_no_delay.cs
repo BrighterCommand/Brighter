@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright � 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,7 +26,7 @@ using System;
 using FakeItEasy;
 using NUnit.Framework;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
+namespace Paramore.Brighter.Tests.MessagingGateway
 {
     [TestFixture]
     public class ChannelRequeueWithoutDelayTest

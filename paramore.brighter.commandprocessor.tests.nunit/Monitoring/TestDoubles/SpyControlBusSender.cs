@@ -26,7 +26,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring.TestDoubles
+namespace Paramore.Brighter.Tests.Monitoring.TestDoubles
 {
     class SpyControlBusSender : IAmAControlBusSender, IAmAControlBusSenderAsync
     {

@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using Newtonsoft.Json;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles
+namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
 {
     internal class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
     {

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright � 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -26,7 +26,7 @@ THE SOFTWARE. */
 using System;
 using NUnit.Framework;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageStore.NoOpStore
+namespace Paramore.Brighter.Tests.MessageStore.NoOpStore
 {
     [TestFixture]
     public class NoOpMessageStoreWriteTests

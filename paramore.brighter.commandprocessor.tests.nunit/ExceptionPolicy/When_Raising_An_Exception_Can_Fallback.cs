@@ -23,12 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.policy.Handlers;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles;
+using Paramore.Brighter.Policies.Handlers;
+using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
+using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy
+namespace Paramore.Brighter.Tests.ExceptionPolicy
 {
     [TestFixture]
     public class FallbackHandlerOnExceptionTests

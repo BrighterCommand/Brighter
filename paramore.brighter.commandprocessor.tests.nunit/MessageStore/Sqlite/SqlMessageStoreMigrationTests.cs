@@ -27,8 +27,9 @@ using System.Linq;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using NUnit.Framework;
+using Paramore.Brighter.Messagestore.Sqlite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
+namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
     public class SQlMessageStoreMigrationTests
     {

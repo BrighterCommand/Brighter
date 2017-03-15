@@ -26,7 +26,7 @@ using System;
 using FakeItEasy;
 using NUnit.Framework;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway
+namespace Paramore.Brighter.Tests.MessagingGateway
 {
     [TestFixture]
     public class ChannelMessageReceiveTests

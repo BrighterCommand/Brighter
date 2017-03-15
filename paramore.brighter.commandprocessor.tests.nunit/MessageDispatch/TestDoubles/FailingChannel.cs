@@ -23,8 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.ServiceActivator.TestHelpers;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles
+namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
 {
     internal class FailingChannel : FakeChannel
     {

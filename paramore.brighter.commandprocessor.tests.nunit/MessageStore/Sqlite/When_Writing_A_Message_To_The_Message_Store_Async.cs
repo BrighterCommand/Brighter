@@ -25,8 +25,9 @@ THE SOFTWARE. */
 using System;
 using Nito.AsyncEx;
 using NUnit.Framework;
+using Paramore.Brighter.Messagestore.Sqlite;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.messagestore.sqlite
+namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
     [TestFixture]
     public class SqliteMessageStoreWritingMessageAsyncTests

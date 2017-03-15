@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright � 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,10 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors
+namespace Paramore.Brighter.Tests
 {
     [TestFixture]
     public class CommandProcessorPipelineStepsTests

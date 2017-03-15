@@ -1,9 +1,9 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.logging.Attributes;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Logging.Attributes;
+using Paramore.Brighter.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.Logging.TestDoubles
+namespace Paramore.Brighter.Tests.Logging.TestDoubles
 {
     internal class MyLoggedHandlerAsync : RequestHandlerAsync<MyCommand>
     {

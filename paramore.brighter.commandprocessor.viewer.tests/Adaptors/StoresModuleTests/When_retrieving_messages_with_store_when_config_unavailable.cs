@@ -38,13 +38,13 @@ THE SOFTWARE. */
 using Nancy;
 using Nancy.Json;
 using Nancy.Testing;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
-using paramore.brighter.commandprocessor.messageviewer.Ports.ViewModelRetrievers;
-using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
 using NUnit.Framework;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
+using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
+using Paramore.Brighter.Viewer.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleTests
+namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
 {
     public class RetrieveMessageStoreNoConfigurationTests
     {

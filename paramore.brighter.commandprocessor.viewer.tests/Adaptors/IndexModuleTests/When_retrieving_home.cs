@@ -5,10 +5,10 @@ using Nancy.Testing;
 using Nancy.TinyIoc;
 using Nancy.ViewEngines;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Configuration;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Configuration;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.IndexModuleTests
+namespace Paramore.Brighter.Viewer.Tests.Adaptors.IndexModuleTests
 {
     [TestFixture]
     public class HomeEndpointTests

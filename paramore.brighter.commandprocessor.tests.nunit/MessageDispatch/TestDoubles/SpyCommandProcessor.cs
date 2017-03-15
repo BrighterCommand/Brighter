@@ -27,9 +27,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.actions;
+using Paramore.Brighter.Actions;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles
+namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
 {
     enum CommandType
     {

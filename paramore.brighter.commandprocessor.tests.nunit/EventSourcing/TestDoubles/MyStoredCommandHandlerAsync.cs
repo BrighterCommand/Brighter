@@ -1,9 +1,9 @@
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.eventsourcing.Attributes;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Eventsourcing.Attributes;
+using Paramore.Brighter.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.EventSourcing.TestDoubles
+namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
 {
     internal class MyStoredCommandHandlerAsync : RequestHandlerAsync<MyCommand> 
     {

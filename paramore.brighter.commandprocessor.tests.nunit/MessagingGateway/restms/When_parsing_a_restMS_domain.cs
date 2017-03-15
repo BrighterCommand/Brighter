@@ -26,7 +26,7 @@ using NUnit.Framework;
 using Paramore.Brighter.MessagingGateway.RESTMS.Model;
 using Paramore.Brighter.MessagingGateway.RESTMS.Parsers;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.restms
+namespace Paramore.Brighter.Tests.MessagingGateway.restms
 {
     
     [Category("RESTMS")]

@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Handlers;
+using Paramore.Brighter.MessageViewer.Ports.Handlers;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
+namespace Paramore.Brighter.Viewer.Tests.TestDoubles
 {
     public class FakeHandlerFactory : IHandlerFactory
     {
         private Dictionary<string, object> handlers = new Dictionary<string, object>();
 
-        public IHandleCommand<T> GetHandler<T>() where T : class, messageviewer.Ports.Handlers.ICommand
+        public IHandleCommand<T> GetHandler<T>() where T : class, MessageViewer.Ports.Handlers.ICommand
         {
             var fullName = typeof (T).FullName;
             if (!handlers.ContainsKey(fullName))

@@ -29,7 +29,7 @@ using NUnit.Framework;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessagingGateway.rmq
+namespace Paramore.Brighter.Tests.MessagingGateway.rmq
 {
     [Category("RMQ")]
     [TestFixture]

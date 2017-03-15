@@ -24,10 +24,10 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
-using paramore.brighter.commandprocessor.monitoring.Attributes;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Monitoring.Attributes;
+using Paramore.Brighter.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.Monitoring.TestDoubles
+namespace Paramore.Brighter.Tests.Monitoring.TestDoubles
 {
     internal class MyMonitoredHandlerAsync : RequestHandlerAsync<MyCommand>
     {

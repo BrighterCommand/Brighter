@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright � 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -31,13 +32,11 @@ using EventStore.ClientAPI;
 using EventStore.ClientAPI.Embedded;
 using EventStore.Core;
 using EventStore.Core.Data;
-using paramore.brighter.commandprocessor;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit;
 using Paramore.Brighter.Messagestore.Eventstore;
 
 
-namespace paramore.commandprocessor.tests.MessageStore.EventStore
+namespace Paramore.Brighter.Tests.MessageStore.EventStore
 {
     [Category("EventStore")]
     [TestFixture]
@@ -70,7 +69,10 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
                 .WithInternalHttpOn(noneIp)
                 .Build();
             _eventStoreNode.NodeStatusChanged +=
-                (sender, e) => { if (e.NewVNodeState == VNodeState.Master) _eventStoreNodeStarted = true; };
+                (sender, e) =>
+                {
+                    if (e.NewVNodeState == VNodeState.Master) _eventStoreNodeStarted = true;
+                };
             _eventStoreNode.Start();
 
             _eventStore = EmbeddedEventStoreConnection.Create(_eventStoreNode);
@@ -98,7 +100,7 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
             _messages = _eventStoreMessageStore.Get(EmptyStreamName, 0, 1);
 
             //_returns_an_empty_list
-            Assert.AreEqual(_messages.Count,0);
+            Assert.AreEqual(_messages.Count, 0);
         }
 
         private Message CreateMessage(int eventNumber)
@@ -123,7 +125,7 @@ namespace paramore.commandprocessor.tests.MessageStore.EventStore
                 }
             }
         }
-
     }
 }
+
 #endif

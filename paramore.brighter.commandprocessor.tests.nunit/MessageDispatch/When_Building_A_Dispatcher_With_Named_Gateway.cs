@@ -25,17 +25,16 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
-using paramore.brighter.serviceactivator;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
+using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 using TinyIoC;
-using IAmADispatchBuilder = paramore.brighter.serviceactivator.IAmADispatchBuilder;
+using IAmADispatchBuilder = Paramore.Brighter.ServiceActivator.IAmADispatchBuilder;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.MessageDispatch
+namespace Paramore.Brighter.Tests.MessageDispatch
 {
     [TestFixture]
     public class DispatchBuilderWithNamedGateway

@@ -31,8 +31,6 @@
 // #DEFINE then these should be set automatically below.
 #define EXPRESSIONS
 
-
-
 // Platform supports System.Linq.Expressions
 #define COMPILED_EXPRESSIONS                // Platform supports compiling expressions
 #define APPDOMAIN_GETASSEMBLIES             // Platform supports getting all assemblies from the AppDomain object
@@ -93,7 +91,8 @@ using System.Runtime.Serialization;
 
 namespace TinyIoC
 {
-    using paramore.brighter.commandprocessor.tests.nunit;
+
+    using Paramore.Brighter.Tests;
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;

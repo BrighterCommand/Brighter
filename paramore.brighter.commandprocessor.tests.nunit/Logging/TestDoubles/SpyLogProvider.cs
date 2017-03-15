@@ -1,7 +1,7 @@
 ﻿using System;
-using paramore.brighter.commandprocessor.Logging;
+using Paramore.Brighter.Logging;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.Logging.TestDoubles
+namespace Paramore.Brighter.Tests.Logging.TestDoubles
 {
     internal class SpyLogProvider : ILogProvider
     {

@@ -22,13 +22,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandstore.mssql;
+using Paramore.Brighter.Commandstore.MsSql;
+using Paramore.Brighter.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandStore.MsSsql
+namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 {
     [Category("MSSQL")]
     [TestFixture]

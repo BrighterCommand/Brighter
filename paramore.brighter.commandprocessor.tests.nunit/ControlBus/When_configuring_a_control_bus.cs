@@ -25,10 +25,12 @@ THE SOFTWARE. */
 using System.Linq;
 using FakeItEasy;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.serviceactivator;
+using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.ControlBus;
+using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
+namespace Paramore.Brighter.Tests.ControlBus
 {
     [TestFixture]
     public class ControlBusBuilderTests

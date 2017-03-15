@@ -23,8 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using NUnit.Framework;
+using Paramore.Brighter.ServiceActivator.Ports;
+using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
+namespace Paramore.Brighter.Tests.ControlBus
 {
     [TestFixture]
     public class ConfigurationCommandToMessageMapperTests

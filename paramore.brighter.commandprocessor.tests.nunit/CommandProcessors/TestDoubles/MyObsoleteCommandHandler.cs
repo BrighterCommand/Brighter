@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles
+namespace Paramore.Brighter.Tests.TestDoubles
 {
     internal class MyObsoleteCommandHandler : RequestHandler<MyCommand>
     {
@@ -35,8 +35,8 @@ namespace paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestD
             s_command = null;
         }
 
-        [MyPreValidationHandlerAttribute(step: 2, timing: HandlerTiming.Before)]
-        [MyPostLoggingHandlerAttribute(step: 1, timing: HandlerTiming.After)]
+        [MyPreValidationHandler(step: 2, timing: HandlerTiming.Before)]
+        [MyPostLoggingHandler(step: 1, timing: HandlerTiming.After)]
         [Obsolete] // even with attributes non inheriting from MessageHandlerDecoratorAttribute it should not fail
         public override MyCommand Handle(MyCommand command)
         {

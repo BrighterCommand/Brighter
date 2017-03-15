@@ -1,7 +1,7 @@
 ﻿using FakeItEasy;
 using NUnit.Framework;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
+namespace Paramore.Brighter.Tests.ControlBus
 {
     [TestFixture]
     public class ControlBusSenderFactoryTests

@@ -25,10 +25,10 @@ THE SOFTWARE. */
 using System;
 using Microsoft.Data.Sqlite;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Commandstore.Sqlite;
+using Paramore.Brighter.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.commandstore.sqlite
+namespace Paramore.Brighter.Tests.commandstore.sqlite
 {
     [TestFixture]
     public class SqliteCommandStoreDuplicateMessageTests

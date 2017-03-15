@@ -22,12 +22,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.policy.Attributes;
-using paramore.brighter.commandprocessor.policy.Handlers;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Policies.Attributes;
+using Paramore.Brighter.Policies.Handlers;
+using Paramore.Brighter.Tests.TestDoubles;
 using Polly.CircuitBreaker;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.ExceptionPolicy.TestDoubles
+namespace Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles
 {
     internal class MyFailsWithFallbackBrokenCircuitHandler: RequestHandler<MyCommand>
     {

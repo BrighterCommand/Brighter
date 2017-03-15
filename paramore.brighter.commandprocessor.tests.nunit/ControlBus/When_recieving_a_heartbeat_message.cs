@@ -24,12 +24,15 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using FakeItEasy;
-using paramore.brighter.commandprocessor.tests.nunit.MessageDispatch.TestDoubles;
-using paramore.brighter.serviceactivator;
 using NUnit.Framework;
+using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.Ports.Commands;
+using Paramore.Brighter.ServiceActivator.Ports.Handlers;
+using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
+namespace Paramore.Brighter.Tests.ControlBus
 {
     [TestFixture]
     public class HeartbeatMessageTests
@@ -61,7 +64,7 @@ namespace paramore.brighter.commandprocessor.tests.nunit.ControlBus
 
             A.CallTo(() => dispatcher.Consumers).Returns(new List<IAmAConsumer>() {s_firstConsumer, s_secondConsumer});
 
-            var hostName = new HostName(Environment.MachineName + "." +System.Reflection.Assembly.GetEntryAssembly().FullName);
+            var hostName = new HostName(Environment.MachineName + "." +Assembly.GetEntryAssembly().FullName);
             A.CallTo(() => dispatcher.HostName).Returns(hostName);
             s_hostName = hostName;
 

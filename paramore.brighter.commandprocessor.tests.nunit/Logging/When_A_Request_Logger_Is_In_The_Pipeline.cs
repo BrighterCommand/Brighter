@@ -1,12 +1,12 @@
-﻿using paramore.brighter.commandprocessor.logging.Handlers;
-using paramore.brighter.commandprocessor.Logging;
-using paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles;
-using paramore.brighter.commandprocessor.tests.nunit.Logging.TestDoubles;
-using System.Linq;
+﻿using System.Linq;
 using NUnit.Framework;
+using Paramore.Brighter.Logging;
+using Paramore.Brighter.Logging.Handlers;
+using Paramore.Brighter.Tests.Logging.TestDoubles;
+using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
-namespace paramore.brighter.commandprocessor.tests.nunit.Logging
+namespace Paramore.Brighter.Tests.Logging
 {
     [Ignore("TODO: Fails erratically to find messages in pipeline")]
     [TestFixture]

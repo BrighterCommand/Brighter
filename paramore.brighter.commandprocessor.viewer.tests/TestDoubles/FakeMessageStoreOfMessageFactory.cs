@@ -35,9 +35,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.TestDoubles
+using Paramore.Brighter.MessageViewer.Ports.Domain;
+
+namespace Paramore.Brighter.Viewer.Tests.TestDoubles
 {
     internal class FakeMessageStoreViewerFactory : IMessageStoreViewerFactory
     {

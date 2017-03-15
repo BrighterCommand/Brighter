@@ -1,16 +1,14 @@
 ﻿using System.Collections.Generic;
-using System.Net;
 using Nancy.Json;
 using Nancy.Testing;
 using NUnit.Framework;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Modules;
-using paramore.brighter.commandprocessor.messageviewer.Adaptors.API.Resources;
-using paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config;
-using paramore.brighter.commandprocessor.viewer.tests.TestDoubles;
 using Paramore.Brighter.Messagestore.MsSql;
-using HttpStatusCode = Nancy.HttpStatusCode;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
+using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
+using Paramore.Brighter.MessageViewer.Ports.Domain.Config;
+using Paramore.Brighter.Viewer.Tests.TestDoubles;
 
-namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleTests
+namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
 {
     [TestFixture]
     public class RetrieveMessageStoreContentTypeJsonTests
@@ -23,7 +21,7 @@ namespace paramore.brighter.commandprocessor.viewer.tests.Adaptors.StoresModuleT
         {
             _browser = new Browser(new ConfigurableBootstrapper(with =>
             {
-                var stores = new List<paramore.brighter.commandprocessor.messageviewer.Ports.Domain.Config.MessageStoreConfig>
+                var stores = new List<MessageStoreConfig>
                 {
                     MessageStoreConfig.Create("store1", typeof (MsSqlMessageStore).FullName, "conn1", "table1"),
                     MessageStoreConfig.Create("store2", typeof (MsSqlMessageStore).FullName, "conn2", "table2")
