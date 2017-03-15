@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Tests
             Assert.IsAssignableFrom(typeof(ArgumentException), _exception);
             //_should_have_an_error_message_that_tells_you_why = () => _exception
             Assert.NotNull(_exception);
-            StringAssert.Contains("More than one handler was found for the typeof command paramore.brighter.commandprocessor.tests.nunit.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.", _exception.Message);
+            StringAssert.Contains("More than one handler was found for the typeof command Paramore.Brighter.Tests.TestDoubles.MyCommand - a command should only have one handler.", _exception.Message);
         }
     }
 }
