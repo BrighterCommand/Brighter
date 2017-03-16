@@ -8,7 +8,7 @@
     "ManagementAndMonitoring": {
       "target": "project"
     },
-    "paramore.brighter.commandprocessor.messagestore.sqlite": {
+    "Paramore.Brighter.Messagestore.Sqlite": {
       "target": "project"
     },
     "Serilog.Sinks.Console": "2.1.0",

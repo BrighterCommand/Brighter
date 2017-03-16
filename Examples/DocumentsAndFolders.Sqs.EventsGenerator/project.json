@@ -8,8 +8,8 @@
   "dependencies": {
     "AWSSDK.Core": "3.3.4",
     "DocumentsAndFolders.Sqs.Core": { "target": "project" },
-    "paramore.brighter.commandprocessor": { "target": "project" },
-    "paramore.brighter.commandprocessor.messaginggateway.awssqs": { "target": "project" }
+    "Paramore.Brighter": { "target": "project" },
+    "Paramore.Brighter.Messaginggateway.AWSSQS": { "target": "project" }
     },
   "frameworks": {
    "net452": {}

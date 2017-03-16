@@ -6,7 +6,7 @@
   "dependencies": {
     "MailKit": "1.10.0",
     "Microsoft.EntityFrameworkCore.Sqlite": "1.1.0",
-    "paramore.brighter.commandprocessor": {
+    "Paramore.Brighter": {
       "target": "project"
     }
   },

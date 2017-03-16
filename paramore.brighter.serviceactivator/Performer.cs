@@ -28,7 +28,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter.ServiceActivator
 {
     /// Abstracts the thread that runs a message pump
-    internal class Performer : IAmAPerformer
+    public class Performer : IAmAPerformer
     {
         private readonly IAmAChannel _channel;
         private readonly IAmAMessagePump _messagePump;

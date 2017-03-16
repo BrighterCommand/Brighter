@@ -5,8 +5,8 @@
      "emitEntryPoint": true
   },
   "dependencies": {
-    "paramore.brighter.commandprocessor": { "target": "project" },
-    "paramore.brighter.commandprocessor.commandstore.mssql": { "target": "project" }
+    "Paramore.Brighter": { "target": "project" },
+    "Paramore.Brighter.Commandstore.MsSql": { "target": "project" }
   },
   "frameworks": {
     "netcoreapp1.0": {

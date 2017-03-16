@@ -4,7 +4,7 @@
      "debugType": "portable"
   },
    "dependencies": {
-    "paramore.brighter.commandprocessor": { "target": "project" },
+    "Paramore.Brighter": { "target": "project" },
     "Tasks": { "target": "project" }
   },
   "frameworks": {

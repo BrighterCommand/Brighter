@@ -7,13 +7,13 @@
   "dependencies": {
     "EventStore.Client": "3.9.2",
     "log4net": "2.0.5",
-    "paramore.brighter.commandprocessor": {
+    "Paramore.Brighter": {
       "target": "project"
     },
-    "paramore.brighter.commandprocessor.messaginggateway.rmq": {
+    "Paramore.Brighter.Messaginggateway.RMQ": {
       "target": "project"
     },
-    "paramore.brighter.serviceactivator": {
+    "Paramore.Brighter.ServiceActivator": {
       "target": "project"
     },
     "Tasks": {

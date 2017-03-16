@@ -5,7 +5,7 @@
      "emitEntryPoint": true
   },
   "dependencies": {
-    "paramore.brighter.commandprocessor": {
+    "Paramore.Brighter": {
       "target": "project"
     }
   },

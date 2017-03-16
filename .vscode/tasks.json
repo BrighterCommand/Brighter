@@ -7,7 +7,7 @@
         {
             "taskName": "build",
             "args": [
-                "${workspaceRoot}\\paramore.brighter.commandprocessor.messageviewer.console\\project.json"
+                "${workspaceRoot}\\Paramore.Brighter.messageviewer.console\\project.json"
             ],
             "isBuildCommand": true,
             "problemMatcher": "$msCompile"

@@ -5,7 +5,7 @@ using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
 {
-    class HeartbeatReplyCommandMessageMapper : IAmAMessageMapper<HeartbeatReply>
+    public class HeartbeatReplyCommandMessageMapper : IAmAMessageMapper<HeartbeatReply>
     {
         public Message MapToMessage(HeartbeatReply request)
         {

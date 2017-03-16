@@ -1,7 +1,8 @@
 {
   "version": "1.0.0-*",
   "buildOptions": {
-    "debugType": "portable"
+    "debugType": "portable",
+    "define": [ "LIBLOG_PUBLIC" ]
   },
   "title": "Paramore.Brighter.ServiceActivator",
   "description": "The Command Dispatcher pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers",
@@ -38,11 +39,11 @@
     "requireLicenseAcceptance": false,
     "repository": {
       "type": "git",
-      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/paramore.brighter.serviceactivator"
+      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.ServiceActivator"
     }
   },
   "dependencies": {
-    "paramore.brighter.commandprocessor": {
+    "Paramore.Brighter": {
       "target": "project"
     },
     "NETStandard.Library": "1.6.1",

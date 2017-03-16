@@ -5,7 +5,7 @@
      "emitEntryPoint": true
   },
   "dependencies": {
-    "paramore.brighter.commandprocessor": { "target": "project" }
+    "Paramore.Brighter": { "target": "project" }
   },
   "frameworks": {
     "netcoreapp1.0": {

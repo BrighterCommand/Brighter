@@ -41,8 +41,7 @@ using Paramore.Brighter.ServiceActivator.Logging;
 
 namespace Paramore.Brighter.ServiceActivator
 {
-
-    internal class MessagePump<TRequest> : MessagePumpBase<TRequest>, IAmAMessagePump where TRequest : class, IRequest
+    public class MessagePump<TRequest> : MessagePumpBase<TRequest>, IAmAMessagePump where TRequest : class, IRequest
     {
         public MessagePump(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
             : base(commandProcessor, messageMapper)

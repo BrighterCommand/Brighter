@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceRoot}\\paramore.brighter.commandprocessor.messageviewer.console\\bin\\Debug\\netcoreapp1.0\\paramore.brighter.commandprocessor.messageviewer.console.dll",
+            "program": "${workspaceRoot}\\Paramore.Brighter.messageviewer.console\\bin\\Debug\\netcoreapp1.0\\Paramore.Brighter.messageviewer.console.dll",
             "args": [],
             "cwd": "${workspaceRoot}",
             "stopAtEntry": false,

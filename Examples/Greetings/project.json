@@ -2,9 +2,9 @@
   "version": "1.0.0-*",
   "debugType": "portable",
    "dependencies": {
-    "paramore.brighter.commandprocessor": { "target": "project" },
-    "paramore.brighter.commandprocessor.messaginggateway.rmq": { "target": "project" },
-    "paramore.brighter.serviceactivator": { "target": "project" }
+    "Paramore.Brighter": { "target": "project" },
+    "Paramore.Brighter.Messaginggateway.RMQ": { "target": "project" },
+    "Paramore.Brighter.ServiceActivator": { "target": "project" }
   },
   "frameworks": {
     "netstandard1.5": {

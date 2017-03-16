@@ -14,7 +14,7 @@ namespace Paramore.Brighter.ServiceActivator
     // It is also why throughput on a queue needs multiple performers, each with their own message pump
     // Retry and circuit breaker should be provided by exception policy using an attribute on the handler
     // Timeout on the handler should be provided by timeout policy using an attribute on the handler
-    internal abstract class MessagePumpBase<TRequest> where TRequest : class, IRequest
+    public abstract class MessagePumpBase<TRequest> where TRequest : class, IRequest
     {
         protected static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MessagePumpBase<TRequest>>);
 
