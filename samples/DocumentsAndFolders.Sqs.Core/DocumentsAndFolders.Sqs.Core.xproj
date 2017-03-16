@@ -6,8 +6,8 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\DotNet\Microsoft.DotNet.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>9e0e5f11-2777-4789-bb09-c866bc5f800d</ProjectGuid>
-    <RootNamespace>Paramore.Brighter.Tests</RootNamespace>
+    <ProjectGuid>b7db617d-2a74-447d-b4a4-7088ace29640</ProjectGuid>
+    <RootNamespace>DocumentsAndFolders.Sqs.Core</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">.\obj</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">.\bin\</OutputPath>
   </PropertyGroup>
