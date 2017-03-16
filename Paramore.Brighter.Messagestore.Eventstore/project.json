@@ -1,0 +1,72 @@
+{
+  "version": "1.0.0-*",
+  "buildOptions": {
+    "debugType": "portable"
+  },
+  "title": "Paramore.Brighter.Messagestore.Eventstore",
+  "description": "This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using Event Store",
+  "authors": [
+    "George Ayris"
+  ],
+  "packOptions": {
+    "summary": "",
+    "tags": [
+      "RabbitMQ",
+      "AMQP",
+      "Command",
+      "Event",
+      "Service Activator",
+      "Decoupled",
+      "Invocation",
+      "Messaging",
+      "Remote",
+      "Command Dispatcher",
+      "Command Processor",
+      "Request",
+      "Service",
+      "Task Queue",
+      "Work Queue",
+      "Retry",
+      "Circuit Breaker",
+      "Availability"
+    ],
+    "owners": [
+      "Ian Cooper"
+    ],
+    "releaseNotes": "https://github.com/iancooper/Paramore/blob/master/release_notes.md",
+    "iconUrl": "http://iancooper.github.io/Paramore/images/brightercanon-nuget.png",
+    "projectUrl": "http://iancooper.github.io/Paramore",
+    "licenseUrl": "http://ianhammondcooper.mit-license.org",
+    "requireLicenseAcceptance": false,
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.Messagestore.Eventstore"
+    }
+  },
+  "dependencies": {
+    "EventStore.Client": "3.9.2",
+    "NETStandard.Library": "1.6.1",
+    "Newtonsoft.Json": "9.0.1",
+    "Paramore.Brighter": {
+      "target": "project"
+    }
+  },
+  "frameworks": {
+    "net452": {
+      "dependencies": {}
+    }
+  }, 
+  "configurations": {
+    "Debug": {
+      "buildOptions": {
+        "define": [ "DEBUG", "TRACE", "LIBLOG_PORTABLE" ]
+      }
+    },
+    "Release": {
+      "buildOptions": {
+        "define": [ "RELEASE", "TRACE", "LIBLOG_PORTABLE" ],
+        "optimize": true
+      }
+    }
+  }
+}

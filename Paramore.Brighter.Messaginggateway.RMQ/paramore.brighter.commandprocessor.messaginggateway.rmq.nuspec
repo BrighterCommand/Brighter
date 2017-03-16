@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <licenseUrl>http://ianhammondcooper.mit-license.org</licenseUrl>
+    <projectUrl>http://iancooper.github.io/Paramore</projectUrl>
+    <tags>RabbitMQ Messaging AMQP ServiceBus PubSub Publish Subscribe Queue Topic Relay Service Bus CQRS Command Dispatcher Command Processor Command Event Broker Task Queue Work Queue Retry Circuit Breaker Availability</tags>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <summary>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter.CommandProcessor pipeline, using RabbitMQ</summary>
+    <copyright>$copyright$</copyright>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System" targetFramework="" />
+      <frameworkAssembly assemblyName="System.Configuration" targetFramework="" />
+    </frameworkAssemblies>
+    <dependencies>
+      <dependency id="Paramore.Brighter.CommandProcessor" version="$version$" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="web.config.install.xdt" target="content\web.config.install.xdt" />
+    <file src="web.config.uninstall.xdt" target="content\web.config.uninstall.xdt" />
+  </files>
+</package>

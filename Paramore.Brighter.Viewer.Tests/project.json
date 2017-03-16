@@ -1,0 +1,51 @@
+{
+  "version": "1.0.0-*",
+  "buildOptions": {
+    "debugType": "portable"
+  },
+  "testRunner": "nunit",
+  "dependencies": {
+    "Paramore.Brighter": {
+      "target": "project"
+    },
+    "Paramore.Brighter.Messageviewer": {
+      "target": "project"
+    },
+    "Paramore.Brighter.Tests": {
+      "target": "project"
+    },
+   "Nancy.Testing": "2.0.0-barneyrubble",
+    "dotnet-test-nunit": "3.4.0-beta-3",
+    "NUnit": "3.5.0"
+  },
+  "frameworks": {
+    "netcoreapp1.0": {
+      "imports": [
+        "dnxcore50",
+        "portable-net45+win8"
+      ],
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.1"
+        }
+
+      }
+    },
+    "net46": {
+    }
+  },
+  "configurations": {
+    "Debug": {
+      "buildOptions": {
+        "define": [ "DEBUG", "TRACE" ]
+      }
+    },
+    "Release": {
+      "buildOptions": {
+        "define": [ "RELEASE", "TRACE" ],
+        "optimize": true
+      }
+    }
+  }
+}

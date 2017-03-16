@@ -1,0 +1,87 @@
+{
+  "version": "1.0.0-*",
+  "buildOptions": {
+    "debugType": "portable"
+  },
+  "testRunner": "nunit",
+  "dependencies": {
+    "Paramore.Brighter": {
+      "target": "project"
+    },
+    "Paramore.Brighter.Commandstore.MsSql": {
+      "target": "project"
+    },
+    "Paramore.Brighter.Commandstore.Sqlite": {
+      "target": "project"
+    },
+    "Paramore.Brighter.Messagestore.MsSql": {
+      "target": "project"
+    },
+    "Paramore.Brighter.Messagestore.Sqlite": {
+      "target": "project"
+    },
+    "Paramore.Brighter.Messaginggateway.AWSSQS": {
+      "target": "project"
+    },
+    "Paramore.Brighter.Messaginggateway.AzureServiceBus": {
+      "target": "project"
+    },
+    "Paramore.Brighter.Messaginggateway.RESTMS": {
+      "target": "project"
+    },
+    "Paramore.Brighter.Messaginggateway.RMQ": {
+      "target": "project"
+    },
+    "Paramore.Brighter.ServiceActivator": {
+      "target": "project"
+    },
+   "Nito.AsyncEx.Context": "1.1.0",
+    "FakeItEasy": "3.0.0",
+    "FluentAssertions": "4.16.0",
+    "NUnit": "3.5.0",
+    "dotnet-test-nunit": "3.4.0-beta-3",
+    "Microsoft.Data.Sqlite": "1.1.0"
+  },
+  "frameworks": {
+    "netcoreapp1.0": {
+      "imports": [
+        "dnxcore50",
+        "portable-net45+win8"
+      ],
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.1"
+        },
+        "System.Diagnostics.TextWriterTraceListener": "4.3.0",
+        "System.Diagnostics.TraceSource": "4.3.0",
+        "System.Linq": "4.3.0",
+        "System.Reflection.TypeExtensions": "4.3.0"
+      }
+    },
+    "net46": {
+      "dependencies": {
+        "Paramore.Brighter.Messagestore.Eventstore": {
+          "target": "project"
+        },
+
+        "EventStore.Client": "3.9.2",
+        "EventStore.Client.Embedded": "3.9.2"
+      }
+    }
+  },
+  "tools": {},
+  "configurations": {
+    "Debug": {
+      "buildOptions": {
+        "define": [ "DEBUG", "TRACE" ]
+      }
+    },
+    "Release": {
+      "buildOptions": {
+        "define": [ "RELEASE", "TRACE" ],
+        "optimize": true
+      }
+    }
+  }
+}

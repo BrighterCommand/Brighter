@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0-*",
+  "buildOptions": {
+    "emitEntryPoint": true,
+    "debugType": "portable"
+  },
+  "dependencies": {
+    "Microsoft.AspNetCore.Server.Kestrel": "1.1.0",
+    "Paramore.Brighter.Messageviewer": {
+      "target": "project"
+    },
+    "Serilog": "2.3.0",
+    "Serilog.Sinks.Console": "2.1.0"
+  },
+  "frameworks": {
+    "netcoreapp1.0": {
+      "dependencies": {
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.1"
+        },
+        "Microsoft.AspNetCore.Hosting": "1.1.0",
+        "Microsoft.AspNetCore.Owin": "1.1.0",
+        "Microsoft.Extensions.Configuration.Binder": "1.1.0",
+        "Microsoft.Extensions.Configuration.Json": "1.1.0"
+      },
+      "imports": [
+        "dotnet54",
+        "portable-net451+win8"
+      ]
+    }
+  }
+}
