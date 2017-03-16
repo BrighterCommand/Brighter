@@ -36,7 +36,7 @@ THE SOFTWARE. */
 #endregion
 
 using Nancy.TinyIoc;
-using Paramore.Brighter.Messagestore.MsSql;
+using Paramore.Brighter.MessageStore.MsSql;
 using Paramore.Brighter.MessageViewer.Ports.Domain;
 using Paramore.Brighter.MessageViewer.Ports.Domain.Config;
 using Paramore.Brighter.MessageViewer.Ports.Handlers;

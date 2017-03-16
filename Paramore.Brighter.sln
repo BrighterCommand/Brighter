@@ -31,7 +31,7 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.Commandst
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.Messagestore.Eventstore", "src\Paramore.Brighter.Messagestore.Eventstore\Paramore.Brighter.Messagestore.Eventstore.xproj", "{0A254942-F673-4CFC-A2CE-11F7CA62D1D0}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.Messagestore.MsSql", "src\Paramore.Brighter.Messagestore.MsSql\Paramore.Brighter.Messagestore.MsSql.xproj", "{9CAFC1CB-55B7-47AC-B7D0-0F0721A50616}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessageStore.MsSql", "src\Paramore.Brighter.MessageStore.MsSql\Paramore.Brighter.MessageStore.MsSql.xproj", "{9CAFC1CB-55B7-47AC-B7D0-0F0721A50616}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessagingGateway.AWSSQS", "src\Paramore.Brighter.Messaginggateway.AWSSQS\Paramore.Brighter.MessagingGateway.AWSSQS.xproj", "{BD55E987-D3D6-4E18-8A89-DAC516C61CC7}"
 EndProject
@@ -59,7 +59,7 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "ManagementAndMonitoringCore
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "ManagementAndMonitoringWindowsService", "samples\ManagementAndMonitoringWindowsService\ManagementAndMonitoringWindowsService.xproj", "{02D2B8B7-0926-4893-9812-CDE195A02215}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.Messagestore.Sqlite", "src\Paramore.Brighter.Messagestore.Sqlite\Paramore.Brighter.Messagestore.Sqlite.xproj", "{24E3EE6D-BA0A-41E5-8370-BBD30DA61DF4}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessageStore.Sqlite", "src\Paramore.Brighter.MessageStore.Sqlite\Paramore.Brighter.MessageStore.Sqlite.xproj", "{24E3EE6D-BA0A-41E5-8370-BBD30DA61DF4}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.Commandstore.Sqlite", "src\Paramore.Brighter.Commandstore.Sqlite\Paramore.Brighter.Commandstore.Sqlite.xproj", "{5A8F1495-B8D2-4018-8B3D-6DA25A14290F}"
 EndProject

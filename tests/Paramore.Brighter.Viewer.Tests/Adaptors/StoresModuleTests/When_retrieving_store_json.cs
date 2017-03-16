@@ -2,7 +2,7 @@
 using Nancy.Json;
 using Nancy.Testing;
 using NUnit.Framework;
-using Paramore.Brighter.Messagestore.MsSql;
+using Paramore.Brighter.MessageStore.MsSql;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.Domain.Config;

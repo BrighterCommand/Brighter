@@ -7,7 +7,7 @@
   <Import Project="$(VSToolsPath)\DotNet\Microsoft.DotNet.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>0a254942-f673-4cfc-a2ce-11f7ca62d1d0</ProjectGuid>
-    <RootNamespace>Paramore.Brighter.Messagestore.Eventstore</RootNamespace>
+    <RootNamespace>Paramore.Brighter.MessageStore.EventStore</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">.\obj</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">.\bin\</OutputPath>
   </PropertyGroup>

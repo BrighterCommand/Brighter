@@ -22,23 +22,28 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Messagestore.Sqlite
+namespace Paramore.Brighter.MessageStore.MsSql
 {
-    public class SqliteMessageStoreBuilder
+    public class SqlMessageStoreBuilder
     {
-        const string MessageStoreDdl = @"CREATE TABLE {0} (
-                                          [MessageId] uniqueidentifier NOT NULL
-                                        , [Topic] nvarchar(255) NULL
-                                        , [MessageType] nvarchar(32) NULL
-                                        , [Timestamp] datetime NULL
-                                        , [HeaderBag] ntext NULL
-                                        , [Body] ntext NULL
-                                        , CONSTRAINT[PK_MessageId] PRIMARY KEY([MessageId])
-                                        );";
+        const string MessageStoreDdl = @"
+        CREATE TABLE [{0}]
+            (
+              [Id] [BIGINT] NOT NULL IDENTITY ,
+              [MessageId] UNIQUEIDENTIFIER NOT NULL ,
+              [Topic] NVARCHAR(255) NULL ,
+              [MessageType] NVARCHAR(32) NULL ,
+              [Timestamp] DATETIME NULL ,
+              [HeaderBag] NTEXT NULL ,
+              [Body] NTEXT NULL ,
+              PRIMARY KEY ( [Id] )
+            );
+        ";
 
         public static string GetDDL(string tableName)
         {
             return string.Format(MessageStoreDdl, tableName);
         }
+
     }
 }

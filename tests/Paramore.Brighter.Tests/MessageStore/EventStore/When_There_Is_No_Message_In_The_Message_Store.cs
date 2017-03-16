@@ -33,7 +33,7 @@ using EventStore.ClientAPI.Embedded;
 using EventStore.Core;
 using EventStore.Core.Data;
 using NUnit.Framework;
-using Paramore.Brighter.Messagestore.Eventstore;
+using Paramore.Brighter.MessageStore.EventStore;
 
 
 namespace Paramore.Brighter.Tests.MessageStore.EventStore

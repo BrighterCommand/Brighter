@@ -46,9 +46,9 @@ using System.Threading.Tasks;
 using EventStore.ClientAPI;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Paramore.Brighter.Messagestore.Eventstore.Logging;
+using Paramore.Brighter.MessageStore.EventStore.Logging;
 
-namespace Paramore.Brighter.Messagestore.Eventstore
+namespace Paramore.Brighter.MessageStore.EventStore
 {
     /// <summary>
     ///     Class EventStoreMessageStore.

@@ -3,7 +3,7 @@
   "buildOptions": {
     "debugType": "portable"
   },
-  "title": "Paramore.Brighter.Messagestore.MsSql",
+  "title": "Paramore.Brighter.MessageStore.MsSql",
   "description": "This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using MS Sql Server",
   "authors": [
     "Francesco Pighi"
@@ -40,7 +40,7 @@
     "requireLicenseAcceptance": false,
     "repository": {
       "type": "git",
-      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.Messagestore.MSSQL"
+      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.MessageStore.MSSQL"
     }
   },
    "dependencies": {

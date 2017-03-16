@@ -36,7 +36,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Messagestore.Sqlite
+namespace Paramore.Brighter.MessageStore.Sqlite
 {
     /// <summary>
     /// Class SqliteMessageStoreConfiguration.

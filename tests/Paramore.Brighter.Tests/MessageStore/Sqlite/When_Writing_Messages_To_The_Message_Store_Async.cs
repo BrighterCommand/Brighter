@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using Paramore.Brighter.Messagestore.Sqlite;
+using Paramore.Brighter.MessageStore.Sqlite;
 using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite

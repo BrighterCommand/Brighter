@@ -23,7 +23,7 @@
     "Paramore.Brighter.Messaginggateway.RMQ": {
       "target": "project"
     },
-    "Paramore.Brighter.Messagestore.Sqlite": {
+    "Paramore.Brighter.MessageStore.Sqlite": {
       "target": "project"
     },
     "StructureMap.Microsoft.DependencyInjection": "1.2.0",

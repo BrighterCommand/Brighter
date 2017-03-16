@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Commandstore.Sqlite;
-using Paramore.Brighter.Messagestore.Sqlite;
+using Paramore.Brighter.MessageStore.Sqlite;
 
 namespace Paramore.Brighter.Tests
 {

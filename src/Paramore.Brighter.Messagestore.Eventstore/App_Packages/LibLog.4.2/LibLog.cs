@@ -39,6 +39,7 @@
 #pragma warning disable 1591
 
 using System.Diagnostics.CodeAnalysis;
+using Paramore.Brighter.MessageStore.EventStore.Logging.LogProviders;
 
 [assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Paramore.Brighter.messagestore.Eventstore.Logging")]
 [assembly: SuppressMessage("Microsoft.Design", "CA1026:DefaultParametersShouldNotBeUsed", Scope = "member", Target = "Paramore.Brighter.messagestore.Eventstore.Logging.Logger.#Invoke(Paramore.Brighter.messagestore.Eventstore.Logging.LogLevel,System.Func`1<System.String>,System.Exception,System.Object[])")]
@@ -48,7 +49,7 @@ using System.Diagnostics.CodeAnalysis;
 #if LIBLOG_PROVIDERS_ONLY
 namespace Paramore.Brighter.Messagestore.Eventstore.LibLog
 #else
-namespace Paramore.Brighter.Messagestore.Eventstore.Logging
+namespace Paramore.Brighter.MessageStore.EventStore.Logging
 #endif
 {
     using System.Collections.Generic;
@@ -56,7 +57,7 @@ namespace Paramore.Brighter.Messagestore.Eventstore.Logging
 #if LIBLOG_PROVIDERS_ONLY
     using Paramore.Brighter.Messagestore.Eventstore.LibLog.LogProviders;
 #else
-    using Paramore.Brighter.Messagestore.Eventstore.Logging.LogProviders;
+    using Paramore.Brighter.MessageStore.EventStore.Logging.LogProviders;
 #endif
     using System;
 #if !LIBLOG_PROVIDERS_ONLY
@@ -716,7 +717,7 @@ namespace Paramore.Brighter.Messagestore.Eventstore.Logging
 #if LIBLOG_PROVIDERS_ONLY
 namespace Paramore.Brighter.Messagestore.Eventstore.LibLog.LogProviders
 #else
-namespace Paramore.Brighter.Messagestore.Eventstore.Logging.LogProviders
+namespace Paramore.Brighter.MessageStore.EventStore.Logging.LogProviders
 #endif
 {
     using System;

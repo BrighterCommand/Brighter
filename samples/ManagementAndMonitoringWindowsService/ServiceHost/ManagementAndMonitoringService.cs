@@ -32,7 +32,7 @@ using ManagementAndMonitoring.Ports.CommandHandlers;
 using ManagementAndMonitoring.Ports.Commands;
 using ManagementAndMonitoring.Ports.Mappers;
 using Paramore.Brighter;
-using Paramore.Brighter.Messagestore.Sqlite;
+using Paramore.Brighter.MessageStore.Sqlite;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.ServiceActivator;

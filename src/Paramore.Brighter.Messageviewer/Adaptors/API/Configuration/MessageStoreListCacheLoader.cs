@@ -35,7 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using Paramore.Brighter.Messagestore.MsSql;
+using Paramore.Brighter.MessageStore.MsSql;
 using Paramore.Brighter.MessageViewer.Ports.Domain;
 
 namespace Paramore.Brighter.MessageViewer.Adaptors.API.Configuration

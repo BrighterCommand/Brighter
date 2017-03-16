@@ -3,7 +3,7 @@
   "dependencies": {
     "Newtonsoft.Json": "9.0.1",
     "Paramore.Brighter": { "target": "project" },
-    "Paramore.Brighter.Messagestore.MsSql": { "target": "project" },
+    "Paramore.Brighter.MessageStore.MsSql": { "target": "project" },
     "Paramore.Brighter.Messaginggateway.RMQ": { "target": "project" },
     "Nancy": "2.0.0-barneyrubble",
     "Nancy.Embedded": "2.0.0-barneyrubble",

@@ -27,7 +27,7 @@ using System.Linq;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using Paramore.Brighter.Messagestore.Sqlite;
+using Paramore.Brighter.MessageStore.Sqlite;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite
 {

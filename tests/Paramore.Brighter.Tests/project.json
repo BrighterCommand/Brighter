@@ -14,10 +14,10 @@
     "Paramore.Brighter.Commandstore.Sqlite": {
       "target": "project"
     },
-    "Paramore.Brighter.Messagestore.MsSql": {
+    "Paramore.Brighter.MessageStore.MsSql": {
       "target": "project"
     },
-    "Paramore.Brighter.Messagestore.Sqlite": {
+    "Paramore.Brighter.MessageStore.Sqlite": {
       "target": "project"
     },
     "Paramore.Brighter.Messaginggateway.AWSSQS": {

@@ -26,7 +26,7 @@ THE SOFTWARE. */
 using System;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using Paramore.Brighter.Messagestore.MsSql;
+using Paramore.Brighter.MessageStore.MsSql;
 
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {

@@ -45,9 +45,9 @@ using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Paramore.Brighter.Messagestore.MsSql.Logging;
+using Paramore.Brighter.MessageStore.MsSql.Logging;
 
-namespace Paramore.Brighter.Messagestore.MsSql
+namespace Paramore.Brighter.MessageStore.MsSql
 {
     /// <summary>
     ///     Class MsSqlMessageStore.
