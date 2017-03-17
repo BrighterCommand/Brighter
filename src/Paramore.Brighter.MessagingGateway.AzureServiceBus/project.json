@@ -3,7 +3,7 @@
   "buildOptions": {
     "debugType": "portable"
   },
-   "title": "Paramore.Brighter.Messaginggateway.AzureServicebus",
+   "title": "Paramore.Brighter.MessagingGateway.AzureServicebus",
   "description": "Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using azureservicebus",
   "authors": [
     "Yiannis Triantafyllopoulos"
@@ -40,7 +40,7 @@
     "requireLicenseAcceptance": false,
     "repository": {
       "type": "git",
-      "url": "https://github.com/iancooper/Paramore/tree/master/BrighterParamore.Brighter.Messaginggateway.AzureServicebus"
+      "url": "https://github.com/iancooper/Paramore/tree/master/BrighterParamore.Brighter.MessagingGateway.AzureServicebus"
     }
   },
   "dependencies": {

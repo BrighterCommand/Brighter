@@ -3,7 +3,7 @@
   "buildOptions": {
     "debugType": "portable"
   },
-  "title": "Paramore.Brighter.Commandstore.Sqlite",
+  "title": "Paramore.Brighter.CommandStore.Sqlite",
   "description": "This is an implementation of the command store used for decoupled invocation of commands by Paramore.Brighter, using Sqlite",
   "authors": [
     "Ian Cooper"
@@ -40,7 +40,7 @@
     "requireLicenseAcceptance": false,
     "repository": {
       "type": "git",
-      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.Commandstore.Sqlite"
+      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.CommandStore.Sqlite"
     }
   },
    "dependencies": {

@@ -28,10 +28,10 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("paramore.brighter.commandprocessor.messagestore.eventstore")]
+[assembly: AssemblyTitle("Paramore.Brighter.MessageStore.EventStore")]
 [assembly: AssemblyDescription("This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter.CommandProcessor, using Event Store")]
 [assembly: AssemblyCompany("George Ayris")]
-[assembly: AssemblyProduct("paramore.brighter.commandprocessor.messagestore.eventstore")]
+[assembly: AssemblyProduct("Paramore.Brighter.MessageStore.EventStore")]
 [assembly: AssemblyCopyright("Copyright \u00A9 2015 George Ayris")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 

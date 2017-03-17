@@ -7,7 +7,7 @@
   "frameworks": {
     "net452": {
       "dependencies": {
-        "Paramore.Brighter.Messageviewer": { "target": "project" },
+        "Paramore.Brighter.MessageViewer": { "target": "project" },
         "Nancy.Hosting.Self": "*",
         "log4net": "2.0.5"
       },

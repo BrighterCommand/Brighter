@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "Microsoft.AspNetCore.Server.Kestrel": "1.1.0",
-    "Paramore.Brighter.Messageviewer": {
+    "Paramore.Brighter.MessageViewer": {
       "target": "project"
     },
     "Serilog": "2.3.0",

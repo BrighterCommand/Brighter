@@ -3,7 +3,7 @@
   "buildOptions": {
     "debugType": "portable"
   },
-  "title": "Paramore.Brighter.Messaginggateway.AWSSQS",
+  "title": "Paramore.Brighter.MessagingGateway.AWSSQS",
   "description": "Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using awssqs",
   "authors": [
     "Deniz Kocak"
@@ -40,7 +40,7 @@
     "requireLicenseAcceptance": false,
     "repository": {
       "type": "git",
-      "url": "https://github.com/iancooper/Paramore/tree/master/BrighterParamore.Brighter.Messaginggateway.AWSSQS"
+      "url": "https://github.com/iancooper/Paramore/tree/master/BrighterParamore.Brighter.MessagingGateway.AWSSQS"
     }
   },
   "dependencies": {
