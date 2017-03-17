@@ -20,5 +20,5 @@
 **/*.html linguist-documentation
 **/*.css linguist-documentation
 **/*.js linguist-documentation
-Documentation/* linguist-documentation
-Help/* linguist-documentation
+docs/* linguist-documentation
+help/* linguist-documentation
