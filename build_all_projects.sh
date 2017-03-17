@@ -1,47 +1,47 @@
 # Build the core projects
-pushd paramore.brighter.commandprocessor
+pushd Paramore.Brighter
 dotnet build -f netstandard1.6 
 popd
-pushd paramore.brighter.commandprocessor.commandstore.mssql
+pushd Paramore.Brighter.CommandStore.MsSql
 dotnet build -f netstandard1.6 
 popd
-pushd paramore.brighter.commandprocessor.commandstore.sqlite
+pushd Paramore.Brighter.CommandStore.Sqlite
 dotnet build -f netstandard1.6 
 popd
-pushd paramore.brighter.commandprocessor.messagestore.mssql
+pushd Paramore.Brighter.MessageStore.MsSql
 dotnet build -f netstandard1.6 
 popd
-pushd paramore.brighter.commandprocessor.messagestore.sqlite
+pushd Paramore.Brighter.MessageStore.Sqlite
 dotnet build -f netstandard1.6 
 popd
-pushd paramore.brighter.commandprocessor.messageviewer
+pushd Paramore.Brighter.MessageViewer
 dotnet build -f netstandard1.6 
 popd
-pushd paramore.brighter.commandprocessor.messageviewer.console
+pushd Paramore.Brighter.MessageViewer.Console
 dotnet build -f netcoreapp1.0 
 popd
-pushd paramore.brighter.commandprocessor.messaginggateway.awssqs
+pushd Paramore.Brighter.MessagingGateway.AWSSQS
 dotnet build -f netstandard1.6 
 popd
-pushd paramore.brighter.commandprocessor.messaginggateway.azureservicebus
+pushd Paramore.Brighter.MessagingGateway.AzureServiceBus
 dotnet build -f netstandard1.6 
 popd
-pushd paramore.brighter.commandprocessor.messaginggateway.restms
+pushd Paramore.Brighter.MessagingGateway.RESTMS
 dotnet build -f netstandard1.6 
 popd
-pushd paramore.brighter.commandprocessor.messaginggateway.rmq
+pushd Paramore.Brighter.MessagingGateway.RMQ
 dotnet build -f netstandard1.6 
 popd
-pushd paramore.brighter.commandprocessor.tests.nunit
-dotnet build -f netcoreapp1.0 
+pushd Paramore.Brighter.Tests
+dotnet build -f netcoreapp1.0 Paramore.BrighterParamore.Brighter
 popd
-pushd paramore.brighter.serviceactivator
+pushd Paramore.Brighter.ServiceSctivator
 dotnet build -f netstandard1.6 
 popd
 
 # Build the example projects
-cd Examples
-ushd DocumentsAndFolders.Sqs.Core
+cd samples
+pushd DocumentsAndFolders.Sqs.Core
 dotnet build -f netstandard1.6 
 popd
 pushd EventSourcing
