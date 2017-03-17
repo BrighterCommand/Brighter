@@ -279,4 +279,4 @@ __pycache__/
 
 # Allow .sdf files in app_data
 !**/App_Data/*.sdf
-Brighter/Examples/tasklist/Data
+Brighter/samples/tasklist/Data
