@@ -3,7 +3,7 @@
   "buildOptions": {
     "debugType": "portable"
   },
-  "title": "Paramore.Brighter.Messagestore.Eventstore",
+  "title": "Paramore.Brighter.MessageStore.EventStore",
   "description": "This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using Event Store",
   "authors": [
     "George Ayris"
@@ -40,7 +40,7 @@
     "requireLicenseAcceptance": false,
     "repository": {
       "type": "git",
-      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.Messagestore.Eventstore"
+      "url": "https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.MessageStore.EventStore"
     }
   },
   "dependencies": {
