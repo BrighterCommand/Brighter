@@ -5,7 +5,7 @@
   },
   "dependencies": {
     "Paramore.Brighter": { "target": "project" },
-    "Paramore.Brighter.Messaginggateway.AWSSQS": { "target": "project" },
+    "Paramore.Brighter.MessagingGateway.AWSSQS": { "target": "project" },
     "Paramore.Brighter.ServiceActivator": { "target": "project" }
   },
   "frameworks": {

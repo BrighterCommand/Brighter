@@ -1,6 +1,6 @@
 using System;
 using System.Data.SqlClient;
-using Paramore.Brighter.Commandstore.MsSql;
+using Paramore.Brighter.CommandStore.MsSql;
 using Paramore.Brighter.MessageStore.MsSql;
 
 namespace Paramore.Brighter.Tests

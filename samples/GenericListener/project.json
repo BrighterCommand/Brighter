@@ -10,7 +10,7 @@
     "Paramore.Brighter": {
       "target": "project"
     },
-    "Paramore.Brighter.Messaginggateway.RMQ": {
+    "Paramore.Brighter.MessagingGateway.RMQ": {
       "target": "project"
     },
     "Paramore.Brighter.ServiceActivator": {

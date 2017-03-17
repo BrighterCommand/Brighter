@@ -8,10 +8,10 @@
     "Paramore.Brighter": {
       "target": "project"
     },
-    "Paramore.Brighter.Commandstore.MsSql": {
+    "Paramore.Brighter.CommandStore.MsSql": {
       "target": "project"
     },
-    "Paramore.Brighter.Commandstore.Sqlite": {
+    "Paramore.Brighter.CommandStore.Sqlite": {
       "target": "project"
     },
     "Paramore.Brighter.MessageStore.MsSql": {
@@ -20,16 +20,16 @@
     "Paramore.Brighter.MessageStore.Sqlite": {
       "target": "project"
     },
-    "Paramore.Brighter.Messaginggateway.AWSSQS": {
+    "Paramore.Brighter.MessagingGateway.AWSSQS": {
       "target": "project"
     },
-    "Paramore.Brighter.Messaginggateway.AzureServiceBus": {
+    "Paramore.Brighter.MessagingGateway.AzureServiceBus": {
       "target": "project"
     },
-    "Paramore.Brighter.Messaginggateway.RESTMS": {
+    "Paramore.Brighter.MessagingGateway.RESTMS": {
       "target": "project"
     },
-    "Paramore.Brighter.Messaginggateway.RMQ": {
+    "Paramore.Brighter.MessagingGateway.RMQ": {
       "target": "project"
     },
     "Paramore.Brighter.ServiceActivator": {
@@ -61,7 +61,7 @@
     },
     "net46": {
       "dependencies": {
-        "Paramore.Brighter.Messagestore.Eventstore": {
+        "Paramore.Brighter.MessageStore.EventStore": {
           "target": "project"
         },
 

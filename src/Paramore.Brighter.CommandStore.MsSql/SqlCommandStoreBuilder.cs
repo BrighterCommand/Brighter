@@ -22,43 +22,21 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using NUnit.Framework;
-using Paramore.Brighter.CommandStore.MsSql;
-using Paramore.Brighter.Tests.TestDoubles;
-
-namespace Paramore.Brighter.Tests.CommandStore.MsSsql
+namespace Paramore.Brighter.CommandStore.MsSql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class SqlCommandStoreEmptyWhenSearchedTests
+    public class SqlCommandStoreBuilder
     {
-        private MsSqlTestHelper _msSqlTestHelper;
-        private MsSqlCommandStore _sqlCommandStore;
-        private MyCommand _storedCommand;
+        const string _messageStoreDDL = "CREATE TABLE [{0}] (" +
+                "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
+                "CommandType nvarchar(256)," +
+                "CommandBody ntext," +
+                "Timestamp dateTime" +
+                ")";
 
-        [SetUp]
-        public void Establish()
+        public static string GetDDL(string tableName)
         {
-            _msSqlTestHelper = new MsSqlTestHelper();
-            _msSqlTestHelper.SetupCommandDb();
-
-            _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
+            return string.Format(_messageStoreDDL, tableName);
         }
 
-        [Test]
-        public void When_There_Is_No_Message_In_The_Sql_Command_Store()
-        {
-            _storedCommand = _sqlCommandStore.Get<MyCommand>(Guid.NewGuid());
-
-           //_should_return_an_empty_command_on_a_missing_command
-            Assert.AreEqual(Guid.Empty, _storedCommand.Id);
-        }
-
-        [TearDown]
-        public void Cleanup()
-        {
-            _msSqlTestHelper.CleanUpDb();
-        }
     }
 }

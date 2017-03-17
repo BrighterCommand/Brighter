@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "Paramore.Brighter": { "target": "project" },
-    "Paramore.Brighter.Messaginggateway.RMQ": { "target": "project" },
+    "Paramore.Brighter.MessagingGateway.RMQ": { "target": "project" },
     "Paramore.Brighter.ServiceActivator": { "target": "project" },
     "TaskMailer.Core": { "target": "project" },
     "Tasks": { "target": "project" },

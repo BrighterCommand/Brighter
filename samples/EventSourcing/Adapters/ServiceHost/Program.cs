@@ -29,7 +29,7 @@ using EventSourcing.Ports.CommandHandlers;
 using EventSourcing.Ports.Commands;
 using Newtonsoft.Json;
 using Paramore.Brighter;
-using Paramore.Brighter.Commandstore.MsSql;
+using Paramore.Brighter.CommandStore.MsSql;
 
 namespace EventSourcing.Adapters.ServiceHost
 {

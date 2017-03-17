@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Paramore.Brighter.Viewer.Tests")]
+[assembly: AssemblyTitle("Paramore.Brighter.CommandStore.MsSql")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Paramore.Brighter.Viewer.Tests")]
+[assembly: AssemblyProduct("Paramore.Brighter.CommandStore.MsSql")]
 [assembly: AssemblyCopyright("Copyright ©  2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("0bb9de03-2233-4392-bd46-4964e8769d8b")]
+[assembly: Guid("f8d67d36-7b3f-4cf2-aca3-5e5b05120718")]
 
 // Version information for an assembly consists of the following four values:
 //

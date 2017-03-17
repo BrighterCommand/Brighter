@@ -28,10 +28,10 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Paramore.Brighter.MessageStore.MsSql")]
+[assembly: AssemblyTitle("Paramore.Brighter.CommandStore.Sqlite")]
 [assembly: AssemblyDescription("The Command Dispatcher pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers")]
 [assembly: AssemblyCompany("Francesco Pighi")]
-[assembly: AssemblyProduct("Paramore.Brighter.MessageStore.MsSql")]
+[assembly: AssemblyProduct("Paramore.Brighter.CommandStore.Sqlite")]
 [assembly: AssemblyCopyright("Copyright \u00A9  2014 Francesco Pighi")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 

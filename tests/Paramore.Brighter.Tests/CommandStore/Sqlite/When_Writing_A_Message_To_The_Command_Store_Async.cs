@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using Microsoft.Data.Sqlite;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using Paramore.Brighter.Commandstore.Sqlite;
+using Paramore.Brighter.CommandStore.Sqlite;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.commandstore.sqlite

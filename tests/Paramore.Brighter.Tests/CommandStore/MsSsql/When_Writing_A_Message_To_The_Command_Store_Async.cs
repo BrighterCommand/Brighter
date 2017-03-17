@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using Nito.AsyncEx;
 using NUnit.Framework;
-using Paramore.Brighter.Commandstore.MsSql;
+using Paramore.Brighter.CommandStore.MsSql;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql

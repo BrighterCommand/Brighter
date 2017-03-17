@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "Paramore.Brighter": { "target": "project" },
-    "Paramore.Brighter.Commandstore.MsSql": { "target": "project" }
+    "Paramore.Brighter.CommandStore.MsSql": { "target": "project" }
   },
   "frameworks": {
     "netcoreapp1.0": {

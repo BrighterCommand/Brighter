@@ -25,21 +25,21 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "HelloWorldAsync", "samples\
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.Serviceactivator", "src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.Serviceactivator.xproj", "{E01C809C-AF79-4BA9-9ECB-80C60802C073}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessagingGateway.RMQ", "src\Paramore.Brighter.Messaginggateway.RMQ\Paramore.Brighter.MessagingGateway.RMQ.xproj", "{61DE9904-884B-4E8A-A4DF-CD697B5A9CF6}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessagingGateway.RMQ", "src\Paramore.Brighter.MessagingGateway.RMQ\Paramore.Brighter.MessagingGateway.RMQ.xproj", "{61DE9904-884B-4E8A-A4DF-CD697B5A9CF6}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.Commandstore.MsSql", "src\Paramore.Brighter.Commandstore.MsSql\Paramore.Brighter.Commandstore.MsSql.xproj", "{6F7705C6-A4C1-4497-BEE5-BA22A7CB2162}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.CommandStore.MsSql", "src\Paramore.Brighter.CommandStore.MsSql\Paramore.Brighter.CommandStore.MsSql.xproj", "{6F7705C6-A4C1-4497-BEE5-BA22A7CB2162}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.Messagestore.Eventstore", "src\Paramore.Brighter.Messagestore.Eventstore\Paramore.Brighter.Messagestore.Eventstore.xproj", "{0A254942-F673-4CFC-A2CE-11F7CA62D1D0}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessageStore.EventStore", "src\Paramore.Brighter.MessageStore.Eventstore\Paramore.Brighter.MessageStore.EventStore.xproj", "{0A254942-F673-4CFC-A2CE-11F7CA62D1D0}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessageStore.MsSql", "src\Paramore.Brighter.MessageStore.MsSql\Paramore.Brighter.MessageStore.MsSql.xproj", "{9CAFC1CB-55B7-47AC-B7D0-0F0721A50616}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessagingGateway.AWSSQS", "src\Paramore.Brighter.Messaginggateway.AWSSQS\Paramore.Brighter.MessagingGateway.AWSSQS.xproj", "{BD55E987-D3D6-4E18-8A89-DAC516C61CC7}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessagingGateway.AWSSQS", "src\Paramore.Brighter.MessagingGateway.AWSSQS\Paramore.Brighter.MessagingGateway.AWSSQS.xproj", "{BD55E987-D3D6-4E18-8A89-DAC516C61CC7}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessagingGateway.AzureServiceBus", "src\Paramore.Brighter.Messaginggateway.AzureServiceBus\Paramore.Brighter.MessagingGateway.AzureServiceBus.xproj", "{3A9F4CF4-AC46-4209-AEC5-1751403E87BA}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessagingGateway.AzureServiceBus", "src\Paramore.Brighter.MessagingGateway.AzureServiceBus\Paramore.Brighter.MessagingGateway.AzureServiceBus.xproj", "{3A9F4CF4-AC46-4209-AEC5-1751403E87BA}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.Viewer.Tests", "tests\Paramore.Brighter.Viewer.Tests\Paramore.Brighter.Viewer.Tests.xproj", "{AA3325CA-8B84-4D31-9D05-05F7AD9C2F3B}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessagingGateway.RESTMS", "src\Paramore.Brighter.Messaginggateway.RESTMS\Paramore.Brighter.MessagingGateway.RESTMS.xproj", "{015E1F81-D21B-40B5-AB0F-53785C6EB163}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessagingGateway.RESTMS", "src\Paramore.Brighter.MessagingGateway.RESTMS\Paramore.Brighter.MessagingGateway.RESTMS.xproj", "{015E1F81-D21B-40B5-AB0F-53785C6EB163}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Greetings", "samples\Greetings\Greetings.xproj", "{EF37D89A-8394-42A3-AD96-1E8E1BF904BE}"
 EndProject
@@ -61,7 +61,7 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "ManagementAndMonitoringWind
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessageStore.Sqlite", "src\Paramore.Brighter.MessageStore.Sqlite\Paramore.Brighter.MessageStore.Sqlite.xproj", "{24E3EE6D-BA0A-41E5-8370-BBD30DA61DF4}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.Commandstore.Sqlite", "src\Paramore.Brighter.Commandstore.Sqlite\Paramore.Brighter.Commandstore.Sqlite.xproj", "{5A8F1495-B8D2-4018-8B3D-6DA25A14290F}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.CommandStore.Sqlite", "src\Paramore.Brighter.CommandStore.Sqlite\Paramore.Brighter.CommandStore.Sqlite.xproj", "{5A8F1495-B8D2-4018-8B3D-6DA25A14290F}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessageViewer", "src\Paramore.Brighter.Messageviewer\Paramore.Brighter.MessageViewer.xproj", "{97AF4A5C-9A84-496B-AA83-C36D8B0E53F8}"
 EndProject
