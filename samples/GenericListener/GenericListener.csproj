@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net452</TargetFramework>
+    <DebugType>portable</DebugType>
+    <AssemblyName>GenericListener</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackageId>GenericListener</PackageId>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.RMQ\Paramore.Brighter.MessagingGateway.RMQ.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
+    <ProjectReference Include="..\Tasks\Tasks.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EventStore.Client" Version="3.9.2" />
+    <PackageReference Include="log4net" Version="2.0.5" />
+    <PackageReference Include="Topshelf" Version="4.0.3" />
+    <PackageReference Include="Topshelf.Log4Net" Version="4.0.3" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+</Project>

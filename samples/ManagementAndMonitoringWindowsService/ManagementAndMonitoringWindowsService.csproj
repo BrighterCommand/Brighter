@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net452</TargetFramework>
+    <DebugType>portable</DebugType>
+    <AssemblyName>ManagementAndMonitoringWindowsService</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackageId>ManagementAndMonitoringWindowsService</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ManagementAndMonitoring\ManagementAndMonitoring.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.Sqlite\Paramore.Brighter.MessageStore.Sqlite.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="log4net" Version="2.0.5" />
+    <PackageReference Include="Topshelf" Version="4.0.3" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <Reference Include="System.Xml" />
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+</Project>

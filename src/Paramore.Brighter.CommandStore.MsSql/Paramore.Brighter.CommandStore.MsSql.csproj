@@ -1,0 +1,56 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using MS Sql Server</Description>
+    <AssemblyTitle>Paramore.Brighter.MessageStore.MsSql</AssemblyTitle>
+    <Authors>Francesco Pighi</Authors>
+    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <DebugType>portable</DebugType>
+    <AssemblyName>Paramore.Brighter.CommandStore.MsSql</AssemblyName>
+    <PackageId>Paramore.Brighter.CommandStore.MsSql</PackageId>
+    <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <PackageReleaseNotes>https://github.com/iancooper/Paramore/blob/master/release_notes.md</PackageReleaseNotes>
+    <PackageIconUrl>http://iancooper.github.io/Paramore/images/brightercanon-nuget.png</PackageIconUrl>
+    <PackageProjectUrl>http://iancooper.github.io/Paramore</PackageProjectUrl>
+    <PackageLicenseUrl>http://ianhammondcooper.mit-license.org</PackageLicenseUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.MessageStore.MSSQL</RepositoryUrl>
+    <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
+    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.5' ">$(PackageTargetFallback);dnxcore50;portable-net45+win8</PackageTargetFallback>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
+    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
+    <EmbeddedResource Include=".\DDL Scripts\MSSQL\MessageStore.sql" Exclude="bin\**;obj\**;**\*.xproj;packages\**;@(EmbeddedResource)" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+</Project>

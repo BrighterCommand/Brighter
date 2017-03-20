@@ -1,0 +1,64 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using awssqs</Description>
+    <AssemblyTitle>Paramore.Brighter.MessagingGateway.AWSSQS</AssemblyTitle>
+    <Authors>Deniz Kocak</Authors>
+    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <DebugType>portable</DebugType>
+    <AssemblyName>Paramore.Brighter.MessagingGateway.AWSSQS</AssemblyName>
+    <PackageId>Paramore.Brighter.MessagingGateway.AWSSQS</PackageId>
+    <PackageTags>awssqs;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <PackageReleaseNotes>https://github.com/iancooper/Paramore/blob/master/release_notes.md</PackageReleaseNotes>
+    <PackageIconUrl>http://iancooper.github.io/Paramore/images/brightercanon-nuget.png</PackageIconUrl>
+    <PackageProjectUrl>http://iancooper.github.io/Paramore</PackageProjectUrl>
+    <PackageLicenseUrl>http://ianhammondcooper.mit-license.org</PackageLicenseUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/iancooper/Paramore/tree/master/BrighterParamore.Brighter.MessagingGateway.AWSSQS</RepositoryUrl>
+    <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
+    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.5' ">$(PackageTargetFallback);dnxcore50;portable-net45+win8</PackageTargetFallback>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Bcl" Version="1.1.10" />
+    <PackageReference Include="Microsoft.Bcl.Async" Version="1.0.168" />
+    <PackageReference Include="Microsoft.Bcl.Build" Version="1.0.21" />
+    <PackageReference Include="Microsoft.Net.Http" Version="2.2.29" />
+    <PackageReference Include="PCLStorage" Version="1.0.2" />
+    <PackageReference Include="PCLCrypto" Version="2.0.147" />
+    <PackageReference Include="AWSSDK.Core" Version="3.3.4" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.0.2" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.3.0.2" />
+    <PackageReference Include="Validation" Version="2.3.7" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
+    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <PackageReference Include="PInvoke.BCrypt" Version="0.3.152" />
+    <PackageReference Include="PInvoke.NCrypt" Version="0.3.152" />
+    <PackageReference Include="PInvoke.Windows.Core" Version="0.3.152" />
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+</Project>
