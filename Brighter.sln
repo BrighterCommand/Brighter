@@ -21,7 +21,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Messaging
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.CommandStore.MsSql", "src\Paramore.Brighter.CommandStore.MsSql\Paramore.Brighter.CommandStore.MsSql.csproj", "{6F7705C6-A4C1-4497-BEE5-BA22A7CB2162}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageStore.EventStore", "src\Paramore.Brighter.MessageStore.Eventstore\Paramore.Brighter.MessageStore.EventStore.csproj", "{0A254942-F673-4CFC-A2CE-11F7CA62D1D0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageStore.EventStore", "src\Paramore.Brighter.MessageStore.EventStore\Paramore.Brighter.MessageStore.EventStore.csproj", "{0A254942-F673-4CFC-A2CE-11F7CA62D1D0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageStore.MsSql", "src\Paramore.Brighter.MessageStore.MsSql\Paramore.Brighter.MessageStore.MsSql.csproj", "{9CAFC1CB-55B7-47AC-B7D0-0F0721A50616}"
 EndProject
