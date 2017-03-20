@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -31,15 +31,13 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy
 {
-    [TestFixture]
     public class CommandProcessorMissingPolicyFromRegistryTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorMissingPolicyFromRegistryTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDoesNotFailPolicyHandler>();
@@ -55,7 +53,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
         }
 
         //We have to catch the final exception that bubbles out after retry
-        [Test]
+        [Fact]
         public void When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry()
         {
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));

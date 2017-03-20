@@ -24,13 +24,12 @@ THE SOFTWARE. */
 
 using System;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
-    [TestFixture]
-    public class SqliteMessageStoreWritingMessageAsyncTests
+    public class SqliteMessageStoreWritingMessageAsyncTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteMessageStore _sSqlMessageStore;
@@ -41,8 +40,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
         private readonly string value1 = "value1";
         private readonly string value2 = "value2";
 
-        [SetUp]
-        public void Establish()
+        public SqliteMessageStoreWritingMessageAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -56,7 +54,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_messageEarliest));
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_A_Message_To_The_Message_Store_Async()
         {
             AsyncContext.Run(async () => _storedMessage = await _sSqlMessageStore.GetAsync(_messageEarliest.Id));
@@ -78,8 +76,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             Assert.AreEqual(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

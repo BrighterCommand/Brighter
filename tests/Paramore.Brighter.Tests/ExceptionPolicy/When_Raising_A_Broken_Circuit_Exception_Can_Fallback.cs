@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -30,14 +30,12 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy
 {
-    [TestFixture]
     public class FallbackHandlerBrokenCircuitOnErrorTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
 
-        [SetUp]
-        public void Establish()
+        public FallbackHandlerBrokenCircuitOnErrorTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsWithFallbackBrokenCircuitHandler>();
@@ -53,7 +51,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
         }
 
-        [Test]
+        [Fact]
         public void When_Raising_A_Broken_Circuit_Exception_Can_Fallback()
         {
             _commandProcessor.Send(_myCommand);

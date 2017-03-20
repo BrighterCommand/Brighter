@@ -24,22 +24,20 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class MsSqlMessageStoreMessageAlreadyExistsTests
+    [Trait("Category", "MSSQL")]
+    public class MsSqlMessageStoreMessageAlreadyExistsTests : IDisposable
     {
         private Exception _exception;
         private Message _messageEarliest;
         private MsSqlMessageStore _sqlMessageStore;
         private MsSqlTestHelper _msSqlTestHelper;
 
-        [SetUp]
-        public void Establish()
+        public MsSqlMessageStoreMessageAlreadyExistsTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
@@ -50,23 +48,16 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             _sqlMessageStore.Add(_messageEarliest);
         }
 
-        [Test]
+        [Fact]
         public void When_The_Message_Is_Already_In_The_Message_Store()
         {
             _exception = Catch.Exception(() => _sqlMessageStore.Add(_messageEarliest));
 
             //_should_ignore_the_duplcate_key_and_still_succeed
             Assert.Null(_exception);
-            ;
         }
 
-        [TearDown]
-        public void Cleanup()
-        {
-            CleanUpDb();
-        }
-
-        private void CleanUpDb()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
         }

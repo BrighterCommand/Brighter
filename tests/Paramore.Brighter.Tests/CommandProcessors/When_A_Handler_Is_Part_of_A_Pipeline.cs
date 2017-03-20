@@ -23,20 +23,18 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using NUnit.Framework;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
+using Xunit;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class PipelineBuilderTests
     {
         private PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish ()
+        public PipelineBuilderTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyImplicitHandler>();
@@ -49,7 +47,7 @@ namespace Paramore.Brighter.Tests
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Handler_Is_Part_of_A_Pipeline()
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();

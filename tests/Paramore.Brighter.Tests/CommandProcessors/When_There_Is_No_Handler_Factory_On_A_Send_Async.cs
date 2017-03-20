@@ -24,20 +24,18 @@ THE SOFTWARE. */
 
 using System;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class CommandProcessorSendMissingHandlerFactoryAsyncTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorSendMissingHandlerFactoryAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
@@ -46,7 +44,7 @@ namespace Paramore.Brighter.Tests
         }
 
         //Ignore any errors about adding System.Runtime from the IDE. See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow
-        [Test]
+        [Fact]
         public void When_There_Is_No_Handler_Factory_On_A_Send_Async()
         {
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand)));

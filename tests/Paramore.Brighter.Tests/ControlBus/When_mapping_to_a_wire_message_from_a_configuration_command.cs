@@ -22,21 +22,19 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class ConfigurationCommandToMessageMapperTests
     {
         private IAmAMessageMapper<ConfigurationCommand> _mapper;
         private Message _message;
         private ConfigurationCommand _command;
 
-        [SetUp]
-        public void Establish()
+        public ConfigurationCommandToMessageMapperTests()
         {
             _mapper = new ConfigurationCommandMessageMapper();
 
@@ -45,7 +43,7 @@ namespace Paramore.Brighter.Tests.ControlBus
         }
 
 
-        [Test]
+        [Fact]
         public void When_mapping_to_a_wire_message_from_a_configuration_command()
         {
             _message = _mapper.MapToMessage(_command);

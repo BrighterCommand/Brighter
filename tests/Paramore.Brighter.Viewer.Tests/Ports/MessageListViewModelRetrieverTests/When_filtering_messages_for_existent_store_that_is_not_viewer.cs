@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+﻿using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.Domain;
 using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTest
             _messageListViewModelRetriever = new MessageListViewModelRetriever(modelFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_filtering_messages_for_existent_store_that_is_not_viewer()
         {
             _result = _messageListViewModelRetriever.Filter(_storeName, "term");

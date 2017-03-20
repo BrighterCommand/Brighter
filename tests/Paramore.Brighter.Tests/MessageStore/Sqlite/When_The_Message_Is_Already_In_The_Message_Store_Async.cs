@@ -25,21 +25,19 @@ THE SOFTWARE. */
 
 using System;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
-    [TestFixture]
-    public class SqliteMessageStoreMessageAlreadyExistsAsyncTests
+    public class SqliteMessageStoreMessageAlreadyExistsAsyncTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteMessageStore _sSqlMessageStore;
         private Exception _exception;
         private Message _messageEarliest;
 
-        [SetUp]
-        public void Establish()
+        public SqliteMessageStoreMessageAlreadyExistsAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -48,7 +46,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_messageEarliest));
         }
 
-        [Test]
+        [Fact]
         public void When_The_Message_Is_Already_In_The_Message_Store_Async()
         {
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_messageEarliest)));
@@ -57,8 +55,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             Assert.Null(_exception);
         }
 
-        [TearDown]
-        public void CleanUp()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

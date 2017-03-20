@@ -25,14 +25,13 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
-    public class ControlBusSenderPostMessageTests
+    public class ControlBusSenderPostMessageTests : IDisposable
     {
         private CommandProcessor _commandProcessor;
         private ControlBusSender _controlBusSender;
@@ -41,8 +40,7 @@ namespace Paramore.Brighter.Tests
         private FakeMessageStore _fakeMessageStore;
         private FakeMessageProducer _fakeMessageProducer;
 
-        [SetUp]
-        public void Establish()
+        public ControlBusSenderPostMessageTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -75,7 +73,7 @@ namespace Paramore.Brighter.Tests
             _controlBusSender = new ControlBusSender(_commandProcessor);
         }
 
-        [Test]
+        [Fact]
         public void When_Posting_Via_A_Control_Bus_Sender()
         {
             _controlBusSender.Post(_myCommand);
@@ -88,8 +86,7 @@ namespace Paramore.Brighter.Tests
             Assert.AreEqual(_message, _fakeMessageStore.Get().First());
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _controlBusSender.Dispose();
         }

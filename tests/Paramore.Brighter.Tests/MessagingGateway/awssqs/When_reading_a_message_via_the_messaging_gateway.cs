@@ -1,13 +1,12 @@
 ﻿using System;
 using Amazon.Runtime;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
 {
-    [Category("AWS")]
-    [TestFixture]
-    public class SqsMessageConsumerReceiveTests
+    [Trait("Category", "AWS")]
+    public class SqsMessageConsumerReceiveTests : IDisposable
     {
         private TestAWSQueueListener _testQueueListener;
         private IAmAMessageProducer _sender;
@@ -16,8 +15,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
         private Message _receivedMessage;
         private string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
 
-        [SetUp]
-        public void Establish ()
+        public SqsMessageConsumerReceiveTests()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
@@ -30,7 +28,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
             _testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
         }
 
-        [Test]
+        [Fact]
         public void When_reading_a_message_via_the_messaging_gateway()
         {
             _sender.Send(_sentMessage);
@@ -54,8 +52,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
             Assert.Null(_testQueueListener.Listen());
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _testQueueListener.DeleteMessage(_receivedMessage.Header.Bag["ReceiptHandle"].ToString());
         }

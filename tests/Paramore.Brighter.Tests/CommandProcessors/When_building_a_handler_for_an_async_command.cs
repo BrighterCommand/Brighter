@@ -23,20 +23,18 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class  PipelineForCommandAsyncTests
     {
         private static PipelineBuilder<MyCommand> s_chainBuilder;
         private static IHandleRequestsAsync<MyCommand> s_chainOfResponsibility;
         private static RequestContext s_requestContext;
 
-        [SetUp]
-        public void Establish()
+        public PipelineForCommandAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
@@ -46,7 +44,7 @@ namespace Paramore.Brighter.Tests
             s_chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_A_Handler_For_An_Async_Command()
         {
             s_chainOfResponsibility = s_chainBuilder.BuildAsync(s_requestContext, false).First();

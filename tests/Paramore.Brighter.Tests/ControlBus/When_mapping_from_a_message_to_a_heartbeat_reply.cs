@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Mappers;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class HeartbeatMessageToReplyTests
     {
         private IAmAMessageMapper<HeartbeatReply> _mapper;
@@ -41,8 +40,7 @@ namespace Paramore.Brighter.Tests.ControlBus
         private const string TOPIC = "test.topic";
         private readonly Guid _correlationId = Guid.NewGuid();
 
-        [SetUp]
-        public void Establish()
+        public HeartbeatMessageToReplyTests()
         {
             _mapper = new HeartbeatReplyCommandMessageMapper();
             var header = new MessageHeader(messageId: Guid.NewGuid(), topic: TOPIC, messageType: MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow, correlationId: _correlationId);
@@ -50,7 +48,7 @@ namespace Paramore.Brighter.Tests.ControlBus
             _message = new Message(header, body);
         }
 
-        [Test]
+        [Fact]
         public void When_mapping_from_a_message_to_a_heartbeat_reply()
         {
             _request = _mapper.MapToRequest(_message);

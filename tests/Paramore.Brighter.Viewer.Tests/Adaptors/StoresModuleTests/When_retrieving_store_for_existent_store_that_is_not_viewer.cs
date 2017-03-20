@@ -1,6 +1,6 @@
 ﻿using Nancy.Json;
 using Nancy.Testing;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
@@ -9,7 +9,7 @@ using Paramore.Brighter.Viewer.Tests.TestDoubles;
 namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
 {
     [Ignore("Returns wrong error code")]
-    [TestFixture]
+
     public class RetreiveMessageStoreNotInViewerTests
     {
         private Browser _browser;
@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
             }));
         }
 
-        [Test]
+        [Fact]
         public void When_retrieving_store_for_existent_store_that_is_not_viewer()
         {
             _result = _browser.Get(_storesUri, with =>

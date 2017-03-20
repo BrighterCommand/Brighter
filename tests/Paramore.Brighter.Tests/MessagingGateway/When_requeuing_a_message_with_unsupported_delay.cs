@@ -25,11 +25,10 @@ THE SOFTWARE. */
 using System;
 using System.Diagnostics;
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway
 {
-    [TestFixture]
     public class ChannelRequeueWithUsnpportedDelayTests
     {
         private IAmAChannel _channel;
@@ -37,8 +36,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
         private Message _requeueMessage;
         private Stopwatch _stopWatch;
 
-        [SetUp]
-        public void Establish()
+        public ChannelRequeueWithUsnpportedDelayTests()
         {
             _gateway = A.Fake<IAmAMessageConsumer>();
 
@@ -51,7 +49,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
             _stopWatch = new Stopwatch();
         }
 
-        [Test]
+        [Fact]
         public void When_Requeuing_A_Message_With_Unsupported_Delay()
         {
             _stopWatch.Start();

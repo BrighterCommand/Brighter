@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Data.Sqlite;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.commandstore.sqlite
 {
-    [TestFixture]
-    public class SqliteCommandStoreDuplicateMessageTests
+    public class SqliteCommandStoreDuplicateMessageTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteCommandStore _sqlCommandStore;
@@ -39,8 +38,7 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
         private Exception _exception;
         private SqliteConnection _sqliteConnection;
 
-        [SetUp]
-        public void Establish()
+        public SqliteCommandStoreDuplicateMessageTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
@@ -49,7 +47,7 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
             _sqlCommandStore.Add<MyCommand>(_raisedCommand);
         }
 
-        [Test]
+        [Fact]
         public void When_The_Message_Is_Already_In_The_Command_Store()
         {
             _exception = Catch.Exception(() => _sqlCommandStore.Add(_raisedCommand));
@@ -58,8 +56,7 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
             Assert.Null(_exception);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

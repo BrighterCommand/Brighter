@@ -23,20 +23,18 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class CommandProcessorNoMatchingSubcribersTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorNoMatchingSubcribersTests()
         {
             var registry = new SubscriberRegistry();
             var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler());
@@ -44,7 +42,7 @@ namespace Paramore.Brighter.Tests
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_There_Are_No_Subscribers()
         {
             _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));

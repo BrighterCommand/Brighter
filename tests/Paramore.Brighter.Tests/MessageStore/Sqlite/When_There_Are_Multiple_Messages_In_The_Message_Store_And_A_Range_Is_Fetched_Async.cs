@@ -27,13 +27,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
-    [TestFixture]
-    public class SqliteMessageStoreRangeRequestAsyncTests
+    public class SqliteMessageStoreRangeRequestAsyncTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteMessageStore _sqlMessageStore;
@@ -44,8 +43,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
         private Message _message2;
         private Message _messageEarliest;
 
-        [SetUp]
-        public void Establish()
+        public SqliteMessageStoreRangeRequestAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -58,7 +56,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             AsyncContext.Run( async () => await _sqlMessageStore.AddAsync(_message2));
         }
 
-        [Test]
+        [Fact]
         public void When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched_Async()
         {
             AsyncContext.Run(async () => messages = await _sqlMessageStore.GetAsync(1, 3));
@@ -71,8 +69,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             Assert.NotNull(messages);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

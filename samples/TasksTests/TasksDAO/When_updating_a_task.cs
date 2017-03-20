@@ -23,12 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Tasks.Model;
 
 namespace TasksTests.TasksDAO
 {
-    [TestFixture]
+
     public class TasksDAOUpdateTests
     {
         private Tasks.Adapters.DataAccess.TasksDAO _dao;
@@ -39,7 +39,7 @@ namespace TasksTests.TasksDAO
         private readonly DateTime? s_NEW_DUE_DATE = DateTime.Now.AddDays(1);
         private readonly DateTime? s_NEW_COMPLETION_DATE = DateTime.Now.AddDays(2);
 
-        [Test]
+        [Fact]
         public void Establish()
         {
             _dao = new Tasks.Adapters.DataAccess.TasksDAO();
@@ -52,7 +52,7 @@ namespace TasksTests.TasksDAO
             _addedTask.CompletionDate = s_NEW_COMPLETION_DATE;
         }
 
-        [Test]
+        [Fact]
         public void When_updating_a_task()
         {
             _dao.Update(_addedTask);

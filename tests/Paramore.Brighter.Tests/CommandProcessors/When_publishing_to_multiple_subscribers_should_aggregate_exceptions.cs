@@ -23,21 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class PublishingToMultipleSubscribersTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public PublishingToMultipleSubscribersTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
@@ -53,7 +51,7 @@ namespace Paramore.Brighter.Tests
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions()
         {
             _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));

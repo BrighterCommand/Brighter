@@ -26,14 +26,13 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
-    [TestFixture]
-    public class SqlMessageStoreWritngMessagesTests
+    public class SqlMessageStoreWritngMessagesTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteMessageStore _sSqlMessageStore;
@@ -42,8 +41,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
         private Message _messageLatest;
         private IEnumerable<Message> _retrievedMessages;
 
-        [SetUp]
-        public void Establish()
+        public SqlMessageStoreWritngMessagesTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -65,7 +63,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             _sSqlMessageStore.Add(_messageLatest);
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_Messages_To_The_Message_Store()
         {
             _retrievedMessages = _sSqlMessageStore.Get();
@@ -78,8 +76,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             Assert.AreEqual(3, _retrievedMessages.Count());
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

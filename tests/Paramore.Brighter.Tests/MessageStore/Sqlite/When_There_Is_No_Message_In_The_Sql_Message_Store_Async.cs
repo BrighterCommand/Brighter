@@ -25,21 +25,19 @@ THE SOFTWARE. */
 
 using System;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
-    [TestFixture]
-    public class SqliteMessageStoreEmptyStoreAsyncTests
+    public class SqliteMessageStoreEmptyStoreAsyncTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteMessageStore _sSqlMessageStore;
         private Message _messageEarliest;
         private Message _storedMessage;
 
-        [SetUp]
-        public void Establish()
+        public SqliteMessageStoreEmptyStoreAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -48,7 +46,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
                 new MessageBody("message body"));
         }
 
-        [Test]
+        [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Message_Store_Async()
         {
             AsyncContext.Run(async () => _storedMessage = await _sSqlMessageStore.GetAsync(_messageEarliest.Id));
@@ -57,13 +55,11 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             Assert.AreEqual(MessageType.MT_NONE, _storedMessage.Header.MessageType);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
-            GC.Collect ();
-            GC.WaitForPendingFinalizers ();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
             _sqliteTestHelper.CleanUpDb();
         }
-
     }    
 }

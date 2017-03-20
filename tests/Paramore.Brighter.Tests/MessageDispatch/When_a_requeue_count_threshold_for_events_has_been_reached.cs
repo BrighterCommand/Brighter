@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -33,7 +33,6 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture()]
     public class MessagePumpEventRequeueCountThresholdTests
     {
         private IAmAMessagePump _messagePump;
@@ -41,8 +40,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         private SpyRequeueCommandProcessor _commandProcessor;
         private MyEvent _event;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpEventRequeueCountThresholdTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
@@ -57,7 +55,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(message2);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Requeue_Count_Threshold_For_Events_Has_Been_Reached()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);

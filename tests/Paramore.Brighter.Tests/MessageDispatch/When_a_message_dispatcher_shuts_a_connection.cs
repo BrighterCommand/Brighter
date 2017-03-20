@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -33,7 +33,7 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
+
     public class MessageDispatcherShutConnectionTests
     {
         private static Dispatcher _dispatcher;
@@ -41,8 +41,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         private static IAmACommandProcessor _commandProcessor;
         private static Connection _connection;
 
-        [SetUp]
-        public void Establish()
+        public MessageDispatcherShutConnectionTests()
         {
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
@@ -63,7 +62,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
 
-        [Test]
+        [Fact]
         public void When_A_Message_Dispatcher_Shuts_A_Connection()
         {
             Task.Delay(1000).Wait();

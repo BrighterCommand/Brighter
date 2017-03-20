@@ -24,21 +24,19 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class PipelineMixedHandlersTests
     {
         private PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public PipelineMixedHandlersTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyMixedImplicitHandler>();
@@ -51,7 +49,7 @@ namespace Paramore.Brighter.Tests
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_A_Sync_Pipeline_That_Has_Async_Handlers()
         {
             _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.Build(new RequestContext()).First());
@@ -60,6 +58,5 @@ namespace Paramore.Brighter.Tests
             Assert.IsInstanceOf(typeof (ConfigurationException), _exception);
             StringAssert.Contains(typeof (MyLoggingHandlerAsync<>).Name, _exception.Message);
         }
-
     }
 }

@@ -1,6 +1,6 @@
 ﻿using Nancy.Json;
 using Nancy.Testing;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
@@ -8,7 +8,7 @@ using Paramore.Brighter.Viewer.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
 {
-    [TestFixture]
+
     public class RetreiveMessageStoreReadFailureTests
     {
         private readonly string _storeUri = "/stores/storeName";
@@ -24,7 +24,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
             }));
         }
 
-        [Test]
+        [Fact]
         public void When_retrieving_messages_with_store_that_cannot_get()
         {
             _result = _browser.Get(_storeUri, with =>

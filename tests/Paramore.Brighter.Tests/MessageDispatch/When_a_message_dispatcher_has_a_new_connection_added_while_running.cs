@@ -22,10 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -33,9 +34,7 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [Ignore("Breaks dotnet test runner")]
-    [TestFixture]
-    public class DispatcherAddNewConnectionTests
+    public class DispatcherAddNewConnectionTests : IDisposable
     {
         private Dispatcher _dispatcher;
         private FakeChannel _channel;
@@ -43,8 +42,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         private Connection _connection;
         private Connection _newConnection;
 
-        [SetUp]
-        public void Establish()
+        public DispatcherAddNewConnectionTests()
         {
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
@@ -65,7 +63,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
 
-        [Test]
+        [Fact(Skip = "TODO: Breaks dotnet test runner")]
         public void When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running()
         {
             _dispatcher.Open(_newConnection);
@@ -84,8 +82,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             Assert.AreEqual(2, _dispatcher.Connections.Count());
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)
                 _dispatcher.End().Wait();

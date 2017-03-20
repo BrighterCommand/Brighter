@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.ServiceActivator;
@@ -33,19 +33,15 @@ using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 using TinyIoC;
-using Connection = Paramore.Brighter.ServiceActivator.Connection;
-using IAmADispatchBuilder = Paramore.Brighter.ServiceActivator.IAmADispatchBuilder;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class DispatchBuilderTests
     {
         private IAmADispatchBuilder _builder;
         private Dispatcher _dispatcher;
 
-        [SetUp]
-        public void Establish()
+        public DispatchBuilderTests()
         {
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -108,7 +104,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
                 .Connections(connections);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_A_Dispatcher()
         {
             _dispatcher = _builder.Build();

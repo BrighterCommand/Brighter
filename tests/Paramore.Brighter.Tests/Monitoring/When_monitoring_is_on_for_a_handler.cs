@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
@@ -35,7 +35,6 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [TestFixture]
     public class MonitorHandlerPipelineTests
     {
         private MyCommand _command;
@@ -46,8 +45,7 @@ namespace Paramore.Brighter.Tests.Monitoring
         private MonitorEvent _afterEvent;
         private string _originalRequestAsJson;
 
-        [SetUp]
-        public void Establish()
+        public MonitorHandlerPipelineTests()
         {
             _controlBusSender = new SpyControlBusSender();
             var registry = new SubscriberRegistry();
@@ -70,7 +68,7 @@ namespace Paramore.Brighter.Tests.Monitoring
             Clock.OverrideTime = _at;
         }
 
-        [Test]
+        [Fact]
         public void When_Monitoring_Is_On_For_A_Handler()
         {
             _commandProcessor.Send(_command);

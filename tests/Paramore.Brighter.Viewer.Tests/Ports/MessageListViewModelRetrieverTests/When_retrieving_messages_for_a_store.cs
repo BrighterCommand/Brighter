@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.Domain;
 using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTest
             _messageListViewModelRetriever = new MessageListViewModelRetriever(modelFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_retrieving_messages_for_a_store()
         {
             _result = _messageListViewModelRetriever.Get(storeName, 1);

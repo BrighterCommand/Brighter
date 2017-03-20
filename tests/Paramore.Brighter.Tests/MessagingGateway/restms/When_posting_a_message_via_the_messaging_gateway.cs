@@ -23,15 +23,14 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.RESTMS;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.restms
 {
-    [Category("RESTMS")]
-    [TestFixture]
-    public class  RestMsMessageProducerSendTests
+    [Trait("Category", "RESTMS")]
+    public class RestMsMessageProducerSendTests : IDisposable
     {
         private const string Topic = "test";
         private IAmAMessageProducer _messageProducer;
@@ -41,8 +40,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.restms
         private string _messageBody;
         private const string QueueName = "test";
 
-        [SetUp]
-        public void Establish()
+        public RestMsMessageProducerSendTests()
         {
             var configuration = new RestMSMessagingGatewayConfiguration
             {
@@ -54,7 +52,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.restms
             _message = new Message(header: new MessageHeader(Guid.NewGuid(), Topic, MessageType.MT_COMMAND),body: new MessageBody("test content"));
         }
 
-        [Test]
+        [Fact]
         public void When_posting_a_message_via_the_messaging_gateway()
         {
             _messageConsumer.Receive(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
@@ -69,8 +67,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.restms
             Assert.AreEqual(0, ((RestMsMessageConsumer)_messageConsumer).NoOfOutstandingMessages(30000));
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _messageConsumer.Purge();
             _messageProducer.Dispose();

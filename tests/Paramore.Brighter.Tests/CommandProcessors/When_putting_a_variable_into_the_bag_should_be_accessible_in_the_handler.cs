@@ -1,10 +1,9 @@
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class ContextBagVisibilityTests
     {
         private const string I_AM_A_TEST_OF_THE_CONTEXT_BAG = "I am a test of the context bag";
@@ -12,8 +11,7 @@ namespace Paramore.Brighter.Tests
         private CommandProcessor _commandProcessor;
         private MyCommand _myCommand;
 
-        [SetUp]
-        public void Establish()
+        public ContextBagVisibilityTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyContextAwareCommandHandler>();
@@ -30,7 +28,7 @@ namespace Paramore.Brighter.Tests
             _request_context.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
         }
 
-        [Test]
+        [Fact]
         public void When_Putting_A_Variable_Into_The_Bag_Should_Be_Accessible_In_The_Handler()
         {
             _commandProcessor.Send(_myCommand);

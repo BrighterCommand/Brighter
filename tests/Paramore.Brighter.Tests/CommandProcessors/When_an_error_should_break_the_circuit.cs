@@ -1,14 +1,13 @@
 using System;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
-    public class CircuitBreakerTests
+    public class CircuitBreakerTests : IDisposable
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -18,8 +17,7 @@ namespace Paramore.Brighter.Tests
         private Exception _failedException;
         private BrokenCircuitException _circuitBrokenException;
 
-        [SetUp]
-        public void Establish()
+        public CircuitBreakerTests()
         {
             _myCommand.Value = "Hello World";
             _messageStore = new FakeMessageStore();
@@ -53,7 +51,7 @@ namespace Paramore.Brighter.Tests
                 _messagingProducer);
         }
 
-        [Test]
+        [Fact]
         public void When_An_Error_Should_Break_The_Circuit()
         {
             //break circuit with retries
@@ -67,8 +65,7 @@ namespace Paramore.Brighter.Tests
             Assert.IsInstanceOf(typeof(BrokenCircuitException), _circuitBrokenException);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
        }

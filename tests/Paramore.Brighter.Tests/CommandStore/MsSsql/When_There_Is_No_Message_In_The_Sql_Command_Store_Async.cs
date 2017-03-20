@@ -24,22 +24,20 @@ THE SOFTWARE. */
 
 using System;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.MsSql;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class  SqlCommandStoreEmptyWhenSearchedAsyncTests
+    [Trait("Category", "MSSQL")]
+    public class  SqlCommandStoreEmptyWhenSearchedAsyncTests : IDisposable
     {
         private MsSqlTestHelper _msSqlTestHelper;
         private MsSqlCommandStore _sqlCommandStore;
         private MyCommand _storedCommand;
 
-        [SetUp]
-        public void Establish()
+        public SqlCommandStoreEmptyWhenSearchedAsyncTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
@@ -47,7 +45,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
         }
 
-        [Test]
+        [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
         {
             _storedCommand = AsyncContext.Run<MyCommand>(async () => await _sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid()));
@@ -56,8 +54,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             Assert.AreEqual(Guid.Empty, _storedCommand.Id);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
         }

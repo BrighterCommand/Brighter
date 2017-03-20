@@ -24,15 +24,14 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.rmq
 {
-    [Category("RMQ")]
-    [TestFixture]
-    public class RmqMessageProducerTests
+    [Trait("Category", "RMQ")]
+    public class RmqMessageProducerTests : IDisposable
     {
         private IAmAMessageProducer _messageProducer;
         private IAmAMessageConsumer _messageConsumer;
@@ -41,8 +40,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
         private string _messageBody;
         private IDictionary<string, object> _messageHeaders;
 
-        [SetUp]
-        public void Establish()
+        public RmqMessageProducerTests()
         {
             _message = new Message(header: new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
@@ -59,7 +57,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
             _client = new TestRMQListener(rmqConnection, _message.Header.Topic);
         }
 
-        [Test]
+        [Fact]
         public void When_posting_a_message_via_a_named_messaging_gateway()
         {
             _messageProducer.Send(_message);
@@ -76,8 +74,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
             CollectionAssert.DoesNotContain(_messageHeaders.Keys, HeaderNames.DELAYED_MILLISECONDS);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _messageConsumer.Purge();
             _messageProducer.Dispose();

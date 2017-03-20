@@ -39,7 +39,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Nancy;
 using Nancy.Testing;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.Handlers;
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.MessagesModuleTests
         }
 
 
-        [Test]
+        [Fact]
         public void When_reposting_some_messages()
         {
             _result = _browser.Post(string.Format("/messages/{0}/repost/{1}", _storeName, _idList),

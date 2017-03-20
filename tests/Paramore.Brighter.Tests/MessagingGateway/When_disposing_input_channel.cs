@@ -23,25 +23,22 @@ THE SOFTWARE. */
 #endregion
 
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway
 {
-    [TestFixture]
     public class ChannelDisposalTests
     {
         private IAmAChannel _channel;
         private IAmAMessageConsumer _messageConsumer;
 
-        [SetUp]
-        public void Establish()
+        public ChannelDisposalTests()
         {
             _messageConsumer = A.Fake<IAmAMessageConsumer>();
-
             _channel = new Channel("test", _messageConsumer);
         }
 
-        [Test]
+        [Fact]
         public void When_Disposing_Channel()
         {
             _channel.Dispose();

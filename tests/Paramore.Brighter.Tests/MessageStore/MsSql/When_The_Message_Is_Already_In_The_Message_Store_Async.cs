@@ -25,22 +25,20 @@ THE SOFTWARE. */
 
 using System;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class MsSqlMessageStoreMessageAlreadyExistsAsyncTests
+    [Trait("Category", "MSSQL")]
+    public class MsSqlMessageStoreMessageAlreadyExistsAsyncTests : IDisposable
     {
         private Exception _exception;
         private Message _messageEarliest;
         private MsSqlMessageStore _sqlMessageStore;
         private MsSqlTestHelper _msSqlTestHelper;
 
-        [SetUp]
-        public void Establish()
+        public MsSqlMessageStoreMessageAlreadyExistsAsyncTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
@@ -51,7 +49,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             AsyncContext.Run(async () => await _sqlMessageStore.AddAsync(_messageEarliest));
         }
 
-        [Test]
+        [Fact]
         public void When_The_Message_Is_Already_In_The_Message_Store_Async()
         {
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _sqlMessageStore.AddAsync(_messageEarliest)));
@@ -60,13 +58,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             Assert.Null(_exception);
         }
 
-        [TearDown]
-        public void Cleanup()
-        {
-            CleanUpDb();
-        }
-
-        private void CleanUpDb()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
         }

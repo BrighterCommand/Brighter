@@ -1,7 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -9,7 +9,6 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessagePumpDispatchAsyncTests
     {
         private IAmAMessagePump _messagePump;
@@ -17,8 +16,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         private IAmACommandProcessor _commandProcessor;
         private MyEvent _event;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpDispatchAsyncTests()
         {
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsyncWithContinuation>();
@@ -41,7 +39,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(quitMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async()
         {
             AsyncContext.Run(async () => await _messagePump.Run());

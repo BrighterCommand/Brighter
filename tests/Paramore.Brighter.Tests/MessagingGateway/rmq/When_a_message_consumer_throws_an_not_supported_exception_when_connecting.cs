@@ -23,15 +23,15 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.Tests.MessagingGateway.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.rmq
 {
-    [Category("RMQ")]
-    [TestFixture]
+    [Trait("Category", "RMQ")]
+
     public class RmqMessageConsumerChannelFailureTests
     {
         private IAmAMessageProducer _sender;
@@ -40,8 +40,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
         private Message _sentMessage;
         private Exception _firstException;
 
-        [SetUp]
-        public void Establish()
+        public RmqMessageConsumerChannelFailureTests()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
 
@@ -62,7 +61,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
             _sender.Send(_sentMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_a_message_consumer_throws_an_not_supported_exception_when_connecting()
         {
             _firstException = Catch.Exception(() => _badReceiver.Receive(2000));
@@ -73,7 +72,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
             Assert.IsInstanceOf<NotSupportedException>(_firstException.InnerException);
         }
 
-        public void Cleanup()
+        public void Dispose()
         {
             _receiver.Purge();
             _sender.Dispose();

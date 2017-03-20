@@ -22,20 +22,18 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class CommandProcessorPipelineStepsTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPipelineStepsTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
@@ -49,7 +47,7 @@ namespace Paramore.Brighter.Tests
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_There_Are_No_Failures_Execute_All_The_Steps_In_The_Pipeline()
         {
             _commandProcessor.Send(_myCommand);

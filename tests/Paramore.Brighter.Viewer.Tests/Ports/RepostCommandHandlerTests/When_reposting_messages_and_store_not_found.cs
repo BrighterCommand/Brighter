@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageViewer.Ports.Handlers;
 using Paramore.Brighter.Tests.TestDoubles;
 using Paramore.Brighter.Viewer.Tests.TestDoubles;
@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.RepostCommandHandlerTests
             _repostHandler = new RepostCommandHandler(fakeMessageStoreFactory, new FakeMessageProducerFactoryProvider(new FakeMessageProducerFactory(_fakeMessageProducer)), new MessageRecoverer());
         }
 
-        [Test]
+        [Fact]
         public void When_reposting_messages_and_store_not_found()
         {
             _ex = Catch.Exception(() => _repostHandler.Handle(_command));

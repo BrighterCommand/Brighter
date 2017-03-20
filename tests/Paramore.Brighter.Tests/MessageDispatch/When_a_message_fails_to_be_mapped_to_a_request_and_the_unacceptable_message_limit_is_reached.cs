@@ -24,22 +24,20 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessagePumpUnacceptableMessageLimitTests
     {
         private IAmAMessagePump _messagePump;
         private FakeChannel _channel;
         private SpyRequeueCommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpUnacceptableMessageLimitTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
@@ -53,7 +51,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(unmappableMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Message_Fails_To_Be_Mapped_To_A_Request_And_The_Unacceptable_Message_Limit_Is_Reached()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);

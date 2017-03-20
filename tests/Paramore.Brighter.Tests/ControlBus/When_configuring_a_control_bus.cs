@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System.Linq;
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.ControlBus;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
@@ -32,7 +32,6 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class ControlBusBuilderTests
     {
         private Dispatcher _controlBus;
@@ -40,8 +39,7 @@ namespace Paramore.Brighter.Tests.ControlBus
         private IDispatcher _dispatcher;
         private string _hostName = "tests";
 
-        [SetUp]
-        public void Establish()
+        public ControlBusBuilderTests()
         {
             _dispatcher = A.Fake<IDispatcher>();
             var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
@@ -55,7 +53,7 @@ namespace Paramore.Brighter.Tests.ControlBus
                 .ChannelFactory(new InMemoryChannelFactory()) as ControlBusReceiverBuilder;
         }
 
-        [Test]
+        [Fact]
         public void When_configuring_a_control_bus()
         {
             _controlBus = _busReceiverBuilder.Build(_hostName);

@@ -1,20 +1,18 @@
 ﻿using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.EventSourcing
 {
-    [TestFixture]
     public class CommandProcessorUsingCommandStoreAsyncTests
     {
         private MyCommand _command;
         private IAmACommandStoreAsync _commandStore;
         private IAmACommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorUsingCommandStoreAsyncTests()
         {
             _commandStore = new InMemoryCommandStore();
 
@@ -31,7 +29,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_Handling_A_Command_With_A_Command_Store_Enabled_Async()
         {
             AsyncContext.Run(async () => await _commandProcessor.SendAsync(_command));

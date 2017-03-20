@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using Nancy.Json;
 using Nancy.Testing;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.MessagesModuleTests
             }));
         }
 
-        [Test]
+        [Fact]
         public void When_retrieving_messages_for_non_existent_store()
         {
             _result = _browser.Get(uri, with =>

@@ -23,21 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
-    public class PipelineTerminationTests
+    public class PipelineTerminationTests : IDisposable
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public PipelineTerminationTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyUnusedCommandHandler>();
@@ -50,7 +48,7 @@ namespace Paramore.Brighter.Tests
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_An_Exception_Is_Thrown_Terminate_The_Pipeline()
         {
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
@@ -59,8 +57,7 @@ namespace Paramore.Brighter.Tests
             Assert.False(MyUnusedCommandHandler.Shouldreceive(_myCommand));
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
         }

@@ -23,13 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Mappers;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class HearbeatRequestToMessageMapperTests
     {
         private IAmAMessageMapper<HeartbeatRequest> _mapper;
@@ -38,15 +37,14 @@ namespace Paramore.Brighter.Tests.ControlBus
         private const string TOPIC = "test.topic";
         private readonly Guid _correlationId = Guid.NewGuid();
 
-        [SetUp]
-        public void Establish()
+        public HearbeatRequestToMessageMapperTests()
         {
             _mapper = new HeartbeatRequestCommandMessageMapper();
 
             _request = new HeartbeatRequest(new ReplyAddress(TOPIC, _correlationId));
         }
 
-        [Test]
+        [Fact]
         public void When_mapping_from_a_heartbeat_request_to_a_message()
         {
             _message = _mapper.MapToMessage(_request);

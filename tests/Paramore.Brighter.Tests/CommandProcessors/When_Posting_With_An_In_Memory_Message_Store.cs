@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
-    public class CommandProcessorWithInMemoryMessageStoreTests
+    public class CommandProcessorWithInMemoryMessageStoreTests : IDisposable
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -39,8 +38,7 @@ namespace Paramore.Brighter.Tests
         private InMemoryMessageStore _messageStore;
         private FakeMessageProducer _fakeMessageProducer;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorWithInMemoryMessageStoreTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -71,7 +69,7 @@ namespace Paramore.Brighter.Tests
                 (IAmAMessageProducer)_fakeMessageProducer);
         }
 
-        [Test]
+        [Fact]
         public void When_Posting_With_An_In_Memory_Message_Store()
         {
             _commandProcessor.Post(_myCommand);
@@ -84,8 +82,7 @@ namespace Paramore.Brighter.Tests
             Assert.AreEqual(_message, _messageStore.Get(_myCommand.Id));
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
         }

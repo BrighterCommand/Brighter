@@ -32,14 +32,14 @@ using EventStore.ClientAPI;
 using EventStore.ClientAPI.Embedded;
 using EventStore.Core;
 using EventStore.Core.Data;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.EventStore;
 
 
 namespace Paramore.Brighter.Tests.MessageStore.EventStore
 {
     [Category("EventStore")]
-    [TestFixture]
+
     public class EventStoreEmptyTests
     {
         private IList<Message> _messages;
@@ -88,13 +88,13 @@ namespace Paramore.Brighter.Tests.MessageStore.EventStore
         }
 
         [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _eventStore.Close();
             _eventStoreNode.Stop();
         }
 
-        [Test]
+        [Fact]
         public void When_There_Is_No_Message_In_The_Message_Store()
         {
             _messages = _eventStoreMessageStore.Get(EmptyStreamName, 0, 1);

@@ -22,16 +22,16 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using Microsoft.Data.Sqlite;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.commandstore.sqlite
 {
-    [TestFixture]
-    public class SqliteCommandStoreAddMessageAsyncTests
+    public class SqliteCommandStoreAddMessageAsyncTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteCommandStore _sqlCommandStore;
@@ -39,8 +39,7 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
         private MyCommand _storedCommand;
         private SqliteConnection _sqliteConnection;
 
-        [SetUp]
-        public void Establish()
+        public SqliteCommandStoreAddMessageAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
@@ -50,7 +49,7 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
             AsyncContext.Run(async () => await _sqlCommandStore.AddAsync(_raisedCommand));
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_A_Message_To_The_Command_Store_Async()
         {
             AsyncContext.Run(async () => _storedCommand =await _sqlCommandStore.GetAsync<MyCommand>(_raisedCommand.Id));
@@ -63,8 +62,7 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
             Assert.AreEqual(_raisedCommand.Id, _storedCommand.Id);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

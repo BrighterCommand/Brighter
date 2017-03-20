@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -33,7 +33,6 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy
 {
-    [TestFixture]
     public class CommandProcessorWithCircuitBreakerTests
     {
         private CommandProcessor _commandProcessor;
@@ -42,8 +41,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
         private Exception _firstException;
         private Exception _secondException;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorWithCircuitBreakerTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsWithDivideByZeroHandler>();
@@ -67,7 +65,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
         }
 
         //We have to catch the final exception that bubbles out after retry
-        [Test]
+        [Fact]
         public void When_Sending_A_Command_That_Repeatedely_Fails_Break_The_Circuit()
         {
                 //First two should be caught, and increment the count

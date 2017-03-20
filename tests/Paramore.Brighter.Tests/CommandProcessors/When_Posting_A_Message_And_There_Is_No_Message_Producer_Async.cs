@@ -25,14 +25,13 @@ THE SOFTWARE. */
 using System;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
-    public class CommandProcessorPostMissingMessageProducerAsyncTests
+    public class CommandProcessorPostMissingMessageProducerAsyncTests : IDisposable
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -40,8 +39,7 @@ namespace Paramore.Brighter.Tests
         private FakeMessageStore _fakeMessageStore;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPostMissingMessageProducerAsyncTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -71,7 +69,7 @@ namespace Paramore.Brighter.Tests
                 (IAmAMessageProducerAsync)null);
         }
 
-        [Test]
+        [Fact]
         public void When_Posting_A_Message_And_There_Is_No_Message_Producer_Async()
         {
             _exception = Catch.Exception(() => AsyncContext.Run(() => _commandProcessor.PostAsync(_myCommand)));
@@ -80,8 +78,7 @@ namespace Paramore.Brighter.Tests
             Assert.IsInstanceOf<InvalidOperationException>(_exception);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
         }

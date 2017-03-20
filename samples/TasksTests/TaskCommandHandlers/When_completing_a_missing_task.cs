@@ -1,6 +1,6 @@
 ﻿using System;
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter;
 using Tasks.Adapters.DataAccess;
 using Tasks.Ports.Commands;
@@ -9,7 +9,6 @@ using Tasks.Ports.Handlers;
 
 namespace TasksTests.TaskCommandHandlers
 {
-    [TestFixture]
     public class CompleteTaskCommandHandlerTests
     {
         private CompleteTaskCommandHandler _handler;
@@ -20,8 +19,7 @@ namespace TasksTests.TaskCommandHandlers
         private Exception _exception;
         private IAmACommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public CompleteTaskCommandHandlerTests()
         {
             _tasksDAO = new Tasks.Adapters.DataAccess.TasksDAO();
             _tasksDAO.Clear();
@@ -34,7 +32,7 @@ namespace TasksTests.TaskCommandHandlers
             _handler = new CompleteTaskCommandHandler(_tasksDAO, _commandProcessor);
         }
 
-        [Test]
+        [Fact]
         public void When_completing_a_missing_task()
         {
             _exception = Catch.Exception(() => _handler.Handle(_cmd));
@@ -44,8 +42,5 @@ namespace TasksTests.TaskCommandHandlers
             //_should_not_post_event
             A.CallTo(() => _commandProcessor.Post(A<TaskCompletedEvent>._)).MustNotHaveHappened();
         }
-
-
-
     }
 }

@@ -1,20 +1,19 @@
 ﻿using System;
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
+
     public class PipelineMixedHandlersAsyncTests
     {
         private PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequestsAsync<MyCommand> _pipeline;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public PipelineMixedHandlersAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyMixedImplicitHandlerAsync>();
@@ -27,7 +26,7 @@ namespace Paramore.Brighter.Tests
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_An_Async_Pipeline_That_Has_Sync_Handlers()
         {
             _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.BuildAsync(new RequestContext(), false).First());

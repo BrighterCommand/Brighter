@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -33,15 +33,13 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy
 {
-    [TestFixture]
     public class CommandProcessorWithExceptionPolicyNothingThrowTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private int _retryCount;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorWithExceptionPolicyNothingThrowTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDoesNotFailPolicyHandler>();
@@ -72,7 +70,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
         }
 
         //We have to catch the final exception that bubbles out after retry
-        [Test]
+        [Fact]
         public void When_Sending_A_Command_That_Passes_Policy_Check()
         {
             _commandProcessor.Send(_myCommand);

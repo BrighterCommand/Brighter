@@ -24,21 +24,19 @@ THE SOFTWARE. */
 
 using System;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class CommandProcessorPublishMultipleMatchesAsyncTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPublishMultipleMatchesAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
@@ -53,7 +51,7 @@ namespace Paramore.Brighter.Tests
         }
 
         //Ignore any errors about adding System.Runtime from the IDE. See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow
-        [Test]
+        [Fact]
         public void When_There_Are_Multiple_Subscribers_Async()
         {
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PublishAsync(_myEvent)));

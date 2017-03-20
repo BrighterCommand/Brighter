@@ -26,20 +26,19 @@ using System;
 using System.Linq;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
-    public class SQlMessageStoreMigrationTests
+    public class SQlMessageStoreMigrationTests : IDisposable
     {
         private SqliteMessageStore _sqlMessageStore;
         private Message _message;
         private Message _storedMessage;
         private SqliteTestHelper _sqliteTestHelper;
 
-        [SetUp]
-        public void Establish()
+        public SQlMessageStoreMigrationTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -77,7 +76,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             }
         }
 
-        [Test]
+        [Fact]
         public void When_writing_a_message_with_minimal_header_information_to_the_message_store()
         {
             _storedMessage = _sqlMessageStore.Get(_message.Id);
@@ -94,8 +93,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             Assert.False(_storedMessage.Header.Bag.Keys.Any());
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

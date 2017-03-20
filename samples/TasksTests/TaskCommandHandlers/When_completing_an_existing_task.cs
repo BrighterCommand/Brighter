@@ -1,6 +1,6 @@
 ﻿using System;
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
@@ -10,7 +10,6 @@ using Tasks.Ports.Handlers;
 
 namespace TasksTests.TaskCommandHandlers
 {
-    [TestFixture]
     public class  CompletedTaskHandlerTests
     {
         private CompleteTaskCommandHandler _handler;
@@ -20,8 +19,7 @@ namespace TasksTests.TaskCommandHandlers
         private readonly DateTime s_COMPLETION_DATE = DateTime.Now.AddDays(-1);
         private IAmACommandProcessor s_commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public CompletedTaskHandlerTests()
         {
             _taskToBeCompleted = new Task("My Task", "My Task Description", DateTime.Now);
             _tasksDAO = new Tasks.Adapters.DataAccess.TasksDAO();
@@ -35,7 +33,7 @@ namespace TasksTests.TaskCommandHandlers
             _handler = new CompleteTaskCommandHandler(_tasksDAO, s_commandProcessor);
         }
 
-        [Test]
+        [Fact]
         public void When_completing_an_existing_task()
         {
             _handler.Handle(_cmd);

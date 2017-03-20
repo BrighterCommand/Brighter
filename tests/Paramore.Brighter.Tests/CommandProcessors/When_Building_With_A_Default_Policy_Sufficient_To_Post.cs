@@ -25,12 +25,11 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class PostCommandTests
     {
         private CommandProcessor _commandProcessor;
@@ -39,8 +38,7 @@ namespace Paramore.Brighter.Tests
         private FakeMessageStore _fakeMessageStore;
         private FakeMessageProducer _fakeMessageProducer;
 
-        [SetUp]
-        public void Establish()
+        public PostCommandTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -65,7 +63,7 @@ namespace Paramore.Brighter.Tests
                 .Build();
         }
 
-        [Test]
+        [Fact]
         public void When_Building_With_A_Default_Policy_Sufficient_To_Post()
         {
             _commandProcessor.Post(_myCommand);

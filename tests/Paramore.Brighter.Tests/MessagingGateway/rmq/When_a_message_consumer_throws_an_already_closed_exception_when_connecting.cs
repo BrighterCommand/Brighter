@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.Tests.MessagingGateway.TestDoubles;
@@ -31,9 +31,8 @@ using RabbitMQ.Client.Exceptions;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.rmq 
 {
-    [Category("RMQ")]
-    [TestFixture]
-    public class RmqMessageConsumerConnectionClosedTests
+    [Trait("Category", "RMQ")]
+    public class RmqMessageConsumerConnectionClosedTests : IDisposable
     {
         private IAmAMessageProducer _sender;
         private IAmAMessageConsumer _receiver;
@@ -41,8 +40,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
         private Message _sentMessage;
         private Exception _firstException;
 
-        [SetUp]
-        public void Establish()
+        public RmqMessageConsumerConnectionClosedTests()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
 
@@ -63,7 +61,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
             _sender.Send(_sentMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_a_message_consumer_throws_an_already_closed_exception_when_connecting()
         {
             _firstException = Catch.Exception(() => _badReceiver.Receive(2000));
@@ -74,8 +72,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
             Assert.IsInstanceOf<AlreadyClosedException>(_firstException.InnerException);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _receiver.Purge();
             _sender.Dispose();

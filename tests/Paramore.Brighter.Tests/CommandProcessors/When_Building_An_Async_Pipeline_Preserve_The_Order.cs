@@ -23,20 +23,18 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture()]
     public class PipelineOrderingAsyncTests
     {
         private PipelineBuilder<MyCommand> _pipeline_Builder;
         private IHandleRequestsAsync<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish()
+        public PipelineOrderingAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyDoubleDecoratedHandlerAsync>();
@@ -50,7 +48,7 @@ namespace Paramore.Brighter.Tests
             _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_An_Async_Pipeline_Preserve_The_Order()
         {
             _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();

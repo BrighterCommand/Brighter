@@ -4,13 +4,13 @@ using Nancy.Conventions;
 using Nancy.Testing;
 using Nancy.TinyIoc;
 using Nancy.ViewEngines;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Configuration;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 
 namespace Paramore.Brighter.Viewer.Tests.Adaptors.IndexModuleTests
 {
-    [TestFixture]
+
     public class HomeEndpointTests
     {
         private Browser _browser;
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.IndexModuleTests
             _browser = new Browser(configurableBootstrapper);
         }
 
-        [Test]
+        [Fact]
         public void When_retrieving_home()
         {
             _result = _browser.Get("/", with =>

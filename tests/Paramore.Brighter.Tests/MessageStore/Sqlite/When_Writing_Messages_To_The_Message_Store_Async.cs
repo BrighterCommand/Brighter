@@ -27,14 +27,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
-    [TestFixture]
-    public class SqlMessageStoreWritngMessagesAsyncTests
+    public class SqlMessageStoreWritngMessagesAsyncTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteMessageStore _sSqlMessageStore;
@@ -43,8 +42,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
         private Message _messageLatest;
         private IList<Message> _retrievedMessages;
 
-        [SetUp]
-        public void Establish()
+        public SqlMessageStoreWritngMessagesAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -67,7 +65,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_messageLatest));
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_Messages_To_The_Message_Store_Async()
         {
             AsyncContext.Run(async () => _retrievedMessages = await _sSqlMessageStore.GetAsync());
@@ -80,8 +78,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             Assert.AreEqual(3, _retrievedMessages.Count());
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

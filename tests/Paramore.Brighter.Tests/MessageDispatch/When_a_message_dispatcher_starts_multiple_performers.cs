@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -32,15 +32,14 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
+
     public class MessageDispatcherMultiplePerformerTests
     {
         private Dispatcher _dispatcher;
         private FakeChannel _channel;
         private IAmACommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public MessageDispatcherMultiplePerformerTests()
         {
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
@@ -61,7 +60,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
 
-        [Test]
+        [Fact]
         public void WhenAMessageDispatcherStartsMultiplePerformers()
         {
             Task.Delay(1000).Wait();

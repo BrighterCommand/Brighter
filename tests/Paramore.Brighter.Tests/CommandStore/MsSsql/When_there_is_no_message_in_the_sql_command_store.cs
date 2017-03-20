@@ -23,22 +23,20 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.MsSql;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class SqlCommandStoreEmptyWhenSearchedTests
+    [Trait("Category", "MSSQL")]
+    public class SqlCommandStoreEmptyWhenSearchedTests : IDisposable
     {
         private MsSqlTestHelper _msSqlTestHelper;
         private MsSqlCommandStore _sqlCommandStore;
         private MyCommand _storedCommand;
 
-        [SetUp]
-        public void Establish()
+        public SqlCommandStoreEmptyWhenSearchedTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
@@ -46,7 +44,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
         }
 
-        [Test]
+        [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Command_Store()
         {
             _storedCommand = _sqlCommandStore.Get<MyCommand>(Guid.NewGuid());
@@ -55,8 +53,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             Assert.AreEqual(Guid.Empty, _storedCommand.Id);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
         }

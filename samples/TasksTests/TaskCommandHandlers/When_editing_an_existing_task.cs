@@ -1,6 +1,6 @@
 ﻿using System;
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
@@ -10,7 +10,6 @@ using Tasks.Ports.Handlers;
 
 namespace TasksTests.TaskCommandHandlers
 {
-    [TestFixture]
     public class EditTaskCommandHandlerTests
     {
         private EditTaskCommandHandler _handler;
@@ -22,8 +21,7 @@ namespace TasksTests.TaskCommandHandlers
         private readonly DateTime _NEW_TIME = DateTime.Now.AddDays(1);
         private IAmACommandProcessor s_commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public EditTaskCommandHandlerTests()
         {
             _taskToBeEdited = new Task("My Task", "My Task Description", DateTime.Now);
             _tasksDAO = new Tasks.Adapters.DataAccess.TasksDAO();
@@ -37,7 +35,7 @@ namespace TasksTests.TaskCommandHandlers
             _handler = new EditTaskCommandHandler(_tasksDAO, s_commandProcessor);
         }
 
-        [Test]
+        [Fact]
         public void When_editing_an_existing_task()
         {
             _handler.Handle(_cmd);
@@ -53,5 +51,4 @@ namespace TasksTests.TaskCommandHandlers
             A.CallTo(() => s_commandProcessor.Post(A<TaskEditedEvent>._)).MustHaveHappened(Repeated.Exactly.Once);
         }
     }
-
 }

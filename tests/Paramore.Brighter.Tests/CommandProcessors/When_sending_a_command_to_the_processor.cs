@@ -22,19 +22,17 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class CommandProcessorSendTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorSendTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
@@ -43,7 +41,7 @@ namespace Paramore.Brighter.Tests
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_Sending_A_Command_To_The_Processor()
         {
             _commandProcessor.Send(_myCommand);
@@ -53,5 +51,3 @@ namespace Paramore.Brighter.Tests
         }
     }
 }
-
-

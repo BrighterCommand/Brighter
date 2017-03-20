@@ -25,21 +25,19 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.rmq
 {
-    [Category("RMQ")]
-    [TestFixture]
-    public class RmqMessageProducerSupportsMultipleThreadsTests
+    [Trait("Category", "RMQ")]
+    public class RmqMessageProducerSupportsMultipleThreadsTests : IDisposable
     {
         private IAmAMessageProducer _messageProducer;
         private Message _message;
 
-        [SetUp]
-        public void Establish()
+        public RmqMessageProducerSupportsMultipleThreadsTests()
         {
             _message = new Message(header: new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
 
@@ -52,7 +50,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
             _messageProducer = new RmqMessageProducer(rmqConnection);
         }
 
-        [Test]
+        [Fact]
         public void When_multiple_threads_try_to_post_a_message_at_the_same_time()
         {
             bool exceptionHappened = false;
@@ -73,8 +71,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
 
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _messageProducer.Dispose();
         }

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Nancy.Json;
 using Nancy.Testing;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
@@ -10,7 +10,7 @@ using Paramore.Brighter.Viewer.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
 {
-    [TestFixture]
+
     public class RetrieveMessageStoreContentTypeJsonTests
     {
         private readonly string _storeUri = "/stores/storeName";

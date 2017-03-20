@@ -23,23 +23,21 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.MsSql;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class SqlCommandStoreDuplicateMessageTests
+    [Trait("Category", "MSSQL")]
+    public class SqlCommandStoreDuplicateMessageTests : IDisposable
     {
         private MsSqlTestHelper _msSqlTestHelper;
         private MsSqlCommandStore _sqlCommandStore;
         private MyCommand _raisedCommand;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public SqlCommandStoreDuplicateMessageTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
@@ -49,7 +47,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             _sqlCommandStore.Add<MyCommand>(_raisedCommand);
         }
 
-        [Test]
+        [Fact]
         public void When_The_Message_Is_Already_In_The_Command_Store()
         {
             _exception = Catch.Exception(() => _sqlCommandStore.Add(_raisedCommand));
@@ -58,8 +56,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             Assert.Null(_exception);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
         }

@@ -26,13 +26,12 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
-    [TestFixture]
-    public class SqliteMessageStoreRangeRequestTests
+    public class SqliteMessageStoreRangeRequestTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteMessageStore _sSqlMessageStore;
@@ -43,8 +42,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
         private Message _message2;
         private Message _messageEarliest;
 
-        [SetUp]
-        public void Establish()
+        public SqliteMessageStoreRangeRequestTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -57,7 +55,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             _sSqlMessageStore.Add(_message2);
         }
 
-        [Test]
+        [Fact]
         public void When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched()
         {
             messages = _sSqlMessageStore.Get(1, 3);
@@ -70,8 +68,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             Assert.NotNull(messages);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -32,15 +32,13 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessagePumpUnacceptableMessageTests
     {
         private IAmAMessagePump _messagePump;
         private FakeChannel _channel;
         private SpyRequeueCommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpUnacceptableMessageTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
@@ -52,7 +50,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(unacceptableMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_An_Unacceptable_Message_Is_Recieved()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);

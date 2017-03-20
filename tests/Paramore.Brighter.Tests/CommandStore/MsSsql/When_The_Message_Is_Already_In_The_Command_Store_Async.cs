@@ -24,24 +24,21 @@ THE SOFTWARE. */
 
 using System;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.MsSql;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 {
-
-    [Category("MSSQL")]
-    [TestFixture]
-    public class SqlCommandStoreDuplicateMessageAsyncTests
+    [Trait("Category", "MSSQL")]
+    public class SqlCommandStoreDuplicateMessageAsyncTests : IDisposable
     {
         private MsSqlTestHelper _msSqlTestHelper;
         private MsSqlCommandStore _sqlCommandStore;
         private MyCommand _raisedCommand;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public SqlCommandStoreDuplicateMessageAsyncTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
@@ -51,7 +48,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             AsyncContext.Run(async () => await _sqlCommandStore.AddAsync<MyCommand>(_raisedCommand));
         }
 
-        [Test]
+        [Fact]
         public void When_The_Message_Is_Already_In_The_Command_Store_Async()
         {
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _sqlCommandStore.AddAsync(_raisedCommand)));
@@ -60,8 +57,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             Assert.Null(_exception);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
         }

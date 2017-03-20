@@ -27,14 +27,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class MsSqlMessageStoreRangeRequestAsyncTests
+    [Trait("Category", "MSSQL")]
+    public class MsSqlMessageStoreRangeRequestAsyncTests : IDisposable
     {
         private MsSqlTestHelper _msSqlTestHelper;
         private readonly string _TopicFirstMessage = "test_topic";
@@ -45,8 +44,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
         private Message _messageEarliest;
         private MsSqlMessageStore _sqlMessageStore;
 
-        [SetUp]
-        public void Establish()
+        public MsSqlMessageStoreRangeRequestAsyncTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
@@ -61,7 +59,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             AsyncContext.Run( async () => await _sqlMessageStore.AddAsync(_message2));
         }
 
-        [Test]
+        [Fact]
         public void When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched_Async()
         {
             AsyncContext.Run(async () => messages = await _sqlMessageStore.GetAsync(1, 3));
@@ -74,13 +72,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             Assert.NotNull(messages);
         }
 
-        [TearDown]
-        public void Cleanup()
-        {
-            CleanUpDb();
-        }
-
-        private void CleanUpDb()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
         }

@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -32,7 +32,6 @@ using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [TestFixture]
     public class MonitorEventMessageMapperTests
     {
         private const string InstanceName = "Paramore.Tests";
@@ -45,8 +44,7 @@ namespace Paramore.Brighter.Tests.Monitoring
         private static int _elapsedMilliseconds;
         private static DateTime _overrideTime;
 
-        [SetUp]
-        public void Establish()
+        public MonitorEventMessageMapperTests()
         {
             _overrideTime = DateTime.UtcNow;
             Clock.OverrideTime = _overrideTime;
@@ -60,7 +58,7 @@ namespace Paramore.Brighter.Tests.Monitoring
 
        }
 
-        [Test]
+        [Fact]
         public void When_Serializing_A_Monitoring_Event()
         {
             _monitorEvent = _monitorEventMessageMapper.MapToRequest(_message);

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -9,15 +9,13 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessageDispatcherRoutingAsyncTests
     {
         private Dispatcher _dispatcher;
         private FakeChannel _channel;
         private SpyCommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public MessageDispatcherRoutingAsyncTests()
         {
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
@@ -44,7 +42,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher.Receive();
         }
 
-        [Test]
+        [Fact]
         public void When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler_Async()
         {
             Task.Delay(1000).Wait();

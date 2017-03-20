@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
@@ -36,7 +36,6 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [TestFixture]
     public class MonitorHandlerMustObserveButRethrowTests
     {
         private MyCommand _command;
@@ -47,8 +46,7 @@ namespace Paramore.Brighter.Tests.Monitoring
         private string _originalRequestAsJson;
         private DateTime _at;
 
-        [SetUp]
-        public void Establish()
+        public MonitorHandlerMustObserveButRethrowTests()
         {
             _controlBusSender = new SpyControlBusSender();
             var registry = new SubscriberRegistry();
@@ -71,7 +69,7 @@ namespace Paramore.Brighter.Tests.Monitoring
             Clock.OverrideTime = _at;
         }
 
-        [Test]
+        [Fact]
         public void When_Monitoring_We_Should_Record_But_Rethrow_Exceptions_Async()
         {
             _thrownException = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_command)));

@@ -24,14 +24,14 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
-    public class CommandProcessorNoMessageMapperTests
+
+    public class CommandProcessorNoMessageMapperTests : IDisposable
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -40,8 +40,7 @@ namespace Paramore.Brighter.Tests
         private FakeMessageProducer _fakeMessageProducer;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorNoMessageMapperTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -79,8 +78,7 @@ namespace Paramore.Brighter.Tests
             Assert.IsInstanceOf<ArgumentOutOfRangeException>(_exception);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
         }

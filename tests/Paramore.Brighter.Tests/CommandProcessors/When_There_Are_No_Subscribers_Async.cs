@@ -24,20 +24,18 @@ THE SOFTWARE. */
 
 using System;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class CommandProcessorNoMatchingSubcribersAsyncTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorNoMatchingSubcribersAsyncTests()
         {
             var registry = new SubscriberRegistry();
             var handlerFactory = new TestHandlerFactoryAsync<MyEvent, MyEventHandlerAsync>(() => new MyEventHandlerAsync());

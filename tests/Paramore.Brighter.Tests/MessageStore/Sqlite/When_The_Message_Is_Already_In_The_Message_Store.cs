@@ -24,21 +24,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
-    [TestFixture]
-    public class SqliteMessageStoreMessageAlreadyExistsTests
+    public class SqliteMessageStoreMessageAlreadyExistsTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteMessageStore _sSqlMessageStore;
         private Exception _exception;
         private Message _messageEarliest;
 
-        [SetUp]
-        public void Establish()
+        public SqliteMessageStoreMessageAlreadyExistsTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -48,7 +46,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             _sSqlMessageStore.Add(_messageEarliest);
         }
 
-        [Test]
+        [Fact]
         public void When_The_Message_Is_Already_In_The_Message_Store()
         {
             _exception = Catch.Exception(() => _sSqlMessageStore.Add(_messageEarliest));
@@ -57,9 +55,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             Assert.Null(_exception);
         }
 
-
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

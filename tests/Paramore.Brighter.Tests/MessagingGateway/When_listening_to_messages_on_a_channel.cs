@@ -24,11 +24,10 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway
 {
-    [TestFixture]
     public class ChannelMessageReceiveTests
     {
         private IAmAChannel _channel;
@@ -36,8 +35,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
         private Message _receivedMessage;
         private Message _sentMessage;
 
-        [SetUp]
-        public void Establish()
+        public ChannelMessageReceiveTests()
         {
             _gateway = A.Fake<IAmAMessageConsumer>();
 
@@ -50,7 +48,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
             A.CallTo(() => _gateway.Receive(1000)).Returns(_sentMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_Listening_To_Messages_On_A_Channel()
         {
             _receivedMessage = _channel.Receive(1000);
@@ -60,6 +58,5 @@ namespace Paramore.Brighter.Tests.MessagingGateway
             //_should_return_the_next_message_from_the_gateway
             Assert.AreEqual(_sentMessage, _receivedMessage);
         }
-
     }
 }

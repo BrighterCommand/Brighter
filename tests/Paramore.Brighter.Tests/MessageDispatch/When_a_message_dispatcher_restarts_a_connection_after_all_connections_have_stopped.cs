@@ -22,10 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -33,8 +34,7 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
-    public class DispatcherRestartConnectionTests
+    public class DispatcherRestartConnectionTests : IDisposable
     {
         private Dispatcher _dispatcher;
         private FakeChannel _channel;
@@ -42,8 +42,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         private Connection _connection;
         private Connection _newConnection;
 
-        [SetUp]
-        public void Establish()
+        public DispatcherRestartConnectionTests()
         {
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
@@ -68,8 +67,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             Assert.AreEqual(0, _dispatcher.Consumers.Count());
         }
 
-
-        [Test]
+        [Fact]
         public void When_A_Message_Dispatcher_Restarts_A_Connection_After_All_Connections_Have_Stopped()
         {
             _dispatcher.Open("newTest");
@@ -89,8 +87,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             Assert.AreEqual(2, _dispatcher.Connections.Count());
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)
                 _dispatcher.End().Wait();

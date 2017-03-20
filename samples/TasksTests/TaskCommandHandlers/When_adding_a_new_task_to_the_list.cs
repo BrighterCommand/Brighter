@@ -1,6 +1,6 @@
 ﻿using System;
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter;
 using Tasks.Adapters.DataAccess;
 using Tasks.Model;
@@ -9,7 +9,6 @@ using Tasks.Ports.Handlers;
 
 namespace TasksTests.TaskCommandHandlers
 {
-    [TestFixture]
     public class AddTaskCommandHandlerTests
     {
         private AddTaskCommandHandler _handler;
@@ -21,8 +20,7 @@ namespace TasksTests.TaskCommandHandlers
         private readonly DateTime _now = DateTime.Now;
         private IAmACommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public AddTaskCommandHandlerTests()
         {
             _tasksDAO = new Tasks.Adapters.DataAccess.TasksDAO();
             _tasksDAO.Clear();
@@ -34,7 +32,7 @@ namespace TasksTests.TaskCommandHandlers
             _handler = new AddTaskCommandHandler(_tasksDAO, _commandProcessor);
         }
 
-        [Test]
+        [Fact]
         public void When_adding_a_new_task_to_the_list()
         {
             _handler.Handle(_cmd);
@@ -48,5 +46,4 @@ namespace TasksTests.TaskCommandHandlers
             Assert.AreEqual(_now.Date, _taskToBeAdded.DueDate.Value.Date);
         }
     }
-
 }

@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
-    public class CommandProcessorNoMessageStoreAsyncTests
+    public class CommandProcessorNoMessageStoreAsyncTests : IDisposable
 
     {
         private CommandProcessor _commandProcessor;
@@ -39,8 +38,7 @@ namespace Paramore.Brighter.Tests
         private FakeMessageProducer _fakeMessageProducer;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorNoMessageStoreAsyncTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -65,14 +63,13 @@ namespace Paramore.Brighter.Tests
                 (IAmAMessageProducer)_fakeMessageProducer);
         }
 
-        [Test]
+        [Fact]
         public void When_Posting_A_Message_And_There_Is_No_Message_Store_Async()
         {
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PostAsync(_myCommand)));
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
 

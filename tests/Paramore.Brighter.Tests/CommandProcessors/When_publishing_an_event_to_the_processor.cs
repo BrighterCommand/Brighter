@@ -22,19 +22,18 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
+
     public class CommandProcessorPublishEventTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyEvent _myEvent = new MyEvent();
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPublishEventTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
@@ -43,7 +42,7 @@ namespace Paramore.Brighter.Tests
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_Publishing_An_Event_To_The_Processor()
         {
             _commandProcessor.Publish(_myEvent);

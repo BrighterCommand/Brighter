@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture()]
-    public class CommandProcessorPostMissingMessageProducerTests
+    public class CommandProcessorPostMissingMessageProducerTests : IDisposable
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -39,8 +38,7 @@ namespace Paramore.Brighter.Tests
         private FakeMessageStore _fakeMessageStore;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPostMissingMessageProducerTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -70,20 +68,18 @@ namespace Paramore.Brighter.Tests
                 (IAmAMessageProducer)null);
         }
 
-        [Test]
+        [Fact]
         public void When_Posting_A_Message_And_There_Is_No_Message_Producer()
         {
             _exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
 
            // _should_throw_an_exception
             Assert.IsInstanceOf<InvalidOperationException>(_exception);
         }
-
     }
 }

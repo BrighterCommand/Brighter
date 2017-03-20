@@ -1,12 +1,11 @@
 ﻿using System;
 using Amazon.Runtime;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
 {
-    [Category("AWS")]
-    [TestFixture]
+    [Trait("Category", "AWS")]
     public class SqsMessageConsumerTests
     {
         private TestAWSQueueListener _testQueueListener;
@@ -15,8 +14,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
         private Message _sentMessage;
         private string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
 
-        [SetUp]
-        public void Establish()
+        public SqsMessageConsumerTests()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
@@ -29,7 +27,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
             _testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
         }
 
-        [Test]
+        [Fact]
         public void When_purging_the_queue()
         {
             _sender.Send(_sentMessage);

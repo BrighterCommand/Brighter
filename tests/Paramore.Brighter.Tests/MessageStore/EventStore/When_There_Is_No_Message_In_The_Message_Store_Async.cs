@@ -33,13 +33,13 @@ using EventStore.ClientAPI.Embedded;
 using EventStore.Core;
 using EventStore.Core.Data;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.EventStore;
 
 namespace Paramore.Brighter.Tests.MessageStore.EventStore
 {
     [Category("EventStore")]
-    [TestFixture]
+
     public class EventStoreEmptyAsyncTests
     {
         private static IList<Message> s_messages;
@@ -80,13 +80,13 @@ namespace Paramore.Brighter.Tests.MessageStore.EventStore
         }
 
         [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             s_eventStore.Close();
             s_eventStoreNode.Stop();
         }
 
-        [Test]
+        [Fact]
         public void When_There_Is_No_Message_In_The_Message_Store()
         {
             AsyncContext.Run(async () => s_messages = await s_eventStoreMessageStore.GetAsync(EmptyStreamName, 0, 1));

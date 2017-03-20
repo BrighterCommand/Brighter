@@ -37,7 +37,7 @@ THE SOFTWARE. */
 
 using Nancy.Json;
 using Nancy.Testing;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
@@ -45,7 +45,7 @@ using Paramore.Brighter.Viewer.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Viewer.Tests.Adaptors.MessagesModuleTests
 {
-    [TestFixture]
+
     public class RetreivingMessageStoreNotImplementingViewerTests
     {
         private static string _storeName = "storeNotImplementingViewer";
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.MessagesModuleTests
         }
 
 
-        [Test]
+        [Fact]
         public void When_retrieving_messages_for_existent_store_that_is_not_viewer()
         {
             _result = _browser.Get(_uri, with =>

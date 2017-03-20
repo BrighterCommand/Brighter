@@ -23,25 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class CommandProcessorPublishMissingHandlerFactoryTests
     {
         private CommandProcessor _commandProcessor;
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPublishMissingHandlerFactoryTests()
         {
             _commandProcessor = new CommandProcessor(new SubscriberRegistry(), (IAmAHandlerFactory) null, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_There_Is_No_Handler_Factory_On_A_Publish()
         {
             _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));

@@ -24,21 +24,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
 namespace Paramore.Brighter.Tests.messagestore.sqlite
 {
-    [TestFixture]
-    public class SqliteMessageStoreEmptyStoreTests
+    public class SqliteMessageStoreEmptyStoreTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteMessageStore _SqlMessageStore;
         private Message _messageEarliest;
         private Message _storedMessage;
 
-        [SetUp]
-        public void Establish()
+        public SqliteMessageStoreEmptyStoreTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -47,7 +45,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
                 new MessageBody("message body"));
         }
 
-        [Test]
+        [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Message_Store()
         {
             _storedMessage = _SqlMessageStore.Get(_messageEarliest.Id);
@@ -56,9 +54,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             Assert.AreEqual(MessageType.MT_NONE, _storedMessage.Header.MessageType);
         }
 
-
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

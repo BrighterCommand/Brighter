@@ -24,22 +24,20 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class MsSqlMessageStoreEmptyStoreTests
+    [Trait("Category", "MSSQL")]
+    public class MsSqlMessageStoreEmptyStoreTests : IDisposable
     {
         private MsSqlTestHelper _msSqlTestHelper;
         private Message _messageEarliest;
         private MsSqlMessageStore _sqlMessageStore;
         private Message _storedMessage;
 
-        [SetUp]
-        public void Establish()
+        public MsSqlMessageStoreEmptyStoreTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
@@ -48,7 +46,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
         }
 
-        [Test]
+        [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Message_Store()
         {
             _storedMessage = _sqlMessageStore.Get(_messageEarliest.Id);
@@ -57,13 +55,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             Assert.AreEqual(MessageType.MT_NONE, _storedMessage.Header.MessageType);
         }
 
-        [TearDown]
-        public void Cleanup()
-        {
-            CleanUpDb();
-        }
-
-        private void CleanUpDb()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
         }

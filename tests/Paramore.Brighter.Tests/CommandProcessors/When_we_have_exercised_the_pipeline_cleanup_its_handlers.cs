@@ -1,18 +1,16 @@
 using System;
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class PipelineCleanupTests
     {
         private PipelineBuilder<MyCommand> _pipeline_Builder;
         private static string s_released;
 
-        [SetUp]
-        public void Establish()
+        public PipelineCleanupTests()
         {
             s_released = string.Empty;
 
@@ -55,7 +53,7 @@ namespace Paramore.Brighter.Tests
         }
 
 
-        [Test]
+        [Fact]
         public void When_We_Have_Exercised_The_Pipeline_Cleanup_Its_Handlers()
         {
             _pipeline_Builder.Dispose();

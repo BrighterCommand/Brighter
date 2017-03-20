@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -33,7 +33,6 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class PerformerCanStopTests
     {
         private Performer _performer;
@@ -41,8 +40,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         private FakeChannel _channel;
         private Task _performerTask;
 
-        [SetUp]
-        public void Establish()
+        public PerformerCanStopTests()
         {
             _commandProcessor = new SpyCommandProcessor();
             _channel = new FakeChannel();
@@ -60,7 +58,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _performer.Stop();
         }
 
-        [Test]
+        [Fact]
         public void When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop()
         {
             _performerTask.Wait();

@@ -1,14 +1,12 @@
 ﻿using System;
 using Amazon.Runtime;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
 {
-    
-    [Category("AWS")]
-    [TestFixture]
-    public class SqsMessageProducerRequeueTests
+    [Trait("Category", "AWS")]
+    public class SqsMessageProducerRequeueTests : IDisposable
     {
         private TestAWSQueueListener _testQueueListener;
         private IAmAMessageProducer _sender;
@@ -19,8 +17,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
         private string _receivedReceiptHandle;
         private readonly string _queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
 
-        [SetUp]
-        public void Establish()
+        public SqsMessageProducerRequeueTests()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
@@ -33,7 +30,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
             _testQueueListener = new TestAWSQueueListener(credentials, _queueUrl);
         }
 
-        [Test]
+        [Fact]
         public void When_requeueing_a_message()
         {
             _sender.Send(_sentMessage);
@@ -47,8 +44,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
             Assert.AreNotEqual(_requeuedMessage.Header.Bag["ReceiptHandle"].ToString(), _receivedReceiptHandle);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _testQueueListener.DeleteMessage(_requeuedMessage.Header.Bag["ReceiptHandle"].ToString());
         }

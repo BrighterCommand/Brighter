@@ -27,15 +27,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class SqlMessageStoreWritngMessagesAsyncTests
+    [Trait("Category", "MSSQL")]
+    public class SqlMessageStoreWritngMessagesAsyncTests : IDisposable
     {
         private MsSqlTestHelper _msSqlTestHelper;
         private Message _message2;
@@ -44,8 +43,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
         private IList<Message> _retrievedMessages;
         private MsSqlMessageStore _sqlMessageStore;
 
-        [SetUp]
-        public void Establish()
+        public SqlMessageStoreWritngMessagesAsyncTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
@@ -66,7 +64,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             AsyncContext.Run(async () => await _sqlMessageStore.AddAsync(_messageLatest));
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_Messages_To_The_Message_Store_Async()
         {
             AsyncContext.Run(async () => _retrievedMessages = await _sqlMessageStore.GetAsync());
@@ -79,16 +77,9 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             Assert.AreEqual(3, _retrievedMessages.Count());
         }
 
-        [TearDown]
-        public void Cleanup()
-        {
-            CleanUpDb();
-        }
-
-        private void CleanUpDb()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
-
         }
     }
 }

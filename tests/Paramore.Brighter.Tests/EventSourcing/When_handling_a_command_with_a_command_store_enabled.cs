@@ -22,22 +22,20 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.EventSourcing
 {
-    [TestFixture]
     public class CommandProcessorUsingCommandStoreTests
     {
         private MyCommand _command;
         private IAmACommandStore _commandstore;
         private IAmACommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorUsingCommandStoreTests()
         {
             _commandstore = new InMemoryCommandStore();
 
@@ -55,7 +53,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
 
         }
 
-        [Test]
+        [Fact]
         public void When_Handling_A_Command_With_A_Command_Store_Enabled()
         {
             _commandProcessor.Send(_command);

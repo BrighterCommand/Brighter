@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -34,7 +34,7 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
+
     public class MessageDispatcherMultipleConnectionTests
     {
         private Dispatcher _dispatcher;
@@ -43,8 +43,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         private IAmACommandProcessor _commandProcessor;
         private static int _numberOfConsumers;
 
-        [SetUp]
-        public void Establish()
+        public MessageDispatcherMultipleConnectionTests()
         {
             _eventChannel = new FakeChannel();
             _commandChannel = new FakeChannel();
@@ -76,7 +75,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
 
-        [Test]
+        [Fact]
         public void When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers()
         {
             Task.Delay(1000).Wait();

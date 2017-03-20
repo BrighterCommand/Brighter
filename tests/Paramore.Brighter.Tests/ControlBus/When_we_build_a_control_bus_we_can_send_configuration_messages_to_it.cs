@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.ControlBus;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
@@ -32,7 +32,6 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class ControlBusTests
     {
         private IDispatcher _dispatcher;
@@ -41,8 +40,7 @@ namespace Paramore.Brighter.Tests.ControlBus
         private ConfigurationCommand _configurationCommand;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public ControlBusTests()
         {
             _dispatcher = A.Fake<IDispatcher>();
             var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
@@ -59,7 +57,7 @@ namespace Paramore.Brighter.Tests.ControlBus
 
         }
 
-        [Test]
+        [Fact]
         public void When_we_build_a_control_bus_we_can_send_configuration_messages_to_it()
         {
             _exception = Catch.Exception(() => _controlBus.CommandProcessor.Send(_configurationCommand));

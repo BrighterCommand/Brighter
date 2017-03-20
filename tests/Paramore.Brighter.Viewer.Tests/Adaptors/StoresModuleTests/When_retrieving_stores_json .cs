@@ -3,7 +3,7 @@ using System.Linq;
 using Nancy;
 using Nancy.Json;
 using Nancy.Testing;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
             }));
         }
 
-        [Test]
+        [Fact]
         public void When_retrieving_stores_json()
         {
             _result = _browser.Get(_storesUri, with =>

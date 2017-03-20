@@ -38,14 +38,14 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Nancy.Testing;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.Viewer.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Viewer.Tests.Adaptors.MessagesModuleTests
 {
-    [TestFixture]
+
     public class RetrieveMessagesForStoreTests
     {
         private static string _storeName = "testStore";
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.MessagesModuleTests
         private Browser _browser;
         private BrowserResponse _result;
 
-        [Test]
+        [Fact]
         public void Establish()
         {
             var messages = new List<Message>
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.MessagesModuleTests
         }
 
 
-        [Test]
+        [Fact]
         public void When_retrieving_messages_for_a_store()
         {
             _result = _browser.Get(_uri, with =>

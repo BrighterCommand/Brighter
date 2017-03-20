@@ -32,13 +32,13 @@ using EventStore.ClientAPI.Embedded;
 using EventStore.Core;
 using EventStore.Core.Data;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.EventStore;
 
 namespace Paramore.Brighter.Tests.MessageStore.EventStore
 {
     [Category("EventStore")]
-    [TestFixture]
+
     public class EventStoreMessageStoreAsyncTests
     {
         private IList<Message> _messages;
@@ -87,13 +87,13 @@ namespace Paramore.Brighter.Tests.MessageStore.EventStore
         }
 
         [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _eventStore.Close();
             _eventStoreNode.Stop();
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_Messages_To_The_Message_Store_Async()
         {
             AsyncContext.Run(async () => _messages = await _eventStoreMessageStore.GetAsync(StreamName, 0, 2));

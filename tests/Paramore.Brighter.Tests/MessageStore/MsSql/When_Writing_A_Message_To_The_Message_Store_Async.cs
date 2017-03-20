@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class SqlMessageStoreWritingMessageAsyncTests
+    [Trait("Category", "MSSQL")]
+    public class SqlMessageStoreWritingMessageAsyncTests : IDisposable
     {
         private MsSqlTestHelper _msSqlTestHelper;
         private readonly string key1 = "name1";
@@ -42,8 +41,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
         private readonly string value1 = "value1";
         private readonly string value2 = "value2";
 
-        [SetUp]
-        public void Establish()
+        public SqlMessageStoreWritingMessageAsyncTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
@@ -57,7 +55,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             AsyncContext.Run(async () => await _sqlMessageStore.AddAsync(_messageEarliest));
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_A_Message_To_The_Message_Store_Async()
         {
             AsyncContext.Run(async () => _storedMessage = await _sqlMessageStore.GetAsync(_messageEarliest.Id));
@@ -78,14 +76,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             Assert.AreEqual(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
         }
 
-
-        [TearDown]
-        public void Cleanup()
-        {
-            CleanUpDb();
-        }
-
-        private void CleanUpDb()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
         }

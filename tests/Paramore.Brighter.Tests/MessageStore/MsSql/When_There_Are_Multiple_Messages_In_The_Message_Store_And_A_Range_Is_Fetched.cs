@@ -26,14 +26,13 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class MsSqlMessageStoreRangeRequestTests
+    [Trait("Category", "MSSQL")]
+    public class MsSqlMessageStoreRangeRequestTests : IDisposable
     {
         private MsSqlTestHelper _msSqlTestHelper;
         private readonly string _TopicFirstMessage = "test_topic";
@@ -44,8 +43,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
         private Message s_messageEarliest;
         private MsSqlMessageStore s_sqlMessageStore;
 
-        [SetUp]
-        public void Establish()
+        public MsSqlMessageStoreRangeRequestTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
@@ -59,7 +57,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             s_sqlMessageStore.Add(s_message2);
         }
 
-        [Test]
+        [Fact]
         public void When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched()
         {
             messages = s_sqlMessageStore.Get(1, 3);
@@ -72,14 +70,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             Assert.NotNull(messages);
         }
 
-
-        [TearDown]
-        public void Cleanup()
-        {
-            CleanUpDb();
-        }
-
-        private void CleanUpDb()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
         }

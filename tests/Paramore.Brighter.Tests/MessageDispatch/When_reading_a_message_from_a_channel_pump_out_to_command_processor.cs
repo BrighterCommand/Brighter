@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -39,8 +39,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         private SpyCommandProcessor _commandProcessor;
         private MyEvent _event;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpToCommandProcessorTests()
         {
             _commandProcessor = new SpyCommandProcessor();
             _channel = new FakeChannel();
@@ -55,7 +54,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(quitMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_Reading_A_Message_From_A_Channel_Pump_Out_To_Command_Processor()
         {
             _messagePump.Run();

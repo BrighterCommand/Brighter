@@ -24,14 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessagePumpRetryCommandOnConnectionFailureTests
     {
         private IAmAMessagePump _messagePump;
@@ -39,8 +38,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         private SpyCommandProcessor _commandProcessor;
         private MyCommand _command;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpRetryCommandOnConnectionFailureTests()
         {
             _commandProcessor = new SpyCommandProcessor();
             _channel = new FailingChannel { NumberOfRetries = 4 };
@@ -57,7 +55,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(quitMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Channel_Failure_Exception_Is_Thrown_For_Command_Should_Retry_Until_Connection_Re_established()
         {
             _messagePump.Run();

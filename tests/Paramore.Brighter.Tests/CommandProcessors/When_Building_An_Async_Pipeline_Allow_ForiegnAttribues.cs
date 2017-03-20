@@ -1,18 +1,16 @@
 ﻿using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class PipelineForiegnAttributesAsyncTests
     {
         private PipelineBuilder<MyCommand> _pipeline_Builder;
         private IHandleRequestsAsync<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish()
+        public PipelineForiegnAttributesAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyObsoleteCommandHandlerAsync>();

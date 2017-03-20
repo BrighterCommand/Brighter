@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -32,7 +32,6 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessagePumpEventRequeueTests
     {
         private IAmAMessagePump _messagePump;
@@ -40,8 +39,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         private SpyCommandProcessor _commandProcessor;
         private MyEvent _event;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpEventRequeueTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
@@ -58,7 +56,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(quitMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Requeue_Of_Event_Exception_Is_Thrown()
         {
             _messagePump.Run();

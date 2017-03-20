@@ -24,26 +24,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.NoOpStore
 {
-    [TestFixture]
     public class NoOpMessageStoreWriteTests
     {
         private Message _messageEarliest;
         private NoOpMessageStore _noOpStore;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public NoOpMessageStoreWriteTests()
         {
             _noOpStore = new NoOpMessageStore();
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
             _noOpStore.Add(_messageEarliest);
         }
 
-        [Test]
+        [Fact]
         public void When_writing_to_noopstore()
         {
             _exception = Catch.Exception(() => _noOpStore.Add(_messageEarliest));

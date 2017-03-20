@@ -25,14 +25,13 @@ THE SOFTWARE. */
 using System;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
-    public class CommandProcessorNoMessageMapperAsyncTests
+    public class CommandProcessorNoMessageMapperAsyncTests : IDisposable
     {
         private CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -41,8 +40,7 @@ namespace Paramore.Brighter.Tests
         private FakeMessageProducer _fakeMessageProducer;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorNoMessageMapperAsyncTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -72,7 +70,7 @@ namespace Paramore.Brighter.Tests
                 (IAmAMessageProducerAsync)_fakeMessageProducer);
         }
 
-        [Test]
+        [Fact]
         public void When_Posting_A_Message_And_There_Is_No_Message_Mapper_Registry_Async()
         {
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PostAsync(_myCommand)));
@@ -81,11 +79,9 @@ namespace Paramore.Brighter.Tests
             Assert.IsInstanceOf<ArgumentOutOfRangeException>(_exception);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
         }
-
     }
 }

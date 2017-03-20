@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
@@ -32,8 +32,6 @@ using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [Ignore("Breaks dotnet test runner")]
-    [TestFixture]
     public class MessageDispatcherResetConnection
     {
         private Dispatcher _dispatcher;
@@ -41,8 +39,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         private IAmACommandProcessor _commandProcessor;
         private Connection _connection;
 
-        [SetUp]
-        public void Establish ()
+        public MessageDispatcherResetConnection()
         {
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
@@ -64,7 +61,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
 
-        [Test]
+        [Fact(Skip = "TODO: Breaks dotnet test runner")]
         public void When_A_Message_Dispatcher_Restarts_A_Connection()
         {
             _dispatcher.Open(_connection);

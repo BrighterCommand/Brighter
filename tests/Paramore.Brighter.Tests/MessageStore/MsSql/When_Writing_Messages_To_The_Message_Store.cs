@@ -26,15 +26,14 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
-    [Category("MSSQL")]
-    [TestFixture]
-    public class SqlMessageStoreWritngMessagesTests
+    [Trait("Category", "MSSQL")]
+    public class SqlMessageStoreWritngMessagesTests : IDisposable
     {
         private MsSqlTestHelper _msSqlTestHelper;
         private Message _message2;
@@ -43,8 +42,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
         private IEnumerable<Message> _retrievedMessages;
         private MsSqlMessageStore _sqlMessageStore;
 
-        [SetUp]
-        public void Establish()
+        public SqlMessageStoreWritngMessagesTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
@@ -68,7 +66,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             _sqlMessageStore.Add(_messageLatest);
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_Messages_To_The_Message_Store()
         {
             _retrievedMessages = _sqlMessageStore.Get();
@@ -81,13 +79,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             Assert.AreEqual(3, _retrievedMessages.Count());
         }
 
-        [TearDown]
-        public void Cleanup()
-        {
-            CleanUpDb();
-        }
-
-        public void CleanUpDb()
+        public void Dispose()
         {
             _msSqlTestHelper.CleanUpDb();
         }

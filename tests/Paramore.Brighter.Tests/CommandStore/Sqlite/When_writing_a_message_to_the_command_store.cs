@@ -22,15 +22,15 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using Microsoft.Data.Sqlite;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.commandstore.sqlite
 {
-    [TestFixture]
-    public class SqliteCommandStoreAddMessageTests
+    public class SqliteCommandStoreAddMessageTests : IDisposable
     {
         private SqliteTestHelper _sqliteTestHelper;
         private SqliteCommandStore _sqlCommandStore;
@@ -38,8 +38,7 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
         private MyCommand _storedCommand;
         private SqliteConnection _sqliteConnection;
 
-        [SetUp]
-        public void Establish()
+        public SqliteCommandStoreAddMessageTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
@@ -49,7 +48,7 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
             _sqlCommandStore.Add<MyCommand>(_raisedCommand);
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_A_Message_To_The_Command_Store()
         {
             _storedCommand = _sqlCommandStore.Get<MyCommand>(_raisedCommand.Id);
@@ -62,8 +61,7 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
             Assert.AreEqual(_raisedCommand.Id, _storedCommand.Id);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

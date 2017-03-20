@@ -23,14 +23,13 @@ THE SOFTWARE. */
 #endregion
 
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class ConfigurationCommandStartTests
     {
         private const string CONNECTION_NAME = "Test";
@@ -38,15 +37,14 @@ namespace Paramore.Brighter.Tests.ControlBus
         private ConfigurationCommand _configurationCommand;
         private IDispatcher _dispatcher;
 
-        [SetUp]
-        public void Establish()
+        public ConfigurationCommandStartTests()
         {
             _dispatcher = A.Fake<IDispatcher>();
             _configurationCommandHandler = new ConfigurationCommandHandler(_dispatcher);
             _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTCHANNEL) {ConnectionName = CONNECTION_NAME};
         }
 
-        [Test]
+        [Fact]
         public void When_receiving_a_start_message_for_a_connection()
         {
             _configurationCommandHandler.Handle(_configurationCommand);

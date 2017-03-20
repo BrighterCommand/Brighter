@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.Domain;
 using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
@@ -8,7 +8,7 @@ using Paramore.Brighter.Viewer.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTests
 {
-    [TestFixture]
+
     public class MessageListModelRetrieverNoMatchingFilterRowsTests
     {
         private static MessageListViewModelRetriever _messageListViewModelRetriever;
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTest
             _messageListViewModelRetriever = new MessageListViewModelRetriever(modelFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_searching_messages_for_non_matching_rows()
         {
             _result = _messageListViewModelRetriever.Filter(storeName, "zxy");

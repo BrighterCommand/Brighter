@@ -1,17 +1,15 @@
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
 {
-    [TestFixture]
     public class PipelineWithHandlerDependenciesTests
     {
         private PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish()
+        public PipelineWithHandlerDependenciesTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDependentCommandHandler>();

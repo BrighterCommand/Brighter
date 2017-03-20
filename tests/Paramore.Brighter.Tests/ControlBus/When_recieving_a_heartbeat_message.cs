@@ -26,7 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
@@ -34,7 +34,6 @@ using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class HeartbeatMessageTests
     {
         private const string TEST_FIRST_CONNECTION_NAME = "Test.First.Connection";
@@ -48,8 +47,7 @@ namespace Paramore.Brighter.Tests.ControlBus
         private IAmAConsumer s_firstConsumer;
         private IAmAConsumer s_secondConsumer;
 
-        [SetUp]
-        public void Establish()
+        public HeartbeatMessageTests()
         {
             var dispatcher = A.Fake<IDispatcher>();
 
@@ -74,7 +72,7 @@ namespace Paramore.Brighter.Tests.ControlBus
 
         }
 
-        [Test]
+        [Fact]
         public void When_recieving_a_heartbeat_message()
         {
             s_handler.Handle(s_heartbeatRequest);
