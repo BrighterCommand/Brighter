@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard1.6;net452</TargetFrameworks>
     <DebugType>portable</DebugType>
-    <AssemblyName>Paramore.Brighter.Messageviewer</AssemblyName>
-    <PackageId>Paramore.Brighter.Messageviewer</PackageId>
+    <AssemblyName>Paramore.Brighter.MessageViewer</AssemblyName>
+    <PackageId>Paramore.Brighter.MessageViewer</PackageId>
     <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.6' ">$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
@@ -31,7 +31,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
     <PackageReference Include="Nancy" Version="2.0.0-barneyrubble" />
     <PackageReference Include="Nancy.Embedded" Version="2.0.0-barneyrubble" />
-    <PackageReference Include="Polly" Version="4.3.0" />
+    <PackageReference Include="Polly" Version="5.0.6" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">

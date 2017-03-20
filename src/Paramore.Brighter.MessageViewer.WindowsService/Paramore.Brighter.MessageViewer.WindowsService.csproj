@@ -3,9 +3,9 @@
   <PropertyGroup>
     <TargetFramework>net452</TargetFramework>
     <DebugType>portable</DebugType>
-    <AssemblyName>Paramore.Brighter.Messageviewer.WindowsService</AssemblyName>
+    <AssemblyName>Paramore.Brighter.MessageViewer.WindowsService</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PackageId>Paramore.Brighter.Messageviewer.WindowsService</PackageId>
+    <PackageId>Paramore.Brighter.MessageViewer.WindowsService</PackageId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -36,7 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.Messageviewer\Paramore.Brighter.MessageViewer.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.MessageViewer\Paramore.Brighter.MessageViewer.csproj" />
   </ItemGroup>
 
 </Project>

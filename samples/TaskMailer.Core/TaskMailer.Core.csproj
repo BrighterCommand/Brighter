@@ -5,7 +5,6 @@
     <DebugType>portable</DebugType>
     <AssemblyName>TaskMailer.Core</AssemblyName>
     <PackageId>TaskMailer.Core</PackageId>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.5' ">$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>

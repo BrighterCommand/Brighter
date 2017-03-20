@@ -55,11 +55,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageSt
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.CommandStore.Sqlite", "src\Paramore.Brighter.CommandStore.Sqlite\Paramore.Brighter.CommandStore.Sqlite.csproj", "{5A8F1495-B8D2-4018-8B3D-6DA25A14290F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageViewer", "src\Paramore.Brighter.Messageviewer\Paramore.Brighter.MessageViewer.csproj", "{97AF4A5C-9A84-496B-AA83-C36D8B0E53F8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageViewer", "src\Paramore.Brighter.MessageViewer\Paramore.Brighter.MessageViewer.csproj", "{97AF4A5C-9A84-496B-AA83-C36D8B0E53F8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageViewer.Console", "src\Paramore.Brighter.Messageviewer.Console\Paramore.Brighter.MessageViewer.Console.csproj", "{1EDB461F-78C0-4469-A3C3-8533C961A963}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageViewer.Console", "src\Paramore.Brighter.MessageViewer.Console\Paramore.Brighter.MessageViewer.Console.csproj", "{1EDB461F-78C0-4469-A3C3-8533C961A963}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageViewer.WindowsService", "src\Paramore.Brighter.Messageviewer.WindowsService\Paramore.Brighter.MessageViewer.WindowsService.csproj", "{C03C3BE3-7DBB-4E53-B957-3222DE4AD7DE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageViewer.WindowsService", "src\Paramore.Brighter.MessageViewer.WindowsService\Paramore.Brighter.MessageViewer.WindowsService.csproj", "{C03C3BE3-7DBB-4E53-B957-3222DE4AD7DE}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DocumentsAndFolders.Sqs.Core", "samples\DocumentsAndFolders.Sqs.Core\DocumentsAndFolders.Sqs.Core.csproj", "{B7DB617D-2A74-447D-B4A4-7088ACE29640}"
 EndProject

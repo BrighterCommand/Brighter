@@ -3,16 +3,16 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp1.0</TargetFramework>
     <DebugType>portable</DebugType>
-    <AssemblyName>Paramore.Brighter.Messageviewer.Console</AssemblyName>
+    <AssemblyName>Paramore.Brighter.MessageViewer.Console</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PackageId>Paramore.Brighter.Messageviewer.Console</PackageId>
+    <PackageId>Paramore.Brighter.MessageViewer.Console</PackageId>
     <PackageTargetFallback>$(PackageTargetFallback);dotnet54;portable-net451+win8</PackageTargetFallback>
     <RuntimeFrameworkVersion>1.0.4</RuntimeFrameworkVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="1.1.1" />
-    <PackageReference Include="Serilog" Version="2.3.0" />
+    <PackageReference Include="Serilog" Version="2.4.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="2.1.0" />
   </ItemGroup>
 
@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.Messageviewer\Paramore.Brighter.MessageViewer.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.MessageViewer\Paramore.Brighter.MessageViewer.csproj" />
   </ItemGroup>
 
 </Project>

@@ -32,10 +32,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0-preview-20170106-08" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
     <PackageReference Include="Nito.AsyncEx.Context" Version="1.1.0" />
-    <PackageReference Include="FakeItEasy" Version="3.0.0" />
-    <PackageReference Include="FluentAssertions" Version="4.16.0" />
+    <PackageReference Include="FakeItEasy" Version="3.1.0" />
+    <PackageReference Include="FluentAssertions" Version="4.19.2" />
     <PackageReference Include="NUnit" Version="3.5.0" />
     <PackageReference Include="dotnet-test-nunit" Version="3.4.0-beta-3" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="1.1.0" />

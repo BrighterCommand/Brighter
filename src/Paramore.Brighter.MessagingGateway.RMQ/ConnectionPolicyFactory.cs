@@ -91,7 +91,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Gets the retry policy.
         /// </summary>
         /// <value>The retry policy.</value>
-        public ContextualPolicy RetryPolicy { get; private set; }
+        public Policy RetryPolicy { get; private set; }
 
         /// <summary>
         /// Gets the circuit breaker policy.

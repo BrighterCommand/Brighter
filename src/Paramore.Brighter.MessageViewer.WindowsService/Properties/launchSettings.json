@@ -15,7 +15,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
-    "Paramore.Brighter.Messageviewer.WindowsService": {
+    "Paramore.Brighter.MessageViewer.WindowsService": {
       "commandName": "Project"
     }
   }

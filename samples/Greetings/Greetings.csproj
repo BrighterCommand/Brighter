@@ -4,7 +4,6 @@
     <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
     <AssemblyName>Greetings</AssemblyName>
     <PackageId>Greetings</PackageId>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.5' ">$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
