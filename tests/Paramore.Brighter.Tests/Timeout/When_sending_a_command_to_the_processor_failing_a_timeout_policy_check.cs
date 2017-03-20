@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -61,11 +62,11 @@ namespace Paramore.Brighter.Tests.Timeout
             _thrownException = (AggregateException)Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_throw_a_timeout_exception
-            Assert.IsInstanceOf<TimeoutException>(_thrownException.Flatten().InnerExceptions.First());
+            _thrownException.Flatten().InnerExceptions.First().Should().BeOfType<TimeoutException>();
             //_should_signal_that_a_timeout_occured_and_handler_should_be_cancelled
-            Assert.True(MyFailsDueToTimeoutHandlerStateTracker.WasCancelled);
+            MyFailsDueToTimeoutHandlerStateTracker.WasCancelled.Should().BeTrue();
             //_should_not_run_to_completion
-            Assert.False(MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted);
+            MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted.Should().BeFalse();
         }
     }
 }

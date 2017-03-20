@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
@@ -58,8 +59,8 @@ namespace Paramore.Brighter.Tests
             //_should_fail_because_multiple_receivers_found
             Assert.IsAssignableFrom(typeof(ArgumentException), _exception);
             //_should_have_an_error_message_that_tells_you_why
-            Assert.NotNull(_exception);
-            StringAssert.Contains("More than one handler was found for the typeof command Paramore.Brighter.Tests.TestDoubles.MyCommand - a command should only have one handler.", _exception.Message);
+            _exception.Should().NotBeNull();
+            _exception.Message.Should().Contain("More than one handler was found for the typeof command Paramore.Brighter.Tests.TestDoubles.MyCommand - a command should only have one handler.");
         }
     }
 }

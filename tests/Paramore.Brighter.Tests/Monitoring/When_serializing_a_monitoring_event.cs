@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.Monitoring.Events;
@@ -64,19 +65,19 @@ namespace Paramore.Brighter.Tests.Monitoring
             _monitorEvent = _monitorEventMessageMapper.MapToRequest(_message);
 
             //_should_have_the_correct_instance_name
-            Assert.AreEqual(InstanceName, _monitorEvent.InstanceName);
+            _monitorEvent.InstanceName.Should().Be(InstanceName);
             //_should_have_the_correct_handler_name
-            Assert.AreEqual(HandlerName, _monitorEvent.HandlerName);
+            _monitorEvent.HandlerName.Should().Be(HandlerName);
             //_should_have_the_correct_handler_full_assembly_name
-            Assert.AreEqual(HandlerFullAssemblyName, _monitorEvent.HandlerFullAssemblyName);
+            _monitorEvent.HandlerFullAssemblyName.Should().Be(HandlerFullAssemblyName);
             //_should_have_the_correct_monitor_type
-            Assert.AreEqual(MonitorEventType.EnterHandler, _monitorEvent.EventType);
+            _monitorEvent.EventType.Should().Be(MonitorEventType.EnterHandler);
             //_should_have_the_original_request_as_json
-            Assert.AreEqual(_originalRequestAsJson, _monitorEvent.RequestBody);
+            _monitorEvent.RequestBody.Should().Be(_originalRequestAsJson);
             //_should_have_the_correct_event_time
-            Assert.AreEqual(_overrideTime, _monitorEvent.EventTime);
+            _monitorEvent.EventTime.Should().Be(_overrideTime);
             //_should_have_the_correct_time_elapsed
-            Assert.AreEqual(_elapsedMilliseconds, _monitorEvent.TimeElapsedMs);
+            _monitorEvent.TimeElapsedMs.Should().Be(_elapsedMilliseconds);
         }
    }
 }

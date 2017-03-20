@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessageViewer.Ports.Handlers;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -16,8 +17,7 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.RepostCommandHandlerTests
         private FakeMessageProducer _fakeMessageProducer;
         private Exception _ex;
 
-        [SetUp]
-        public void Establish()
+        public RepostCommandHandlerMessagesNotFoundTests()
         {
             var fakeStore = new FakeMessageStoreWithViewer();
             var fakeMessageStoreFactory = new FakeMessageStoreViewerFactory(fakeStore, _storeName);
@@ -33,10 +33,9 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.RepostCommandHandlerTests
             _ex = Catch.Exception(() => _repostHandler.Handle(_command));
 
             //should_throw_expected_exception
-            Assert.IsInstanceOf<Exception>(_ex);
-            StringAssert.Contains("messages", _ex.Message);
-            StringAssert.Contains(_command.MessageIds.Single(), _ex.Message);
+            _ex.Should().BeOfType<Exception>();
+            _ex.Message.Should().Contain("messages");
+            _ex.Message.Should().Contain(_command.MessageIds.Single());
         }
-  }
-
+    }
 }

@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
@@ -58,7 +59,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Add(message);
 
-            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
         }
 
@@ -73,13 +74,13 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             Task.Delay(1000).Wait();
 
             //_should_have_consumed_the_messages_in_the_event_channel
-            Assert.AreEqual(0, _channel.Length);
+            _channel.Length.Should().Be(0);
             //_should_have_a_running_state
-            Assert.AreEqual(DispatcherState.DS_RUNNING, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
             //_should_have_only_one_consumer
-            Assert.AreEqual(2, _dispatcher.Consumers.Count());
+            _dispatcher.Consumers.Count().Should().Be(2);
             //_should_have_two_connections
-            Assert.AreEqual(2, _dispatcher.Connections.Count());
+            _dispatcher.Connections.Count().Should().Be(2);
         }
 
         public void Dispose()

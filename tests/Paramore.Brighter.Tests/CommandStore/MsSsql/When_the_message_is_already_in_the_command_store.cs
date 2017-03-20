@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.CommandStore.MsSql;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -53,7 +54,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             _exception = Catch.Exception(() => _sqlCommandStore.Add(_raisedCommand));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
         }
 
         public void Dispose()

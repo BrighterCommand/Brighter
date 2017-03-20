@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -69,11 +70,11 @@ namespace Paramore.Brighter.Tests
             _commandProcessor.Post(_myCommand);
 
             //_should_store_the_message_in_the_sent_command_message_repository
-            Assert.True(_fakeMessageStore.MessageWasAdded);
+            _fakeMessageStore.MessageWasAdded.Should().BeTrue();
             //_should_send_a_message_via_the_messaging_gateway
-            Assert.True(_fakeMessageProducer.MessageWasSent);
+            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             //_should_convert_the_command_into_a_message
-            Assert.AreEqual(_message, _fakeMessageStore.Get().First());
+            _fakeMessageStore.Get().First().Should().Be(_message);
         }
 
         internal class EmptyHandlerFactory : IAmAHandlerFactory

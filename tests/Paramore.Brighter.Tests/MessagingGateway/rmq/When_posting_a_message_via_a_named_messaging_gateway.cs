@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
@@ -67,11 +68,11 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
             _messageHeaders = result.GetHeaders();
 
             //_should_send_a_message_via_rmq_with_the_matching_body
-            Assert.AreEqual(_message.Body.Value, _messageBody);
+            _messageBody.Should().Be(_message.Body.Value);
             //_should_send_a_message_via_rmq_without_delay_header
-            CollectionAssert.DoesNotContain(_messageHeaders.Keys, HeaderNames.DELAY_MILLISECONDS);
+            _messageHeaders.Keys.Should().NotContain(HeaderNames.DELAY_MILLISECONDS);
             //_should_received_a_message_via_rmq_without_delayed_header
-            CollectionAssert.DoesNotContain(_messageHeaders.Keys, HeaderNames.DELAYED_MILLISECONDS);
+            _messageHeaders.Keys.Should().NotContain(HeaderNames.DELAYED_MILLISECONDS);
         }
 
         public void Dispose()

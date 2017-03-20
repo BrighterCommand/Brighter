@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -59,7 +60,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
             _commandProcessor.Send(_command);
 
             //should_store_the_command_to_the_command_store
-            Assert.AreEqual(_command.Value, _commandstore.Get<MyCommand>(_command.Id).Value);
+            _commandstore.Get<MyCommand>(_command.Id).Value.Should().Be(_command.Value);
         }
     }
 }

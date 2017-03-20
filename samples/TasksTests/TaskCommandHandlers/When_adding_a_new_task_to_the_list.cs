@@ -1,5 +1,6 @@
 ﻿using System;
 using FakeItEasy;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter;
 using Tasks.Adapters.DataAccess;
@@ -39,11 +40,11 @@ namespace TasksTests.TaskCommandHandlers
             _taskToBeAdded = _tasksDAO.FindById(_cmd.TaskId);
 
             //_should_have_the_matching_task_name
-            Assert.AreEqual(TASK_NAME, _taskToBeAdded.TaskName);
+            _taskToBeAdded.TaskName.Should().Be(TASK_NAME);
             //_should_have_the_matching_task_description
-            Assert.AreEqual(TASK_DESCRIPTION, _taskToBeAdded.TaskDescription);
+            _taskToBeAdded.TaskDescription.Should().Be(TASK_DESCRIPTION);
             //_should_have_the_matching_task_name
-            Assert.AreEqual(_now.Date, _taskToBeAdded.DueDate.Value.Date);
+            _taskToBeAdded.DueDate.Value.Date.Should().Be(_now.Date);
         }
     }
 }

@@ -1,4 +1,5 @@
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
@@ -25,7 +26,7 @@ namespace Paramore.Brighter.Tests
            // _should_return_the_command_handler_as_the_implicit_handler
             Assert.IsAssignableFrom(typeof(MyDependentCommandHandler), _pipeline);
             //  _should_be_the_only_element_in_the_chain
-            Assert.AreEqual("MyDependentCommandHandler|", TracePipeline().ToString());
+            TracePipeline().ToString().Should().Be("MyDependentCommandHandler|");
         }
 
         private PipelineTracer TracePipeline()

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using Xunit;
@@ -76,9 +77,9 @@ namespace Paramore.Brighter.Tests
             AsyncContext.Run(async () => await _commandProcessor.PostAsync(_myCommand));
 
            //_should_store_the_message_in_the_sent_command_message_repository
-            Assert.True(_fakeMessageStore.MessageWasAdded);
+            _fakeMessageStore.MessageWasAdded.Should().BeTrue();
             //_should_send_a_message_via_the_messaging_gateway
-            Assert.True(_fakeMessageProducer.MessageWasSent);
+            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             //_should_convert_the_command_into_a_message
         }
 

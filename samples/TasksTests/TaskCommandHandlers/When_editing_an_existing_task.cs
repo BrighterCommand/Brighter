@@ -1,5 +1,6 @@
 ﻿using System;
 using FakeItEasy;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter;
 using Tasks.Adapters.DataAccess;
@@ -42,11 +43,11 @@ namespace TasksTests.TaskCommandHandlers
             _taskToBeEdited = _tasksDAO.FindById(_cmd.TaskId);
 
             //_should_update_the_task_with_the_new_task_name
-            Assert.AreEqual(NEW_TASK_NAME, _taskToBeEdited.TaskName);
+            _taskToBeEdited.TaskName.Should().Be(NEW_TASK_NAME);
             //_should_update_the_task_with_the_new_task_description
-            Assert.AreEqual(NEW_TASK_DESCRIPTION, _taskToBeEdited.TaskDescription);
+            _taskToBeEdited.TaskDescription.Should().Be(NEW_TASK_DESCRIPTION);
             //_should_update_the_task_with_the_new_task_time
-            Assert.AreEqual(_NEW_TIME.Date, _taskToBeEdited.DueDate.Value.Date);
+            _taskToBeEdited.DueDate.Value.Date.Should().Be(_NEW_TIME.Date);
             //_should_post_event
             A.CallTo(() => s_commandProcessor.Post(A<TaskEditedEvent>._)).MustHaveHappened(Repeated.Exactly.Once);
         }

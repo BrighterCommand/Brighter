@@ -1,4 +1,5 @@
 ﻿using FakeItEasy;
+using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.ControlBus
@@ -24,7 +25,7 @@ namespace Paramore.Brighter.Tests.ControlBus
             s_sender = s_senderFactory.Create(s_fakeMessageStore, s_fakeGateway);
 
             //_should_create_a_control_bus_sender
-            Assert.NotNull(s_sender);
+            s_sender.Should().NotBeNull();
         }
     }
 }

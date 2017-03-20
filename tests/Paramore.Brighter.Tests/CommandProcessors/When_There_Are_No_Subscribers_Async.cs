@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.Tests
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PublishAsync(_myEvent)));
 
             //_should_not_throw_an_exception
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
         }
     }
 }

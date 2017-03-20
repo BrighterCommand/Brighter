@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
@@ -53,8 +54,8 @@ namespace Paramore.Brighter.Tests
         {
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
-            Assert.NotNull(_exception);
-            Assert.False(MyUnusedCommandHandler.Shouldreceive(_myCommand));
+            _exception.Should().NotBeNull();
+            MyUnusedCommandHandler.Shouldreceive(_myCommand).Should().BeFalse();
         }
 
         public void Dispose()

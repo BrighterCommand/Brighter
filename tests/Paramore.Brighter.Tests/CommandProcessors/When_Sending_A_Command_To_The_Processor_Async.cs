@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using FluentAssertions;
 using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -50,7 +51,7 @@ namespace Paramore.Brighter.Tests
             AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand));
 
            // _should_send_the_command_to_the_command_handler
-            Assert.True(MyCommandHandlerAsync.ShouldReceive(_myCommand));
+            MyCommandHandlerAsync.ShouldReceive(_myCommand).Should().BeTrue();
         }
     }
 }

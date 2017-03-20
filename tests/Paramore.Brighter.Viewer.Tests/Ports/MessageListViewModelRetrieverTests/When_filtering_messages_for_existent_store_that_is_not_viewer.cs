@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.Domain;
 using Paramore.Brighter.MessageViewer.Ports.ViewModelRetrievers;
@@ -12,8 +13,7 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTest
         private ViewModelRetrieverResult<MessageListModel, MessageListModelError> _result;
         private readonly string _storeName = "storeNotImplementingViewer";
 
-        [SetUp]
-        public void Establish()
+        public MessageListViewModelRetreiverStoreNotInViewerTests()
         {
             var fakeStoreNotViewer = new FakeMessageStoreNotViewer();
             var modelFactory = new FakeMessageStoreViewerFactory(fakeStoreNotViewer, _storeName);
@@ -27,10 +27,9 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTest
 
            // should_not_return_MessageListModel
             var model = _result.Result;
-            Assert.Null(model);
-            Assert.True(_result.IsError);
-            Assert.AreEqual(MessageListModelError.StoreMessageViewerNotImplemented, _result.Error);
+            model.Should().BeNull();
+            _result.IsError.Should().BeTrue();
+            _result.Error.Should().Be(MessageListModelError.StoreMessageViewerNotImplemented);
         }
    }
-
 }

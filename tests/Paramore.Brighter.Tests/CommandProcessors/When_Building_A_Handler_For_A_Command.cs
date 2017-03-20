@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
@@ -49,8 +50,8 @@ namespace Paramore.Brighter.Tests
         {
             _chainOfResponsibility = _chainBuilder.Build(_requestContext).First();
 
-            Assert.NotNull(_chainOfResponsibility.Context);
-            Assert.AreSame(_requestContext, _chainOfResponsibility.Context);
+            _chainOfResponsibility.Context.Should().NotBeNull();
+            _chainOfResponsibility.Context.Should().BeSameAs(_requestContext);
         }
     }
 }

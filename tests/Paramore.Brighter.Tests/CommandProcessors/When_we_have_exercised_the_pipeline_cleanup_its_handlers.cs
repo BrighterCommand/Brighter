@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
@@ -59,11 +60,11 @@ namespace Paramore.Brighter.Tests
             _pipeline_Builder.Dispose();
 
             //_should_have_called_dispose_on_instances_from_ioc
-            Assert.True(MyPreAndPostDecoratedHandler.DisposeWasCalled);
+            MyPreAndPostDecoratedHandler.DisposeWasCalled.Should().BeTrue();
             //_should_have_called_dispose_on_instances_from_pipeline_builder
-            Assert.True(MyLoggingHandler<MyCommand>.DisposeWasCalled);
+            MyLoggingHandler<MyCommand>.DisposeWasCalled.Should().BeTrue();
             //_should_have_called_release_on_all_handlers
-            Assert.AreEqual("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1", s_released);
+            s_released.Should().Be("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1");
         }
     }
 }

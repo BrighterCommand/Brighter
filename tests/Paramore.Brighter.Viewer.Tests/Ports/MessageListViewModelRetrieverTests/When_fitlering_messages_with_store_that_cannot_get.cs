@@ -1,4 +1,5 @@
 ﻿using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.Domain;
@@ -13,8 +14,7 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTest
         private string storeName = "storeThatCannotGet";
         private MessageListViewModelRetriever _messageListViewModelRetriever;
 
-        [SetUp]
-        public void Establish()
+        public MessageListViewModelRetrieverFilterStoreErrorTests()
         {
             var fakeStoreNotViewer = new FakeMessageStoreViewerWithGetException();
             var modelFactory = new FakeMessageStoreViewerFactory(fakeStoreNotViewer, storeName);
@@ -27,13 +27,11 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTest
             _result = _messageListViewModelRetriever.Filter(storeName, "term");
 
             //should_return_error
-            var model = _result.Result;
-            Assert.Null(model);
-            Assert.True(_result.IsError);
-            Assert.AreEqual(MessageListModelError.StoreMessageViewerGetException, _result.Error);
-            Assert.NotNull(_result.Exception);
-            Assert.IsInstanceOf<AggregateException>(_result.Exception);
+            _result.Result.Should().BeNull();
+            _result.IsError.Should().BeTrue();
+            _result.Error.Should().Be(MessageListModelError.StoreMessageViewerGetException);
+            _result.Exception.Should().NotBeNull();
+            _result.Exception.Should().BeOfType<AggregateException>();
         }
-
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessageViewer.Ports.Handlers;
 using Paramore.Brighter.Viewer.Tests.TestDoubles;
@@ -13,8 +14,7 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.RepostCommandHandlerTests
         private RepostCommand _command;
         private Message _messageToRepost;
 
-        [SetUp]
-        public void Establish()
+        public RepostCommandHandlerMisConfiguredTests()
         {
             var fakeStore = new FakeMessageStoreWithViewer();
             _messageToRepost = new Message(new MessageHeader(Guid.NewGuid(), "a topic", MessageType.MT_COMMAND, DateTime.UtcNow), new MessageBody("body"));
@@ -31,8 +31,8 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.RepostCommandHandlerTests
             var ex = Catch.Exception(() => _repostHandler.Handle(_command));
 
             //should_throw_expected_exception
-            Assert.IsInstanceOf<Exception>(ex);
-            StringAssert.Contains("Mis-configured", ex.Message);
+            ex.Should().BeOfType<Exception>();
+            ex.Message.Should().Contain("Mis-configured");
         }
    }
 }

@@ -23,12 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Tasks.Model;
 
 namespace TasksTests.TasksDAO
 {
-
     public class TasksDAOUpdateTests
     {
         private Tasks.Adapters.DataAccess.TasksDAO _dao;
@@ -58,15 +58,15 @@ namespace TasksTests.TasksDAO
             _dao.Update(_addedTask);
 
             //_should_add_the_task_into_the_list
-            Assert.NotNull(GetTask());
+            GetTask().Should().NotBeNull();
             //_should_set_the_task_name
-            Assert.AreEqual(NEW_TASK_NAME, GetTask().TaskName);
+            GetTask().TaskName.Should().Be(NEW_TASK_NAME);
             //_should_set_the_task_description
-            Assert.AreEqual(NEW_TASK_DESCRIPTION, GetTask().TaskDescription);
+            GetTask().TaskDescription.Should().Be(NEW_TASK_DESCRIPTION);
             //_should_set_the_task_duedate
-            Assert.AreEqual(s_NEW_DUE_DATE.Value.Date, GetTask().DueDate.Value.Date);
+            GetTask().DueDate.Value.Date.Should().Be(s_NEW_DUE_DATE.Value.Date);
             //_should_set_the_task_completion_date
-            Assert.AreEqual(s_NEW_COMPLETION_DATE.Value.Date, GetTask().CompletionDate.Value.Date);
+            GetTask().CompletionDate.Value.Date.Should().Be(s_NEW_COMPLETION_DATE.Value.Date);
         }
 
         private Task GetTask()

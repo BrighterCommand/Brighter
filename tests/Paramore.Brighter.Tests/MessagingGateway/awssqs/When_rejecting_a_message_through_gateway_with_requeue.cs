@@ -1,5 +1,6 @@
 ﻿using System;
 using Amazon.Runtime;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -39,7 +40,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
 
             //should_requeue_the_message
             var message = _receiver.Receive(1000);
-            Assert.AreEqual(_listenedMessage, message);
+            message.Should().Be(_listenedMessage);
         }
 
         public void Dispose()

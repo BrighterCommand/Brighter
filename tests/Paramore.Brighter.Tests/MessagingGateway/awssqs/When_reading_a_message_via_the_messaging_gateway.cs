@@ -1,5 +1,6 @@
 ﻿using System;
 using Amazon.Runtime;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -37,19 +38,19 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
 
 
             //should_send_a_message_via_sqs_with_the_matching_body
-            Assert.AreEqual(_sentMessage.Body, _receivedMessage.Body);
+            _receivedMessage.Body.Should().Be(_sentMessage.Body);
             //should_send_a_message_via_sqs_with_the_matching_header_handled_count
-            Assert.AreEqual(_sentMessage.Header.HandledCount, _receivedMessage.Header.HandledCount);
+            _receivedMessage.Header.HandledCount.Should().Be(_sentMessage.Header.HandledCount);
             //should_send_a_message_via_sqs_with_the_matching_header_id
-            Assert.AreEqual(_sentMessage.Header.Id, _receivedMessage.Header.Id);
+            _receivedMessage.Header.Id.Should().Be(_sentMessage.Header.Id);
             //should_send_a_message_via_sqs_with_the_matching_header_message_type
-            Assert.AreEqual(_sentMessage.Header.MessageType, _receivedMessage.Header.MessageType);
+            _receivedMessage.Header.MessageType.Should().Be(_sentMessage.Header.MessageType);
             //should_send_a_message_via_sqs_with_the_matching_header_time_stamp
-            Assert.AreEqual(_sentMessage.Header.TimeStamp, _receivedMessage.Header.TimeStamp);
+            _receivedMessage.Header.TimeStamp.Should().Be(_sentMessage.Header.TimeStamp);
             //should_send_a_message_via_sqs_with_the_matching_header_topic
-            Assert.AreEqual(_sentMessage.Header.Topic, _receivedMessage.Header.Topic);
+            _receivedMessage.Header.Topic.Should().Be(_sentMessage.Header.Topic);
             //should_remove_the_message_from_the_queue
-            Assert.Null(_testQueueListener.Listen());
+            _testQueueListener.Listen().Should().BeNull();
         }
 
         public void Dispose()

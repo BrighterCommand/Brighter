@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -75,7 +76,7 @@ namespace Paramore.Brighter.Tests
             _exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
 
             //_should_throw_an_exception
-            Assert.IsInstanceOf<ArgumentOutOfRangeException>(_exception);
+            _exception.Should().BeOfType<ArgumentOutOfRangeException>();
         }
 
         public void Dispose()

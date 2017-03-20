@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             Task.WaitAll(new[] { task });
 
             //should_have_acknowledge_the_message
-            Assert.True(_channel.AcknowledgeHappened);
+            _channel.AcknowledgeHappened.Should().BeTrue();
         }
     }
 }

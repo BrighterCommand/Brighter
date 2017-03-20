@@ -1,5 +1,6 @@
 ﻿using System;
 using Amazon.Runtime;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -40,8 +41,8 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
 
             //should_delete_the_original_message_and_create_new_message
              _requeuedMessage = _receiver.Receive(1000);
-            Assert.AreEqual(_receivedMessage.Body.Value, _requeuedMessage.Body.Value);
-            Assert.AreNotEqual(_requeuedMessage.Header.Bag["ReceiptHandle"].ToString(), _receivedReceiptHandle);
+            _requeuedMessage.Body.Value.Should().Be(_receivedMessage.Body.Value);
+            _requeuedMessage.Header.Bag["ReceiptHandle"].Should().Be(_receivedReceiptHandle);
         }
 
         public void Dispose()

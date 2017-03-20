@@ -76,9 +76,9 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
             _commandProcessor.Send(_myCommand);
 
            //_should_send_the_command_to_the_command_handler
-            Assert.True(MyDoesNotFailPolicyHandler.Shouldreceive(_myCommand));
+            MyDoesNotFailPolicyHandler.Shouldreceive(_myCommand).Should().BeTrue();
             //_should_not_retry
-            Assert.AreEqual(0, _retryCount);
+            _retryCount.Should().Be(0);
         }
     }
 }

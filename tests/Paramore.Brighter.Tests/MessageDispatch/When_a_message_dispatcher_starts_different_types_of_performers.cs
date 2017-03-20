@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
@@ -70,7 +71,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             var commandMessage = new MyCommandMessageMapper().MapToMessage(command);
             _commandChannel.Add(commandMessage);
 
-            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
         }
 
@@ -83,15 +84,15 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher.End().Wait();
 
            //_should_have_consumed_the_messages_in_the_event_channel
-            Assert.AreEqual(0, _eventChannel.Length);
+            _eventChannel.Length.Should().Be(0);
             //_should_have_consumed_the_messages_in_the_command_channel
-            Assert.AreEqual(0, _commandChannel.Length);
+            _commandChannel.Length.Should().Be(0);
             //_should_have_a_stopped_state
-            Assert.AreEqual(DispatcherState.DS_STOPPED, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
             //_should_have_no_consumers
-            Assert.False(_dispatcher.Consumers.Any());
+            _dispatcher.Consumers.Any().Should().BeFalse();
             //_should_of_had_2_consumers_when_running
-            Assert.AreEqual(2, _numberOfConsumers);
+            _numberOfConsumers.Should().Be(2);
         }
 
     }

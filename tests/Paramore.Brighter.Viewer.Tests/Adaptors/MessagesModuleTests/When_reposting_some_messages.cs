@@ -37,6 +37,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FluentAssertions;
 using Nancy;
 using Nancy.Testing;
 using Xunit;
@@ -68,8 +69,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.MessagesModuleTests
             public RepostCommand InvokedCommand { get; private set; }
         }
 
-        [SetUp]
-        public void Establish()
+        public RepostEndpointResendMessageTests()
         {
             _messages = new List<Message>
             {
@@ -100,15 +100,15 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.MessagesModuleTests
                 .Result;
 
             //should_return_200_OK
-            Assert.AreEqual(HttpStatusCode.OK, _result.StatusCode);
+            _result.StatusCode.Should().Be(HttpStatusCode.OK);
             //should_invoke_handler_from_factory
-            Assert.True(_fakeRepostHandler.WasHandled);
+            _fakeRepostHandler.WasHandled.Should().BeTrue();
             //should_invoke_handler_with_store_and_passed_ids
             var command = _fakeRepostHandler.InvokedCommand;
-            Assert.NotNull(command);
-            Assert.AreEqual(_storeName, command.StoreName);
-            Assert.True(command.MessageIds.Contains(_messages[0].Id.ToString()));
-            Assert.True(command.MessageIds.Contains(_messages[1].Id.ToString()));
+            command.Should().NotBeNull();
+            command.StoreName.Should().Be(_storeName);
+            command.MessageIds.Contains(_messages[0].Id.ToString()).Should().BeTrue();
+            command.MessageIds.Contains(_messages[1].Id.ToString()).Should().BeTrue();
         }
    }
 }

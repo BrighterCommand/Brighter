@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
@@ -67,13 +68,13 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             Task.WaitAll(new[] { task });
 
             //_should_send_the_message_via_the_command_processor
-            Assert.AreEqual(CommandType.Send, _commandProcessor.Commands[0]);
+            _commandProcessor.Commands[0].Should().Be(CommandType.Send);
             //_should_have_been_handled_6_times_via_send
-            Assert.AreEqual(6, _commandProcessor.SendCount);
+            _commandProcessor.SendCount.Should().Be(6);
             //_should_requeue_the_messages
-            Assert.AreEqual(0, _channel.Length);
+            _channel.Length.Should().Be(0);
             //_should_dispose_the_input_channel
-            Assert.True(_channel.DisposeHappened);
+            _channel.DisposeHappened.Should().BeTrue();
         }
     }
 }

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
+using FluentAssertions;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 using Xunit;
@@ -52,8 +53,8 @@ namespace Paramore.Brighter.Tests
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-            Assert.True(TracePipeline().ToString().Contains("MyImplicitHandler"));
-            Assert.True(TracePipeline().ToString().Contains("MyLoggingHandler"));
+            TracePipeline().ToString().Should().Contain("MyImplicitHandler");
+            TracePipeline().ToString().Should().Contain("MyLoggingHandler");
         }
 
         private PipelineTracer TracePipeline()

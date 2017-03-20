@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.RESTMS;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
@@ -62,9 +63,9 @@ namespace Paramore.Brighter.Tests.MessagingGateway.restms
             _messageConsumer.Acknowledge(_sentMessage);
 
             //_should_send_a_message_via_restms_with_the_matching_body
-            Assert.AreEqual(_message.Body.Value, _messageBody);
+            _messageBody.Should().Be(_message.Body.Value);
             //_should_have_an_empty_pipe_after_acknowledging_the_message
-            Assert.AreEqual(0, ((RestMsMessageConsumer)_messageConsumer).NoOfOutstandingMessages(30000));
+            ((RestMsMessageConsumer)_messageConsumer).NoOfOutstandingMessages(30000).Should().Be(0);
         }
 
         public void Dispose()

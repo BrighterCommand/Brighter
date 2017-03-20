@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
@@ -59,10 +60,10 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_throw_an_exception
-            Assert.IsInstanceOf<ArgumentException>(_exception);
+            _exception.Should().BeOfType<ArgumentException>();
             //_should_give_the_name_of_the_missing_policy
-            Assert.NotNull(_exception);
-            StringAssert.Contains("There is no policy for MyDivideByZeroPolicy", _exception.Message);
+            _exception.Should().NotBeNull();
+            _exception.Message.Should().Contain("There is no policy for MyDivideByZeroPolicy");
         }
     }
 }

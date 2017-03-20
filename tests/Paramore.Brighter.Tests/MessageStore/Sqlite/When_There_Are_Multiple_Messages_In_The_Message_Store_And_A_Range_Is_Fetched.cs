@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
@@ -61,11 +62,11 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             messages = _sSqlMessageStore.Get(1, 3);
 
             //_should_fetch_1_message
-            Assert.AreEqual(1, messages.Count());
+            messages.Count().Should().Be(1);
             //_should_fetch_expected_message
-            Assert.AreEqual(_TopicLastMessage, messages.First().Header.Topic);
+            messages.First().Header.Topic.Should().Be(_TopicLastMessage);
             //_should_not_fetch_null_messages
-            Assert.NotNull(messages);
+            messages.Should().NotBeNull();
         }
 
         public void Dispose()

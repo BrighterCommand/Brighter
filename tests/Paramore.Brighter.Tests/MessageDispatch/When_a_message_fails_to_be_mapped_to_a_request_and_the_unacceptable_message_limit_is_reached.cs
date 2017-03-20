@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
@@ -60,9 +61,9 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             Task.WaitAll(new[] { task });
 
             //should_have_acknowledge_the_3_messages
-            Assert.AreEqual(3, _channel.AcknowledgeCount);
+            _channel.AcknowledgeCount.Should().Be(3);
             //should_dispose_the_input_channel
-            Assert.True(_channel.DisposeHappened);
+            _channel.DisposeHappened.Should().BeTrue();
         }
     }
 }

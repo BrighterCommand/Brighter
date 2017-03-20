@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
@@ -61,7 +62,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
             //_should_send_the_command_to_the_command_handler
             MyFailsWithUnsupportedExceptionForFallback.ShouldReceive(_myCommand);
             // _should_bubble_out_the_exception
-            Assert.NotNull(_exception);
+            _exception.Should().NotBeNull();
         }
     }
 }

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
@@ -55,7 +56,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _sqlMessageStore.AddAsync(_messageEarliest)));
 
             //_should_ignore_the_duplcate_key_and_still_succeed
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
         }
 
         public void Dispose()

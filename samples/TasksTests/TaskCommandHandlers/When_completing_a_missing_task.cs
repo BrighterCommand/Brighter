@@ -1,5 +1,6 @@
 ﻿using System;
 using FakeItEasy;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter;
 using Tasks.Adapters.DataAccess;
@@ -38,7 +39,7 @@ namespace TasksTests.TaskCommandHandlers
             _exception = Catch.Exception(() => _handler.Handle(_cmd));
 
             //_should_fail
-            Assert.IsInstanceOf<ArgumentOutOfRangeException>(_exception);
+            _exception.Should().BeOfType<ArgumentOutOfRangeException>();
             //_should_not_post_event
             A.CallTo(() => _commandProcessor.Post(A<TaskCompletedEvent>._)).MustNotHaveHappened();
         }

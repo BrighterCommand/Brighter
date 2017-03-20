@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
@@ -110,13 +111,13 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher = _builder.Build();
 
             //_should_build_a_dispatcher
-            Assert.NotNull(_dispatcher);
+            _dispatcher.Should().NotBeNull();
             //_should_have_a_foo_connection
-            Assert.NotNull(GetConnection("foo"));
+            GetConnection("foo").Should().NotBeNull();
             //_should_have_a_bar_connection
-            Assert.NotNull(GetConnection("bar"));
+            GetConnection("bar").Should().NotBeNull();
             //_should_be_in_the_awaiting_state
-            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
         }
 
         private Connection GetConnection(string name)

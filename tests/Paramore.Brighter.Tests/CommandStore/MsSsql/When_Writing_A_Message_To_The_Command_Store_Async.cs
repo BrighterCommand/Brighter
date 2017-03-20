@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.CommandStore.MsSql;
@@ -54,11 +55,11 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             AsyncContext.Run(async () => _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(_raisedCommand.Id));
 
             //_should_read_the_command_from_the__sql_command_store
-            Assert.NotNull(_storedCommand);
+            _storedCommand.Should().NotBeNull();
             //_should_read_the_command_value
-            Assert.AreEqual(_raisedCommand.Value, _storedCommand.Value);
+            _storedCommand.Value.Should().Be(_raisedCommand.Value);
             //_should_read_the_command_id
-            Assert.AreEqual(_raisedCommand.Id, _storedCommand.Id);
+            _storedCommand.Id.Should().Be(_raisedCommand.Id);
         }
 
         public void Dispose()

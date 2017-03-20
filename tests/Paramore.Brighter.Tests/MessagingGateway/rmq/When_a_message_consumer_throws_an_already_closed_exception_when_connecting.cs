@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
@@ -67,9 +68,9 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
             _firstException = Catch.Exception(() => _badReceiver.Receive(2000));
 
             //_should_return_a_channel_failure_exception
-            Assert.IsInstanceOf<ChannelFailureException>(_firstException);
+            _firstException.Should().BeOfType<ChannelFailureException>();
             //_should_return_an_explainging_inner_exception
-            Assert.IsInstanceOf<AlreadyClosedException>(_firstException.InnerException);
+            _firstException.InnerException.Should().BeOfType<AlreadyClosedException>();
         }
 
         public void Dispose()

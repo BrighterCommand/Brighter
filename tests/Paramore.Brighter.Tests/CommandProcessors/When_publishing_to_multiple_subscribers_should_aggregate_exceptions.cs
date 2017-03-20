@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
@@ -57,13 +58,13 @@ namespace Paramore.Brighter.Tests
             _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
 
             //_should_throw_an_aggregate_exception
-            Assert.IsInstanceOf(typeof(AggregateException), _exception);
+            _exception.Should().BeOfType<AggregateException>();
             //_should_have_an_inner_exception_from_the_handler
-            Assert.IsInstanceOf(typeof(InvalidOperationException), ((AggregateException)_exception).InnerException);
+            ((AggregateException)_exception).InnerException.Should().BeOfType<InvalidOperationException>();
             //_should_publish_the_command_to_the_first_event_handler
-            Assert.True(MyEventHandler.ShouldReceive(_myEvent));
+            MyEventHandler.ShouldReceive(_myEvent).Should().BeTrue();
             //_should_publish_the_command_to_the_second_event_handler
-            Assert.True(MyOtherEventHandler.Shouldreceive(_myEvent));
+            MyOtherEventHandler.Shouldreceive(_myEvent).Should().BeTrue();
         }
     }
 }

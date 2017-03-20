@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests
 {
-
     public class PipelineMixedHandlersAsyncTests
     {
         private PipelineBuilder<MyCommand> _pipelineBuilder;
@@ -31,9 +31,9 @@ namespace Paramore.Brighter.Tests
         {
             _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.BuildAsync(new RequestContext(), false).First());
 
-            Assert.NotNull(_exception);
-            Assert.IsInstanceOf(typeof (ConfigurationException), _exception);
-            StringAssert.Contains(typeof (MyLoggingHandler<>).Name, _exception.Message);
+            _exception.Should().NotBeNull();
+            _exception.Should().BeOfType<ConfigurationException>();
+            _exception.Message.Should().Contain(typeof(MyLoggingHandler<>).Name);
         }
     }
 }

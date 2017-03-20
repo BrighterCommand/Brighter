@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
@@ -52,7 +53,7 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             _exception = Catch.Exception(() => _sSqlMessageStore.Add(_messageEarliest));
 
             //_should_ignore_the_duplcate_key_and_still_succeed
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
         }
 
         public void Dispose()

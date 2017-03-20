@@ -1,4 +1,5 @@
 ﻿using System;
+using FluentAssertions;
 using Nancy;
 using Nancy.Conventions;
 using Nancy.Testing;
@@ -10,14 +11,12 @@ using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 
 namespace Paramore.Brighter.Viewer.Tests.Adaptors.IndexModuleTests
 {
-
     public class HomeEndpointTests
     {
         private Browser _browser;
         private BrowserResponse _result;
 
-        [SetUp]
-        public void Establish()
+        public HomeEndpointTests()
         {
             var configurableBootstrapper = new TestConfigurableBootstrapper(with =>
             {
@@ -39,11 +38,10 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.IndexModuleTests
                 .Result;
 
             //should_return_200_OK
-            Assert.AreEqual(_result.StatusCode, HttpStatusCode.OK);
+            HttpStatusCode.OK.Should().Be(_result.StatusCode);
             //should_return_text_html
-            Assert.AreEqual(_result.ContentType, "text/html");
+            _result.ContentType.Should().Be("text/html");
         }
-
    }
 
     public class TestConfigurableBootstrapper : ConfigurableBootstrapper

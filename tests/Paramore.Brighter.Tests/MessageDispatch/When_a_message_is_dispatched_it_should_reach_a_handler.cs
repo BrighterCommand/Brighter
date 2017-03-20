@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
@@ -68,7 +69,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _messagePump.Run();
 
             //_should_dispatch_the_message_to_a_handler
-            Assert.True(MyEventHandler.ShouldReceive(_event));
+            MyEventHandler.ShouldReceive(_event).Should().BeTrue();
         }
 
         internal class CheapHandlerFactory : IAmAHandlerFactory

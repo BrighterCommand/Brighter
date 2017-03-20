@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System.Linq;
 using FakeItEasy;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.ControlBus;
@@ -63,7 +64,7 @@ namespace Paramore.Brighter.Tests.ControlBus
             //_should_have_a_heartbeat_channel
             Assert.True(_controlBus.Connections.Any(cn => cn.Name == _hostName + "." + ControlBusReceiverBuilder.HEARTBEAT));
             //_should_have_a_command_processor
-            Assert.NotNull(_controlBus.CommandProcessor);
+            _controlBus.CommandProcessor.Should().NotBeNull();
         }
     }
 }

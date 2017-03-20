@@ -1,4 +1,5 @@
-﻿using Nancy.Json;
+﻿using FluentAssertions;
+using Nancy.Json;
 using Nancy.Testing;
 using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
@@ -8,16 +9,13 @@ using Paramore.Brighter.Viewer.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
 {
-    [Ignore("Returns wrong error code")]
-
     public class RetreiveMessageStoreNotInViewerTests
     {
         private Browser _browser;
         private BrowserResponse _result;
         private readonly string _storesUri = "/stores";
 
-       [SetUp]
-        public void Establish()
+        public RetreiveMessageStoreNotInViewerTests()
         {
             _browser = new Browser(new ConfigurableBootstrapper(with =>
             {
@@ -36,15 +34,15 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
                 .Result;
 
             //should_return_404_NotFound
-            Assert.AreEqual(Nancy.HttpStatusCode.NotFound, _result.StatusCode);
+            _result.StatusCode.Should().Be(Nancy.HttpStatusCode.NotFound);
             //should_return_json
-            StringAssert.Contains("application/json", _result.ContentType);
+            _result.ContentType.Should().Contain("application/json");
             //should_return_error_detail
             var serializer = new JavaScriptSerializer();
             var model = serializer.Deserialize<MessageViewerError>(_result.Body.AsString());
 
-            Assert.NotNull(model);
-            StringAssert.Contains("IMessageStoreViewer", model.Message);
+            model.Should().NotBeNull();
+            model.Message.Should().Contain("IMessageStoreViewer");
         }
 
         private void ConfigureStoreModuleForStoreError(ConfigurableBootstrapper.ConfigurableBootstrapperConfigurator with, MessageStoreViewerModelError messageStoreViewerModelError)

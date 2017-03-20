@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using Xunit;
@@ -82,15 +83,15 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             _storedMessage = _sqlMessageStore.Get(_message.Id);
 
             //_should_read_the_message_from_the__sql_message_store
-            Assert.AreEqual(_message.Body.Value, _storedMessage.Body.Value);
+            _storedMessage.Body.Value.Should().Be(_message.Body.Value);
             //_should_read_the_message_header_type_from_the__sql_message_store
-            Assert.AreEqual(_message.Header.MessageType, _storedMessage.Header.MessageType);
+            _storedMessage.Header.MessageType.Should().Be(_message.Header.MessageType);
             //_should_read_the_message_header_topic_from_the__sql_message_store
-            Assert.AreEqual(_message.Header.Topic, _storedMessage.Header.Topic);
+            _storedMessage.Header.Topic.Should().Be(_message.Header.Topic);
             //_should_default_the_timestamp_from_the__sql_message_store
-            Assert.GreaterOrEqual(_storedMessage.Header.TimeStamp, _message.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.Should().BeOnOrAfter(_message.Header.TimeStamp);
             //_should_read_empty_header_bag_from_the__sql_message_store
-            Assert.False(_storedMessage.Header.Bag.Keys.Any());
+            _storedMessage.Header.Bag.Keys.Should().BeEmpty();
         }
 
         public void Dispose()

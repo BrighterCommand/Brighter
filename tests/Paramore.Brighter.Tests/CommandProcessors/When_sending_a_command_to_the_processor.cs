@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
@@ -47,7 +48,7 @@ namespace Paramore.Brighter.Tests
             _commandProcessor.Send(_myCommand);
 
             //_should_send_the_command_to_the_command_handler
-            Assert.True(MyCommandHandler.ShouldReceive(_myCommand));
+            MyCommandHandler.ShouldReceive(_myCommand).Should().BeTrue();
         }
     }
 }

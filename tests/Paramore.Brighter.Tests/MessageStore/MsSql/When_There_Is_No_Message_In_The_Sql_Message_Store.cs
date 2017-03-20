@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 
@@ -52,7 +53,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             _storedMessage = _sqlMessageStore.Get(_messageEarliest.Id);
 
             //_should_return_a_empty_message
-            Assert.AreEqual(MessageType.MT_NONE, _storedMessage.Header.MessageType);
+            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
         }
 
         public void Dispose()

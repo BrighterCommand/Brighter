@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.NoOpStore
@@ -50,10 +51,10 @@ namespace Paramore.Brighter.Tests.MessageStore.NoOpStore
             _exception = Catch.Exception(() => _messages = _noOpStore.Get());
 
             //_should_not_cause_exception
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
             //_should_return_empty_list
-            Assert.NotNull(_messages);
-            Assert.False(_messages.Any());
+            _messages.Should().NotBeNull();
+            _messages.Any().Should().BeFalse();
         }
    }
 }

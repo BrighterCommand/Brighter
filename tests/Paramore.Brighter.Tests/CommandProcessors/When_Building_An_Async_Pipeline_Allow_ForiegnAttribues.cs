@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
@@ -28,7 +29,7 @@ namespace Paramore.Brighter.Tests
         {
             _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
 
-            Assert.AreEqual("MyValidationHandlerAsync`1|MyObsoleteCommandHandlerAsync|MyLoggingHandlerAsync`1|", TraceFilters().ToString());
+            TraceFilters().ToString().Should().Be("MyValidationHandlerAsync`1|MyObsoleteCommandHandlerAsync|MyLoggingHandlerAsync`1|");
         }
 
         private PipelineTracer TraceFilters()

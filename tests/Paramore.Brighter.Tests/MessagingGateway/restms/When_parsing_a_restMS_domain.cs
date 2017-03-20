@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.RESTMS.Model;
 using Paramore.Brighter.MessagingGateway.RESTMS.Parsers;
@@ -41,9 +42,9 @@ namespace Paramore.Brighter.Tests.MessagingGateway.restms
             _couldParse = XmlResultParser.TryParse(BODY, out _domain);
 
             //_should_be_able_to_parse_the_result
-            Assert.True(_couldParse);
+            _couldParse.Should().BeTrue();
             //_should_have_a_domain_object
-            Assert.NotNull(_domain);
+            _domain.Should().NotBeNull();
         }
     }
 }

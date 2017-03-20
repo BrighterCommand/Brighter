@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Tests.MessageStore.EventStore
             AsyncContext.Run(async () => s_messages = await s_eventStoreMessageStore.GetAsync(EmptyStreamName, 0, 1));
 
             //_returns_an_empty_list
-            Assert.AreEqual(s_messages.Count, 0);
+            0.Should().Be(s_messages.Count);
         }
 
         private void EnsureEventStoreNodeHasStartedAndTheClientHasConnected()

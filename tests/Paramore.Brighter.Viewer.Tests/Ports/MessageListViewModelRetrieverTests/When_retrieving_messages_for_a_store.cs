@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.Domain;
@@ -17,8 +18,7 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTest
         private Message _message1;
         private string storeName = "testStore";
 
-        [SetUp]
-        public void Establish()
+        public MessageListViewModelRetrieverGetMessagesForStoreTests()
         {
             _message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic1", MessageType.MT_COMMAND), new MessageBody("a body"));
             var messageHeader = new MessageHeader(Guid.NewGuid(), "MyTopic2", MessageType.MT_COMMAND);
@@ -42,28 +42,26 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTest
             //should_return_MessageListModel
             var model = _result.Result;
 
-            Assert.NotNull(model);
-            Assert.AreEqual(_messages.Count, model.MessageCount);
+            model.Should().NotBeNull();
+            model.MessageCount.Should().Be(_messages.Count);
 
             //should_return_expected_message_state
             var foundMessage = model.Messages.Single(m => m.MessageId == _message1.Id);
-            Assert.NotNull(foundMessage);
+            foundMessage.Should().NotBeNull();
 
-            Assert.AreEqual(_message1.Header.HandledCount, foundMessage.HandledCount);
-            Assert.AreEqual(_message1.Header.MessageType.ToString(), foundMessage.MessageType);
-            Assert.AreEqual(_message1.Header.Topic, foundMessage.Topic);
-            Assert.AreEqual(_message1.Header.TimeStamp, foundMessage.TimeStamp);
+            foundMessage.HandledCount.Should().Be(_message1.Header.HandledCount);
+            foundMessage.MessageType.Should().Be(_message1.Header.MessageType.ToString());
+            foundMessage.Topic.Should().Be(_message1.Header.Topic);
+            foundMessage.TimeStamp.Should().Be(_message1.Header.TimeStamp);
 
             foreach (var key in _message1.Header.Bag.Keys)
             {
                 foundMessage.Bag.Contains(key);
                 foundMessage.Bag.Contains(_message1.Header.Bag[key].ToString());
             }
-            Assert.AreEqual(_message1.Body.Value, foundMessage.MessageBody);
+            foundMessage.MessageBody.Should().Be(_message1.Body.Value);
 
             //foundMessage.TimeStampUI.ShouldContain("ago");//fragile time-based
         }
-
    }
-
 }

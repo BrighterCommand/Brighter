@@ -1,4 +1,5 @@
 using FakeItEasy;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
@@ -34,9 +35,9 @@ namespace Paramore.Brighter.Tests
             _commandProcessor.Send(_myCommand);
 
             //_should_have_seen_the_data_we_pushed_into_the_bag
-            Assert.AreEqual(I_AM_A_TEST_OF_THE_CONTEXT_BAG, MyContextAwareCommandHandler.TestString);
+            MyContextAwareCommandHandler.TestString.Should().Be(I_AM_A_TEST_OF_THE_CONTEXT_BAG);
             //_should_have_been_filled_by_the_handler
-            Assert.AreEqual("I was called and set the context", ((string)_request_context.Bag["MyContextAwareCommandHandler"]));
+            _request_context.Bag["MyContextAwareCommandHandler"].Should().Be("I was called and set the context");
         }
     }
 }

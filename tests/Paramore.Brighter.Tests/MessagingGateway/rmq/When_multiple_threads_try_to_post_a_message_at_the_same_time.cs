@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
@@ -67,8 +68,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.rmq
             }
 
             //_should_not_throw
-            Assert.IsFalse(exceptionHappened);
-
+            exceptionHappened.Should().BeFalse();
         }
 
         public void Dispose()

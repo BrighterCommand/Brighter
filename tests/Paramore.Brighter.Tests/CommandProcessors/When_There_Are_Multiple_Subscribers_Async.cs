@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -57,11 +58,11 @@ namespace Paramore.Brighter.Tests
             _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PublishAsync(_myEvent)));
 
             //_should_not_throw_an_exception
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
             //_should_publish_the_command_to_the_first_event_handler
-            Assert.True(MyEventHandlerAsync.ShouldReceive(_myEvent));
+            MyEventHandlerAsync.ShouldReceive(_myEvent).Should().BeTrue();
             //_should_publish_the_command_to_the_second_event_handler
-            Assert.True(MyOtherEventHandlerAsync.ShouldReceive(_myEvent));
+            MyOtherEventHandlerAsync.ShouldReceive(_myEvent).Should().BeTrue();
         }
     }
 }

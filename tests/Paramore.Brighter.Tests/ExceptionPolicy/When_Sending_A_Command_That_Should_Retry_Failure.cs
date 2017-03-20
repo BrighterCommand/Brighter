@@ -76,9 +76,9 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
             Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_send_the_command_to_the_command_handler
-            Assert.True(MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand));
+            MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand).Should().BeTrue();
             //_should_retry_three_times
-            Assert.AreEqual(3, _retryCount);
+            _retryCount.Should().Be(3);
         }
     }
 }

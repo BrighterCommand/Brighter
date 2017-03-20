@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
@@ -61,19 +62,19 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
 
 
             //_should_read_the_message_from_the__sql_message_store
-            Assert.AreEqual(_messageEarliest.Body.Value, _storedMessage.Body.Value);
+            _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //_should_read_the_message_header_first_bag_item_from_the__sql_message_store
-            Assert.True(_storedMessage.Header.Bag.ContainsKey(key1));
-            Assert.AreEqual(value1, _storedMessage.Header.Bag[key1]);
+            _storedMessage.Header.Bag.ContainsKey(key1).Should().BeTrue();
+            _storedMessage.Header.Bag[key1].Should().Be(value1);
             //_should_read_the_message_header_second_bag_item_from_the__sql_message_store
-            Assert.True(_storedMessage.Header.Bag.ContainsKey(key2));
-            Assert.AreEqual(value2, _storedMessage.Header.Bag[key2]);
+            _storedMessage.Header.Bag.ContainsKey(key2).Should().BeTrue();
+            _storedMessage.Header.Bag[key2].Should().Be(value2);
             //_should_read_the_message_header_timestamp_from_the__sql_message_store
-            Assert.AreEqual(_messageEarliest.Header.TimeStamp, _storedMessage.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
             //_should_read_the_message_header_topic_from_the__sql_message_store =
-            Assert.AreEqual(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);
+            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             //_should_read_the_message_header_type_from_the__sql_message_store
-            Assert.AreEqual(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
+            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
         }
 
         public void Dispose()

@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
@@ -51,7 +52,7 @@ namespace Paramore.Brighter.Tests.ControlBus
             // _should_serialize_the_command_type_to_the_message_body
             Assert.True(_message.Body.Value.Contains("\"Type\":1"));
             //_should_serialize_the_message_type_to_the_header
-            Assert.AreEqual(MessageType.MT_COMMAND, _message.Header.MessageType);
+            _message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             //_should_serialize_the_connection_name_to_the_message_body
             Assert.True(_message.Body.Value.Contains("\"ConnectionName\":\"getallthethings\""));
             //_should_serialize_the_message_id_to_the_message_body

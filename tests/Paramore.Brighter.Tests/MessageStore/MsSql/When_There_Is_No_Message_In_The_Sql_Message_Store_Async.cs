@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
@@ -54,7 +55,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             AsyncContext.Run(async () => _storedMessage = await _sqlMessageStore.GetAsync(_messageEarliest.Id));
 
             //_should_return_a_empty_message
-            Assert.AreEqual(MessageType.MT_NONE, _storedMessage.Header.MessageType);
+            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
         }
 
         public void Dispose()

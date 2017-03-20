@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
 using Paramore.Brighter.MessageViewer.Ports.Domain;
@@ -8,7 +9,6 @@ using Paramore.Brighter.Viewer.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTests
 {
-
     public class MessageListModelRetrieverFilterOnBodyTests
     {
         private MessageListViewModelRetriever _messageListViewModelRetriever;
@@ -16,8 +16,7 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTest
         private List<Message> _messages;
         private readonly string _storeName = "testStore";
 
-        [SetUp]
-        public void Establish()
+        public MessageListModelRetrieverFilterOnBodyTests()
         {
             _messages = new List<Message>{
                 new Message(new MessageHeader(Guid.NewGuid(), "MyTopic1", MessageType.MT_COMMAND), new MessageBody("topic3")),
@@ -37,8 +36,8 @@ namespace Paramore.Brighter.Viewer.Tests.Ports.MessageListViewModelRetrieverTest
             //should_return_expected_model
              var model = _result.Result;
 
-            Assert.NotNull(model);
-            Assert.AreEqual(1, model.MessageCount);
+            model.Should().NotBeNull();
+            model.MessageCount.Should().Be(1);
         }
    }
 }

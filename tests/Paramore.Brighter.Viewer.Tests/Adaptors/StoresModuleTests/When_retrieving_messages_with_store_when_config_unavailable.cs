@@ -35,6 +35,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using FluentAssertions;
 using Nancy;
 using Nancy.Json;
 using Nancy.Testing;
@@ -52,8 +53,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
         private Browser _browser;
         private static BrowserResponse _result;
 
-        [SetUp]
-        public void Establish()
+        public RetrieveMessageStoreNoConfigurationTests()
         {
             _browser = new Browser(new ConfigurableBootstrapper(with =>
             {
@@ -76,15 +76,15 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
                 .Result;
 
             //should_return_500_Server_error
-            Assert.AreEqual(HttpStatusCode.InternalServerError, _result.StatusCode);
+            _result.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
             //should_return_json
-            StringAssert.Contains("application/json", _result.ContentType);
+            _result.ContentType.Should().Contain("application/json");
             //should_return_error
             var serializer = new JavaScriptSerializer();
             var model = serializer.Deserialize<MessageViewerError>(_result.Body.AsString());
 
-            Assert.NotNull(model);
-            StringAssert.Contains("Mis-configured", model.Message);
+            model.Should().NotBeNull();
+            model.Message.Should().Contain("Mis-configured");
         }
    }
 }

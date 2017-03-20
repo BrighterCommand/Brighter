@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
@@ -54,11 +55,11 @@ namespace Paramore.Brighter.Tests
 
 
             //_should_call_the_pre_validation_handler
-            Assert.True(MyValidationHandler<MyCommand>.ShouldReceive(_myCommand));
+            MyValidationHandler<MyCommand>.ShouldReceive(_myCommand).Should().BeTrue();
             //_should_send_the_command_to_the_command_handler
-            Assert.True(MyPreAndPostDecoratedHandler.ShouldReceive(_myCommand));
+            MyPreAndPostDecoratedHandler.ShouldReceive(_myCommand).Should().BeTrue();
             // _should_call_the_post_validation_handler
-            Assert.True(MyLoggingHandler<MyCommand>.Shouldreceive(_myCommand));
+            MyLoggingHandler<MyCommand>.Shouldreceive(_myCommand).Should().BeTrue();
         }
     }
 }

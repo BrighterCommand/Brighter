@@ -37,7 +37,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using FluentAssertions;
 using Nancy.Testing;
+using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Modules;
 using Paramore.Brighter.MessageViewer.Adaptors.API.Resources;
@@ -83,12 +85,12 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.MessagesModuleTests
                 .Result;
 
             //should_return_200_OK
-            Assert.AreEqual(Nancy.HttpStatusCode.OK, _result.StatusCode);
+            _result.StatusCode.Should().Be(Nancy.HttpStatusCode.OK);
             //should_return_json
-            StringAssert.Contains("application/json", _result.ContentType);
+            _result.ContentType.Should().Contain("application/json");
             //should_return_MessageListModel
-             var model = Newtonsoft.Json.JsonConvert.DeserializeObject<MessageListModel>(_result.Body.AsString());
-            Assert.NotNull(model);
+             var model = JsonConvert.DeserializeObject<MessageListModel>(_result.Body.AsString());
+            model.Should().NotBeNull();
         }
    }
 }

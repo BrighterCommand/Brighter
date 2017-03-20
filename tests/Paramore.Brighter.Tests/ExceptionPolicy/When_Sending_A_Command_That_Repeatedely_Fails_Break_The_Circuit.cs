@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
@@ -75,13 +76,13 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
                 _thirdException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
                 //_should_send_the_command_to_the_command_handler
-            Assert.True(MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand));
+            MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand).Should().BeTrue();
             //_should_bubble_up_the_first_exception
-            Assert.IsInstanceOf<DivideByZeroException>(_firstException);
+            _firstException.Should().BeOfType<DivideByZeroException>();
             //_should_bubble_up_the_second_exception
-            Assert.IsInstanceOf<DivideByZeroException>(_secondException);
+            _secondException.Should().BeOfType<DivideByZeroException>();
             //_should_break_the_circuit_after_two_fails
-            Assert.IsInstanceOf<BrokenCircuitException>(_thirdException);
+            _thirdException.Should().BeOfType<BrokenCircuitException>();
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using Amazon.Runtime;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -34,7 +35,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
             _receiver.Purge();
 
            //should_clean_the_queue
-            Assert.Null(_testQueueListener.Listen());
+            _testQueueListener.Listen().Should().BeNull();
         }
     }
 }

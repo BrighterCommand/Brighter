@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
@@ -56,9 +57,9 @@ namespace Paramore.Brighter.Tests.ControlBus
             _message = _mapper.MapToMessage(_request);
 
             //_should_put_the_reply_to_as_the_topic
-            Assert.AreEqual(TOPIC, _message.Header.Topic);
+            _message.Header.Topic.Should().Be(TOPIC);
             //_should_put_the_correlation_id_in_the_header
-            Assert.AreEqual(_correlationId, _message.Header.CorrelationId);
+            _message.Header.CorrelationId.Should().Be(_correlationId);
             //_should_put_the_connections_into_the_body
             Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"ConnectionName\": \"Test.Connection\""))).Invoke(_message.Body));
             Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"State\": 1"))).Invoke(_message.Body));

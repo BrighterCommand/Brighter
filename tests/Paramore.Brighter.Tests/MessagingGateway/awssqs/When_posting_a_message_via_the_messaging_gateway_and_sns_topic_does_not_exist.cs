@@ -1,6 +1,7 @@
 ﻿using System;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService.Model;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -31,7 +32,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
             _topic = _queueListener.CheckSnsTopic(_message.Header.Topic);
 
             //should_create_topic_and_send_the_message
-            Assert.NotNull(_topic);
+            _topic.Should().NotBeNull();
         }
 
         public void Dispose()

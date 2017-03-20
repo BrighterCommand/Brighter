@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
@@ -105,7 +106,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher = _builder.Build();
 
             //_should_build_a_dispatcher
-            Assert.NotNull(_dispatcher);
+            _dispatcher.Should().NotBeNull();
         }
     }
 }

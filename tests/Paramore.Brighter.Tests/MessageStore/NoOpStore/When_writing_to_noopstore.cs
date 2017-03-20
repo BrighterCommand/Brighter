@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.NoOpStore
@@ -47,7 +48,7 @@ namespace Paramore.Brighter.Tests.MessageStore.NoOpStore
             _exception = Catch.Exception(() => _noOpStore.Add(_messageEarliest));
 
             //_should_not_cause_exception
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
         }
     }
 }

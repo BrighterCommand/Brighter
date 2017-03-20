@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
@@ -51,9 +52,9 @@ namespace Paramore.Brighter.Tests.ControlBus
             _command = _mapper.MapToRequest(_message);
 
             //_should_rehydrate_the_command_type
-            Assert.AreEqual(ConfigurationCommandType.CM_STARTALL, _command.Type);
+            _command.Type.Should().Be(ConfigurationCommandType.CM_STARTALL);
             // _should_rehydrate_the_connection_name
-            Assert.AreEqual("getallthethings", _command.ConnectionName);
+            _command.ConnectionName.Should().Be("getallthethings");
         }
     }
 }

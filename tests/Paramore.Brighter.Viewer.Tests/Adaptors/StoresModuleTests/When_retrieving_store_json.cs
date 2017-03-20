@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using FluentAssertions;
 using Nancy.Json;
 using Nancy.Testing;
 using Xunit;
@@ -44,14 +45,14 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
                 .Result;
 
             //should_return_200_OK
-            Assert.AreEqual(Nancy.HttpStatusCode.OK, _result.StatusCode);
+            _result.StatusCode.Should().Be(Nancy.HttpStatusCode.OK);
             //should_return_json
-            StringAssert.Contains("application/json", _result.ContentType);
+            _result.ContentType.Should().Contain("application/json");
             //should_return_StoresListModel
             var serializer = new JavaScriptSerializer();
             var model = serializer.Deserialize<MessageStoreViewerModel>(_result.Body.AsString());
 
-            Assert.NotNull(model);
+            model.Should().NotBeNull();
         }
   }
 }

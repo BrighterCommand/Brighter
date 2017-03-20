@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using FluentAssertions;
 using Nancy;
 using Nancy.Json;
 using Nancy.Testing;
@@ -18,8 +19,7 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
         private BrowserResponse _result;
         private string _storesUri = "/stores";
 
-        [SetUp]
-        public void Establish()
+        public RetrieveMessageStoresContentTypeJsonTests()
         {
             _browser = new Browser(new ConfigurableBootstrapper(with =>
             {
@@ -44,15 +44,15 @@ namespace Paramore.Brighter.Viewer.Tests.Adaptors.StoresModuleTests
             .Result;
 
              //should_return_200_OK
-            Assert.AreEqual(HttpStatusCode.OK, _result.StatusCode);
+            _result.StatusCode.Should().Be(HttpStatusCode.OK);
             //should_return_json
-            StringAssert.Contains("application/json", _result.ContentType);
+            _result.ContentType.Should().Contain("application/json");
             //should_return_StoresListModel
              var serializer = new JavaScriptSerializer();
              var model = serializer.Deserialize<MessageStoreActivationStateListModel>(_result.Body.AsString());
 
-            Assert.NotNull(model);
-            Assert.AreEqual(2, model.stores.Count());
+            model.Should().NotBeNull();
+            model.stores.Count().Should().Be(2);
         }
    }
 }

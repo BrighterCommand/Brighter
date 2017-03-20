@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
@@ -48,7 +49,7 @@ namespace Paramore.Brighter.Tests
             _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
 
             //_should_not_throw_an_exception
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
         }
     }
 }

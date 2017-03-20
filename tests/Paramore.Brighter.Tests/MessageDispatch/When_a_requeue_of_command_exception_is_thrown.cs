@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
@@ -60,11 +61,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _messagePump.Run();
 
             //_should_send_the_message_via_the_command_processor
-            Assert.AreEqual(CommandType.Send, _commandProcessor.Commands[0]);
+            _commandProcessor.Commands[0].Should().Be(CommandType.Send);
             //_should_requeue_the_messages
-            Assert.AreEqual(2, _channel.Length);
+            _channel.Length.Should().Be(2);
             //_should_dispose_the_input_channel
-            Assert.True(_channel.DisposeHappened);
+            _channel.DisposeHappened.Should().BeTrue();
         }
     }
 }

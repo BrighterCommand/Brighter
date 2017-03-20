@@ -1,4 +1,5 @@
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -60,9 +61,9 @@ namespace Paramore.Brighter.Tests
             //now respond with broken ciruit
             _circuitBrokenException = (BrokenCircuitException)Catch.Exception(() => _commandProcessor.Post(_myCommand));
 
-            Assert.AreEqual(4, _messagingProducer.SentCalledCount);
-            Assert.IsInstanceOf(typeof(Exception), _failedException);
-            Assert.IsInstanceOf(typeof(BrokenCircuitException), _circuitBrokenException);
+            _messagingProducer.SentCalledCount.Should().Be(4);
+            _failedException.Should().BeOfType<Exception>();
+            _circuitBrokenException.Should().BeOfType<BrokenCircuitException>();
         }
 
         public void Dispose()

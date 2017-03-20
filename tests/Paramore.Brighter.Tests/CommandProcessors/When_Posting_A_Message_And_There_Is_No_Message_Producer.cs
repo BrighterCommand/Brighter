@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -79,7 +80,7 @@ namespace Paramore.Brighter.Tests
             _commandProcessor.Dispose();
 
            // _should_throw_an_exception
-            Assert.IsInstanceOf<InvalidOperationException>(_exception);
+            _exception.Should().BeOfType<InvalidOperationException>();
         }
     }
 }

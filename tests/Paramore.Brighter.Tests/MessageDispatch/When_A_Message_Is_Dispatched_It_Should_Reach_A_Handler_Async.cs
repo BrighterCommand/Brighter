@@ -1,4 +1,5 @@
 ﻿using System;
+using FluentAssertions;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using Xunit;
@@ -44,9 +45,9 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         {
             AsyncContext.Run(async () => await _messagePump.Run());
 
-            Assert.True(MyEventHandlerAsyncWithContinuation.ShouldReceive(_event));
-            Assert.AreEqual(2, MyEventHandlerAsyncWithContinuation.LoopCounter.Value);
-            Assert.AreEqual(MyEventHandlerAsyncWithContinuation.ContinuationThreadId, MyEventHandlerAsyncWithContinuation.WorkThreadId);
+            MyEventHandlerAsyncWithContinuation.ShouldReceive(_event).Should().BeTrue();
+            MyEventHandlerAsyncWithContinuation.LoopCounter.Value.Should().Be(2);
+            MyEventHandlerAsyncWithContinuation.WorkThreadId.Should().Be(MyEventHandlerAsyncWithContinuation.ContinuationThreadId);
         }
 
         internal class CheapHandlerFactoryAsync : IAmAHandlerFactoryAsync

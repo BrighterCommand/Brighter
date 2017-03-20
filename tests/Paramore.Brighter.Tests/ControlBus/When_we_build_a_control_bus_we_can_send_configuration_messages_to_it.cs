@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.ControlBus;
@@ -63,7 +64,7 @@ namespace Paramore.Brighter.Tests.ControlBus
             _exception = Catch.Exception(() => _controlBus.CommandProcessor.Send(_configurationCommand));
 
             //should_not_raise_exceptions_for_missing_handlers
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
             //should_call_the_dispatcher_to_start_it
             A.CallTo(() => _dispatcher.Receive()).MustHaveHappened();
         }

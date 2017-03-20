@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.CommandStore.MsSql;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -50,7 +51,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             _storedCommand = _sqlCommandStore.Get<MyCommand>(Guid.NewGuid());
 
            //_should_return_an_empty_command_on_a_missing_command
-            Assert.AreEqual(Guid.Empty, _storedCommand.Id);
+            _storedCommand.Id.Should().Be(Guid.Empty);
         }
 
         public void Dispose()

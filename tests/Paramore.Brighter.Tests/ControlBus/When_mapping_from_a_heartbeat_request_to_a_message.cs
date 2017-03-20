@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Mappers;
@@ -50,13 +51,13 @@ namespace Paramore.Brighter.Tests.ControlBus
             _message = _mapper.MapToMessage(_request);
 
             //_should_serialize_the_message_type_to_the_header
-            Assert.AreEqual(MessageType.MT_COMMAND, _message.Header.MessageType);
+            _message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             //_should_serialize_the_message_id_to_the_message_body
             Assert.True(_message.Body.Value.Contains(string.Format("\"Id\": \"{0}\"", _request.Id)));
             //_should_serialize_the_topic_to_the_message_body
-            Assert.AreEqual(TOPIC, _message.Header.ReplyTo);
+            _message.Header.ReplyTo.Should().Be(TOPIC);
             //_should_serialize_the_correlation_id_to_the_message_body
-            Assert.AreEqual(_correlationId, _message.Header.CorrelationId);
+            _message.Header.CorrelationId.Should().Be(_correlationId);
         }
     }
 }

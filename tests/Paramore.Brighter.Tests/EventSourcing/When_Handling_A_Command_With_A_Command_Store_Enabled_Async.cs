@@ -1,4 +1,5 @@
-﻿using Nito.AsyncEx;
+﻿using FluentAssertions;
+using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -35,7 +36,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
             AsyncContext.Run(async () => await _commandProcessor.SendAsync(_command));
 
            // should_store_the_command_to_the_command_store
-            Assert.AreEqual(_command.Value, _commandStore.GetAsync<MyCommand>(_command.Id).Result.Value);
+            _commandStore.GetAsync<MyCommand>(_command.Id).Result.Value.Should().Be(_command.Value);
         }
     }
 }

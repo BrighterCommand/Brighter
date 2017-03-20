@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using Xunit;
@@ -75,7 +76,7 @@ namespace Paramore.Brighter.Tests
             _exception = Catch.Exception(() => AsyncContext.Run(() => _commandProcessor.PostAsync(_myCommand)));
 
             //_should_throw_an_exception
-            Assert.IsInstanceOf<InvalidOperationException>(_exception);
+            _exception.Should().BeOfType<InvalidOperationException>();
         }
 
         public void Dispose()

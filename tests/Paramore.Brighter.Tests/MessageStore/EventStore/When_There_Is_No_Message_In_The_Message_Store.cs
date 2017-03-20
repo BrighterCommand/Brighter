@@ -100,7 +100,7 @@ namespace Paramore.Brighter.Tests.MessageStore.EventStore
             _messages = _eventStoreMessageStore.Get(EmptyStreamName, 0, 1);
 
             //_returns_an_empty_list
-            Assert.AreEqual(_messages.Count, 0);
+            0.Should().Be(_messages.Count);
         }
 
         private Message CreateMessage(int eventNumber)

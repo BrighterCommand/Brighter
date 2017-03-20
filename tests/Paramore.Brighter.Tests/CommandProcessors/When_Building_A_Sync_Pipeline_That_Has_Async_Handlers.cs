@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
@@ -54,9 +55,9 @@ namespace Paramore.Brighter.Tests
         {
             _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.Build(new RequestContext()).First());
 
-            Assert.NotNull(_exception);
-            Assert.IsInstanceOf(typeof (ConfigurationException), _exception);
-            StringAssert.Contains(typeof (MyLoggingHandlerAsync<>).Name, _exception.Message);
+            _exception.Should().NotBeNull();
+            _exception.Should().BeOfType<ConfigurationException>();
+            _exception.Message.Should().Contain(typeof(MyLoggingHandlerAsync<>).Name);
         }
     }
 }

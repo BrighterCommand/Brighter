@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
+using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway
@@ -56,7 +57,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
             //_should_call_the_messaging_gateway
             A.CallTo(() => _gateway.Receive(1000)).MustHaveHappened();
             //_should_return_the_next_message_from_the_gateway
-            Assert.AreEqual(_sentMessage, _receivedMessage);
+            _receivedMessage.Should().Be(_sentMessage);
         }
     }
 }
