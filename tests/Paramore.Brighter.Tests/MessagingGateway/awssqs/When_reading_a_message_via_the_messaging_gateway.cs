@@ -14,7 +14,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
         private IAmAMessageConsumer _receiver;
         private Message _sentMessage;
         private Message _receivedMessage;
-        private string queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
+        private string _queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
 
         public SqsMessageConsumerReceiveTests()
         {
@@ -25,11 +25,11 @@ namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
 
             var credentials = new AnonymousAWSCredentials();
             _sender = new SqsMessageProducer(credentials);
-            _receiver = new SqsMessageConsumer(credentials, queueUrl);
-            _testQueueListener = new TestAWSQueueListener(credentials, queueUrl);
+            _receiver = new SqsMessageConsumer(credentials, _queueUrl);
+            _testQueueListener = new TestAWSQueueListener(credentials, _queueUrl);
         }
 
-        [Fact]
+        [Fact(Skip = "todo: Amazon.Runtime.AmazonClientException : No RegionEndpoint or ServiceURL configured")]
         public void When_reading_a_message_via_the_messaging_gateway()
         {
             _sender.Send(_sentMessage);
