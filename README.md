@@ -1,3 +1,4 @@
+| | |
 | ------------- | ------------- |
 |![canon] (https://openclipart.org/people/amilo/canon.svg) |[Brighter](http://iancooper.github.io/Paramore/Brighter.html)|
 ||Brighter is a command dispatcher, processor, and task queue. It can be used to implement the [Command Invoker] (http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker) pattern. It can be used for interoperability in a microservices architecture as well. |
