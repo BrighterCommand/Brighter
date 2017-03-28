@@ -1,9 +1,9 @@
 # Release Notes #
-NuGet packages for the last good build on master are available via [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore) (see Artifacts) or the nuget feed is [https://ci.appveyor.com/nuget/paramore-gnrfp84lbfd3](https://ci.appveyor.com/nuget/paramore-gnrfp84lbfd3). The simplest way to work with this is to use the Nuget Feed, which is every successful build, So 
+NuGet packages for the last good build on master are available via [AppVeyor](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter) (see Artifacts) or the nuget feed is [https://ci.appveyor.com/nuget/paramore-brighter-m289d49fraww](https://ci.appveyor.com/nuget/paramore-brighter-m289d49fraww). The simplest way to work with this is to use the Nuget Feed, which is every successful build, So 
 
 When we push a collection of functionality it is available via [nuget.org](http://www.nuget.org) and symbol files are published to [symbolsource.org](http://www.symbolsource.org)
 
-This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/IanCooper/paramore), but not yet deployed to [nuget.org](http://www.nuget.org).
+This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter), but not yet deployed to [nuget.org](http://www.nuget.org).
 
 ## Master ##
 	- Support for .NET Core (NETSTANDARD 1.5)
@@ -21,10 +21,10 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 ## Release 6.0.28 ##
 
-Fix issue with encoding of non-string types and transmission of correlation id https://github.com/iancooper/Paramore/pull/180
+Fix issue with encoding of non-string types and transmission of correlation id https://github.com/BrighterCommand/Brighter/pull/180
 
 ## Release 6.0.6 ##
-- Increase logging level when we stop reading from a queue that cannot be read https://github.com/iancooper/Paramore/pull/179
+- Increase logging level when we stop reading from a queue that cannot be readhttps://github.com/BrighterCommand/Brighter/pull/179
 - Peformance issue caused by creation of a logger per requesthandler instance. The logger is now static, but is initialized lazily and can be overridden for TDD or legacy compatibility 
 
 ## Release 6.0.0 ##
@@ -92,8 +92,8 @@ Fix issue with encoding of non-string types and transmission of correlation id h
 ## Release 3.0.129 ##
 1. We now support a Fallback method on IHandleRequests<TRequest> which is intended to be used for compensating or emergency action when a Handle method cannot be executed. The [FallbackPolicy] attribute supports the pipeline calling the Fallback method for you, in the event of either any exception bubbling into the handler, or a broken circuit exception bubbling into the handler.
 2. Fix issue with RabbitMQ consumers running on a High Availability cluster not cancelling properly after cluster failover.
-3. Fixed bug with config section duplication https://github.com/iancooper/Paramore/issues/52
-4. Added functionality so after a specified number of unacceptable message (unable to read from queue or map message) a connection is shutdown, by default unacceptable message are acked and dropped. https://github.com/iancooper/Paramore/issues/51
+3. Fixed bug with config section duplication https://github.com/BrighterCommand/Brighter/issues/52
+4. Added functionality so after a specified number of unacceptable message (unable to read from queue or map message) a connection is shutdown, by default unacceptable message are acked and dropped. https://github.com/BrighterCommand/Brighter/issues/51
 5. Move RequeueException to paramore.brighter.commandprocessor.exceptions (breaking change).
 
 ## Release 3 ##
