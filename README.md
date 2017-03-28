@@ -19,7 +19,7 @@
  	- Brighter provides a Task Queue implementation for handling commands asynchronously via a work queue. 
 
 ## Documentation
-* More detailed documentation on the project can be found on the GitHub pages for the project here: [Paramore](http://brightercommand.github.io/Paramore.Brighter/)
+* More detailed documentation on the project can be found on the GitHub pages for the project here: [Paramore](http://brightercommand.github.io/Brighter/)
 
 
 ## What are the different branches?
