@@ -1,0 +1,230 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/BrighterCommand/Brighter">View the Project on GitHub <small>BrighterCommand/Brighter</small></a></p>
+    <ul>
+        <li><a href="https://github.com/BrighterCommand/Brighter/zipball/master">Download <strong>ZIP File</strong></a></li>
+        <li><a href="https://github.com/BrighterCommand/Brighter/tarball/master">Download <strong>TAR Ball</strong></a></li>
+        <li><a href="https://github.com/BrighterCommand/Brighter">View On <strong>GitHub</strong></a></li>
+    </ul>
+        <p><a href="index.html">Paramore Home</a></p>
+        <a href="CommandsCommandDispatcherandProcessor.html">Prev</a>
+    </header>
+    <section>
+        <h1>Brighter</h1>
+        <h2>Decoupling via a Command Dispatcher</h2>
+        <p>When we think about a <a href="http://domaindrivendesign.org/node/118">layered </a>or
+            <a href="http://alistair.cockburn.us/Hexagonal+architecture">hexagonal </a>architecture
+            it is common to identify the need for a service layer. The service layer both provides a facade over our domain layer to applications
+            acting as an API definition and contains the co-ordination and control logic for orchestrating how we respond to requests.</p>
+        <p>One option to implement this is the notion of a service as a class:</p>
+        <pre><code>
+public class MyFatDomainService
+{
+    public void CreateMyThing(
+            CreateMyThingCommand createMyThingCommand)
+    {
+        /*Stuff*/
+    }
+
+    public void UpdateMyThingForFoo(
+            FooCommand fooHappened)
+    {
+        /*Other Stuff*/
+    }
+
+    public void UpdateMyThingForBar(
+            BarCommand barHappened)
+    {
+        /*Other Stuff*/
+    }
+
+    /*Loads more of these*/
+}
+        </code></pre>
+        <p>Another option is to use the <a href="http://hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher pattern</a>.
+            There are some keys to understanding the choice to use a Command Dispatcher to implement your service layer.</p>
+        <p>The <a href="http://www.objectmentor.com/resources/articles/isp.pdf">Interface Segregation Principle</a> states that clients should not be forced to depend on methods on an interface
+            that they do not use. This is because we do not want to update the client because the interface changes to service other clients in a way that the client itself does not
+            care about. <em>Operation script</em> style domain service classes force consumers (for example MVC controllers) to become dependent on methods on the domain service class
+            that they do not consume.</p>
+        <p>Now this can be obviated by having the domain service implement a number of interfaces, and hand to its clients interfaces that only cover the concerns they have.
+            With application service layers this naturally tends towards one method per interface.</p>
+        <pre><code>
+public interface ICreateMyThingDomainService
+{
+    void CreateMyThing(
+            CreateMyThingCommand createMyThingCommand);
+}
+
+public interface IUpdateMyThingForFooDomainService
+{
+    void UpdateMyThingForFoo(
+            FooCommand fooHappened);
+}
+
+public interface IUpdateMyThingForBarDomainService
+{
+    void UpdateMyThingForBar(
+            BarCommand barHappened);
+}
+
+public class MyFatDomainService :
+            ICreateMyThingDomainService,
+            IUpdateMyThingForFooDomainService,
+            IUpdateMyThingForBarDomainService
+{
+    public void CreateMyThing(
+            CreateMyThingCommand createMyThingCommand)
+    {
+        /*Stuff*/
+    }
+
+    public void UpdateMyThingForFoo(
+            FooCommand fooHappened)
+    {
+        /*Other Stuff*/
+    }
+
+    public void UpdateMyThingForBar(
+            BarCommand barHappened)
+    {
+        /*Other Stuff*/
+    }
+
+    /*Loads more of these*/
+
+}
+        </code></pre>
+        <p>Now the <a href="http://www.objectmentor.com/resources/articles/srp.pdf">Single Responsibility Principle</a> suggests that a class should have one and only one reason to change.
+            All these separate interfaces begin to suggest that a separate class might be better for each interface, to avoid updating a class for concerns that it does not have.</p>
+        <p>In addition, a single service class results in our class collecting depdendencies for all its methods. Where we have an explosion of dependencies for our service,
+            it can be hard to get our service under test, or makes the tests unintelligible and results
+            in <a href="http://altnetseattle.pbworks.com/w/page/12367942/Why%20We%20Stopped%20Using%20the%20Auto-Mocking%20Container%20and%20What%27s%20Next">anti-patterns like auto-mocking</a>.
+            The need for auto-mocking may be seen as a design smell: you have too many dependencies; the resolution might be to use a Command Dispatcher.</p>
+        <pre><code>
+public interface ICreateMyThingDomainService
+{
+    void CreateMyThing(
+            CreateMyThingCommand createMyThingCommand);
+}
+
+public class CreateMyThingDomainService :
+            ICreateMyThingDomainService
+{
+    public void CreateMyThing(
+            CreateMyThingCommand createMyThingCommand)
+    {
+        /*Stuff */
+    }
+}
+
+public interface IUpdateMyThingForFooDomainService
+{
+    void UpdateMyThingForFoo(FooCommand fooHappened);
+}
+
+public class UpdateMyThingForFooDomainService :
+            IUpdateMyThingForBarDomainService
+{
+    public void UpdateMyThingForBar(
+            BarCommand barHappened)
+    {
+        /*Other Stuff*/
+    }
+}
+
+public interface IUpdateMyThingForFooDomainService
+{
+    void UpdateMyThingForBar(FooCommand barHappened);
+}
+
+public class UpdateMyThingForFooDomainService :
+            IUpdateMyThingForFooDomainService
+{
+    public void UpdateMyThingForFoo(
+            FooCommand barHappened)
+    {
+        /*Other Stuff*/
+    }
+}
+        </code></pre>
+        <p>Having split these individual classes out we might choose to avoid calling them directly, but instead decide to send a message to them. There are a number of reasons for this.</p>
+        <p>The first is that we decouple the caller from the service. This is useful where we might want to change what the service does – for example handle requests asynchronously,
+            without modifying the caller.</p>
+        <p>This also serves to reduce the number of interfaces that we must implement as the generic interface can stand in for most of them.</p>
+        <p>&nbsp;</p>
+        <pre><code>
+public interface IHandleMessages&lt;T&gt;
+{
+    void Handle(T command);
+}
+
+public class CreateMyThingHandler : IHandleMessages
+{
+    public void Handles(
+            CreateMyThingCommand createMyThingCommand)
+    {
+        /*Stuff */
+    }
+}
+        </code></pre>
+        <p>We gain some dependency advantages from the split into separate handlers, because each handler will have fewer dependencies than a service. But in addition we can separate
+            concerns in our handlers, such that we focus on updating a small part of our domain model or object graph in each handler (in DDD terms we
+            focus on an <a href="http://domaindrivendesign.org/node/88">Aggregate</a>).</p>
+         <p>By restricting a handler to updating one Aggregate we can treat the handler as a transactional boundary. We initialize the state of our model by reading from the backing store,
+             update one Aggregate in the model, and commit the changes to the backing store.
+             If we need to notify other Aggregates of this change, because they need to updated in an eventually consistent fashion then we can publish a message (a Domain Event)
+             from the service that handles the initial request. Publish calls zero to many handlers that update aggregates that care about this change in their own transaction and
+            consistency boundary. Because the Command Dispatcher passes the event to those handlers, we do not have any direct dependency on them, reducing our coupling.</p>
+        <pre><code>
+public class CreateMyThingHandler : IHandleMessages
+{
+    IProcessCommands _commandProcessor;
+    IMyThingRepository _myThingRepository;
+
+    public CreateMyThingHandler(
+        IProcessCommands commandProcessor,
+        IMyThingRepository myThingRepository
+            )
+    {
+        _commandProcessor = commandProcessor;
+        _myThingRepository = myThingRepository;
+    }
+
+    public void Handles(
+        CreateMyThingCommand createMyThingCommand)
+    {
+        /*Use Factory or Factory Method to create a my thing  */
+         /*save my thing to a repository*/
+
+        _commandProcessor.Publish(
+            new MyThingCreated
+                {/* properties that other consumers care about*/}
+            );
+    }
+}
+        </code></pre>
+        </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+</body>
+</html>

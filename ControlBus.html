@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Paramore by iancooper</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>Paramore</h1>
+        <p>Libraries and supporting examples for use with the Ports and Adapters and CQRS architectural styles for .NET, with support for Task Queues</p>
+        <p class="view"><a href="https://github.com/BrighterCommand/Brighter">View the Project on GitHub <small>BrighterCommand/Brighter</small></a></p>
+        <ul>
+            <li><a href="https://github.com/BrighterCommand/Brighter/zipball/master">Download <strong>ZIP File</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Brighter/tarball/master">Download <strong>TAR Ball</strong></a></li>
+            <li><a href="https://github.com/BrighterCommand/Brighter">View On <strong>GitHub</strong></a></li>
+        </ul>
+        <p><a href="index.html">Paramore Home</a></p>
+        <p><a href="Implementing%20Ports%20and%20Adapters.html">Next</a></p>
+        <p><a href="TasksExample.html">Prev</a></p>
+    </header>
+    <section>
+        <h1>Brighter</h1>
+        <h2>Control Bus</h2>
+        <h3>What is a Control Bus?</h3>
+        <p>A <a href="https://en.wikipedia.org/wiki/Control_bus">Control Bus is defined by Wikipedia</a> as:</p>
+         <p>
+         <cite>(part of) a computer bus, used by CPUs for communicating with other devices within the computer. While the address bus carries the information on which device the CPU is communicating with and the data bus carries the actual data being processed, the control bus carries commands from the CPU and returns status signals from the devices</cite>
+        </p>
+        <p>Within a system comprising Distributed Task Queues it can be thought of as a mechanism for controlling and managing the queues without interferring with   dispatch to those queues.<p>
+
+        <p>The control bus within Brighter is aligned to that defined by Greghor Hope:</p>
+        <p><cite>"Use a Control Bus to manage an enterprise integration system." in his <a href="http://www.enterpriseintegrationpatterns.com/patterns/messaging/ControlBus.html">Enterprise Integration Patterns</a></cite></p> 
+        <img src="http://www.enterpriseintegrationpatterns.com/img/ControlBus.gif" />
+
+        <p>Gregor additionally further states that a Control Bus;</p>
+        <p><cite>uses the same messaging mechanism used by the application data, but uses separate channels to transmit data</cite></p>
+
+        <h3>Brighter Control Bus</h3>
+        <p>Within a Brighter context this results in the use of the same mechanism of dispatch for control bus messages as for Commands or Events - namely using the ChannelFactory (this ensures the same mechanism is used). An alternative channel is configured by using an alternative <b>broker</b> to transmit the Control Messages. This ensures independence to the Task Messages and adds additional resilience in times of faults on the Messaging broker.<p>
+
+        <p>The Control Bus is to be used for Controlling and Configuring Tasks queues. It is also used for broadcasting and issuing <a href="http://paramore.readthedocs.io/en/latest/Monitoring.html">Monitoring information</a></p>
+
+        <h3><a name="configure"></a>Configuring a Control Bus</h3>
+        <p>
+            As covered in <a href="http://paramore.readthedocs.io/en/latest/DistributedTaskQueueConfiguration.html">Configuring the Distributed Task Queue</a> the following need to be considered:
+            <ul>
+                <li>Channel Factory</li>
+                <li>Connection List</li>
+            </ul>
+        </p>
+        <p>
+            For the following example we will again be using a rabbitMQ Channel, with an independent, named connection. We'll assume the Configuration Section is already present in the config file (again detailed in <a href="http://paramore.readthedocs.io/en/latest/DistributedTaskQueueConfiguration.html"> Configuring the Distributed Task Queue</a>)'.
+        </p>
+        <p>
+            Then the channel connection for the control bus can be specified to use rabbit using the <a href="http://paramore.readthedocs.io/en/latest/RabbitMQConfiguration.html">standard rabbitMq configuration for brighter</a>:
+        </p>
+             <pre><code>&lt;rmqMessagingGateway&gt;
+    &lt;connection name=&quot;monitoring&quot;&gt;
+      &lt;amqpUri uri=&quot;amqp://uri:port&quot; connectionRetryCount=&quot;9&quot; retryWaitInMilliseconds=&quot;50&quot; circuitBreakTimeInMilliseconds=&quot;60000&quot; /&gt;
+      &lt;exchange name=&quot;exchangeName&quot; type=&quot;direct&quot; durable=&quot;true&quot; /&gt;
+      &lt;queues highAvailability=&quot;true&quot; /&gt;
+    &lt;/connection&gt;
+&lt;/rmqMessagingGateway&gt;</code></pre>
+            
+        <p>
+            The next step is to instantiate a Control Bus using the Brighter Factory, referring to the Connection configured, in this case "monitoring":
+        </p>
+             <pre><code>container.Register(new ControlBusSenderFactory()
+.Create(new InMemoryMessageStore(), new RmqMessageProducer("monitoring")));</code></pre>
+        <p>
+            A Control Bus is now active and ready to transmit monitoring messages.
+        </p>
+    </section>
+    <footer>
+        <p>This project is maintained by <a href="https://github.com/iancooper">iancooper</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+    </footer>
+</div>
+<script src="javascripts/scale.fix.js"></script>
+</body>
+</html>
