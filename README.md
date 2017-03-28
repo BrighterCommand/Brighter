@@ -4,8 +4,8 @@
 ||Brighter is a command dispatcher, processor, and task queue. It can be used to implement the [Command Invoker] (http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker) pattern. It can be used for interoperability in a microservices architecture as well. |
 | Version  | [![NuGet Version](http://img.shields.io/nuget/v/paramore.brighter.commandprocessor.svg)](https://www.nuget.org/packages/paramore.brighter.commandprocessor/)  |
 | Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.commandprocessor.svg)](https://www.nuget.org/packages/Paramore.Brighter.CommandProcessor/) |
-| Web  |http://brightercommand.github.io/Paramore.Brighter/  |
-| Source  |https://github.com/BrighterCommand/Paramore.Brighter |
+| Web  |http://brightercommand.github.io/Brighter/  |
+| Source  |https://github.com/BrighterCommand/Brighter |
 | Chat | [![Join the chat at https://gitter.im/iancooper/Paramore](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/iancooper/Paramore?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) |
 | Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, c#, command, command dispatcher, command  processor, queue, distributed |
 
