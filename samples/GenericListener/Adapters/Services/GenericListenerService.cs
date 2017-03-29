@@ -3,21 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using GenericListener.Adapters.Containers;
 using GenericListener.Adapters.MessageMappers;
-using GenericListener.Adapters.MessageMappers.Tasks;
 using GenericListener.Infrastructure;
 using GenericListener.Ports.Attributes;
 using GenericListener.Ports.Events;
 using GenericListener.Ports.Handlers;
-using GenericListener.Ports.Handlers.Tasks;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
-using Tasks.Ports.Events;
 using TinyIoc;
 using Topshelf;
-using Connection = Paramore.Brighter.ServiceActivator.Connection;
 
 namespace GenericListener.Adapters.Services
 {
@@ -48,7 +44,7 @@ namespace GenericListener.Adapters.Services
 
             _dispatcher = BuildDispatcher(config);
 
-            _container.Register<IAmACommandProcessor>(_dispatcher.CommandProcessor);
+            _container.Register(_dispatcher.CommandProcessor);
 
             _dispatcher.Receive();
 
@@ -65,9 +61,6 @@ namespace GenericListener.Adapters.Services
 
         private void RegisterHandlers(HandlerConfig config)
         {
-            // Register traditional Brighter event type with appropriate handler and mapper.
-            config.Register<TaskReminderSentEvent, TaskReminderSentEventHandler, TaskReminderSentEventMapper>();
-
             // Register events deriving from GenericTask that optonally confirm to our generic usage
             // hoisting custom version for derived types where found.
             RegisterGenericHandlersFor<GenericTask>(config);
@@ -135,8 +128,6 @@ namespace GenericListener.Adapters.Services
 
             var connections = new List<Connection>
             {
-                // Events with mapper and handler overrides
-                new Connection(new ConnectionName("Task.ReminderSent"),inputChannelFactory, typeof(Tasks.Ports.Events.TaskReminderSentEvent), new ChannelName("Task.ReminderSent"), "Task.ReminderSent", noOfPerformers:1, timeoutInMilliseconds: 200),
                 // Generic Events
                 new Connection(new ConnectionName("Task.Added"),inputChannelFactory, typeof(GenericTaskAddedEvent), new ChannelName("Task.Added"), "Task.Added", noOfPerformers:1, timeoutInMilliseconds: 200),
                 new Connection(new ConnectionName("Task.Edited"),inputChannelFactory, typeof(GenericTaskEditedEvent), new ChannelName("Task.Edited"), "Task.Edited", noOfPerformers:1, timeoutInMilliseconds: 200),

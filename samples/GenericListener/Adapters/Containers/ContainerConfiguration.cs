@@ -6,7 +6,6 @@ using EventStore.ClientAPI.Exceptions;
 using EventStore.ClientAPI.SystemData;
 using GenericListener.Adapters.EventStore;
 using GenericListener.Ports.Indexers;
-using Tasks.Ports.Events;
 using TinyIoc;
 
 namespace GenericListener.Adapters.Containers
@@ -77,7 +76,6 @@ namespace GenericListener.Adapters.Containers
             //container.Register(typeof(IGenericFeedEventIndexer<>), typeof(GenericEventIndexer<>)).AsMultiInstance();
 
             container.Register(typeof(IEventStoreWriter<>), typeof(EventStoreWriter<>)).AsMultiInstance(); //Should be singleton
-            container.Register<ITaskReminderSentEventIndexer>((c, o) => new TaskReminderSentEventIndexer(c.Resolve<IEventStoreConnection>(), new EventStoreWriter<TaskReminderSentEvent>())); //should be transient
             container.Register(typeof(IGenericFeedEventIndexer<>), typeof (GenericEventIndexer<>)).AsMultiInstance(); //should be transient
 
             return container;
