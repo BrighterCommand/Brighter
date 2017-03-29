@@ -25,7 +25,7 @@ assembly_info:
   assembly_informational_version: '{version}'
 
 nuget:
-  project_feed: true
+  project_feed: false # false until pkg versioning is sorted
   disable_publish_on_pr: true
 
 install:
@@ -37,26 +37,26 @@ before_build:
   - cmd: dotnet restore --verbosity Minimal
 
 build_script:
-  - cmd: dotnet build -configuration %CONFIGURATION%
+  - cmd: dotnet build --configuration %CONFIGURATION%
 
 after_build:
-  - cmd: dotnet pack src\Paramore.Brighter --configuration %CONFIGURATION% --no-build --output ..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.ServiceActivator --configuration %CONFIGURATION% --no-build --output ..\nupkgs 
-  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --configuration %CONFIGURATION% --no-build --output ..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AWSSQS --configuration %CONFIGURATION% --no-build --output ..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AzureServiceBus --configuration %CONFIGURATION% --no-build --output ..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RESTMS --configuration %CONFIGURATION% --no-build --output ..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --configuration %CONFIGURATION% --no-build --output ..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.ServiceActivator --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs 
+  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AWSSQS --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AzureServiceBus --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RESTMS --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
 
 test_script:
   - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj
 
 artifacts:
-  - path: '/**/nupkgs/*.nupkg'
+  - path: nupkgs/*.nupkg
 
 cache:
 - '%USERPROFILE%\.nuget\packages'
