@@ -1,58 +1,61 @@
 version: 7.0.{build}-alpha
+configuration: Release
+platform: Any CPU
+
+environment:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
 pull_requests:
   do_not_increment_build_number: true
+
 branches:
   only:
   - master
   # blacklist
   except:
     - gh-pages
+
 skip_tags: true
-configuration: 
-#- Debug
-- Release
-platform: Any CPU
+
 assembly_info:
   patch: true
   file: '**\AssemblyInfo.*'
   assembly_version: 7.0.0.0
   assembly_file_version: 7.0.{build}
   assembly_informational_version: '{version}'
+
 nuget:
   project_feed: true
   disable_publish_on_pr: true
+
+install:
+  - ps: Invoke-WebRequest -Uri "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/dotnet-install.ps1" -OutFile "dotnet-install.ps1"
+  - ps: ./dotnet-install.ps1 -Version 1.0.0
+
 before_build:
   - cmd: dotnet --info
   - cmd: dotnet restore --verbosity Minimal
-  - ps: |
-        Get-ChildItem . -Recurse -Include project.json | ForEach-Object {(Get-Content $PSItem) -Replace "`"version`": `"1\.0\.0-\*`"","`"version`": `"$env:APPVEYOR_BUILD_VERSION`"" | Set-Content -Path $PSItem;}
 
 build_script:
-  - cmd: dotnet build -c Release */**/project.json
+  - cmd: dotnet build -configuration %CONFIGURATION%
 
 after_build:
-  - cmd: dotnet pack paramore.brighter.commandprocessor/project.json --configuration Release --no-build --output nupkgs
-  - cmd: dotnet pack paramore.brighter.serviceactivator/project.json --configuration Release --no-build --output nupkgs 
-  - cmd: dotnet pack paramore.brighter.commandprocessor.commandstore.mssql/project.json --configuration Release --no-build --output nupkgs
-  - cmd: dotnet pack paramore.brighter.commandprocessor.commandstore.sqlite/project.json --configuration Release --no-build --output nupkgs
-  - cmd: dotnet pack paramore.brighter.commandprocessor.messagestore.eventstore/project.json --configuration Release --no-build --output nupkgs
-  - cmd: dotnet pack paramore.brighter.commandprocessor.messagestore.mssql/project.json --configuration Release --no-build --output nupkgs
-  - cmd: dotnet pack paramore.brighter.commandprocessor.messagestore.sqlite/project.json --configuration Release --no-build --output nupkgs
-  - cmd: dotnet pack paramore.brighter.commandprocessor.messaginggateway.awssqs/project.json --configuration Release --no-build --output nupkgs
-  - cmd: dotnet pack paramore.brighter.commandprocessor.messaginggateway.azureservicebus/project.json --configuration Release --no-build --output nupkgs
-  - cmd: dotnet pack paramore.brighter.commandprocessor.messaginggateway.restms/project.json --configuration Release --no-build --output nupkgs
-  - cmd: dotnet pack paramore.brighter.commandprocessor.messaginggateway.rmq/project.json --configuration Release --no-build --output nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter --configuration %CONFIGURATION% --no-build --output ..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.ServiceActivator --configuration %CONFIGURATION% --no-build --output ..\nupkgs 
+  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --configuration %CONFIGURATION% --no-build --output ..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AWSSQS --configuration %CONFIGURATION% --no-build --output ..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AzureServiceBus --configuration %CONFIGURATION% --no-build --output ..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RESTMS --configuration %CONFIGURATION% --no-build --output ..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --configuration %CONFIGURATION% --no-build --output ..\nupkgs
 
 test_script:
-  - cmd: dotnet test paramore.brighter.commandprocessor.tests.nunit/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=brightertestresults.xml
-  - ps: (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\brightertestresults.xml))
-  - cmd: dotnet test paramore.brighter.commandprocessor.viewer.tests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=viewertestresults.xml
-  - ps: (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\viewertestresults.xml))
-  - cmd: dotnet test Examples/TasksTests/project.json --where "cat!=MSSQL && cat!=EventStore && cat!=AWS && cat!=RESTMS && cat!=RMQ" --result=tasktestresults.xml
-  - ps: (New-Object 'System.Net.WebClient').UploadFile("https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\tasktestresults.xml))
+  - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj
 
 artifacts:
-  # pushing all *.nupkg files in build directory recursively
   - path: '/**/nupkgs/*.nupkg'
 
 cache:
