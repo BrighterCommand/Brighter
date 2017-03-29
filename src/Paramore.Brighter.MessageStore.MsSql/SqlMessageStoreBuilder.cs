@@ -44,6 +44,5 @@ namespace Paramore.Brighter.MessageStore.MsSql
         {
             return string.Format(MessageStoreDdl, tableName);
         }
-
     }
 }

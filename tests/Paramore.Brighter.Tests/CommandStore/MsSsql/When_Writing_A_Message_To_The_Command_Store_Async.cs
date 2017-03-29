@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             _msSqlTestHelper.SetupCommandDb();
 
             _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
-            _raisedCommand = new MyCommand {Value = "Test"};
+            _raisedCommand = new MyCommand { Value = "Test" };
         }
 
         [Fact]

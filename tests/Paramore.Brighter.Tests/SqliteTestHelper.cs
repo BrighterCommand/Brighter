@@ -9,7 +9,7 @@ namespace Paramore.Brighter.Tests
     public class SqliteTestHelper
     {
         private const string TestDbPath = "test.db";
-        public string ConnectionString = "DataSource=\"" + TestDbPath + "\"";
+        public string ConnectionString = $"DataSource=\"{TestDbPath}\"";
         public string TableName = "test_commands";
         public string TableName_Messages = "test_messages";
         private string connectionStringPath;
@@ -19,14 +19,14 @@ namespace Paramore.Brighter.Tests
         public SqliteConnection SetupCommandDb()
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
-            ConnectionString = "DataSource=\"" + connectionStringPath + "\"";
+            ConnectionString = $"DataSource=\"{connectionStringPath}\"";
             return CreateDatabaseWithTable(ConnectionString, SqliteCommandStoreBuilder.GetDDL(TableName));
         }
 
         public SqliteConnection SetupMessageDb()
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
-            ConnectionString = "DataSource=\"" + connectionStringPath + "\"";
+            ConnectionString = $"DataSource=\"{connectionStringPath}\"";
             return CreateDatabaseWithTable(ConnectionString, SqliteMessageStoreBuilder.GetDDL(TableName_Messages));
         }
 
@@ -60,8 +60,8 @@ namespace Paramore.Brighter.Tests
         private SqliteConnection CreateDatabaseWithTable(string dataSourceTestDb, string createTableScript)
         {
             _sqlConnection = new SqliteConnection(dataSourceTestDb);
-
             _sqlConnection.Open();
+
             using (var command = _sqlConnection.CreateCommand())
             {
                 command.CommandText = createTableScript;
