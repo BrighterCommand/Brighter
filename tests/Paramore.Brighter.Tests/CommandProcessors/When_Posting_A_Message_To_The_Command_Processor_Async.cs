@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
@@ -72,9 +72,9 @@ namespace Paramore.Brighter.Tests
         }
 
         [Fact]
-        public void When_Posting_A_Message_To_The_Command_Processor_Async()
+        public async Task When_Posting_A_Message_To_The_Command_Processor_Async()
         {
-            AsyncContext.Run(async () => await _commandProcessor.PostAsync(_myCommand));
+            await _commandProcessor.PostAsync(_myCommand);
 
            //_should_store_the_message_in_the_sent_command_message_repository
             _fakeMessageStore.MessageWasAdded.Should().BeTrue();

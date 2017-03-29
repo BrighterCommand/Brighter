@@ -24,8 +24,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
@@ -44,13 +44,14 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             _sqliteTestHelper.SetupMessageDb();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_messageEarliest));
         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Message_Store_Async()
+        public async Task When_The_Message_Is_Already_In_The_Message_Store_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_messageEarliest)));
+            await _sSqlMessageStore.AddAsync(_messageEarliest);
+
+            _exception = await Catch.ExceptionAsync(() => _sSqlMessageStore.AddAsync(_messageEarliest));
 
             //_should_ignore_the_duplcate_key_and_still_succeed
             _exception.Should().BeNull();

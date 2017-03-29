@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
@@ -72,16 +72,16 @@ namespace Paramore.Brighter.Tests
         }
 
         [Fact]
-        public void When_Posting_With_An_In_Memory_Message_Store_Async()
+        public async Task When_Posting_With_An_In_Memory_Message_Store_Async()
         {
-            AsyncContext.Run(async () => await _commandProcessor.PostAsync(_myCommand));
+            await _commandProcessor.PostAsync(_myCommand);
 
             //_should_store_the_message_in_the_sent_command_message_repository
-            Assert.NotNull(AsyncContext.Run(async() => await _messageStore.GetAsync(_myCommand.Id)));
+            Assert.NotNull(await _messageStore.GetAsync(_myCommand.Id));
             //_should_send_a_message_via_the_messaging_gateway
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             //_should_convert_the_command_into_a_message
-            Assert.Equal(_message, AsyncContext.Run(async() => await _messageStore.GetAsync(_myCommand.Id)));
+            Assert.Equal(_message, await _messageStore.GetAsync(_myCommand.Id));
         }
 
         public void Dispose()

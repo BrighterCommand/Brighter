@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -48,9 +48,9 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
         }
 
         [Fact]
-        public void When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
+        public async Task When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
         {
-            _storedCommand = AsyncContext.Run<MyCommand>(async () => await _sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid()));
+            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid());
 
             //_should_return_an_empty_command_on_a_missing_command
             _storedCommand.Id.Should().Be(Guid.Empty);

@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
@@ -54,9 +54,9 @@ namespace Paramore.Brighter.Tests
         }
 
         [Fact]
-        public void When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async()
+        public async Task When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PublishAsync(_myEvent)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(_myEvent));
 
             //_should_throw_an_aggregate_exception
             _exception.Should().BeOfType<AggregateException>();

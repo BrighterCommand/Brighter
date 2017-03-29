@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
@@ -71,9 +71,9 @@ namespace Paramore.Brighter.Tests
         }
 
         [Fact]
-        public void When_Posting_A_Message_And_There_Is_No_Message_Producer_Async()
+        public async Task When_Posting_A_Message_And_There_Is_No_Message_Producer_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(() => _commandProcessor.PostAsync(_myCommand)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_myCommand));
 
             //_should_throw_an_exception
             _exception.Should().BeOfType<InvalidOperationException>();

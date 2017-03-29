@@ -1,5 +1,5 @@
-﻿using FluentAssertions;
-using Nito.AsyncEx;
+﻿using System.Threading.Tasks;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -31,9 +31,9 @@ namespace Paramore.Brighter.Tests.EventSourcing
         }
 
         [Fact]
-        public void When_Handling_A_Command_With_A_Command_Store_Enabled_Async()
+        public async Task When_Handling_A_Command_With_A_Command_Store_Enabled_Async()
         {
-            AsyncContext.Run(async () => await _commandProcessor.SendAsync(_command));
+            await _commandProcessor.SendAsync(_command);
 
            // should_store_the_command_to_the_command_store
             _commandStore.GetAsync<MyCommand>(_command.Id).Result.Value.Should().Be(_command.Value);

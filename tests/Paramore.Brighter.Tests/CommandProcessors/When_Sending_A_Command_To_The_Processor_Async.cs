@@ -22,8 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
@@ -46,9 +46,9 @@ namespace Paramore.Brighter.Tests
         // Ignore any errors about adding System.Runtime from the IDE.
         // See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow
         [Fact]
-        public void When_Sending_A_Command_To_The_Processor_Async()
+        public async Task When_Sending_A_Command_To_The_Processor_Async()
         {
-            AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand));
+            await _commandProcessor.SendAsync(_myCommand);
 
            // _should_send_the_command_to_the_command_handler
             MyCommandHandlerAsync.ShouldReceive(_myCommand).Should().BeTrue();

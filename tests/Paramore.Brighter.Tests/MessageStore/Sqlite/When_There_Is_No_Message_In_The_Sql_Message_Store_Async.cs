@@ -24,8 +24,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 
@@ -48,9 +48,9 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
         }
 
         [Fact]
-        public void When_There_Is_No_Message_In_The_Sql_Message_Store_Async()
+        public async Task When_There_Is_No_Message_In_The_Sql_Message_Store_Async()
         {
-            AsyncContext.Run(async () => _storedMessage = await _sSqlMessageStore.GetAsync(_messageEarliest.Id));
+            _storedMessage = await _sSqlMessageStore.GetAsync(_messageEarliest.Id);
 
             //_should_return_a_empty_message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);

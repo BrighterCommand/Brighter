@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Nito.AsyncEx;
+using System.Threading.Tasks;
 using Xunit;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Logging.Handlers;
@@ -37,9 +37,9 @@ namespace Paramore.Brighter.Tests.Logging
         }
 
         [Fact]
-        public void When_A_Request_Logger_Is_In_The_Pipeline_Async()
+        public async Task When_A_Request_Logger_Is_In_The_Pipeline_Async()
         {
-            AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand));
+            await _commandProcessor.SendAsync(_myCommand);
 
             //_should_log_the_request_handler_call
             Assert.True(((Func<IList<SpyLog.LogRecord>, bool>) (logs => logs.Any(log => log.Message.Contains("Logging handler pipeline call")))).Invoke(_logger.Logs));

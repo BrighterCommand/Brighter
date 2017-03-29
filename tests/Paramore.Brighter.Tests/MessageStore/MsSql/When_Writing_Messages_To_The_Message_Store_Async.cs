@@ -26,8 +26,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 using Paramore.Brighter.Time;
@@ -50,32 +50,39 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
-            AsyncContext.Run(async () => await _sqlMessageStore.AddAsync(_messageEarliest));
-
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-2);
-
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND), new MessageBody("Body2"));
-            AsyncContext.Run(async () => await _sqlMessageStore.AddAsync(_message2));
-
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-1);
-
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND),new MessageBody("Body3"));
-            AsyncContext.Run(async () => await _sqlMessageStore.AddAsync(_messageLatest));
         }
 
         [Fact]
-        public void When_Writing_Messages_To_The_Message_Store_Async()
+        public async Task When_Writing_Messages_To_The_Message_Store_Async()
         {
-            AsyncContext.Run(async () => _retrievedMessages = await _sqlMessageStore.GetAsync());
+            await SetUpMessagesAsync();
+
+            _retrievedMessages = await _sqlMessageStore.GetAsync();
 
             //_should_read_first_message_last_from_the__message_store
             _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
             //_should_read_last_message_first_from_the__message_store
             _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
             // _should_read_the_messages_from_the__message_store
-            _retrievedMessages.Count().Should().Be(3);
+            _retrievedMessages.Should().HaveCount(3);
+        }
+
+        private async Task SetUpMessagesAsync()
+        {
+            Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
+
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
+            await _sqlMessageStore.AddAsync(_messageEarliest);
+
+            Clock.OverrideTime = DateTime.UtcNow.AddHours(-2);
+
+            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND), new MessageBody("Body2"));
+            await _sqlMessageStore.AddAsync(_message2);
+
+            Clock.OverrideTime = DateTime.UtcNow.AddHours(-1);
+
+            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND), new MessageBody("Body3"));
+            await _sqlMessageStore.AddAsync(_messageLatest);
         }
 
         public void Dispose()

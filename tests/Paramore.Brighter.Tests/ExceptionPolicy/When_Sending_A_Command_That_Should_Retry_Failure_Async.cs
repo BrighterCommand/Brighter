@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
@@ -48,9 +48,9 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
 
         //We have to catch the final exception that bubbles out after retry
         [Fact]
-        public void When_Sending_A_Command_That_Should_Retry_Failure_Async()
+        public async Task When_Sending_A_Command_That_Should_Retry_Failure_Async()
         {
-            Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand)));
+            await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
 
             //_should_send_the_command_to_the_command_handler
             MyFailsWithFallbackDivideByZeroHandlerAsync.ShouldReceive(_myCommand).Should().BeTrue();

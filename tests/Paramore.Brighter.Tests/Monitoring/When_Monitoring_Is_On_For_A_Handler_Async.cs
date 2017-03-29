@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
@@ -71,9 +71,9 @@ namespace Paramore.Brighter.Tests.Monitoring
         }
 
         [Fact]
-        public void When_Monitoring_Is_on_For_A_Handler_Async()
+        public async Task When_Monitoring_Is_on_For_A_Handler_Async()
         {
-            AsyncContext.Run(async () => await _commandProcessor.SendAsync(_command));
+            await _commandProcessor.SendAsync(_command);
             _beforeEvent = _controlBusSender.Observe<MonitorEvent>();
             _afterEvent = _controlBusSender.Observe<MonitorEvent>();
 

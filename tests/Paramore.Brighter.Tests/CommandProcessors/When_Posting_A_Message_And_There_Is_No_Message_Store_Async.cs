@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
@@ -65,9 +65,9 @@ namespace Paramore.Brighter.Tests
         }
 
         [Fact]
-        public void When_Posting_A_Message_And_There_Is_No_Message_Store_Async()
+        public async Task When_Posting_A_Message_And_There_Is_No_Message_Store_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PostAsync(_myCommand)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_myCommand));
         }
 
         public void Dispose()

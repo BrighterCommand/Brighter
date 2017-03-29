@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
@@ -71,9 +71,9 @@ namespace Paramore.Brighter.Tests.Monitoring
         }
 
         [Fact]
-        public void When_Monitoring_We_Should_Record_But_Rethrow_Exceptions_Async()
+        public async Task When_Monitoring_We_Should_Record_But_Rethrow_Exceptions_Async()
         {
-            _thrownException = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_command)));
+            _thrownException = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_command));
             _controlBusSender.Observe<MonitorEvent>();
             _afterEvent = _controlBusSender.Observe<MonitorEvent>();
 

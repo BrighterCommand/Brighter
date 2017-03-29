@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
@@ -42,9 +42,9 @@ namespace Paramore.Brighter.Tests
         }
 
         [Fact]
-        public void When_There_Is_No_Handler_Factory_On_A_Publish_Async()
+        public async Task When_There_Is_No_Handler_Factory_On_A_Publish_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PublishAsync(_myEvent)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(_myEvent));
 
            //_should_throw_an_invalid_operation_exception
             _exception.Should().BeOfType<InvalidOperationException>();

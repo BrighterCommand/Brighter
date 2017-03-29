@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -47,13 +47,14 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
 
             _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
             _raisedCommand = new MyCommand {Value = "Test"};
-            AsyncContext.Run(async () => await _sqlCommandStore.AddAsync(_raisedCommand));
         }
 
         [Fact]
-        public void When_Writing_A_Message_To_The_Command_Store_Async()
+        public async Task When_Writing_A_Message_To_The_Command_Store_Async()
         {
-            AsyncContext.Run(async () => _storedCommand =await _sqlCommandStore.GetAsync<MyCommand>(_raisedCommand.Id));
+            await _sqlCommandStore.AddAsync(_raisedCommand);
+
+            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(_raisedCommand.Id);
 
             //_should_read_the_command_from_the__sql_command_store
             _storedCommand.Should().NotBeNull();

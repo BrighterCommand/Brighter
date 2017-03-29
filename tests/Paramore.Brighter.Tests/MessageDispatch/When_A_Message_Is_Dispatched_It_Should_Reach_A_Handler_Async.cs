@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
@@ -41,9 +41,9 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async()
+        public async Task When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async()
         {
-            AsyncContext.Run(async () => await _messagePump.Run());
+            await _messagePump.Run();
 
             MyEventHandlerAsyncWithContinuation.ShouldReceive(_event).Should().BeTrue();
             MyEventHandlerAsyncWithContinuation.LoopCounter.Value.Should().Be(2);

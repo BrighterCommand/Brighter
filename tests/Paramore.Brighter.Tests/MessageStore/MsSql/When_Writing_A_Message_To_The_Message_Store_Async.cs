@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
 
@@ -53,13 +53,14 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             messageHeader.Bag.Add(key2, value2);
 
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
-            AsyncContext.Run(async () => await _sqlMessageStore.AddAsync(_messageEarliest));
         }
 
         [Fact]
-        public void When_Writing_A_Message_To_The_Message_Store_Async()
+        public async Task When_Writing_A_Message_To_The_Message_Store_Async()
         {
-            AsyncContext.Run(async () => _storedMessage = await _sqlMessageStore.GetAsync(_messageEarliest.Id));
+            await _sqlMessageStore.AddAsync(_messageEarliest);
+
+            _storedMessage = await _sqlMessageStore.GetAsync(_messageEarliest.Id);
 
             //_should_read_the_message_from_the__sql_message_store =
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

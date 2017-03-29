@@ -25,6 +25,7 @@ THE SOFTWARE.
 
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tests
 {
@@ -38,6 +39,21 @@ namespace Paramore.Brighter.Tests
             try
             {
                 action();
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+
+            return exception;
+        }
+        public static async Task<Exception> ExceptionAsync(Func<Task> action)
+        {
+            Exception exception = null;
+
+            try
+            {
+                await action();
             }
             catch (Exception e)
             {

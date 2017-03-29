@@ -23,9 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
-using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests
@@ -45,9 +44,9 @@ namespace Paramore.Brighter.Tests
         }
 
         //Ignore any errors about adding System.Runtime from the IDE. See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow
-        public void When_There_Are_No_Subscribers_Async()
+        public async Task When_There_Are_No_Subscribers_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PublishAsync(_myEvent)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(_myEvent));
 
             //_should_not_throw_an_exception
             _exception.Should().BeNull();

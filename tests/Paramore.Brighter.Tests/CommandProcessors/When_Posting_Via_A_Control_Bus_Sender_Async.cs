@@ -24,9 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
@@ -76,9 +76,9 @@ namespace Paramore.Brighter.Tests
         }
 
         [Fact]
-        public void When_Posting_Via_A_Control_Bus_Sender_Async()
+        public async Task When_Posting_Via_A_Control_Bus_Sender_Async()
         {
-            AsyncContext.Run(async () => await _controlBusSender.PostAsync(_myCommand));
+            await _controlBusSender.PostAsync(_myCommand);
 
             //_should_store_the_message_in_the_sent_command_message_repository
             _fakeMessageStore.MessageWasAdded.Should().BeTrue();

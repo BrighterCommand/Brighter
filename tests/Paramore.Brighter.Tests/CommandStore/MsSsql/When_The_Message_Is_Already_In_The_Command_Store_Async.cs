@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
 using Xunit;
 using Paramore.Brighter.CommandStore.MsSql;
 using Paramore.Brighter.Tests.TestDoubles;
@@ -46,13 +46,14 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 
             _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
             _raisedCommand = new MyCommand {Value = "Test"};
-            AsyncContext.Run(async () => await _sqlCommandStore.AddAsync<MyCommand>(_raisedCommand));
         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Command_Store_Async()
+        public async Task When_The_Message_Is_Already_In_The_Command_Store_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _sqlCommandStore.AddAsync(_raisedCommand)));
+            await _sqlCommandStore.AddAsync(_raisedCommand);
+
+            _exception = await Catch.ExceptionAsync(() => _sqlCommandStore.AddAsync(_raisedCommand));
 
            //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
