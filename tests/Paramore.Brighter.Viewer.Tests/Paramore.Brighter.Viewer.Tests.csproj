@@ -10,7 +10,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageViewer\Paramore.Brighter.MessageViewer.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     <ProjectReference Include="..\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj" />
   </ItemGroup>
