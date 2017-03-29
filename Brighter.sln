@@ -23,7 +23,7 @@ Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "HelloWorld", "samples\Hello
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "HelloWorldAsync", "samples\HelloWorldAsync\HelloWorldAsync.xproj", "{EEDF9610-AAE0-4604-999C-159B39B52532}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.Serviceactivator", "src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.Serviceactivator.xproj", "{E01C809C-AF79-4BA9-9ECB-80C60802C073}"
+Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.ServiceActivator", "src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.xproj", "{E01C809C-AF79-4BA9-9ECB-80C60802C073}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Paramore.Brighter.MessagingGateway.RMQ", "src\Paramore.Brighter.MessagingGateway.RMQ\Paramore.Brighter.MessagingGateway.RMQ.xproj", "{61DE9904-884B-4E8A-A4DF-CD697B5A9CF6}"
 EndProject

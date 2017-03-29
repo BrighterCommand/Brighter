@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(unacceptableMessage);
         }
 
-        [SetUp]
+        [Test]
         public void When_An_Unacceptable_Message_Is_Recieved()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
