@@ -1,6 +1,5 @@
 version: 7.0.{build}-alpha
 configuration: Release
-platform: Any CPU
 
 environment:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
@@ -42,7 +41,7 @@ build_script:
 after_build:
   - cmd: dotnet pack src\Paramore.Brighter --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
   - cmd: dotnet pack src\Paramore.Brighter.ServiceActivator --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs 
-  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --configuration %CONFIGURATION% ---no-build --output ..\..\nupkgs
   - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
   - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
   - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
@@ -56,7 +55,7 @@ test_script:
   - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj
 
 artifacts:
-  - path: nupkgs/*.nupkg
+  - path: nupkgs\*.nupkg
 
 cache:
 - '%USERPROFILE%\.nuget\packages'
