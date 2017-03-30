@@ -31,7 +31,7 @@ install:
   - ps: Invoke-WebRequest -Uri "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/dotnet-install.ps1" -OutFile "dotnet-install.ps1"
   - ps: .\dotnet-install.ps1 -Version 1.0.0
   - ps: Import-Module .\Set-Version.psm1
-  - ps: Set-Version -CsprojPattern "src/*/*.csproj" -Version "{version}"
+  - ps: Set-Version -CsprojPattern "src/*/*.csproj" -Version $env:APPVEYOR_BUILD_VERSION
 
 before_build:
   - cmd: dotnet --info
