@@ -3,9 +3,6 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
     <DebugType>portable</DebugType>
-    <AssemblyName>DocumentsAndFolders.Sqs.Core</AssemblyName>
-    <PackageId>DocumentsAndFolders.Sqs.Core</PackageId>
-    <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.5' ">$(PackageTargetFallback);dnxcore50;portable-net45+win8</PackageTargetFallback>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>

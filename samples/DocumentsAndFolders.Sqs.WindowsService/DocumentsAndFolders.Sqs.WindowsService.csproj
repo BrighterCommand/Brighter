@@ -3,9 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net452</TargetFramework>
     <DebugType>portable</DebugType>
-    <AssemblyName>DocumentsAndFolders.Sqs.WindowsService</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PackageId>DocumentsAndFolders.Sqs.WindowsService</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>

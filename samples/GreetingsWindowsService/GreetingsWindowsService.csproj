@@ -3,9 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net452</TargetFramework>
     <DebugType>portable</DebugType>
-    <AssemblyName>GreetingsWindowsService</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PackageId>GreetingsWindowsService</PackageId>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>

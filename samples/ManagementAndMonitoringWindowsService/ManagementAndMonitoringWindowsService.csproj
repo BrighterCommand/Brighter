@@ -3,9 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net452</TargetFramework>
     <DebugType>portable</DebugType>
-    <AssemblyName>ManagementAndMonitoringWindowsService</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PackageId>ManagementAndMonitoringWindowsService</PackageId>
   </PropertyGroup>
 
   <ItemGroup>

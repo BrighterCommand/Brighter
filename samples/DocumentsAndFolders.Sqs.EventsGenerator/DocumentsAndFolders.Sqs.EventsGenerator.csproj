@@ -3,9 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net452</TargetFramework>
     <DebugType>portable</DebugType>
-    <AssemblyName>DocumentsAndFolders.Sqs.EventsGenerator</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PackageId>DocumentsAndFolders.Sqs.EventsGenerator</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
@@ -24,10 +22,6 @@
     <ProjectReference Include="..\DocumentsAndFolders.Sqs.Core\DocumentsAndFolders.Sqs.Core.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AWSSQS\Paramore.Brighter.MessagingGateway.AWSSQS.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="AWSSDK.Core" Version="3.3.10.2" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
