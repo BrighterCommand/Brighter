@@ -24,21 +24,20 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PipelineMixedHandlersTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public PipelineMixedHandlersTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyMixedImplicitHandler>();
@@ -51,15 +50,14 @@ namespace Paramore.Brighter.Tests
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_A_Sync_Pipeline_That_Has_Async_Handlers()
         {
             _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.Build(new RequestContext()).First());
 
-            Assert.NotNull(_exception);
-            Assert.IsInstanceOf(typeof (ConfigurationException), _exception);
-            StringAssert.Contains(typeof (MyLoggingHandlerAsync<>).Name, _exception.Message);
+            _exception.Should().NotBeNull();
+            _exception.Should().BeOfType<ConfigurationException>();
+            _exception.Message.Should().Contain(typeof(MyLoggingHandlerAsync<>).Name);
         }
-
     }
 }

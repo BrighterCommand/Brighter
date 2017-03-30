@@ -23,31 +23,29 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
-using NUnit.Framework;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Monitoring.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using Paramore.Brighter.Time;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [TestFixture]
     public class MonitorHandlerTests
     {
-        private MyCommand _command;
+        private readonly MyCommand _command;
         private Exception _thrownException;
-        private SpyControlBusSender _controlBusSender;
-        private CommandProcessor _commandProcessor;
+        private readonly SpyControlBusSender _controlBusSender;
+        private readonly CommandProcessor _commandProcessor;
         private MonitorEvent _afterEvent;
         private string _originalRequestAsJson;
-        private DateTime _at;
+        private readonly DateTime _at;
 
-        [SetUp]
-        public void Establish()
+        public MonitorHandlerTests()
         {
             _controlBusSender = new SpyControlBusSender();
             var registry = new SubscriberRegistry();
@@ -77,23 +75,21 @@ namespace Paramore.Brighter.Tests.Monitoring
             _afterEvent = _controlBusSender.Observe<MonitorEvent>();
 
             //_should_pass_through_the_exception_not_swallow
-            Assert.NotNull(_thrownException);
+            _thrownException.Should().NotBeNull();
             //_should_monitor_the_exception
-            Assert.IsInstanceOf(typeof(Exception), _afterEvent.Exception);
+            _afterEvent.Exception.Should().BeOfType<Exception>();
             //_should_surface_the_error_message
-            StringAssert.Contains("monitored", _afterEvent.Exception.Message);
+            _afterEvent.Exception.Message.Should().Contain("monitored");
             //_should_have_an_instance_name_after
-            Assert.AreEqual("UnitTests", _afterEvent.InstanceName);
+            _afterEvent.InstanceName.Should().Be("UnitTests");
             //_should_post_the_handler_fullname_to_the_control_bus_after
-            Assert.AreEqual(typeof(MyMonitoredHandler).FullName, _afterEvent.HandlerName);
+            _afterEvent.HandlerName.Should().Be(typeof(MyMonitoredHandler).FullName);
             //_should_post_the_handler_name_to_the_control_bus_after
-            Assert.AreEqual(typeof(MyMonitoredHandler).AssemblyQualifiedName, _afterEvent.HandlerFullAssemblyName);
+            _afterEvent.HandlerFullAssemblyName.Should().Be(typeof(MyMonitoredHandler).AssemblyQualifiedName);
             //should_post_the_time_of_the_request_after
-            Assert.Greater(_afterEvent.EventTime, _at);
+            _afterEvent.EventTime.Should().BeAfter(_at);
             //should_post_the_elapsedtime_of_the_request_after
-            Assert.Greater(_afterEvent.EventTime, _at);
-            //should_post_the_elapsedtime_of_the_request_after
-            Assert.AreEqual((_afterEvent.EventTime - _at).Milliseconds, _afterEvent.TimeElapsedMs);
+            _afterEvent.TimeElapsedMs.Should().Be((_afterEvent.EventTime - _at).Milliseconds);
         }
    }
 }

@@ -23,25 +23,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessagePumpCommandRequeueTests
     {
-        private IAmAMessagePump _messagePump;
-        private FakeChannel _channel;
-        private SpyCommandProcessor _commandProcessor;
-        private MyCommand _command = new MyCommand();
+        private readonly IAmAMessagePump _messagePump;
+        private readonly FakeChannel _channel;
+        private readonly SpyCommandProcessor _commandProcessor;
+        private readonly MyCommand _command = new MyCommand();
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpCommandRequeueTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
@@ -56,17 +55,17 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(quitMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Requeue_Of_Command_Exception_Is_Thrown()
         {
             _messagePump.Run();
 
             //_should_send_the_message_via_the_command_processor
-            Assert.AreEqual(CommandType.Send, _commandProcessor.Commands[0]);
+            _commandProcessor.Commands[0].Should().Be(CommandType.Send);
             //_should_requeue_the_messages
-            Assert.AreEqual(2, _channel.Length);
+            _channel.Length.Should().Be(2);
             //_should_dispose_the_input_channel
-            Assert.True(_channel.DisposeHappened);
+            _channel.DisposeHappened.Should().BeTrue();
         }
     }
 }

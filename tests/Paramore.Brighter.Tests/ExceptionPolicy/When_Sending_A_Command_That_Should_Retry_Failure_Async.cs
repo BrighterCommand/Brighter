@@ -1,24 +1,22 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Policies.Handlers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy
 {
-    [TestFixture]
     public class CommandProcessorWithRetryPolicyAsyncTests
     {
-        private static CommandProcessor s_commandProcessor;
-        private static readonly MyCommand s_myCommand = new MyCommand();
-        private static int s_retryCount;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private int _retryCount;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorWithRetryPolicyAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyFailsWithFallbackDivideByZeroHandlerAsync>();
@@ -39,25 +37,25 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
                     3.Seconds()
                 }, (exception, timeSpan) =>
                 {
-                    s_retryCount++;
+                    _retryCount++;
                 });
             policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
             MyFailsWithFallbackDivideByZeroHandlerAsync.ReceivedCommand = false;
 
-            s_commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
         }
 
         //We have to catch the final exception that bubbles out after retry
-        [Test]
-        public void When_Sending_A_Command_That_Should_Retry_Failure_Async()
+        [Fact]
+        public async Task When_Sending_A_Command_That_Should_Retry_Failure_Async()
         {
-            Catch.Exception(() => AsyncContext.Run(async () => await s_commandProcessor.SendAsync(s_myCommand)));
+            await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
 
             //_should_send_the_command_to_the_command_handler
-            Assert.True(MyFailsWithFallbackDivideByZeroHandlerAsync.ShouldReceive(s_myCommand));
+            MyFailsWithFallbackDivideByZeroHandlerAsync.ShouldReceive(_myCommand).Should().BeTrue();
             //_should_retry_three_times
-            Assert.AreEqual(3, s_retryCount);
+            _retryCount.Should().Be(3);
         }
     }
 }

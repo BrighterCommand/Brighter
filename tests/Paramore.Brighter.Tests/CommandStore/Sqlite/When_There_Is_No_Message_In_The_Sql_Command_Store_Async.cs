@@ -23,24 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.Data.Sqlite;
-using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.commandstore.sqlite
+namespace Paramore.Brighter.Tests.CommandStore.Sqlite
 {
-    [TestFixture]
-    public class SqliteCommandStoreEmptyWhenSearchedAsyncTests
+    public class SqliteCommandStoreEmptyWhenSearchedAsyncTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteCommandStore _sqlCommandStore;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteCommandStore _sqlCommandStore;
         private MyCommand _storedCommand;
         private SqliteConnection _sqliteConnection;
 
-        [SetUp]
-        public void Establish()
+        public SqliteCommandStoreEmptyWhenSearchedAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
@@ -48,17 +47,16 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
             _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
         }
 
-        [Test]
-        public void When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
+        [Fact]
+        public async Task When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
         {
-            _storedCommand = AsyncContext.Run<MyCommand>(async () => await _sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid()));
+            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid());
 
             //_should_return_an_empty_command_on_a_missing_command
-            Assert.AreEqual(Guid.Empty, _storedCommand.Id);
+            _storedCommand.Id.Should().Be(Guid.Empty);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

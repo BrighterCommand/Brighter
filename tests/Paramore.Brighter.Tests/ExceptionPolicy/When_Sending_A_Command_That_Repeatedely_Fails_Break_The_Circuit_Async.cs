@@ -23,28 +23,27 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Nito.AsyncEx;
-using NUnit.Framework;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.Policies.Handlers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 using Polly.CircuitBreaker;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy
 {
-    [TestFixture]
     public class CommandProcessorWithCircuitBreakerAsyncTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _thirdException;
         private Exception _firstException;
         private Exception _secondException;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorWithCircuitBreakerAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyFailsWithDivideByZeroHandlerAsync>();
@@ -68,23 +67,23 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
         }
 
         //We have to catch the final exception that bubbles out after retry
-        [Test]
-        public void When_Sending_A_Command_That_Repeatedely_Fails_Break_The_Circuit_Async()
+        [Fact]
+        public async Task When_Sending_A_Command_That_Repeatedely_Fails_Break_The_Circuit_Async()
         {
             //First two should be caught, and increment the count
-            _firstException = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand)));
-            _secondException = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand)));
+            _firstException = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
+            _secondException = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
             //this one should tell us that the circuit is broken
-            _thirdException = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand)));
+            _thirdException = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
 
             //_should_send_the_command_to_the_command_handler
-            Assert.True(MyFailsWithDivideByZeroHandlerAsync.ShouldReceive(_myCommand));
+            MyFailsWithDivideByZeroHandlerAsync.ShouldReceive(_myCommand).Should().BeTrue();
             //_should_bubble_up_the_first_exception
-            Assert.IsInstanceOf<DivideByZeroException>(_firstException);
+            _firstException.Should().BeOfType<DivideByZeroException>();
             //_should_bubble_up_the_second_exception
-            Assert.IsInstanceOf<DivideByZeroException>(_secondException);
+            _secondException.Should().BeOfType<DivideByZeroException>();
             //_should_break_the_circuit_after_two_fails
-            Assert.IsInstanceOf<BrokenCircuitException>(_thirdException);
+            _thirdException.Should().BeOfType<BrokenCircuitException>();
         }
 
    }

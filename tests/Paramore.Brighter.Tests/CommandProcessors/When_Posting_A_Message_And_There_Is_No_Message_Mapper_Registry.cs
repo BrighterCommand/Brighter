@@ -23,25 +23,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
-    public class CommandProcessorNoMessageMapperTests
+
+    public class CommandProcessorNoMessageMapperTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
-        private FakeMessageStore _fakeMessageStore;
-        private FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageStore _fakeMessageStore;
+        private readonly FakeMessageProducer _fakeMessageProducer;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorNoMessageMapperTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -76,11 +75,10 @@ namespace Paramore.Brighter.Tests
             _exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
 
             //_should_throw_an_exception
-            Assert.IsInstanceOf<ArgumentOutOfRangeException>(_exception);
+            _exception.Should().BeOfType<ArgumentOutOfRangeException>();
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
         }

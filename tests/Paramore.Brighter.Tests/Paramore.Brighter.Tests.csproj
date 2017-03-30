@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.MsSql\Paramore.Brighter.CommandStore.MsSql.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.Sqlite\Paramore.Brighter.CommandStore.Sqlite.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.MsSql\Paramore.Brighter.MessageStore.MsSql.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.Sqlite\Paramore.Brighter.MessageStore.Sqlite.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AWSSQS\Paramore.Brighter.MessagingGateway.AWSSQS.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AzureServiceBus\Paramore.Brighter.MessagingGateway.AzureServiceBus.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.RESTMS\Paramore.Brighter.MessagingGateway.RESTMS.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.RMQ\Paramore.Brighter.MessagingGateway.RMQ.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
+    <PackageReference Include="Microsoft.TestPlatform.TestHost" Version="15.0.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="1.1.0" />
+    <PackageReference Include="xunit" Version="2.2.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
+    <PackageReference Include="FakeItEasy" Version="3.1.0" />
+    <PackageReference Include="FluentAssertions" Version="4.19.2" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.1' ">
+    <PackageReference Include="System.Diagnostics.TextWriterTraceListener" Version="4.3.0" />
+    <PackageReference Include="System.Diagnostics.TraceSource" Version="4.3.0" />
+    <PackageReference Include="System.Linq" Version="4.3.0" />
+    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+  </ItemGroup>
+
+</Project>

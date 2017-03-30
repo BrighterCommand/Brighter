@@ -23,29 +23,27 @@ THE SOFTWARE. */
 #endregion
 
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class ConfigurationCommandAllStopTests
     {
-        private ConfigurationCommandHandler _configurationCommandHandler;
-        private ConfigurationCommand _configurationCommand;
-        private IDispatcher _dispatcher;
+        private readonly ConfigurationCommandHandler _configurationCommandHandler;
+        private readonly ConfigurationCommand _configurationCommand;
+        private readonly IDispatcher _dispatcher;
 
-        [SetUp]
-        public void Establish()
+        public ConfigurationCommandAllStopTests()
         {
             _dispatcher = A.Fake<IDispatcher>();
             _configurationCommandHandler = new ConfigurationCommandHandler(_dispatcher);
             _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STOPALL);
         }
 
-        [Test]
+        [Fact]
         public void When_receiving_an_all_stop_message()
         {
             _configurationCommandHandler.Handle(_configurationCommand);

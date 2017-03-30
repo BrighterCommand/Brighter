@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.Monitoring.Attributes;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.Monitoring.TestDoubles
 {

@@ -24,19 +24,17 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway
 {
-    [TestFixture]
     public class ChannelRequeueWithoutDelayTest
     {
-        private IAmAChannel _channel;
-        private IAmAMessageConsumer _gateway;
-        private Message _requeueMessage;
+        private readonly IAmAChannel _channel;
+        private readonly IAmAMessageConsumer _gateway;
+        private readonly Message _requeueMessage;
 
-        [SetUp]
-        public void Establish()
+        public ChannelRequeueWithoutDelayTest()
         {
             _gateway = A.Fake<IAmAMessageConsumer>();
 
@@ -47,7 +45,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
                 new MessageBody("a test body"));
         }
 
-        [Test]
+        [Fact]
         public void When_Requeuing_A_Message_With_No_Delay()
         {
             _channel.Requeue(_requeueMessage);

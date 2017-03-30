@@ -23,37 +23,40 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Nito.AsyncEx;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class CommandProcessorNoHandlersMatchAsyncTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorNoHandlersMatchAsyncTests()
         {
-            _commandProcessor = new CommandProcessor(new SubscriberRegistry(), new TinyIocHandlerFactoryAsync(new TinyIoCContainer()), new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(
+                new SubscriberRegistry(),
+                new TinyIocHandlerFactoryAsync(new TinyIoCContainer()),
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry());
         }
 
         //Ignore any errors about adding System.Runtime from the IDE. See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow
-        [Test]
-        public void When_There_Are_No_Command_Handlers_Async()
+        [Fact]
+        public async Task When_There_Are_No_Command_Handlers_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
 
             //_should_fail_because_multiple_receivers_found
-            Assert.IsAssignableFrom(typeof(ArgumentException), _exception);
+            _exception.Should().BeOfType<ArgumentException>();
             //_should_have_an_error_message_that_tells_you_why
-            Assert.NotNull(_exception);
-            StringAssert.Contains("No command handler was found for the typeof command Paramore.Brighter.Tests.TestDoubles.MyCommand - a command should have exactly one handler.", _exception.Message);
+            _exception.Should().NotBeNull();
+            _exception.Message.Should().Contain("No command handler was found for the typeof command Paramore.Brighter.Tests.CommandProcessors.TestDoubles.MyCommand - a command should have exactly one handler.");
         }
     }
 }

@@ -23,20 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class CommandProcessorSendMissingHandlerFactoryTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorSendMissingHandlerFactoryTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
@@ -44,13 +43,13 @@ namespace Paramore.Brighter.Tests
             _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory) null, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_There_Is_No_Handler_Factory_On_A_Send()
         {
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_throw_an_invalid_operation_exception
-            Assert.IsInstanceOf<InvalidOperationException>(_exception);
+            _exception.Should().BeOfType<InvalidOperationException>();
         }
     }
 }

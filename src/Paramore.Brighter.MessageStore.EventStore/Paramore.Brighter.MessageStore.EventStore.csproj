@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using Event Store</Description>
+    <AssemblyTitle>Paramore.Brighter.MessageStore.EventStore</AssemblyTitle>
+    <Authors>George Ayris</Authors>
+    <TargetFrameworks>net452</TargetFrameworks>
+    <DebugType>portable</DebugType>
+    <AssemblyName>Paramore.Brighter.MessageStore.EventStore</AssemblyName>
+    <PackageId>Paramore.Brighter.MessageStore.EventStore</PackageId>
+    <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <PackageReleaseNotes>https://github.com/iancooper/Paramore/blob/master/release_notes.md</PackageReleaseNotes>
+    <PackageIconUrl>http://iancooper.github.io/Paramore/images/brightercanon-nuget.png</PackageIconUrl>
+    <PackageProjectUrl>http://iancooper.github.io/Paramore</PackageProjectUrl>
+    <PackageLicenseUrl>http://ianhammondcooper.mit-license.org</PackageLicenseUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.MessageStore.EventStore</RepositoryUrl>
+    <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EventStore.Client" Version="3.9.4" />
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+</Project>

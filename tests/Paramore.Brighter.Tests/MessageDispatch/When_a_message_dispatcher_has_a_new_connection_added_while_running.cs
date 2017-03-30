@@ -22,29 +22,27 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [Ignore("Breaks dotnet test runner")]
-    [TestFixture]
-    public class DispatcherAddNewConnectionTests
+    public class DispatcherAddNewConnectionTests : IDisposable
     {
-        private Dispatcher _dispatcher;
-        private FakeChannel _channel;
-        private IAmACommandProcessor _commandProcessor;
-        private Connection _connection;
-        private Connection _newConnection;
+        private readonly Dispatcher _dispatcher;
+        private readonly FakeChannel _channel;
+        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly Connection _connection;
+        private readonly Connection _newConnection;
 
-        [SetUp]
-        public void Establish()
+        public DispatcherAddNewConnectionTests()
         {
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
@@ -60,32 +58,31 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Add(message);
 
-            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
         }
 
-
-        [Test]
+        [Fact(Skip = "TODO: Breaks dotnet test runner")]
         public void When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running()
         {
             _dispatcher.Open(_newConnection);
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Add(message);
+
             Task.Delay(1000).Wait();
 
             //_should_have_consumed_the_messages_in_the_event_channel
-            Assert.AreEqual(0, _channel.Length);
+            _channel.Length.Should().Be(0);
             //_should_have_a_running_state
-            Assert.AreEqual(DispatcherState.DS_RUNNING, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
             //_should_have_only_one_consumer
-            Assert.AreEqual(2, _dispatcher.Consumers.Count());
+            _dispatcher.Consumers.Should().HaveCount(2);
             //_should_have_two_connections
-            Assert.AreEqual(2, _dispatcher.Connections.Count());
+            _dispatcher.Connections.Should().HaveCount(2);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)
                 _dispatcher.End().Wait();

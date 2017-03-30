@@ -23,25 +23,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.Data.Sqlite;
-using Nito.AsyncEx;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.commandstore.sqlite
+namespace Paramore.Brighter.Tests.CommandStore.Sqlite
 {
-    [TestFixture]
-    public class SqliteCommandStoreDuplicateMessageAsyncTests
+    public class SqliteCommandStoreDuplicateMessageAsyncTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteCommandStore _sqlCommandStore;
-        private MyCommand _raisedCommand;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteCommandStore _sqlCommandStore;
+        private readonly MyCommand _raisedCommand;
         private Exception _exception;
         private SqliteConnection _sqliteConnection;
 
-        [SetUp]
-        public void Establish()
+        public SqliteCommandStoreDuplicateMessageAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
@@ -49,23 +48,22 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
             _sqlCommandStore =
                 new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
             _raisedCommand = new MyCommand {Value = "Test"};
-            AsyncContext.Run(async () => await _sqlCommandStore.AddAsync<MyCommand>(_raisedCommand));
         }
 
-        [Test]
-        public void When_The_Message_Is_Already_In_The_Command_Store_Async()
+        [Fact]
+        public async Task When_The_Message_Is_Already_In_The_Command_Store_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _sqlCommandStore.AddAsync(_raisedCommand)));
+            await _sqlCommandStore.AddAsync(_raisedCommand);
+
+            _exception = await Catch.ExceptionAsync(() => _sqlCommandStore.AddAsync(_raisedCommand));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }
-
     }
 }

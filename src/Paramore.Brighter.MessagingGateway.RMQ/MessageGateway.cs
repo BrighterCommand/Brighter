@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MessageGateway>);
 
         private readonly ConnectionFactory _connectionFactory;
-        private readonly ContextualPolicy _retryPolicy;
+        private readonly Policy _retryPolicy;
         private readonly Policy _circuitBreakerPolicy;
 
         /// <summary>

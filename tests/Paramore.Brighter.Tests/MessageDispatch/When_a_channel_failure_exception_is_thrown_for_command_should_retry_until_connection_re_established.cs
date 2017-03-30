@@ -23,24 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessagePumpRetryCommandOnConnectionFailureTests
     {
-        private IAmAMessagePump _messagePump;
-        private FailingChannel _channel;
-        private SpyCommandProcessor _commandProcessor;
-        private MyCommand _command;
+        private readonly IAmAMessagePump _messagePump;
+        private readonly FailingChannel _channel;
+        private readonly SpyCommandProcessor _commandProcessor;
+        private readonly MyCommand _command;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpRetryCommandOnConnectionFailureTests()
         {
             _commandProcessor = new SpyCommandProcessor();
             _channel = new FailingChannel { NumberOfRetries = 4 };
@@ -57,13 +56,13 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(quitMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Channel_Failure_Exception_Is_Thrown_For_Command_Should_Retry_Until_Connection_Re_established()
         {
             _messagePump.Run();
 
             //_should_send_the_message_via_the_command_processor
-            Assert.AreEqual(CommandType.Send, _commandProcessor.Commands[0]);
+            _commandProcessor.Commands[0].Should().Be(CommandType.Send);
         }
     }
 }

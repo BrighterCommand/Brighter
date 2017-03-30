@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Tests.TestDoubles
+namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
     class MyCancellableCommandHandlerAsync : RequestHandlerAsync<MyCommand>
     {

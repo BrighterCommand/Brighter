@@ -25,27 +25,24 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 using TinyIoC;
-using Connection = Paramore.Brighter.ServiceActivator.Connection;
-using IAmADispatchBuilder = Paramore.Brighter.ServiceActivator.IAmADispatchBuilder;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class DispatchBuilderTests
     {
-        private IAmADispatchBuilder _builder;
+        private readonly IAmADispatchBuilder _builder;
         private Dispatcher _dispatcher;
 
-        [SetUp]
-        public void Establish()
+        public DispatchBuilderTests()
         {
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -108,19 +105,19 @@ namespace Paramore.Brighter.Tests.MessageDispatch
                 .Connections(connections);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_A_Dispatcher()
         {
             _dispatcher = _builder.Build();
 
             //_should_build_a_dispatcher
-            Assert.NotNull(_dispatcher);
+            _dispatcher.Should().NotBeNull();
             //_should_have_a_foo_connection
-            Assert.NotNull(GetConnection("foo"));
+            GetConnection("foo").Should().NotBeNull();
             //_should_have_a_bar_connection
-            Assert.NotNull(GetConnection("bar"));
+            GetConnection("bar").Should().NotBeNull();
             //_should_be_in_the_awaiting_state
-            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
         }
 
         private Connection GetConnection(string name)

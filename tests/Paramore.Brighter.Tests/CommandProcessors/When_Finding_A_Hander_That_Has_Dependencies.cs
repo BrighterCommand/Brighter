@@ -1,17 +1,15 @@
 using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PipelineWithHandlerDependenciesTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish()
+        public PipelineWithHandlerDependenciesTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDependentCommandHandler>();
@@ -24,10 +22,10 @@ namespace Paramore.Brighter.Tests
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-           // _should_return_the_command_handler_as_the_implicit_handler
-            Assert.IsAssignableFrom(typeof(MyDependentCommandHandler), _pipeline);
+            // _should_return_the_command_handler_as_the_implicit_handler
+            _pipeline.Should().BeOfType<MyDependentCommandHandler>();
             //  _should_be_the_only_element_in_the_chain
-            Assert.AreEqual("MyDependentCommandHandler|", TracePipeline().ToString());
+            TracePipeline().ToString().Should().Be("MyDependentCommandHandler|");
         }
 
         private PipelineTracer TracePipeline()

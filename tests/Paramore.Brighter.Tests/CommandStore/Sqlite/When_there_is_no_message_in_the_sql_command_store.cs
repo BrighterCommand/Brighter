@@ -23,40 +23,38 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Microsoft.Data.Sqlite;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.commandstore.sqlite
+namespace Paramore.Brighter.Tests.CommandStore.Sqlite
 {
-    [TestFixture]
-    public class SqliteCommandStoreEmptyWhenSearchedTests
+    public class SqliteCommandStoreEmptyWhenSearchedTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteCommandStore _sqlCommandStore;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteCommandStore _sqlCommandStore;
         private MyCommand _storedCommand;
         private static SqliteConnection _sqliteConnection;
 
-        [SetUp]
-        public void Establish()
+        public SqliteCommandStoreEmptyWhenSearchedTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
             _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
         }
 
-        [Test]
+        [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Command_Store()
         {
             _storedCommand = _sqlCommandStore.Get<MyCommand>(Guid.NewGuid());
 
            //_should_return_an_empty_command_on_a_missing_command
-            Assert.AreEqual(Guid.Empty, _storedCommand.Id);
+            _storedCommand.Id.Should().Be(Guid.Empty);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

@@ -24,23 +24,22 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessagePumpUnacceptableMessageTests
     {
-        private IAmAMessagePump _messagePump;
-        private FakeChannel _channel;
-        private SpyRequeueCommandProcessor _commandProcessor;
+        private readonly IAmAMessagePump _messagePump;
+        private readonly FakeChannel _channel;
+        private readonly SpyRequeueCommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpUnacceptableMessageTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
@@ -52,7 +51,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(unacceptableMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_An_Unacceptable_Message_Is_Recieved()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
@@ -64,7 +63,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             Task.WaitAll(new[] { task });
 
             //should_acknowledge_the_message
-            Assert.True(_channel.AcknowledgeHappened);
+            _channel.AcknowledgeHappened.Should().BeTrue();
         }
     }
 }

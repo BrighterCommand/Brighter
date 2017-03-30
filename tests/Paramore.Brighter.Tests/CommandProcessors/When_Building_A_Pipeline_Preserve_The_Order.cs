@@ -23,20 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PipelineOrderingTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish()
+        public PipelineOrderingTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDoubleDecoratedHandler>();
@@ -50,12 +49,12 @@ namespace Paramore.Brighter.Tests
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_A_Pipeline_Preserve_The_Order()
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-            Assert.AreEqual("MyLoggingHandler`1|MyValidationHandler`1|MyDoubleDecoratedHandler|", PipelineTracer().ToString());
+            PipelineTracer().ToString().Should().Be("MyLoggingHandler`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
         }
 
         private PipelineTracer PipelineTracer()

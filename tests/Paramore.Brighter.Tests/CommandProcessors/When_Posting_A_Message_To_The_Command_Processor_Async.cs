@@ -23,25 +23,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class CommandProcessorPostCommandAsyncTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
-        private FakeMessageStore _fakeMessageStore;
-        private FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageStore _fakeMessageStore;
+        private readonly FakeMessageProducer _fakeMessageProducer;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPostCommandAsyncTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -72,19 +71,19 @@ namespace Paramore.Brighter.Tests
                 (IAmAMessageProducerAsync)_fakeMessageProducer);
         }
 
-        [Test]
-        public void When_Posting_A_Message_To_The_Command_Processor_Async()
+        [Fact]
+        public async Task When_Posting_A_Message_To_The_Command_Processor_Async()
         {
-            AsyncContext.Run(async () => await _commandProcessor.PostAsync(_myCommand));
+            await _commandProcessor.PostAsync(_myCommand);
 
            //_should_store_the_message_in_the_sent_command_message_repository
-            Assert.True(_fakeMessageStore.MessageWasAdded);
+            _fakeMessageStore.MessageWasAdded.Should().BeTrue();
             //_should_send_a_message_via_the_messaging_gateway
-            Assert.True(_fakeMessageProducer.MessageWasSent);
+            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             //_should_convert_the_command_into_a_message
         }
 
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
         }

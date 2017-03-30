@@ -23,19 +23,18 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PipelineBuildForCommandTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish()
+        public PipelineBuildForCommandTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
@@ -44,15 +43,15 @@ namespace Paramore.Brighter.Tests
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_Finding_A_Handler_For_A_Command()
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
            //_should_return_the_my_command_handler_as_the_implicit_handler
-            Assert.IsAssignableFrom(typeof(MyCommandHandler), _pipeline);
+            _pipeline.Should().BeOfType<MyCommandHandler>();
             //_should_be_the_only_element_in_the_chain
-            Assert.AreEqual("MyCommandHandler|", TracePipeline().ToString());
+            TracePipeline().ToString().Should().Be("MyCommandHandler|");
         }
 
         private PipelineTracer TracePipeline()

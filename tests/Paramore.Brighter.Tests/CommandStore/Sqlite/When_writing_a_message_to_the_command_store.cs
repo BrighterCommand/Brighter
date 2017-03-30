@@ -22,24 +22,24 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using FluentAssertions;
 using Microsoft.Data.Sqlite;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.commandstore.sqlite
+namespace Paramore.Brighter.Tests.CommandStore.Sqlite
 {
-    [TestFixture]
-    public class SqliteCommandStoreAddMessageTests
+    public class SqliteCommandStoreAddMessageTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteCommandStore _sqlCommandStore;
-        private MyCommand _raisedCommand;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteCommandStore _sqlCommandStore;
+        private readonly MyCommand _raisedCommand;
         private MyCommand _storedCommand;
         private SqliteConnection _sqliteConnection;
 
-        [SetUp]
-        public void Establish()
+        public SqliteCommandStoreAddMessageTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
@@ -49,21 +49,20 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
             _sqlCommandStore.Add<MyCommand>(_raisedCommand);
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_A_Message_To_The_Command_Store()
         {
             _storedCommand = _sqlCommandStore.Get<MyCommand>(_raisedCommand.Id);
 
             //_should_read_the_command_from_the__sql_command_store
-            Assert.NotNull(_storedCommand);
+            _storedCommand.Should().NotBeNull();
             //_should_read_the_command_value
-            Assert.AreEqual(_raisedCommand.Value, _storedCommand.Value);
+            _storedCommand.Value.Should().Be(_raisedCommand.Value);
             //_should_read_the_command_id
-            Assert.AreEqual(_raisedCommand.Id, _storedCommand.Id);
+            _storedCommand.Id.Should().Be(_raisedCommand.Id);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

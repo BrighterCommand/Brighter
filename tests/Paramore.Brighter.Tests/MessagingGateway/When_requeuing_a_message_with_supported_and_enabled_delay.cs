@@ -25,20 +25,19 @@ THE SOFTWARE. */
 using System;
 using System.Diagnostics;
 using FakeItEasy;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway
 {
-    [TestFixture]
     public class ChannelRequeueTests
     {
-        private IAmAChannel _channel;
-        private IAmAMessageConsumerSupportingDelay _gateway;
-        private Message _requeueMessage;
-        private Stopwatch _stopWatch;
+        private readonly IAmAChannel _channel;
+        private readonly IAmAMessageConsumerSupportingDelay _gateway;
+        private readonly Message _requeueMessage;
+        private readonly Stopwatch _stopWatch;
 
-        [SetUp]
-        public void Establish()
+        public ChannelRequeueTests()
         {
             _gateway = A.Fake<IAmAMessageConsumerSupportingDelay>();
             A.CallTo(() => _gateway.DelaySupported).Returns(true);
@@ -52,7 +51,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
             _stopWatch = new Stopwatch();
         }
 
-        [Test]
+        [Fact]
         public void When_Requeuing_A_Message_With_Supported_And_Enabled_Delay()
         {
             _stopWatch.Start();
@@ -62,7 +61,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
             //_should_call_the_messaging_gateway
             A.CallTo(() => _gateway.Requeue(_requeueMessage, 1000)).MustHaveHappened();
             //_should_have_used_gateway_delay_support
-            Assert.True((_stopWatch.ElapsedMilliseconds < 500));
+            _stopWatch.ElapsedMilliseconds.Should().BeLessThan(500);
         }
    }
 }

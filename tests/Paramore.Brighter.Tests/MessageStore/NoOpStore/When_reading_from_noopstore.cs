@@ -25,37 +25,34 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.NoOpStore
 {
-    [TestFixture]
     public class NoOpMessageStoreReadTests
     {
-        private Message _messageEarliest;
-        private NoOpMessageStore _noOpStore;
+        private readonly NoOpMessageStore _noOpStore;
         private Exception _exception;
         private IList<Message> _messages;
 
-        [SetUp]
-        public void Establish ()
+        public NoOpMessageStoreReadTests()
         {
             _noOpStore = new NoOpMessageStore();
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _noOpStore.Add(_messageEarliest);
+            var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _noOpStore.Add(messageEarliest);
         }
 
-        [Test]
+        [Fact]
         public void When_reading_from_noopstore()
         {
             _exception = Catch.Exception(() => _messages = _noOpStore.Get());
 
             //_should_not_cause_exception
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
             //_should_return_empty_list
-            Assert.NotNull(_messages);
-            Assert.False(_messages.Any());
+            _messages.Should().NotBeNull();
+            _messages.Should().BeEmpty();
         }
    }
 }

@@ -1,5 +1,5 @@
 ﻿using Paramore.Brighter.Logging.Attributes;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.Logging.TestDoubles
 {

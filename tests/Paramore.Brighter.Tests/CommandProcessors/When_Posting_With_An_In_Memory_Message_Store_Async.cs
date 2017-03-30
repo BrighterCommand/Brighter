@@ -23,25 +23,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
-    public class CommandProcessorWithInMemoryMessageStoreAscyncTests
+    public class CommandProcessorWithInMemoryMessageStoreAscyncTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private Message _message;
-        private InMemoryMessageStore _messageStore;
-        private FakeMessageProducer _fakeMessageProducer;
+        private readonly Message _message;
+        private readonly InMemoryMessageStore _messageStore;
+        private readonly FakeMessageProducer _fakeMessageProducer;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorWithInMemoryMessageStoreAscyncTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -72,21 +71,21 @@ namespace Paramore.Brighter.Tests
                 (IAmAMessageProducerAsync)_fakeMessageProducer);
         }
 
-        [Test]
-        public void When_Posting_With_An_In_Memory_Message_Store_Async()
+        [Fact]
+        public async Task When_Posting_With_An_In_Memory_Message_Store_Async()
         {
-            AsyncContext.Run(async () => await _commandProcessor.PostAsync(_myCommand));
+            await _commandProcessor.PostAsync(_myCommand);
 
+            var message = await _messageStore.GetAsync(_myCommand.Id);
             //_should_store_the_message_in_the_sent_command_message_repository
-            Assert.NotNull(AsyncContext.Run(async() => await _messageStore.GetAsync(_myCommand.Id)));
+            message.Should().NotBeNull();
             //_should_send_a_message_via_the_messaging_gateway
-            Assert.True(_fakeMessageProducer.MessageWasSent);
+            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             //_should_convert_the_command_into_a_message
-            Assert.AreEqual(_message, AsyncContext.Run(async() => await _messageStore.GetAsync(_myCommand.Id)));
+            message.Should().Be(_message);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
         }

@@ -22,22 +22,20 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.Policies.Handlers;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Timeout.Test_Doubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Timeout
 {
-    [TestFixture]
     public class MyPassesTimeoutHandlerTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
 
-        [SetUp]
-        public void Establish()
+        public MyPassesTimeoutHandlerTests()
         {
             var registry = new SubscriberRegistry();
             //Handler is decorated with UsePolicy 
@@ -52,7 +50,7 @@ namespace Paramore.Brighter.Tests.Timeout
         }
 
         //We have to catch the final exception that bubbles out after retry
-        [Test]
+        [Fact]
         public void When_Sending_A_Command_To_The_Processor_Passing_A_Timeout_Policy_Check()
         {
             _commandProcessor.Send(_myCommand);

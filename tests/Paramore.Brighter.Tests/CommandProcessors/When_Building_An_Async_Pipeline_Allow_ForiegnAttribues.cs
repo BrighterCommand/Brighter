@@ -1,18 +1,16 @@
 ﻿using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PipelineForiegnAttributesAsyncTests
     {
-        private PipelineBuilder<MyCommand> _pipeline_Builder;
+        private readonly PipelineBuilder<MyCommand> _pipeline_Builder;
         private IHandleRequestsAsync<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish()
+        public PipelineForiegnAttributesAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyObsoleteCommandHandlerAsync>();
@@ -30,7 +28,7 @@ namespace Paramore.Brighter.Tests
         {
             _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
 
-            Assert.AreEqual("MyValidationHandlerAsync`1|MyObsoleteCommandHandlerAsync|MyLoggingHandlerAsync`1|", TraceFilters().ToString());
+            TraceFilters().ToString().Should().Be("MyValidationHandlerAsync`1|MyObsoleteCommandHandlerAsync|MyLoggingHandlerAsync`1|");
         }
 
         private PipelineTracer TraceFilters()

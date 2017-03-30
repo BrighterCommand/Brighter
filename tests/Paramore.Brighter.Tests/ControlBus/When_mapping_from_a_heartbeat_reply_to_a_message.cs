@@ -23,51 +23,49 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Mappers;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class HeartbeatReplyToMessageMapperTests
     {
-        private IAmAMessageMapper<HeartbeatReply> _mapper;
+        private readonly IAmAMessageMapper<HeartbeatReply> _mapper;
         private Message _message;
-        private HeartbeatReply _request;
+        private readonly HeartbeatReply _request;
         private const string TOPIC = "test.topic";
         private readonly Guid _correlationId = Guid.NewGuid();
-        private RunningConsumer _firstConsumer;
-        private RunningConsumer _secondConsumer;
 
-        [SetUp]
-        public void Establish()
+        public HeartbeatReplyToMessageMapperTests()
         {
             _mapper = new HeartbeatReplyCommandMessageMapper();
             _request = new HeartbeatReply("Test.Hostname", new ReplyAddress(TOPIC, _correlationId));
-            _firstConsumer = new RunningConsumer(new ConnectionName("Test.Connection"), ConsumerState.Open);
-            _request.Consumers.Add(_firstConsumer);
-            _secondConsumer = new RunningConsumer(new ConnectionName("More.Consumers"),ConsumerState.Shut );
-            _request.Consumers.Add(_secondConsumer);
+            var firstConsumer = new RunningConsumer(new ConnectionName("Test.Connection"), ConsumerState.Open);
+            _request.Consumers.Add(firstConsumer);
+            var secondConsumer = new RunningConsumer(new ConnectionName("More.Consumers"),ConsumerState.Shut );
+            _request.Consumers.Add(secondConsumer);
         }
 
-        [Test]
+        [Fact]
         public void When_mapping_from_a_heartbeat_reply_to_a_message()
         {
             _message = _mapper.MapToMessage(_request);
 
             //_should_put_the_reply_to_as_the_topic
-            Assert.AreEqual(TOPIC, _message.Header.Topic);
+            _message.Header.Topic.Should().Be(TOPIC);
             //_should_put_the_correlation_id_in_the_header
-            Assert.AreEqual(_correlationId, _message.Header.CorrelationId);
+            _message.Header.CorrelationId.Should().Be(_correlationId);
             //_should_put_the_connections_into_the_body
-            Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"ConnectionName\": \"Test.Connection\""))).Invoke(_message.Body));
-            Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"State\": 1"))).Invoke(_message.Body));
-            Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"ConnectionName\": \"More.Consumers\""))).Invoke(_message.Body));
-            Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"State\": 0"))).Invoke(_message.Body));
+            _message.Body.Value.Should().Contain("\"ConnectionName\": \"Test.Connection\"");
+            _message.Body.Value.Should().Contain("\"State\": 1");
+            _message.Body.Value.Should().Contain("\"ConnectionName\": \"More.Consumers\"");
+            _message.Body.Value.Should().Contain("\"State\": 0");
+
             //_should_put_the_hostname_in_the_message_body
-            Assert.True(((Func<MessageBody, bool>) (body => body.Value.Contains("\"HostName\": \"Test.Hostname\""))).Invoke(_message.Body));
+            _message.Body.Value.Should().Contain("\"HostName\": \"Test.Hostname\"");
         }
     }
 }

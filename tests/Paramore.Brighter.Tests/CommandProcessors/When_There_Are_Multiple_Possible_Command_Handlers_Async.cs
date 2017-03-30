@@ -23,22 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Nito.AsyncEx;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class CommandProcessorSendWithMultipleMatchesAsyncTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorSendWithMultipleMatchesAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
@@ -46,24 +47,25 @@ namespace Paramore.Brighter.Tests
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyCommandHandlerAsync>("DefaultHandler");
-            container.Register<IHandleRequestsAsync<MyCommand>, MyImplicitHandlerAsync>("ImplicitHandler");
+            container.Register<IHandleRequestsAsync<MyCommand>, MyCommandHandlerAsync>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyImplicitHandlerAsync>();
             container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
+            container.Register(_receivedMessages);
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
         //Ignore any errors about adding System.Runtime from the IDE. See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow
-        [Test]
-        public void When_There_Are_Multiple_Possible_Command_Handlers_Async()
+        [Fact]
+        public async Task When_There_Are_Multiple_Possible_Command_Handlers_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
 
             //_should_fail_because_multiple_receivers_found
-            Assert.IsAssignableFrom(typeof(ArgumentException), _exception);
+            _exception.Should().BeOfType<ArgumentException>();
             //_should_have_an_error_message_that_tells_you_why = () => _exception
-            Assert.NotNull(_exception);
-            StringAssert.Contains("More than one handler was found for the typeof command Paramore.Brighter.Tests.TestDoubles.MyCommand - a command should only have one handler.", _exception.Message);
+            _exception.Should().NotBeNull();
+            _exception.Message.Should().Contain("More than one handler was found for the typeof command Paramore.Brighter.Tests.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.");
         }
     }
 }

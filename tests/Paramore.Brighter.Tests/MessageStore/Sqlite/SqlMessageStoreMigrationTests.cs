@@ -23,23 +23,22 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
+using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using NUnit.Framework;
 using Paramore.Brighter.MessageStore.Sqlite;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.messagestore.sqlite
+namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
-    public class SQlMessageStoreMigrationTests
+    public class SQlMessageStoreMigrationTests : IDisposable
     {
-        private SqliteMessageStore _sqlMessageStore;
-        private Message _message;
+        private readonly SqliteMessageStore _sqlMessageStore;
+        private readonly Message _message;
         private Message _storedMessage;
-        private SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteTestHelper _sqliteTestHelper;
 
-        [SetUp]
-        public void Establish()
+        public SQlMessageStoreMigrationTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -77,25 +76,24 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             }
         }
 
-        [Test]
+        [Fact]
         public void When_writing_a_message_with_minimal_header_information_to_the_message_store()
         {
             _storedMessage = _sqlMessageStore.Get(_message.Id);
 
             //_should_read_the_message_from_the__sql_message_store
-            Assert.AreEqual(_message.Body.Value, _storedMessage.Body.Value);
+            _storedMessage.Body.Value.Should().Be(_message.Body.Value);
             //_should_read_the_message_header_type_from_the__sql_message_store
-            Assert.AreEqual(_message.Header.MessageType, _storedMessage.Header.MessageType);
+            _storedMessage.Header.MessageType.Should().Be(_message.Header.MessageType);
             //_should_read_the_message_header_topic_from_the__sql_message_store
-            Assert.AreEqual(_message.Header.Topic, _storedMessage.Header.Topic);
+            _storedMessage.Header.Topic.Should().Be(_message.Header.Topic);
             //_should_default_the_timestamp_from_the__sql_message_store
-            Assert.GreaterOrEqual(_storedMessage.Header.TimeStamp, _message.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.Should().BeOnOrAfter(_message.Header.TimeStamp);
             //_should_read_empty_header_bag_from_the__sql_message_store
-            Assert.False(_storedMessage.Header.Bag.Keys.Any());
+            _storedMessage.Header.Bag.Keys.Should().BeEmpty();
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

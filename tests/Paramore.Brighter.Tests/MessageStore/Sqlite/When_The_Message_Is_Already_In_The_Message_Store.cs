@@ -24,21 +24,20 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using FluentAssertions;
 using Paramore.Brighter.MessageStore.Sqlite;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.messagestore.sqlite
+namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
-    [TestFixture]
-    public class SqliteMessageStoreMessageAlreadyExistsTests
+    public class SqliteMessageStoreMessageAlreadyExistsTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteMessageStore _sSqlMessageStore;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteMessageStore _sSqlMessageStore;
         private Exception _exception;
-        private Message _messageEarliest;
+        private readonly Message _messageEarliest;
 
-        [SetUp]
-        public void Establish()
+        public SqliteMessageStoreMessageAlreadyExistsTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -48,18 +47,16 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             _sSqlMessageStore.Add(_messageEarliest);
         }
 
-        [Test]
+        [Fact]
         public void When_The_Message_Is_Already_In_The_Message_Store()
         {
             _exception = Catch.Exception(() => _sSqlMessageStore.Add(_messageEarliest));
 
             //_should_ignore_the_duplcate_key_and_still_succeed
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
         }
 
-
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

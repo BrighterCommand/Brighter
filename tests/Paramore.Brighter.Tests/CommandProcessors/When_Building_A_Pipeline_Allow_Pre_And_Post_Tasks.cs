@@ -23,20 +23,20 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture()]
+
     public class PipelinePreAndPostFiltersTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish()
+        public PipelinePreAndPostFiltersTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
@@ -50,12 +50,12 @@ namespace Paramore.Brighter.Tests
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_A_Pipeline_Allow_Pre_And_Post_Tasks()
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-            Assert.AreEqual("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|", TraceFilters().ToString());
+            TraceFilters().ToString().Should().Be("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|");
         }
 
         private PipelineTracer TraceFilters()

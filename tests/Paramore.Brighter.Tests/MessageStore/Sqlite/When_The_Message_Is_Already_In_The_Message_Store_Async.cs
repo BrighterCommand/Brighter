@@ -24,41 +24,40 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Nito.AsyncEx;
-using NUnit.Framework;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Paramore.Brighter.MessageStore.Sqlite;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.messagestore.sqlite
+namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
-    [TestFixture]
-    public class SqliteMessageStoreMessageAlreadyExistsAsyncTests
+    public class SqliteMessageStoreMessageAlreadyExistsAsyncTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteMessageStore _sSqlMessageStore;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteMessageStore _sSqlMessageStore;
         private Exception _exception;
-        private Message _messageEarliest;
+        private readonly Message _messageEarliest;
 
-        [SetUp]
-        public void Establish()
+        public SqliteMessageStoreMessageAlreadyExistsAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_messageEarliest));
         }
 
-        [Test]
-        public void When_The_Message_Is_Already_In_The_Message_Store_Async()
+        [Fact]
+        public async Task When_The_Message_Is_Already_In_The_Message_Store_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_messageEarliest)));
+            await _sSqlMessageStore.AddAsync(_messageEarliest);
+
+            _exception = await Catch.ExceptionAsync(() => _sSqlMessageStore.AddAsync(_messageEarliest));
 
             //_should_ignore_the_duplcate_key_and_still_succeed
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
         }
 
-        [TearDown]
-        public void CleanUp()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

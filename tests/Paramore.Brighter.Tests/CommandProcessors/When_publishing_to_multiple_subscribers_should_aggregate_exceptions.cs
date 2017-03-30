@@ -23,21 +23,22 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using System.Collections.Generic;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PublishingToMultipleSubscribersTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public PublishingToMultipleSubscribersTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
@@ -46,26 +47,27 @@ namespace Paramore.Brighter.Tests
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyEvent>, MyEventHandler>("MyEventHandler");
-            container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("MyOtherHandler");
-            container.Register<IHandleRequests<MyEvent>, MyThrowingEventHandler>("MyThrowingHandler");
+            container.Register<IHandleRequests<MyEvent>, MyEventHandler>();
+            container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>();
+            container.Register<IHandleRequests<MyEvent>, MyThrowingEventHandler>();
+            container.Register(_receivedMessages);
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions()
         {
             _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
 
             //_should_throw_an_aggregate_exception
-            Assert.IsInstanceOf(typeof(AggregateException), _exception);
+            _exception.Should().BeOfType<AggregateException>();
             //_should_have_an_inner_exception_from_the_handler
-            Assert.IsInstanceOf(typeof(InvalidOperationException), ((AggregateException)_exception).InnerException);
+            ((AggregateException)_exception).InnerException.Should().BeOfType<InvalidOperationException>();
             //_should_publish_the_command_to_the_first_event_handler
-            Assert.True(MyEventHandler.ShouldReceive(_myEvent));
+            _receivedMessages.Should().Contain(nameof(MyEventHandler), _myEvent.Id);
             //_should_publish_the_command_to_the_second_event_handler
-            Assert.True(MyOtherEventHandler.Shouldreceive(_myEvent));
+            _receivedMessages.Should().Contain(nameof(MyOtherEventHandler), _myEvent.Id);
         }
     }
 }

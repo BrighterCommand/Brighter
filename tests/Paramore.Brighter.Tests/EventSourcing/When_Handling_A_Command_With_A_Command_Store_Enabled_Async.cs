@@ -1,20 +1,19 @@
-﻿using Nito.AsyncEx;
-using NUnit.Framework;
+﻿using System.Threading.Tasks;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.EventSourcing
 {
-    [TestFixture]
     public class CommandProcessorUsingCommandStoreAsyncTests
     {
-        private MyCommand _command;
-        private IAmACommandStoreAsync _commandStore;
-        private IAmACommandProcessor _commandProcessor;
+        private readonly MyCommand _command;
+        private readonly IAmACommandStoreAsync _commandStore;
+        private readonly IAmACommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorUsingCommandStoreAsyncTests()
         {
             _commandStore = new InMemoryCommandStore();
 
@@ -31,13 +30,13 @@ namespace Paramore.Brighter.Tests.EventSourcing
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
-        public void When_Handling_A_Command_With_A_Command_Store_Enabled_Async()
+        [Fact]
+        public async Task When_Handling_A_Command_With_A_Command_Store_Enabled_Async()
         {
-            AsyncContext.Run(async () => await _commandProcessor.SendAsync(_command));
+            await _commandProcessor.SendAsync(_command);
 
            // should_store_the_command_to_the_command_store
-            Assert.AreEqual(_command.Value, _commandStore.GetAsync<MyCommand>(_command.Id).Result.Value);
+            _commandStore.GetAsync<MyCommand>(_command.Id).Result.Value.Should().Be(_command.Value);
         }
     }
 }

@@ -32,13 +32,13 @@ using EventStore.ClientAPI;
 using EventStore.ClientAPI.Embedded;
 using EventStore.Core;
 using EventStore.Core.Data;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.MessageStore.EventStore;
 
 namespace Paramore.Brighter.Tests.MessageStore.EventStore
 {
     [Category("EventStore")]
-    [TestFixture]
+
     public class EventStoreMessageStoreTests
     {
         private IList<Message> _messages;
@@ -86,7 +86,7 @@ namespace Paramore.Brighter.Tests.MessageStore.EventStore
         }
 
         [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _eventStore.Close();
             _eventStoreNode.Stop();

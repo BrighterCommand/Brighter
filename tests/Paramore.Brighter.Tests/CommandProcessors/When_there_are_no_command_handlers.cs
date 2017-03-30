@@ -23,35 +23,34 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class CommandProcessorNoHandlersMatchTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorNoHandlersMatchTests()
         {
             _commandProcessor = new CommandProcessor(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer()), new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_There_Are_No_Command_Handlers()
         {
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_fail_because_multiple_receivers_found
-            Assert.IsAssignableFrom(typeof(ArgumentException), _exception);
+            _exception.Should().BeOfType<ArgumentException>();
             //_should_have_an_error_message_that_tells_you_why
-            Assert.NotNull(_exception);
-            StringAssert.Contains("No command handler was found", _exception.Message);
+            _exception.Should().NotBeNull();
+            _exception.Message.Should().Contain("No command handler was found");
         }
     }
 }

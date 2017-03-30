@@ -24,26 +24,24 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using Polly;
 using TinyIoC;
-using IAmADispatchBuilder = Paramore.Brighter.ServiceActivator.IAmADispatchBuilder;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class DispatchBuilderWithNamedGateway
     {
-        private IAmADispatchBuilder _builder;
+        private readonly IAmADispatchBuilder _builder;
         private Dispatcher _dispatcher;
 
-        [SetUp]
-        public void Establish()
+        public DispatchBuilderWithNamedGateway()
         {
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
@@ -102,13 +100,13 @@ namespace Paramore.Brighter.Tests.MessageDispatch
                 .Connections(connections);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_A_Dispatcher_With_Named_Gateway()
         {
             _dispatcher = _builder.Build();
 
             //_should_build_a_dispatcher
-            Assert.NotNull(_dispatcher);
+            _dispatcher.Should().NotBeNull();
         }
     }
 }

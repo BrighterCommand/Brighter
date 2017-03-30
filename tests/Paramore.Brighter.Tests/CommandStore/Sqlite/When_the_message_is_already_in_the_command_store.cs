@@ -23,24 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Microsoft.Data.Sqlite;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.commandstore.sqlite
+namespace Paramore.Brighter.Tests.CommandStore.Sqlite
 {
-    [TestFixture]
-    public class SqliteCommandStoreDuplicateMessageTests
+    public class SqliteCommandStoreDuplicateMessageTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteCommandStore _sqlCommandStore;
-        private MyCommand _raisedCommand;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteCommandStore _sqlCommandStore;
+        private readonly MyCommand _raisedCommand;
         private Exception _exception;
         private SqliteConnection _sqliteConnection;
 
-        [SetUp]
-        public void Establish()
+        public SqliteCommandStoreDuplicateMessageTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
@@ -49,17 +48,16 @@ namespace Paramore.Brighter.Tests.commandstore.sqlite
             _sqlCommandStore.Add<MyCommand>(_raisedCommand);
         }
 
-        [Test]
+        [Fact]
         public void When_The_Message_Is_Already_In_The_Command_Store()
         {
             _exception = Catch.Exception(() => _sqlCommandStore.Add(_raisedCommand));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

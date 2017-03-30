@@ -22,22 +22,21 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.EventSourcing
 {
-    [TestFixture]
     public class CommandProcessorUsingCommandStoreTests
     {
-        private MyCommand _command;
-        private IAmACommandStore _commandstore;
-        private IAmACommandProcessor _commandProcessor;
+        private readonly MyCommand _command;
+        private readonly IAmACommandStore _commandstore;
+        private readonly IAmACommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorUsingCommandStoreTests()
         {
             _commandstore = new InMemoryCommandStore();
 
@@ -55,13 +54,13 @@ namespace Paramore.Brighter.Tests.EventSourcing
 
         }
 
-        [Test]
+        [Fact]
         public void When_Handling_A_Command_With_A_Command_Store_Enabled()
         {
             _commandProcessor.Send(_command);
 
             //should_store_the_command_to_the_command_store
-            Assert.AreEqual(_command.Value, _commandstore.Get<MyCommand>(_command.Id).Value);
+            _commandstore.Get<MyCommand>(_command.Id).Value.Should().Be(_command.Value);
         }
     }
 }

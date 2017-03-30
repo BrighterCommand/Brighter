@@ -25,30 +25,28 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessageDispatcherMultipleConnectionTests
     {
-        private Dispatcher _dispatcher;
-        private FakeChannel _eventChannel;
-        private FakeChannel _commandChannel;
-        private IAmACommandProcessor _commandProcessor;
+        private readonly Dispatcher _dispatcher;
+        private readonly FakeChannel _eventChannel;
+        private readonly FakeChannel _commandChannel;
         private static int _numberOfConsumers;
 
-        [SetUp]
-        public void Establish()
+        public MessageDispatcherMultipleConnectionTests()
         {
             _eventChannel = new FakeChannel();
             _commandChannel = new FakeChannel();
-            _commandProcessor = new SpyCommandProcessor();
+            var commandProcessor = new SpyCommandProcessor();
 
             var container = new TinyIoCContainer();
             container.Register<MyEventMessageMapper>();
@@ -61,7 +59,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             var myEventConnection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_eventChannel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
             var myCommandConnection = new Connection(name: new ConnectionName("anothertest"), dataType: typeof(MyCommand), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_commandChannel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
-            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { myEventConnection, myCommandConnection });
+            _dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection> { myEventConnection, myCommandConnection });
 
             var @event = new MyEvent();
             var eventMessage = new MyEventMessageMapper().MapToMessage(@event);
@@ -71,12 +69,12 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             var commandMessage = new MyCommandMessageMapper().MapToMessage(command);
             _commandChannel.Add(commandMessage);
 
-            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
         }
 
 
-        [Test]
+        [Fact]
         public void When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers()
         {
             Task.Delay(1000).Wait();
@@ -84,15 +82,15 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher.End().Wait();
 
            //_should_have_consumed_the_messages_in_the_event_channel
-            Assert.AreEqual(0, _eventChannel.Length);
+            _eventChannel.Length.Should().Be(0);
             //_should_have_consumed_the_messages_in_the_command_channel
-            Assert.AreEqual(0, _commandChannel.Length);
+            _commandChannel.Length.Should().Be(0);
             //_should_have_a_stopped_state
-            Assert.AreEqual(DispatcherState.DS_STOPPED, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
             //_should_have_no_consumers
-            Assert.False(_dispatcher.Consumers.Any());
+            _dispatcher.Consumers.Should().BeEmpty();
             //_should_of_had_2_consumers_when_running
-            Assert.AreEqual(2, _numberOfConsumers);
+            _numberOfConsumers.Should().Be(2);
         }
 
     }

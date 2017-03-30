@@ -22,21 +22,20 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class ConfigurationCommandToMessageMapperTests
     {
-        private IAmAMessageMapper<ConfigurationCommand> _mapper;
+        private readonly IAmAMessageMapper<ConfigurationCommand> _mapper;
         private Message _message;
-        private ConfigurationCommand _command;
+        private readonly ConfigurationCommand _command;
 
-        [SetUp]
-        public void Establish()
+        public ConfigurationCommandToMessageMapperTests()
         {
             _mapper = new ConfigurationCommandMessageMapper();
 
@@ -45,19 +44,19 @@ namespace Paramore.Brighter.Tests.ControlBus
         }
 
 
-        [Test]
+        [Fact]
         public void When_mapping_to_a_wire_message_from_a_configuration_command()
         {
             _message = _mapper.MapToMessage(_command);
 
             // _should_serialize_the_command_type_to_the_message_body
-            Assert.True(_message.Body.Value.Contains("\"Type\":1"));
+            _message.Body.Value.Should().Contain("\"Type\":1");
             //_should_serialize_the_message_type_to_the_header
-            Assert.AreEqual(MessageType.MT_COMMAND, _message.Header.MessageType);
+            _message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             //_should_serialize_the_connection_name_to_the_message_body
-            Assert.True(_message.Body.Value.Contains("\"ConnectionName\":\"getallthethings\""));
+            _message.Body.Value.Should().Contain("\"ConnectionName\":\"getallthethings\"");
             //_should_serialize_the_message_id_to_the_message_body
-            Assert.True(_message.Body.Value.Contains(string.Format("\"Id\":\"{0}\"", _command.Id)));
+            _message.Body.Value.Should().Contain($"\"Id\":\"{_command.Id}\"");
         }
     }
 }

@@ -1,25 +1,24 @@
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
 using Polly.CircuitBreaker;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
-    public class CircuitBreakerTests
+    public class CircuitBreakerTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
-        private FakeMessageStore _messageStore;
-        private FakeErroringMessageProducer _messagingProducer;
+        private readonly FakeMessageStore _messageStore;
+        private readonly FakeErroringMessageProducer _messagingProducer;
         private Exception _failedException;
         private BrokenCircuitException _circuitBrokenException;
 
-        [SetUp]
-        public void Establish()
+        public CircuitBreakerTests()
         {
             _myCommand.Value = "Hello World";
             _messageStore = new FakeMessageStore();
@@ -53,7 +52,7 @@ namespace Paramore.Brighter.Tests
                 _messagingProducer);
         }
 
-        [Test]
+        [Fact]
         public void When_An_Error_Should_Break_The_Circuit()
         {
             //break circuit with retries
@@ -62,13 +61,12 @@ namespace Paramore.Brighter.Tests
             //now respond with broken ciruit
             _circuitBrokenException = (BrokenCircuitException)Catch.Exception(() => _commandProcessor.Post(_myCommand));
 
-            Assert.AreEqual(4, _messagingProducer.SentCalledCount);
-            Assert.IsInstanceOf(typeof(Exception), _failedException);
-            Assert.IsInstanceOf(typeof(BrokenCircuitException), _circuitBrokenException);
+            _messagingProducer.SentCalledCount.Should().Be(4);
+            _failedException.Should().BeOfType<Exception>();
+            _circuitBrokenException.Should().BeOfType<BrokenCircuitException>();
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
        }

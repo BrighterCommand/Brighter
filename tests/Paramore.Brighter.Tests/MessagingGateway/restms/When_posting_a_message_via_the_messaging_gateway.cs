@@ -23,26 +23,25 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RESTMS;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.restms
+namespace Paramore.Brighter.Tests.MessagingGateway.RESTMS
 {
-    [Category("RESTMS")]
-    [TestFixture]
-    public class  RestMsMessageProducerSendTests
+    [Trait("Category", "RESTMS")]
+    public class RestMsMessageProducerSendTests : IDisposable
     {
         private const string Topic = "test";
-        private IAmAMessageProducer _messageProducer;
-        private IAmAMessageConsumer _messageConsumer;
-        private Message _message;
+        private readonly IAmAMessageProducer _messageProducer;
+        private readonly IAmAMessageConsumer _messageConsumer;
+        private readonly Message _message;
         private Message _sentMessage;
         private string _messageBody;
         private const string QueueName = "test";
 
-        [SetUp]
-        public void Establish()
+        public RestMsMessageProducerSendTests()
         {
             var configuration = new RestMSMessagingGatewayConfiguration
             {
@@ -51,10 +50,10 @@ namespace Paramore.Brighter.Tests.MessagingGateway.restms
             };
             _messageProducer = new RestMsMessageProducer(configuration);
             _messageConsumer = new RestMsMessageConsumer(configuration, QueueName, Topic);
-            _message = new Message(header: new MessageHeader(Guid.NewGuid(), Topic, MessageType.MT_COMMAND),body: new MessageBody("test content"));
+            _message = new Message(new MessageHeader(Guid.NewGuid(), Topic, MessageType.MT_COMMAND), new MessageBody("test content"));
         }
 
-        [Test]
+        [Fact(Skip = "todo: broken")]
         public void When_posting_a_message_via_the_messaging_gateway()
         {
             _messageConsumer.Receive(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
@@ -64,13 +63,12 @@ namespace Paramore.Brighter.Tests.MessagingGateway.restms
             _messageConsumer.Acknowledge(_sentMessage);
 
             //_should_send_a_message_via_restms_with_the_matching_body
-            Assert.AreEqual(_message.Body.Value, _messageBody);
+            _messageBody.Should().Be(_message.Body.Value);
             //_should_have_an_empty_pipe_after_acknowledging_the_message
-            Assert.AreEqual(0, ((RestMsMessageConsumer)_messageConsumer).NoOfOutstandingMessages(30000));
+            ((RestMsMessageConsumer)_messageConsumer).NoOfOutstandingMessages(30000).Should().Be(0);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _messageConsumer.Purge();
             _messageProducer.Dispose();

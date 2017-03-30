@@ -1,0 +1,52 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using Sqlite</Description>
+    <AssemblyTitle>Paramore.Brighter.MessageStore.Sqlite</AssemblyTitle>
+    <Authors>Francesco Pighi</Authors>
+    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <DebugType>portable</DebugType>
+    <AssemblyName>Paramore.Brighter.MessageStore.Sqlite</AssemblyName>
+    <PackageId>Paramore.Brighter.MessageStore.Sqlite</PackageId>
+    <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <PackageReleaseNotes>https://github.com/iancooper/Paramore/blob/master/release_notes.md</PackageReleaseNotes>
+    <PackageIconUrl>http://iancooper.github.io/Paramore/images/brightercanon-nuget.png</PackageIconUrl>
+    <PackageProjectUrl>http://iancooper.github.io/Paramore</PackageProjectUrl>
+    <PackageLicenseUrl>http://ianhammondcooper.mit-license.org</PackageLicenseUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.MessageStore.Sqlite</RepositoryUrl>
+    <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="1.1.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
+    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
+    <DefineConstants>$(DefineConstants);NETSTANDARD;LIBLOG_PORTABLE</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+</Project>

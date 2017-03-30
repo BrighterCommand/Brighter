@@ -1,19 +1,18 @@
 using FakeItEasy;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class ContextBagVisibilityTests
     {
         private const string I_AM_A_TEST_OF_THE_CONTEXT_BAG = "I am a test of the context bag";
-        private RequestContext _request_context;
-        private CommandProcessor _commandProcessor;
-        private MyCommand _myCommand;
+        private readonly RequestContext _request_context;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand;
 
-        [SetUp]
-        public void Establish()
+        public ContextBagVisibilityTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyContextAwareCommandHandler>();
@@ -30,15 +29,15 @@ namespace Paramore.Brighter.Tests
             _request_context.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
         }
 
-        [Test]
+        [Fact]
         public void When_Putting_A_Variable_Into_The_Bag_Should_Be_Accessible_In_The_Handler()
         {
             _commandProcessor.Send(_myCommand);
 
             //_should_have_seen_the_data_we_pushed_into_the_bag
-            Assert.AreEqual(I_AM_A_TEST_OF_THE_CONTEXT_BAG, MyContextAwareCommandHandler.TestString);
+            MyContextAwareCommandHandler.TestString.Should().Be(I_AM_A_TEST_OF_THE_CONTEXT_BAG);
             //_should_have_been_filled_by_the_handler
-            Assert.AreEqual("I was called and set the context", ((string)_request_context.Bag["MyContextAwareCommandHandler"]));
+            _request_context.Bag["MyContextAwareCommandHandler"].Should().Be("I was called and set the context");
         }
     }
 }

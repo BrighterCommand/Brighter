@@ -24,25 +24,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using FluentAssertions;
 using Paramore.Brighter.MessageStore.Sqlite;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.messagestore.sqlite
+namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
-    [TestFixture]
-    public class SqliteMessageStoreWritingMessageTests
+    public class SqliteMessageStoreWritingMessageTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteMessageStore _SqlMessageStore;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteMessageStore _SqlMessageStore;
         private readonly string key1 = "name1";
         private readonly string key2 = "name2";
-        private Message _messageEarliest;
+        private readonly Message _messageEarliest;
         private Message _storedMessage;
         private readonly string value1 = "value1";
         private readonly string value2 = "value2";
 
-        [SetUp]
-        public void Establish()
+        public SqliteMessageStoreWritingMessageTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -56,30 +55,28 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             _SqlMessageStore.Add(_messageEarliest);
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_A_Message_To_The_Message_Store()
         {
             _storedMessage = _SqlMessageStore.Get(_messageEarliest.Id);
 
             //_should_read_the_message_from_the__sql_message_store
-            Assert.AreEqual(_messageEarliest.Body.Value, _storedMessage.Body.Value);
+            _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //_should_read_the_message_header_first_bag_item_from_the__sql_message_store
-            Assert.True(_storedMessage.Header.Bag.ContainsKey(key1));
-            Assert.AreEqual(value1, _storedMessage.Header.Bag[key1]);
+            _storedMessage.Header.Bag.ContainsKey(key1).Should().BeTrue();
+            _storedMessage.Header.Bag[key1].Should().Be(value1);
             //_should_read_the_message_header_second_bag_item_from_the__sql_message_store
-            Assert.True(_storedMessage.Header.Bag.ContainsKey(key2));
-            Assert.AreEqual(value2, _storedMessage.Header.Bag[key2]);
+            _storedMessage.Header.Bag.ContainsKey(key2).Should().BeTrue();
+            _storedMessage.Header.Bag[key2].Should().Be(value2);
             //_should_read_the_message_header_timestamp_from_the__sql_message_store
-            Assert.AreEqual(_messageEarliest.Header.TimeStamp, _storedMessage.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
             //_should_read_the_message_header_topic_from_the__sql_message_store
-            Assert.AreEqual(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);
+            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             //_should_read_the_message_header_type_from_the__sql_message_store
-            Assert.AreEqual(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
+            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
         }
 
-
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

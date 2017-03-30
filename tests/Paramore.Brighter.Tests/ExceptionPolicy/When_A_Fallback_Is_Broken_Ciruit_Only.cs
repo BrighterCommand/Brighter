@@ -23,23 +23,22 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.Policies.Handlers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy
 {
-    [TestFixture]
     public class FallbackHandlerBrokenCircuitTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public FallbackHandlerBrokenCircuitTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsWithUnsupportedExceptionForFallback>();
@@ -55,7 +54,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Fallback_Is_Broken_Ciruit_Only()
         {
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
@@ -63,7 +62,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
             //_should_send_the_command_to_the_command_handler
             MyFailsWithUnsupportedExceptionForFallback.ShouldReceive(_myCommand);
             // _should_bubble_out_the_exception
-            Assert.NotNull(_exception);
+            _exception.Should().NotBeNull();
         }
     }
 }

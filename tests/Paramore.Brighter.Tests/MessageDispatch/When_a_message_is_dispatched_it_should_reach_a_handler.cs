@@ -23,72 +23,53 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using FluentAssertions;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessagePumpDispatchTests
     {
-        private IAmAMessagePump _messagePump;
-        private FakeChannel _channel;
-        private IAmACommandProcessor _commandProcessor;
-        private MyEvent _event;
+        private readonly IAmAMessagePump _messagePump;
+        private readonly MyEvent _myEvent = new MyEvent();
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpDispatchTests()
         {
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyEvent, MyEventHandler>();
 
-            _commandProcessor = new CommandProcessor(
+            var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler(_receivedMessages));
+
+            var commandProcessor = new CommandProcessor(
                 subscriberRegistry,
-                new CheapHandlerFactory(), 
+                handlerFactory, 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry());
 
-            _channel = new FakeChannel();
+            var channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000 };
+            _messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000 };
 
-            _event = new MyEvent();
-
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_event)));
-            _channel.Add(message);
+            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_myEvent)));
+            channel.Add(message);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            _channel.Add(quitMessage);
+            channel.Add(quitMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler()
         {
             _messagePump.Run();
 
             //_should_dispatch_the_message_to_a_handler
-            Assert.True(MyEventHandler.ShouldReceive(_event));
-        }
-
-        internal class CheapHandlerFactory : IAmAHandlerFactory
-        {
-            public IHandleRequests Create(Type handlerType)
-            {
-                if (handlerType == typeof(MyEventHandler))
-                {
-                    return new MyEventHandler();
-                }
-                return null;
-            }
-
-            public void Release(IHandleRequests handler)
-            {
-                var disposable = handler as IDisposable;
-                disposable?.Dispose();
-            }
+            _receivedMessages.Should().Contain(nameof(MyEventHandler), _myEvent.Id);
         }
     }
 }

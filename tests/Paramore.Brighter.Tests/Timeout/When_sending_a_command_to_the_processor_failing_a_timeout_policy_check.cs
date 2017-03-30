@@ -24,23 +24,22 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.Policies.Handlers;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Timeout.Test_Doubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Timeout
 {
-    [TestFixture]
     public class TimeoutHandlerFailsCheckTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private AggregateException _thrownException;
 
-        [SetUp]
-        public void Establish ()
+        public TimeoutHandlerFailsCheckTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsDueToTimeoutHandler>();
@@ -57,17 +56,17 @@ namespace Paramore.Brighter.Tests.Timeout
         }
 
         //We have to catch the final exception that bubbles out after retry
-        [Test]
+        [Fact]
         public void When_Sending_A_Command_To_The_Processor_Failing_A_Timeout_Policy_Check()
         {
             _thrownException = (AggregateException)Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_throw_a_timeout_exception
-            Assert.IsInstanceOf<TimeoutException>(_thrownException.Flatten().InnerExceptions.First());
+            _thrownException.Flatten().InnerExceptions.First().Should().BeOfType<TimeoutException>();
             //_should_signal_that_a_timeout_occured_and_handler_should_be_cancelled
-            Assert.True(MyFailsDueToTimeoutHandlerStateTracker.WasCancelled);
+            MyFailsDueToTimeoutHandlerStateTracker.WasCancelled.Should().BeTrue();
             //_should_not_run_to_completion
-            Assert.False(MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted);
+            MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted.Should().BeFalse();
         }
     }
 }

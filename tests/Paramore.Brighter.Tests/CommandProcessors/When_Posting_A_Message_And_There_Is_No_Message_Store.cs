@@ -23,22 +23,21 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
-    public class CommandProcessorNoMessageStoreTests
+    public class CommandProcessorNoMessageStoreTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducer _fakeMessageProducer;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorNoMessageStoreTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -63,17 +62,16 @@ namespace Paramore.Brighter.Tests
                 (IAmAMessageProducer)_fakeMessageProducer);
         }
 
-        [Test]
+        [Fact]
         public void When_Posting_A_Message_And_There_Is_No_Message_Store()
         {
             _exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
 
            //_should_throw_an_exception
-            Assert.IsInstanceOf<InvalidOperationException>(_exception);
+            _exception.Should().BeOfType<InvalidOperationException>();
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
         }

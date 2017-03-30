@@ -26,24 +26,23 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
+using FluentAssertions;
 using Paramore.Brighter.MessageStore.Sqlite;
 using Paramore.Brighter.Time;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.messagestore.sqlite
+namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
-    [TestFixture]
-    public class SqlMessageStoreWritngMessagesTests
+    public class SqlMessageStoreWritngMessagesTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteMessageStore _sSqlMessageStore;
-        private Message _message2;
-        private Message _messageEarliest;
-        private Message _messageLatest;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteMessageStore _sSqlMessageStore;
+        private readonly Message _message2;
+        private readonly Message _messageEarliest;
+        private readonly Message _messageLatest;
         private IEnumerable<Message> _retrievedMessages;
 
-        [SetUp]
-        public void Establish()
+        public SqlMessageStoreWritngMessagesTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
@@ -65,21 +64,20 @@ namespace Paramore.Brighter.Tests.messagestore.sqlite
             _sSqlMessageStore.Add(_messageLatest);
         }
 
-        [Test]
+        [Fact]
         public void When_Writing_Messages_To_The_Message_Store()
         {
             _retrievedMessages = _sSqlMessageStore.Get();
 
             // _should_read_first_message_last_from_the__message_store
-            Assert.AreEqual(_messageEarliest.Id, _retrievedMessages.Last().Id);
+            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
             //_should_read_last_message_first_from_the__message_store
-            Assert.AreEqual(_messageLatest.Id, _retrievedMessages.First().Id);
+            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
             //_should_read_the_messages_from_the__message_store
-            Assert.AreEqual(3, _retrievedMessages.Count());
+            _retrievedMessages.Should().HaveCount(3);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

@@ -23,24 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Nito.AsyncEx;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
-    public class CommandProcessorNoMessageStoreAsyncTests
+    public class CommandProcessorNoMessageStoreAsyncTests : IDisposable
 
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducer _fakeMessageProducer;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorNoMessageStoreAsyncTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -65,19 +64,18 @@ namespace Paramore.Brighter.Tests
                 (IAmAMessageProducer)_fakeMessageProducer);
         }
 
-        [Test]
-        public void When_Posting_A_Message_And_There_Is_No_Message_Store_Async()
+        [Fact]
+        public async Task When_Posting_A_Message_And_There_Is_No_Message_Store_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PostAsync(_myCommand)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_myCommand));
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
 
             //_should_throw_an_exception
-            Assert.IsInstanceOf<InvalidOperationException>(_exception);
+            _exception.Should().BeOfType<InvalidOperationException>();
         }
     }
 }

@@ -23,21 +23,20 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class ConfigurationCommandMessageMapperTests
     {
-        private IAmAMessageMapper<ConfigurationCommand> _mapper;
-        private Message _message;
+        private readonly IAmAMessageMapper<ConfigurationCommand> _mapper;
+        private readonly Message _message;
         private ConfigurationCommand _command;
 
-        [SetUp]
-        public void Establish()
+        public ConfigurationCommandMessageMapperTests()
         {
             _mapper = new ConfigurationCommandMessageMapper();
 
@@ -47,15 +46,15 @@ namespace Paramore.Brighter.Tests.ControlBus
                 );
         }
 
-        [Test]
+        [Fact]
         public void When_mapping_from_a_configuration_command_from_a_message()
         {
             _command = _mapper.MapToRequest(_message);
 
             //_should_rehydrate_the_command_type
-            Assert.AreEqual(ConfigurationCommandType.CM_STARTALL, _command.Type);
+            _command.Type.Should().Be(ConfigurationCommandType.CM_STARTALL);
             // _should_rehydrate_the_connection_name
-            Assert.AreEqual("getallthethings", _command.ConnectionName);
+            _command.ConnectionName.Should().Be("getallthethings");
         }
     }
 }

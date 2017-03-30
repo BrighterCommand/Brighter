@@ -23,20 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PipelineForCommandTests
     {
-        private PipelineBuilder<MyCommand> _chainBuilder;
+        private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private IHandleRequests<MyCommand> _chainOfResponsibility;
-        private RequestContext _requestContext;
+        private readonly RequestContext _requestContext;
 
-        [SetUp]
-        public void Establish()
+        public PipelineForCommandTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
@@ -46,13 +45,13 @@ namespace Paramore.Brighter.Tests
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_A_Handler_For_A_Command()
         {
             _chainOfResponsibility = _chainBuilder.Build(_requestContext).First();
 
-            Assert.NotNull(_chainOfResponsibility.Context);
-            Assert.AreSame(_requestContext, _chainOfResponsibility.Context);
+            _chainOfResponsibility.Context.Should().NotBeNull();
+            _chainOfResponsibility.Context.Should().BeSameAs(_requestContext);
         }
     }
 }

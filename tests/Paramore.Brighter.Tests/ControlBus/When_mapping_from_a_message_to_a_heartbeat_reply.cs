@@ -23,26 +23,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Mappers;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class HeartbeatMessageToReplyTests
     {
-        private IAmAMessageMapper<HeartbeatReply> _mapper;
-        private Message _message;
+        private readonly IAmAMessageMapper<HeartbeatReply> _mapper;
+        private readonly Message _message;
         private HeartbeatReply _request;
         private const string MESSAGE_BODY = "{\r\n  \"HostName\": \"Test.Hostname\",\r\n  \"Consumers\": [\r\n    {\r\n      \"ConnectionName\": \"Test.Connection\",\r\n      \"State\": 1\r\n    },\r\n    {\r\n      \"ConnectionName\": \"More.Consumers\",\r\n      \"State\": 0\r\n    }\r\n  ]\r\n}";
         private const string TOPIC = "test.topic";
         private readonly Guid _correlationId = Guid.NewGuid();
 
-        [SetUp]
-        public void Establish()
+        public HeartbeatMessageToReplyTests()
         {
             _mapper = new HeartbeatReplyCommandMessageMapper();
             var header = new MessageHeader(messageId: Guid.NewGuid(), topic: TOPIC, messageType: MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow, correlationId: _correlationId);
@@ -50,20 +48,20 @@ namespace Paramore.Brighter.Tests.ControlBus
             _message = new Message(header, body);
         }
 
-        [Test]
+        [Fact]
         public void When_mapping_from_a_message_to_a_heartbeat_reply()
         {
             _request = _mapper.MapToRequest(_message);
 
             // _should_set_the_sender_address_topic
-            Assert.AreEqual(TOPIC, _request.SendersAddress.Topic);
+            _request.SendersAddress.Topic.Should().Be(TOPIC);
             // _should_set_the_sender_correlation_id
-            Assert.AreEqual(_correlationId, _request.SendersAddress.CorrelationId);
+            _request.SendersAddress.CorrelationId.Should().Be(_correlationId);
             // _should_set_the_hostName
-            Assert.AreEqual("Test.Hostname", _request.HostName);
+            _request.HostName.Should().Be("Test.Hostname");
             // _should_contain_the_consumers
-            Assert.True((bool) _request.Consumers.Any(rc => rc.ConnectionName == "Test.Connection" && rc.State == ConsumerState.Open));
-            Assert.True(_request.Consumers.Any(rc => rc.ConnectionName == "More.Consumers" && rc.State == ConsumerState.Shut));
+            _request.Consumers.Should().Contain(rc => rc.ConnectionName == "Test.Connection" && rc.State == ConsumerState.Open);
+            _request.Consumers.Should().Contain(rc => rc.ConnectionName == "More.Consumers" && rc.State == ConsumerState.Shut);
         }
    }
 }

@@ -22,34 +22,37 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using System;
+using System.Collections.Generic;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
+
     public class CommandProcessorPublishEventTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
         private readonly MyEvent _myEvent = new MyEvent();
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPublishEventTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyEvent, MyEventHandler>();
-            var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler());
+            var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler(_receivedMessages));
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_Publishing_An_Event_To_The_Processor()
         {
             _commandProcessor.Publish(_myEvent);
 
            //_should_publish_the_command_to_the_event_handlers
-            Assert.True(MyEventHandler.ShouldReceive(_myEvent));
+            _receivedMessages.Should().Contain(nameof(MyEventHandler), _myEvent.Id);
         }
     }
 }

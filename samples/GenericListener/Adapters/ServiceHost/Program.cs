@@ -1,6 +1,5 @@
 ﻿using System;
 using GenericListener.Adapters.Services;
-using Tasks.Ports.Events;
 using Topshelf;
 using Topshelf.Hosts;
 
@@ -53,8 +52,6 @@ namespace GenericListener.Adapters.ServiceHost
     /// </summary>
     internal class Program
     {
-        public static readonly Type ForceTypeLoading = typeof(TaskCompletedEvent);
-
         public static void Main()
         {
             HostFactory.Run(x => x.Service<GenericListenerService>(sc =>

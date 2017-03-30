@@ -24,25 +24,24 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using FluentAssertions;
 using Newtonsoft.Json;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
-    public class ControlBusSenderPostMessageTests
+    public class ControlBusSenderPostMessageTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
-        private ControlBusSender _controlBusSender;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly ControlBusSender _controlBusSender;
         private readonly MyCommand _myCommand = new MyCommand();
-        private Message _message;
-        private FakeMessageStore _fakeMessageStore;
-        private FakeMessageProducer _fakeMessageProducer;
+        private readonly Message _message;
+        private readonly FakeMessageStore _fakeMessageStore;
+        private readonly FakeMessageProducer _fakeMessageProducer;
 
-        [SetUp]
-        public void Establish()
+        public ControlBusSenderPostMessageTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -75,21 +74,20 @@ namespace Paramore.Brighter.Tests
             _controlBusSender = new ControlBusSender(_commandProcessor);
         }
 
-        [Test]
+        [Fact]
         public void When_Posting_Via_A_Control_Bus_Sender()
         {
             _controlBusSender.Post(_myCommand);
 
             //_should_store_the_message_in_the_sent_command_message_repository
-            Assert.True(_fakeMessageStore.MessageWasAdded);
+            _fakeMessageStore.MessageWasAdded.Should().BeTrue();
             //_should_send_a_message_via_the_messaging_gateway
-            Assert.True(_fakeMessageProducer.MessageWasSent);
+            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             //_should_convert_the_command_into_a_message
-            Assert.AreEqual(_message, _fakeMessageStore.Get().First());
+            _fakeMessageStore.Get().First().Should().Be(_message);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _controlBusSender.Dispose();
         }

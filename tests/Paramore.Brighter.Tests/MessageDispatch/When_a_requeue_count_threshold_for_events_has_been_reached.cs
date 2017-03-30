@@ -24,25 +24,24 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture()]
     public class MessagePumpEventRequeueCountThresholdTests
     {
-        private IAmAMessagePump _messagePump;
-        private FakeChannel _channel;
-        private SpyRequeueCommandProcessor _commandProcessor;
-        private MyEvent _event;
+        private readonly IAmAMessagePump _messagePump;
+        private readonly FakeChannel _channel;
+        private readonly SpyRequeueCommandProcessor _commandProcessor;
+        private readonly MyEvent _event;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpEventRequeueCountThresholdTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(message2);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Requeue_Count_Threshold_For_Events_Has_Been_Reached()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
@@ -69,13 +68,13 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             Task.WaitAll(new[] { task });
 
             //_should_publish_the_message_via_the_command_processor
-            Assert.AreEqual(CommandType.Publish, _commandProcessor.Commands[0]);
+            _commandProcessor.Commands[0].Should().Be(CommandType.Publish);
             //_should_have_been_handled_6_times_via_publish
-            Assert.AreEqual(6, _commandProcessor.PublishCount);
+            _commandProcessor.PublishCount.Should().Be(6);
             //_should_requeue_the_messages
-            Assert.AreEqual(0, _channel.Length);
+            _channel.Length.Should().Be(0);
             //_should_dispose_the_input_channel
-            Assert.True(_channel.DisposeHappened);
+            _channel.DisposeHappened.Should().BeTrue();
         }
     }
 }

@@ -26,62 +26,64 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Nito.AsyncEx;
-using NUnit.Framework;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Paramore.Brighter.MessageStore.Sqlite;
 using Paramore.Brighter.Time;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.messagestore.sqlite
+namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
-    [TestFixture]
-    public class SqlMessageStoreWritngMessagesAsyncTests
+    public class SqlMessageStoreWritngMessagesAsyncTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteMessageStore _sSqlMessageStore;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteMessageStore _sSqlMessageStore;
         private Message _message2;
         private Message _messageEarliest;
         private Message _messageLatest;
         private IList<Message> _retrievedMessages;
 
-        [SetUp]
-        public void Establish()
+        public SqlMessageStoreWritngMessagesAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
             _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+        }
+
+        [Fact]
+        public async Task When_Writing_Messages_To_The_Message_Store_Async()
+        {
+            await SetUpMessagesAsync();
+
+            _retrievedMessages = await _sSqlMessageStore.GetAsync();
+
+            //_should_read_first_message_last_from_the__message_store
+            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
+            //_should_read_last_message_first_from_the__message_store
+            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            //_should_read_the_messages_from_the__message_store
+            _retrievedMessages.Should().HaveCount(3);
+        }
+
+        private async Task SetUpMessagesAsync()
+        {
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND),
-                new MessageBody("Body"));
-            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_messageEarliest));
+
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
+            await _sSqlMessageStore.AddAsync(_messageEarliest);
 
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-2);
 
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND),
-                new MessageBody("Body2"));
-            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_message2));
+            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND), new MessageBody("Body2"));
+            await _sSqlMessageStore.AddAsync(_message2);
 
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-1);
 
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND),
-                new MessageBody("Body3"));
-            AsyncContext.Run(async () => await _sSqlMessageStore.AddAsync(_messageLatest));
+            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND), new MessageBody("Body3"));
+            await _sSqlMessageStore.AddAsync(_messageLatest);
         }
 
-        [Test]
-        public void When_Writing_Messages_To_The_Message_Store_Async()
-        {
-            AsyncContext.Run(async () => _retrievedMessages = await _sSqlMessageStore.GetAsync());
-
-            //_should_read_first_message_last_from_the__message_store
-            Assert.AreEqual(_messageEarliest.Id, _retrievedMessages.Last().Id);
-            //_should_read_last_message_first_from_the__message_store
-            Assert.AreEqual(_messageLatest.Id, _retrievedMessages.First().Id);
-            //_should_read_the_messages_from_the__message_store
-            Assert.AreEqual(3, _retrievedMessages.Count());
-        }
-
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _sqliteTestHelper.CleanUpDb();
         }

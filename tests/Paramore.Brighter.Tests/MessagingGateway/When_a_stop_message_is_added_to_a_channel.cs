@@ -24,20 +24,18 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using NUnit.Framework;
+using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway
 {
-    [TestFixture]
     public class ChannelStopTests
     {
-        private IAmAChannel _channel;
-        private IAmAMessageConsumer _gateway;
+        private readonly IAmAChannel _channel;
+        private readonly IAmAMessageConsumer _gateway;
         private Message _receivedMessage;
-        private Message _sentMessage;
+        private readonly Message _sentMessage;
 
-        [SetUp]
-        public void Establish()
+        public ChannelStopTests()
         {
             _gateway = A.Fake<IAmAMessageConsumer>();
 
@@ -52,7 +50,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
             A.CallTo(() => _gateway.Receive(1000)).Returns(_sentMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Stop_Message_Is_Added_To_A_Channel()
         {
             _receivedMessage = _channel.Receive(1000);

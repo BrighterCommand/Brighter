@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.Tests.TestDoubles
+namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
     internal class MyObsoleteCommandHandler : RequestHandler<MyCommand>
     {
@@ -35,6 +35,7 @@ namespace Paramore.Brighter.Tests.TestDoubles
             s_command = null;
         }
 
+#pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
         [MyPreValidationHandler(step: 2, timing: HandlerTiming.Before)]
         [MyPostLoggingHandler(step: 1, timing: HandlerTiming.After)]
         [Obsolete] // even with attributes non inheriting from MessageHandlerDecoratorAttribute it should not fail
@@ -43,6 +44,7 @@ namespace Paramore.Brighter.Tests.TestDoubles
             LogCommand(command);
             return base.Handle(command);
         }
+#pragma warning restore CS0809 // Obsolete member overrides non-obsolete member
 
         public static bool Shouldreceive(MyCommand expectedCommand)
         {

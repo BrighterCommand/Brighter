@@ -22,37 +22,39 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class  PipelineForCommandAsyncTests
     {
-        private static PipelineBuilder<MyCommand> s_chainBuilder;
-        private static IHandleRequestsAsync<MyCommand> s_chainOfResponsibility;
-        private static RequestContext s_requestContext;
+        private static PipelineBuilder<MyCommand> _chainBuilder;
+        private static IHandleRequestsAsync<MyCommand> _chainOfResponsibility;
+        private static RequestContext _requestContext;
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
 
-        [SetUp]
-        public void Establish()
+        public PipelineForCommandAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
-            var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync());
-            s_requestContext = new RequestContext();
+            var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync(_receivedMessages));
+            _requestContext = new RequestContext();
 
-            s_chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_A_Handler_For_An_Async_Command()
         {
-            s_chainOfResponsibility = s_chainBuilder.BuildAsync(s_requestContext, false).First();
+            _chainOfResponsibility = _chainBuilder.BuildAsync(_requestContext, false).First();
 
-            Assert.NotNull(s_chainOfResponsibility.Context);
-            Assert.AreSame(s_requestContext, s_chainOfResponsibility.Context);
+            _chainOfResponsibility.Context.Should().NotBeNull();
+            _chainOfResponsibility.Context.Should().BeSameAs(_requestContext);
         }
     }
 }

@@ -23,22 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Nito.AsyncEx;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PublishingToMultipleSubscribersAsyncTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyEvent _myEvent = new MyEvent();
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public PublishingToMultipleSubscribersAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
@@ -47,26 +48,27 @@ namespace Paramore.Brighter.Tests
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyEvent>, MyEventHandlerAsync>("MyEventHandler");
-            container.Register<IHandleRequestsAsync<MyEvent>, MyOtherEventHandlerAsync>("MyOtherHandler");
-            container.Register<IHandleRequestsAsync<MyEvent>, MyThrowingEventHandlerAsync>("MyThrowingHandler");
+            container.Register<IHandleRequestsAsync<MyEvent>, MyEventHandlerAsync>();
+            container.Register<IHandleRequestsAsync<MyEvent>, MyOtherEventHandlerAsync>();
+            container.Register<IHandleRequestsAsync<MyEvent>, MyThrowingEventHandlerAsync>();
+            container.Register(_receivedMessages);
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
-        public void When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async()
+        [Fact]
+        public async Task When_Publishing_To_Multiple_Subscribers_Should_Aggregate_Exceptions_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PublishAsync(_myEvent)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(_myEvent));
 
             //_should_throw_an_aggregate_exception
-            Assert.IsInstanceOf(typeof(AggregateException), _exception);
+            _exception.Should().BeOfType<AggregateException>();
             //_should_have_an_inner_exception_from_the_handler
-            Assert.IsInstanceOf(typeof(InvalidOperationException), ((AggregateException)_exception).InnerException);
+            ((AggregateException)_exception).InnerException.Should().BeOfType<InvalidOperationException>();
             //_should_publish_the_command_to_the_first_event_handler
-            Assert.True(MyEventHandlerAsync.ShouldReceive(_myEvent));
+            _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), _myEvent.Id);
             //_should_publish_the_command_to_the_second_event_handler
-            Assert.True(MyOtherEventHandlerAsync.ShouldReceive(_myEvent));
+            _receivedMessages.Should().Contain(nameof(MyOtherEventHandlerAsync), _myEvent.Id);
         }
     }
 }

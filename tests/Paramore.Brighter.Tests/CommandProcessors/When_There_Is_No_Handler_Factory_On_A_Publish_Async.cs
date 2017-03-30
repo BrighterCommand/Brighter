@@ -23,32 +23,31 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Nito.AsyncEx;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class CommandProcessorPublishMissingHandlerFactoryAsyncTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPublishMissingHandlerFactoryAsyncTests()
         {
             _commandProcessor = new CommandProcessor(new SubscriberRegistry(), (IAmAHandlerFactoryAsync) null, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
-        public void When_There_Is_No_Handler_Factory_On_A_Publish_Async()
+        [Fact]
+        public async Task When_There_Is_No_Handler_Factory_On_A_Publish_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.PublishAsync(_myEvent)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(_myEvent));
 
            //_should_throw_an_invalid_operation_exception
-            Assert.IsInstanceOf<InvalidOperationException>(_exception);
+            _exception.Should().BeOfType<InvalidOperationException>();
         }
     }
 }

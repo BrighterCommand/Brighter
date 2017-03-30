@@ -23,24 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Nito.AsyncEx;
-using NUnit.Framework;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.Policies.Handlers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy
 {
-    [TestFixture]
     public class CommandProcessorMissingPolicyFromRegistryAsyncTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorMissingPolicyFromRegistryAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyDoesNotFailPolicyHandlerAsync>();
@@ -56,16 +55,16 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
         }
 
         //We have to catch the final exception that bubbles out after retry
-        [Test]
-        public void When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry_Async()
+        [Fact]
+        public async Task When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
 
             //_should_throw_an_exception
-            Assert.IsInstanceOf<ArgumentException>(_exception);
+            _exception.Should().BeOfType<ArgumentException>();
             //_should_give_the_name_of_the_missing_policy
-            Assert.NotNull(_exception);
-            StringAssert.Contains("There is no policy for MyDivideByZeroPolicy", _exception.Message);
+            _exception.Should().NotBeNull();
+            _exception.Message.Should().Contain("There is no policy for MyDivideByZeroPolicy");
         }
     }
 }

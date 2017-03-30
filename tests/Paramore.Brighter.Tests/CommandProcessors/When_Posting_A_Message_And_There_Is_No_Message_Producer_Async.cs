@@ -23,25 +23,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
-    public class CommandProcessorPostMissingMessageProducerAsyncTests
+    public class CommandProcessorPostMissingMessageProducerAsyncTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
-        private FakeMessageStore _fakeMessageStore;
+        private readonly FakeMessageStore _fakeMessageStore;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPostMissingMessageProducerAsyncTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -71,17 +70,16 @@ namespace Paramore.Brighter.Tests
                 (IAmAMessageProducerAsync)null);
         }
 
-        [Test]
-        public void When_Posting_A_Message_And_There_Is_No_Message_Producer_Async()
+        [Fact]
+        public async Task When_Posting_A_Message_And_There_Is_No_Message_Producer_Async()
         {
-            _exception = Catch.Exception(() => AsyncContext.Run(() => _commandProcessor.PostAsync(_myCommand)));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_myCommand));
 
             //_should_throw_an_exception
-            Assert.IsInstanceOf<InvalidOperationException>(_exception);
+            _exception.Should().BeOfType<InvalidOperationException>();
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
         }

@@ -12,17 +12,17 @@ namespace Paramore.Brighter.Tests
 
         public MsSqlTestHelper()
         {
-            _tableName = "test_" + Guid.NewGuid();
+            _tableName = $"test_{Guid.NewGuid()}";
         }
 
-        public MsSqlTestHelper(string tableName) : this()
+        public MsSqlTestHelper(string tableName)
         {
             _tableName = tableName;
         }
 
         public void CreateDatabase()
         {
-            using (var connection = new SqlConnection("Server=.;Database=master;Integrated Security=True;Application Name=BrighterTests"))
+            using (var connection = new SqlConnection(ConnectionString))
             {
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -49,21 +49,9 @@ namespace Paramore.Brighter.Tests
             CreateCommandStoreTable();
         }
 
-        public MsSqlCommandStoreConfiguration CommandStoreConfiguration
-        {
-            get
-            {
-                return new MsSqlCommandStoreConfiguration(ConnectionString, _tableName);
-            }
-        }
+        public MsSqlCommandStoreConfiguration CommandStoreConfiguration => new MsSqlCommandStoreConfiguration(ConnectionString, _tableName);
 
-        public MsSqlMessageStoreConfiguration MessageStoreConfiguration
-        {
-            get
-            {
-                return new MsSqlMessageStoreConfiguration(ConnectionString, _tableName, MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer);
-            }
-        }
+        public MsSqlMessageStoreConfiguration MessageStoreConfiguration => new MsSqlMessageStoreConfiguration(ConnectionString, _tableName, MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer);
 
         public void CleanUpDb()
         {
@@ -72,11 +60,11 @@ namespace Paramore.Brighter.Tests
                 connection.Open();
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = String.Format(@"
-                                        IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[{0}]') AND type in (N'U'))
+                    command.CommandText = $@"
+                                        IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[{_tableName}]') AND type in (N'U'))
                                         BEGIN
-                                            DROP TABLE [{0}]
-                                        END;", _tableName);
+                                            DROP TABLE [{_tableName}]
+                                        END;";
                     command.ExecuteNonQuery();
                 }
             }
@@ -86,8 +74,8 @@ namespace Paramore.Brighter.Tests
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
-                _tableName = "message_" + _tableName;
-                string createTableSql = SqlMessageStoreBuilder.GetDDL(_tableName);
+                _tableName = $"message_{_tableName}";
+                var createTableSql = SqlMessageStoreBuilder.GetDDL(_tableName);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -102,8 +90,8 @@ namespace Paramore.Brighter.Tests
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
-                _tableName = "command_" + _tableName;
-                string createTableSql = SqlCommandStoreBuilder.GetDDL(_tableName);
+                _tableName = $"command_{_tableName}";
+                var createTableSql = SqlCommandStoreBuilder.GetDDL(_tableName);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())

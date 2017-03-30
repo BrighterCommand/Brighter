@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Paramore.Brighter.Tests.TestDoubles
+namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
     public class FakeSession : IUnitOfWork
     {

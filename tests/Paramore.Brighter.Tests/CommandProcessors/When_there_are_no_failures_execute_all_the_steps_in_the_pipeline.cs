@@ -22,20 +22,19 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class CommandProcessorPipelineStepsTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPipelineStepsTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
@@ -49,18 +48,18 @@ namespace Paramore.Brighter.Tests
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_There_Are_No_Failures_Execute_All_The_Steps_In_The_Pipeline()
         {
             _commandProcessor.Send(_myCommand);
 
 
             //_should_call_the_pre_validation_handler
-            Assert.True(MyValidationHandler<MyCommand>.ShouldReceive(_myCommand));
+            MyValidationHandler<MyCommand>.ShouldReceive(_myCommand).Should().BeTrue();
             //_should_send_the_command_to_the_command_handler
-            Assert.True(MyPreAndPostDecoratedHandler.ShouldReceive(_myCommand));
+            MyPreAndPostDecoratedHandler.ShouldReceive(_myCommand).Should().BeTrue();
             // _should_call_the_post_validation_handler
-            Assert.True(MyLoggingHandler<MyCommand>.Shouldreceive(_myCommand));
+            MyLoggingHandler<MyCommand>.Shouldreceive(_myCommand).Should().BeTrue();
         }
     }
 }

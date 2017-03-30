@@ -22,19 +22,18 @@ THE SOFTWARE. */
 
 #endregion
 
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class CommandProcessorSendTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorSendTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
@@ -43,15 +42,13 @@ namespace Paramore.Brighter.Tests
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
-        [Test]
+        [Fact]
         public void When_Sending_A_Command_To_The_Processor()
         {
             _commandProcessor.Send(_myCommand);
 
             //_should_send_the_command_to_the_command_handler
-            Assert.True(MyCommandHandler.ShouldReceive(_myCommand));
+            MyCommandHandler.ShouldReceive(_myCommand).Should().BeTrue();
         }
     }
 }
-
-

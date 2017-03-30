@@ -23,24 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture()]
-    public class CommandProcessorPostMissingMessageProducerTests
+    public class CommandProcessorPostMissingMessageProducerTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
-        private FakeMessageStore _fakeMessageStore;
+        private readonly FakeMessageStore _fakeMessageStore;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public CommandProcessorPostMissingMessageProducerTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -70,20 +69,18 @@ namespace Paramore.Brighter.Tests
                 (IAmAMessageProducer)null);
         }
 
-        [Test]
+        [Fact]
         public void When_Posting_A_Message_And_There_Is_No_Message_Producer()
         {
             _exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             _commandProcessor.Dispose();
 
            // _should_throw_an_exception
-            Assert.IsInstanceOf<InvalidOperationException>(_exception);
+            _exception.Should().BeOfType<InvalidOperationException>();
         }
-
     }
 }

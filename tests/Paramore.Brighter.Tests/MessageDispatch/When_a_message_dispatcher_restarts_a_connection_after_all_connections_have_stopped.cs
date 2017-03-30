@@ -22,28 +22,27 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
-    public class DispatcherRestartConnectionTests
+    public class DispatcherRestartConnectionTests : IDisposable
     {
-        private Dispatcher _dispatcher;
-        private FakeChannel _channel;
-        private IAmACommandProcessor _commandProcessor;
-        private Connection _connection;
-        private Connection _newConnection;
+        private readonly Dispatcher _dispatcher;
+        private readonly FakeChannel _channel;
+        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly Connection _connection;
+        private readonly Connection _newConnection;
 
-        [SetUp]
-        public void Establish()
+        public DispatcherRestartConnectionTests()
         {
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
@@ -59,17 +58,16 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Add(message);
 
-            Assert.AreEqual(DispatcherState.DS_AWAITING, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
             Task.Delay(1000).Wait();
             _dispatcher.Shut("test");
             _dispatcher.Shut("newTest");
             Task.Delay(3000).Wait();
-            Assert.AreEqual(0, _dispatcher.Consumers.Count());
+            _dispatcher.Consumers.Should().HaveCount(0);
         }
 
-
-        [Test]
+        [Fact]
         public void When_A_Message_Dispatcher_Restarts_A_Connection_After_All_Connections_Have_Stopped()
         {
             _dispatcher.Open("newTest");
@@ -80,17 +78,16 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
 
             //_should_have_consumed_the_messages_in_the_event_channel
-            Assert.AreEqual(0, _channel.Length);
+            _channel.Length.Should().Be(0);
             //_should_have_a_running_state
-            Assert.AreEqual(DispatcherState.DS_RUNNING, _dispatcher.State);
+            _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
             //_should_have_only_one_consumer
-            Assert.AreEqual(1, _dispatcher.Consumers.Count());
+            _dispatcher.Consumers.Should().HaveCount(1);
             //_should_have_two_connections
-            Assert.AreEqual(2, _dispatcher.Connections.Count());
+            _dispatcher.Connections.Should().HaveCount(2);
         }
 
-        [TearDown]
-        public void Cleanup()
+        public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)
                 _dispatcher.End().Wait();

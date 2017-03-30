@@ -23,24 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Mappers;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class HeartbeatMessageToRequestTests
     {
-        private IAmAMessageMapper<HeartbeatRequest> _mapper;
-        private Message _message;
+        private readonly IAmAMessageMapper<HeartbeatRequest> _mapper;
+        private readonly Message _message;
         private HeartbeatRequest _request;
         private const string TOPIC = "test.topic";
         private readonly Guid _correlationId = Guid.NewGuid();
         private readonly Guid _commandId = Guid.NewGuid();
 
-        [SetUp]
-        public void Establish()
+        public HeartbeatMessageToRequestTests()
         {
             _mapper = new HeartbeatRequestCommandMessageMapper();
             var messageHeader = new MessageHeader(
@@ -55,17 +54,17 @@ namespace Paramore.Brighter.Tests.ControlBus
             _message = new Message(header: messageHeader, body: messageBody);
         }
 
-        [Test]
+        [Fact]
         public void When_mapping_from_a_message_to_a_heartbeat_request()
         {
             _request = _mapper.MapToRequest(_message);
 
             //_should_put_the_message_reply_topic_into_the_address
-            Assert.AreEqual(TOPIC, _request.ReplyAddress.Topic);
+            _request.ReplyAddress.Topic.Should().Be(TOPIC);
             //_should_put_the_message_correlation_id_into_the_address
-            Assert.AreEqual(_correlationId, _request.ReplyAddress.CorrelationId);
+            _request.ReplyAddress.CorrelationId.Should().Be(_correlationId);
             //_should_set_the_id_of_the_request
-            Assert.AreEqual(_commandId, _request.Id);
+            _request.Id.Should().Be(_commandId);
         }
     }
 }

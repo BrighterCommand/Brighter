@@ -22,36 +22,38 @@ THE SOFTWARE. */
 
 #endregion
 
-using Nito.AsyncEx;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class CancellingAsyncPipelineTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
         private readonly MyCommand _myCommand = new MyCommand();
 
-        [SetUp]
-        public void Establish()
+        public CancellingAsyncPipelineTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCancellableCommandHandlerAsync>();
-            var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync());
+            var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync(_receivedMessages));
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
         //Ignore any errors about adding System.Runtime from the IDE. See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow
-        [Test]
-        public void When_Cancelling_An_Async_Command()
+        [Fact]
+        public async Task When_Cancelling_An_Async_Command()
         {
-            AsyncContext.Run(async () => await _commandProcessor.SendAsync(_myCommand));
+            await _commandProcessor.SendAsync(_myCommand);
 
             //_should_send_the_command_to_the_command_handler
-            Assert.True(MyCommandHandlerAsync.ShouldReceive(_myCommand));
+            _receivedMessages.Should().Contain(nameof(MyCommandHandlerAsync), _myCommand.Id);
         }
     }
 }

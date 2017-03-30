@@ -24,7 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.ControlBus;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
@@ -32,17 +33,15 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Tests.ControlBus
 {
-    [TestFixture]
     public class ControlBusTests
     {
-        private IDispatcher _dispatcher;
-        private Dispatcher _controlBus;
-        private ControlBusReceiverBuilder _busReceiverBuilder;
-        private ConfigurationCommand _configurationCommand;
+        private readonly IDispatcher _dispatcher;
+        private readonly Dispatcher _controlBus;
+        private readonly ControlBusReceiverBuilder _busReceiverBuilder;
+        private readonly ConfigurationCommand _configurationCommand;
         private Exception _exception;
 
-        [SetUp]
-        public void Establish()
+        public ControlBusTests()
         {
             _dispatcher = A.Fake<IDispatcher>();
             var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
@@ -59,13 +58,13 @@ namespace Paramore.Brighter.Tests.ControlBus
 
         }
 
-        [Test]
+        [Fact]
         public void When_we_build_a_control_bus_we_can_send_configuration_messages_to_it()
         {
             _exception = Catch.Exception(() => _controlBus.CommandProcessor.Send(_configurationCommand));
 
             //should_not_raise_exceptions_for_missing_handlers
-            Assert.Null(_exception);
+            _exception.Should().BeNull();
             //should_call_the_dispatcher_to_start_it
             A.CallTo(() => _dispatcher.Receive()).MustHaveHappened();
         }

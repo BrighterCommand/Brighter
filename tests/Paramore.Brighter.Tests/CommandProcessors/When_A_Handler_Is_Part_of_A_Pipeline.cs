@@ -23,20 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PipelineBuilderTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish ()
+        public PipelineBuilderTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyImplicitHandler>();
@@ -49,13 +48,13 @@ namespace Paramore.Brighter.Tests
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Handler_Is_Part_of_A_Pipeline()
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-            Assert.True(TracePipeline().ToString().Contains("MyImplicitHandler"));
-            Assert.True(TracePipeline().ToString().Contains("MyLoggingHandler"));
+            TracePipeline().ToString().Should().Contain("MyImplicitHandler");
+            TracePipeline().ToString().Should().Contain("MyLoggingHandler");
         }
 
         private PipelineTracer TracePipeline()

@@ -37,6 +37,5 @@ namespace Paramore.Brighter.CommandStore.MsSql
         {
             return string.Format(_messageStoreDDL, tableName);
         }
-
     }
 }

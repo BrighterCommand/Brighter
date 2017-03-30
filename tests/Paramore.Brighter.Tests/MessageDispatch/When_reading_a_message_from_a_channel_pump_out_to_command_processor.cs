@@ -23,24 +23,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using FluentAssertions;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
     public class MessagePumpToCommandProcessorTests
     {
-        private IAmAMessagePump _messagePump;
-        private FakeChannel _channel;
-        private SpyCommandProcessor _commandProcessor;
-        private MyEvent _event;
+        private readonly IAmAMessagePump _messagePump;
+        private readonly FakeChannel _channel;
+        private readonly SpyCommandProcessor _commandProcessor;
+        private readonly MyEvent _event;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpToCommandProcessorTests()
         {
             _commandProcessor = new SpyCommandProcessor();
             _channel = new FakeChannel();
@@ -55,17 +55,17 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(quitMessage);
         }
 
-        [Test]
+        [Fact]
         public void When_Reading_A_Message_From_A_Channel_Pump_Out_To_Command_Processor()
         {
             _messagePump.Run();
 
             //_should_send_the_message_via_the_command_processor
-            Assert.AreEqual(CommandType.Publish, _commandProcessor.Commands[0]);
+            _commandProcessor.Commands[0].Should().Be(CommandType.Publish);
             //_should_convert_the_message_into_an_event
-            Assert.AreEqual(_event, (_commandProcessor.Observe<MyEvent>()));
+            _commandProcessor.Observe<MyEvent>().Should().Be(_event);
             //_should_dispose_the_input_channel
-            Assert.True(_channel.DisposeHappened);
+            _channel.DisposeHappened.Should().BeTrue();
         }
     }
 }

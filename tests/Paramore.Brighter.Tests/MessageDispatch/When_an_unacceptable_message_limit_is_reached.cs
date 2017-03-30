@@ -24,23 +24,22 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using FluentAssertions;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class MessagePumpUnacceptableMessageLimitBreachedTests
     {
-        private IAmAMessagePump _messagePump;
-        private FakeChannel _channel;
-        private SpyRequeueCommandProcessor _commandProcessor;
+        private readonly IAmAMessagePump _messagePump;
+        private readonly FakeChannel _channel;
+        private readonly SpyRequeueCommandProcessor _commandProcessor;
 
-        [SetUp]
-        public void Establish()
+        public MessagePumpUnacceptableMessageLimitBreachedTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
@@ -58,7 +57,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _channel.Add(unacceptableMessage4);
         }
 
-        [Test]
+        [Fact]
         public void When_An_Unacceptable_Message_Limit_Is_Reached()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
@@ -67,9 +66,9 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             Task.WaitAll(new[] { task });
 
             //should_have_acknowledge_the_3_messages
-            Assert.AreEqual(3, _channel.AcknowledgeCount);
+            _channel.AcknowledgeCount.Should().Be(3);
             //should_dispose_the_input_channel
-            Assert.True(_channel.DisposeHappened);
+            _channel.DisposeHappened.Should().BeTrue();
         }
     }
 }

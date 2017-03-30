@@ -23,20 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PipelineBuilderAsyncTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequestsAsync<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish ()
+        public PipelineBuilderAsyncTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyImplicitHandlerAsync>();
@@ -49,13 +48,13 @@ namespace Paramore.Brighter.Tests
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_A_Handler_Is_Part_Of_An_Async_Pipeline()
         {
             _pipeline = _pipelineBuilder.BuildAsync(new RequestContext(), false).First();
 
-            Assert.True(TracePipeline().ToString().Contains("MyImplicitHandlerAsync"));
-            Assert.True(TracePipeline().ToString().Contains("MyLoggingHandlerAsync"));
+            TracePipeline().ToString().Should().Contain("MyImplicitHandlerAsync");
+            TracePipeline().ToString().Should().Contain("MyLoggingHandlerAsync");
         }
 
         private PipelineTracer TracePipeline()

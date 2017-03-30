@@ -1,18 +1,17 @@
 using System;
 using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PipelineCleanupTests
     {
-        private PipelineBuilder<MyCommand> _pipeline_Builder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private static string s_released;
 
-        [SetUp]
-        public void Establish()
+        public PipelineCleanupTests()
         {
             s_released = string.Empty;
 
@@ -22,8 +21,8 @@ namespace Paramore.Brighter.Tests
 
             var handlerFactory = new CheapHandlerFactory();
 
-            _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
-            _pipeline_Builder.Build(new RequestContext()).Any();
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            _pipelineBuilder.Build(new RequestContext()).Any();
         }
 
         internal class CheapHandlerFactory : IAmAHandlerFactory
@@ -55,17 +54,17 @@ namespace Paramore.Brighter.Tests
         }
 
 
-        [Test]
+        [Fact]
         public void When_We_Have_Exercised_The_Pipeline_Cleanup_Its_Handlers()
         {
-            _pipeline_Builder.Dispose();
+            _pipelineBuilder.Dispose();
 
             //_should_have_called_dispose_on_instances_from_ioc
-            Assert.True(MyPreAndPostDecoratedHandler.DisposeWasCalled);
+            MyPreAndPostDecoratedHandler.DisposeWasCalled.Should().BeTrue();
             //_should_have_called_dispose_on_instances_from_pipeline_builder
-            Assert.True(MyLoggingHandler<MyCommand>.DisposeWasCalled);
+            MyLoggingHandler<MyCommand>.DisposeWasCalled.Should().BeTrue();
             //_should_have_called_release_on_all_handlers
-            Assert.AreEqual("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1", s_released);
+            s_released.Should().Be("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1");
         }
     }
 }

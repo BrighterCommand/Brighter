@@ -23,20 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
-using NUnit.Framework;
-using Paramore.Brighter.Tests.TestDoubles;
+using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    [TestFixture]
     public class PipelineForiegnAttributesTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
-        [SetUp]
-        public void Establish()
+        public PipelineForiegnAttributesTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyObsoleteCommandHandler>();
@@ -50,12 +49,12 @@ namespace Paramore.Brighter.Tests
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
         }
 
-        [Test]
+        [Fact]
         public void When_Building_A_Pipeline_Allow_ForiegnAttribues()
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-            Assert.AreEqual("MyValidationHandler`1|MyObsoleteCommandHandler|MyLoggingHandler`1|", TraceFilters().ToString());
+            TraceFilters().ToString().Should().Be("MyValidationHandler`1|MyObsoleteCommandHandler|MyLoggingHandler`1|");
         }
 
         private PipelineTracer TraceFilters()

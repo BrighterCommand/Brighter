@@ -24,25 +24,24 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Newtonsoft.Json;
-using NUnit.Framework;
+using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    [TestFixture]
     public class PerformerCanStopTests
     {
-        private Performer _performer;
-        private SpyCommandProcessor _commandProcessor;
-        private FakeChannel _channel;
-        private Task _performerTask;
+        private readonly Performer _performer;
+        private readonly SpyCommandProcessor _commandProcessor;
+        private readonly FakeChannel _channel;
+        private readonly Task _performerTask;
 
-        [SetUp]
-        public void Establish()
+        public PerformerCanStopTests()
         {
             _commandProcessor = new SpyCommandProcessor();
             _channel = new FakeChannel();
@@ -60,19 +59,19 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _performer.Stop();
         }
 
-        [Test]
+        [Fact]
         public void When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop()
         {
             _performerTask.Wait();
 
             //_should_terminate_successfully
-            Assert.True(_performerTask.IsCompleted);
+            _performerTask.IsCompleted.Should().BeTrue();
             //_should_not_have_errored
-            Assert.False(_performerTask.IsFaulted);
+            _performerTask.IsFaulted.Should().BeFalse();
             //_should_not_show_as_cancelled
-            Assert.False(_performerTask.IsCanceled);
+            _performerTask.IsCanceled.Should().BeFalse();
             //_should_have_consumed_the_messages_in_the_channel
-            Assert.AreEqual(0, _channel.Length);
+            _channel.Length.Should().Be(0);
         }
     }
 }
