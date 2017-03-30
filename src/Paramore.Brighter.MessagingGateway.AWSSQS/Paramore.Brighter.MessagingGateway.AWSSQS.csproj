@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <VersionPrefix>1.0.0</VersionPrefix>
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using awssqs</Description>
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.AWSSQS</AssemblyTitle>
     <Authors>Deniz Kocak</Authors>

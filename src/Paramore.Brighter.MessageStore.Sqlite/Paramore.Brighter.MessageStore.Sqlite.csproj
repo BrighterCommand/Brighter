@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <VersionPrefix>1.0.0</VersionPrefix>
     <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using Sqlite</Description>
     <AssemblyTitle>Paramore.Brighter.MessageStore.Sqlite</AssemblyTitle>
     <Authors>Francesco Pighi</Authors>

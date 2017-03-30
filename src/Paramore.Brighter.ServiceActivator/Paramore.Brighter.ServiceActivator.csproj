@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <VersionPrefix>1.0.0</VersionPrefix>
     <Description>The Command Dispatcher pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers</Description>
     <AssemblyTitle>Paramore.Brighter.ServiceActivator</AssemblyTitle>
     <Authors>Ian Cooper</Authors>

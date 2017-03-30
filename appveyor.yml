@@ -24,12 +24,14 @@ assembly_info:
   assembly_informational_version: '{version}'
 
 nuget:
-  project_feed: false # false until pkg versioning is sorted
+  project_feed: true
   disable_publish_on_pr: true
 
 install:
   - ps: Invoke-WebRequest -Uri "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/dotnet-install.ps1" -OutFile "dotnet-install.ps1"
-  - ps: ./dotnet-install.ps1 -Version 1.0.0
+  - ps: .\dotnet-install.ps1 -Version 1.0.0
+  - ps: Import-Module .\Set-Version.psm1
+  - ps: Set-Version -CsprojPattern "src/*/*.csproj" -Version "{version}"
 
 before_build:
   - cmd: dotnet --info
