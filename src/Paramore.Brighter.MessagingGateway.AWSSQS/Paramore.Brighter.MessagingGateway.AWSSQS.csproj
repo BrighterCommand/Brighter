@@ -33,19 +33,9 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
-    <PackageReference Include="Microsoft.Bcl" Version="1.1.10" />
-    <PackageReference Include="Microsoft.Bcl.Async" Version="1.0.168" />
-    <PackageReference Include="Microsoft.Bcl.Build" Version="1.0.21" />
-    <PackageReference Include="Microsoft.Net.Http" Version="2.2.29" />
-    <PackageReference Include="PCLStorage" Version="1.0.2" />
-    <PackageReference Include="PCLCrypto" Version="2.0.147" />
     <PackageReference Include="AWSSDK.Core" Version="3.3.10.2" />
     <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.0.10" />
     <PackageReference Include="AWSSDK.SQS" Version="3.3.1.10" />
-    <PackageReference Include="PInvoke.BCrypt" Version="0.5.64" />
-    <PackageReference Include="PInvoke.NCrypt" Version="0.5.64" />
-    <PackageReference Include="PInvoke.Windows.Core" Version="0.5.64" />
-    <PackageReference Include="Validation" Version="2.4.15" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
