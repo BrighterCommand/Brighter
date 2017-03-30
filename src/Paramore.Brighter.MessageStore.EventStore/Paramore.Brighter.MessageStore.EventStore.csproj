@@ -5,7 +5,7 @@
     <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using Event Store</Description>
     <AssemblyTitle>Paramore.Brighter.MessageStore.EventStore</AssemblyTitle>
     <Authors>George Ayris</Authors>
-    <TargetFrameworks>net452</TargetFrameworks>
+    <TargetFrameworks>net46</TargetFrameworks>
     <DebugType>portable</DebugType>
     <AssemblyName>Paramore.Brighter.MessageStore.EventStore</AssemblyName>
     <PackageId>Paramore.Brighter.MessageStore.EventStore</PackageId>
@@ -32,11 +32,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="EventStore.Client" Version="3.9.4" />
     <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
+    <PackageReference Include="EventStore.Client" Version="4.0.0" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net46' ">
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>

@@ -48,7 +48,7 @@ namespace ManagementAndMonitoringCoreConsole
         public static void Main()
         {
             Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console()
+                .WriteTo.LiterateConsole()
                 .CreateLogger();
 
             var container = new TinyIoCContainer();
