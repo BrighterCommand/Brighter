@@ -30,9 +30,9 @@ namespace Paramore.Brighter.Tests.MessagingGateway
 {
     public class ChannelRequeueWithoutDelayTest
     {
-        private IAmAChannel _channel;
-        private IAmAMessageConsumer _gateway;
-        private Message _requeueMessage;
+        private readonly IAmAChannel _channel;
+        private readonly IAmAMessageConsumer _gateway;
+        private readonly Message _requeueMessage;
 
         public ChannelRequeueWithoutDelayTest()
         {

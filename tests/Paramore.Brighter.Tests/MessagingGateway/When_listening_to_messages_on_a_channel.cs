@@ -31,10 +31,10 @@ namespace Paramore.Brighter.Tests.MessagingGateway
 {
     public class ChannelMessageReceiveTests
     {
-        private IAmAChannel _channel;
-        private IAmAMessageConsumer _gateway;
+        private readonly IAmAChannel _channel;
+        private readonly IAmAMessageConsumer _gateway;
         private Message _receivedMessage;
-        private Message _sentMessage;
+        private readonly Message _sentMessage;
 
         public ChannelMessageReceiveTests()
         {

@@ -8,9 +8,9 @@ namespace Paramore.Brighter.Tests.CommandProcessors
     public class ContextBagVisibilityTests
     {
         private const string I_AM_A_TEST_OF_THE_CONTEXT_BAG = "I am a test of the context bag";
-        private RequestContext _request_context;
-        private CommandProcessor _commandProcessor;
-        private MyCommand _myCommand;
+        private readonly RequestContext _request_context;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand;
 
         public ContextBagVisibilityTests()
         {

@@ -7,7 +7,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class PipelinePreAndPostFiltersAsyncTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequestsAsync<MyCommand> _pipeline;
 
         public PipelinePreAndPostFiltersAsyncTests()

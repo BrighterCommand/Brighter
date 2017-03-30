@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
 {
     public class CommandProcessorWithCircuitBreakerTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _thirdException;
         private Exception _firstException;

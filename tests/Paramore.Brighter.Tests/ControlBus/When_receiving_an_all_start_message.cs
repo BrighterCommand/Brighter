@@ -32,9 +32,9 @@ namespace Paramore.Brighter.Tests.ControlBus
 {
     public class ConfigurationCommandAllStartTests
     {
-        private ConfigurationCommandHandler _configurationCommandHandler;
-        private ConfigurationCommand _configurationCommand;
-        private IDispatcher _dispatcher;
+        private readonly ConfigurationCommandHandler _configurationCommandHandler;
+        private readonly ConfigurationCommand _configurationCommand;
+        private readonly IDispatcher _dispatcher;
 
         public ConfigurationCommandAllStartTests()
         {

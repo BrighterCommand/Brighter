@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             //_should_read_last_message_first_from_the__message_store
             _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
             //_should_read_the_messages_from_the__message_store
-            _retrievedMessages.Count().Should().Be(3);
+            _retrievedMessages.Should().HaveCount(3);
         }
 
         public void Dispose()

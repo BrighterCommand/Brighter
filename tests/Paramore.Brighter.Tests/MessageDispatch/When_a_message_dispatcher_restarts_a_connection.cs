@@ -35,10 +35,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 {
     public class MessageDispatcherResetConnection
     {
-        private Dispatcher _dispatcher;
-        private FakeChannel _channel;
-        private IAmACommandProcessor _commandProcessor;
-        private Connection _connection;
+        private readonly Dispatcher _dispatcher;
+        private readonly FakeChannel _channel;
+        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly Connection _connection;
 
         public MessageDispatcherResetConnection()
         {

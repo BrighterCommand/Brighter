@@ -34,10 +34,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 {
     public class MessagePumpRetryCommandOnConnectionFailureTests
     {
-        private IAmAMessagePump _messagePump;
-        private FailingChannel _channel;
-        private SpyCommandProcessor _commandProcessor;
-        private MyCommand _command;
+        private readonly IAmAMessagePump _messagePump;
+        private readonly FailingChannel _channel;
+        private readonly SpyCommandProcessor _commandProcessor;
+        private readonly MyCommand _command;
 
         public MessagePumpRetryCommandOnConnectionFailureTests()
         {

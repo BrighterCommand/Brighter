@@ -32,8 +32,8 @@ namespace Paramore.Brighter.Tests.ControlBus
 {
     public class ConfigurationCommandMessageMapperTests
     {
-        private IAmAMessageMapper<ConfigurationCommand> _mapper;
-        private Message _message;
+        private readonly IAmAMessageMapper<ConfigurationCommand> _mapper;
+        private readonly Message _message;
         private ConfigurationCommand _command;
 
         public ConfigurationCommandMessageMapperTests()

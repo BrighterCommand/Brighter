@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using FluentAssertions;
 using Newtonsoft.Json;
-using Xunit;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
@@ -38,13 +37,13 @@ namespace Paramore.Brighter.Tests.Monitoring
 {
     public class MonitorHandlerTests
     {
-        private MyCommand _command;
+        private readonly MyCommand _command;
         private Exception _thrownException;
-        private SpyControlBusSender _controlBusSender;
-        private CommandProcessor _commandProcessor;
+        private readonly SpyControlBusSender _controlBusSender;
+        private readonly CommandProcessor _commandProcessor;
         private MonitorEvent _afterEvent;
         private string _originalRequestAsJson;
-        private DateTime _at;
+        private readonly DateTime _at;
 
         public MonitorHandlerTests()
         {

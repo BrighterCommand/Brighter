@@ -29,8 +29,8 @@ namespace Paramore.Brighter.Tests.MessagingGateway
 {
     public class ChannelDisposalTests
     {
-        private IAmAChannel _channel;
-        private IAmAMessageConsumer _messageConsumer;
+        private readonly IAmAChannel _channel;
+        private readonly IAmAMessageConsumer _messageConsumer;
 
         public ChannelDisposalTests()
         {

@@ -34,14 +34,14 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
     public class SqliteMessageStoreRangeRequestTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteMessageStore _sSqlMessageStore;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteMessageStore _sSqlMessageStore;
         private readonly string _TopicFirstMessage = "test_topic";
         private readonly string _TopicLastMessage = "test_topic3";
         private IEnumerable<Message> messages;
-        private Message _message1;
-        private Message _message2;
-        private Message _messageEarliest;
+        private readonly Message _message1;
+        private readonly Message _message2;
+        private readonly Message _messageEarliest;
 
         public SqliteMessageStoreRangeRequestTests()
         {
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
             messages = _sSqlMessageStore.Get(1, 3);
 
             //_should_fetch_1_message
-            messages.Count().Should().Be(1);
+            messages.Should().HaveCount(1);
             //_should_fetch_expected_message
             messages.First().Header.Topic.Should().Be(_TopicLastMessage);
             //_should_not_fetch_null_messages

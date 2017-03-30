@@ -32,8 +32,8 @@ namespace Paramore.Brighter.Tests.ControlBus
 {
     public class HeartbeatMessageToRequestTests
     {
-        private IAmAMessageMapper<HeartbeatRequest> _mapper;
-        private Message _message;
+        private readonly IAmAMessageMapper<HeartbeatRequest> _mapper;
+        private readonly Message _message;
         private HeartbeatRequest _request;
         private const string TOPIC = "test.topic";
         private readonly Guid _correlationId = Guid.NewGuid();

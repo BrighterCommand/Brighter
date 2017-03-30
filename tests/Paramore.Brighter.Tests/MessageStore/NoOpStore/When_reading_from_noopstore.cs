@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using FluentAssertions;
 using Xunit;
 
@@ -33,16 +32,15 @@ namespace Paramore.Brighter.Tests.MessageStore.NoOpStore
 {
     public class NoOpMessageStoreReadTests
     {
-        private Message _messageEarliest;
-        private NoOpMessageStore _noOpStore;
+        private readonly NoOpMessageStore _noOpStore;
         private Exception _exception;
         private IList<Message> _messages;
 
         public NoOpMessageStoreReadTests()
         {
             _noOpStore = new NoOpMessageStore();
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _noOpStore.Add(_messageEarliest);
+            var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _noOpStore.Add(messageEarliest);
         }
 
         [Fact]
@@ -54,7 +52,7 @@ namespace Paramore.Brighter.Tests.MessageStore.NoOpStore
             _exception.Should().BeNull();
             //_should_return_empty_list
             _messages.Should().NotBeNull();
-            _messages.Any().Should().BeFalse();
+            _messages.Should().BeEmpty();
         }
    }
 }

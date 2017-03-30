@@ -31,8 +31,8 @@ namespace Paramore.Brighter.Tests.MessageStore.NoOpStore
 {
     public class NoOpMessageStoreWriteTests
     {
-        private Message _messageEarliest;
-        private NoOpMessageStore _noOpStore;
+        private readonly Message _messageEarliest;
+        private readonly NoOpMessageStore _noOpStore;
         private Exception _exception;
 
         public NoOpMessageStoreWriteTests()

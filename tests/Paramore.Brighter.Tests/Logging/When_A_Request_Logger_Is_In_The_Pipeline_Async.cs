@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Logging.Handlers;
@@ -13,9 +11,9 @@ namespace Paramore.Brighter.Tests.Logging
 {
     public class CommandProcessorWithLoggingInPipelineAsyncTests
     {
-        private SpyLog _logger;
-        private MyCommand _myCommand;
-        private IAmACommandProcessor _commandProcessor;
+        private readonly SpyLog _logger;
+        private readonly MyCommand _myCommand;
+        private readonly IAmACommandProcessor _commandProcessor;
 
         public CommandProcessorWithLoggingInPipelineAsyncTests()
         {
@@ -42,9 +40,9 @@ namespace Paramore.Brighter.Tests.Logging
             await _commandProcessor.SendAsync(_myCommand);
 
             //_should_log_the_request_handler_call
-            Assert.True(((Func<IList<SpyLog.LogRecord>, bool>) (logs => logs.Any(log => log.Message.Contains("Logging handler pipeline call")))).Invoke(_logger.Logs));
+            _logger.Logs.Should().Contain(log => log.Message.Contains("Logging handler pipeline call"));
             //_should_log_the_type_of_handler_in_the_call
-            Assert.True(((Func<IList<SpyLog.LogRecord>, bool>) (logs => logs.Any(log => log.Message.Contains(typeof(MyCommand).ToString())))).Invoke(_logger.Logs));
+            _logger.Logs.Should().Contain(log => log.Message.Contains(typeof(MyCommand).ToString()));
         }
     }
 }

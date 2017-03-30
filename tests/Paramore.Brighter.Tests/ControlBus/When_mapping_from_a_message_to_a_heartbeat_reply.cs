@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
@@ -34,8 +33,8 @@ namespace Paramore.Brighter.Tests.ControlBus
 {
     public class HeartbeatMessageToReplyTests
     {
-        private IAmAMessageMapper<HeartbeatReply> _mapper;
-        private Message _message;
+        private readonly IAmAMessageMapper<HeartbeatReply> _mapper;
+        private readonly Message _message;
         private HeartbeatReply _request;
         private const string MESSAGE_BODY = "{\r\n  \"HostName\": \"Test.Hostname\",\r\n  \"Consumers\": [\r\n    {\r\n      \"ConnectionName\": \"Test.Connection\",\r\n      \"State\": 1\r\n    },\r\n    {\r\n      \"ConnectionName\": \"More.Consumers\",\r\n      \"State\": 0\r\n    }\r\n  ]\r\n}";
         private const string TOPIC = "test.topic";

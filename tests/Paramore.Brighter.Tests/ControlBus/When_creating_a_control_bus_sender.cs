@@ -7,9 +7,9 @@ namespace Paramore.Brighter.Tests.ControlBus
     public class ControlBusSenderFactoryTests
     {
         private IAmAControlBusSender s_sender;
-        private IAmAControlBusSenderFactory s_senderFactory;
-        private IAmAMessageStore<Message> s_fakeMessageStore;
-        private IAmAMessageProducer s_fakeGateway;
+        private readonly IAmAControlBusSenderFactory s_senderFactory;
+        private readonly IAmAMessageStore<Message> s_fakeMessageStore;
+        private readonly IAmAMessageProducer s_fakeGateway;
 
         public ControlBusSenderFactoryTests()
         {

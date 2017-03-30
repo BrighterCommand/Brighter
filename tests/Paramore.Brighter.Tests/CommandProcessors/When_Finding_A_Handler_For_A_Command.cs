@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class PipelineBuildForCommandTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
         public PipelineBuildForCommandTests()
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
            //_should_return_the_my_command_handler_as_the_implicit_handler
-            Assert.IsAssignableFrom(typeof(MyCommandHandler), _pipeline);
+            _pipeline.Should().BeOfType<MyCommandHandler>();
             //_should_be_the_only_element_in_the_chain
             TracePipeline().ToString().Should().Be("MyCommandHandler|");
         }

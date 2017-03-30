@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CommandProcessorPipelineStepsTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
 
         public CommandProcessorPipelineStepsTests()

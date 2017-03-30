@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Linq;
 using FakeItEasy;
 using FluentAssertions;
 using Xunit;
@@ -36,20 +35,19 @@ namespace Paramore.Brighter.Tests.ControlBus
     public class ControlBusBuilderTests
     {
         private Dispatcher _controlBus;
-        private ControlBusReceiverBuilder _busReceiverBuilder;
-        private IDispatcher _dispatcher;
-        private string _hostName = "tests";
+        private readonly ControlBusReceiverBuilder _busReceiverBuilder;
+        private readonly string _hostName = "tests";
 
         public ControlBusBuilderTests()
         {
-            _dispatcher = A.Fake<IDispatcher>();
+            var dispatcher = A.Fake<IDispatcher>();
             var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
 
             A.CallTo(() => messageProducerFactory.Create()).Returns(new FakeMessageProducer());
 
             _busReceiverBuilder = ControlBusReceiverBuilder
                 .With()
-                .Dispatcher(_dispatcher)
+                .Dispatcher(dispatcher)
                 .ProducerFactory(messageProducerFactory)
                 .ChannelFactory(new InMemoryChannelFactory()) as ControlBusReceiverBuilder;
         }
@@ -60,9 +58,9 @@ namespace Paramore.Brighter.Tests.ControlBus
             _controlBus = _busReceiverBuilder.Build(_hostName);
 
             //_should_have_a_configuration_channel
-            Assert.True(_controlBus.Connections.Any(cn => cn.Name == _hostName  + "." + ControlBusReceiverBuilder.CONFIGURATION));
+            _controlBus.Connections.Should().Contain(cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.CONFIGURATION}");
             //_should_have_a_heartbeat_channel
-            Assert.True(_controlBus.Connections.Any(cn => cn.Name == _hostName + "." + ControlBusReceiverBuilder.HEARTBEAT));
+            _controlBus.Connections.Should().Contain(cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.HEARTBEAT}");
             //_should_have_a_command_processor
             _controlBus.CommandProcessor.Should().NotBeNull();
         }

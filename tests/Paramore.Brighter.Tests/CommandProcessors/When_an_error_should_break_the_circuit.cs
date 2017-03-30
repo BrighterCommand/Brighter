@@ -10,11 +10,11 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CircuitBreakerTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
-        private FakeMessageStore _messageStore;
-        private FakeErroringMessageProducer _messagingProducer;
+        private readonly FakeMessageStore _messageStore;
+        private readonly FakeErroringMessageProducer _messagingProducer;
         private Exception _failedException;
         private BrokenCircuitException _circuitBrokenException;
 

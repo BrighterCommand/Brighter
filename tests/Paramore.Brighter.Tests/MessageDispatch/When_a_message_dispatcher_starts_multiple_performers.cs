@@ -36,9 +36,9 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
     public class MessageDispatcherMultiplePerformerTests
     {
-        private Dispatcher _dispatcher;
-        private FakeChannel _channel;
-        private IAmACommandProcessor _commandProcessor;
+        private readonly Dispatcher _dispatcher;
+        private readonly FakeChannel _channel;
+        private readonly IAmACommandProcessor _commandProcessor;
 
         public MessageDispatcherMultiplePerformerTests()
         {

@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Diagnostics;
 using FakeItEasy;
+using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway
 {
     public class ChannelRequeueWithDelayTests
     {
-        private IAmAChannel _channel;
-        private IAmAMessageConsumerSupportingDelay _gateway;
-        private Message _requeueMessage;
-        private Stopwatch _stopWatch;
+        private readonly IAmAChannel _channel;
+        private readonly IAmAMessageConsumerSupportingDelay _gateway;
+        private readonly Message _requeueMessage;
+        private readonly Stopwatch _stopWatch;
 
         public ChannelRequeueWithDelayTests()
         {
@@ -36,7 +37,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
             //_should_call_the_messaging_gateway
             A.CallTo(() => _gateway.Requeue(_requeueMessage)).MustHaveHappened();
             //_should_have_process_delayed_the_call
-            Assert.True((_stopWatch.ElapsedMilliseconds > 900));
+            _stopWatch.ElapsedMilliseconds.Should().BeGreaterThan(900);
         }
     }
 }

@@ -35,10 +35,10 @@ namespace Paramore.Brighter.Tests.ControlBus
 {
     public class ControlBusTests
     {
-        private IDispatcher _dispatcher;
-        private Dispatcher _controlBus;
-        private ControlBusReceiverBuilder _busReceiverBuilder;
-        private ConfigurationCommand _configurationCommand;
+        private readonly IDispatcher _dispatcher;
+        private readonly Dispatcher _controlBus;
+        private readonly ControlBusReceiverBuilder _busReceiverBuilder;
+        private readonly ConfigurationCommand _configurationCommand;
         private Exception _exception;
 
         public ControlBusTests()

@@ -32,11 +32,11 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
     public class SqliteMessageStoreWritingMessageTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteMessageStore _SqlMessageStore;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteMessageStore _SqlMessageStore;
         private readonly string key1 = "name1";
         private readonly string key2 = "name2";
-        private Message _messageEarliest;
+        private readonly Message _messageEarliest;
         private Message _storedMessage;
         private readonly string value1 = "value1";
         private readonly string value2 = "value2";

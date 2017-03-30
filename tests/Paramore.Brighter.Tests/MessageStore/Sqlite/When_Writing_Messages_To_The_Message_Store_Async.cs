@@ -36,8 +36,8 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
     public class SqlMessageStoreWritngMessagesAsyncTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteMessageStore _sSqlMessageStore;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteMessageStore _sSqlMessageStore;
         private Message _message2;
         private Message _messageEarliest;
         private Message _messageLatest;

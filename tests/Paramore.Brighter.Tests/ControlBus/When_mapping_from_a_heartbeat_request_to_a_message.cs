@@ -32,9 +32,9 @@ namespace Paramore.Brighter.Tests.ControlBus
 {
     public class HearbeatRequestToMessageMapperTests
     {
-        private IAmAMessageMapper<HeartbeatRequest> _mapper;
+        private readonly IAmAMessageMapper<HeartbeatRequest> _mapper;
         private Message _message;
-        private HeartbeatRequest _request;
+        private readonly HeartbeatRequest _request;
         private const string TOPIC = "test.topic";
         private readonly Guid _correlationId = Guid.NewGuid();
 
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Tests.ControlBus
             //_should_serialize_the_message_type_to_the_header
             _message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             //_should_serialize_the_message_id_to_the_message_body
-            Assert.True(_message.Body.Value.Contains(string.Format("\"Id\": \"{0}\"", _request.Id)));
+            _message.Body.Value.Should().Contain($"\"Id\": \"{_request.Id}\"");
             //_should_serialize_the_topic_to_the_message_body
             _message.Header.ReplyTo.Should().Be(TOPIC);
             //_should_serialize_the_correlation_id_to_the_message_body

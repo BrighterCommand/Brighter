@@ -33,9 +33,9 @@ namespace Paramore.Brighter.Tests.CommandStore.Sqlite
 {
     public class SqliteCommandStoreAddMessageTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteCommandStore _sqlCommandStore;
-        private MyCommand _raisedCommand;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteCommandStore _sqlCommandStore;
+        private readonly MyCommand _raisedCommand;
         private MyCommand _storedCommand;
         private SqliteConnection _sqliteConnection;
 

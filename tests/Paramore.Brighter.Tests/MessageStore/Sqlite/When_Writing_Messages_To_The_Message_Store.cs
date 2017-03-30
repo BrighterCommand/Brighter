@@ -35,11 +35,11 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
     public class SqlMessageStoreWritngMessagesTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteMessageStore _sSqlMessageStore;
-        private Message _message2;
-        private Message _messageEarliest;
-        private Message _messageLatest;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteMessageStore _sSqlMessageStore;
+        private readonly Message _message2;
+        private readonly Message _messageEarliest;
+        private readonly Message _messageLatest;
         private IEnumerable<Message> _retrievedMessages;
 
         public SqlMessageStoreWritngMessagesTests()
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
             //_should_read_last_message_first_from_the__message_store
             _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
             //_should_read_the_messages_from_the__message_store
-            _retrievedMessages.Count().Should().Be(3);
+            _retrievedMessages.Should().HaveCount(3);
         }
 
         public void Dispose()

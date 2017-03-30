@@ -10,9 +10,9 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
     [Trait("Category", "AWS")]
     public class SqsMessageProducerMissingTopicTests : IDisposable
     {
-        private Message _message;
-        private SqsMessageProducer _messageProducer;
-        private TestAWSQueueListener _queueListener;
+        private readonly Message _message;
+        private readonly SqsMessageProducer _messageProducer;
+        private readonly TestAWSQueueListener _queueListener;
         private Topic _topic;
 
         public SqsMessageProducerMissingTopicTests()

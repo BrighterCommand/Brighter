@@ -9,10 +9,10 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
     [Trait("Category", "AWS")]
     public class SqsMessageProeducerSendTests : IDisposable
     {
-        private string _queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
-        private Message _message;
-        private SqsMessageProducer _messageProducer;
-        private TestAWSQueueListener _queueListener;
+        private readonly string _queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
+        private readonly Message _message;
+        private readonly SqsMessageProducer _messageProducer;
+        private readonly TestAWSQueueListener _queueListener;
         private Amazon.SQS.Model.Message _listenedMessage;
 
         public SqsMessageProeducerSendTests()

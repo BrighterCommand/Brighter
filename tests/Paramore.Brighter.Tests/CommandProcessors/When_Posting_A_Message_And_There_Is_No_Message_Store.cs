@@ -32,9 +32,9 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CommandProcessorNoMessageStoreTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducer _fakeMessageProducer;
         private Exception _exception;
 
         public CommandProcessorNoMessageStoreTests()

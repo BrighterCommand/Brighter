@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
@@ -34,34 +33,30 @@ using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-
     public class MessageDispatcherShutConnectionTests
     {
         private static Dispatcher _dispatcher;
-        private static FakeChannel _channel;
-        private static IAmACommandProcessor _commandProcessor;
         private static Connection _connection;
 
         public MessageDispatcherShutConnectionTests()
         {
-            _channel = new FakeChannel();
-            _commandProcessor = new SpyCommandProcessor();
+            var channel = new FakeChannel();
+            IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            _connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
-            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { _connection });
+            _connection = new Connection(name: new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 3, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+            _dispatcher = new Dispatcher(commandProcessor, messageMapperRegistry, new List<Connection> { _connection });
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
             for (var i = 0; i < 6; i++)
-                _channel.Add(message);
+                channel.Add(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
         }
-
 
         [Fact]
         public void When_A_Message_Dispatcher_Shuts_A_Connection()
@@ -71,11 +66,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher.End().Wait();
 
             //_should_have_consumed_the_messages_in_the_channel
-            Assert.False(_dispatcher.Consumers.Any(consumer => (consumer.Name == _connection.Name) && (consumer.State == ConsumerState.Open)));
+            _dispatcher.Consumers.Should().NotContain(consumer => consumer.Name == _connection.Name && consumer.State == ConsumerState.Open);
             //_should_have_a_stopped_state
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
             //_should_have_no_consumers
-            _dispatcher.Consumers.Any().Should().BeFalse();
+            _dispatcher.Consumers.Should().BeEmpty();
         }
     }
 }

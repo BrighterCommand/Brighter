@@ -9,7 +9,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class PipelineMixedHandlersAsyncTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequestsAsync<MyCommand> _pipeline;
         private Exception _exception;
 

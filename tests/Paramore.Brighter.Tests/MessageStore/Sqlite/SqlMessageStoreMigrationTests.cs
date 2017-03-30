@@ -33,10 +33,10 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
     public class SQlMessageStoreMigrationTests : IDisposable
     {
-        private SqliteMessageStore _sqlMessageStore;
-        private Message _message;
+        private readonly SqliteMessageStore _sqlMessageStore;
+        private readonly Message _message;
         private Message _storedMessage;
-        private SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteTestHelper _sqliteTestHelper;
 
         public SQlMessageStoreMigrationTests()
         {

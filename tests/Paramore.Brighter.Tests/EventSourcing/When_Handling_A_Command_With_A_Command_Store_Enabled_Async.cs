@@ -9,9 +9,9 @@ namespace Paramore.Brighter.Tests.EventSourcing
 {
     public class CommandProcessorUsingCommandStoreAsyncTests
     {
-        private MyCommand _command;
-        private IAmACommandStoreAsync _commandStore;
-        private IAmACommandProcessor _commandProcessor;
+        private readonly MyCommand _command;
+        private readonly IAmACommandStoreAsync _commandStore;
+        private readonly IAmACommandProcessor _commandProcessor;
 
         public CommandProcessorUsingCommandStoreAsyncTests()
         {

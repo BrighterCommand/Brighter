@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class PipelineMixedHandlersTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
         private Exception _exception;
 

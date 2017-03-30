@@ -33,11 +33,11 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CommandProcessorWithInMemoryMessageStoreTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private Message _message;
-        private InMemoryMessageStore _messageStore;
-        private FakeMessageProducer _fakeMessageProducer;
+        private readonly Message _message;
+        private readonly InMemoryMessageStore _messageStore;
+        private readonly FakeMessageProducer _fakeMessageProducer;
 
         public CommandProcessorWithInMemoryMessageStoreTests()
         {

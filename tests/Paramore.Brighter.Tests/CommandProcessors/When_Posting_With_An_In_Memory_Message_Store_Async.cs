@@ -34,11 +34,11 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CommandProcessorWithInMemoryMessageStoreAscyncTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private Message _message;
-        private InMemoryMessageStore _messageStore;
-        private FakeMessageProducer _fakeMessageProducer;
+        private readonly Message _message;
+        private readonly InMemoryMessageStore _messageStore;
+        private readonly FakeMessageProducer _fakeMessageProducer;
 
         public CommandProcessorWithInMemoryMessageStoreAscyncTests()
         {
@@ -76,12 +76,13 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         {
             await _commandProcessor.PostAsync(_myCommand);
 
+            var message = await _messageStore.GetAsync(_myCommand.Id);
             //_should_store_the_message_in_the_sent_command_message_repository
-            Assert.NotNull(await _messageStore.GetAsync(_myCommand.Id));
+            message.Should().NotBeNull();
             //_should_send_a_message_via_the_messaging_gateway
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             //_should_convert_the_command_into_a_message
-            Assert.Equal(_message, await _messageStore.GetAsync(_myCommand.Id));
+            message.Should().Be(_message);
         }
 
         public void Dispose()

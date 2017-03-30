@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class PipelineOrderingTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
         public PipelineOrderingTests()

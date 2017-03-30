@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 {
     public class DispatchBuilderWithNamedGateway
     {
-        private IAmADispatchBuilder _builder;
+        private readonly IAmADispatchBuilder _builder;
         private Dispatcher _dispatcher;
 
         public DispatchBuilderWithNamedGateway()

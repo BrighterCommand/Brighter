@@ -35,10 +35,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 {
     public class MessagePumpCommandRequeueTests
     {
-        private IAmAMessagePump _messagePump;
-        private FakeChannel _channel;
-        private SpyCommandProcessor _commandProcessor;
-        private MyCommand _command = new MyCommand();
+        private readonly IAmAMessagePump _messagePump;
+        private readonly FakeChannel _channel;
+        private readonly SpyCommandProcessor _commandProcessor;
+        private readonly MyCommand _command = new MyCommand();
 
         public MessagePumpCommandRequeueTests()
         {

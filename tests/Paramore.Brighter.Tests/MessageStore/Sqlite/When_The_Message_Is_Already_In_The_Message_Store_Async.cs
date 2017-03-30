@@ -33,10 +33,10 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
     public class SqliteMessageStoreMessageAlreadyExistsAsyncTests : IDisposable
     {
-        private SqliteTestHelper _sqliteTestHelper;
-        private SqliteMessageStore _sSqlMessageStore;
+        private readonly SqliteTestHelper _sqliteTestHelper;
+        private readonly SqliteMessageStore _sSqlMessageStore;
         private Exception _exception;
-        private Message _messageEarliest;
+        private readonly Message _messageEarliest;
 
         public SqliteMessageStoreMessageAlreadyExistsAsyncTests()
         {

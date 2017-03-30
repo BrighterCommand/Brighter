@@ -9,10 +9,10 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
     [Trait("Category", "AWS")]
     public class SqsMessageProducerRequeueTests : IDisposable
     {
-        private TestAWSQueueListener _testQueueListener;
-        private IAmAMessageProducer _sender;
-        private IAmAMessageConsumer _receiver;
-        private Message _sentMessage;
+        private readonly TestAWSQueueListener _testQueueListener;
+        private readonly IAmAMessageProducer _sender;
+        private readonly IAmAMessageConsumer _receiver;
+        private readonly Message _sentMessage;
         private Message _requeuedMessage;
         private Message _receivedMessage;
         private string _receivedReceiptHandle;

@@ -31,9 +31,9 @@ namespace Paramore.Brighter.Tests.ControlBus
 {
     public class ConfigurationCommandToMessageMapperTests
     {
-        private IAmAMessageMapper<ConfigurationCommand> _mapper;
+        private readonly IAmAMessageMapper<ConfigurationCommand> _mapper;
         private Message _message;
-        private ConfigurationCommand _command;
+        private readonly ConfigurationCommand _command;
 
         public ConfigurationCommandToMessageMapperTests()
         {
@@ -50,13 +50,13 @@ namespace Paramore.Brighter.Tests.ControlBus
             _message = _mapper.MapToMessage(_command);
 
             // _should_serialize_the_command_type_to_the_message_body
-            Assert.True(_message.Body.Value.Contains("\"Type\":1"));
+            _message.Body.Value.Should().Contain("\"Type\":1");
             //_should_serialize_the_message_type_to_the_header
             _message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             //_should_serialize_the_connection_name_to_the_message_body
-            Assert.True(_message.Body.Value.Contains("\"ConnectionName\":\"getallthethings\""));
+            _message.Body.Value.Should().Contain("\"ConnectionName\":\"getallthethings\"");
             //_should_serialize_the_message_id_to_the_message_body
-            Assert.True(_message.Body.Value.Contains(string.Format("\"Id\":\"{0}\"", _command.Id)));
+            _message.Body.Value.Should().Contain($"\"Id\":\"{_command.Id}\"");
         }
     }
 }

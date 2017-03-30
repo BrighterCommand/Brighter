@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 {
     public class DispatchBuilderTests
     {
-        private IAmADispatchBuilder _builder;
+        private readonly IAmADispatchBuilder _builder;
         private Dispatcher _dispatcher;
 
         public DispatchBuilderTests()

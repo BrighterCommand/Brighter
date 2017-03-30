@@ -35,12 +35,12 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class ControlBusSenderPostMessageAsyneTests : IDisposable
     {
-        private CommandProcessor _commandProcessor;
-        private ControlBusSender _controlBusSender;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly ControlBusSender _controlBusSender;
         private readonly MyCommand _myCommand = new MyCommand();
-        private Message _message;
-        private FakeMessageStore _fakeMessageStore;
-        private FakeMessageProducer _fakeMessageProducer;
+        private readonly Message _message;
+        private readonly FakeMessageStore _fakeMessageStore;
+        private readonly FakeMessageProducer _fakeMessageProducer;
 
         public ControlBusSenderPostMessageAsyneTests()
         {

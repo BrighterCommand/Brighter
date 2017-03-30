@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CommandProcessorPublishMissingHandlerFactoryTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 

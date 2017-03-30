@@ -36,10 +36,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 {
     public class PerformerCanStopTests
     {
-        private Performer _performer;
-        private SpyCommandProcessor _commandProcessor;
-        private FakeChannel _channel;
-        private Task _performerTask;
+        private readonly Performer _performer;
+        private readonly SpyCommandProcessor _commandProcessor;
+        private readonly FakeChannel _channel;
+        private readonly Task _performerTask;
 
         public PerformerCanStopTests()
         {

@@ -31,9 +31,9 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class PipelineForCommandTests
     {
-        private PipelineBuilder<MyCommand> _chainBuilder;
+        private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private IHandleRequests<MyCommand> _chainOfResponsibility;
-        private RequestContext _requestContext;
+        private readonly RequestContext _requestContext;
 
         public PipelineForCommandTests()
         {

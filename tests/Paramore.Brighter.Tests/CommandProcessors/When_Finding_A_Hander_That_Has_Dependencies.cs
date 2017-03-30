@@ -1,13 +1,12 @@
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
-using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class PipelineWithHandlerDependenciesTests
     {
-        private PipelineBuilder<MyCommand> _pipelineBuilder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
         public PipelineWithHandlerDependenciesTests()
@@ -23,8 +22,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-           // _should_return_the_command_handler_as_the_implicit_handler
-            Assert.IsAssignableFrom(typeof(MyDependentCommandHandler), _pipeline);
+            // _should_return_the_command_handler_as_the_implicit_handler
+            _pipeline.Should().BeOfType<MyDependentCommandHandler>();
             //  _should_be_the_only_element_in_the_chain
             TracePipeline().ToString().Should().Be("MyDependentCommandHandler|");
         }

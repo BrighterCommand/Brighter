@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Tests.Timeout
 {
     public class TimeoutHandlerFailsCheckTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private AggregateException _thrownException;
 

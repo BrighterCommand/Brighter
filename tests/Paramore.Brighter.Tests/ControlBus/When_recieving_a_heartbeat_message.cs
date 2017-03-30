@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using FakeItEasy;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
@@ -39,55 +40,50 @@ namespace Paramore.Brighter.Tests.ControlBus
         private const string TEST_FIRST_CONNECTION_NAME = "Test.First.Connection";
         private const string TEST_SECOND_CONNECTION_NAME = "Test.Second.Connection";
         private const string TEST_ROUTING_KEY = "test.routing.key";
-        private readonly SpyCommandProcessor s_spyCommandProcessor = new SpyCommandProcessor();
-        private readonly Guid s_CorrelationId = Guid.NewGuid();
-        private HeartbeatRequestCommandHandler s_handler;
-        private HeartbeatRequest s_heartbeatRequest;
-        private string s_hostName;
-        private IAmAConsumer s_firstConsumer;
-        private IAmAConsumer s_secondConsumer;
+        private readonly SpyCommandProcessor _spyCommandProcessor = new SpyCommandProcessor();
+        private readonly Guid _correlationId = Guid.NewGuid();
+        private readonly HeartbeatRequestCommandHandler _handler;
+        private readonly HeartbeatRequest _heartbeatRequest;
+        private readonly string _hostName;
 
         public HeartbeatMessageTests()
         {
             var dispatcher = A.Fake<IDispatcher>();
+            var firstConsumer = A.Fake<IAmAConsumer>();
+            var secondConsumer = A.Fake<IAmAConsumer>();
 
-            s_firstConsumer = A.Fake<IAmAConsumer>();
+            A.CallTo(() => firstConsumer.Name).Returns(new ConnectionName(TEST_FIRST_CONNECTION_NAME));
+            A.CallTo(() => firstConsumer.State).Returns(ConsumerState.Open);
 
-            A.CallTo(() => s_firstConsumer.Name).Returns(new ConnectionName(TEST_FIRST_CONNECTION_NAME));
-            A.CallTo(() => s_firstConsumer.State).Returns(ConsumerState.Open);
+            A.CallTo(() => secondConsumer.Name).Returns(new ConnectionName(TEST_SECOND_CONNECTION_NAME));
+            A.CallTo(() => secondConsumer.State).Returns(ConsumerState.Shut);
 
-            s_secondConsumer = A.Fake<IAmAConsumer>();
-            A.CallTo(() => s_secondConsumer.Name).Returns(new ConnectionName(TEST_SECOND_CONNECTION_NAME));
-            A.CallTo(() => s_secondConsumer.State).Returns(ConsumerState.Shut);
+            A.CallTo(() => dispatcher.Consumers).Returns(new List<IAmAConsumer> {firstConsumer, secondConsumer});
 
-            A.CallTo(() => dispatcher.Consumers).Returns(new List<IAmAConsumer>() {s_firstConsumer, s_secondConsumer});
-
-            var hostName = new HostName(Environment.MachineName + "." +Assembly.GetEntryAssembly().FullName);
+            var hostName = new HostName($"{Environment.MachineName}.{Assembly.GetEntryAssembly().FullName}");
             A.CallTo(() => dispatcher.HostName).Returns(hostName);
-            s_hostName = hostName;
+            _hostName = hostName;
 
-            s_heartbeatRequest = new HeartbeatRequest(new ReplyAddress(TEST_ROUTING_KEY, s_CorrelationId));
-
-            s_handler = new HeartbeatRequestCommandHandler(s_spyCommandProcessor, dispatcher);
-
+            _heartbeatRequest = new HeartbeatRequest(new ReplyAddress(TEST_ROUTING_KEY, _correlationId));
+            _handler = new HeartbeatRequestCommandHandler(_spyCommandProcessor, dispatcher);
         }
 
         [Fact]
         public void When_recieving_a_heartbeat_message()
         {
-            s_handler.Handle(s_heartbeatRequest);
+            _handler.Handle(_heartbeatRequest);
 
             //_should_post_back_a_heartbeat_response
-            s_spyCommandProcessor.ContainsCommand(CommandType.Post);
+            _spyCommandProcessor.ContainsCommand(CommandType.Post);
             //_should_have_diagnostic_information_in_the_response
-            var heartbeatEvent = s_spyCommandProcessor.Observe<HeartbeatReply>();
-            Assert.True(((Func<HeartbeatReply, bool>) (hb => hb.HostName == s_hostName
-                                       && hb.SendersAddress.Topic == TEST_ROUTING_KEY
-                                       && hb.SendersAddress.CorrelationId == s_CorrelationId
-                                       && hb.Consumers[0].ConnectionName == TEST_FIRST_CONNECTION_NAME
-                                       && hb.Consumers[0].State == ConsumerState.Open
-                                       && hb.Consumers[1].ConnectionName == TEST_SECOND_CONNECTION_NAME
-                                       && hb.Consumers[1].State == ConsumerState.Shut)).Invoke(heartbeatEvent));
+            var heartbeatEvent = _spyCommandProcessor.Observe<HeartbeatReply>();
+            heartbeatEvent.HostName.Should().Be(_hostName);
+            heartbeatEvent.SendersAddress.Topic.Should().Be(TEST_ROUTING_KEY);
+            heartbeatEvent.SendersAddress.CorrelationId.Should().Be(_correlationId);
+            heartbeatEvent.Consumers[0].ConnectionName.ToString().Should().Be(TEST_FIRST_CONNECTION_NAME);
+            heartbeatEvent.Consumers[0].State.Should().Be(ConsumerState.Open);
+            heartbeatEvent.Consumers[1].ConnectionName.ToString().Should().Be(TEST_SECOND_CONNECTION_NAME);
+            heartbeatEvent.Consumers[1].State.Should().Be(ConsumerState.Shut);
         }
    }
 }

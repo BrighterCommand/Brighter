@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CommandProcessorNoHandlersMatchTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _exception;
 
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_fail_because_multiple_receivers_found
-            Assert.IsAssignableFrom(typeof(ArgumentException), _exception);
+            _exception.Should().BeOfType<ArgumentException>();
             //_should_have_an_error_message_that_tells_you_why
             _exception.Should().NotBeNull();
             _exception.Message.Should().Contain("No command handler was found");

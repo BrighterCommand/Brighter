@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -34,9 +34,9 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
     internal class TestRMQListener
     {
         private readonly string _channelName;
-        private ConnectionFactory _connectionFactory;
-        private IConnection _connection;
-        private IModel _channel;
+        private readonly ConnectionFactory _connectionFactory;
+        private readonly IConnection _connection;
+        private readonly IModel _channel;
 
         public TestRMQListener(RmqMessagingGatewayConnection connection, string channelName)
         {
