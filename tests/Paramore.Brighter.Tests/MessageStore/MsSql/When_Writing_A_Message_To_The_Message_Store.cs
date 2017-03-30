@@ -33,14 +33,14 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
     [Trait("Category", "MSSQL")]
     public class SqlMessageStoreWritingMessageTests : IDisposable
     {
-        private readonly string key1 = "name1";
-        private readonly string key2 = "name2";
-        private Message _messageEarliest;
-        private MsSqlMessageStore _sqlMessageStore;
+        private readonly string _key1 = "name1";
+        private readonly string _key2 = "name2";
+        private readonly Message _messageEarliest;
+        private readonly MsSqlMessageStore _sqlMessageStore;
         private Message _storedMessage;
-        private readonly string value1 = "value1";
-        private readonly string value2 = "value2";
-        private MsSqlTestHelper _msSqlTestHelper;
+        private readonly string _value1 = "value1";
+        private readonly string _value2 = "value2";
+        private readonly MsSqlTestHelper _msSqlTestHelper;
 
         public SqlMessageStoreWritingMessageTests()
         {
@@ -49,8 +49,8 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
 
             _sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT, DateTime.UtcNow.AddDays(-1), 5, 5);
-            messageHeader.Bag.Add(key1, value1);
-            messageHeader.Bag.Add(key2, value2);
+            messageHeader.Bag.Add(_key1, _value1);
+            messageHeader.Bag.Add(_key2, _value2);
 
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
             _sqlMessageStore.Add(_messageEarliest);
@@ -64,11 +64,11 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             //_should_read_the_message_from_the__sql_message_store
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //_should_read_the_message_header_first_bag_item_from_the__sql_message_store
-            _storedMessage.Header.Bag.ContainsKey(key1).Should().BeTrue();
-            _storedMessage.Header.Bag[key1].Should().Be(value1);
+            _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
+            _storedMessage.Header.Bag[_key1].Should().Be(_value1);
             //_should_read_the_message_header_second_bag_item_from_the__sql_message_store
-            _storedMessage.Header.Bag.ContainsKey(key2).Should().BeTrue();
-            _storedMessage.Header.Bag[key2].Should().Be(value2);
+            _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
+            _storedMessage.Header.Bag[_key2].Should().Be(_value2);
             //_should_read_the_message_header_timestamp_from_the__sql_message_store
             _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
             //_should_read_the_message_header_topic_from_the__sql_message_store

@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles

@@ -27,7 +27,7 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.Sqlite
 {

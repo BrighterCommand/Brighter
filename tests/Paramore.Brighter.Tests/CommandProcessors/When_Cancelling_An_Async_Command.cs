@@ -22,23 +22,26 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
-using Paramore.Brighter.Tests.TestDoubles;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CancellingAsyncPipelineTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
         private readonly MyCommand _myCommand = new MyCommand();
 
         public CancellingAsyncPipelineTests()
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCancellableCommandHandlerAsync>();
-            var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync());
+            var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync(_receivedMessages));
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
@@ -50,7 +53,7 @@ namespace Paramore.Brighter.Tests
             await _commandProcessor.SendAsync(_myCommand);
 
             //_should_send_the_command_to_the_command_handler
-            MyCommandHandlerAsync.ShouldReceive(_myCommand).Should().BeTrue();
+            _receivedMessages.Should().Contain(nameof(MyCommandHandlerAsync), _myCommand.Id);
         }
     }
 }

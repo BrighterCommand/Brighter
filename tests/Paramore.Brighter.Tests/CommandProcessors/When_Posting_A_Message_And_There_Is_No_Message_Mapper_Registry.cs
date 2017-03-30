@@ -25,11 +25,10 @@ THE SOFTWARE. */
 using System;
 using FluentAssertions;
 using Newtonsoft.Json;
-using Xunit;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
 
     public class CommandProcessorNoMessageMapperTests : IDisposable

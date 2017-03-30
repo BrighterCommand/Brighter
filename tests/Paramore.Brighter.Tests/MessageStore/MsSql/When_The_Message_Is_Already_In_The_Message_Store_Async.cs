@@ -35,9 +35,9 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
     public class MsSqlMessageStoreMessageAlreadyExistsAsyncTests : IDisposable
     {
         private Exception _exception;
-        private Message _messageEarliest;
-        private MsSqlMessageStore _sqlMessageStore;
-        private MsSqlTestHelper _msSqlTestHelper;
+        private readonly Message _messageEarliest;
+        private readonly MsSqlMessageStore _sqlMessageStore;
+        private readonly MsSqlTestHelper _msSqlTestHelper;
 
         public MsSqlMessageStoreMessageAlreadyExistsAsyncTests()
         {
@@ -45,8 +45,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
-                new MessageBody("message body"));
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
         }
 
         [Fact]

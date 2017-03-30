@@ -28,7 +28,7 @@ using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Tests.Monitoring
@@ -38,10 +38,10 @@ namespace Paramore.Brighter.Tests.Monitoring
         private const string InstanceName = "Paramore.Tests";
         private const string HandlerFullAssemblyName = "Paramore.Dummy.Handler, with some Assembly information";
         private const string HandlerName = "Paramore.Dummy.Handler";
-        private MonitorEventMessageMapper _monitorEventMessageMapper;
         private MonitorEvent _monitorEvent;
-        private Message _message;
-        private string _originalRequestAsJson;
+        private readonly MonitorEventMessageMapper _monitorEventMessageMapper;
+        private readonly Message _message;
+        private readonly string _originalRequestAsJson;
         private static int _elapsedMilliseconds;
         private static DateTime _overrideTime;
 

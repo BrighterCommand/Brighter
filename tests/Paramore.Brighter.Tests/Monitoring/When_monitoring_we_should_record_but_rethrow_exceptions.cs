@@ -29,8 +29,8 @@ using Xunit;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Monitoring.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using Paramore.Brighter.Time;
 using TinyIoC;
 

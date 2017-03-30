@@ -23,22 +23,24 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
-using Paramore.Brighter.Tests.TestDoubles;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CommandProcessorNoMatchingSubcribersTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 
         public CommandProcessorNoMatchingSubcribersTests()
         {
             var registry = new SubscriberRegistry();
-            var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler());
+            var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler(_receivedMessages));
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }

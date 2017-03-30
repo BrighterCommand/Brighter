@@ -30,8 +30,8 @@ using Xunit;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Monitoring.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using Paramore.Brighter.Time;
 using TinyIoC;
 
@@ -39,13 +39,13 @@ namespace Paramore.Brighter.Tests.Monitoring
 {
     public class MonitorHandlerMustObserveButRethrowTests
     {
-        private MyCommand _command;
-        private Exception _thrownException;
-        private SpyControlBusSender _controlBusSender;
-        private CommandProcessor _commandProcessor;
+        private readonly MyCommand _command;
+        private readonly SpyControlBusSender _controlBusSender;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly string _originalRequestAsJson;
+        private readonly DateTime _at;
         private MonitorEvent _afterEvent;
-        private string _originalRequestAsJson;
-        private DateTime _at;
+        private Exception _exception;
 
         public MonitorHandlerMustObserveButRethrowTests()
         {
@@ -70,15 +70,15 @@ namespace Paramore.Brighter.Tests.Monitoring
             Clock.OverrideTime = _at;
         }
 
-        [Fact]
+        [Fact(Skip = "todo: Clock.OverrideTime doesn't really support parallel execution")]
         public async Task When_Monitoring_We_Should_Record_But_Rethrow_Exceptions_Async()
         {
-            _thrownException = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_command));
+            _exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_command));
             _controlBusSender.Observe<MonitorEvent>();
             _afterEvent = _controlBusSender.Observe<MonitorEvent>();
 
            //_should_pass_through_the_exception_not_swallow
-            _thrownException.Should().NotBeNull();
+            _exception.Should().NotBeNull();
             //_should_monitor_the_exception
             _afterEvent.Exception.Should().BeOfType<Exception>();
             //_should_surface_the_error_message

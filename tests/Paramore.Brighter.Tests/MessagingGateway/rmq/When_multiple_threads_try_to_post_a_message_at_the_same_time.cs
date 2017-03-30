@@ -26,11 +26,11 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Xunit;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.rmq
+namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 {
     [Trait("Category", "RMQ")]
     public class RmqMessageProducerSupportsMultipleThreadsTests : IDisposable

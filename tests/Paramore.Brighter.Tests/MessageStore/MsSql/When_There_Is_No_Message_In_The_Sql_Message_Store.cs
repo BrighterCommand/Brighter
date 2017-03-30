@@ -33,9 +33,9 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
     [Trait("Category", "MSSQL")]
     public class MsSqlMessageStoreEmptyStoreTests : IDisposable
     {
-        private MsSqlTestHelper _msSqlTestHelper;
-        private Message _messageEarliest;
-        private MsSqlMessageStore _sqlMessageStore;
+        private readonly MsSqlTestHelper _msSqlTestHelper;
+        private readonly Message _messageEarliest;
+        private readonly MsSqlMessageStore _sqlMessageStore;
         private Message _storedMessage;
 
         public MsSqlMessageStoreEmptyStoreTests()

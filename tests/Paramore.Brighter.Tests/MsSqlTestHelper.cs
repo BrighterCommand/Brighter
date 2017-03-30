@@ -8,11 +8,11 @@ namespace Paramore.Brighter.Tests
     public class MsSqlTestHelper
     {
         private const string ConnectionString = "Server=.;Database=BrighterTests;Integrated Security=True;Application Name=BrighterTests";
-        private readonly string _tableName;
+        private string _tableName;
 
         public MsSqlTestHelper()
         {
-            _tableName = $"test_{Guid.NewGuid():N}";
+            _tableName = $"test_{Guid.NewGuid()}";
         }
 
         public MsSqlTestHelper(string tableName)
@@ -74,7 +74,8 @@ namespace Paramore.Brighter.Tests
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
-                var createTableSql = SqlMessageStoreBuilder.GetDDL($"message_{_tableName}");
+                _tableName = $"message_{_tableName}";
+                var createTableSql = SqlMessageStoreBuilder.GetDDL(_tableName);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -89,7 +90,8 @@ namespace Paramore.Brighter.Tests
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
-                var createTableSql = SqlCommandStoreBuilder.GetDDL($"command_{_tableName}");
+                _tableName = $"command_{_tableName}";
+                var createTableSql = SqlCommandStoreBuilder.GetDDL(_tableName);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())

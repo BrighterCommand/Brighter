@@ -23,16 +23,18 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using FluentAssertions;
-using Xunit;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CommandProcessorPublishMultipleMatchesTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 
@@ -44,8 +46,9 @@ namespace Paramore.Brighter.Tests
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyEvent>, MyEventHandler>("MyEventHandler");
-            container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>("MyOtherHandler");
+            container.Register<IHandleRequests<MyEvent>, MyEventHandler>();
+            container.Register<IHandleRequests<MyEvent>, MyOtherEventHandler>();
+            container.Register(_receivedMessages);
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
@@ -58,9 +61,9 @@ namespace Paramore.Brighter.Tests
             //_should_not_throw_an_exception
             _exception.Should().BeNull();
             //_should_publish_the_command_to_the_first_event_handler
-            MyEventHandler.ShouldReceive(_myEvent).Should().BeTrue();
+            _receivedMessages.Should().Contain(nameof(MyEventHandler), _myEvent.Id);
             //_should_publish_the_command_to_the_second_event_handler
-            MyOtherEventHandler.Shouldreceive(_myEvent).Should().BeTrue();
+            _receivedMessages.Should().Contain(nameof(MyOtherEventHandler), _myEvent.Id);
         }
     }
 }

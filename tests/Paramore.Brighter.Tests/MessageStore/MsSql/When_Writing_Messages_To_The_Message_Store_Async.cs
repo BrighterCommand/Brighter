@@ -37,12 +37,12 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
     [Trait("Category", "MSSQL")]
     public class SqlMessageStoreWritngMessagesAsyncTests : IDisposable
     {
-        private MsSqlTestHelper _msSqlTestHelper;
+        private readonly MsSqlTestHelper _msSqlTestHelper;
         private Message _message2;
         private Message _messageEarliest;
         private Message _messageLatest;
         private IList<Message> _retrievedMessages;
-        private MsSqlMessageStore _sqlMessageStore;
+        private readonly MsSqlMessageStore _sqlMessageStore;
 
         public SqlMessageStoreWritngMessagesAsyncTests()
         {

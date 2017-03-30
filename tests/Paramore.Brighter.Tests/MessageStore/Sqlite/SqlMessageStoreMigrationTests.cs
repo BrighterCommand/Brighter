@@ -23,14 +23,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.messagestore.sqlite
+namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
     public class SQlMessageStoreMigrationTests : IDisposable
     {

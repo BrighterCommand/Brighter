@@ -1,10 +1,10 @@
 ﻿using System;
 using Amazon.Runtime;
 using FluentAssertions;
-using Xunit;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
+namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
 {
     [Trait("Category", "AWS")]
     public class SqsMessageConsumerRequeueTests : IDisposable

@@ -1,9 +1,9 @@
 using System.Linq;
 using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
-using Paramore.Brighter.Tests.TestDoubles;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class PipelineWithHandlerDependenciesTests
     {

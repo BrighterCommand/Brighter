@@ -26,8 +26,8 @@ using System;
 using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy

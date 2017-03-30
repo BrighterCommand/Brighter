@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Eventsourcing.Attributes;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
 {

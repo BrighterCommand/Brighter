@@ -27,11 +27,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
-using Xunit;
 using Paramore.Brighter.MessageStore.Sqlite;
 using Paramore.Brighter.Time;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.messagestore.sqlite
+namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
     public class SqlMessageStoreWritngMessagesTests : IDisposable
     {

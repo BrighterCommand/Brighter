@@ -23,16 +23,18 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using FluentAssertions;
-using Xunit;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CommandProcessorSendWithMultipleMatchesTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
         private readonly MyCommand _myCommand = new MyCommand();
         private Exception _exception;
 
@@ -44,9 +46,10 @@ namespace Paramore.Brighter.Tests
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>("DefaultHandler");
-            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>("ImplicitHandler");
+            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>();
+            container.Register<IHandleRequests<MyCommand>, MyImplicitHandler>();
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
+            container.Register(_receivedMessages);
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
@@ -57,10 +60,10 @@ namespace Paramore.Brighter.Tests
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_fail_because_multiple_receivers_found
-            Assert.IsAssignableFrom(typeof(ArgumentException), _exception);
+            _exception.Should().BeOfType<ArgumentException>();
             //_should_have_an_error_message_that_tells_you_why
             _exception.Should().NotBeNull();
-            _exception.Message.Should().Contain("More than one handler was found for the typeof command Paramore.Brighter.Tests.TestDoubles.MyCommand - a command should only have one handler.");
+            _exception.Message.Should().Contain("More than one handler was found for the typeof command Paramore.Brighter.Tests.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.");
         }
     }
 }

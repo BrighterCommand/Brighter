@@ -1,31 +1,23 @@
-﻿using System.Threading;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Tests.TestDoubles
+namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
     internal class MyCommandHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        private static MyCommand s_command;
+        private readonly IDictionary<string, Guid> _receivedMessages;
 
-        public MyCommandHandlerAsync()
+        public MyCommandHandlerAsync(IDictionary<string, Guid> receivedMessages)
         {
-            s_command = null;
+            _receivedMessages = receivedMessages;
         }
 
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            LogCommand(command);
+            _receivedMessages.Add(nameof(MyCommandHandlerAsync), command.Id);
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-        }
-
-        public static bool ShouldReceive(MyCommand expectedCommand)
-        {
-            return (s_command != null) && (expectedCommand.Id == s_command.Id);
-        }
-
-        private void LogCommand(MyCommand request)
-        {
-            s_command = request;
         }
     }
 }

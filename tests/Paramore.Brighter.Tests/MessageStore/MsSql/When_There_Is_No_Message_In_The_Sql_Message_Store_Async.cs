@@ -34,9 +34,9 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
     [Trait("Category", "MSSQL")]
     public class MsSqlMessageStoreEmptyStoreAsyncTests : IDisposable
     {
-        private MsSqlTestHelper _msSqlTestHelper;
-        private Message _messageEarliest;
-        private MsSqlMessageStore _sqlMessageStore;
+        private readonly MsSqlTestHelper _msSqlTestHelper;
+        private readonly Message _messageEarliest;
+        private readonly MsSqlMessageStore _sqlMessageStore;
         private Message _storedMessage;
 
         public MsSqlMessageStoreEmptyStoreAsyncTests()
@@ -45,8 +45,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
-                new MessageBody("message body"));
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
         }
 
         [Fact]

@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.EventSourcing

@@ -2,8 +2,8 @@
 using Xunit;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Logging.Handlers;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Logging.TestDoubles;
-using Paramore.Brighter.Tests.TestDoubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Logging

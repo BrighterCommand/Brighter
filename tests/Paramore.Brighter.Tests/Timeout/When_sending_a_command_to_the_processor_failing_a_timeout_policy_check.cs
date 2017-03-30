@@ -27,7 +27,7 @@ using System.Linq;
 using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Timeout.Test_Doubles;
 using TinyIoC;
 

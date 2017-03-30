@@ -36,12 +36,11 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
     [Trait("Category", "MSSQL")]
     public class SqlMessageStoreWritngMessagesTests : IDisposable
     {
-        private MsSqlTestHelper _msSqlTestHelper;
-        private Message _message2;
-        private Message _messageEarliest;
-        private Message _messageLatest;
+        private readonly MsSqlTestHelper _msSqlTestHelper;
+        private readonly Message _messageEarliest;
+        private readonly Message _messageLatest;
         private IEnumerable<Message> _retrievedMessages;
-        private MsSqlMessageStore _sqlMessageStore;
+        private readonly MsSqlMessageStore _sqlMessageStore;
 
         public SqlMessageStoreWritngMessagesTests()
         {
@@ -50,20 +49,17 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
 
             _sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND),
-                new MessageBody("Body"));
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
             _sqlMessageStore.Add(_messageEarliest);
 
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-2);
 
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND),
-                new MessageBody("Body2"));
-            _sqlMessageStore.Add(_message2);
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND), new MessageBody("Body2"));
+            _sqlMessageStore.Add(message2);
 
             Clock.OverrideTime = DateTime.UtcNow.AddHours(-1);
 
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND),
-                new MessageBody("Body3"));
+            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND), new MessageBody("Body3"));
             _sqlMessageStore.Add(_messageLatest);
         }
 

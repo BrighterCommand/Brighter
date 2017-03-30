@@ -1,6 +1,6 @@
 using System;
 
-namespace Paramore.Brighter.Tests.TestDoubles
+namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
     public class FakeErroringMessageProducer : IAmAMessageProducer
     {

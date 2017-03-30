@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.Tests.TestDoubles
+namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
     class TestHandlerFactoryAsync<TRequest, TRequestHandler> : IAmAHandlerFactoryAsync where TRequest : class, IRequest where TRequestHandler : class, IHandleRequestsAsync<TRequest>
     {

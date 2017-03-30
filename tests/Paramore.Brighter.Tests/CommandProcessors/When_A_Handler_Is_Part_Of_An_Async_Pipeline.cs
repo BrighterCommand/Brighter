@@ -24,11 +24,11 @@ THE SOFTWARE. */
 
 using System.Linq;
 using FluentAssertions;
-using Xunit;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class PipelineBuilderAsyncTests
     {

@@ -23,11 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using FluentAssertions;
-using Xunit;
 using Paramore.Brighter.MessagingGateway.RESTMS.Model;
 using Paramore.Brighter.MessagingGateway.RESTMS.Parsers;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.restms
+namespace Paramore.Brighter.Tests.MessagingGateway.RESTMS
 {
     [Trait("Category", "RESTMS")]
     public class ParseRestMSResultTests
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.restms
         private RestMSDomain _domain;
         private bool _couldParse;
 
-        [Fact(Skip = "todo: RabbitMQ.Client.Exceptions.OperationInterruptedException : The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=503, text=\"COMMAND_INVALID - unknown exchange type 'x-delayed-message'\", classId=40, methodId=10, cause=")]
+        [Fact]
         public void When_parsing_a_restMS_domain()
         {
             _couldParse = XmlResultParser.TryParse(BODY, out _domain);

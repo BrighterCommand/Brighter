@@ -4,7 +4,7 @@ using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.awssqs
+namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
 {
     public class TestAWSQueueListener
     {

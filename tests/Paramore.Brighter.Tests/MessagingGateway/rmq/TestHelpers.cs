@@ -29,7 +29,7 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.rmq
+namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 {
     internal class TestRMQListener
     {

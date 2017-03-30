@@ -35,40 +35,37 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
     [Trait("Category", "MSSQL")]
     public class MsSqlMessageStoreRangeRequestTests : IDisposable
     {
-        private MsSqlTestHelper _msSqlTestHelper;
+        private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly string _TopicFirstMessage = "test_topic";
         private readonly string _TopicLastMessage = "test_topic3";
-        private IEnumerable<Message> messages;
-        private Message s_message1;
-        private Message s_message2;
-        private Message s_messageEarliest;
-        private MsSqlMessageStore s_sqlMessageStore;
+        private IEnumerable<Message> _messages;
+        private readonly MsSqlMessageStore _sqlMessageStore;
 
         public MsSqlMessageStoreRangeRequestTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            s_sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
-            s_messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            s_message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
-            s_message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
-            s_sqlMessageStore.Add(s_messageEarliest);
-            s_sqlMessageStore.Add(s_message1);
-            s_sqlMessageStore.Add(s_message2);
+            _sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
+            var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
+            _sqlMessageStore.Add(messageEarliest);
+            _sqlMessageStore.Add(message1);
+            _sqlMessageStore.Add(message2);
         }
 
         [Fact]
         public void When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched()
         {
-            messages = s_sqlMessageStore.Get(1, 3);
+            _messages = _sqlMessageStore.Get(1, 3);
 
             //_should_fetch_1_message
-            messages.Should().HaveCount(1);
+            _messages.Should().HaveCount(1);
             //_should_fetch_expected_message
-            messages.First().Header.Topic.Should().Be(_TopicLastMessage);
+            _messages.First().Header.Topic.Should().Be(_TopicLastMessage);
             //_should_not_fetch_null_messages
-            messages.Should().NotBeNull();
+            _messages.Should().NotBeNull();
         }
 
         public void Dispose()

@@ -1,14 +1,14 @@
 using System;
 using System.Linq;
 using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
-using Paramore.Brighter.Tests.TestDoubles;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class PipelineCleanupTests
     {
-        private PipelineBuilder<MyCommand> _pipeline_Builder;
+        private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private static string s_released;
 
         public PipelineCleanupTests()
@@ -21,8 +21,8 @@ namespace Paramore.Brighter.Tests
 
             var handlerFactory = new CheapHandlerFactory();
 
-            _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
-            _pipeline_Builder.Build(new RequestContext()).Any();
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            _pipelineBuilder.Build(new RequestContext()).Any();
         }
 
         internal class CheapHandlerFactory : IAmAHandlerFactory
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Tests
         [Fact]
         public void When_We_Have_Exercised_The_Pipeline_Cleanup_Its_Handlers()
         {
-            _pipeline_Builder.Dispose();
+            _pipelineBuilder.Dispose();
 
             //_should_have_called_dispose_on_instances_from_ioc
             MyPreAndPostDecoratedHandler.DisposeWasCalled.Should().BeTrue();

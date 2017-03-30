@@ -28,7 +28,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.Timeout.Test_Doubles
 {

@@ -23,17 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Xunit;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using TinyIoC;
+using Xunit;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests.CommandProcessors
 {
     public class CommandProcessorPublishMultipleMatchesAsyncTests
     {
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
         private readonly MyEvent _myEvent = new MyEvent();
         private Exception _exception;
 
@@ -45,8 +47,9 @@ namespace Paramore.Brighter.Tests
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyEvent>, MyEventHandlerAsync>("MyEventHandlerAsync");
-            container.Register<IHandleRequestsAsync<MyEvent>, MyOtherEventHandlerAsync>("MyOtherHandlerAsync");
+            container.Register<IHandleRequestsAsync<MyEvent>, MyEventHandlerAsync>();
+            container.Register<IHandleRequestsAsync<MyEvent>, MyOtherEventHandlerAsync>();
+            container.Register(_receivedMessages);
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
@@ -60,9 +63,9 @@ namespace Paramore.Brighter.Tests
             //_should_not_throw_an_exception
             _exception.Should().BeNull();
             //_should_publish_the_command_to_the_first_event_handler
-            MyEventHandlerAsync.ShouldReceive(_myEvent).Should().BeTrue();
+            _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), _myEvent.Id);
             //_should_publish_the_command_to_the_second_event_handler
-            MyOtherEventHandlerAsync.ShouldReceive(_myEvent).Should().BeTrue();
+            _receivedMessages.Should().Contain(nameof(MyOtherEventHandlerAsync), _myEvent.Id);
         }
     }
 }

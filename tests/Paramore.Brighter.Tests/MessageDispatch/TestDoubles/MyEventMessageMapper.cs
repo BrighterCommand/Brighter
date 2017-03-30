@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using Newtonsoft.Json;
-using Paramore.Brighter.Tests.TestDoubles;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
 {

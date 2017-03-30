@@ -36,14 +36,14 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
     [Trait("Category", "MSSQL")]
     public class MsSqlMessageStoreRangeRequestAsyncTests : IDisposable
     {
-        private MsSqlTestHelper _msSqlTestHelper;
+        private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly string _TopicFirstMessage = "test_topic";
         private readonly string _TopicLastMessage = "test_topic3";
-        private IEnumerable<Message> messages;
-        private Message _message1;
-        private Message _message2;
-        private Message _messageEarliest;
-        private MsSqlMessageStore _sqlMessageStore;
+        private IEnumerable<Message> _messages;
+        private readonly Message _message1;
+        private readonly Message _message2;
+        private readonly Message _messageEarliest;
+        private readonly MsSqlMessageStore _sqlMessageStore;
 
         public MsSqlMessageStoreRangeRequestAsyncTests()
         {
@@ -63,14 +63,14 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             await _sqlMessageStore.AddAsync(_message1);
             await _sqlMessageStore.AddAsync(_message2);
 
-             messages = await _sqlMessageStore.GetAsync(1, 3);
+             _messages = await _sqlMessageStore.GetAsync(1, 3);
 
             //_should_fetch_1_message
-            messages.Count().Should().Be(1);
+            _messages.Count().Should().Be(1);
             //_should_fetch_expected_message
-            messages.First().Header.Topic.Should().Be(_TopicLastMessage);
+            _messages.First().Header.Topic.Should().Be(_TopicLastMessage);
             //_should_not_fetch_null_messages
-            messages.Should().NotBeNull();
+            _messages.Should().NotBeNull();
         }
 
         public void Dispose()
