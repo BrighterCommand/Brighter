@@ -33,7 +33,6 @@
 
   <ItemGroup>
     <PackageReference Include="EventStore.Client" Version="3.9.4" />
-    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
