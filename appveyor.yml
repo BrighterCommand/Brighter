@@ -41,7 +41,7 @@ build_script:
 after_build:
   - cmd: dotnet pack src\Paramore.Brighter --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
   - cmd: dotnet pack src\Paramore.Brighter.ServiceActivator --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs 
-  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --configuration %CONFIGURATION% ---no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
   - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
   - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
   - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
