@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyStoredCommandHandler>();
-            container.Register<IAmACommandStore>(_commandstore);
+            container.Register(_commandstore);
 
             _command = new MyCommand {Value = "My Test String"};
 

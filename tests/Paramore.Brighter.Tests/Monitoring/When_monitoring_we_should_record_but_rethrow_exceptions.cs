@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
@@ -32,9 +31,12 @@ using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Monitoring.TestDoubles;
 using Paramore.Brighter.Time;
 using TinyIoC;
+using Xunit;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
+    [Collection("Monitoring")]
+    [Trait("Category", "Monitoring")]
     public class MonitorHandlerTests
     {
         private readonly MyCommand _command;
@@ -42,7 +44,6 @@ namespace Paramore.Brighter.Tests.Monitoring
         private readonly SpyControlBusSender _controlBusSender;
         private readonly CommandProcessor _commandProcessor;
         private MonitorEvent _afterEvent;
-        private string _originalRequestAsJson;
         private readonly DateTime _at;
 
         public MonitorHandlerTests()
@@ -56,18 +57,17 @@ namespace Paramore.Brighter.Tests.Monitoring
             container.Register<IHandleRequests<MyCommand>, MyMonitoredHandlerThatThrows>();
             container.Register<IHandleRequests<MyCommand>, MonitorHandler<MyCommand>>();
             container.Register<IAmAControlBusSender>(_controlBusSender);
-            container.Register<MonitorConfiguration>(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
+            container.Register(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
             _command = new MyCommand();
 
-            _originalRequestAsJson = JsonConvert.SerializeObject(_command);
-
             _at = DateTime.UtcNow;
             Clock.OverrideTime = _at;
         }
 
+        [Fact]
         public void When_Monitoring_We_Should_Record_But_Rethrow_Exceptions()
         {
             _thrownException = Catch.Exception(() => _commandProcessor.Send(_command));

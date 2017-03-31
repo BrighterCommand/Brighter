@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Tests.Monitoring.TestDoubles
 {
     internal class MyMonitoredHandler : RequestHandler<MyCommand>
     {
-        [Monitor(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandler))]
+        [Monitor(1, HandlerTiming.Before, typeof(MyMonitoredHandler))]
         public override MyCommand Handle(MyCommand command)
         {
             return base.Handle(command);

@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry() { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
+                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 null,
                 (IAmAMessageProducer)_fakeMessageProducer);

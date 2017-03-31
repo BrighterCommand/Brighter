@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RESTMS
             _message = new Message(new MessageHeader(Guid.NewGuid(), Topic, MessageType.MT_COMMAND), new MessageBody("test content"));
         }
 
-        [Fact(Skip = "todo: broken")]
+        [Fact]
         public void When_posting_a_message_via_the_messaging_gateway()
         {
             _messageConsumer.Receive(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard

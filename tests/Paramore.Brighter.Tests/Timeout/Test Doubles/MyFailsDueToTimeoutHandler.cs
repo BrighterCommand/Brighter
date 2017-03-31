@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Tests.Timeout.Test_Doubles
 {
     internal class MyFailsDueToTimeoutHandler : RequestHandler<MyCommand>
     {
-        [TimeoutPolicy(milliseconds: 300, step: 1, timing: HandlerTiming.Before)]
+        [TimeoutPolicy(300, 1, HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
             var ct = (CancellationToken)Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];

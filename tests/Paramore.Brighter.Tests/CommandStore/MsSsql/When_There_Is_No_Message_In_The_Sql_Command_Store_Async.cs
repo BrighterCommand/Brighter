@@ -32,6 +32,7 @@ using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 {
     [Trait("Category", "MSSQL")]
+    [Collection("MSSQL CommandStore")]
     public class  SqlCommandStoreEmptyWhenSearchedAsyncTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
@@ -46,7 +47,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
         }
 
-        [Fact(Skip = "todo: Can't be executed in parallel with other MSSQL tests: There is already an object named 'PK_MessageId' in the database.")]
+        [Fact]
         public async Task When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
         {
             _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid());

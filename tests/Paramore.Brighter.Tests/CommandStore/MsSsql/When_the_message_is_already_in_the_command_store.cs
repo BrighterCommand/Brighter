@@ -31,6 +31,7 @@ using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 {
     [Trait("Category", "MSSQL")]
+    [Collection("MSSQL CommandStore")]
     public class SqlCommandStoreDuplicateMessageTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
@@ -48,7 +49,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             _sqlCommandStore.Add(_raisedCommand);
         }
 
-        [Fact(Skip = "todo: Can't be executed in parallel with other MSSQL tests: There is already an object named 'PK_MessageId' in the database.")]
+        [Fact]
         public void When_The_Message_Is_Already_In_The_Command_Store()
         {
             _exception = Catch.Exception(() => _sqlCommandStore.Add(_raisedCommand));

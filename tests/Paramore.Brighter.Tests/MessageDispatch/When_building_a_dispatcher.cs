@@ -91,8 +91,8 @@ namespace Paramore.Brighter.Tests.MessageDispatch
                 .CommandProcessor(CommandProcessorBuilder.With()
                         .Handlers(new HandlerConfiguration(new SubscriberRegistry(),
                             new TinyIocHandlerFactory(new TinyIoCContainer())))
-                        .Policies(new PolicyRegistry()
-                        {
+                        .Policies(new PolicyRegistry
+                    {
                             {CommandProcessor.RETRYPOLICY, retryPolicy},
                             {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
                         })

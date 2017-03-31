@@ -14,8 +14,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
         }
 
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
-        [MyPreValidationHandlerAsync(step: 2, timing: HandlerTiming.Before)]
-        [MyPostLoggingHandlerAsync(step: 1, timing: HandlerTiming.After)]
+        [MyPreValidationHandlerAsync(2, HandlerTiming.Before)]
+        [MyPostLoggingHandlerAsync(1, HandlerTiming.After)]
         [Obsolete] // even with attributes non inheriting from MessageHandlerDecoratorAttribute it should not fail
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {

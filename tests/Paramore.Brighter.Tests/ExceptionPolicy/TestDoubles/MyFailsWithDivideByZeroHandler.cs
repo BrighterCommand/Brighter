@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles
             ReceivedCommand = false;
         }
 
-        [UsePolicy(policy: "MyDivideByZeroPolicy", step: 1)]
+        [UsePolicy("MyDivideByZeroPolicy", 1)]
         public override MyCommand Handle(MyCommand command)
         {
             ReceivedCommand = true;

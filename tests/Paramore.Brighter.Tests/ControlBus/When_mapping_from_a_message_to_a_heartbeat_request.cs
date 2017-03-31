@@ -43,15 +43,15 @@ namespace Paramore.Brighter.Tests.ControlBus
         {
             _mapper = new HeartbeatRequestCommandMessageMapper();
             var messageHeader = new MessageHeader(
-                messageId: Guid.NewGuid(),
-                topic: "Heartbeat",
-                messageType: MessageType.MT_COMMAND,
-                timeStamp: DateTime.UtcNow,
-                correlationId: _correlationId, replyTo: TOPIC);
+                Guid.NewGuid(),
+                "Heartbeat",
+                MessageType.MT_COMMAND,
+                DateTime.UtcNow,
+                _correlationId, TOPIC);
 
             var body = String.Format("\"Id\": \"{0}\"", _commandId);
             var messageBody = new MessageBody("{" + body + "}");
-            _message = new Message(header: messageHeader, body: messageBody);
+            _message = new Message(messageHeader, messageBody);
         }
 
         [Fact]

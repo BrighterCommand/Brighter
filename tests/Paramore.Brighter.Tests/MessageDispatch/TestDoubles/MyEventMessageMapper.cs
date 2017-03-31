@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
     {
         public Message MapToMessage(MyEvent request)
         {
-            var header = new MessageHeader(messageId: request.Id, topic: "MyEvent", messageType: MessageType.MT_EVENT);
+            var header = new MessageHeader(request.Id, "MyEvent", MessageType.MT_EVENT);
             var body = new MessageBody(JsonConvert.SerializeObject(request));
             var message = new Message(header, body);
             return message;

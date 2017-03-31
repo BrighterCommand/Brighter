@@ -31,6 +31,7 @@ using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 {
     [Trait("Category", "MSSQL")]
+    [Collection("MSSQL CommandStore")]
     public class SqlCommandStoreEmptyWhenSearchedTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
@@ -45,7 +46,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
         }
 
-        [Fact(Skip = "todo: Can't be executed in parallel with other MSSQL tests: There is already an object named 'PK_MessageId' in the database.")]
+        [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Command_Store()
         {
             _storedCommand = _sqlCommandStore.Get<MyCommand>(Guid.NewGuid());

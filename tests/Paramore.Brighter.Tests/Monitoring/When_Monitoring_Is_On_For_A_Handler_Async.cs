@@ -37,6 +37,8 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
+    [Collection("Monitoring")]
+    [Trait("Category", "Monitoring")]
     public class MonitorHandlerPipelineAsyncTests
     {
         private readonly MyCommand _command;
@@ -58,7 +60,7 @@ namespace Paramore.Brighter.Tests.Monitoring
             container.Register<IHandleRequestsAsync<MyCommand>, MyMonitoredHandlerAsync>();
             container.Register<IHandleRequestsAsync<MyCommand>, MonitorHandlerAsync<MyCommand>>();
             container.Register<IAmAControlBusSenderAsync>(_controlBusSender);
-            container.Register<MonitorConfiguration>(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
+            container.Register(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
@@ -70,7 +72,7 @@ namespace Paramore.Brighter.Tests.Monitoring
             Clock.OverrideTime = _at;
         }
 
-        [Fact(Skip = "todo: Clock.OverrideTime doesn't really support parallel execution")]
+        [Fact]
         public async Task When_Monitoring_Is_on_For_A_Handler_Async()
         {
             await _commandProcessor.SendAsync(_command);

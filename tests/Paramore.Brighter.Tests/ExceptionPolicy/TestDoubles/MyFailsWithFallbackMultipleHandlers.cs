@@ -41,8 +41,8 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles
             ReceivedCommand = false;
         }
 
-        [FallbackPolicy(backstop: true, circuitBreaker: false, step: 1)]
-        [RequestLogging(step: 2, timing: HandlerTiming.Before)]
+        [FallbackPolicy(true, false, 1)]
+        [RequestLogging(2, HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
             ReceivedCommand = true;

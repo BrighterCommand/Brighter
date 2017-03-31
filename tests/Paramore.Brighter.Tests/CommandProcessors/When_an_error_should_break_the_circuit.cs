@@ -25,8 +25,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 
             _messagingProducer = new FakeErroringMessageProducer();
             _message = new Message(
-                header: new MessageHeader(messageId: _myCommand.Id, topic: "MyCommand", messageType: MessageType.MT_COMMAND),
-                body: new MessageBody(JsonConvert.SerializeObject(_myCommand))
+                new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
+                new MessageBody(JsonConvert.SerializeObject(_myCommand))
                 );
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();

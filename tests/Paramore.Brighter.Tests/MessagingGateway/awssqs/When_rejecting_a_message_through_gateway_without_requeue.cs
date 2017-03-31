@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            _message = new Message(header: messageHeader, body: new MessageBody("test content"));
+            _message = new Message(messageHeader, new MessageBody("test content"));
 
             var credentials = new AnonymousAWSCredentials();
             _sender = new SqsMessageProducer(credentials);
@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             _listenedMessage = _receiver.Receive(1000);
         }
 
-        [Fact(Skip = "todo: Amazon.Runtime.AmazonClientException : No RegionEndpoint or ServiceURL configured")]
+        [Fact]
         public void When_rejecting_a_message_through_gateway_without_requeue()
         {
             _receiver.Reject(_listenedMessage, false);

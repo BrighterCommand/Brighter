@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            _sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+            _sentMessage = new Message(messageHeader, new MessageBody("test content"));
 
             var credentials = new AnonymousAWSCredentials();
             _sender = new SqsMessageProducer(credentials);
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             _testQueueListener = new TestAWSQueueListener(credentials, _queueUrl);
         }
 
-        [Fact(Skip = "todo: Amazon.Runtime.AmazonClientException : No RegionEndpoint or ServiceURL configured")]
+        [Fact]
         public void When_reading_a_message_via_the_messaging_gateway()
         {
             _sender.Send(_sentMessage);

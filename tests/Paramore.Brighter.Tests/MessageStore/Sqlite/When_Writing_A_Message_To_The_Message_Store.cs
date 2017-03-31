@@ -30,10 +30,12 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
+    [Trait("Category", "Sqlite")]
+    [Collection("Sqlite MessageStore")]
     public class SqliteMessageStoreWritingMessageTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteMessageStore _SqlMessageStore;
+        private readonly SqliteMessageStore _sqlMessageStore;
         private readonly string key1 = "name1";
         private readonly string key2 = "name2";
         private readonly Message _messageEarliest;
@@ -45,20 +47,20 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _SqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,
                 DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(key1, value1);
             messageHeader.Bag.Add(key2, value2);
 
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
-            _SqlMessageStore.Add(_messageEarliest);
+            _sqlMessageStore.Add(_messageEarliest);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_Message_Store()
         {
-            _storedMessage = _SqlMessageStore.Get(_messageEarliest.Id);
+            _storedMessage = _sqlMessageStore.Get(_messageEarliest.Id);
 
             //_should_read_the_message_from_the__sql_message_store
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

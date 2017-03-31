@@ -30,6 +30,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
+    [Trait("Category", "Sqlite")]
+    [Collection("Sqlite MessageStore")]
     public class SqliteMessageStoreMessageAlreadyExistsTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
