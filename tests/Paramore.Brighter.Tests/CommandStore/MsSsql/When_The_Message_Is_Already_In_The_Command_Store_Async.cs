@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             _raisedCommand = new MyCommand { Value = "Test" };
         }
 
-        [Fact(Skip = "todo: Can't be executed in parallel with other MSSQL tests: There is already an object named 'PK_MessageId' in the database.")]
+        [Fact]
         public async Task When_The_Message_Is_Already_In_The_Command_Store_Async()
         {
             await _sqlCommandStore.AddAsync(_raisedCommand);

@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             _testQueueListener = new TestAWSQueueListener(credentials, _queueUrl);
         }
 
-        [Fact(Skip = "todo: Amazon.Runtime.AmazonClientException : No RegionEndpoint or ServiceURL configured")]
+        [Fact]
         public void When_requeueing_a_message()
         {
             _sender.Send(_sentMessage);

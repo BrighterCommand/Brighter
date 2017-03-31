@@ -24,7 +24,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             _messageProducer = new SqsMessageProducer(credentials);
         }
 
-        [Fact(Skip = "todo: Amazon.Runtime.AmazonClientException : No RegionEndpoint or ServiceURL configured")]
+        [Fact]
         public void When_posting_a_message_via_the_messaging_gateway_and_sns_topic_does_not_exist()
         {
             _messageProducer.Send(_message);

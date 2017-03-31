@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             channel.Add(quitMessage);
         }
 
-        [Fact(Skip = "todo: not sure why this test is failing")]
+        [Fact]
         public async Task When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async()
         {
             await _messagePump.Run();

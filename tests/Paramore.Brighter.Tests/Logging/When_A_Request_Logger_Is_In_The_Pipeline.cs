@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Tests.Logging
             LogProvider.SetCurrentLogProvider(new SpyLogProvider(_logger));
         }
 
-        [Fact(Skip = "TODO: Fails erratically to find messages in pipeline")]
+        [Fact]
         public void When_A_Request_Logger_Is_In_The_Pipeline()
         {
             _commandProcessor.Send(_myCommand);

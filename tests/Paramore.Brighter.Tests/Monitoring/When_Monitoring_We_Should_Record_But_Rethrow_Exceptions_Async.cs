@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Tests.Monitoring
             Clock.OverrideTime = _at;
         }
 
-        [Fact(Skip = "todo: Clock.OverrideTime doesn't really support parallel execution")]
+        [Fact]
         public async Task When_Monitoring_We_Should_Record_But_Rethrow_Exceptions_Async()
         {
             _exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_command));

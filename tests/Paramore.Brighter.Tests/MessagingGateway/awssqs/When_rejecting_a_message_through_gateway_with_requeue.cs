@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             _listenedMessage = _receiver.Receive(1000);
         }
 
-        [Fact(Skip = "todo: Amazon.Runtime.AmazonClientException : No RegionEndpoint or ServiceURL configured")]
+        [Fact]
         public void When_rejecting_a_message_through_gateway_with_requeue()
         {
             _receiver.Reject(_listenedMessage, true);

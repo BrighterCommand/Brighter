@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
             _sender.Send(_sentMessage);
         }
 
-        [Fact(Skip = "RabbitMQ.Client.Exceptions.OperationInterruptedException : The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=503, text=\"COMMAND_INVALID - unknown exchange type 'x-delayed-message'\", classId=40, methodId=10, cause=")]
+        [Fact]
         public void When_a_message_consumer_throws_an_already_closed_exception_when_connecting()
         {
             _firstException = Catch.Exception(() => _badReceiver.Receive(2000));
