@@ -19,7 +19,7 @@ namespace GreetingsCoreConsole
         public static void Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console()
+                .WriteTo.LiterateConsole()
                 .CreateLogger();
 
             var container = new TinyIoCContainer();

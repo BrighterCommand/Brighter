@@ -181,8 +181,7 @@ namespace Paramore.Brighter.MessageStore.EventStore
             return eventStreamSlice.Events.Select(e => ConvertEventToMessage(e.Event, stream)).ToList();
         }
 
-        private static void AddMetadataToHeader(byte[] metadata, MessageHeader messageHeader, int eventNumber,
-            string stream)
+        private static void AddMetadataToHeader(byte[] metadata, MessageHeader messageHeader, long eventNumber, string stream)
         {
             messageHeader.Bag.Add("streamId", stream);
             messageHeader.Bag.Add("eventNumber", eventNumber);
