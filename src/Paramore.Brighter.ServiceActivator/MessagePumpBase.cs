@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.ServiceActivator.Logging;
+using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -57,6 +58,12 @@ namespace Paramore.Brighter.ServiceActivator
                 try
                 {
                     message = Channel.Receive(TimeoutInMilliseconds);
+                }
+                catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
+                {
+                    _logger.Value.WarnFormat("MessagePump: BrokenCircuitException messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    Task.Delay(1000).Wait();
+                    continue;
                 }
                 catch (ChannelFailureException)
                 {

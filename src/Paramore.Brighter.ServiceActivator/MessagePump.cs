@@ -49,6 +49,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         public bool IsAsync => false;
 
+        // doesn't have async keyword, so won't actually run asynchronously / generate state machine
         protected override Task DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
             var tcs = new TaskCompletionSource<object>();
