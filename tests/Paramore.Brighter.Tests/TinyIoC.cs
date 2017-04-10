@@ -869,9 +869,9 @@ namespace TinyIoC
     sealed class ResolveOptions
     {
         private static readonly ResolveOptions _Default = new ResolveOptions();
-        private static readonly ResolveOptions _FailUnregisteredAndNameNotFound = new ResolveOptions() { NamedResolutionFailureAction = NamedResolutionFailureActions.Fail, UnregisteredResolutionAction = UnregisteredResolutionActions.Fail };
-        private static readonly ResolveOptions _FailUnregisteredOnly = new ResolveOptions() { NamedResolutionFailureAction = NamedResolutionFailureActions.AttemptUnnamedResolution, UnregisteredResolutionAction = UnregisteredResolutionActions.Fail };
-        private static readonly ResolveOptions _FailNameNotFoundOnly = new ResolveOptions() { NamedResolutionFailureAction = NamedResolutionFailureActions.Fail, UnregisteredResolutionAction = UnregisteredResolutionActions.AttemptResolve };
+        private static readonly ResolveOptions _FailUnregisteredAndNameNotFound = new ResolveOptions { NamedResolutionFailureAction = NamedResolutionFailureActions.Fail, UnregisteredResolutionAction = UnregisteredResolutionActions.Fail };
+        private static readonly ResolveOptions _FailUnregisteredOnly = new ResolveOptions { NamedResolutionFailureAction = NamedResolutionFailureActions.AttemptUnnamedResolution, UnregisteredResolutionAction = UnregisteredResolutionActions.Fail };
+        private static readonly ResolveOptions _FailNameNotFoundOnly = new ResolveOptions { NamedResolutionFailureAction = NamedResolutionFailureActions.Fail, UnregisteredResolutionAction = UnregisteredResolutionActions.AttemptResolve };
 
         private UnregisteredResolutionActions _UnregisteredResolutionAction = UnregisteredResolutionActions.AttemptResolve;
         public UnregisteredResolutionActions UnregisteredResolutionAction
@@ -3351,7 +3351,7 @@ namespace TinyIoC
         private bool IsIgnoredAssembly(Assembly assembly)
         {
             // TODO - find a better way to remove "system" assemblies from the auto registration
-            var ignoreChecks = new List<Func<Assembly, bool>>()
+            var ignoreChecks = new List<Func<Assembly, bool>>
             {
                 asm => asm.FullName.StartsWith("Microsoft.", StringComparison.Ordinal),
                 asm => asm.FullName.StartsWith("System.", StringComparison.Ordinal),
@@ -3375,7 +3375,7 @@ namespace TinyIoC
         private bool IsIgnoredType(Type type, Func<Type, bool> registrationPredicate)
         {
             // TODO - find a better way to remove "system" types from the auto registration
-            var ignoreChecks = new List<Func<Type, bool>>()
+            var ignoreChecks = new List<Func<Type, bool>>
             {
                 t => t.FullName.StartsWith("System.", StringComparison.Ordinal),
                 t => t.FullName.StartsWith("Microsoft.", StringComparison.Ordinal),
@@ -3402,7 +3402,7 @@ namespace TinyIoC
 
         private void RegisterDefaultTypes()
         {
-            Register<TinyIoCContainer>(this);
+            Register(this);
 
 #if TINYMESSENGER
             // Only register the TinyMessenger singleton if we are the root container

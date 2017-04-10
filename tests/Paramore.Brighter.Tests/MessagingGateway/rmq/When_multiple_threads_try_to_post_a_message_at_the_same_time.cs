@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 
         public RmqMessageProducerSupportsMultipleThreadsTests()
         {
-            _message = new Message(header: new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
+            _message = new Message(new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
             _messageProducer = new RmqMessageProducer(rmqConnection);
         }
 
-        [Fact(Skip = "RabbitMQ.Client.Exceptions.OperationInterruptedException : The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=503, text=\"COMMAND_INVALID - unknown exchange type 'x-delayed-message'\", classId=40, methodId=10, cause=")]
+        [Fact]
         public void When_multiple_threads_try_to_post_a_message_at_the_same_time()
         {
             bool exceptionHappened = false;

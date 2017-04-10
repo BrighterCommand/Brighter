@@ -31,6 +31,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
+    [Trait("Category", "Sqlite")]
+    [Collection("Sqlite MessageStore")]
     public class SqliteMessageStoreEmptyStoreAsyncTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;

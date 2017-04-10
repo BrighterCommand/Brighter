@@ -30,10 +30,12 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
+    [Trait("Category", "Sqlite")]
+    [Collection("Sqlite MessageStore")]
     public class SqliteMessageStoreEmptyStoreTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteMessageStore _SqlMessageStore;
+        private readonly SqliteMessageStore _sqlMessageStore;
         private readonly Message _messageEarliest;
         private Message _storedMessage;
 
@@ -41,7 +43,7 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _SqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
         }
@@ -49,7 +51,7 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
         [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Message_Store()
         {
-            _storedMessage = _SqlMessageStore.Get(_messageEarliest.Id);
+            _storedMessage = _sqlMessageStore.Get(_messageEarliest.Id);
 
             //_should_return_a_empty_message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);

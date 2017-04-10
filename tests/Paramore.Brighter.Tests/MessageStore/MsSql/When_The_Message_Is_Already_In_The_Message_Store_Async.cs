@@ -32,6 +32,7 @@ using Paramore.Brighter.MessageStore.MsSql;
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
     [Trait("Category", "MSSQL")]
+    [Collection("MSSQL MessageStore")]
     public class MsSqlMessageStoreMessageAlreadyExistsAsyncTests : IDisposable
     {
         private Exception _exception;
@@ -48,7 +49,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
         }
 
-        [Fact(Skip = "todo: fails on AppVeyor: A network-related or instance-specific error occurred while establishing a connection to SQL Server. The server was not found or was not accessible. Verify that the instance name is correct and that SQL Server is configured to allow remote connections. (provider: Named Pipes Provider, error: 40 - Could not open a connection to SQL Server)")]
+        [Fact]
         public async Task When_The_Message_Is_Already_In_The_Message_Store_Async()
         {
             await _sqlMessageStore.AddAsync(_messageEarliest);

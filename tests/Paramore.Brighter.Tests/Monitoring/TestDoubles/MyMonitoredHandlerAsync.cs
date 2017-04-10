@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Tests.Monitoring.TestDoubles
 {
     internal class MyMonitoredHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        [MonitorAsync(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandlerAsync))]
+        [MonitorAsync(1, HandlerTiming.Before, typeof(MyMonitoredHandlerAsync))]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);

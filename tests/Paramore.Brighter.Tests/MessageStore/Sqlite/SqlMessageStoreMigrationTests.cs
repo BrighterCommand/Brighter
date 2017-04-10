@@ -31,6 +31,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
+    [Trait("Category", "Sqlite")]
+    [Collection("Sqlite MessageStore")]
     public class SQlMessageStoreMigrationTests : IDisposable
     {
         private readonly SqliteMessageStore _sqlMessageStore;

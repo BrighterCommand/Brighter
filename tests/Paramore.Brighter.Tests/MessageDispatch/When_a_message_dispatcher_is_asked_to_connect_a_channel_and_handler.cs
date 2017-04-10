@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var connection = new Connection(
-                name: new ConnectionName("test"), 
+                new ConnectionName("test"), 
                 dataType: typeof(MyEvent), 
                 noOfPerformers: 1, 
                 timeoutInMilliseconds: 1000, 

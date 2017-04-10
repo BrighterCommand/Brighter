@@ -32,6 +32,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
+    [Trait("Category", "Sqlite")]
+    [Collection("Sqlite MessageStore")]
     public class SqliteMessageStoreRangeRequestTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;

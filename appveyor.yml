@@ -54,7 +54,7 @@ after_build:
   - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
 
 test_script:
-  - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj
+  - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj --filter "Category!=MSSQL & Category!=RMQ & Category!=AWS & Category != RESTMS"
 
 artifacts:
   - path: nupkgs\*.nupkg

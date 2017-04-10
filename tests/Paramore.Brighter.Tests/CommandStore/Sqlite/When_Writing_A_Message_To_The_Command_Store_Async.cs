@@ -25,25 +25,25 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.Data.Sqlite;
 using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.Sqlite
 {
+    [Trait("Category", "Sqlite")]
+    [Collection("Sqlite CommandStore")]
     public class SqliteCommandStoreAddMessageAsyncTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteCommandStore _sqlCommandStore;
         private readonly MyCommand _raisedCommand;
         private MyCommand _storedCommand;
-        private SqliteConnection _sqliteConnection;
 
         public SqliteCommandStoreAddMessageAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
-            _sqliteConnection = _sqliteTestHelper.SetupCommandDb();
+            _sqliteTestHelper.SetupCommandDb();
 
             _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
             _raisedCommand = new MyCommand {Value = "Test"};
