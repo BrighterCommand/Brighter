@@ -1,4 +1,4 @@
-﻿-- User Table information:
+-- User Table information:
 -- Number of tables: 1
 -- Commands: 0 row(s)
 

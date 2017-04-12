@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using GenericListener.Infrastructure;
 using Paramore.Brighter;
 

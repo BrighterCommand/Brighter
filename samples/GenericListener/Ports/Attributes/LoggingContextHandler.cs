@@ -1,4 +1,4 @@
-﻿using Paramore.Brighter;
+using Paramore.Brighter;
 using Paramore.Brighter.Logging.Attributes;
 
 namespace GenericListener.Ports.Attributes

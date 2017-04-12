@@ -1,4 +1,4 @@
-﻿// ***********************************************************************
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.commandstore.mssql
 // Author           : francesco.pighi
 // Created          : 06-03-2015

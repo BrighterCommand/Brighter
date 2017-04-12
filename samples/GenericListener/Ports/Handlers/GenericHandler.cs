@@ -1,4 +1,4 @@
-﻿using GenericListener.Ports.Events;
+using GenericListener.Ports.Events;
 using GenericListener.Ports.Indexers;
 using log4net;
 using Paramore.Brighter;

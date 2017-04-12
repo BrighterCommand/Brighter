@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using GenericListener.Ports.Events;
 using Newtonsoft.Json.Linq;

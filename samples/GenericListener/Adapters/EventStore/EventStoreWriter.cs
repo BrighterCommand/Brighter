@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using EventStore.ClientAPI;
 using Newtonsoft.Json;

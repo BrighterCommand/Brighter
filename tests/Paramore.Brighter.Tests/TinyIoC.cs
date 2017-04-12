@@ -1,4 +1,4 @@
-﻿//https://github.com/NancyFx/Nancy/blob/master/src/Nancy/TinyIoc/TinyIoC.cs
+//https://github.com/NancyFx/Nancy/blob/master/src/Nancy/TinyIoc/TinyIoC.cs
 
 //===============================================================================
 // TinyIoC

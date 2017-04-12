@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright � 2014 Francesco Pighi <francesco.pighi@gmail.com>
 

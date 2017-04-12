@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Logging.Handlers;

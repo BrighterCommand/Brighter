@@ -1,4 +1,4 @@
-﻿// ***********************************************************************
+// ***********************************************************************
 // Assembly         : paramore.brighter.commandprocessor.messagestore.eventstore
 // Author           : george
 // Created          : 06-11-2015

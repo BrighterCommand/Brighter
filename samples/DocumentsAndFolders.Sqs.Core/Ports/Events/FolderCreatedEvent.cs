@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Paramore.Brighter;
 
 namespace DocumentsAndFolders.Sqs.Core.Ports.Events

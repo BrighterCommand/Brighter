@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using GenericListener.Adapters.Services;
 using Topshelf;
 using Topshelf.Hosts;

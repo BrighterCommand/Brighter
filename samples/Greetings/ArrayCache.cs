@@ -1,4 +1,4 @@
-﻿namespace Greetings
+namespace Greetings
 {
     /// <summary>
     /// A cache for empty arrays.

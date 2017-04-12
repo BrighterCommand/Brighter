@@ -1,4 +1,4 @@
-﻿namespace ManagementAndMonitoring.ManualTinyIoc
+namespace ManagementAndMonitoring.ManualTinyIoc
 {
     /// <summary>
     /// A cache for empty arrays.

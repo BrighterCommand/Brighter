@@ -1,4 +1,4 @@
-﻿namespace GenericListener.Ports.Events
+namespace GenericListener.Ports.Events
 {
     public class GenericTask : EventStoredEvent { }
     public class GenericTaskAddedEvent : GenericTask { }

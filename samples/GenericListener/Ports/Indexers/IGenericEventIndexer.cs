@@ -1,4 +1,4 @@
-﻿using GenericListener.Ports.Events;
+using GenericListener.Ports.Events;
 
 namespace GenericListener.Ports.Indexers
 {

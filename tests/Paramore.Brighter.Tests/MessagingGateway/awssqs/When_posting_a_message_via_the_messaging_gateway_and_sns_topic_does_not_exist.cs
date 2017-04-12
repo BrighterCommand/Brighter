@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService.Model;
 using FluentAssertions;

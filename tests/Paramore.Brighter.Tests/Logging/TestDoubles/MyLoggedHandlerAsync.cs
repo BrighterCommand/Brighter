@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
