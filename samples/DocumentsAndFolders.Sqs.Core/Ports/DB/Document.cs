@@ -1,4 +1,4 @@
-﻿namespace DocumentsAndFolders.Sqs.Core.Ports.DB
+namespace DocumentsAndFolders.Sqs.Core.Ports.DB
 {
     public class Document
     {

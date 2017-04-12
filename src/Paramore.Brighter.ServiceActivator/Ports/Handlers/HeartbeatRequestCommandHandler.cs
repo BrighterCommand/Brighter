@@ -1,16 +1,3 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.serviceactivator
-// Author           : ian
-// Created          : 12-01-2015
-//
-// Last Modified By : ian
-// Last Modified On : 12-07-2015
-// ***********************************************************************
-// <copyright file="HeartbeatRequestCommandHandler.cs" company="Ian Cooper">
-//     Copyright \u00A9  2014 Ian Cooper
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>

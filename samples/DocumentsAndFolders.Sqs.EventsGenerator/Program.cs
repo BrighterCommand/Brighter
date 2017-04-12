@@ -1,4 +1,4 @@
-﻿using Amazon.Runtime;
+using Amazon.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;

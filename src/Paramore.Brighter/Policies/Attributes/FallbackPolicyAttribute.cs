@@ -1,17 +1,3 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
-// Author           : ian
-// Created          : 02-26-2015
-//
-// Last Modified By : ian
-// Last Modified On : 02-26-2015
-// ***********************************************************************
-// <copyright file="FallbackPolicyAttribute.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>

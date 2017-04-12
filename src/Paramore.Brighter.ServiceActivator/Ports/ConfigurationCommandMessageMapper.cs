@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using Newtonsoft.Json;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;

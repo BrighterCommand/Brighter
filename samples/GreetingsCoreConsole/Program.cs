@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.CommandHandlers;

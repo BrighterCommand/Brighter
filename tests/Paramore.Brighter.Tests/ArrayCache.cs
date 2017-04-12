@@ -1,4 +1,4 @@
-﻿namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.Tests
 {
     /// <summary>
     /// A cache for empty arrays.
