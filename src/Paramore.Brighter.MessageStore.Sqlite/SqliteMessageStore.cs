@@ -1,17 +1,3 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor.messagestore.sqlite
-// Author           : ian
-// Created          : 01-26-2015
-//
-// Last Modified By : ian
-// Last Modified On : 02-26-2015
-// ***********************************************************************
-// <copyright file="MsSqlMessageStore.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 
 /* The MIT License (MIT)

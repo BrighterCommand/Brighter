@@ -1,17 +1,3 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
-// Author           : SUNDANCE
-// Created          : 07-09-2015
-//
-// Last Modified By : SUNDANCE
-// Last Modified On : 07-09-2015
-// ***********************************************************************
-// <copyright file="IAmAControlBus.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>

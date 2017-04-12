@@ -1,16 +1,3 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
-// Author           : fred
-// Created          : 02-02-2016
-//
-// Last Modified By : fred
-// Last Modified On : 02-02-2016
-// ***********************************************************************
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2016 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>

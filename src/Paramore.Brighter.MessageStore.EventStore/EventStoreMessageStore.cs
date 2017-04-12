@@ -1,17 +1,3 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor.messagestore.eventstore
-// Author           : george
-// Created          : 06-11-2015
-//
-// Last Modified By : george
-// Last Modified On : 06-11-2015
-// ***********************************************************************
-// <copyright file="EventStoreMessageStore.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 
 /* The MIT License (MIT)

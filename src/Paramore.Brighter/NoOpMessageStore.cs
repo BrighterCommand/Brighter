@@ -1,17 +1,3 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
-// Author           : ip
-// Created          : 07-19-2016
-//
-// Last Modified By : ip
-// Last Modified On : 07-19-2016
-// ***********************************************************************
-// <copyright file="NoOpMessageStore.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 
 /* The MIT License (MIT)

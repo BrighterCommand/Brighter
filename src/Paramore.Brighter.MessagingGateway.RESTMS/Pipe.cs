@@ -1,6 +1,3 @@
-
-
-
 #region Licence
 
 /* The MIT License (MIT)

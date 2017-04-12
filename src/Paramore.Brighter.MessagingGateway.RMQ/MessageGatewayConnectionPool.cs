@@ -1,17 +1,3 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor.messaginggateway.rmq
-// Author           : AnthonyP
-// Created          : 08-04-2015
-//
-// Last Modified By : 
-// Last Modified On : 
-// ***********************************************************************
-// <copyright file="MessageGatewayConnectionPool.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>

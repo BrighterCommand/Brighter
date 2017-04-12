@@ -1,17 +1,3 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
-// Author           : ian
-// Created          : 06-03-2015
-//
-// Last Modified By : ian
-// Last Modified On : 06-03-2015
-// ***********************************************************************
-// <copyright file="InMemoryCommandStore.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 
 /* The MIT License (MIT)

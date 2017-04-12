@@ -1,17 +1,3 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
-// Author           : ian
-// Created          : 07-29-2014
-//
-// Last Modified By : ian
-// Last Modified On : 07-29-2014
-// ***********************************************************************
-// <copyright file="IAmASendMessageGateway.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 
 /* The MIT License (MIT)
