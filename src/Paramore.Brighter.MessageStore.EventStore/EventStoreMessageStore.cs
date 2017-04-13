@@ -1,17 +1,3 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor.messagestore.eventstore
-// Author           : george
-// Created          : 06-11-2015
-//
-// Last Modified By : george
-// Last Modified On : 06-11-2015
-// ***********************************************************************
-// <copyright file="EventStoreMessageStore.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 
 /* The MIT License (MIT)
@@ -181,8 +167,7 @@ namespace Paramore.Brighter.MessageStore.EventStore
             return eventStreamSlice.Events.Select(e => ConvertEventToMessage(e.Event, stream)).ToList();
         }
 
-        private static void AddMetadataToHeader(byte[] metadata, MessageHeader messageHeader, int eventNumber,
-            string stream)
+        private static void AddMetadataToHeader(byte[] metadata, MessageHeader messageHeader, long eventNumber, string stream)
         {
             messageHeader.Bag.Add("streamId", stream);
             messageHeader.Bag.Add("eventNumber", eventNumber);

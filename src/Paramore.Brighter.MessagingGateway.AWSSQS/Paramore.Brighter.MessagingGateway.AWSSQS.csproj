@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <VersionPrefix>1.0.0</VersionPrefix>
@@ -32,7 +32,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
     <PackageReference Include="AWSSDK.Core" Version="3.3.10.2" />
     <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.0.10" />
     <PackageReference Include="AWSSDK.SQS" Version="3.3.1.10" />

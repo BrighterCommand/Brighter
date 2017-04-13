@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -48,7 +48,7 @@ namespace ManagementAndMonitoringCoreConsole
         public static void Main()
         {
             Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console()
+                .WriteTo.LiterateConsole()
                 .CreateLogger();
 
             var container = new TinyIoCContainer();

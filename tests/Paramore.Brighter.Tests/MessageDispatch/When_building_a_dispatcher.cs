@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -91,8 +91,8 @@ namespace Paramore.Brighter.Tests.MessageDispatch
                 .CommandProcessor(CommandProcessorBuilder.With()
                         .Handlers(new HandlerConfiguration(new SubscriberRegistry(),
                             new TinyIocHandlerFactory(new TinyIoCContainer())))
-                        .Policies(new PolicyRegistry()
-                        {
+                        .Policies(new PolicyRegistry
+                    {
                             {CommandProcessor.RETRYPOLICY, retryPolicy},
                             {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
                         })

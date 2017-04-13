@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Amazon.Runtime;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -18,7 +18,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
         public SqsMessageProeducerSendTests()
         {
             _queueListener = new TestAWSQueueListener(new AnonymousAWSCredentials(), _queueUrl);
-            _message = new Message(header: new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
+            _message = new Message(new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
 
             var credentials = new AnonymousAWSCredentials();
             _messageProducer = new SqsMessageProducer(credentials);

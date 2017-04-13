@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Tests.Monitoring.TestDoubles
 {
     internal class MyMonitoredHandlerThatThrowsAsync : RequestHandlerAsync<MyCommand>
     {
-        [MonitorAsync(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandlerThatThrowsAsync))]
+        [MonitorAsync(1, HandlerTiming.Before, typeof(MyMonitoredHandlerThatThrowsAsync))]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
             await Task.Delay(5);

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -30,10 +30,12 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
+    [Trait("Category", "Sqlite")]
+    [Collection("Sqlite MessageStore")]
     public class SqliteMessageStoreWritingMessageAsyncTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteMessageStore _sSqlMessageStore;
+        private readonly SqliteMessageStore _sqlMessageStore;
         private readonly string key1 = "name1";
         private readonly string key2 = "name2";
         private readonly Message _messageEarliest;
@@ -45,7 +47,7 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sSqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
 
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(key1, value1);
@@ -57,9 +59,9 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
         [Fact]
         public async Task When_Writing_A_Message_To_The_Message_Store_Async()
         {
-            await _sSqlMessageStore.AddAsync(_messageEarliest);
+            await _sqlMessageStore.AddAsync(_messageEarliest);
 
-            _storedMessage = await _sSqlMessageStore.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _sqlMessageStore.GetAsync(_messageEarliest.Id);
 
             //_should_read_the_message_from_the__sql_message_store
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

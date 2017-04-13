@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles
             ReceivedCommand = false;
         }
 
-        [FallbackPolicy(backstop: false, circuitBreaker: true, step: 1)]
+        [FallbackPolicy(false, true, 1)]
         public override MyCommand Handle(MyCommand command)
         {
             ReceivedCommand = true;

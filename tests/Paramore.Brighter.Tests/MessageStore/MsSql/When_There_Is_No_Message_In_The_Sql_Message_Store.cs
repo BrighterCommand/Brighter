@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -31,6 +31,7 @@ using Paramore.Brighter.MessageStore.MsSql;
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
     [Trait("Category", "MSSQL")]
+    [Collection("MSSQL MessageStore")]
     public class MsSqlMessageStoreEmptyStoreTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;

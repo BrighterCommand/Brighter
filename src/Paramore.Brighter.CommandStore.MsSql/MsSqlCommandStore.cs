@@ -1,17 +1,3 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor.commandstore.mssql
-// Author           : francesco.pighi
-// Created          : 06-03-2015
-//
-// Last Modified By : ian cooper
-// Last Modified On : 06-04-2015
-// ***********************************************************************
-// <copyright file="MsSqlCommandStore.cs" company="">
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 
 /* The MIT License (MIT)

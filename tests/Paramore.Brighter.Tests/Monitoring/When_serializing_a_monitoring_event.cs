@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -33,6 +33,8 @@ using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
+    [Collection("Monitoring")]
+    [Trait("Category", "Monitoring")]
     public class MonitorEventMessageMapperTests
     {
         private const string InstanceName = "Paramore.Tests";
@@ -56,7 +58,6 @@ namespace Paramore.Brighter.Tests.Monitoring
             _elapsedMilliseconds = 34;
             var @event = new MonitorEvent(InstanceName, MonitorEventType.EnterHandler, HandlerName, HandlerFullAssemblyName, _originalRequestAsJson, Clock.Now(), _elapsedMilliseconds);
             _message = _monitorEventMessageMapper.MapToMessage(@event);
-
        }
 
         [Fact]

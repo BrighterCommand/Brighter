@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Amazon.Runtime;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            _sentMessage = new Message(header: messageHeader, body: new MessageBody("test content"));
+            _sentMessage = new Message(messageHeader, new MessageBody("test content"));
 
             var credentials = new AnonymousAWSCredentials();
             _sender = new SqsMessageProducer(credentials);

@@ -1,4 +1,4 @@
-﻿using DocumentsAndFolders.Sqs.Core.Ports.Events;
+using DocumentsAndFolders.Sqs.Core.Ports.Events;
 using Newtonsoft.Json;
 using Paramore.Brighter;
 

@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Logging.Handlers;
@@ -8,6 +8,7 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Logging
 {
+    [Collection("Request Logging")]
     public class CommandProcessorWithLoggingInPipelineTests
     {
         private readonly SpyLog _logger;

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -32,6 +32,7 @@ using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 {
     [Trait("Category", "MSSQL")]
+    [Collection("MSSQL CommandStore")]
     public class SqlCommandStoreDuplicateMessageAsyncTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;

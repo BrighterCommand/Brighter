@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService.Model;
 using FluentAssertions;
@@ -18,7 +18,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
         public SqsMessageProducerMissingTopicTests()
         {
             _queueListener = new TestAWSQueueListener(new AnonymousAWSCredentials());
-            _message = new Message(header: new MessageHeader(Guid.NewGuid(), "AnotherTestSqsTopic", MessageType.MT_COMMAND), body: new MessageBody("test content"));
+            _message = new Message(new MessageHeader(Guid.NewGuid(), "AnotherTestSqsTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
 
             var credentials = new AnonymousAWSCredentials();
             _messageProducer = new SqsMessageProducer(credentials);

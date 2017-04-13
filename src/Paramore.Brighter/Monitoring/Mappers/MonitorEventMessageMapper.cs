@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Paramore.Brighter.Monitoring.Events;
 
 namespace Paramore.Brighter.Monitoring.Mappers

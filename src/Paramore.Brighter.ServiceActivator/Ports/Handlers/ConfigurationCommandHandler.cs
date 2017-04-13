@@ -1,16 +1,3 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.serviceactivator.controlbus
-// Author           : ian
-// Created          : 01-30-2015
-//
-// Last Modified By : ian
-// Last Modified On : 01-30-2015
-// ***********************************************************************
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>

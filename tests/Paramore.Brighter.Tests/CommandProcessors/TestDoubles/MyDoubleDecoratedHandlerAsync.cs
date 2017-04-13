@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -29,8 +29,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
     internal class MyDoubleDecoratedHandlerAsync: RequestHandlerAsync<MyCommand>
     {
-        [MyValidationHandlerAsync(step: 2)]
-        [MyLoggingHandlerAsync(step: 1)]
+        [MyValidationHandlerAsync(2)]
+        [MyLoggingHandlerAsync(1)]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);

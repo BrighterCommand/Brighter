@@ -1,4 +1,4 @@
-﻿# Building #
+# Building #
 ## Dependency on IdentityModelv2 Hawk ##
 We depend on Thinktecture's Identity Model for support for Hawk authentication. There is no .NET Core version of Identity Model but there is
 an IdentityModelv2. However, the Hawk model has not been ported to that yet and it is in beta. For this reason I have forked IdentityModelv2 

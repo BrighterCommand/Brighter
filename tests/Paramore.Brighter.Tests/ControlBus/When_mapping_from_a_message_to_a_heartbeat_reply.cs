@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Tests.ControlBus
         public HeartbeatMessageToReplyTests()
         {
             _mapper = new HeartbeatReplyCommandMessageMapper();
-            var header = new MessageHeader(messageId: Guid.NewGuid(), topic: TOPIC, messageType: MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow, correlationId: _correlationId);
+            var header = new MessageHeader(Guid.NewGuid(), TOPIC, MessageType.MT_COMMAND, DateTime.UtcNow, _correlationId);
             var body = new MessageBody(MESSAGE_BODY);
             _message = new Message(header, body);
         }

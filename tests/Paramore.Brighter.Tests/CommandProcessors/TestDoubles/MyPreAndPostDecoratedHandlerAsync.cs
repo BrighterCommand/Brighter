@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -39,8 +39,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             DisposeWasCalled = false;
         }
 
-        [MyPreValidationHandlerAsync(step: 2, timing: HandlerTiming.Before)]
-        [MyPostLoggingHandlerAsync(step: 1, timing: HandlerTiming.After)]
+        [MyPreValidationHandlerAsync(2, HandlerTiming.Before)]
+        [MyPostLoggingHandlerAsync(1, HandlerTiming.After)]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)

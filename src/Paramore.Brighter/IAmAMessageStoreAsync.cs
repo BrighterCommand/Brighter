@@ -1,17 +1,3 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
-// Author           : Fred
-// Created          : 2016-01-10
-//                    Based on IAmAMessageStore.cs
-//
-// Last Modified By : Fred
-// Last Modified On : 2016-01-10
-// ***********************************************************************
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2016 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles
             ReceivedCommand = false;
         }
 
-        [UsePolicyAsync(policy: "MyDivideByZeroPolicy", step: 1)]
+        [UsePolicyAsync("MyDivideByZeroPolicy", 1)]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)

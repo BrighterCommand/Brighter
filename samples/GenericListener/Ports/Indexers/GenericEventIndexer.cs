@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using EventStore.ClientAPI;
 using GenericListener.Adapters.EventStore;
 using GenericListener.Ports.Events;

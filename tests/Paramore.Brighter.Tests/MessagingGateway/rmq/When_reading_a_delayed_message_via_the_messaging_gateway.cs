@@ -45,11 +45,11 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
         public RmqMessageProducerDelayedMessageTests()
         {
             var header = new MessageHeader(Guid.NewGuid(), "test3", MessageType.MT_COMMAND);
-            var originalMessage = new Message(header: header, body: new MessageBody("test3 content"));
+            var originalMessage = new Message(header, new MessageBody("test3 content"));
 
             var mutatedHeader = new MessageHeader(header.Id, "test3", MessageType.MT_COMMAND);
             mutatedHeader.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
-            _message = new Message(header: mutatedHeader, body: originalMessage.Body);
+            _message = new Message(mutatedHeader, originalMessage.Body);
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
@@ -69,10 +69,10 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
         {
             _messageProducer.SendWithDelay(_message, 1000);
 
-            var immediateResult = _client.Listen(waitForMilliseconds: 0, suppressDisposal: true);
+            var immediateResult = _client.Listen(0, true);
             _immediateReadIsNull = immediateResult == null;
 
-            var delayedResult = _client.Listen(waitForMilliseconds: 2000);
+            var delayedResult = _client.Listen(2000);
             _messageBody = delayedResult.GetBody();
             _messageHeaders = delayedResult.GetHeaders();
 

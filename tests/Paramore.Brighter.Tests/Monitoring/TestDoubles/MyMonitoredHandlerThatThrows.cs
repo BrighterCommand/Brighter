@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Tests.Monitoring.TestDoubles
 {
     internal class MyMonitoredHandlerThatThrows : RequestHandler<MyCommand>
     {
-        [Monitor(step: 1, timing: HandlerTiming.Before, handlerType: typeof(MyMonitoredHandler))]
+        [Monitor(1, HandlerTiming.Before, typeof(MyMonitoredHandler))]
         public override MyCommand Handle(MyCommand command)
         {
             throw new Exception("I am an exception in a monitored pipeline");

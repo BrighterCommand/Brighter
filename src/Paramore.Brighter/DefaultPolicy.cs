@@ -1,14 +1,3 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
-// Author           : toby
-// Created          : 16-07-2015
-//
-// ***********************************************************************
-//     Copyright (c) . All rights reserved.
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Toby Henderson

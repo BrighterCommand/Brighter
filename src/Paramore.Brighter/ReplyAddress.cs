@@ -1,17 +1,3 @@
-﻿// ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor
-// Author           : ian
-// Created          : 12-02-2015
-//
-// Last Modified By : ian
-// Last Modified On : 12-02-2015
-// ***********************************************************************
-// <copyright file="ReplyAddress.cs" company="Ian Cooper">
-//     Copyright \u00A9  2014 Ian Cooper
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 #region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>

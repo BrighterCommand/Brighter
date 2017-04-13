@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandHandlerAsync>();
-            container.Register<IAmACommandStoreAsync>(_commandStore);
+            container.Register(_commandStore);
 
             _command = new MyCommand {Value = "My Test String"};
 

@@ -1,4 +1,4 @@
-﻿namespace EventSourcing.ManualTinyIoc
+namespace EventSourcing.ManualTinyIoc
 {
     /// <summary>
     /// A cache for empty arrays.

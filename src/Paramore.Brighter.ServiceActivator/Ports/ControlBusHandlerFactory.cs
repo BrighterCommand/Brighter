@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
 namespace Paramore.Brighter.ServiceActivator.Ports

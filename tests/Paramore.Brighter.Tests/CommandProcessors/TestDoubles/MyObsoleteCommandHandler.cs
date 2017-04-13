@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -36,8 +36,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
         }
 
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
-        [MyPreValidationHandler(step: 2, timing: HandlerTiming.Before)]
-        [MyPostLoggingHandler(step: 1, timing: HandlerTiming.After)]
+        [MyPreValidationHandler(2, HandlerTiming.Before)]
+        [MyPostLoggingHandler(1, HandlerTiming.After)]
         [Obsolete] // even with attributes non inheriting from MessageHandlerDecoratorAttribute it should not fail
         public override MyCommand Handle(MyCommand command)
         {

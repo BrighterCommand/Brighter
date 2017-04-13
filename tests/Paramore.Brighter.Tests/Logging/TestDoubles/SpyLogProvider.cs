@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Tests.Logging.TestDoubles
