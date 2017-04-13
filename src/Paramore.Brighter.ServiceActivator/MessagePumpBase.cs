@@ -161,12 +161,16 @@ namespace Paramore.Brighter.ServiceActivator
             _logger.Value.DebugFormat("MessagePump: Finished running message loop, no longer receiving messages from {0} on thread # {1}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
         }
 
-
         protected void AcknowledgeMessage(Message message)
         {
             _logger.Value.DebugFormat("MessagePump: Acknowledge message {0} read from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
             Channel.Acknowledge(message);
+        }
+
+        private bool DiscardRequeuedMessagesEnabled()
+        {
+            return RequeueCount != -1;
         }
 
         protected abstract Task DispatchRequest(MessageHeader messageHeader, TRequest request);
@@ -281,9 +285,5 @@ namespace Paramore.Brighter.ServiceActivator
             return false;
         }
 
-        private bool DiscardRequeuedMessagesEnabled()
-        {
-            return RequeueCount != -1;
-        }
     }
 }
