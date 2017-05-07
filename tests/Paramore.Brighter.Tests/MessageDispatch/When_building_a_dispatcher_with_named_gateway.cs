@@ -101,7 +101,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_Building_A_Dispatcher_With_Named_Gateway()
+        public void When_building_a_dispatcher_with_named_gateway()
         {
             _dispatcher = _builder.Build();
 

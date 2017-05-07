@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler_Async()
+        public void When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
         {
             Task.Delay(1000).Wait();
             _dispatcher.End().Wait();

@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public async Task When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler_Async()
+        public async Task When_a_message_is_dispatched_it_should_reach_a_handler_async()
         {
             await _messagePump.Run();
 
