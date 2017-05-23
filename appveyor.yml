@@ -64,7 +64,7 @@ cache:
 
 notifications:
 - provider: Webhook
-  url: https://webhooks.gitter.im/e/182838afa865c8e16f72
+  url: https://webhooks.gitter.im/e/f67b9440940cca246ec4q
   on_build_success: true
   on_build_failure: true
   on_build_status_changed: true
