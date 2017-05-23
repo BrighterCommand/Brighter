@@ -90,7 +90,7 @@ namespace Paramore.Brighter.Tests.Monitoring
             //_should_include_the_underlying_request_details_before
             _beforeEvent.RequestBody.Should().Be(_originalRequestAsJson);
             //should_post_the_time_of_the_request_before
-            _beforeEvent.EventTime.Should().Be(_at);
+            _beforeEvent.EventTime.AsUtc().Should().Be(_at.AsUtc());
             //_should_have_an_instance_name_after
             _afterEvent.InstanceName.Should().Be("UnitTests");
             //_should_post_the_event_type_to_the_control_bus_after
@@ -104,7 +104,7 @@ namespace Paramore.Brighter.Tests.Monitoring
             //should_post_the_time_of_the_request_after
             _afterEvent.EventTime.AsUtc().Should().BeAfter(_at.AsUtc());
             //should_post_the_elapsedtime_of_the_request_after
-            _afterEvent.TimeElapsedMs.Should().Be((_afterEvent.EventTime - _beforeEvent.EventTime).Milliseconds);
+            _afterEvent.TimeElapsedMs.Should().Be((_afterEvent.EventTime.AsUtc() - _beforeEvent.EventTime.AsUtc()).Milliseconds);
         }
    }
 }
