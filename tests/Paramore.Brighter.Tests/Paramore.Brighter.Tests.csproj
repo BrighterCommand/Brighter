@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp1.1</TargetFramework>
@@ -23,7 +23,7 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="1.1.0" />
     <PackageReference Include="xunit" Version="2.2.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
-    <PackageReference Include="FakeItEasy" Version="3.1.0" />
+    <PackageReference Include="FakeItEasy" Version="3.3.2" />
     <PackageReference Include="FluentAssertions" Version="4.19.2" />
   </ItemGroup>
 
