@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Tests.Monitoring
 
             _originalRequestAsJson = JsonConvert.SerializeObject(_command);
 
-            _at = DateTime.UtcNow;
+            _at = DateTime.Now.ToUniversalTime();
             Clock.OverrideTime = _at;
         }
 

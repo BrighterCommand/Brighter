@@ -10,9 +10,9 @@ namespace Paramore.Brighter.Time
         {
             if (OverrideTime.HasValue)
             {
-                var overrideTime = OverrideTime;
+                var overrideTime = OverrideTime.Value;
                 OverrideTime = OverrideTime.Value.AddMilliseconds(50);
-                return overrideTime.Value.ToUniversalTime();
+                return overrideTime.ToUniversalTime();
             }
 
             return DateTime.UtcNow;
