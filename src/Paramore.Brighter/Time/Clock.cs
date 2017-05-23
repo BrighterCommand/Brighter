@@ -12,7 +12,7 @@ namespace Paramore.Brighter.Time
             {
                 var overrideTime = OverrideTime;
                 OverrideTime = OverrideTime.Value.AddMilliseconds(50);
-                return overrideTime.Value;
+                return overrideTime.Value.ToUniversalTime();
             }
 
             return DateTime.UtcNow;
