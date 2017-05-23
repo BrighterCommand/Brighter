@@ -87,9 +87,9 @@ namespace Paramore.Brighter.Tests.Monitoring
             //_should_post_the_handler_name_to_the_control_bus_after
             _afterEvent.HandlerFullAssemblyName.Should().Be(typeof(MyMonitoredHandler).AssemblyQualifiedName);
             //should_post_the_time_of_the_request_after
-            _afterEvent.EventTime.Should().BeAfter(_at);
+            _afterEvent.EventTime.AsUtc().Should().BeAfter(_at.AsUtc());
             //should_post_the_elapsedtime_of_the_request_after
-            _afterEvent.TimeElapsedMs.Should().Be((_afterEvent.EventTime - _at).Milliseconds);
+            _afterEvent.TimeElapsedMs.Should().Be((_afterEvent.EventTime.AsUtc() - _at.AsUtc()).Milliseconds);
         }
    }
 }
