@@ -6,7 +6,7 @@
     <AssemblyTitle>Paramore.Brighter.MessageStore.Sqlite</AssemblyTitle>
     <Authors>Francesco Pighi</Authors>
     <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
-    <DebugType>portable</DebugType>
+    <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.MessageStore.Sqlite</AssemblyName>
     <PackageId>Paramore.Brighter.MessageStore.Sqlite</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>

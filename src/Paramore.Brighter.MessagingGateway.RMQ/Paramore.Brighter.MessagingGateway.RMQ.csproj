@@ -6,7 +6,7 @@
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.RMQ</AssemblyTitle>
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
-    <DebugType>portable</DebugType>
+    <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.MessagingGateway.RMQ</AssemblyName>
     <PackageId>Paramore.Brighter.MessagingGateway.RMQ</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>

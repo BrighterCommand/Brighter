@@ -7,7 +7,7 @@
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
     <DefineConstants>$(DefineConstants);LIBLOG_PUBLIC</DefineConstants>
-    <DebugType>portable</DebugType>
+    <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.ServiceActivator</AssemblyName>
     <PackageId>Paramore.Brighter.ServiceActivator</PackageId>
     <PackageTags>Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>

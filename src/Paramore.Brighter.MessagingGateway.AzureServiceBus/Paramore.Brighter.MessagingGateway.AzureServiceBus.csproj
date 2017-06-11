@@ -6,7 +6,7 @@
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.AzureServicebus</AssemblyTitle>
     <Authors>Yiannis Triantafyllopoulos</Authors>
     <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
-    <DebugType>portable</DebugType>
+    <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.MessagingGateway.AzureServiceBus</AssemblyName>
     <PackageId>Paramore.Brighter.MessagingGateway.AzureServiceBus</PackageId>
     <PackageTags>awssqs;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
