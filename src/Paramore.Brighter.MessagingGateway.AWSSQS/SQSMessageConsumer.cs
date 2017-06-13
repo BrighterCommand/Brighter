@@ -1,5 +1,5 @@
 // ***********************************************************************
-// Assembly         : paramore.brighter.commandprocessor.messaginggateway.awssqs
+// Assembly         : paramore.brighter.messaginggateway.awssqs
 // Author           : ian
 // Created          : 08-17-2015
 //

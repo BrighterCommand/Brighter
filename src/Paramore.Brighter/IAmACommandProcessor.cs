@@ -29,7 +29,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmACommandProcessor
-    /// Paramore.Brighter.CommandProcessor provides the default implementation of this interface <see cref="CommandProcessor"/> and it is unlikely you need
+    /// Paramore.Brighter provides the default implementation of this interface <see cref="CommandProcessor"/> and it is unlikely you need
     /// to override this for anything other than testing purposes. The usual need is that in a <see cref="RequestHandler{T}"/> you intend to publish an  
     /// <see cref="Event"/> to indicate the handler has completed to other components. In this case your tests should only verify that the correct 
     /// event was raised by listening to <see cref="Publish{T}"/> calls on this interface, using a mocking framework of your choice or bespoke
