@@ -9,6 +9,7 @@
 // You do not need to add suppressions to this file manually.
 
 using System.Diagnostics.CodeAnalysis;
+using Xunit;
 
 [assembly: SuppressMessage("Microsoft.Design", "CA1063:ImplementIDisposableCorrectly", Scope = "type", Target = "TinyIoC.SafeDictionary`2")]
 [assembly: SuppressMessage("Microsoft.Design", "CA1063:ImplementIDisposableCorrectly", Scope = "member", Target = "TinyIoC.SafeDictionary`2.#Dispose()")]
@@ -19,3 +20,6 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Microsoft.Usage", "CA2237:MarkISerializableTypesWithSerializable", Scope = "type", Target = "TinyIoC.TinyIoCConstructorResolutionException")]
 [assembly: SuppressMessage("Microsoft.Usage", "CA2237:MarkISerializableTypesWithSerializable", Scope = "type", Target = "TinyIoC.TinyIoCAutoRegistrationException")]
 [assembly: SuppressMessage("Microsoft.Usage", "CA2237:MarkISerializableTypesWithSerializable", Scope = "type", Target = "TinyIoC.NamedParameterOverloads")]
+
+
+[assembly: CollectionBehavior(DisableTestParallelization = true)]

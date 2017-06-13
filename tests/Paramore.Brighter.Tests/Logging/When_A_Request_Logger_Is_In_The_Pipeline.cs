@@ -18,6 +18,7 @@ namespace Paramore.Brighter.Tests.Logging
         public CommandProcessorWithLoggingInPipelineTests()
         {
             _logger = new SpyLog();
+
             _myCommand = new MyCommand();
 
             var registry = new SubscriberRegistry();
@@ -30,13 +31,12 @@ namespace Paramore.Brighter.Tests.Logging
             var handlerFactory = new TinyIocHandlerFactory(container);
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-
-            LogProvider.SetCurrentLogProvider(new SpyLogProvider(_logger));
         }
 
         [Fact]
         public void When_A_Request_Logger_Is_In_The_Pipeline()
         {
+            LogProvider.SetCurrentLogProvider(new SpyLogProvider(_logger));
             _commandProcessor.Send(_myCommand);
 
             //_should_log_the_request_handler_call
