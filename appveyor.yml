@@ -1,8 +1,7 @@
 version: 7.0.{build}-alpha
 configuration: Release
 
-environment:
-  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+image: Visual Studio 2017
 
 pull_requests:
   do_not_increment_build_number: true
@@ -28,8 +27,6 @@ nuget:
   disable_publish_on_pr: true
 
 install:
-  - ps: Invoke-WebRequest -Uri "https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0/scripts/obtain/dotnet-install.ps1" -OutFile "dotnet-install.ps1"
-  - ps: .\dotnet-install.ps1 -Version 1.0.0
   - ps: Import-Module .\Set-Version.psm1
   - ps: Set-Version -CsprojPattern "src/*/*.csproj" -Version $env:APPVEYOR_BUILD_VERSION
 
