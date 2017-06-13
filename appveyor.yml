@@ -1,4 +1,4 @@
-version: 7.0.{build}-alpha
+version: 7.0.{build}
 configuration: Release
 
 image: Visual Studio 2017
@@ -55,9 +55,6 @@ test_script:
 
 artifacts:
   - path: nupkgs\*.nupkg
-
-cache:
-- '%USERPROFILE%\.nuget\packages'
 
 notifications:
 - provider: Webhook
