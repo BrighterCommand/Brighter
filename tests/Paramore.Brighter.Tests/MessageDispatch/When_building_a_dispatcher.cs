@@ -76,14 +76,14 @@ namespace Paramore.Brighter.Tests.MessageDispatch
                     new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory),
                     typeof(MyEvent),
                     new ChannelName("mary"),
-                    "bob",
+                    new RoutingKey("bob"),
                     timeoutInMilliseconds: 200),
                 new Connection(
                     new ConnectionName("bar"),
                     new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory),
                     typeof(MyEvent),
                     new ChannelName("alice"),
-                    "simon",
+                    new RoutingKey("simon"),
                     timeoutInMilliseconds: 200)
             };
 

@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
                 timeoutInMilliseconds: 1000, 
                 channelFactory: new InMemoryChannelFactory(_channel),
                 channelName: new ChannelName("fakeChannel"), 
-                routingKey: "fakekey",
+                routingKey: new RoutingKey("fakekey"),
                 isAsync: true);
             _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { connection });
 

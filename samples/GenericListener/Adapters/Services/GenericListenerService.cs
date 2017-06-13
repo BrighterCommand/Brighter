@@ -129,9 +129,9 @@ namespace GenericListener.Adapters.Services
             var connections = new List<Connection>
             {
                 // Generic Events
-                new Connection(new ConnectionName("Task.Added"),inputChannelFactory, typeof(GenericTaskAddedEvent), new ChannelName("Task.Added"), "Task.Added", noOfPerformers:1, timeoutInMilliseconds: 200),
-                new Connection(new ConnectionName("Task.Edited"),inputChannelFactory, typeof(GenericTaskEditedEvent), new ChannelName("Task.Edited"), "Task.Edited", noOfPerformers:1, timeoutInMilliseconds: 200),
-                new Connection(new ConnectionName("Task.Completed"),inputChannelFactory, typeof(GenericTaskCompletedEvent), new ChannelName("Task.Completed"), "Task.Completed", noOfPerformers:1, timeoutInMilliseconds: 200),
+                new Connection(new ConnectionName("Task.Added"),inputChannelFactory, typeof(GenericTaskAddedEvent), new ChannelName("Task.Added"), new RoutingKey("Task.Added"), noOfPerformers:1, timeoutInMilliseconds: 200),
+                new Connection(new ConnectionName("Task.Edited"),inputChannelFactory, typeof(GenericTaskEditedEvent), new ChannelName("Task.Edited"), new RoutingKey("Task.Edited"), noOfPerformers:1, timeoutInMilliseconds: 200),
+                new Connection(new ConnectionName("Task.Completed"),inputChannelFactory, typeof(GenericTaskCompletedEvent), new ChannelName("Task.Completed"),new RoutingKey( "Task.Completed"), noOfPerformers:1, timeoutInMilliseconds: 200),
             };
             
             return DispatchBuilder.With()

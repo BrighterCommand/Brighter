@@ -63,7 +63,7 @@ namespace Paramore.Brighter.ServiceActivator
                 _inputChannelFactory,
                 _type,
                 new ChannelName(_channelName),
-                _routingKey,
+                new RoutingKey(_routingKey),
                 timeoutInMilliseconds: _milliseconds);
         }
 

@@ -75,7 +75,7 @@ namespace GreetingsCoreConsole
                     new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory),
                     typeof(GreetingEvent),
                     new ChannelName("greeting.event"),
-                    "greeting.event",
+                    new RoutingKey("greeting.event"),
                     timeoutInMilliseconds: 200)
             };
 

@@ -49,7 +49,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets or sets the name.
         /// </summary>
         /// <value>The name.</value>
-        public string RoutingKey { get; set; }
+        public RoutingKey RoutingKey { get; set; }
 
         /// <summary>
         /// Gets the channel.
@@ -119,7 +119,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel</param>
         /// <param name="channelName">The channel name</param>
         /// <param name="isDurable">The durability of the queue</param>
-        public Connection(ConnectionName name, IAmAChannelFactory channelFactory, Type dataType, ChannelName channelName, string routingKey, int noOfPerformers = 1, 
+        public Connection(ConnectionName name, IAmAChannelFactory channelFactory, Type dataType, ChannelName channelName, RoutingKey routingKey, int noOfPerformers = 1, 
             int timeoutInMilliseconds = 300, int requeueCount = -1, int requeueDelayInMilliseconds = 0, int unacceptableMessageLimit = 0, bool isDurable = false,
             bool isAsync = false)
         {

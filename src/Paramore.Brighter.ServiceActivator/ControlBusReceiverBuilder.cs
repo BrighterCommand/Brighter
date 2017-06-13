@@ -120,7 +120,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 _channelFactory,
                 typeof(ConfigurationCommand),
                 new ChannelName(hostName + "." + CONFIGURATION),
-                hostName + "." + CONFIGURATION
+                new RoutingKey(hostName + "." + CONFIGURATION)
                 );
             //var connectionConfiguration = new ConnectionConfiguration()
             //{ 
@@ -137,7 +137,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 _channelFactory,
                 typeof(HeartbeatRequest),
                 new ChannelName(hostName + "." + HEARTBEAT),
-                hostName + "." + HEARTBEAT,
+                new RoutingKey(hostName + "." + HEARTBEAT),
                 isDurable:false
                 );
 

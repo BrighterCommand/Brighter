@@ -104,7 +104,7 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
                     new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
                     typeof(DocumentCreatedEvent),
                     new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/DocumentCreatedEvent"),
-                    "DocumentCreatedEvent",
+                    new RoutingKey("DocumentCreatedEvent"),
                     timeoutInMilliseconds: 5000,
                     noOfPerformers: 10),
                 new Connection(
@@ -112,7 +112,7 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
                     new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
                     typeof(DocumentUpdatedEvent),
                     new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/DocumentUpdatedEvent"),
-                    "DocumentUpdatedEvent",
+                    new RoutingKey("DocumentUpdatedEvent"),
                     timeoutInMilliseconds: 5000,
                     noOfPerformers: 10),
                 new Connection(
@@ -120,7 +120,7 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
                     new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
                     typeof(FolderCreatedEvent),
                     new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/FolderCreatedEvent"),
-                    "FolderCreatedEvent",
+                    new RoutingKey("FolderCreatedEvent"),
                     timeoutInMilliseconds: 5000,
                     noOfPerformers: 10)
             };
