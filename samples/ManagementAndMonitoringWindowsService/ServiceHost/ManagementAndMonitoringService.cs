@@ -117,7 +117,7 @@ namespace ManagementAndMonitoringWindowsService.ServiceHost
                     .Build()
                  )
                  .MessageMappers(messageMapperRegistry)
-                 .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                 .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
                  .Connections(connections);
             _dispatcher = builder.Build();
 
@@ -153,9 +153,7 @@ namespace ManagementAndMonitoringWindowsService.ServiceHost
 
         public void Shutdown(HostControl hostcontrol)
         {
-            if (_dispatcher != null)
-                _dispatcher.End();
-            return;
+            _dispatcher?.End();
         }
     }
 }

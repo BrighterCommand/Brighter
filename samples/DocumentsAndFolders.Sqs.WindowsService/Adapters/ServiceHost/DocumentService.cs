@@ -33,9 +33,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
-
 using TinyIoC;
-
 using Topshelf;
 
 namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
@@ -47,7 +45,6 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
         public DocumentService()
         {
             log4net.Config.XmlConfigurator.Configure();
-            
 
             var container = new TinyIoCContainer();
 
@@ -67,20 +64,20 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
             var retryPolicy = Policy
                 .Handle<Exception>()
                 .WaitAndRetry(new[]
-                    {
-                        TimeSpan.FromMilliseconds(5000),
-                        TimeSpan.FromMilliseconds(10000),
-                        TimeSpan.FromMilliseconds(10000)
-                    });
+                {
+                    TimeSpan.FromMilliseconds(5000),
+                    TimeSpan.FromMilliseconds(10000),
+                    TimeSpan.FromMilliseconds(10000)
+                });
 
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-            var policyRegistry = new PolicyRegistry()
+            var policyRegistry = new PolicyRegistry
             {
-                {CommandProcessor.RETRYPOLICY, retryPolicy},
-                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+                { CommandProcessor.RETRYPOLICY, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
 
             //create message mappers
@@ -93,53 +90,36 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
 
             var awsCredentials = new StoredProfileAWSCredentials();
 
-
-            var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(awsCredentials );
-            var sqsMessageProducerFactory = new SqsMessageProducerFactory(awsCredentials );
-
-            var connections = new List<Connection>
-            {
-                new Connection(
-                    new ConnectionName("paramore.example.documentsandfolders.documentcreatedevent"),
-                    new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
-                    typeof(DocumentCreatedEvent),
-                    new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/DocumentCreatedEvent"),
-                    new RoutingKey("DocumentCreatedEvent"),
-                    timeoutInMilliseconds: 5000,
-                    noOfPerformers: 10),
-                new Connection(
-                    new ConnectionName("paramore.example.documentsandfolders.documentupdatedevent"),
-                    new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
-                    typeof(DocumentUpdatedEvent),
-                    new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/DocumentUpdatedEvent"),
-                    new RoutingKey("DocumentUpdatedEvent"),
-                    timeoutInMilliseconds: 5000,
-                    noOfPerformers: 10),
-                new Connection(
-                    new ConnectionName("paramore.example.documentsandfolders.foldercreateddevent"),
-                    new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory),
-                    typeof(FolderCreatedEvent),
-                    new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/FolderCreatedEvent"),
-                    new RoutingKey("FolderCreatedEvent"),
-                    timeoutInMilliseconds: 5000,
-                    noOfPerformers: 10)
-            };
-
-
-
-            var builder = DispatchBuilder
-                .With()
+            _dispatcher = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
-                        .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-                        .Policies(policyRegistry)
-                        .NoTaskQueues()
-                        .RequestContextFactory(new InMemoryRequestContextFactory())
-                        .Build()
-                )
+                    .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+                    .Policies(policyRegistry)
+                    .NoTaskQueues()
+                    .RequestContextFactory(new InMemoryRequestContextFactory())
+                    .Build())
                 .MessageMappers(messageMapperRegistry)
-                .ChannelFactory(new InputChannelFactory(sqsMessageConsumerFactory, sqsMessageProducerFactory))
-                .Connections(connections);
-            _dispatcher = builder.Build();
+                .DefaultChannelFactory(new InputChannelFactory(new SqsMessageConsumerFactory(awsCredentials), new SqsMessageProducerFactory(awsCredentials)))
+                .Connections(new Connection[]
+                {
+                    new Connection<DocumentCreatedEvent>(
+                        new ConnectionName("paramore.example.documentsandfolders.documentcreatedevent"),
+                        new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/DocumentCreatedEvent"),
+                        new RoutingKey("DocumentCreatedEvent"),
+                        timeoutInMilliseconds: 5000,
+                        noOfPerformers: 10),
+                    new Connection<DocumentUpdatedEvent>(
+                        new ConnectionName("paramore.example.documentsandfolders.documentupdatedevent"),
+                        new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/DocumentUpdatedEvent"),
+                        new RoutingKey("DocumentUpdatedEvent"),
+                        timeoutInMilliseconds: 5000,
+                        noOfPerformers: 10),
+                    new Connection<FolderCreatedEvent>(
+                        new ConnectionName("paramore.example.documentsandfolders.foldercreateddevent"),
+                        new ChannelName("https://sqs.eu-west-1.amazonaws.com/027649620536/FolderCreatedEvent"),
+                        new RoutingKey("FolderCreatedEvent"),
+                        timeoutInMilliseconds: 5000,
+                        noOfPerformers: 10)
+                }).Build();
         }
 
         public bool Start(HostControl hostControl)
@@ -157,9 +137,7 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
 
         public void Shutdown(HostControl hostcontrol)
         {
-            if (_dispatcher != null)
-                _dispatcher.End();
-            return;
+            _dispatcher?.End();
         }
     }
 }
