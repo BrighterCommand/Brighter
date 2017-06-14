@@ -45,16 +45,16 @@ namespace GreetingsCoreConsole
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-            var policyRegistry = new PolicyRegistry()
+            var policyRegistry = new PolicyRegistry
             {
-                {CommandProcessor.RETRYPOLICY, retryPolicy},
-                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+                { CommandProcessor.RETRYPOLICY, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
 
             //create message mappers
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
             {
-                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
+                { typeof(GreetingEvent), typeof(GreetingEventMessageMapper) }
             };
 
             //create the gateway
@@ -64,36 +64,26 @@ namespace GreetingsCoreConsole
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
 
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection );
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqConnnection );
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqConnnection);
 
-            // Service Activator connections
-            var connections = new List<Connection>
-            {
-                new Connection(
-                    new ConnectionName("paramore.example.greeting"),
-                    new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory),
-                    typeof(GreetingEvent),
-                    new ChannelName("greeting.event"),
-                    new RoutingKey("greeting.event"),
-                    timeoutInMilliseconds: 200)
-            };
-
-            var builder = DispatchBuilder
-                .With()
+            var dispatcher = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
-                        .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-                        .Policies(policyRegistry)
-                        .NoTaskQueues()
-                        .RequestContextFactory(new InMemoryRequestContextFactory())
-                        .Build()
-                )
+                    .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+                    .Policies(policyRegistry)
+                    .NoTaskQueues()
+                    .RequestContextFactory(new InMemoryRequestContextFactory())
+                    .Build())
                 .MessageMappers(messageMapperRegistry)
-                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
-                .Connections(connections);
-
-            var dispatcher = builder.Build();
-
+                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                .Connections(new Connection[]
+                {
+                    new Connection<GreetingEvent>(
+                        new ConnectionName("paramore.example.greeting"),
+                        new ChannelName("greeting.event"),
+                        new RoutingKey("greeting.event"),
+                        timeoutInMilliseconds: 200)
+                }).Build();
 
             dispatcher.Receive();
 

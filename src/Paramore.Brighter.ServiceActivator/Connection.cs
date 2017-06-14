@@ -34,40 +34,40 @@ namespace Paramore.Brighter.ServiceActivator
     public class Connection
     {
         /// <summary>
-        /// Gets or sets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        public ConnectionName Name { get; set; }
-
-        /// <summary>
-        /// Gets or sets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        public ChannelName ChannelName { get; set; }
-
-        /// <summary>
-        /// Gets or sets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        public RoutingKey RoutingKey { get; set; }
-
-        /// <summary>
         /// Gets the channel.
         /// </summary>
         /// <value>The channel.</value>
-        public IAmAChannelFactory ChannelFactory { get; private set; }
+        public IAmAChannelFactory ChannelFactory { get; internal set; }
+
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
+        public ConnectionName Name { get; }
+
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
+        public ChannelName ChannelName { get; }
+
+        /// <summary>
+        /// Gets or sets the name.
+        /// </summary>
+        /// <value>The name.</value>
+        public RoutingKey RoutingKey { get; }
 
         /// <summary>
         /// Gets the type of the <see cref="IRequest"/> that <see cref="Message"/>s on the <see cref="Channel"/> can be translated into.
         /// </summary>
         /// <value>The type of the data.</value>
-        public Type DataType { get; private set; }
+        public Type DataType { get; }
 
         /// <summary>
         /// Gets a value indicating whether this instance is durable.
         /// </summary>
         /// <value><c>true</c> if this instance is durable; otherwise, <c>false</c>.</value>
-        public bool IsDurable { get; private set; }
+        public bool IsDurable { get; }
 
         /// <summary>
         /// Gets a value indicating whether this connection should use an asynchronous pipeline
@@ -75,66 +75,115 @@ namespace Paramore.Brighter.ServiceActivator
         /// This increases throughput (although it will no longer throttle use of the resources on the host machine).
         /// </summary>
         /// <value><c>true</c> if this instance should use an asynchronous pipeline; otherwise, <c>false</c></value>
-        public bool IsAsync { get; private set; }
+        public bool IsAsync { get; }
 
         /// <summary>
         /// Gets the no of peformers.
         /// </summary>
         /// <value>The no of peformers.</value>
-        public int NoOfPeformers { get; private set; }
+        public int NoOfPeformers { get; }
 
         /// <summary>
         /// Gets the timeout in miliseconds.
         /// </summary>
         /// <value>The timeout in miliseconds.</value>
-        public int TimeoutInMiliseconds { get; private set; }
+        public int TimeoutInMiliseconds { get; }
 
         /// <summary>
         /// Gets or sets the requeue count.
         /// </summary>
         /// <value>The requeue count.</value>
-        public int RequeueCount { get; private set; }
+        public int RequeueCount { get; }
 
         /// <summary>
         /// Gets or sets number of milliseconds to delay delivery of re-queued messages.
         /// </summary>
-        public int RequeueDelayInMilliseconds { get; private set; }
+        public int RequeueDelayInMilliseconds { get; }
 
         /// <summary>
         /// Gets the unacceptable messages limit
         /// </summary>
-        public int UnacceptableMessageLimit { get; private set; }
+        public int UnacceptableMessageLimit { get; }
+
+        [Obsolete("Use the other constructor or Connection<T>. This constructor will be removed in a future release.")]
+        public Connection(ConnectionName name, IAmAChannelFactory channelFactory, Type dataType, ChannelName channelName, RoutingKey routingKey, int noOfPerformers = 1, int timeoutInMilliseconds = 300, int requeueCount = -1, int requeueDelayInMilliseconds = 0, int unacceptableMessageLimit = 0, bool isDurable = false, bool isAsync = false)
+            : this(dataType, name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, isAsync, channelFactory)
+        {
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Connection"/> class.
         /// </summary>
-        /// <param name="name">The name.</param>
-        /// <param name="channelFactory">The channel factory to create channels for Consumer</param>
         /// <param name="dataType">Type of the data.</param>
-        /// <param name="routingKey">The routing key</param>
+        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
+        /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="noOfPerformers">The no of performers.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <param name="requeueCount">The number of times you want to requeue a message before dropping it</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for</param>
-        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel</param>
-        /// <param name="channelName">The channel name</param>
-        /// <param name="isDurable">The durability of the queue</param>
-        public Connection(ConnectionName name, IAmAChannelFactory channelFactory, Type dataType, ChannelName channelName, RoutingKey routingKey, int noOfPerformers = 1, 
-            int timeoutInMilliseconds = 300, int requeueCount = -1, int requeueDelayInMilliseconds = 0, int unacceptableMessageLimit = 0, bool isDurable = false,
-            bool isAsync = false)
+        /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
+        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="isDurable">The durability of the queue.</param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        public Connection(
+            Type dataType,
+            ConnectionName name = null,
+            ChannelName channelName = null,
+            RoutingKey routingKey = null,
+            int noOfPerformers = 1, 
+            int timeoutInMilliseconds = 300,
+            int requeueCount = -1,
+            int requeueDelayInMilliseconds = 0,
+            int unacceptableMessageLimit = 0,
+            bool isDurable = false,
+            bool isAsync = false,
+            IAmAChannelFactory channelFactory = null)
         {
-            RequeueCount = requeueCount;
-            Name = name;
-            ChannelFactory = channelFactory;
             DataType = dataType;
+            Name = name ?? new ConnectionName(dataType.FullName);
+            ChannelName = channelName ?? new ChannelName(dataType.FullName);
+            RoutingKey = routingKey ?? new RoutingKey(dataType.FullName);
             NoOfPeformers = noOfPerformers;
             TimeoutInMiliseconds = timeoutInMilliseconds;
-            UnacceptableMessageLimit = unacceptableMessageLimit;
+            RequeueCount = requeueCount;
             RequeueDelayInMilliseconds = requeueDelayInMilliseconds;
-            ChannelName = channelName;
-            RoutingKey = routingKey;
+            UnacceptableMessageLimit = unacceptableMessageLimit;
             IsDurable = isDurable;
             IsAsync = isAsync;
+            ChannelFactory = channelFactory;
+        }
+    }
+
+    public class Connection<T> : Connection
+        where T : IRequest
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Connection"/> class with data type T.
+        /// </summary>
+        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
+        /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="noOfPerformers">The no of performers.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
+        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="isDurable">The durability of the queue.</param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        public Connection(
+            ConnectionName name = null,
+            ChannelName channelName = null,
+            RoutingKey routingKey = null,
+            int noOfPerformers = 1,
+            int timeoutInMilliseconds = 300,
+            int requeueCount = -1,
+            int requeueDelayInMilliseconds = 0,
+            int unacceptableMessageLimit = 0,
+            bool isDurable = false,
+            bool isAsync = false,
+            IAmAChannelFactory channelFactory = null)
+            : base(typeof(T), name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, isAsync, channelFactory)
+        {
         }
     }
 }
