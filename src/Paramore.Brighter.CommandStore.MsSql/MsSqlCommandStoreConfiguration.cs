@@ -33,10 +33,10 @@ namespace Paramore.Brighter.CommandStore.MsSql
         /// Initializes a new instance of the <see cref="MsSqlCommandStoreConfiguration"/> class.
         /// </summary>
         /// <param name="connectionString">The connection string.</param>
-        /// <param name="messageStoreTableName">Name of the message store table.</param>
-        public MsSqlCommandStoreConfiguration(string connectionString, string messageStoreTableName)
+        /// <param name="commandStoreTableName">Name of the message store table.</param>
+        public MsSqlCommandStoreConfiguration(string connectionString, string commandStoreTableName)
         {
-            MessageStoreTableName = messageStoreTableName;
+            CommandStoreTableName = commandStoreTableName;
             ConnectionString = connectionString;
         }
 
@@ -49,6 +49,6 @@ namespace Paramore.Brighter.CommandStore.MsSql
         /// Gets the name of the message store table.
         /// </summary>
         /// <value>The name of the message store table.</value>
-        public string MessageStoreTableName { get; private set; }
+        public string CommandStoreTableName { get; private set; }
     }
 }

@@ -27,7 +27,7 @@ namespace Paramore.Brighter.MessageStore.MsSql
     public class SqlMessageStoreBuilder
     {
         const string MessageStoreDdl = @"
-        CREATE TABLE [{0}]
+        CREATE TABLE {0}
             (
               [Id] [BIGINT] NOT NULL IDENTITY ,
               [MessageId] UNIQUEIDENTIFIER NOT NULL ,

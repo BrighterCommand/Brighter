@@ -26,7 +26,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
 {
     public class SqlCommandStoreBuilder
     {
-        const string _messageStoreDDL = "CREATE TABLE [{0}] (" +
+        const string _messageStoreDDL = "CREATE TABLE {0} (" +
                 "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
                 "CommandType nvarchar(256)," +
                 "CommandBody ntext," +

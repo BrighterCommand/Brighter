@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Tests
 
         public MsSqlCommandStoreConfiguration CommandStoreConfiguration => new MsSqlCommandStoreConfiguration(ConnectionString, _tableName);
 
-        public MsSqlMessageStoreConfiguration MessageStoreConfiguration => new MsSqlMessageStoreConfiguration(ConnectionString, _tableName, MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer);
+        public MsSqlMessageStoreConfiguration MessageStoreConfiguration => new MsSqlMessageStoreConfiguration(ConnectionString, _tableName);
 
         public void CleanUpDb()
         {
@@ -61,9 +61,9 @@ namespace Paramore.Brighter.Tests
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = $@"
-                                        IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[{_tableName}]') AND type in (N'U'))
+                                        IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'{_tableName}') AND type in (N'U'))
                                         BEGIN
-                                            DROP TABLE [{_tableName}]
+                                            DROP TABLE {_tableName}
                                         END;";
                     command.ExecuteNonQuery();
                 }
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Tests
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
-                _tableName = $"message_{_tableName}";
+                _tableName = $"[message_{_tableName}]";
                 var createTableSql = SqlMessageStoreBuilder.GetDDL(_tableName);
 
                 connection.Open();
@@ -90,7 +90,7 @@ namespace Paramore.Brighter.Tests
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
-                _tableName = $"command_{_tableName}";
+                _tableName = $"[command_{_tableName}]";
                 var createTableSql = SqlCommandStoreBuilder.GetDDL(_tableName);
 
                 connection.Open();
