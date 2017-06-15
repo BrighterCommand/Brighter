@@ -12,7 +12,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration
 
         private RmqGatewayBuilder() {  }
 
-        public static IRmqGatewayBuilderUri With { get { return new RmqGatewayBuilder();}}
+        public static IRmqGatewayBuilderUri With => new RmqGatewayBuilder();
 
         public IRmqGatewayBuilderExchange Uri(Uri uri)
         {
@@ -22,15 +22,16 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration
 
         public IRmqGatewayBuilderQueues Exchange(string exchangeName)
         {
-            this._exchangeName = exchangeName;
+            _exchangeName = exchangeName;
             return this;
         }
 
         public RmqMessagingGatewayConnection  DefaultQueues()
         {
-            return new RmqMessagingGatewayConnection { 
-                        AmpqUri = new AmqpUriSpecification(_ampqUri),
-                        Exchange = new Exchange(_exchangeName)
+            return new RmqMessagingGatewayConnection
+            {
+                AmpqUri = new AmqpUriSpecification(_ampqUri),
+                Exchange = new Exchange(_exchangeName)
             };
         }
 
@@ -46,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration
 
         public interface IRmqGatewayBuilderQueues
         {
-            RmqMessagingGatewayConnection   DefaultQueues();
+            RmqMessagingGatewayConnection DefaultQueues();
         }
     }
 }

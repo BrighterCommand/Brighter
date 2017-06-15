@@ -51,11 +51,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="connection"></param>
         public ConnectionPolicyFactory(RmqMessagingGatewayConnection connection)
         {
-            int retries = connection.AmpqUri.ConnectionRetryCount;
-            int retryWaitInMilliseconds = connection.AmpqUri.RetryWaitInMilliseconds;
-            int circuitBreakerTimeout = connection.AmpqUri.CircuitBreakTimeInMilliseconds;
+            var retries = connection.AmpqUri.ConnectionRetryCount;
+            var retryWaitInMilliseconds = connection.AmpqUri.RetryWaitInMilliseconds;
+            var circuitBreakerTimeout = connection.AmpqUri.CircuitBreakTimeInMilliseconds;
 
-            RetryPolicy = Policy.Handle<BrokerUnreachableException>()
+            RetryPolicy = Policy
+                .Handle<BrokerUnreachableException>()
                 .Or<Exception>()
                 .WaitAndRetry(
                     retries,
@@ -80,23 +81,26 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                                 context["queueName"],
                                 connection.Exchange.Name,
                                 connection.AmpqUri.GetSanitizedUri());
+
                             throw exception;
                         }
                     });
 
-            CircuitBreakerPolicy = Policy.Handle<BrokerUnreachableException>().CircuitBreaker(1, TimeSpan.FromMilliseconds(circuitBreakerTimeout));
+            CircuitBreakerPolicy = Policy
+                .Handle<BrokerUnreachableException>()
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(circuitBreakerTimeout));
         }
 
         /// <summary>
         /// Gets the retry policy.
         /// </summary>
         /// <value>The retry policy.</value>
-        public Policy RetryPolicy { get; private set; }
+        public Policy RetryPolicy { get; }
 
         /// <summary>
         /// Gets the circuit breaker policy.
         /// </summary>
         /// <value>The circuit breaker policy.</value>
-        public Policy CircuitBreakerPolicy { get; private set; }
+        public Policy CircuitBreakerPolicy { get; }
     }
 }
