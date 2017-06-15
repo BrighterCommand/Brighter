@@ -60,12 +60,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Gets a value indicating whether this <see cref="HeaderResult{TResult}"/> is success.
         /// </summary>
         /// <value><c>true</c> if success; otherwise, <c>false</c>.</value>
-        public bool Success { get; private set; }
+        public bool Success { get; }
         /// <summary>
         /// Gets the result.
         /// </summary>
         /// <value>The result.</value>
-        public TResult Result { get; private set; }
+        public TResult Result { get; }
 
         /// <summary>
         /// Empties this instance.
