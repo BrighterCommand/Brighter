@@ -7,7 +7,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
     {
         private static MyEvent s_receivedEvent;
 
-        public static ThreadLocal<int> LoopCounter { get; set; }
+        public static int MonitorValue { get; set; }
         public static int WorkThreadId { get; set; }
         public static int ContinuationThreadId { get; set; }
 
@@ -18,10 +18,10 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 
         public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            LoopCounter = new ThreadLocal<int>(() => 0);
+            MonitorValue = 0;
             WorkThreadId = 0;
             ContinuationThreadId = 0;
-            LoopCounter.Value = 1;
+            MonitorValue = 1;
 
             if (cancellationToken.IsCancellationRequested)
             {
@@ -34,10 +34,10 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             await Task.Delay(30, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             //this will run on the continuation
-            LoopCounter.Value = 2;
+            MonitorValue = 2;
             ContinuationThreadId = Thread.CurrentThread.ManagedThreadId;
 
-            return command;
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         private static void LogEvent(MyEvent @event)

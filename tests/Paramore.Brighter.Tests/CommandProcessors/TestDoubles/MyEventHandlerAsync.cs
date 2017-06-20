@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 
             await Task.Delay(0, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-            return command;
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
     }
 }
