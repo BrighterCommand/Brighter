@@ -8,6 +8,7 @@ namespace Paramore.Brighter.Tests
     public class MsSqlTestHelper
     {
         private const string ConnectionString = "Server=.;Database=BrighterTests;Integrated Security=True;Application Name=BrighterTests";
+        private const string MasterConnectionString = "Server=.;Database=master;Integrated Security=True;Application Name=BrighterTests";
         private string _tableName;
 
         public MsSqlTestHelper()
@@ -20,9 +21,9 @@ namespace Paramore.Brighter.Tests
             _tableName = tableName;
         }
 
-        public void CreateDatabase()
+       public void CreateDatabase()
         {
-            using (var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(MasterConnectionString))
             {
                 connection.Open();
                 using (var command = connection.CreateCommand())
