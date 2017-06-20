@@ -89,7 +89,7 @@ namespace Paramore.Brighter.Tests.Monitoring
             //_should_include_the_underlying_request_details_before
             _beforeEvent.RequestBody.Should().Be(_originalRequestAsJson);
             //_should_post_the_time_of_the_request_before
-            _beforeEvent.EventTime.AsUtc().Should().Be(_at.AsUtc());
+            _beforeEvent.EventTime.AsUtc().Should().BeCloseTo(_at.AsUtc(), 500);
             //_should_elapsed_before_as_zero
             _beforeEvent.TimeElapsedMs.Should().Be(0);
             //_should_have_an_instance_name_after
