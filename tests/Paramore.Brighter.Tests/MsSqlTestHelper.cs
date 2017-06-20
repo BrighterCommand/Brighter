@@ -16,11 +16,6 @@ namespace Paramore.Brighter.Tests
             _tableName = $"test_{Guid.NewGuid()}";
         }
 
-        public MsSqlTestHelper(string tableName)
-        {
-            _tableName = tableName;
-        }
-
        public void CreateDatabase()
         {
             using (var connection = new SqlConnection(MasterConnectionString))

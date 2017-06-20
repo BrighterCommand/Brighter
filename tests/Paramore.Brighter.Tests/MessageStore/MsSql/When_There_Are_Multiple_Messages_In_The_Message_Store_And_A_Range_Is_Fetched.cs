@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
@@ -52,8 +53,10 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
             _sqlMessageStore.Add(messageEarliest);
+            Task.Delay(100);
             _sqlMessageStore.Add(message1);
-            _sqlMessageStore.Add(message2);
+            Task.Delay(100);
+             _sqlMessageStore.Add(message2);
         }
 
         [Fact]
