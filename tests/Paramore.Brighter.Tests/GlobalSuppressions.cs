@@ -21,5 +21,3 @@ using Xunit;
 [assembly: SuppressMessage("Microsoft.Usage", "CA2237:MarkISerializableTypesWithSerializable", Scope = "type", Target = "TinyIoC.TinyIoCAutoRegistrationException")]
 [assembly: SuppressMessage("Microsoft.Usage", "CA2237:MarkISerializableTypesWithSerializable", Scope = "type", Target = "TinyIoC.NamedParameterOverloads")]
 
-
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
