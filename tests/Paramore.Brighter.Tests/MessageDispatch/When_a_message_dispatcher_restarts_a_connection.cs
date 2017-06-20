@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher.Shut(_connection);
         }
         		 
-        [Fact(Skip = "TODO: Breaks dotnet test runner")]
+        [Fact]
         public void When_A_Message_Dispatcher_Restarts_A_Connection()
         {
             _dispatcher.Open(_connection);
