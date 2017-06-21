@@ -37,7 +37,7 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [Collection("Monitoring")]
+    [Collection("MonitoringAsync")]
     [Trait("Category", "Monitoring")]
     public class MonitorHandlerMustObserveButRethrowTests
     {
