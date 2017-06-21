@@ -29,7 +29,6 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
-using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Monitoring.Handlers
 {
@@ -74,7 +73,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
             if (!_isMonitoringEnabled) return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             ExceptionDispatchInfo capturedException = null;
-            var timeBeforeHandle = Clock.Now();
+            var timeBeforeHandle = DateTime.UtcNow; 
             try
             {
                 if (!cancellationToken.IsCancellationRequested)
@@ -96,7 +95,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
 
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    var timeAfterHandle = Clock.Now();
+                    var timeAfterHandle = DateTime.UtcNow;
                     await _controlBusSender.PostAsync(
                         new MonitorEvent(
                             _instanceName,
@@ -122,7 +121,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    var timeOnException = Clock.Now();
+                    var timeOnException = DateTime.UtcNow; 
                     //can't await inside a catch block
                     await _controlBusSender.PostAsync(
                         new MonitorEvent(

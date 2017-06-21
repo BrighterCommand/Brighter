@@ -26,7 +26,6 @@ using System;
 using Newtonsoft.Json;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
-using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Monitoring.Handlers
 {
@@ -74,7 +73,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
         {
             if (_isMonitoringEnabled)
             {
-                var timeBeforeHandle = Clock.Now();
+                var timeBeforeHandle = DateTime.UtcNow;
                 try
                 {
                     _controlBusSender.Post(
@@ -89,7 +88,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
 
                     base.Handle(command);
 
-                    var timeAfterHandle = Clock.Now();
+                    var timeAfterHandle = DateTime.UtcNow;
                     _controlBusSender.Post(
                         new MonitorEvent(
                             _instanceName, 
@@ -104,7 +103,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                 }
                 catch (Exception e)
                 {
-                    var timeOnException = Clock.Now();
+                    var timeOnException = DateTime.UtcNow;
                     _controlBusSender.Post(
                         new MonitorEvent(
                             _instanceName, 

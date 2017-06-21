@@ -32,14 +32,12 @@ using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Monitoring.TestDoubles;
-using Paramore.Brighter.Time;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [Collection("Monitoring Record But Rethrow Async")]
     [Trait("Category", "Monitoring")]
-    public class MonitorHandlerMustObserveButRethrowTests : IDisposable
+    public class MonitorHandlerMustObserveButRethrowTests 
     {
         private readonly MyCommand _command;
         private readonly SpyControlBusSender _controlBusSender;
@@ -68,8 +66,7 @@ namespace Paramore.Brighter.Tests.Monitoring
 
             _originalRequestAsJson = JsonConvert.SerializeObject(_command);
 
-            _at = DateTime.UtcNow;
-            Clock.OverrideTime = _at;
+            _at = DateTime.UtcNow.AddMilliseconds(-500);
         }
 
         [Fact]
@@ -95,33 +92,6 @@ namespace Paramore.Brighter.Tests.Monitoring
             _afterEvent.RequestBody.Should().Be(_originalRequestAsJson);
             //should_post_the_time_of_the_request_after
             _afterEvent.EventTime.AsUtc().Should().BeAfter(_at.AsUtc());
-            //should_post_the_elapsedtime_of_the_request_after
-            _afterEvent.TimeElapsedMs.Should().Be((_afterEvent.EventTime.AsUtc() - _at.AsUtc()).Milliseconds);
         }
-
-        private void Release()
-        {
-            Clock.Clear();
-        }
-
-        private void Dispose(bool disposing)
-        {
-            Release();
-            if (disposing)
-            {
-                _commandProcessor.Dispose();
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        ~MonitorHandlerMustObserveButRethrowTests()
-        {
-            Dispose(false);
-        }
-    }
+   }
 }

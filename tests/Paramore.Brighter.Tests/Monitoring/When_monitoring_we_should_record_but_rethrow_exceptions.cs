@@ -29,15 +29,13 @@ using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Monitoring.TestDoubles;
-using Paramore.Brighter.Time;
 using TinyIoC;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [Collection("Monitoring Record But Rethrow")]
     [Trait("Category", "Monitoring")]
-    public class MonitorHandlerTests : IDisposable
+    public class MonitorHandlerTests 
     {
         private readonly MyCommand _command;
         private Exception _thrownException;
@@ -63,8 +61,7 @@ namespace Paramore.Brighter.Tests.Monitoring
 
             _command = new MyCommand();
 
-            _at = DateTime.UtcNow;
-            Clock.OverrideTime = _at;
+            _at = DateTime.UtcNow.AddMilliseconds(-500);
         }
 
         [Fact]
@@ -88,33 +85,6 @@ namespace Paramore.Brighter.Tests.Monitoring
             _afterEvent.HandlerFullAssemblyName.Should().Be(typeof(MyMonitoredHandler).AssemblyQualifiedName);
             //should_post_the_time_of_the_request_after
             _afterEvent.EventTime.AsUtc().Should().BeAfter(_at.AsUtc());
-            //should_post_the_elapsedtime_of_the_request_after
-            _afterEvent.TimeElapsedMs.Should().Be((_afterEvent.EventTime.AsUtc() - _at.AsUtc()).Milliseconds);
         }
-
-        private void Release()
-        {
-            Clock.Clear();
-        }
-
-        private void Dispose(bool disposing)
-        {
-            Release();
-            if (disposing)
-            {
-                _commandProcessor.Dispose();
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        ~MonitorHandlerTests()
-        {
-            Dispose(false);
-        }
-    }
+   }
 }

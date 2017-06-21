@@ -29,13 +29,11 @@ using Xunit;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [Collection("Monitoring Serialize")]
     [Trait("Category", "Monitoring")]
-    public class MonitorEventMessageMapperTests : IDisposable
+    public class MonitorEventMessageMapperTests 
     {
         private const string InstanceName = "Paramore.Tests";
         private const string HandlerFullAssemblyName = "Paramore.Dummy.Handler, with some Assembly information";
@@ -45,18 +43,17 @@ namespace Paramore.Brighter.Tests.Monitoring
         private readonly Message _message;
         private readonly string _originalRequestAsJson;
         private static int _elapsedMilliseconds;
-        private static DateTime _overrideTime;
+        private static DateTime _at;
 
         public MonitorEventMessageMapperTests()
         {
-            _overrideTime = DateTime.UtcNow;
-            Clock.OverrideTime = _overrideTime;
+            _at = DateTime.UtcNow.AddMilliseconds(-500);
 
             _monitorEventMessageMapper = new MonitorEventMessageMapper();
 
             _originalRequestAsJson = JsonConvert.SerializeObject(new MyCommand());
             _elapsedMilliseconds = 34;
-            var @event = new MonitorEvent(InstanceName, MonitorEventType.EnterHandler, HandlerName, HandlerFullAssemblyName, _originalRequestAsJson, Clock.Now(), _elapsedMilliseconds);
+            var @event = new MonitorEvent(InstanceName, MonitorEventType.EnterHandler, HandlerName, HandlerFullAssemblyName, _originalRequestAsJson, _at, _elapsedMilliseconds);
             _message = _monitorEventMessageMapper.MapToMessage(@event);
        }
 
@@ -76,25 +73,10 @@ namespace Paramore.Brighter.Tests.Monitoring
             //_should_have_the_original_request_as_json
             _monitorEvent.RequestBody.Should().Be(_originalRequestAsJson);
             //_should_have_the_correct_event_time
-            _monitorEvent.EventTime.AsUtc().Should().Be(_overrideTime.AsUtc());
+            _monitorEvent.EventTime.AsUtc().Should().BeCloseTo(_at.AsUtc(), 1000);
             //_should_have_the_correct_time_elapsed
             _monitorEvent.TimeElapsedMs.Should().Be(_elapsedMilliseconds);
         }
 
-        private void Release()
-        {
-            Clock.Clear();
-        }
-
-        public void Dispose()
-        {
-            Release();
-            GC.SuppressFinalize(this);
-        }
-
-        ~MonitorEventMessageMapperTests()
-        {
-            Release();
-        }
-    }
+   }
 }
