@@ -4,7 +4,16 @@ namespace Paramore.Brighter.Time
 {
     public static class Clock
     {
-        public static DateTime? OverrideTime { get; set; }
+        private static DateTime? _overrideTimeUtc;
+
+        public static DateTime? OverrideTime
+        {
+            get => _overrideTimeUtc;
+            set
+            {
+                if (value != null) _overrideTimeUtc = value.Value.ToUniversalTime();
+            }
+        }
 
         public static DateTime Now()
         {
@@ -12,15 +21,16 @@ namespace Paramore.Brighter.Time
             {
                 var overrideTime = OverrideTime.Value;
                 OverrideTime = OverrideTime.Value.AddMilliseconds(50);
-                return overrideTime.ToUniversalTime();
+                return overrideTime;
             }
 
+            
             return DateTime.UtcNow;
         }
 
         public static void Clear()
         {
-            OverrideTime = null;
+            _overrideTimeUtc = null;
         }
     }
 }
