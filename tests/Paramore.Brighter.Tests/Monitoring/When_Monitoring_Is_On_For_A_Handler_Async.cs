@@ -37,9 +37,9 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [Collection("Monitoring")]
+    [Collection("Monitoring On Async")]
     [Trait("Category", "Monitoring")]
-    public class MonitorHandlerPipelineAsyncTests
+    public class MonitorHandlerPipelineAsyncTests : IDisposable
     {
         private readonly MyCommand _command;
         private readonly IAmACommandProcessor _commandProcessor;
@@ -106,5 +106,21 @@ namespace Paramore.Brighter.Tests.Monitoring
             //should_post_the_elapsedtime_of_the_request_after
             _afterEvent.TimeElapsedMs.Should().Be((_afterEvent.EventTime.AsUtc() - _beforeEvent.EventTime.AsUtc()).Milliseconds);
         }
-   }
+
+        private void Release()
+        {
+            Clock.Clear();
+        }
+
+        public void Dispose()
+        {
+            Release();
+            GC.SuppressFinalize(this);
+        }
+
+        ~MonitorHandlerPipelineAsyncTests()
+        {
+            Release();
+        }
+    }
 }

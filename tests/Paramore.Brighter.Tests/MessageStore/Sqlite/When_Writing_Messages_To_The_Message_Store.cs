@@ -76,9 +76,21 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
             _retrievedMessages.Should().HaveCount(3);
         }
 
+        private void Release()
+        {
+           _sqliteTestHelper.CleanUpDb();
+           Clock.Clear();
+        }
+        
         public void Dispose()
         {
-            _sqliteTestHelper.CleanUpDb();
+            GC.SuppressFinalize(this);
+            Release();
         }
-    }
+
+        ~SqlMessageStoreWritngMessagesTests()
+        {
+            Release();
+        }
+   }
 }

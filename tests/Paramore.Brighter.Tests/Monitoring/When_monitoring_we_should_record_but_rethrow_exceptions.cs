@@ -35,9 +35,9 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [Collection("Monitoring")]
+    [Collection("Monitoring Record But Rethrow")]
     [Trait("Category", "Monitoring")]
-    public class MonitorHandlerTests
+    public class MonitorHandlerTests : IDisposable
     {
         private readonly MyCommand _command;
         private Exception _thrownException;
@@ -91,5 +91,30 @@ namespace Paramore.Brighter.Tests.Monitoring
             //should_post_the_elapsedtime_of_the_request_after
             _afterEvent.TimeElapsedMs.Should().Be((_afterEvent.EventTime.AsUtc() - _at.AsUtc()).Milliseconds);
         }
-   }
+
+        private void Release()
+        {
+            Clock.Clear();
+        }
+
+        private void Dispose(bool disposing)
+        {
+            Release();
+            if (disposing)
+            {
+                _commandProcessor.Dispose();
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~MonitorHandlerTests()
+        {
+            Dispose(false);
+        }
+    }
 }

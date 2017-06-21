@@ -33,9 +33,9 @@ using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [Collection("Monitoring")]
+    [Collection("Monitoring Serialize")]
     [Trait("Category", "Monitoring")]
-    public class MonitorEventMessageMapperTests
+    public class MonitorEventMessageMapperTests : IDisposable
     {
         private const string InstanceName = "Paramore.Tests";
         private const string HandlerFullAssemblyName = "Paramore.Dummy.Handler, with some Assembly information";
@@ -80,5 +80,21 @@ namespace Paramore.Brighter.Tests.Monitoring
             //_should_have_the_correct_time_elapsed
             _monitorEvent.TimeElapsedMs.Should().Be(_elapsedMilliseconds);
         }
-   }
+
+        private void Release()
+        {
+            Clock.Clear();
+        }
+
+        public void Dispose()
+        {
+            Release();
+            GC.SuppressFinalize(this);
+        }
+
+        ~MonitorEventMessageMapperTests()
+        {
+            Release();
+        }
+    }
 }

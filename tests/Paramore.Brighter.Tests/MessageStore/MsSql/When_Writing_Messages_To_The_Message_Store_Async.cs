@@ -86,9 +86,21 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             await _sqlMessageStore.AddAsync(_messageLatest);
         }
 
-        public void Dispose()
+        private void Release()
         {
             _msSqlTestHelper.CleanUpDb();
+            Clock.Clear();
+        }
+        
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+            Release();
+        }
+
+        ~SqlMessageStoreWritngMessagesAsyncTests()
+        {
+            Release();
         }
     }
 }

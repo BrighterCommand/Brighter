@@ -10,7 +10,7 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Logging
 {
-    [Collection("Request Logging")]
+    [Collection("Request Logging Async")]
     public class CommandProcessorWithLoggingInPipelineAsyncTests: IDisposable
     {
         private readonly SpyLog _logger;

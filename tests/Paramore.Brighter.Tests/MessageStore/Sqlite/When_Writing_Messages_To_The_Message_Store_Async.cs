@@ -85,9 +85,21 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
             await _sSqlMessageStore.AddAsync(_messageLatest);
         }
 
+        private void Release()
+        {
+           _sqliteTestHelper.CleanUpDb();
+           Clock.Clear();
+        }
+        
         public void Dispose()
         {
-            _sqliteTestHelper.CleanUpDb();
+            GC.SuppressFinalize(this);
+            Release();
+        }
+
+        ~SqlMessageStoreWritngMessagesAsyncTests()
+        {
+            Release();
         }
     }
 }
