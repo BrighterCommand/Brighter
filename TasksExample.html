@@ -34,13 +34,13 @@
 
         <h3>Design Overview</h3>                
         <p>Tasks is intended to give a slightly fuller example of the use of Brighter to support a Web UI with supporting API and Application Service. Whilst we show snippets of code here, you will either want to clone Paramore from GitHub to follow along, or
-            <a href="https://github.com/BrighterCommand/Brighter/tree/master/Brighter/Examples">browse the code</a> on the web.</p>
+            <a href="https://github.com/BrighterCommand/Contrib/tree/master/samples">browse the code</a> on the web.</p>
         <p>The separate components are:</p>
         <ul>
-            <li><a href="https://github.com/BrighterCommand/Brighter/tree/master/Brighter/Examples/TaskListUI" target="_blank">Tasklist UI</a>: An ASP.NET MVC UI SPA for the Tasklist API - least interesting from a Brighter perspective</li>
-            <li><a href="https://github.com/BrighterCommand/Brighter/tree/master/Brighter/Examples/TaskList" target="_blank">Tasklist</a>: An HTTP API for tasks. Hosted in OpenRasta, uses <strong>Brighter.CommandProcessor</strong></li>
-            <li><a href="https://github.com/BrighterCommand/Brighter/tree/master/Brighter/Examples/TaskMailer" target="_blank">TaskMailer</a>: As service that notifies task owners of upcoming or overdue tasks, uses <strong>Brighter.ServiceActivator</strong></li>
-            <li><a href="https://github.com/BrighterCommand/Brighter/tree/master/Brighter/Examples/Tasks" target="_blank">Tasks</a>: A core library that models Tasks used by both Tasklist and TaskMailer</li>
+            <li><a href="https://github.com/BrighterCommand/Contrib/tree/master/samples/TaskList/src/TaskListUI" target="_blank">Tasklist UI</a>: An ASP.NET MVC UI SPA for the Tasklist API - least interesting from a Brighter perspective</li>
+            <li><a href="https://github.com/BrighterCommand/Contrib/tree/master/samples/TaskList/src/TaskList" target="_blank">Tasklist</a>: An HTTP API for tasks. Hosted in OpenRasta, uses <strong>Brighter.CommandProcessor</strong></li>
+            <li><a href="https://github.com/BrighterCommand/Contrib/tree/master/samples/TaskList/src/TaskMailer.Core" target="_blank">TaskMailer</a>: As service that notifies task owners of upcoming or overdue tasks, uses <strong>Brighter.ServiceActivator</strong></li>
+            <li><a href="https://github.com/BrighterCommand/Contrib/tree/master/samples/TaskList/src/Tasks" target="_blank">Tasks</a>: A core library that models Tasks used by both Tasklist and TaskMailer</li>
         </ul>
         <p>In a production SOA application we would consider all of these components to be part of the Tasks SOA and would be happy for these Autonomous Components within that  to
             share a model, as we are not crossing an SOA boundary. If we were to cross an SOA boundary we would not share the core library as we do here. </p>
@@ -51,10 +51,10 @@
         <h3>Prerequisites</h3>
         <p>We will assume you are familiar with:
         <ul>
-            <li><a href="http://iancooper.github.io/Paramore/HelloWorldExample.html">Hello World</a> and <a href="http://iancooper.github.io/Paramore/GreetingsExample.html">Greetings</a> examples</li>
-            <li>can add <a href="http://iancooper.github.io/Paramore/GreetingsExample.html">Brighter.ServiceActivator</a> and <a href="http://iancooper.github.io/Paramore/HelloWorldExample.html">Brighter.ComandProcessor</a> components</li>
+            <li><a href="https://brightercommand.github.io/Brighter/HelloWorldExample.html">Hello World</a> and <a href="https://brightercommand.github.io/Brighter/GreetingsExample.html">Greetings</a> examples</li>
+            <li>can add <a href="https://brightercommand.github.io/Brighter/GreetingsExample.html">Brighter.ServiceActivator</a> and <a href="https://brightercommand.github.io/Brighter/HelloWorldExample.html">Brighter.ComandProcessor</a> components</li>
             <li>can <a href="http://iancooper.github.io/Paramore/GreetingsExample.html">build/configure building Brighter.CommandProcessor and Policies</a></li>
-            <li>understand <a href="http://iancooper.github.io/Paramore/GreetingsExample.html">message Mappers</a></li>
+            <li>understand <a href="http://paramore.readthedocs.io/en/latest/DistributedTaskQueueConfiguration.html#message-mappers">message Mappers</a></li>
             <li>and can configure <a href="https://github.com/grumpydev/TinyIoC">TinyIoc</a></li>
         </ul>
         
