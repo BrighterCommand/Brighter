@@ -178,7 +178,6 @@ class Program
 
         var builder = CommandProcessorBuilder.With()
             .Handlers(new HandlerConfiguration(
-            .Handlers(new HandlerConfiguration(
                     subscriberRegistry: registry,
                     handlerFactory: new SimpleHandlerFactory(logger)
                 ))
