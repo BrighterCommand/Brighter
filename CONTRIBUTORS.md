@@ -50,6 +50,9 @@ Brighter contributors (sorted alphabeticaly)
 
 **[Eddie Li](https://github.com/xiaodili)**
   * Various fixes   
+  
+**[Henk Mollema](https://github.com/henkmollema)**
+  * Documentation fixes 
 
 **[Scott McLewin](https://github.com/smclewin)**
   * Binary serialization support for messages 
@@ -60,6 +63,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Ian Pender](https://github.com/penderi)**
   * Work on Tasks examples
   * Documentation for Tasks examples
+  
+**[Petr Houška](https://github.com/petrroll)**
+  * Documentation fixes 
  
 **[Anthony Peyron](https://github.com/MrHypnos)**
  * Stability fixes for Service Activator
