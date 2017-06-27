@@ -5,7 +5,7 @@
     <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using Event Store</Description>
     <AssemblyTitle>Paramore.Brighter.MessageStore.EventStore</AssemblyTitle>
     <Authors>George Ayris</Authors>
-    <TargetFrameworks>net46</TargetFrameworks>
+    <TargetFramework>net46</TargetFramework>
     <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.MessageStore.EventStore</AssemblyName>
     <PackageId>Paramore.Brighter.MessageStore.EventStore</PackageId>
