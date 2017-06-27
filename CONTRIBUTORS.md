@@ -1,7 +1,7 @@
 Brighter contributors (sorted alphabeticaly)
 ============================================
 
-**[Rudy Alvarez] (https://github.com/rudygt)**
+**[Rudy Alvarez](https://github.com/rudygt)**
   * Various fixes  
 
 **[Ian Battersby](https://github.com/ianbattersby)**
@@ -54,14 +54,14 @@ Brighter contributors (sorted alphabeticaly)
 **[Scott McLewin](https://github.com/smclewin)**
   * Binary serialization support for messages 
    
-**[Solveig Oskarsdottir] (https://github.com/solveigo)**
+**[Solveig Oskarsdottir](https://github.com/solveigo)**
  * QA of Brighter
  
-**[Ian Pender] (https://github.com/penderi)**
+**[Ian Pender](https://github.com/penderi)**
   * Work on Tasks examples
   * Documentation for Tasks examples
  
-**[Anthony Peyron] (https://github.com/MrHypnos)**
+**[Anthony Peyron](https://github.com/MrHypnos)**
  * Stability fixes for Service Activator
  * Gateway connection pooling
 
