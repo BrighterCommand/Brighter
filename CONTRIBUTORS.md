@@ -22,6 +22,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
   * Work on POSTEL messaging approach
+  
+ **[Scott Hanselman](https://github.com/shanselman)**
+  * Various fixes
 
 **[Toby Henderson](https://github.com/holytshirt)**
   * Various fixes
