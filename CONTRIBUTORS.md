@@ -9,6 +9,9 @@ Brighter contributors (sorted alphabeticaly)
 * Delayed Queueing
 * Committer
 
+**[Ian Bebbington](https://github.com/ibebbs)** 
+ * Documentation fixes
+
 **[Ed Blackurn](https://github.com/edblackburn)** 
  * Documentation fixes
  
