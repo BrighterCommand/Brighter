@@ -38,7 +38,7 @@ namespace HelloWorldAsync
             var result = await api.GetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             Console.WriteLine("Hello {0}", command.Name);
-            Console.WriteLine(result.Success ? "Your public IP addres is {0}" : "Call to IpFy API failed : {0}", result.Message);
+            Console.WriteLine(result.Success ? "Your public IP address is {0}" : "Call to IpFy API failed : {0}", result.Message);
 
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
