@@ -89,3 +89,5 @@ Brighter contributors (sorted alphabeticaly)
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
   * Various Fixes
 
+**[Joseph Woodward](https://github.com/JosephWoodward)**  
+  * Documentation fixes 
