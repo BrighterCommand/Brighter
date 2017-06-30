@@ -68,6 +68,7 @@ namespace Paramore.Brighter.ServiceActivator
                 catch (ChannelFailureException)
                 {
                     _logger.Value.WarnFormat("MessagePump: ChannelFailureException messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    Task.Delay(1000).Wait();
                     continue;
                 }
                 catch (Exception exception)
