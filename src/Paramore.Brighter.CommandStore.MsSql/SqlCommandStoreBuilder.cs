@@ -26,12 +26,16 @@ namespace Paramore.Brighter.CommandStore.MsSql
 {
     public class SqlCommandStoreBuilder
     {
-        const string _messageStoreDDL = "CREATE TABLE {0} (" +
-                "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
-                "CommandType nvarchar(256)," +
-                "CommandBody ntext," +
-                "Timestamp dateTime" +
-                ")";
+        private const string _messageStoreDDL = @"
+                    CREATE TABLE {0}
+                        (
+                            [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
+                            [CommandId] [UNIQUEIDENTIFIER] NOT NULL ,
+                            [CommandType] [NVARCHAR](256) NULL ,
+                            [CommandBody] [NTEXT] NULL ,
+                            [Timestamp] [DATETIME] NULL ,
+                            PRIMARY KEY ( [Id] )
+                        );";
 
         public static string GetDDL(string tableName)
         {
