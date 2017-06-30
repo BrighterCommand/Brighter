@@ -1,4 +1,4 @@
-version: 7.0.{build}
+version: 7.1.{build}
 configuration: Release
 
 image: Visual Studio 2017
@@ -18,8 +18,8 @@ skip_tags: true
 assembly_info:
   patch: true
   file: '**\AssemblyInfo.*'
-  assembly_version: 7.0.0.0
-  assembly_file_version: 7.0.{build}
+  assembly_version: 7.1.0.0
+  assembly_file_version: 7.1.{build}
   assembly_informational_version: '{version}'
 
 nuget:
