@@ -39,6 +39,8 @@ namespace Paramore.Brighter.ServiceActivator
         /// <value>The channel.</value>
         public IAmAChannelFactory ChannelFactory { get; internal set; }
 
+        public bool HighAvailability { get; }
+
         /// <summary>
         /// Gets or sets the name.
         /// </summary>
@@ -106,8 +108,8 @@ namespace Paramore.Brighter.ServiceActivator
         public int UnacceptableMessageLimit { get; }
 
         [Obsolete("Use the other constructor or Connection<T>. This constructor will be removed in a future release.")]
-        public Connection(ConnectionName name, IAmAChannelFactory channelFactory, Type dataType, ChannelName channelName, RoutingKey routingKey, int noOfPerformers = 1, int timeoutInMilliseconds = 300, int requeueCount = -1, int requeueDelayInMilliseconds = 0, int unacceptableMessageLimit = 0, bool isDurable = false, bool isAsync = false)
-            : this(dataType, name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, isAsync, channelFactory)
+        public Connection(ConnectionName name, IAmAChannelFactory channelFactory, Type dataType, ChannelName channelName, RoutingKey routingKey, int noOfPerformers = 1, int timeoutInMilliseconds = 300, int requeueCount = -1, int requeueDelayInMilliseconds = 0, int unacceptableMessageLimit = 0, bool isDurable = false, bool isAsync = false, bool highAvailability = false)
+            : this(dataType, name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, isAsync, channelFactory, highAvailability)
         {
         }
 
@@ -124,7 +126,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isDurable">The durability of the queue.</param>
+        /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="highAvailability"></param>
         public Connection(
             Type dataType,
             ConnectionName name = null,
@@ -137,7 +141,8 @@ namespace Paramore.Brighter.ServiceActivator
             int unacceptableMessageLimit = 0,
             bool isDurable = false,
             bool isAsync = false,
-            IAmAChannelFactory channelFactory = null)
+            IAmAChannelFactory channelFactory = null,
+            bool highAvailability = false)
         {
             DataType = dataType;
             Name = name ?? new ConnectionName(dataType.FullName);
@@ -151,6 +156,7 @@ namespace Paramore.Brighter.ServiceActivator
             IsDurable = isDurable;
             IsAsync = isAsync;
             ChannelFactory = channelFactory;
+            HighAvailability = highAvailability;
         }
     }
 
@@ -169,7 +175,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isDurable">The durability of the queue.</param>
+        /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="highAvailability"></param>
         public Connection(
             ConnectionName name = null,
             ChannelName channelName = null,
@@ -181,8 +189,9 @@ namespace Paramore.Brighter.ServiceActivator
             int unacceptableMessageLimit = 0,
             bool isDurable = false,
             bool isAsync = false,
-            IAmAChannelFactory channelFactory = null)
-            : base(typeof(T), name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, isAsync, channelFactory)
+            IAmAChannelFactory channelFactory = null,
+            bool highAvailability = false)
+            : base(typeof(T), name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, isAsync, channelFactory, highAvailability)
         {
         }
     }

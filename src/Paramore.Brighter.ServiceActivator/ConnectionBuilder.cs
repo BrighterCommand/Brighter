@@ -58,12 +58,11 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Connection Build()
         {
-            return new Connection(
+            return new Connection(_type,
                 new ConnectionName(_name),
-                _inputChannelFactory,
-                _type,
                 new ChannelName(_channelName),
                 new RoutingKey(_routingKey),
+                channelFactory:_inputChannelFactory,
                 timeoutInMilliseconds: _milliseconds);
         }
 
