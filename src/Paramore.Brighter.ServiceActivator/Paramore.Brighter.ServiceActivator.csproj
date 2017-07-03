@@ -11,12 +11,12 @@
     <AssemblyName>Paramore.Brighter.ServiceActivator</AssemblyName>
     <PackageId>Paramore.Brighter.ServiceActivator</PackageId>
     <PackageTags>Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <PackageReleaseNotes>https://github.com/iancooper/Paramore/blob/master/release_notes.md</PackageReleaseNotes>
+    <PackageReleaseNotes>https://github.com/BrighterCommand/Brighter/blob/master/release_notes.md</PackageReleaseNotes>
     <PackageIconUrl>https://brightercommand.github.io/Brighter//images/brightercanon-nuget.png</PackageIconUrl>
     <PackageProjectUrl>https://brightercommand.github.io/Brighter/</PackageProjectUrl>
     <PackageLicenseUrl>http://ianhammondcooper.mit-license.org</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/iancooper/Paramore/tree/master/Brighter/Paramore.Brighter.ServiceActivator</RepositoryUrl>
+    <RepositoryUrl>https://github.com/BrighterCommand/Brighter/tree/master/src/Paramore.Brighter.ServiceActivator</RepositoryUrl>
     <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
