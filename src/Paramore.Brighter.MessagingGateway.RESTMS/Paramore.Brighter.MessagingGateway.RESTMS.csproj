@@ -5,7 +5,7 @@
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using restms</Description>
     <AssemblyTitle>Paramore.Brighter.Messaginggateway.RESTMS</AssemblyTitle>
     <Authors>Ian Cooper</Authors>
-    <TargetFrameworks>netstandard1.6;net452</TargetFrameworks>
+    <TargetFramework>netstandard1.6</TargetFramework>
     <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.MessagingGateway.RESTMS</AssemblyName>
     <PackageId>Paramore.Brighter.MessagingGateway.RESTMS</PackageId>

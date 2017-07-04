@@ -5,7 +5,7 @@
     <Description>This is an implementation of the command store used for decoupled invocation of commands by Paramore.Brighter, using Sqlite</Description>
     <AssemblyTitle>Paramore.Brighter.CommandStore.Sqlite</AssemblyTitle>
     <Authors>Ian Cooper</Authors>
-    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <TargetFramework>netstandard1.5</TargetFramework>
     <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.CommandStore.Sqlite</AssemblyName>
     <PackageId>Paramore.Brighter.CommandStore.Sqlite</PackageId>
