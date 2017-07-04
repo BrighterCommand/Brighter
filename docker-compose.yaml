@@ -1,0 +1,28 @@
+version: '2'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: always
+
+  eventstore:
+    image: eventstore/eventstore
+    ports:
+      - "1113:1113" # TCP (default 1113)
+      - "2113:2113" # HTTP (default 2113)
+    environment:
+      - EVENTSTORE_RUN_PROJECTIONS=ALL
+      - EVENTSTORE_START_STANDARD_PROJECTIONS=TRUE
+    restart: always
+    
+  # Need to give 4GB of memory to Docker for SQL
+  sqlserver:
+    image: microsoft/mssql-server-linux
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=password
