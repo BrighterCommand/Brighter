@@ -34,10 +34,8 @@ namespace Paramore.Brighter.MessageStore.MsSql
         /// </summary>
         /// <param name="connectionString">The connection string.</param>
         /// <param name="messageStoreTableName">Name of the message store table.</param>
-        /// <param name="databaseType">Type of the database.</param>
-        public MsSqlMessageStoreConfiguration(string connectionString, string messageStoreTableName, DatabaseType databaseType)
+        public MsSqlMessageStoreConfiguration(string connectionString, string messageStoreTableName)
         {
-            Type = databaseType;
             MessageStoreTableName = messageStoreTableName;
             ConnectionString = connectionString;
         }
@@ -52,25 +50,5 @@ namespace Paramore.Brighter.MessageStore.MsSql
         /// </summary>
         /// <value>The name of the message store table.</value>
         public string MessageStoreTableName { get; private set; }
-        /// <summary>
-        /// Gets the type.
-        /// </summary>
-        /// <value>The type.</value>
-        public DatabaseType Type { get; private set; }
-
-        /// <summary>
-        /// Enum DatabaseType
-        /// </summary>
-        public enum DatabaseType
-        {
-            /// <summary>
-            /// The ms SQL server
-            /// </summary>
-            MsSqlServer,
-            /// <summary>
-            /// The SQL ce
-            /// </summary>
-            SqlCe
-        }
     }
 }

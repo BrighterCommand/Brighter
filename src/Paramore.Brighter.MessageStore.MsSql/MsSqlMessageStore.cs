@@ -104,7 +104,7 @@ namespace Paramore.Brighter.MessageStore.MsSql
         /// <returns>Task&lt;Message&gt;.</returns>
         public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
-            var sql = string.Format("SELECT * FROM [{0}] WHERE MessageId = @MessageId",
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
                 _configuration.MessageStoreTableName);
             var parameters = new[]
             {
@@ -163,7 +163,7 @@ namespace Paramore.Brighter.MessageStore.MsSql
         /// <returns><see cref="Task{Message}" />.</returns>
         public async Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var sql = string.Format("SELECT * FROM [{0}] WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
 
             var parameters = new[]
             {
@@ -234,12 +234,8 @@ namespace Paramore.Brighter.MessageStore.MsSql
         //Fold this code back in as there is only one choice
         private DbParameter CreateSqlParameter(string parameterName, object value)
         {
-            switch (_configuration.Type)
-            {
-                case MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer:
-                    return new SqlParameter(parameterName, value);
-            }
-            return null;
+            return new SqlParameter(parameterName, value);
+
         }
 
         private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int messageStoreTimeout, params DbParameter[] parameters)
@@ -278,12 +274,8 @@ namespace Paramore.Brighter.MessageStore.MsSql
 
         private DbConnection GetConnection()
         {
-            switch (_configuration.Type)
-            {
-                case MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer:
-                    return new SqlConnection(_configuration.ConnectionString);
-            }
-            return null;
+
+            return new SqlConnection(_configuration.ConnectionString);
         }
 
         private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters)
@@ -291,7 +283,7 @@ namespace Paramore.Brighter.MessageStore.MsSql
             var command = connection.CreateCommand();
             var sql =
                 string.Format(
-                    "INSERT INTO [{0}] (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
+                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
                     _configuration.MessageStoreTableName);
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
@@ -360,7 +352,7 @@ namespace Paramore.Brighter.MessageStore.MsSql
         private void SetPagingCommandFor(DbCommand command, MsSqlMessageStoreConfiguration configuration, int pageSize,
             int pageNumber)
         {
-            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM [{0}]) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
                 CreateSqlParameter("PageNumber", pageNumber),

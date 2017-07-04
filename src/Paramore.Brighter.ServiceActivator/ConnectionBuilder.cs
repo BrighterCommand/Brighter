@@ -18,7 +18,7 @@ namespace Paramore.Brighter.ServiceActivator
         private string _routingKey;
         private ConnectionBuilder() {}
 
-        public static IConnectionBuilderName With { get { return new ConnectionBuilder(); } }
+        public static IConnectionBuilderName With => new ConnectionBuilder();
 
         public IConnectionBuilderChannelFactory Name(string name)
         {
@@ -58,12 +58,11 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Connection Build()
         {
-            return new Connection(
+            return new Connection(_type,
                 new ConnectionName(_name),
-                _inputChannelFactory,
-                _type,
                 new ChannelName(_channelName),
-                _routingKey,
+                new RoutingKey(_routingKey),
+                channelFactory:_inputChannelFactory,
                 timeoutInMilliseconds: _milliseconds);
         }
 
@@ -97,6 +96,5 @@ namespace Paramore.Brighter.ServiceActivator
             Connection Build();
             IConnectionBuilderOptionalBuild Timeout(int millisecondTimeout);
         }
-
     }
 }

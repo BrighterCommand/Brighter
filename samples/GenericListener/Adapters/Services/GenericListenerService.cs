@@ -129,9 +129,9 @@ namespace GenericListener.Adapters.Services
             var connections = new List<Connection>
             {
                 // Generic Events
-                new Connection(new ConnectionName("Task.Added"),inputChannelFactory, typeof(GenericTaskAddedEvent), new ChannelName("Task.Added"), "Task.Added", noOfPerformers:1, timeoutInMilliseconds: 200),
-                new Connection(new ConnectionName("Task.Edited"),inputChannelFactory, typeof(GenericTaskEditedEvent), new ChannelName("Task.Edited"), "Task.Edited", noOfPerformers:1, timeoutInMilliseconds: 200),
-                new Connection(new ConnectionName("Task.Completed"),inputChannelFactory, typeof(GenericTaskCompletedEvent), new ChannelName("Task.Completed"), "Task.Completed", noOfPerformers:1, timeoutInMilliseconds: 200),
+                new Connection<GenericTaskAddedEvent>(new ConnectionName("Task.Added"), new ChannelName("Task.Added"), new RoutingKey("Task.Added"), noOfPerformers:1, timeoutInMilliseconds: 200),
+                new Connection<GenericTaskEditedEvent>(new ConnectionName("Task.Edited"), new ChannelName("Task.Edited"), new RoutingKey("Task.Edited"), noOfPerformers:1, timeoutInMilliseconds: 200),
+                new Connection<GenericTaskCompletedEvent>(new ConnectionName("Task.Completed"), new ChannelName("Task.Completed"),new RoutingKey( "Task.Completed"), noOfPerformers:1, timeoutInMilliseconds: 200),
             };
             
             return DispatchBuilder.With()
@@ -142,8 +142,7 @@ namespace GenericListener.Adapters.Services
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build())
                 .MessageMappers(handlers.Mappers)
-                .ChannelFactory(inputChannelFactory)
-                //.ConnectionsFromConfiguration()
+                .DefaultChannelFactory(inputChannelFactory)
                 .Connections(connections)
                 .Build();
         }
@@ -165,14 +164,14 @@ namespace GenericListener.Adapters.Services
 
             return new PolicyRegistry
             {
-                {CommandProcessor.RETRYPOLICY, retryPolicy},
-                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+                { CommandProcessor.RETRYPOLICY, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
         }
 
         public void Shutdown(HostControl hostcontrol)
         {
-            if (null != _dispatcher)
+            if (_dispatcher != null)
                 Stop(hostcontrol);
         }
     }

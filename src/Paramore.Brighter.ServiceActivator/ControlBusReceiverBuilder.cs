@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
@@ -108,57 +107,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build(string hostName)
         {
-            var connectionsConfiguration = new List<Connection>();
-
-            /* 
-             * These are the control bus channels, we hardcode them because we want to know they exist, but we use
-            a base naming scheme to allow centralized management.
-             */
-
-            var connectionConfiguration = new Connection(
-                new ConnectionName(hostName + "." + CONFIGURATION),
-                _channelFactory,
-                typeof(ConfigurationCommand),
-                new ChannelName(hostName + "." + CONFIGURATION),
-                hostName + "." + CONFIGURATION
-                );
-            //var connectionConfiguration = new ConnectionConfiguration()
-            //{ 
-            //    ChannelName = hostName  + "." + CONFIGURATION,
-            //    ConnectionName = hostName  + "." + CONFIGURATION,
-            //    IsDurable = true,
-            //    DataType = typeof(ConfigurationCommand).FullName,
-            //    RoutingKey = hostName + "." + CONFIGURATION,
-            //};
-            connectionsConfiguration.Add(connectionConfiguration);
-
-            var heartbeatElement = new Connection(
-                new ConnectionName(hostName + "." + HEARTBEAT),
-                _channelFactory,
-                typeof(HeartbeatRequest),
-                new ChannelName(hostName + "." + HEARTBEAT),
-                hostName + "." + HEARTBEAT,
-                isDurable:false
-                );
-
-            //var heartbeatElement = new ConnectionConfiguration
-            //{
-            //    ChannelName = hostName  + "." + HEARTBEAT,
-            //    ConnectionName = hostName  + "." + HEARTBEAT,
-            //    IsDurable = false,
-            //    DataType = typeof(HeartbeatRequest).FullName,
-            //    RoutingKey = hostName + "." + HEARTBEAT,
-            //};
-            connectionsConfiguration.Add(heartbeatElement);
-
-            /* We want to register policies, messages and handlers for receiving built in commands. It's simple enough to do this for
-             the registries, but we cannot know your HandlerFactory implementation in order to insert. So we have to rely on
-             an internal HandlerFactory to build these for you.
-             
-             * We also need to  pass the supervised dispatcher as a dependency to our command handlers, so this allows us to manage
-             * the injection of the dependency as part of our handler factory
-             
-             */
+            // We want to register policies, messages and handlers for receiving built in commands. It's simple enough to do this for
+            // the registries, but we cannot know your HandlerFactory implementation in order to insert. So we have to rely on
+            // an internal HandlerFactory to build these for you.
+            // We also need to  pass the supervised dispatcher as a dependency to our command handlers, so this allows us to manage
+            // the injection of the dependency as part of our handler factory
             
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -173,12 +126,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-            var policyRegistry = new PolicyRegistry()
+            var policyRegistry = new PolicyRegistry
             {
-                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy},
-                {CommandProcessor.RETRYPOLICY, retryPolicy}
+                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
+                { CommandProcessor.RETRYPOLICY, retryPolicy }
             };
-
 
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
@@ -203,16 +155,29 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             CommandProcessor commandProcessor = null;
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher, () => commandProcessor)))
-                .Policies(policyRegistry: policyRegistry)
+                .Policies(policyRegistry)
                 .TaskQueues(new MessagingConfiguration(messageStore, producer, outgoingMessageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
-            return DispatchBuilder
-                .With()
+            // These are the control bus channels, we hardcode them because we want to know they exist, but we use
+            // a base naming scheme to allow centralized management.
+            var connectionsConfiguration = new Connection[]
+            {
+                new Connection<ConfigurationCommand>(
+                    new ConnectionName($"{hostName}.{CONFIGURATION}"),
+                    new ChannelName($"{hostName}.{CONFIGURATION}"),
+                    new RoutingKey($"{hostName}.{CONFIGURATION}")),
+                new Connection<HeartbeatRequest>(
+                    new ConnectionName($"{hostName}.{HEARTBEAT}"),
+                    new ChannelName($"{hostName}.{HEARTBEAT}"),
+                    new RoutingKey($"{hostName}.{HEARTBEAT}"))
+            };
+
+            return DispatchBuilder.With()
                 .CommandProcessor(commandProcessor)
                 .MessageMappers(incomingMessageMapperRegistry)
-                .ChannelFactory(_channelFactory)
+                .DefaultChannelFactory(_channelFactory)
                 .Connections(connectionsConfiguration)
                 .Build();
         }

@@ -28,13 +28,12 @@ using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.MessageStore.Sqlite;
-using Paramore.Brighter.Time;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 {
     [Trait("Category", "Sqlite")]
-    public class SqlMessageStoreWritngMessagesTests : IDisposable
+    public class SqlMessageStoreWritngMessagesTests 
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteMessageStore _sqlMessageStore;
@@ -48,18 +47,13 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
             _sqliteTestHelper.SetupMessageDb();
             _sqlMessageStore = new SqliteMessageStore(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
 
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
             _sqlMessageStore.Add(_messageEarliest);
 
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-2);
-
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND), new MessageBody("Body2"));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
             _sqlMessageStore.Add(message2);
 
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-1);
-
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND), new MessageBody("Body3"));
+            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
             _sqlMessageStore.Add(_messageLatest);
         }
 
@@ -75,10 +69,5 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
             //_should_read_the_messages_from_the__message_store
             _retrievedMessages.Should().HaveCount(3);
         }
-
-        public void Dispose()
-        {
-            _sqliteTestHelper.CleanUpDb();
-        }
-    }
+  }
 }

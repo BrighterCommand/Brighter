@@ -42,6 +42,6 @@ namespace Paramore.Brighter
         /// <param name="routingKey"></param>
         /// <param name="isDurable"></param>
         /// <returns>IAmAnInputChannel.</returns>
-        IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable);
+        IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = false, ushort preFetchSize = 1, bool highAvailability = false);
     }
 }

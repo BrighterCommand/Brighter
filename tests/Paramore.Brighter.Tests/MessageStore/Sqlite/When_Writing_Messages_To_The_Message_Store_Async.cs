@@ -29,7 +29,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessageStore.Sqlite;
-using Paramore.Brighter.Time;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.Sqlite
@@ -69,25 +68,30 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 
         private async Task SetUpMessagesAsync()
         {
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
-
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
             await _sSqlMessageStore.AddAsync(_messageEarliest);
 
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-2);
-
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND), new MessageBody("Body2"));
+            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
             await _sSqlMessageStore.AddAsync(_message2);
 
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-1);
-
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND), new MessageBody("Body3"));
+            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
             await _sSqlMessageStore.AddAsync(_messageLatest);
         }
 
+        private void Release()
+        {
+           _sqliteTestHelper.CleanUpDb();
+        }
+        
         public void Dispose()
         {
-            _sqliteTestHelper.CleanUpDb();
+            GC.SuppressFinalize(this);
+            Release();
+        }
+
+        ~SqlMessageStoreWritngMessagesAsyncTests()
+        {
+            Release();
         }
     }
 }

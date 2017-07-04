@@ -31,14 +31,12 @@ using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Monitoring.TestDoubles;
-using Paramore.Brighter.Time;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Monitoring
 {
-    [Collection("Monitoring")]
     [Trait("Category", "Monitoring")]
-    public class MonitorHandlerPipelineTests
+    public class MonitorHandlerPipelineTests 
     {
         private readonly MyCommand _command;
         private readonly IAmACommandProcessor _commandProcessor;
@@ -67,8 +65,7 @@ namespace Paramore.Brighter.Tests.Monitoring
 
             _originalRequestAsJson = JsonConvert.SerializeObject(_command);
 
-            _at = DateTime.UtcNow;
-            Clock.OverrideTime = _at;
+            _at = DateTime.UtcNow.AddMilliseconds(-500);
         }
 
         [Fact]
@@ -89,7 +86,7 @@ namespace Paramore.Brighter.Tests.Monitoring
             //_should_include_the_underlying_request_details_before
             _beforeEvent.RequestBody.Should().Be(_originalRequestAsJson);
             //_should_post_the_time_of_the_request_before
-            _beforeEvent.EventTime.AsUtc().Should().Be(_at.AsUtc());
+            _beforeEvent.EventTime.AsUtc().Should().BeCloseTo(_at.AsUtc(), 1000);
             //_should_elapsed_before_as_zero
             _beforeEvent.TimeElapsedMs.Should().Be(0);
             //_should_have_an_instance_name_after
@@ -104,8 +101,6 @@ namespace Paramore.Brighter.Tests.Monitoring
             _afterEvent.RequestBody.Should().Be(_originalRequestAsJson);
             //should_post_the_time_of_the_request_after
             _afterEvent.EventTime.AsUtc().Should().BeAfter(_at.AsUtc());
-            //should_post_the_elapsedtime_of_the_request_after
-            _afterEvent.TimeElapsedMs.Should().Be((_afterEvent.EventTime.AsUtc() - _beforeEvent.EventTime.AsUtc()).Milliseconds);
         }
    }
 }

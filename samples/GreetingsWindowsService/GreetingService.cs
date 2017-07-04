@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.CommandHandlers;
@@ -70,16 +69,16 @@ namespace GreetingsWindowsService
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-            var policyRegistry = new PolicyRegistry()
+            var policyRegistry = new PolicyRegistry
             {
-                {CommandProcessor.RETRYPOLICY, retryPolicy},
-                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+                { CommandProcessor.RETRYPOLICY, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
 
             //create message mappers
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
             {
-                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
+                { typeof(GreetingEvent), typeof(GreetingEventMessageMapper) }
             };
 
             //create the gateway
@@ -92,34 +91,23 @@ namespace GreetingsWindowsService
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
             var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqConnnection);
 
-
-            // < add connectionName = "paramore.example.greeting" channelName = "greeting." routingKey = "greeting.command" dataType = "Greetings.Ports.Commands.GreetingEvent" timeOutInMilliseconds = "200" />
-            // Service Activator connections
-            var connections = new List<Connection>
-            {
-                new Connection(
-                    new ConnectionName("paramore.example.greeting"),
-                    new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory),
-                    typeof(GreetingEvent),
-                    new ChannelName("greeting.event"),
-                    "greeting.event",
-                    timeoutInMilliseconds: 200)
-            };
-
-            var builder = DispatchBuilder
-                .With()
+            _dispatcher = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                     .Policies(policyRegistry)
                     .NoTaskQueues()
                     .RequestContextFactory(new InMemoryRequestContextFactory())
-                    .Build()
-                )
+                    .Build())
                 .MessageMappers(messageMapperRegistry)
-                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
-                .Connections(connections);
-
-            _dispatcher = builder.Build();
+                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                .Connections(new []
+                {
+                    new Connection<GreetingEvent>(
+                        new ConnectionName("paramore.example.greeting"),
+                        new ChannelName("greeting.event"),
+                        new RoutingKey("greeting.event"),
+                        timeoutInMilliseconds: 200)
+                }).Build();
         }
 
         public bool Start(HostControl hostControl)
@@ -137,9 +125,7 @@ namespace GreetingsWindowsService
 
         public void Shutdown(HostControl hostcontrol)
         {
-            if (_dispatcher != null)
-                _dispatcher.End();
-            return;
+            _dispatcher?.End();
         }
     }
 }

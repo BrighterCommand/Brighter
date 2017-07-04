@@ -103,7 +103,7 @@ namespace ManagementAndMonitoringCoreConsole
                     .Build()
                  )
                  .MessageMappers(messageMapperRegistry)
-                 .ChannelFactory(inputChannelFactory)
+                 .DefaultChannelFactory(inputChannelFactory)
                  .Connections(new[]
                  {
                      ConnectionBuilder.With

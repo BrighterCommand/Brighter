@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Logging.Handlers
 {

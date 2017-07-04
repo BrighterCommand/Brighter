@@ -61,7 +61,9 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
         public async Task When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched_Async()
         {
             await _sqlMessageStore.AddAsync(_messageEarliest);
+            await Task.Delay(100);
             await _sqlMessageStore.AddAsync(_message1);
+            await Task.Delay(100);
             await _sqlMessageStore.AddAsync(_message2);
 
              _messages = await _sqlMessageStore.GetAsync(1, 3);

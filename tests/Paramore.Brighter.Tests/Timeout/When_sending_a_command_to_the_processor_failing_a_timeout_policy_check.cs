@@ -33,6 +33,7 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Timeout
 {
+    [Collection("Timeout Policy Check")]
     public class TimeoutHandlerFailsCheckTests
     {
         private readonly CommandProcessor _commandProcessor;

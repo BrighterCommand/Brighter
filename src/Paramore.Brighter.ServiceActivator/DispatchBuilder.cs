@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -34,11 +35,12 @@ namespace Paramore.Brighter.ServiceActivator
     /// </summary>
     public class DispatchBuilder : INeedACommandProcessor, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfConnections, IAmADispatchBuilder
     {
-        private IEnumerable<Connection> _connections;
         private CommandProcessor _commandProcessor;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
-        private DispatchBuilder() { }
+        private IAmAChannelFactory _defaultChannelFactory;
+        private IEnumerable<Connection> _connections;
 
+        private DispatchBuilder() { }
 
         /// <summary>
         /// Begins the fluent interface 
@@ -72,14 +74,15 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP 
+        /// The default channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP 
         /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
         /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
         /// <param name="channelFactory">The channel factory.</param>
         /// <returns>INeedAListOfConnections.</returns>
-        public INeedAListOfConnections ChannelFactory(IAmAChannelFactory channelFactory)
+        public INeedAListOfConnections DefaultChannelFactory(IAmAChannelFactory channelFactory)
         {
+            _defaultChannelFactory = channelFactory;
             return this;
         }
 
@@ -91,6 +94,12 @@ namespace Paramore.Brighter.ServiceActivator
         public IAmADispatchBuilder Connections(IEnumerable<Connection> connections)
         {
             _connections = connections;
+
+            foreach (var connection in _connections.Where(c => c.ChannelFactory == null))
+            {
+                connection.ChannelFactory = _defaultChannelFactory;
+            }
+
             return this;
         }
 
@@ -143,7 +152,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="channelFactory">The channel factory.</param>
         /// <returns>INeedAListOfConnections.</returns>
-        INeedAListOfConnections ChannelFactory(IAmAChannelFactory channelFactory);
+        INeedAListOfConnections DefaultChannelFactory(IAmAChannelFactory channelFactory);
     }
 
     /// <summary>

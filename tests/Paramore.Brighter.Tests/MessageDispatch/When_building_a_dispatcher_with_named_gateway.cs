@@ -68,36 +68,30 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(connection);
             var rmqMessageProducerFactory = new RmqMessageProducerFactory(connection);
 
-            var connections = new List<Connection>
-            {
-                new Connection(
-                    new ConnectionName("foo"),
-                    new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory),
-                    typeof(MyEvent),
-                    new ChannelName("mary"),
-                    "bob",
-                    timeoutInMilliseconds: 200),
-                new Connection(
-                    new ConnectionName("bar"),
-                    new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory),
-                    typeof(MyEvent),
-                    new ChannelName("alice"),
-                    "simon",
-                    timeoutInMilliseconds: 200)
-            };
+            var commandProcessor = CommandProcessorBuilder.With()
+                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer())))
+                .Policies(policyRegistry)
+                .NoTaskQueues()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
 
             _builder = DispatchBuilder.With()
-                .CommandProcessor(CommandProcessorBuilder.With()
-                        .Handlers(new HandlerConfiguration(new SubscriberRegistry(),
-                            new TinyIocHandlerFactory(new TinyIoCContainer())))
-                        .Policies(policyRegistry)
-                        .NoTaskQueues()
-                        .RequestContextFactory(new InMemoryRequestContextFactory())
-                        .Build()
-                )
+                .CommandProcessor(commandProcessor)
                 .MessageMappers(messageMapperRegistry)
-                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
-                .Connections(connections);
+                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                .Connections(new []
+                {
+                    new Connection<MyEvent>(
+                        new ConnectionName("foo"),
+                        new ChannelName("mary"),
+                        new RoutingKey("bob"),
+                        timeoutInMilliseconds: 200),
+                    new Connection<MyEvent>(
+                        new ConnectionName("bar"),
+                        new ChannelName("alice"),
+                        new RoutingKey("simon"),
+                        timeoutInMilliseconds: 200)
+                });
         }
 
         [Fact]

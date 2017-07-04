@@ -98,8 +98,8 @@ namespace Paramore.Brighter.CommandStore.MsSql
         /// <returns>T.</returns>
         public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
         {
-            var sql = string.Format("select * from [{0}] where CommandId = @commandId",
-                _configuration.MessageStoreTableName);
+            var sql = string.Format("select * from {0} where CommandId = @commandId",
+                _configuration.CommandStoreTableName);
             var parameters = new[]
             {
                 CreateSqlParameter("CommandId", id)
@@ -166,7 +166,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
         public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken))
             where T : class, IRequest, new()
         {
-            var sql = string.Format("select * from [{0}] where CommandId = @commandId", _configuration.MessageStoreTableName);
+            var sql = string.Format("select * from {0} where CommandId = @commandId", _configuration.CommandStoreTableName);
 
             var parameters = new[]
             {
@@ -232,8 +232,8 @@ namespace Paramore.Brighter.CommandStore.MsSql
         {
             var sqlAdd =
                 string.Format(
-                    "insert into [{0}] (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)",
-                    _configuration.MessageStoreTableName);
+                    "insert into {0} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)",
+                    _configuration.CommandStoreTableName);
 
             var sqlcmd = connection.CreateCommand();
             if (timeoutInMilliseconds != -1) sqlcmd.CommandTimeout = timeoutInMilliseconds;

@@ -29,7 +29,6 @@ using System.Linq;
 using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.MessageStore.MsSql;
-using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter.Tests.MessageStore.MsSql
 {
@@ -49,18 +48,13 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-3);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND), new MessageBody("Body"));
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
             _sqlMessageStore.Add(_messageEarliest);
 
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-2);
-
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND), new MessageBody("Body2"));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
             _sqlMessageStore.Add(message2);
 
-            Clock.OverrideTime = DateTime.UtcNow.AddHours(-1);
-
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND), new MessageBody("Body3"));
+            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
             _sqlMessageStore.Add(_messageLatest);
         }
 
@@ -77,9 +71,20 @@ namespace Paramore.Brighter.Tests.MessageStore.MsSql
             _retrievedMessages.Should().HaveCount(3);
         }
 
-        public void Dispose()
+        private void Release()
         {
             _msSqlTestHelper.CleanUpDb();
+        }
+        
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+            Release();
+        }
+
+        ~SqlMessageStoreWritngMessagesTests()
+        {
+            Release();
         }
     }
 }

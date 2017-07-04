@@ -29,11 +29,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Paramore.Brighter.CommandProcessor")]
+[assembly: AssemblyTitle("Paramore.Brighter")]
 [assembly: AssemblyDescription("The Command Dispatcher pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers")]
 [assembly: AssemblyConfiguration("Debug")]
 [assembly: AssemblyCompany("Ian Cooper")]
-[assembly: AssemblyProduct("Paramore.Brighter.CommandProcessor")]
+[assembly: AssemblyProduct("Paramore.Brighter")]
 [assembly: AssemblyCopyright("Copyright \u00A9  2014 Ian Cooper")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
@@ -58,5 +58,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyVersion("2.0.1.0")]
 //[assembly: AssemblyFileVersion("2.0.*")]
 
-[assembly: InternalsVisibleTo("paramore.brighter.commandprocessor.tests")]
-[assembly: InternalsVisibleTo("paramore.brighter.commandprocessor.tests.nunit")]
+[assembly: InternalsVisibleTo("Paramore.Brighter.Tests")]

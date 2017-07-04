@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
@@ -9,8 +10,8 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Logging
 {
-    [Collection("Request Logging")]
-    public class CommandProcessorWithLoggingInPipelineAsyncTests
+    [Collection("Request Logging Async")]
+    public class CommandProcessorWithLoggingInPipelineAsyncTests: IDisposable
     {
         private readonly SpyLog _logger;
         private readonly MyCommand _myCommand;
@@ -44,6 +45,22 @@ namespace Paramore.Brighter.Tests.Logging
             _logger.Logs.Should().Contain(log => log.Message.Contains("Logging handler pipeline call"));
             //_should_log_the_type_of_handler_in_the_call
             _logger.Logs.Should().Contain(log => log.Message.Contains(typeof(MyCommand).ToString()));
+        }
+
+        private void Release()
+        {
+            LogProvider.SetCurrentLogProvider(null);
+        }
+
+        public void Dispose()
+        {
+            Release();
+            GC.SuppressFinalize(this);
+        }
+
+        ~CommandProcessorWithLoggingInPipelineAsyncTests()
+        {
+            Release();
         }
     }
 }

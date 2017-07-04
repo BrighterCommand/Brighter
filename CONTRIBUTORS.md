@@ -1,13 +1,16 @@
 Brighter contributors (sorted alphabeticaly)
 ============================================
 
-**[Rudy Alvarez] (https://github.com/rudygt)**
+**[Rudy Alvarez](https://github.com/rudygt)**
   * Various fixes  
 
 **[Ian Battersby](https://github.com/ianbattersby)**
 * Documentation fixes & general code tidying
 * Delayed Queueing
 * Committer
+
+**[Ian Bebbington](https://github.com/ibebbs)** 
+ * Documentation fixes
 
 **[Ed Blackurn](https://github.com/edblackburn)** 
  * Documentation fixes
@@ -22,6 +25,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
   * Work on POSTEL messaging approach
+  
+ **[Scott Hanselman](https://github.com/shanselman)**
+  * Various fixes
 
 **[Toby Henderson](https://github.com/holytshirt)**
   * Various fixes
@@ -44,18 +50,24 @@ Brighter contributors (sorted alphabeticaly)
 
 **[Eddie Li](https://github.com/xiaodili)**
   * Various fixes   
+  
+**[Henk Mollema](https://github.com/henkmollema)**
+  * Documentation fixes 
 
 **[Scott McLewin](https://github.com/smclewin)**
   * Binary serialization support for messages 
    
-**[Solveig Oskarsdottir] (https://github.com/solveigo)**
+**[Solveig Oskarsdottir](https://github.com/solveigo)**
  * QA of Brighter
  
-**[Ian Pender] (https://github.com/penderi)**
+**[Ian Pender](https://github.com/penderi)**
   * Work on Tasks examples
   * Documentation for Tasks examples
+  
+**[Petr Houška](https://github.com/petrroll)**
+  * Documentation fixes 
  
-**[Anthony Peyron] (https://github.com/MrHypnos)**
+**[Anthony Peyron](https://github.com/MrHypnos)**
  * Stability fixes for Service Activator
  * Gateway connection pooling
 
@@ -77,3 +89,5 @@ Brighter contributors (sorted alphabeticaly)
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
   * Various Fixes
 
+**[Joseph Woodward](https://github.com/JosephWoodward)**  
+  * Documentation fixes 

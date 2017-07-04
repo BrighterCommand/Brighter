@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessageStore.Sqlite;
 using Xunit;
@@ -54,8 +55,10 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
             _message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
             _message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
             _sSqlMessageStore.Add(_messageEarliest);
+            Task.Delay(100);
             _sSqlMessageStore.Add(_message1);
-            _sSqlMessageStore.Add(_message2);
+            Task.Delay(100);
+             _sSqlMessageStore.Add(_message2);
         }
 
         [Fact]

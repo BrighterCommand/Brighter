@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            _connection = new Connection(new ConnectionName("test"), dataType: typeof(MyEvent), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: "fakekey");
+            _connection = new Connection<MyEvent>(new ConnectionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
             _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { _connection });
 
             var @event = new MyEvent();
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher.Shut(_connection);
         }
         		 
-        [Fact(Skip = "TODO: Breaks dotnet test runner")]
+        [Fact(Skip = "Breaks test runner on Rider")]
         public void When_A_Message_Dispatcher_Restarts_A_Connection()
         {
             _dispatcher.Open(_connection);

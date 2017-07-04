@@ -29,7 +29,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Paramore.Brighter.MessageStore.EventStore")]
-[assembly: AssemblyDescription("This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter.CommandProcessor, using Event Store")]
+[assembly: AssemblyDescription("This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using Event Store")]
 [assembly: AssemblyCompany("George Ayris")]
 [assembly: AssemblyProduct("Paramore.Brighter.MessageStore.EventStore")]
 [assembly: AssemblyCopyright("Copyright \u00A9 2015 George Ayris")]

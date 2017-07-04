@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Paramore.Brighter.Time;
 
 namespace Paramore.Brighter
 {
@@ -142,7 +141,7 @@ namespace Paramore.Brighter
             Topic = topic;
             MessageType = messageType;
             Bag = new Dictionary<string, object>();
-            TimeStamp = RoundToSeconds(Clock.Now());
+            TimeStamp = RoundToSeconds(DateTime.UtcNow);
             HandledCount = 0;
             DelayedMilliseconds = 0;
             CorrelationId = correlationId ?? Guid.Empty ;
