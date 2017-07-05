@@ -21,13 +21,8 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
+  <ItemGroup>
     <PackageReference Include="System.Reflection.TypeExtensions" Version="4.3.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
 </Project>

@@ -6,7 +6,7 @@
     <AssemblyTitle>Paramore.Brighter.ServiceActivator</AssemblyTitle>
     <Authors>Ian Cooper</Authors>
     <TargetFramework>netstandard1.5</TargetFramework>
-    <DefineConstants>$(DefineConstants);LIBLOG_PUBLIC</DefineConstants>
+    <DefineConstants>$(DefineConstants);LIBLOG_PUBLIC;LIBLOG_PORTABLE</DefineConstants>
     <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.ServiceActivator</AssemblyName>
     <PackageId>Paramore.Brighter.ServiceActivator</PackageId>
@@ -33,17 +33,8 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
+  <ItemGroup>
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
-    <DefineConstants>$(DefineConstants);NETSTANDARD;LIBLOG_PORTABLE</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
 </Project>

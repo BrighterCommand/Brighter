@@ -7,6 +7,7 @@
     <Authors>Yiannis Triantafyllopoulos</Authors>
     <TargetFramework>netstandard1.5</TargetFramework>
     <DebugType>full</DebugType>
+    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessagingGateway.AzureServiceBus</AssemblyName>
     <PackageId>Paramore.Brighter.MessagingGateway.AzureServiceBus</PackageId>
     <PackageTags>awssqs;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
@@ -35,20 +36,7 @@
 
   <ItemGroup>
     <PackageReference Include="AMQPNetLite" Version="1.2.3" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
-    <DefineConstants>$(DefineConstants);NETSTANDARD;LIBLOG_PORTABLE</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Net.Http" />
   </ItemGroup>
 
 </Project>

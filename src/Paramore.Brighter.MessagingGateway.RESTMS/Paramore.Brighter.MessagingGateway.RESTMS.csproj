@@ -7,6 +7,7 @@
     <Authors>Ian Cooper</Authors>
     <TargetFramework>netstandard1.6</TargetFramework>
     <DebugType>full</DebugType>
+    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessagingGateway.RESTMS</AssemblyName>
     <PackageId>Paramore.Brighter.MessagingGateway.RESTMS</PackageId>
     <PackageTags>awssqs;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
@@ -35,26 +36,10 @@
     <PackageReference Include="Hawk" Version="2.0.0-beta5" />
     <PackageReference Include="System.Runtime.Serialization.Xml" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Serialization.Primitives" Version="4.3.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
     <PackageReference Include="System.Private.DataContractSerialization" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.Xml.XmlSerializer" Version="4.3.0" />
     <PackageReference Include="System.Net.Requests" Version="4.3.0" />
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
-    <DefineConstants>$(DefineConstants);NETSTANDARD;LIBLOG_PORTABLE</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <Reference Include="System.Net.Requests" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Xml.XmlSerializer" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
 </Project>

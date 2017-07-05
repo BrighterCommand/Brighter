@@ -7,6 +7,7 @@
     <Authors>Francesco Pighi</Authors>
     <TargetFramework>netstandard1.5</TargetFramework>
     <DebugType>full</DebugType>
+    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.CommandStore.MsSql</AssemblyName>
     <PackageId>Paramore.Brighter.CommandStore.MsSql</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
@@ -33,19 +34,7 @@
 
   <ItemGroup>
     <PackageReference Include="System.Data.SqlClient" Version="4.3.1" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
-    <DefineConstants>$(DefineConstants);NETSTANDARD;LIBLOG_PORTABLE</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(Configuration)' == 'Release' ">

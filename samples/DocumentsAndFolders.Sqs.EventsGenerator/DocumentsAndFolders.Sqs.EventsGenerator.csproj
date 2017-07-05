@@ -1,7 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net452</TargetFramework>
+    <TargetFramework>net462</TargetFramework>
     <DebugType>full</DebugType>
     <OutputType>Exe</OutputType>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
@@ -22,11 +22,6 @@
     <ProjectReference Include="..\DocumentsAndFolders.Sqs.Core\DocumentsAndFolders.Sqs.Core.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AWSSQS\Paramore.Brighter.MessagingGateway.AWSSQS.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
 </Project>
