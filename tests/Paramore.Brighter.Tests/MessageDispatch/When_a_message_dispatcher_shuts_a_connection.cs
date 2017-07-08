@@ -59,11 +59,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Dispatcher_Shuts_A_Connection()
+        public async Task When_A_Message_Dispatcher_Shuts_A_Connection()
         {
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
             _dispatcher.Shut(_connection);
-            _dispatcher.End().Wait();
+            await _dispatcher.End();
 
             //_should_have_consumed_the_messages_in_the_channel
             _dispatcher.Consumers.Should().NotContain(consumer => consumer.Name == _connection.Name && consumer.State == ConsumerState.Open);

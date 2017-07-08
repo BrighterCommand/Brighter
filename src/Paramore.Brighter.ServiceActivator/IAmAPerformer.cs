@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -37,10 +38,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// Stops this instance.
         /// </summary>
         void Stop();
+
         /// <summary>
         /// Runs this instance.
         /// </summary>
         /// <returns>Task.</returns>
-        Task Run();
+        Task Run(CancellationToken cancellationToken);
     }
 }

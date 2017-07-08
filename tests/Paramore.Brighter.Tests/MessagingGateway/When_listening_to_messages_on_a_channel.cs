@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FakeItEasy;
 using FluentAssertions;
 using Xunit;
@@ -40,22 +41,22 @@ namespace Paramore.Brighter.Tests.MessagingGateway
         {
             _gateway = A.Fake<IAmAMessageConsumer>();
 
-            _channel = new Channel("test", _gateway);
+            _channel = new Channel(new ChannelName("test"), _gateway);
 
             _sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
-            A.CallTo(() => _gateway.Receive(1000)).Returns(_sentMessage);
+            A.CallTo(() => _gateway.ReceiveAsync(1000)).Returns(_sentMessage);
         }
 
         [Fact]
-        public void When_Listening_To_Messages_On_A_Channel()
+        public async Task When_Listening_To_Messages_On_A_Channel()
         {
-            _receivedMessage = _channel.Receive(1000);
+            _receivedMessage = await _channel.ReceiveAsync(1000);
 
             //_should_call_the_messaging_gateway
-            A.CallTo(() => _gateway.Receive(1000)).MustHaveHappened();
+            A.CallTo(() => _gateway.ReceiveAsync(1000)).MustHaveHappened();
             //_should_return_the_next_message_from_the_gateway
             _receivedMessage.Should().Be(_sentMessage);
         }

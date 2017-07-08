@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
             _messageConsumer = new RmqMessageConsumer(rmqConnection, _message.Header.Topic, _message.Header.Topic, false, 1, false);
-            _messageConsumer.Purge();
+            _messageConsumer.PurgeAsync().GetAwaiter().GetResult();
 
             _client = new TestRMQListener(rmqConnection, _message.Header.Topic);
         }
@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 
         public void Dispose()
         {
-            _messageConsumer.Purge();
+            _messageConsumer.PurgeAsync().GetAwaiter().GetResult();
             _messageProducer.Dispose();
         }
     }

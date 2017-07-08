@@ -58,7 +58,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Opens the specified connection.
         /// </summary>
         /// <param name="connection">The connection.</param>
-        void Open(Connection connection);
+        void Open(ConnectionBase connection);
 
         /// <summary>
         /// Opens the specified connection name.
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Shuts the specified connection.
         /// </summary>
         /// <param name="connection">The connection.</param>
-        void Shut(Connection connection);
+        void Shut(ConnectionBase connection);
 
         /// <summary>
         /// Shuts the specified connection name.

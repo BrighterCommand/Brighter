@@ -26,6 +26,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.ServiceActivator.Logging;
@@ -42,10 +43,10 @@ namespace Paramore.Brighter.ServiceActivator
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<Dispatcher>);
 
-        private Task _controlTask;
+        private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
-        private readonly ConcurrentDictionary<int, Task> _tasks;
-        private readonly ConcurrentDictionary<string, IAmAConsumer> _consumers;
+        private readonly ConcurrentDictionary<string, ConnectionBase> _connections;
+        private readonly ConcurrentDictionary<IAmAConsumer, Task> _consumers;
 
         /// <summary>
         /// Gets the command processor.
@@ -57,13 +58,13 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets the connections.
         /// </summary>
         /// <value>The connections.</value>
-        public IEnumerable<Connection> Connections { get; private set; }
+        public IEnumerable<ConnectionBase> Connections => _connections.Values;
 
         /// <summary>
         /// Gets the <see cref="Consumer"/>s
         /// </summary>
         /// <value>The consumers.</value>
-        public IEnumerable<IAmAConsumer> Consumers => _consumers.Values;
+        public IEnumerable<IAmAConsumer> Consumers => _consumers.Keys;
 
         /// <summary>
         /// Gets or sets the name for this dispatcher instance.
@@ -87,16 +88,16 @@ namespace Paramore.Brighter.ServiceActivator
         public Dispatcher(
             IAmACommandProcessor commandProcessor, 
             IAmAMessageMapperRegistry messageMapperRegistry,
-            IEnumerable<Connection> connections)
+            IEnumerable<ConnectionBase> connections)
         {
-            CommandProcessor = commandProcessor;
-            Connections = connections;
-            _messageMapperRegistry = messageMapperRegistry;
-
             State = DispatcherState.DS_NOTREADY;
 
-            _tasks = new ConcurrentDictionary<int, Task>();
-            _consumers = new ConcurrentDictionary<string, IAmAConsumer>();
+            CommandProcessor = commandProcessor;
+
+            _messageMapperRegistry = messageMapperRegistry;
+            _cancellationTokenSource = new CancellationTokenSource();
+            _connections = new ConcurrentDictionary<string, ConnectionBase>(connections.Select(c => new KeyValuePair<string, ConnectionBase>(c.Name, c)));
+            _consumers = new ConcurrentDictionary<IAmAConsumer, Task>();
 
             State = DispatcherState.DS_AWAITING;
         }
@@ -105,15 +106,29 @@ namespace Paramore.Brighter.ServiceActivator
         /// Stop listening to messages
         /// </summary>
         /// <returns>Task.</returns>
-        public Task End()
+        public async Task End()
         {
             if (State == DispatcherState.DS_RUNNING)
             {
                 _logger.Value.Info("Dispatcher: Stopping dispatcher");
-                Consumers.Each(consumer => consumer.Shut());
-            }
 
-            return _controlTask;
+                _cancellationTokenSource.Cancel();
+
+                try
+                {
+                    await Task.WhenAll(_consumers.Values);
+                }
+                catch (TaskCanceledException)
+                {
+                    // ignore this race
+                }
+
+                _consumers.Clear();
+
+                State = DispatcherState.DS_STOPPED;
+
+                _logger.Value.Info("Dispatcher: Dispatcher stopped");
+            }
         }
 
         /// <summary>
@@ -122,45 +137,48 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="connectionName">The name of the connection</param>
         public void Open(string connectionName)
         {
-            Open(Connections.SingleOrDefault(c => c.Name == connectionName));
+            if (_connections.TryGetValue(connectionName, out ConnectionBase connection))
+            {
+                Open(connection);
+            }
         }
 
         /// <summary>
         /// Opens the specified connection.
         /// </summary>
         /// <param name="connection">The connection.</param>
-        public void Open(Connection connection)
+        public void Open(ConnectionBase connection)
         {
             _logger.Value.InfoFormat("Dispatcher: Opening connection {0}", connection.Name);
 
-            AddConnectionToConnections(connection);
+            if (!_connections.ContainsKey(connection.Name))
+            {
+                _connections.TryAdd(connection.Name, connection);
+            }
+
             var addedConsumers = CreateConsumers(new[] { connection });
 
             switch (State)
             {
                 case DispatcherState.DS_RUNNING:
-                    addedConsumers.Each(consumer =>
+                    foreach (var consumer in addedConsumers)
                     {
-                        _consumers.TryAdd(consumer.Name, consumer);
-                        consumer.Open();
-                        _tasks.TryAdd(consumer.JobId, consumer.Job);
-                    });
+                        _consumers.TryAdd(consumer, Task.CompletedTask);
+                        StartConsumer(consumer);
+                    }
                     break;
+
                 case DispatcherState.DS_STOPPED:
                 case DispatcherState.DS_AWAITING:
-                    addedConsumers.Each(consumer => _consumers.TryAdd(consumer.Name, consumer));
+                    foreach (var consumer in addedConsumers)
+                    {
+                        _consumers.TryAdd(consumer, Task.CompletedTask);
+                    }
                     Start();
                     break;
+
                 default:
                     throw new InvalidOperationException("The dispatcher is not ready");
-            }
-        }
-
-        private void AddConnectionToConnections(Connection connection)
-        {
-            if (Connections.All(c => c.Name != connection.Name))
-            {
-                Connections = new List<Connection>(Connections) { connection };
             }
         }
 
@@ -169,8 +187,17 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         public void Receive()
         {
-            CreateConsumers(Connections).Each(consumer => _consumers.TryAdd(consumer.Name, consumer));
-            Start();
+            if (State == DispatcherState.DS_AWAITING)
+            {
+                _logger.Value.Info("Dispatcher: Starting dispatcher");
+
+                foreach (var consumer in CreateConsumers(Connections))
+                {
+                    _consumers.TryAdd(consumer, Task.CompletedTask);
+                }
+
+                Start();
+            }
         }
 
         /// <summary>
@@ -179,96 +206,84 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="connectionName">The name of the connection</param>
         public void Shut(string connectionName)
         {
-            Shut(Connections.SingleOrDefault(c => c.Name == connectionName));
+            if (_connections.TryGetValue(connectionName, out ConnectionBase connection))
+            {
+                Shut(connection);
+            }
         }
 
         /// <summary>
         /// Shuts the specified connection.
         /// </summary>
         /// <param name="connection">The connection.</param>
-        public void Shut(Connection connection)
+        public void Shut(ConnectionBase connection)
         {
             if (State == DispatcherState.DS_RUNNING)
             {
                 _logger.Value.InfoFormat("Dispatcher: Stopping connection {0}", connection.Name);
+
                 var consumersForConnection = Consumers.Where(consumer => consumer.Name == connection.Name).ToArray();
-                var noOfConsumers = consumersForConnection.Length;
-                for (int i = 0; i < noOfConsumers; ++i)
+                var tasks = new List<Task>(consumersForConnection.Length);
+                foreach (var consumer in consumersForConnection)
                 {
-                    consumersForConnection[i].Shut();
+                    consumer.Shut();
+
+                    if (_consumers.TryRemove(consumer, out Task task))
+                    {
+                        tasks.Add(task);
+                    }
                 }
+
+                // Task.WhenAll(tasks).GetAwaiter().GetResult(); todo probably want to do this, and probably with await
             }
         }
 
         private void Start()
         {
-            _controlTask = Task.Factory.StartNew(() =>
+            if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
             {
-                if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
+                _logger.Value.Info("Dispatcher: Dispatcher starting");
+
+                State = DispatcherState.DS_RUNNING;
+
+                _logger.Value.InfoFormat("Dispatcher: Dispatcher starting {0} performers", _consumers.Count);
+
+                foreach (var consumer in Consumers)
                 {
-                    _logger.Value.Info("Dispatcher: Dispatcher starting");
-                    State = DispatcherState.DS_RUNNING;
-
-                    var consumers = Consumers.ToArray();
-                    consumers.Each(consumer => consumer.Open());
-                    consumers.Each(consumer => _tasks.TryAdd(consumer.JobId, consumer.Job));
-
-                    _logger.Value.InfoFormat("Dispatcher: Dispatcher starting {0} performers", _tasks.Count);
-
-                    while (!_tasks.IsEmpty)
-                    {
-                        try
-                        {
-                            var runningTasks = _tasks.Values.ToArray();
-                            var index = Task.WaitAny(runningTasks);
-                            var stoppingConsumer = runningTasks[index];
-                            _logger.Value.DebugFormat("Dispatcher: Performer stopped with state {0}", stoppingConsumer.Status);
-
-                            var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
-                            if (consumer != null)
-                            {
-                                _logger.Value.DebugFormat("Dispatcher: Removing a consumer with connection name {0}", consumer.Name);
-                                consumer.Dispose();
-
-                                _consumers.TryRemove(consumer.Name, out consumer);
-                            }
-
-                            Task removedTask;
-                            _tasks.TryRemove(stoppingConsumer.Id, out removedTask);
-                        }
-                        catch (AggregateException ae)
-                        {
-                            ae.Handle(ex =>
-                            {
-                                _logger.Value.ErrorFormat("Dispatcher: Error on consumer; consumer shut down");
-                                return true;
-                            });
-                        }
-                    }
-
-                    State = DispatcherState.DS_STOPPED;
-                    _logger.Value.Info("Dispatcher: Dispatcher stopped");
+                    StartConsumer(consumer);
                 }
-            },
-            TaskCreationOptions.LongRunning);
+            }
         }
 
-        private IEnumerable<Consumer> CreateConsumers(IEnumerable<Connection> connections)
+        private void StartConsumer(IAmAConsumer consumer)
         {
-            var list = new List<Consumer>();
-            connections.Each(connection =>
+            var task = consumer.Open(_cancellationTokenSource.Token);
+            if (!_consumers.TryUpdate(consumer, task, Task.CompletedTask))
+                throw new InvalidOperationException("Tried to start a consumer that was not currently stopped. This should never happen, this exception is just here to make debugging easier.");
+
+            _cancellationTokenSource.Token.Register(() =>
+            {
+                consumer.Shut();
+                consumer.Dispose();
+
+                _logger.Value.DebugFormat("Dispatcher: Performer stopped with state {0}", consumer.State);
+            });
+        }
+
+        private IEnumerable<Consumer> CreateConsumers(IEnumerable<ConnectionBase> connections)
+        {
+            foreach (var connection in connections)
             {
                 for (var i = 0; i < connection.NoOfPeformers; i++)
                 {
-                    int performer = i;
-                    _logger.Value.InfoFormat("Dispatcher: Creating consumer number {0} for connection: {1}", performer + 1, connection.Name);
+                    _logger.Value.InfoFormat("Dispatcher: Creating consumer number {0} for connection: {1}", i + 1, connection.Name);
+
                     var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(connection.DataType);
                     var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, CommandProcessor, _messageMapperRegistry, connection);
 
-                    list.Add(connection.IsAsync ? consumerFactory.CreateAsync() : consumerFactory.Create());
+                    yield return consumerFactory.Create();
                 }
-            });
-            return list;
+            }
         }
     }
 }

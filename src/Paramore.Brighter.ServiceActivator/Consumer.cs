@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -51,31 +52,25 @@ namespace Paramore.Brighter.ServiceActivator
     /// Waited on by callers. Shut closes the message pump.
     /// 
     /// </summary>
-    public class Consumer : IAmAConsumer, IEquatable<Consumer>
+    public class Consumer : IAmAConsumer
     {
         /// <summary>
         /// Gets or sets the name.
         /// </summary>
         /// <value>The name.</value>
-        public ConnectionName Name { get; set; }
+        public ConnectionName Name { get; }
+
         /// <summary>
         /// Gets the performer.
         /// </summary>
         /// <value>The performer.</value>
-        public IAmAPerformer Performer { get; private set; }
+        public IAmAPerformer Performer { get; }
+
         /// <summary>
         /// Gets or sets the state.
         /// </summary>
         /// <value>The state.</value>
-        public ConsumerState State { get; set; }
-        /// <summary>
-        /// Gets or sets the job.
-        /// </summary>
-        /// <value>The job.</value>
-        public Task Job { get; set; }
-
-        public int JobId { get; set; }
-
+        public ConsumerState State { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Consumer"/> class.
@@ -90,14 +85,20 @@ namespace Paramore.Brighter.ServiceActivator
             State = ConsumerState.Shut;
         }
 
+        private Task _job;
+
         /// <summary>
         /// Opens the task queue and begin receiving messages.
         /// </summary>
-        public void Open()
+        public Task Open(CancellationToken cancellationToken)
         {
-            State = ConsumerState.Open;
-            Job = Performer.Run();
-            JobId = Job.Id;
+            if (State == ConsumerState.Shut)
+            {
+                State = ConsumerState.Open;
+                _job = Performer.Run(cancellationToken);
+            }
+
+            return _job ?? Task.CompletedTask;
         }
 
         /// <summary>
@@ -127,65 +128,6 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 Performer.Dispose();
             }
-        }
-
-        /// <summary>
-        /// Do the consumers match on name?
-        /// </summary>
-        /// <param name="other">An object to compare with this object.</param>
-        /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
-        public bool Equals(Consumer other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return Equals(Name, other.Name) && Equals(Job, other.Job);
-        }
-
-        /// <summary>
-        ///Do the consumers match on name?
-        /// </summary>
-        /// <param name="obj">The object to compare with the current object.</param>
-        /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((Consumer)obj);
-        }
-
-        /// <summary>
-        /// Returns a hash code for this instance.
-        /// </summary>
-        /// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return ((Name != null ? Name.GetHashCode() : 0) * 397) ^ (Job != null ? Job.GetHashCode() : 0);
-            }
-        }
-
-        /// <summary>
-        /// Implements the ==. Do the consumers match on name?
-        /// </summary>
-        /// <param name="left">The left.</param>
-        /// <param name="right">The right.</param>
-        /// <returns>The result of the operator.</returns>
-        public static bool operator ==(Consumer left, Consumer right)
-        {
-            return Equals(left, right);
-        }
-
-        /// <summary>
-        /// Implements the !=. Do the consumers not match on name?
-        /// </summary>
-        /// <param name="left">The left.</param>
-        /// <param name="right">The right.</param>
-        /// <returns>The result of the operator.</returns>
-        public static bool operator !=(Consumer left, Consumer right)
-        {
-            return !Equals(left, right);
         }
     }
 }

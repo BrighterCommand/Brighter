@@ -1,18 +1,5 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.messaginggateway.awssqs
-// Author           : ian
-// Created          : 08-17-2015
-//
-// Last Modified By : ian
-// Last Modified On : 10-25-2015
-// ***********************************************************************
-// <copyright file="SqsMessageConsumer.cs" company="">
-//     Copyright ©  2015
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 using System;
+using System.Threading.Tasks;
 using Amazon.Runtime;
 using Amazon.SQS;
 using Amazon.SQS.Model;
@@ -24,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// <summary>
     /// Class SqsMessageConsumer.
     /// </summary>
-    public class SqsMessageConsumer : IAmAMessageConsumerSupportingDelay 
+    public class SqsMessageConsumer : IAmAMessageConsumerSupportingDelay
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageConsumer>);
 
@@ -54,9 +41,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        public Message Receive(int timeoutInMilliseconds)
+        public Task<Message> ReceiveAsync(int timeoutInMilliseconds)
         {
-            return Receive(timeoutInMilliseconds, 1);
+            return ReceiveAsync(timeoutInMilliseconds, 1);
         }
 
         /// <summary>
@@ -65,11 +52,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="noOfMessagesToCache">Number of cacheable messages.</param>
         /// <returns>Message.</returns>
-        public Message Receive(int timeoutInMilliseconds, int noOfMessagesToCache)
+        public async Task<Message> ReceiveAsync(int timeoutInMilliseconds, int noOfMessagesToCache)
         {
             _logger.Value.DebugFormat("SqsMessageConsumer: Preparing to retrieve next message from queue {0}", _queueUrl);
 
-            var rawSqsMessage = new SqsQueuedRetriever(_credentials).GetMessage(_queueUrl, timeoutInMilliseconds, noOfMessagesToCache).Result;
+            var rawSqsMessage = await new SqsQueuedRetriever(_credentials).GetMessage(_queueUrl, timeoutInMilliseconds, noOfMessagesToCache);
 
             if(rawSqsMessage == null)
                 return new Message();
@@ -93,7 +80,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Acknowledge(Message message)
+        public async Task AcknowledgeAsync(Message message)
         {
             if(!message.Header.Bag.ContainsKey("ReceiptHandle"))
                 return;
@@ -104,7 +91,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 using (var client = new AmazonSQSClient(_credentials))
                 {
-                    client.DeleteMessageAsync(new DeleteMessageRequest(_queueUrl, receiptHandle));
+                    await client.DeleteMessageAsync(new DeleteMessageRequest(_queueUrl, receiptHandle));
 
                     _logger.Value.InfoFormat("SqsMessageConsumer: Deleted the message {0} with receipt handle {1} on the queue {2}", message.Id, receiptHandle, _queueUrl);
                 }
@@ -121,7 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-        public void Reject(Message message, bool requeue)
+        public async Task RejectAsync(Message message, bool requeue)
         {
             if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
                 return;
@@ -136,11 +123,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     if (requeue)
                     {
-                        client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(_queueUrl, receiptHandle, 0)).Wait();
+                        await client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(_queueUrl, receiptHandle, 0));
                     }
                     else
                     {
-                        client.DeleteMessageAsync(_queueUrl, receiptHandle).Wait();
+                        await client.DeleteMessageAsync(_queueUrl, receiptHandle);
                     }
                 }
 
@@ -156,7 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
-        public void Purge()
+        public async Task PurgeAsync()
         {
             try
             {
@@ -164,7 +151,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     _logger.Value.InfoFormat("SqsMessageConsumer: Purging the queue {0}", _queueUrl);
 
-                    client.PurgeQueueAsync(_queueUrl).Wait();
+                    await client.PurgeQueueAsync(_queueUrl);
 
                     _logger.Value.InfoFormat("SqsMessageConsumer: Purged the queue {0}", _queueUrl);
                 }
@@ -180,9 +167,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Requeue(Message message)
+        public Task RequeueAsync(Message message)
         {
-            Requeue(message, 0);
+            return RequeueAsync(message, 0);
         }
 
         /// <summary>
@@ -190,11 +177,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void Requeue(Message message, int delayMilliseconds)
+        public async Task RequeueAsync(Message message, int delayMilliseconds)
         {
             try
             {
-                Reject(message, false);
+                await RejectAsync(message, false);
 
                 using (var client = new AmazonSQSClient(_credentials))
                 {
@@ -202,11 +189,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                     message.Header.Bag.Remove("ReceiptHandle");
                     var request = new SendMessageRequest(_queueUrl, JsonConvert.SerializeObject(message))
-                                  {
-                                      DelaySeconds = (int)TimeSpan.FromMilliseconds(delayMilliseconds).TotalSeconds
-                                  };
+                    {
+                        DelaySeconds = (int)TimeSpan.FromMilliseconds(delayMilliseconds).TotalSeconds
+                    };
 
-                    client.SendMessageAsync(request).Wait();
+                    await client.SendMessageAsync(request);
                 }
 
                 _logger.Value.InfoFormat("SqsMessageConsumer: requeued the message {0}", message.Id);

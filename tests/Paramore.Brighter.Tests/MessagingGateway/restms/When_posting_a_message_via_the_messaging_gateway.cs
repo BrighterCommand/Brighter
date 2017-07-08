@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RESTMS;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
@@ -54,13 +55,13 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RESTMS
         }
 
         [Fact]
-        public void When_posting_a_message_via_the_messaging_gateway()
+        public async Task When_posting_a_message_via_the_messaging_gateway()
         {
-            _messageConsumer.Receive(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
+            await _messageConsumer.ReceiveAsync(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
             _messageProducer.Send(_message);
-            _sentMessage = _messageConsumer.Receive(30000);
+            _sentMessage = await _messageConsumer.ReceiveAsync(30000);
             _messageBody = _sentMessage.Body.Value;
-            _messageConsumer.Acknowledge(_sentMessage);
+            await _messageConsumer.AcknowledgeAsync(_sentMessage);
 
             //_should_send_a_message_via_restms_with_the_matching_body
             _messageBody.Should().Be(_message.Body.Value);
@@ -70,7 +71,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RESTMS
 
         public void Dispose()
         {
-            _messageConsumer.Purge();
+            _messageConsumer.PurgeAsync().GetAwaiter().GetResult();
             _messageProducer.Dispose();
         }
     }

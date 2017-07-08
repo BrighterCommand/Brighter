@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -46,30 +47,42 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _commandProcessor = new SpyCommandProcessor();
             _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            var messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper);
-            messagePump.Channel = _channel;
-            messagePump.TimeoutInMilliseconds = 5000;
+            var messagePump = new MessagePump<MyEvent>(_channel, _commandProcessor, mapper)
+            {
+                TimeoutInMilliseconds = 5000
+            };
 
             var @event = new MyEvent();
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
             _channel.Add(message);
 
+            var cts = new CancellationTokenSource();
             _performer = new Performer(_channel, messagePump);
-            _performerTask = _performer.Run();
-            _performer.Stop();
+            _performerTask = _performer.Run(cts.Token);
         }
 
         [Fact]
-        public void When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop()
+        public async Task When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop()
         {
-            _performerTask.Wait();
+            await Task.Delay(1000);
+
+            _performer.Stop();
+
+            try
+            {
+                await _performerTask;
+            }
+            catch (TaskCanceledException)
+            {
+                // ignore
+            }
 
             //_should_terminate_successfully
             _performerTask.IsCompleted.Should().BeTrue();
             //_should_not_have_errored
             _performerTask.IsFaulted.Should().BeFalse();
-            //_should_not_show_as_cancelled
-            _performerTask.IsCanceled.Should().BeFalse();
+            //_should_show_as_cancelled
+            _performerTask.IsCanceled.Should().BeTrue();
             //_should_have_consumed_the_messages_in_the_channel
             _channel.Length.Should().Be(0);
         }

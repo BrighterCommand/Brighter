@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
@@ -44,7 +45,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
+            _messagePump = new MessagePump<MyEvent>(_channel, _commandProcessor, mapper)
+            {
+                TimeoutInMilliseconds = 5000,
+                RequeueCount = 3
+            };
 
             var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
 
@@ -52,15 +57,16 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_An_Unacceptable_Message_Is_Recieved()
+        public async Task When_An_Unacceptable_Message_Is_Recieved()
         {
-            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
+            var cts = new CancellationTokenSource();
+            var task = Task.Run(() => _messagePump.RunAsync(cts.Token), cts.Token);
+            await Task.Delay(1000, cts.Token);
 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Add(quitMessage);
 
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(task);
 
             //should_acknowledge_the_message
             _channel.AcknowledgeHappened.Should().BeTrue();

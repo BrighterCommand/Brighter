@@ -48,11 +48,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var connection = new Connection<MyEvent>(
-                new ConnectionName("test"), 
-                noOfPerformers: 1, 
-                timeoutInMilliseconds: 1000, 
+                new ConnectionName("test"),
+                noOfPerformers: 1,
+                timeoutInMilliseconds: 1000,
                 channelFactory: new InMemoryChannelFactory(_channel),
-                channelName: new ChannelName("fakeChannel"), 
+                channelName: new ChannelName("fakeChannel"),
                 routingKey: new RoutingKey("fakekey"));
             _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { connection });
 
@@ -65,10 +65,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler()
+        public async Task When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler()
         {
-            Task.Delay(1000).Wait();
-            _dispatcher.End().Wait();
+            await Task.Delay(1000);
+            await _dispatcher.End();
 
             //_should_have_consumed_the_messages_in_the_channel
             _channel.Length.Should().Be(0);

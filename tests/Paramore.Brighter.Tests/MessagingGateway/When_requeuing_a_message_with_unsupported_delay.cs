@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using FakeItEasy;
 using FluentAssertions;
 using Xunit;
@@ -41,7 +42,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
         {
             _gateway = A.Fake<IAmAMessageConsumer>();
 
-            _channel = new Channel("test", _gateway);
+            _channel = new Channel(new ChannelName("test"), _gateway);
 
             _requeueMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
@@ -51,14 +52,14 @@ namespace Paramore.Brighter.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_Requeuing_A_Message_With_Unsupported_Delay()
+        public async Task When_Requeuing_A_Message_With_Unsupported_Delay()
         {
             _stopWatch.Start();
-            _channel.Requeue(_requeueMessage, 1000);
+            await _channel.RequeueAsync(_requeueMessage, 1000);
             _stopWatch.Stop();
 
             //_should_call_the_messaging_gateway
-            A.CallTo(() => _gateway.Requeue(_requeueMessage)).MustHaveHappened();
+            A.CallTo(() => _gateway.RequeueAsync(_requeueMessage)).MustHaveHappened();
             //_should_have_process_delayed_the_call
             _stopWatch.ElapsedMilliseconds.Should().BeGreaterThan(900);
         }

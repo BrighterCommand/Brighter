@@ -89,7 +89,6 @@ namespace GreetingsWindowsService
             };
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqConnnection);
 
             _dispatcher = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
@@ -99,7 +98,7 @@ namespace GreetingsWindowsService
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build())
                 .MessageMappers(messageMapperRegistry)
-                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
                 .Connections(new []
                 {
                     new Connection<GreetingEvent>(

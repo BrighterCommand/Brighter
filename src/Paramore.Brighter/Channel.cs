@@ -37,77 +37,51 @@ namespace Paramore.Brighter
     /// </summary>
     public class Channel : IAmAChannel
     {
-        private readonly string _channelName;
         private readonly IAmAMessageConsumer _messageConsumer;
-        private readonly bool _messageConsumerSupportsDelay;
-        private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
+
+        /// <summary>
+        ///     Gets the name.
+        /// </summary>
+        /// <value>The name.</value>
+        public ChannelName Name { get; }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Channel" /> class.
         /// </summary>
         /// <param name="channelName">Name of the queue.</param>
         /// <param name="messageConsumer">The messageConsumer.</param>
-        public Channel(string channelName, IAmAMessageConsumer messageConsumer)
+        public Channel(ChannelName channelName, IAmAMessageConsumer messageConsumer)
         {
-            _channelName = channelName;
+            Name = channelName;
             _messageConsumer = messageConsumer;
-            _messageConsumerSupportsDelay = _messageConsumer is IAmAMessageConsumerSupportingDelay &&
-                                            (_messageConsumer as IAmAMessageGatewaySupportingDelay).DelaySupported;
         }
-
-        /// <summary>
-        ///     Acknowledges the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void Acknowledge(Message message)
-        {
-            _messageConsumer.Acknowledge(message);
-        }
-
-        /// <summary>
-        /// Inserts a message into the channel for consumption by the message pump. Used to send control signals to the pump, normal operation uses recieve.
-        /// </summary>
-        /// <param name="message">The message to insert into the channel</param>
-        public void Enqueue(Message message)
-        {
-            _queue.Enqueue(message);
-        }
-
-        /// <summary>
-        ///     Gets the length.
-        /// </summary>
-        /// <value>The length.</value>
-        public int Length { get { return _queue.Count; } }
-
-        /// <summary>
-        ///     Gets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        public ChannelName Name { get { return new ChannelName(_channelName); } }
 
         /// <summary>
         ///     Receives the specified timeout in milliseconds.
         /// </summary>
         /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        public Message Receive(int timeoutinMilliseconds)
+        public async Task<Message> ReceiveAsync(int timeoutinMilliseconds)
         {
-            Message message;
-            if (!_queue.TryDequeue(out message))
-            {
-                message = _messageConsumer.Receive(timeoutinMilliseconds);
-            }
+            return await _messageConsumer.ReceiveAsync(timeoutinMilliseconds);
+        }
 
-            return message;
+        /// <summary>
+        ///     Acknowledges the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public async Task AcknowledgeAsync(Message message)
+        {
+            await _messageConsumer.AcknowledgeAsync(message);
         }
 
         /// <summary>
         ///     Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message)
+        public async Task RejectAsync(Message message)
         {
-            _messageConsumer.Reject(message, true);
+            await _messageConsumer.RejectAsync(message, true);
         }
 
         /// <summary>
@@ -115,23 +89,22 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message"></param>
         /// <param name="delayMilliseconds">How long should we delay before requeueing</param>
-        public void Requeue(Message message, int delayMilliseconds = 0)
+        public async Task RequeueAsync(Message message, int delayMilliseconds = 0)
         {
-            if (delayMilliseconds > 0 && !_messageConsumerSupportsDelay)
-                Task.Delay(delayMilliseconds).Wait();
-
-            if (_messageConsumerSupportsDelay)
-                (_messageConsumer as IAmAMessageConsumerSupportingDelay).Requeue(message, delayMilliseconds);
+            var messageConsumerSupportingDelay = _messageConsumer as IAmAMessageConsumerSupportingDelay;
+            if (messageConsumerSupportingDelay != null && messageConsumerSupportingDelay.DelaySupported)
+            {
+                await messageConsumerSupportingDelay.RequeueAsync(message, delayMilliseconds);
+            }
             else
-                _messageConsumer.Requeue(message);
-        }
+            {
+                if (delayMilliseconds > 0)
+                {
+                    await Task.Delay(delayMilliseconds);
+                }
 
-        /// <summary>
-        ///     Stops this instance.
-        /// </summary>
-        public void Stop()
-        {
-            _queue.Enqueue(MessageFactory.CreateQuitMessage());
+                await _messageConsumer.RequeueAsync(message);
+            }
         }
 
         /// <summary>

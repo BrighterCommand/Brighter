@@ -75,11 +75,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
 
         [Fact]
-        public void When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers()
+        public async Task When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers()
         {
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
             _numberOfConsumers = _dispatcher.Consumers.Count();
-            _dispatcher.End().Wait();
+            await _dispatcher.End();
 
            //_should_have_consumed_the_messages_in_the_event_channel
             _eventChannel.Length.Should().Be(0);
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
             //_should_have_no_consumers
             _dispatcher.Consumers.Should().BeEmpty();
-            //_should_of_had_2_consumers_when_running
+            //_should_have_had_2_consumers_when_running
             _numberOfConsumers.Should().Be(2);
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -29,7 +30,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             var channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePumpAsync<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000 };
+            _messagePump = new MessagePumpAsync<MyEvent>(channel, commandProcessor, mapper)
+            {
+                TimeoutInMilliseconds = 5000
+            };
 
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_myEvent)));
             channel.Add(message);
@@ -40,7 +44,8 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         [Fact(Skip = "Failing due to threading issues on Xunit tests")]
         public async Task When_a_message_is_dispatched_it_should_reach_a_handler_async()
         {
-            await _messagePump.Run();
+            var cts = new CancellationTokenSource();
+            await _messagePump.RunAsync(cts.Token);
 
             MyEventHandlerAsyncWithContinuation.ShouldReceive(_myEvent).Should().BeTrue();
             MyEventHandlerAsyncWithContinuation.MonitorValue.Should().Be(2);

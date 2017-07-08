@@ -1,17 +1,3 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.messaginggateway.awssqs
-// Author           : ian
-// Created          : 08-17-2015
-//
-// Last Modified By : ian
-// Last Modified On : 10-25-2015
-// ***********************************************************************
-// <copyright file="SqsMessageConsumerFactory.cs" company="">
-//     Copyright ©  2015
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 using Amazon.Runtime;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS

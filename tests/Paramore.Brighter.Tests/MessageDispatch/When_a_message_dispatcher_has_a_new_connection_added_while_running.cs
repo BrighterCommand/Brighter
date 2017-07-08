@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -34,7 +33,7 @@ using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    public class DispatcherAddNewConnectionTests : IDisposable
+    public class DispatcherAddNewConnectionTests
     {
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _channel;
@@ -63,7 +62,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running()
+        public async Task When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running()
         {
             _dispatcher.Open(_newConnection);
 
@@ -71,7 +70,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Add(message);
 
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
 
             //_should_have_consumed_the_messages_in_the_event_channel
             _channel.Length.Should().Be(0);
@@ -81,12 +80,8 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher.Consumers.Should().HaveCount(2);
             //_should_have_two_connections
             _dispatcher.Connections.Should().HaveCount(2);
-        }
 
-        public void Dispose()
-        {
-            if (_dispatcher?.State == DispatcherState.DS_RUNNING)
-                _dispatcher.End().Wait();
+            await _dispatcher.End();
         }
     }
 }

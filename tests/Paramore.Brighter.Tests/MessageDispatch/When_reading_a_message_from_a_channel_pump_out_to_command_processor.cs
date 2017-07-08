@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
@@ -45,7 +47,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _commandProcessor = new SpyCommandProcessor();
             _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000 };
+            _messagePump = new MessagePump<MyEvent>(_channel, _commandProcessor, mapper)
+            {
+                TimeoutInMilliseconds = 5000
+            };
 
             _event = new MyEvent();
 
@@ -56,9 +61,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_Reading_A_Message_From_A_Channel_Pump_Out_To_Command_Processor()
+        public async Task When_Reading_A_Message_From_A_Channel_Pump_Out_To_Command_Processor()
         {
-            _messagePump.Run();
+            var cts = new CancellationTokenSource();
+
+            await _messagePump.RunAsync(cts.Token);
 
             //_should_send_the_message_via_the_command_processor
             _commandProcessor.Commands[0].Should().Be(CommandType.Publish);

@@ -62,10 +62,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
 
         [Fact]
-        public void WhenAMessageDispatcherStartsMultiplePerformers()
+        public async Task WhenAMessageDispatcherStartsMultiplePerformers()
         {
-            Task.Delay(1000).Wait();
-            _dispatcher.End().Wait();
+            await Task.Delay(1000);
+            await _dispatcher.End();
 
             //_should_have_consumed_the_messages_in_the_channel
             _channel.Length.Should().Be(0);

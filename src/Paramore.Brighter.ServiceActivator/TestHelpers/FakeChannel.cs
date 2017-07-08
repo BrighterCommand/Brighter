@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.ServiceActivator.TestHelpers
 {
@@ -42,36 +43,33 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
             Name = new ChannelName(channelName);
         }
 
-        public virtual void Acknowledge(Message message)
+        public virtual Task AcknowledgeAsync(Message message)
         {
             AcknowledgeHappened = true;
             AcknowledgeCount++;
+
+            return Task.CompletedTask;
         }
 
-        public void Enqueue(Message message)
+        public virtual Task<Message> ReceiveAsync(int timeoutinMilliseconds)
         {
-            _messageQueue.Enqueue(message);
+            return _messageQueue.TryDequeue(out Message message)
+                ? Task.FromResult(message)
+                : Task.FromResult(new Message());
         }
 
-        public virtual Message Receive(int timeoutinMilliseconds)
-        {
-            Message message;
-            return _messageQueue.TryDequeue(out message) ? message : new Message();
-        }
-
-        public virtual void Reject(Message message)
+        public virtual Task RejectAsync(Message message)
         {
             RejectCount++;
+
+            return Task.CompletedTask;
         }
 
-        public virtual void Stop()
-        {
-            _messageQueue.Enqueue(MessageFactory.CreateQuitMessage());
-        }
-
-        public virtual void Requeue(Message message, int delayMilliseconds = 0)
+        public virtual Task RequeueAsync(Message message, int delayMilliseconds = 0)
         {
             _messageQueue.Enqueue(message);
+
+            return Task.CompletedTask;
         }
 
         public virtual void Add(Message message, int millisecondsDelay = 0)

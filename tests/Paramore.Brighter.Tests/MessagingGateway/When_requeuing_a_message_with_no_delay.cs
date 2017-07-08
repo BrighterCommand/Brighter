@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Xunit;
 
@@ -38,7 +39,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
         {
             _gateway = A.Fake<IAmAMessageConsumer>();
 
-            _channel = new Channel("test", _gateway);
+            _channel = new Channel(new ChannelName("test"), _gateway);
 
             _requeueMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
@@ -46,12 +47,12 @@ namespace Paramore.Brighter.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_Requeuing_A_Message_With_No_Delay()
+        public async Task When_Requeuing_A_Message_With_No_Delay()
         {
-            _channel.Requeue(_requeueMessage);
+            await _channel.RequeueAsync(_requeueMessage);
 
             //_should_call_the_messaging_gateway
-            A.CallTo(() => _gateway.Requeue(_requeueMessage)).MustHaveHappened();
+            A.CallTo(() => _gateway.RequeueAsync(_requeueMessage)).MustHaveHappened();
         }
     }
 }

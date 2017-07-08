@@ -67,7 +67,6 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             };
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqConnection);
 
             var commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer())))
@@ -83,7 +82,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _builder = DispatchBuilder.With()
                 .CommandProcessor(commandProcessor)
                 .MessageMappers(messageMapperRegistry)
-                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
                 .Connections(new []
                 {
                     new Connection<MyEvent>(
@@ -114,7 +113,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
         }
 
-        private Connection GetConnection(string name)
+        private ConnectionBase GetConnection(string name)
         {
             return _dispatcher.Connections.SingleOrDefault(conn => conn.Name == name);
         }

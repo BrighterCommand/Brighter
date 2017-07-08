@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Paramore.Brighter.MessagingGateway.RMQ.Logging;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
@@ -83,7 +84,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Acknowledge(Message message)
+        public Task AcknowledgeAsync(Message message)
         {
             var deliveryTag = message.GetDeliveryTag();
             try
@@ -91,6 +92,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 EnsureChannel(_queueName);
                 _logger.Value.InfoFormat("RmqMessageConsumer: Acknowledging message {0} as completed with delivery tag {1}", message.Id, deliveryTag);
                 Channel.BasicAck(deliveryTag, false);
+
+                return Task.CompletedTask;
             }
             catch (Exception exception)
             {
@@ -102,17 +105,22 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
-        public void Purge()
+        public Task PurgeAsync()
         {
             try
             {
                 EnsureChannel(_queueName);
                 _logger.Value.DebugFormat("RmqMessageConsumer: Purging channel {0}", _queueName);
 
-                try { Channel.QueuePurge(_queueName); }
+                try
+                {
+                    Channel.QueuePurge(_queueName);
+                }
                 catch (OperationInterruptedException operationInterruptedException)
                 {
-                    if (operationInterruptedException.ShutdownReason.ReplyCode == 404) { return; }
+                    if (operationInterruptedException.ShutdownReason.ReplyCode == 404)
+                        return Task.CompletedTask;
+
                     throw;
                 }
             }
@@ -121,14 +129,16 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 _logger.Value.ErrorException("RmqMessageConsumer: Error purging channel {0}", exception, _queueName);
                 throw;
             }
+
+            return Task.CompletedTask;
         }
 
-        public void Requeue(Message message)
+        public Task RequeueAsync(Message message)
         {
-            Requeue(message, 0);
+            return RequeueAsync(message, 0);
         }
 
-        public void Requeue(Message message, int delayMilliseconds)
+        public Task RequeueAsync(Message message, int delayMilliseconds)
         {
             try
             {
@@ -136,7 +146,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 EnsureChannel(_queueName);
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name);
                 rmqMessagePublisher.RequeueMessage(message, _queueName, delayMilliseconds);
-                Reject(message, false);
+                RejectAsync(message, false);
+
+                return Task.CompletedTask;
             }
             catch (Exception exception)
             {
@@ -150,13 +162,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-        public void Reject(Message message, bool requeue)
+        public Task RejectAsync(Message message, bool requeue)
         {
             try
             {
                 EnsureChannel(_queueName);
                 _logger.Value.InfoFormat("RmqMessageConsumer: NoAck message {0} with delivery tag {1}", message.Id, message.GetDeliveryTag());
                 Channel.BasicNack(message.GetDeliveryTag(), false, requeue);
+
+                return Task.CompletedTask;
             }
             catch (Exception exception)
             {
@@ -170,7 +184,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        public Message Receive(int timeoutInMilliseconds)
+        public Task<Message> ReceiveAsync(int timeoutInMilliseconds)
         {
             _logger.Value.DebugFormat("RmqMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName, _routingKey, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
@@ -260,7 +274,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 throw;
             }
 
-            return message;
+            return Task.FromResult(message);
         }
 
         protected virtual void CreateConsumer()

@@ -25,13 +25,7 @@ THE SOFTWARE. */
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Interface IAmAChannelFactory
-    /// Creates instances of <see cref="IAmAChannel"/>channels. We provide support for some Application Layer channels, and provide factories for those:
-    /// <list type="bullet">
-    /// <item>AMQP</item>
-    /// <item>RestML</item>
-    /// </list>
-    /// If you need to support other Application Layer protocols, please consider issuing a Pull request for your implementation
+    /// Creates instances of <see cref="IAmAChannel"/>channels
     /// </summary>
     public interface IAmAChannelFactory
     {
@@ -42,6 +36,6 @@ namespace Paramore.Brighter
         /// <param name="routingKey"></param>
         /// <param name="isDurable"></param>
         /// <returns>IAmAnInputChannel.</returns>
-        IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = false, ushort preFetchSize = 1, bool highAvailability = false);
+        IAmAChannel CreateInputChannel(ChannelName channelName, string routingKey, bool isDurable = false, ushort preFetchSize = 1, bool highAvailability = false);
     }
 }

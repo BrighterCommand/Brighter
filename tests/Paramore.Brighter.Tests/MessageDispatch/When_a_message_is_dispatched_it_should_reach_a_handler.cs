@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
@@ -55,7 +57,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             var channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000 };
+            _messagePump = new MessagePump<MyEvent>(channel, commandProcessor, mapper)
+            {
+                TimeoutInMilliseconds = 5000
+            };
 
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_myEvent)));
             channel.Add(message);
@@ -64,9 +69,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler()
+        public async Task When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler()
         {
-            _messagePump.Run();
+            var cts = new CancellationTokenSource();
+
+            await _messagePump.RunAsync(cts.Token);
 
             //_should_dispatch_the_message_to_a_handler
             _receivedMessages.Should().Contain(nameof(MyEventHandler), _myEvent.Id);

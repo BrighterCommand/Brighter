@@ -82,7 +82,7 @@ namespace ManagementAndMonitoringCoreConsole
             //create message mappers
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
             {
-                {typeof(GreetingCommand), typeof(GreetingCommandMessageMapper)}
+                { typeof(GreetingCommand), typeof(GreetingCommandMessageMapper) }
             };
 
             var rmqGatewayMessages = RmqGatewayBuilder.With
@@ -92,30 +92,26 @@ namespace ManagementAndMonitoringCoreConsole
 
             var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqGatewayMessages);
 
-            var inputChannelFactory = new InputChannelFactory(new RmqMessageConsumerFactory(rmqGatewayMessages), rmqMessageProducerFactory);
-            var builder = DispatchBuilder
-                .With()
+            var inputChannelFactory = new InputChannelFactory(new RmqMessageConsumerFactory(rmqGatewayMessages));
+
+            _dispatcher = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                     .Policies(policyRegistry)
                     .NoTaskQueues()
                     .RequestContextFactory(new InMemoryRequestContextFactory())
-                    .Build()
-                 )
+                    .Build())
                  .MessageMappers(messageMapperRegistry)
                  .DefaultChannelFactory(inputChannelFactory)
-                 .Connections(new[]
+                 .Connections(new []
                  {
-                     ConnectionBuilder.With
-                        .Name("paramore.example.greeting")
-                        .ChannelFactory(inputChannelFactory)
-                        .Type(typeof(GreetingCommand))
-                        .ChannelName("greeting.event")
-                        .RoutingKey("greeting.event")
-                        .Timeout(200)
-                        .Build()
-                 });
-            _dispatcher = builder.Build();
+                     new Connection<GreetingCommand>(
+                         new ConnectionName("paramore.example.greeting"),
+                         new ChannelName("greeting.event"),
+                         new RoutingKey("greeting.event"),
+                         timeoutInMilliseconds: 200)
+                 })
+                 .Build();
 
             var controlBusBuilder = ControlBusReceiverBuilder
                 .With()
