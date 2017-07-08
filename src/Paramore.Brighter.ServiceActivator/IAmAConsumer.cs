@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -9,7 +10,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets or sets the name.
         /// </summary>
         /// <value>The name.</value>
-        ConnectionName Name { get; set; }
+        ConnectionName Name { get; }
 
         /// <summary>
         /// Gets the performer.
@@ -21,20 +22,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets or sets the state.
         /// </summary>
         /// <value>The state.</value>
-        ConsumerState State { get; set; }
-
-        /// <summary>
-        /// Gets or sets the job.
-        /// </summary>
-        /// <value>The job.</value>
-        Task Job { get; set; }
-
-        int JobId { get; set; }
+        ConsumerState State { get; }
 
         /// <summary>
         /// Opens the task queue and begin receiving messages.
         /// </summary>
-        void Open();
+        Task Open(CancellationToken cancellationToken);
 
         /// <summary>
         /// Shuts the task, which will not receive messages.

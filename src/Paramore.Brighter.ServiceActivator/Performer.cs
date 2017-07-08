@@ -23,35 +23,38 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.ServiceActivator
 {
+    /// <summary>
     /// Abstracts the thread that runs a message pump
+    /// </summary>
     public class Performer : IAmAPerformer
     {
         private readonly IAmAChannel _channel;
         private readonly IAmAMessagePump _messagePump;
+        private readonly CancellationTokenSource _cancellationTokenSource;
 
         public Performer(IAmAChannel channel, IAmAMessagePump messagePump)
         {
             _channel = channel;
             _messagePump = messagePump;
+            _cancellationTokenSource = new CancellationTokenSource();
         }
 
         public void Stop()
         {
-            _channel.Stop();
+            _cancellationTokenSource.Cancel();
         }
 
-        public Task Run()
+        public Task Run(CancellationToken cancellationToken)
         {
-            //TODO: We want to support an event loop for async pipelines, but more work is needed
-            //if (!_messagePump.IsAsync)
-                return Task.Factory.StartNew(() => _messagePump.Run().Wait(), TaskCreationOptions.LongRunning);
-            //else
-                //return Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-         }
+            cancellationToken.Register(() => _cancellationTokenSource.Cancel());
+
+            return Task.Run(() => _messagePump.RunAsync(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
+        }
 
         public void Dispose()
         {
@@ -63,7 +66,6 @@ namespace Paramore.Brighter.ServiceActivator
         {
             Dispose(false);
         }
-
 
         private void Dispose(bool disposing)
         {

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -46,7 +47,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
+            _messagePump = new MessagePump<MyEvent>(_channel, _commandProcessor, mapper)
+            {
+                TimeoutInMilliseconds = 5000, RequeueCount = 3
+            };
 
             _event = new MyEvent();
 
@@ -57,15 +61,16 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Requeue_Count_Threshold_For_Events_Has_Been_Reached()
+        public async Task When_A_Requeue_Count_Threshold_For_Events_Has_Been_Reached()
         {
-            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
+            var cts = new CancellationTokenSource();
+            var task = Task.Run(() => _messagePump.RunAsync(cts.Token), cts.Token);
+            await Task.Delay(1000, cts.Token);
 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Add(quitMessage);
 
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(task);
 
             //_should_publish_the_message_via_the_command_processor
             _commandProcessor.Commands[0].Should().Be(CommandType.Publish);

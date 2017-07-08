@@ -19,13 +19,15 @@ namespace Paramore.Brighter.ServiceActivator
     {
         protected static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MessagePumpBase<TRequest>>);
 
+        protected IAmAChannel _channel;
         protected IAmACommandProcessor _commandProcessor;
 
         private readonly IAmAMessageMapper<TRequest> _messageMapper;
         private int _unacceptableMessageCount = 0;
 
-        protected MessagePumpBase(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
+        protected MessagePumpBase(IAmAChannel channel, IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
         {
+            _channel = channel;
             _commandProcessor = commandProcessor;
             _messageMapper = messageMapper;
         }
@@ -38,64 +40,62 @@ namespace Paramore.Brighter.ServiceActivator
 
         public int UnacceptableMessageLimit { get; set; }
 
-        public IAmAChannel Channel { get; set; }
+        protected abstract Task DispatchRequest(MessageHeader messageHeader, TRequest request, CancellationToken cancellationToken);
 
-        public async Task Run()
+        public async Task RunAsync(CancellationToken cancellationToken)
         {
-            SynchronizationContextHook();
-
-            do
+            while (!cancellationToken.IsCancellationRequested)
             {
                 if (UnacceptableMessageLimitReached())
                 {
-                    Channel.Dispose();
+                    _channel.Dispose();
                     break;
                 }
 
-                _logger.Value.DebugFormat("MessagePump: Receiving messages from channel {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                _logger.Value.DebugFormat("MessagePump: Receiving messages from channel {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, _channel.Name);
 
                 Message message = null;
                 try
                 {
-                    message = Channel.Receive(TimeoutInMilliseconds);
+                    message = await _channel.ReceiveAsync(TimeoutInMilliseconds);
                 }
                 catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
                 {
-                    _logger.Value.WarnFormat("MessagePump: BrokenCircuitException messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
-                    Task.Delay(1000).Wait();
+                    _logger.Value.WarnFormat("MessagePump: BrokenCircuitException messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, _channel.Name);
+                    await Task.Delay(1000, cancellationToken);
                     continue;
                 }
                 catch (ChannelFailureException)
                 {
-                    _logger.Value.WarnFormat("MessagePump: ChannelFailureException messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
-                    Task.Delay(1000).Wait();
+                    _logger.Value.WarnFormat("MessagePump: ChannelFailureException messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, _channel.Name);
+                    await Task.Delay(1000, cancellationToken);
                     continue;
                 }
                 catch (Exception exception)
                 {
-                    _logger.Value.ErrorException("MessagePump: Exception receiving messages from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.Value.ErrorException("MessagePump: Exception receiving messages from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, _channel.Name);
                 }
 
                 if (message == null)
                 {
-                    Channel.Dispose();
+                    _channel.Dispose();
                     throw new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
                 }
 
                 // empty queue
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
-                    Task.Delay(500).Wait();
+                    await Task.Delay(500, cancellationToken);
                     continue;
                 }
 
                 // failed to parse a message from the incoming data
                 if (message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
                 {
-                    _logger.Value.WarnFormat("MessagePump: Failed to parse a message from the incoming message with id {1} from {2} on thread # {0}", Thread.CurrentThread.ManagedThreadId, message.Id, Channel.Name);
+                    _logger.Value.WarnFormat("MessagePump: Failed to parse a message from the incoming message with id {1} from {2} on thread # {0}", Thread.CurrentThread.ManagedThreadId, message.Id, _channel.Name);
 
                     IncrementUnacceptableMessageLimit();
-                    AcknowledgeMessage(message);
+                    await AcknowledgeMessageAsync(message);
 
                     continue;
                 }
@@ -103,8 +103,8 @@ namespace Paramore.Brighter.ServiceActivator
                 // QUIT command
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                 {
-                    _logger.Value.DebugFormat("MessagePump: Quit receiving messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
-                    Channel.Dispose();
+                    _logger.Value.DebugFormat("MessagePump: Quit receiving messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, _channel.Name);
+                    _channel.Dispose();
                     break;
                 }
 
@@ -119,61 +119,60 @@ namespace Paramore.Brighter.ServiceActivator
                 try
                 {
                     var request = TranslateMessage(message);
-                    await DispatchRequest(message.Header, request);
+                    await DispatchRequest(message.Header, request, cancellationToken);
                 }
                 catch (ConfigurationException configurationException)
                 {
-                    _logger.Value.DebugException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", configurationException, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.Value.DebugException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", configurationException, Thread.CurrentThread.ManagedThreadId, _channel.Name);
 
-                    RejectMessage(message);
-                    Channel.Dispose();
+                    await RejectMessageAsync(message);
+                    _channel.Dispose();
                     break;
                 }
                 catch (DeferMessageAction)
                 {
-                    RequeueMessage(message);
+                    await RequeueMessageAsync(message);
                     continue;
                 }
                 catch (AggregateException aggregateException)
                 {
-                    var stopAndRequeue = HandleProcessingException(aggregateException);
+                    (var stop, var requeue) = HandleProcessingException(aggregateException);
 
-                    if (stopAndRequeue.Item2)   //requeue
+                    if (requeue)
                     {
-                        RequeueMessage(message);
+                        await RequeueMessageAsync(message);
                         continue;
                     }
 
-                    if (stopAndRequeue.Item1)   //stop
+                    if (stop)
                     {
-                        RejectMessage(message);
-                        Channel.Dispose();
+                        await RejectMessageAsync(message);
+                        _channel.Dispose();
                         break;
                     }
                 }
                 catch (MessageMappingException messageMappingException)
                 {
-                    _logger.Value.WarnException("MessagePump: Failed to map the message from {1} on thread # {0}", messageMappingException, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.Value.WarnException("MessagePump: Failed to map the message from {1} on thread # {0}", messageMappingException, Thread.CurrentThread.ManagedThreadId, _channel.Name);
 
                     IncrementUnacceptableMessageLimit();
                 }
                 catch (Exception e)
                 {
-                    _logger.Value.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", e, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.Value.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", e, Thread.CurrentThread.ManagedThreadId, _channel.Name);
                 }
 
-                AcknowledgeMessage(message);
+                await AcknowledgeMessageAsync(message);
+            }
 
-            } while (true);
-
-            _logger.Value.DebugFormat("MessagePump: Finished running message loop, no longer receiving messages from {0} on thread # {1}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
+            _logger.Value.DebugFormat("MessagePump: Finished running message loop, no longer receiving messages from {0} on thread # {1}", _channel.Name, Thread.CurrentThread.ManagedThreadId);
         }
 
-        protected void AcknowledgeMessage(Message message)
+        private async Task AcknowledgeMessageAsync(Message message)
         {
-            _logger.Value.DebugFormat("MessagePump: Acknowledge message {0} read from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            _logger.Value.DebugFormat("MessagePump: Acknowledge message {0} read from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, _channel.Name);
 
-            Channel.Acknowledge(message);
+            await _channel.AcknowledgeAsync(message);
         }
 
         private bool DiscardRequeuedMessagesEnabled()
@@ -181,9 +180,7 @@ namespace Paramore.Brighter.ServiceActivator
             return RequeueCount != -1;
         }
 
-        protected abstract Task DispatchRequest(MessageHeader messageHeader, TRequest request);
-
-        protected Tuple<bool, bool> HandleProcessingException(AggregateException aggregateException)
+        private (bool stop, bool requeue) HandleProcessingException(AggregateException aggregateException)
         {
             var stop = false;
             var requeue = false;
@@ -198,100 +195,88 @@ namespace Paramore.Brighter.ServiceActivator
 
                 if (exception is ConfigurationException)
                 {
-                    _logger.Value.DebugException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                    _logger.Value.DebugException("MessagePump: Stopping receiving of messages from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, _channel.Name);
                     stop = true;
                     break;
                 }
 
-                _logger.Value.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+                _logger.Value.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, _channel.Name);
             }
 
-            return new Tuple<bool, bool>(stop, requeue);
+            return (stop, requeue);
         }
 
-        protected void IncrementUnacceptableMessageLimit()
+        private void IncrementUnacceptableMessageLimit()
         {
-            _unacceptableMessageCount++;
+            Interlocked.Increment(ref _unacceptableMessageCount);
         }
 
-        protected void RejectMessage(Message message)
+        private async Task RejectMessageAsync(Message message)
         {
-            _logger.Value.DebugFormat("MessagePump: Rejecting message {0} from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            _logger.Value.DebugFormat("MessagePump: Rejecting message {0} from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, _channel.Name);
 
-            Channel.Reject(message);
+            await _channel.RejectAsync(message);
         }
 
-        protected void RequeueMessage(Message message)
+        private async Task RequeueMessageAsync(Message message)
         {
             message.UpdateHandledCount();
 
-            if (DiscardRequeuedMessagesEnabled())
+            if (DiscardRequeuedMessagesEnabled() && message.HandledCountReached(RequeueCount))
             {
-                if (message.HandledCountReached(RequeueCount))
-                {
-                    var originalMessageId = message.Header.Bag.ContainsKey(Message.OriginalMessageIdHeaderName) ? message.Header.Bag[Message.OriginalMessageIdHeaderName].ToString() : null;
+                var originalMessageId = message.Header.Bag.ContainsKey(Message.OriginalMessageIdHeaderName) ? message.Header.Bag[Message.OriginalMessageIdHeaderName].ToString() : null;
 
-                    _logger.Value.ErrorFormat(
-                        "MessagePump: Have tried {2} times to handle this message {0}{4} from {3} on thread # {1}, dropping message.{5}Message Body:{6}", 
-                        message.Id, 
-                        Thread.CurrentThread.ManagedThreadId, 
-                        RequeueCount, 
-                        Channel.Name,
-                        string.IsNullOrEmpty(originalMessageId) ? string.Empty : string.Format(" (original message id {0})", originalMessageId),
-                        Environment.NewLine,
-                        message.Body.Value);
+                _logger.Value.ErrorFormat(
+                    "MessagePump: Have tried {2} times to handle this message {0}{4} from {3} on thread # {1}, dropping message.{5}Message Body:{6}",
+                    message.Id,
+                    Thread.CurrentThread.ManagedThreadId, 
+                    RequeueCount,
+                    _channel.Name,
+                    string.IsNullOrEmpty(originalMessageId) ? string.Empty : string.Format(" (original message id {0})", originalMessageId),
+                    Environment.NewLine,
+                    message.Body.Value);
 
-                    AcknowledgeMessage(message);
-                    return;
-                }
+                await AcknowledgeMessageAsync(message);
+                return;
             }
 
-            _logger.Value.DebugFormat("MessagePump: Re-queueing message {0} from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            _logger.Value.DebugFormat("MessagePump: Re-queueing message {0} from {2} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId, _channel.Name);
 
-            Channel.Requeue(message, RequeueDelayInMilliseconds);
+            await _channel.RequeueAsync(message, RequeueDelayInMilliseconds);
         }
 
-        protected abstract void SynchronizationContextHook();
-
-        protected TRequest TranslateMessage(Message message)
+        private TRequest TranslateMessage(Message message)
         {
             if (_messageMapper == null)
-            {
-                throw new ConfigurationException(string.Format("No message mapper found for type {0} for message {1}.", typeof(TRequest).FullName, message.Id));
-            }
+                throw new ConfigurationException($"No message mapper found for type {typeof(TRequest).FullName} for message {message.Id}.");
 
             _logger.Value.DebugFormat("MessagePump: Translate message {0} on thread # {1}", message.Id, Thread.CurrentThread.ManagedThreadId);
 
-            TRequest request;
-
             try
             {
-                request = _messageMapper.MapToRequest(message);
+                return _messageMapper.MapToRequest(message);
             }
             catch (Exception exception)
             {
-                throw new MessageMappingException(string.Format("Failed to map message {0} using message mapper {1} for type {2} ", message.Id, _messageMapper.GetType().FullName, typeof(TRequest).FullName), exception);
+                throw new MessageMappingException($"Failed to map message {message.Id} using message mapper {_messageMapper.GetType().FullName} for type {typeof(TRequest).FullName}.", exception);
             }
-
-            return request;
         }
 
-        protected bool UnacceptableMessageLimitReached()
+        private bool UnacceptableMessageLimitReached()
         {
-            if (UnacceptableMessageLimit == 0) return false;
+            if (UnacceptableMessageLimit == 0)
+                return false;
 
-            if (_unacceptableMessageCount >= UnacceptableMessageLimit)
-            {
-                _logger.Value.ErrorFormat(
-                    "MessagePump: Unacceptable message limit of {2} reached, stopping reading messages from {0} on thread # {1}",
-                    Channel.Name,
-                    Thread.CurrentThread.ManagedThreadId,
-                    UnacceptableMessageLimit);
-                
-                return true;
-            }
-            return false;
+            if (_unacceptableMessageCount < UnacceptableMessageLimit)
+                return false;
+
+            _logger.Value.ErrorFormat(
+                "MessagePump: Unacceptable message limit of {2} reached, stopping reading messages from {0} on thread # {1}",
+                _channel.Name,
+                Thread.CurrentThread.ManagedThreadId,
+                UnacceptableMessageLimit);
+
+            return true;
         }
-
     }
 }

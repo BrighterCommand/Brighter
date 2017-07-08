@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Amazon.Runtime;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -30,12 +31,11 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
         }
 
         [Fact]
-        public void When_reading_a_message_via_the_messaging_gateway()
+        public async Task When_reading_a_message_via_the_messaging_gateway()
         {
             _sender.Send(_sentMessage);
-            _receivedMessage = _receiver.Receive(2000);
-            _receiver.Acknowledge(_receivedMessage);
-
+            _receivedMessage = await _receiver.ReceiveAsync(2000);
+            await _receiver.AcknowledgeAsync(_receivedMessage);
 
             //should_send_a_message_via_sqs_with_the_matching_body
             _receivedMessage.Body.Should().Be(_sentMessage.Body);

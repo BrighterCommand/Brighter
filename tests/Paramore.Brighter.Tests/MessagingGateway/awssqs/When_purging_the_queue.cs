@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Amazon.Runtime;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -29,10 +30,10 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
         }
 
         [Fact]
-        public void When_purging_the_queue()
+        public async Task When_purging_the_queue()
         {
             _sender.Send(_sentMessage);
-            _receiver.Purge();
+            await _receiver.PurgeAsync();
 
            //should_clean_the_queue
             _testQueueListener.Listen().Should().BeNull();

@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
@@ -45,7 +47,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
             var mapper = new MyCommandMessageMapper();
-            _messagePump = new MessagePump<MyCommand>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
+            _messagePump = new MessagePump<MyCommand>(_channel, _commandProcessor, mapper)
+            {
+                TimeoutInMilliseconds = 5000,
+                RequeueCount = -1
+            };
 
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(_command)));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(_command)));
@@ -56,9 +62,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Requeue_Of_Command_Exception_Is_Thrown()
+        public async Task When_A_Requeue_Of_Command_Exception_Is_Thrown()
         {
-            _messagePump.Run();
+            var cts = new CancellationTokenSource();
+
+            await _messagePump.RunAsync(cts.Token);
 
             //_should_send_the_message_via_the_command_processor
             _commandProcessor.Commands[0].Should().Be(CommandType.Send);

@@ -23,11 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Interface IAmAReceiveMessageGateway
+    /// Interface IAmAMessageConsumer
     /// </summary>
     public interface IAmAMessageConsumer : IDisposable
     {
@@ -38,27 +39,31 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        Message Receive(int timeoutInMilliseconds);
+        Task<Message> ReceiveAsync(int timeoutInMilliseconds);
+
         /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        void Acknowledge(Message message);
+        Task AcknowledgeAsync(Message message);
+
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-        void Reject(Message message, bool requeue);
+        Task RejectAsync(Message message, bool requeue);
+
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
-        void Purge();
+        Task PurgeAsync();
+
         /// <summary>
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        void Requeue(Message message);
+        Task RequeueAsync(Message message);
     }
 
     public interface IAmAMessageConsumerSupportingDelay : IAmAMessageConsumer, IAmAMessageGatewaySupportingDelay
@@ -68,6 +73,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message"></param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        void Requeue(Message message, int delayMilliseconds);
+        Task RequeueAsync(Message message, int delayMilliseconds);
     }
 }

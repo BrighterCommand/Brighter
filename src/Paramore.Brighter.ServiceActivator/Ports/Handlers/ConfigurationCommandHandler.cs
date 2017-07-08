@@ -61,7 +61,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
                     _logger.Value.DebugFormat("Configuration Command received and now stopping all consumers. Begin at {0}", DateTime.UtcNow.ToString("o"));
                     _logger.Value.Debug("--------------------------------------------------------------------------");
                     _logger.Value.Debug("...");
-                    _dispatcher.End().Wait();
+                    _dispatcher.End().GetAwaiter().GetResult();
                     _logger.Value.DebugFormat("All consumers stopped in response to configuration command. Stopped at {0}", DateTime.UtcNow.ToString("o"));
                     _logger.Value.Debug("--------------------------------------------------------------------------");
                     break;

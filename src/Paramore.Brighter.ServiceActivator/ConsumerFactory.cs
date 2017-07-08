@@ -22,15 +22,17 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.ServiceActivator
 {
     internal class ConsumerFactory<TRequest> : IConsumerFactory where TRequest : class, IRequest
     {
         private readonly IAmACommandProcessor _commandProcessor;
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
-        private readonly Connection _connection;
+        private readonly ConnectionBase _connection;
 
-        public ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, Connection connection)
+        public ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, ConnectionBase connection)
         {
             _commandProcessor = commandProcessor;
             _messageMapperRegistry = messageMapperRegistry;
@@ -39,10 +41,23 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Consumer Create()
         {
-            var channel = _connection.ChannelFactory.CreateInputChannel(_connection.ChannelName, _connection.RoutingKey, _connection.IsDurable, highAvailability: _connection.HighAvailability);
-            var messagePump = new MessagePump<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
+            switch (_connection)
             {
-                Channel = channel,
+                case Connection c:
+                    return Create(c);
+
+                case ConnectionAsync c:
+                    return Create(c);
+            }
+
+            throw new NotImplementedException();
+        }
+
+        private Consumer Create(Connection connection)
+        {
+            var channel = connection.ChannelFactory.CreateInputChannel(_connection.ChannelName, _connection.RoutingKey, _connection.IsDurable, highAvailability: _connection.HighAvailability);
+            var messagePump = new MessagePump<TRequest>(channel, _commandProcessor, _messageMapperRegistry.Get<TRequest>())
+            {
                 TimeoutInMilliseconds = _connection.TimeoutInMiliseconds,
                 RequeueCount = _connection.RequeueCount,
                 RequeueDelayInMilliseconds = _connection.RequeueDelayInMilliseconds,
@@ -52,12 +67,11 @@ namespace Paramore.Brighter.ServiceActivator
             return new Consumer(_connection.Name, channel, messagePump);
         }
 
-        public Consumer CreateAsync()
+        private Consumer Create(ConnectionAsync connection)
         {
-            var channel = _connection.ChannelFactory.CreateInputChannel(_connection.ChannelName, _connection.RoutingKey, _connection.IsDurable, highAvailability: _connection.HighAvailability);
-            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
+            var channel = connection.ChannelFactory.CreateInputChannel(_connection.ChannelName, _connection.RoutingKey, _connection.IsDurable, highAvailability: _connection.HighAvailability);
+            var messagePump = new MessagePumpAsync<TRequest>(channel, _commandProcessor, _messageMapperRegistry.Get<TRequest>())
             {
-                Channel = channel,
                 TimeoutInMilliseconds = _connection.TimeoutInMiliseconds,
                 RequeueCount = _connection.RequeueCount,
                 RequeueDelayInMilliseconds = _connection.RequeueDelayInMilliseconds,

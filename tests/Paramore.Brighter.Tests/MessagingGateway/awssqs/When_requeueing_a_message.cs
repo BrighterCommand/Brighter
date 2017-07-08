@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Amazon.Runtime;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -32,15 +33,15 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
         }
 
         [Fact]
-        public void When_requeueing_a_message()
+        public async Task When_requeueing_a_message()
         {
             _sender.Send(_sentMessage);
-            _receivedMessage = _receiver.Receive(2000);
+            _receivedMessage = await _receiver.ReceiveAsync(2000);
             _receivedReceiptHandle = _receivedMessage.Header.Bag["ReceiptHandle"].ToString();
-            _receiver.Requeue(_receivedMessage);
+            await _receiver.RequeueAsync(_receivedMessage);
 
             //should_delete_the_original_message_and_create_new_message
-             _requeuedMessage = _receiver.Receive(1000);
+             _requeuedMessage = await _receiver.ReceiveAsync(1000);
             _requeuedMessage.Body.Value.Should().Be(_receivedMessage.Body.Value);
             _requeuedMessage.Header.Bag["ReceiptHandle"].Should().Be(_receivedReceiptHandle);
         }

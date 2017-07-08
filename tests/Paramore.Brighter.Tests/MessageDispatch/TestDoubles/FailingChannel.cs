@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
             NumberOfRetries = 0;
         }
 
-        public override Message Receive(int timeoutinMilliseconds)
+        public override Task<Message> ReceiveAsync(int timeoutinMilliseconds)
         {
             if (_attempts <= NumberOfRetries)
             {
@@ -45,7 +46,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
                 throw new ChannelFailureException("Test general failure", new Exception("inner test exception"));
             }
 
-            return base.Receive(timeoutinMilliseconds);
+            return base.ReceiveAsync(timeoutinMilliseconds);
         }
     }
 }

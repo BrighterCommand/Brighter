@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -38,23 +39,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Runs the message loop
         /// </summary>
-        Task Run();
+        Task RunAsync(CancellationToken cancellationToken);
 
         /// <summary>
         /// Gets or sets the timeout in milliseconds, that the pump waits for a message on the queue before it yields control for an interval, prior to resuming.
         /// </summary>
         /// <value>The timeout in milliseconds.</value>
         int TimeoutInMilliseconds { get; set; }
-
-        /// <summary>
-        /// Gets or sets the channel to read messages from.
-        /// </summary>
-        /// <value>The channel.</value>
-        IAmAChannel Channel { get; set; }
-
-        /// <summary>
-        /// Is this message pump for an async pipeline, or a synchronous pipeline
-        /// </summary>
-        bool IsAsync { get; }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Amazon.Runtime;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -14,7 +15,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
         private readonly IAmAMessageProducer _sender;
         private readonly IAmAMessageConsumer _receiver;
         private readonly Message _message;
-        private readonly Message _listenedMessage;
+        private Message _listenedMessage;
 
         public SqsMessageConsumerRequeueTests()
         {
@@ -29,17 +30,16 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             _testQueueListener = new TestAWSQueueListener(credentials, _queueUrl);
 
             _sender.Send(_message);
-
-            _listenedMessage = _receiver.Receive(1000);
         }
 
         [Fact]
-        public void When_rejecting_a_message_through_gateway_with_requeue()
+        public async Task When_rejecting_a_message_through_gateway_with_requeue()
         {
-            _receiver.Reject(_listenedMessage, true);
+            _listenedMessage = await _receiver.ReceiveAsync(1000);
+            await _receiver.RejectAsync(_listenedMessage, true);
 
             //should_requeue_the_message
-            var message = _receiver.Receive(1000);
+            var message = await _receiver.ReceiveAsync(1000);
             message.Should().Be(_listenedMessage);
         }
 

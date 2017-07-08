@@ -33,7 +33,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
             _channel = channel ?? new FakeChannel();
         }
 
-        public IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = false, ushort preFetchSize = 1, bool highAvailability = false)
+        public IAmAChannel CreateInputChannel(ChannelName channelName, string routingKey, bool isDurable = false, ushort preFetchSize = 1, bool highAvailability = false)
         {
             return _channel;
         }

@@ -23,15 +23,14 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            var connection = new Connection<MyEvent>(
+            var connection = new ConnectionAsync<MyEvent>(
                 new ConnectionName("test"),
                 noOfPerformers: 1, 
                 timeoutInMilliseconds: 1000, 
                 channelFactory: new InMemoryChannelFactory(_channel),
                 channelName: new ChannelName("fakeChannel"), 
-                routingKey: new RoutingKey("fakekey"),
-                isAsync: true);
-            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { connection });
+                routingKey: new RoutingKey("fakekey"));
+            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new [] { connection });
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
@@ -42,10 +41,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
+        public async Task When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
         {
-            Task.Delay(1000).Wait();
-            _dispatcher.End().Wait();
+            await Task.Delay(1000);
+            await _dispatcher.End();
 
             //_should_have_consumed_the_messages_in_the_channel
             _channel.Length.Should().Be(0);
@@ -54,7 +53,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             //_should_have_dispatched_a_request
             _commandProcessor.Observe<MyEvent>().Should().NotBeNull();
             //_should_have_published_async
-            _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.PublishAsync);
+            _commandProcessor.Commands.Should().Contain(CommandType.PublishAsync);
         }
     }
 }

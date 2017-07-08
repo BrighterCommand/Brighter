@@ -57,14 +57,14 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
             _receiver = new RmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, 1, false);
             _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, 1, false);
 
-            _receiver.Purge();
+            _receiver.PurgeAsync().GetAwaiter().GetResult();
             _sender.Send(_sentMessage);
         }
 
         [Fact]
         public void When_a_message_consumer_throws_an_not_supported_exception_when_connecting()
         {
-            _firstException = Catch.Exception(() => _badReceiver.Receive(2000));
+            _firstException = Catch.Exception(async () => await _badReceiver.ReceiveAsync(2000));
 
             //_should_return_a_channel_failure_exception
             _firstException.Should().BeOfType<ChannelFailureException>();
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 
         public void Dispose()
         {
-            _receiver.Purge();
+            _receiver.PurgeAsync().GetAwaiter().GetResult();
             _sender.Dispose();
             _receiver.Dispose();
         }

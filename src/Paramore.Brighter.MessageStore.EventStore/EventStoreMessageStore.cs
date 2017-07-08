@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessageStore.EventStore
             var numberOfPreviousEvent = eventNumber - 1;
             var eventData = CreateEventData(message, headerBag);
 
-            _eventStore.AppendToStreamAsync(streamId, numberOfPreviousEvent, eventData).Wait();
+            _eventStore.AppendToStreamAsync(streamId, numberOfPreviousEvent, eventData).GetAwaiter().GetResult();
         }
 
         private static EventData[] CreateEventData(Message message, Dictionary<string, object> headerBag)

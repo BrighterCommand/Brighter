@@ -34,7 +34,7 @@ using Paramore.Brighter.Tests.MessageDispatch.TestDoubles;
 
 namespace Paramore.Brighter.Tests.MessageDispatch
 {
-    public class DispatcherRestartConnectionTests : IDisposable
+    public class DispatcherRestartConnectionTests
     {
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _channel;
@@ -60,22 +60,23 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
-            Task.Delay(1000).Wait();
+            Task.Delay(1000).GetAwaiter().GetResult();
             _dispatcher.Shut("test");
             _dispatcher.Shut("newTest");
-            Task.Delay(3000).Wait();
+            Task.Delay(3000).GetAwaiter().GetResult();
             _dispatcher.Consumers.Should().HaveCount(0);
         }
 
         [Fact]
-        public void When_A_Message_Dispatcher_Restarts_A_Connection_After_All_Connections_Have_Stopped()
+        public async Task When_A_Message_Dispatcher_Restarts_A_Connection_After_All_Connections_Have_Stopped()
         {
             _dispatcher.Open("newTest");
+
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Add(message);
-            Task.Delay(1000).Wait();
 
+            await Task.Delay(1000);
 
             //_should_have_consumed_the_messages_in_the_event_channel
             _channel.Length.Should().Be(0);
@@ -85,12 +86,8 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _dispatcher.Consumers.Should().HaveCount(1);
             //_should_have_two_connections
             _dispatcher.Connections.Should().HaveCount(2);
-        }
 
-        public void Dispose()
-        {
-            if (_dispatcher?.State == DispatcherState.DS_RUNNING)
-                _dispatcher.End().Wait();
+            await _dispatcher.End();
         }
     }
 }

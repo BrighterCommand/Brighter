@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FakeItEasy;
 using Xunit;
 
@@ -38,7 +39,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
         {
             _gateway = A.Fake<IAmAMessageConsumer>();
 
-            _channel = new Channel("test", _gateway);
+            _channel = new Channel(new ChannelName("test"), _gateway);
 
             _receivedMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
@@ -48,12 +49,12 @@ namespace Paramore.Brighter.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_No_Acknowledge_Is_Called_On_A_Channel()
+        public async Task When_No_Acknowledge_Is_Called_On_A_Channel()
         {
-            _channel.Reject(_receivedMessage);
+            await _channel.RejectAsync(_receivedMessage);
 
             //_should_ackonwledge_the_message
-            A.CallTo(() => _gateway.Reject(_receivedMessage, true)).MustHaveHappened();
+            A.CallTo(() => _gateway.RejectAsync(_receivedMessage, true)).MustHaveHappened();
         }
     }
 }

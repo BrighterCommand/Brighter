@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RESTMS.Exceptions;
 using Paramore.Brighter.MessagingGateway.RESTMS.Logging;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
@@ -70,11 +71,10 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         /// <summary>
         /// Receives the specified queue name.
         /// </summary>
-
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Message Receive(int timeoutInMilliseconds = -1)
+        public async Task<Message> ReceiveAsync(int timeoutInMilliseconds = -1)
         {
             try
             {
@@ -82,7 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
                 _pipe = new Pipe(this, _feed);
                 _pipe.EnsurePipeExists(_queueName, _routingKey, _domain.GetDomain());
 
-                return ReadMessage();
+                return await GetMessageAsync(_pipe.GetPipe().Messages?.FirstOrDefault());
             }
             catch (RestMSClientException rmse)
             {
@@ -101,10 +101,10 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         /// </summary>
         /// <param name="message">The message.</param>
         /// <exception cref="System.NotImplementedException"></exception>
-        public void Acknowledge(Message message)
+        public async Task AcknowledgeAsync(Message message)
         {
             var pipe = _pipe.GetPipe();
-            DeleteMessage(pipe, message);
+            await DeleteMessageAsync(pipe, message);
         }
 
         /// <summary>
@@ -136,7 +136,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         /// Purges the specified queue name.
         /// </summary>
         /// <exception cref="System.NotImplementedException"></exception>
-        public void Purge()
+        public async Task PurgeAsync()
         {
             try
             {
@@ -148,7 +148,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
                     {
                         if (message != null)
                         {
-                            SendDeleteMessage(message);
+                            await SendDeleteMessageAsync(message);
                         }
                         pipe = _pipe.GetPipe();
                     } while (pipe.Messages != null && pipe.Messages.Any());
@@ -166,8 +166,9 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
         }
 
-        public void Requeue(Message message)
+        public Task RequeueAsync(Message message)
         {
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -176,12 +177,12 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         /// <exception cref="System.NotImplementedException"></exception>
-        public void Reject(Message message, bool requeue)
+        public Task RejectAsync(Message message, bool requeue)
         {
+            return Task.CompletedTask;
         }
 
-
-        private void DeleteMessage(RestMSPipe pipe, Message message)
+        private async Task DeleteMessageAsync(RestMSPipe pipe, Message message)
         {
             if (pipe.Messages == null || !pipe.Messages.Any())
             {
@@ -195,10 +196,10 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
 
             _logger.Value.DebugFormat("Deleting the message {0} from the pipe: {0}", message.Id, pipe.Href);
-            SendDeleteMessage(matchingMessage);
+            await SendDeleteMessageAsync(matchingMessage);
         }
 
-        private Message GetMessage(RestMSMessageLink messageUri)
+        private async Task<Message> GetMessageAsync(RestMSMessageLink messageUri)
         {
             if (messageUri == null)
             {
@@ -210,7 +211,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
 
             try
             {
-                var response = client.GetAsync(messageUri.Href).Result;
+                var response = await client.GetAsync(messageUri.Href);
                 response.EnsureSuccessStatusCode();
                 var pipeMessage = ParseResponse<RestMSMessage>(response);
                 return RestMSMessageCreator.CreateMessage(pipeMessage);
@@ -222,20 +223,14 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
                     _logger.Value.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", _pipe.PipeUri, exception.Message);
                 }
 
-                throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));
+                throw new RestMSClientException("Error retrieving the domain from the RestMS server, see log for details");
             }
         }
 
-        private Message ReadMessage()
-        {
-            var pipe = _pipe.GetPipe();
-            return GetMessage(pipe.Messages?.FirstOrDefault());
-        }
-
-        private void SendDeleteMessage(RestMSMessageLink matchingMessage)
+        private async Task SendDeleteMessageAsync(RestMSMessageLink matchingMessage)
         {
             var client = Client();
-            var response = client.DeleteAsync(matchingMessage.Href).Result;
+            var response = await client.DeleteAsync(matchingMessage.Href);
             response.EnsureSuccessStatusCode();
         }
     }

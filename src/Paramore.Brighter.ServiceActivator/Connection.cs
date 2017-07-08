@@ -31,7 +31,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// A <see cref="Connection"/> holds the configuration details of the relationship between a channel provided by a broker, and a <see cref="Command"/> or <see cref="Event"/>. 
     /// It holds information on the number of threads to use to process <see cref="Message"/>s on the channel, turning them into <see cref="Command"/>s or <see cref="Event"/>s 
     /// </summary>
-    public class Connection
+    public abstract class ConnectionBase
     {
         /// <summary>
         /// Gets the channel.
@@ -72,14 +72,6 @@ namespace Paramore.Brighter.ServiceActivator
         public bool IsDurable { get; }
 
         /// <summary>
-        /// Gets a value indicating whether this connection should use an asynchronous pipeline
-        /// If it does it will process new messages from the queue whilst awaiting in prior messages' pipelines
-        /// This increases throughput (although it will no longer throttle use of the resources on the host machine).
-        /// </summary>
-        /// <value><c>true</c> if this instance should use an asynchronous pipeline; otherwise, <c>false</c></value>
-        public bool IsAsync { get; }
-
-        /// <summary>
         /// Gets the no of peformers.
         /// </summary>
         /// <value>The no of peformers.</value>
@@ -107,11 +99,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         public int UnacceptableMessageLimit { get; }
 
-        [Obsolete("Use the other constructor or Connection<T>. This constructor will be removed in a future release.")]
-        public Connection(ConnectionName name, IAmAChannelFactory channelFactory, Type dataType, ChannelName channelName, RoutingKey routingKey, int noOfPerformers = 1, int timeoutInMilliseconds = 300, int requeueCount = -1, int requeueDelayInMilliseconds = 0, int unacceptableMessageLimit = 0, bool isDurable = false, bool isAsync = false, bool highAvailability = false)
-            : this(dataType, name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, isAsync, channelFactory, highAvailability)
-        {
-        }
+        public abstract bool IsAsync { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Connection"/> class.
@@ -126,10 +114,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isDurable">The durability of the queue.</param>
-        /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability"></param>
-        public Connection(
+        protected ConnectionBase(
             Type dataType,
             ConnectionName name = null,
             ChannelName channelName = null,
@@ -140,7 +127,6 @@ namespace Paramore.Brighter.ServiceActivator
             int requeueDelayInMilliseconds = 0,
             int unacceptableMessageLimit = 0,
             bool isDurable = false,
-            bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             bool highAvailability = false)
         {
@@ -154,9 +140,45 @@ namespace Paramore.Brighter.ServiceActivator
             RequeueDelayInMilliseconds = requeueDelayInMilliseconds;
             UnacceptableMessageLimit = unacceptableMessageLimit;
             IsDurable = isDurable;
-            IsAsync = isAsync;
             ChannelFactory = channelFactory;
             HighAvailability = highAvailability;
+        }
+    }
+
+    public class Connection : ConnectionBase
+    {
+        public override bool IsAsync => false;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConnectionAsync"/> class with data type T.
+        /// </summary>
+        /// <param name="dataType">Type of the data.</param>
+        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
+        /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="noOfPerformers">The no of performers.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
+        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="isDurable">The durability of the queue.</param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="highAvailability"></param>
+        public Connection(
+            Type dataType,
+            ConnectionName name = null,
+            ChannelName channelName = null,
+            RoutingKey routingKey = null,
+            int noOfPerformers = 1,
+            int timeoutInMilliseconds = 300,
+            int requeueCount = -1,
+            int requeueDelayInMilliseconds = 0,
+            int unacceptableMessageLimit = 0,
+            bool isDurable = false,
+            IAmAChannelFactory channelFactory = null,
+            bool highAvailability = false)
+            : base(dataType, name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, channelFactory, highAvailability)
+        {
         }
     }
 
@@ -175,7 +197,6 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isDurable">The durability of the queue.</param>
-        /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability"></param>
         public Connection(
@@ -188,10 +209,79 @@ namespace Paramore.Brighter.ServiceActivator
             int requeueDelayInMilliseconds = 0,
             int unacceptableMessageLimit = 0,
             bool isDurable = false,
-            bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             bool highAvailability = false)
-            : base(typeof(T), name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, isAsync, channelFactory, highAvailability)
+            : base(typeof(T), name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, channelFactory, highAvailability)
+        {
+        }
+    }
+
+    public class ConnectionAsync : ConnectionBase
+    {
+        public override bool IsAsync => true;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConnectionAsync"/> class with data type T.
+        /// </summary>
+        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
+        /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="noOfPerformers">The no of performers.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
+        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="isDurable">The durability of the queue.</param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="highAvailability"></param>
+        public ConnectionAsync(
+            Type dataType,
+            ConnectionName name = null,
+            ChannelName channelName = null,
+            RoutingKey routingKey = null,
+            int noOfPerformers = 1,
+            int timeoutInMilliseconds = 300,
+            int requeueCount = -1,
+            int requeueDelayInMilliseconds = 0,
+            int unacceptableMessageLimit = 0,
+            bool isDurable = false,
+            IAmAChannelFactory channelFactory = null,
+            bool highAvailability = false)
+            : base(dataType, name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, channelFactory, highAvailability)
+        {
+        }
+    }
+
+    public class ConnectionAsync<T> : ConnectionAsync
+        where T : IRequest
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConnectionAsync"/> class with data type T.
+        /// </summary>
+        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
+        /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="noOfPerformers">The no of performers.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
+        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="isDurable">The durability of the queue.</param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="highAvailability"></param>
+        public ConnectionAsync(
+            ConnectionName name = null,
+            ChannelName channelName = null,
+            RoutingKey routingKey = null,
+            int noOfPerformers = 1,
+            int timeoutInMilliseconds = 300,
+            int requeueCount = -1,
+            int requeueDelayInMilliseconds = 0,
+            int unacceptableMessageLimit = 0,
+            bool isDurable = false,
+            IAmAChannelFactory channelFactory = null,
+            bool highAvailability = false)
+            : base(typeof(T), name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, channelFactory, highAvailability)
         {
         }
     }

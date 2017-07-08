@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
@@ -44,7 +46,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _commandProcessor = new SpyCommandProcessor();
             _channel = new FailingChannel { NumberOfRetries = 4 };
             var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
+            _messagePump = new MessagePump<MyEvent>(_channel, _commandProcessor, mapper)
+            {
+                TimeoutInMilliseconds = 5000,
+                RequeueCount = -1
+            };
 
             _event = new MyEvent();
 
@@ -57,13 +63,14 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Channel_Failure_Exception_Is_Thrown_For_Event_Should_Retry_Until_Connection_Re_established()
+        public async Task When_A_Channel_Failure_Exception_Is_Thrown_For_Event_Should_Retry_Until_Connection_Re_established()
         {
-            _messagePump.Run();
+            var cts = new CancellationTokenSource();
+
+            await _messagePump.RunAsync(cts.Token);
 
             //_should_publish_the_message_via_the_command_processor
             _commandProcessor.Commands[0].Should().Be(CommandType.Publish);
         }
-
     }
 }

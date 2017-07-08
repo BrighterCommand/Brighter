@@ -23,11 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Interface IAmAChannel 
+    /// Interface IAmAChannel
     /// An <see cref="IAmAChannel"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     /// and acknowledging receipt of those messages
     /// </summary>
@@ -38,49 +39,31 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The name.</value>
         ChannelName Name { get; }
-        
+
         /// <summary>
         /// Receives the specified timeout in milliseconds.
         /// </summary>
         /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        Message Receive(int timeoutinMilliseconds);
-        
+        Task<Message> ReceiveAsync(int timeoutinMilliseconds);
+
         /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        void Acknowledge(Message message);
-
-        /// <summary>
-        /// Gets the length.
-        /// </summary>
-        /// <value>The length.</value>
-        int Length { get; }
+        Task AcknowledgeAsync(Message message);
 
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        void Reject(Message message);
-        
-        /// <summary>
-        /// Stops this instance.
-        /// </summary>
-        void Stop();
-        
-        /// <summary>
-        /// Adds a message to the queue
-        /// </summary>
-        /// <param name="message"></param>
-        void Enqueue(Message message);
+        Task RejectAsync(Message message);
 
         /// <summary>
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        void Requeue(Message message, int delayMilliseconds = 0);
-
+        Task RequeueAsync(Message message, int delayMilliseconds = 0);
    }
 }

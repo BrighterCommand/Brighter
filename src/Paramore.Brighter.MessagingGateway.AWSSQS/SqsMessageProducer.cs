@@ -1,17 +1,3 @@
-// ***********************************************************************
-// Assembly         : paramore.brighter.messaginggateway.awssqs
-// Author           : ian
-// Created          : 08-17-2015
-//
-// Last Modified By : ian
-// Last Modified On : 10-25-2015
-// ***********************************************************************
-// <copyright file="SqsMessageProducer.cs" company="">
-//     Copyright ©  2015
-// </copyright>
-// <summary></summary>
-// ***********************************************************************
-
 using System;
 using System.Net;
 using Amazon.Runtime;
@@ -53,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 var topicArn = EnsureTopic(message.Header.Topic, client);
                 var publishRequest = new PublishRequest(topicArn, messageString);
-                client.PublishAsync(publishRequest).Wait();
+                client.PublishAsync(publishRequest).GetAwaiter().GetResult();
             }
         }
 

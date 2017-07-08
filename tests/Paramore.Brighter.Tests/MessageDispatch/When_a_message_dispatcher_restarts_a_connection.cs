@@ -57,20 +57,26 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
-            Task.Delay(1000).Wait();
-            _dispatcher.Shut(_connection);
         }
-        		 
-        [Fact(Skip = "Breaks test runner on Rider")]
-        public void When_A_Message_Dispatcher_Restarts_A_Connection()
+
+        [Fact]
+        public async Task When_A_Message_Dispatcher_Restarts_A_Connection()
         {
+            await Task.Delay(1000);
+
+            _dispatcher.Shut(_connection);
+
+            await Task.Delay(1000);
+
             _dispatcher.Open(_connection);
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Add(message);
 
-            _dispatcher.End().Wait();
+            await Task.Delay(1000);
+
+            await _dispatcher.End();
 
             //_should_have_consumed_the_messages_in_the_event_channel
             _channel.Length.Should().Be(0);

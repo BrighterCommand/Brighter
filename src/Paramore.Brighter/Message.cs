@@ -39,21 +39,18 @@ namespace Paramore.Brighter
         /// Gets the header.
         /// </summary>
         /// <value>The header.</value>
-        public MessageHeader Header { get; private set; }
+        public MessageHeader Header { get; }
         /// <summary>
         /// Gets the body.
         /// </summary>
         /// <value>The body.</value>
-        public MessageBody Body { get; private set; }
+        public MessageBody Body { get; }
 
         /// <summary>
         /// Gets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
-        public Guid Id
-        {
-            get { return Header.Id; }
-        }
+        public Guid Id => Header.Id;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Message"/> class.

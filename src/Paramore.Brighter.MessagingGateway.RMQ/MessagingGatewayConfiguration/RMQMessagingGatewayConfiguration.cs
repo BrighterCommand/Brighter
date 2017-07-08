@@ -46,7 +46,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration
         /// </summary>
         /// <value>The exchange.</value>
         public Exchange Exchange { get; set; }
-
     }
 
     /// <summary>

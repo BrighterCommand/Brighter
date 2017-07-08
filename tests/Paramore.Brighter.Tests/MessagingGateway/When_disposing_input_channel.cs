@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
         public ChannelDisposalTests()
         {
             _messageConsumer = A.Fake<IAmAMessageConsumer>();
-            _channel = new Channel("test", _messageConsumer);
+            _channel = new Channel(new ChannelName("test"), _messageConsumer);
         }
 
         [Fact]
