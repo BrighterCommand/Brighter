@@ -124,7 +124,7 @@ namespace GenericListener.Adapters.Services
             //<add connectionName="Task.Edited" channelName="Task.Edited" routingKey="Task.Edited" dataType="GenericListener.Ports.Events.GenericTaskEditedEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
             //<add connectionName="Task.Completed" channelName="Task.Completed" routingKey="Task.Completed" dataType="GenericListener.Ports.Events.GenericTaskCompletedEvent" noOfPerformers="1" timeOutInMilliseconds="200" />
 
-            var inputChannelFactory = new InputChannelFactory(new RmqMessageConsumerFactory(rmqConnnection), new RmqMessageProducerFactory(rmqConnnection));
+            var inputChannelFactory = new InputChannelFactory(new RmqMessageConsumerFactory(rmqConnnection));
 
             var connections = new List<Connection>
             {

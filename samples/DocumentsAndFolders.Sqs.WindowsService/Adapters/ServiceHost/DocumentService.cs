@@ -98,7 +98,7 @@ namespace DocumentsAndFolders.Sqs.Adapters.ServiceHost
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build())
                 .MessageMappers(messageMapperRegistry)
-                .DefaultChannelFactory(new InputChannelFactory(new SqsMessageConsumerFactory(awsCredentials), new SqsMessageProducerFactory(awsCredentials)))
+                .DefaultChannelFactory(new InputChannelFactory(new SqsMessageConsumerFactory(awsCredentials)))
                 .Connections(new Connection[]
                 {
                     new Connection<DocumentCreatedEvent>(

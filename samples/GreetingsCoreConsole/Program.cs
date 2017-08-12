@@ -65,7 +65,6 @@ namespace GreetingsCoreConsole
             };
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqConnnection);
 
             var dispatcher = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
@@ -75,7 +74,7 @@ namespace GreetingsCoreConsole
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build())
                 .MessageMappers(messageMapperRegistry)
-                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
                 .Connections(new Connection[]
                 {
                     new Connection<GreetingEvent>(
