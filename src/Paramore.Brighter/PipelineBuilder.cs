@@ -180,7 +180,8 @@ namespace Paramore.Brighter
             {
                 var handlerType = attribute.GetHandlerType();
                 if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
-                {   var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext).CreateAsyncRequestHandler();
+                {
+                    var decorator = _asyncHandlerFactory.CreateAsyncRequestHandler<TRequest>(attribute, requestContext);
                     lastInPipeline.SetSuccessor(decorator);
                     lastInPipeline = decorator;
                 }
@@ -199,7 +200,7 @@ namespace Paramore.Brighter
                 var handlerType = attribute.GetHandlerType();
                 if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
                 {
-                    var decorator = new AsyncHandlerFactory<TRequest>(attribute, _asyncHandlerFactory, requestContext) .CreateAsyncRequestHandler();
+                    var decorator = _asyncHandlerFactory.CreateAsyncRequestHandler<TRequest>(attribute, requestContext);
                     decorator.ContinueOnCapturedContext = continueOnCapturedContext;
                     decorator.SetSuccessor(lastInPipeline);
                     lastInPipeline = decorator;
