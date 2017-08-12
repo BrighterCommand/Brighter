@@ -227,7 +227,7 @@ namespace Greetings.Adapters.ServiceHost
             As discussed above, we are not doing a Post here.</p>
             <p>(You can also use policies in your own handlers as discussed <a href="http://paramore.readthedocs.io/en/latest/PolicyRetryAndCircuitBreaker.html">here</a>).</p>
         <p>We register implementations of <strong>IAmAMessageMapper</strong> with the <strong>MessageMapperRegistry</strong> to map the message body from the Task Queue into Commands and Events. In this
-            case we only have one: <strong>GreetingCommandMessageMapper</strong> which we use to map a <strong>GreetingCommand</strong> to and from the message body (as JSON). </p>
+            case we only have one: <strong>GreetingEventMessageMapper</strong> which we use to map a <strong>GreetingEvent</strong> to and from the message body (as JSON). </p>
         <p>In order to read messages from a Task Queue we need a <strong>IAmAMessageConsumerFactory</strong>. In this case we are reading from a RabbitMQ Task Queue so we use
             <strong>RmqMessageConsumerFactory</strong>. We set this as the parameter to an <strong>InputChannelFactory</strong> and pass to the <strong>DispatchBuilder</strong> </p>
         <p>The <strong>Input Channel</strong> is an abstraction over the stream from which we read messages - mostly implemented using Message-Oriented Middleware - and <strong>Dispatcher</strong> uses
@@ -241,7 +241,7 @@ namespace Greetings.Adapters.ServiceHost
         <p>Add a TinyIocHandlerFactory class to the project and enter the following code</p>
         <pre><code>
 using System;
-using Brighter.commandprocessor;
+using Paramore.Brighter;
 using TinyIoC;
 
 namespace Greetings.Adapters.ServiceHost
@@ -275,7 +275,7 @@ namespace Greetings.Adapters.ServiceHost
     <p>Add a TinyIoCMessageMapperFactory class to the project and enter the following code</p>
     <pre><code>
 using System;
-using Brighter.commandprocessor;
+using Paramore.Brighter;
 using TinyIoC;
 
 namespace Greetings.Adapters.ServiceHost
@@ -297,73 +297,74 @@ namespace Greetings.Adapters.ServiceHost
 }
         </code></pre>
         <h3>Step Nine</h3>
-        <p>Now we need to add the GreetingCommand itself. Add a new class GreetingCommand to the project and enter the following code.</p>
+        <p>Now we need to add the GreetingEvent itself. Add a new class GreetingEvent to the project and enter the following code.</p>
         <pre><code>
 using System;
-using Brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace Greetings.Ports.Commands
 {
-    public class GreetingCommand : Command
+    public class GreetingEvent : Event
     {
-        public GreetingCommand() : base(Guid.NewGuid()) { }
+        public GreetingEvent() : base(Guid.NewGuid()) { }
 
-        public GreetingCommand(string greeting) : base(Guid.NewGuid())
+        public GreetingEvent(string greeting) : base(Guid.NewGuid())
         {
             Greeting = greeting;
         }
 
-     public string Greeting { get; set; }
+        public string Greeting { get; set; }
     }
 }
         </code></pre>
-        <p>We simply derive our class from <strong>Command</strong> and add a property that allows you to set the Greeting which we intend to send.</p>
+        <p>We simply derive our class from <strong>Event</strong> and add a property that allows you to set the Greeting which we intend to send.</p>
         <h3>Step Ten</h3>
-        <p>Once we have a command we need to add the code for its <strong>Message Mapper</strong> which we use to de-serialize the message from the wire protocol.
-            Add a class GreetingCommandMessageMapper to the project.</p>
+        <p>Once we have an event we need to add the code for its <strong>Message Mapper</strong> which we use to de-serialize the message from the wire protocol.
+            Add a class GreetingEventMessageMapper to the project.</p>
         <pre><code>
 using Greetings.Ports.Commands;
 using Newtonsoft.Json;
-using Brighter.commandprocessor;
+using Paramore.Brighter;
 
 namespace Greetings.Ports.Mappers
 {
-   internal class GreetingCommandMessageMapper : IAmAMessageMapper&lt;GreetingCommand&gt;
-   {
-       public Message MapToMessage(GreetingCommand request)
-       {
-           var header = new MessageHeader(messageId: request.Id, topic: "greeting.command", messageType: MessageType.MT_COMMAND);
-           var body = new MessageBody(JsonConvert.SerializeObject(request));
-           var message = new Message(header, body);
-           return message;
-       }
+    public class GreetingEventMessageMapper : IAmAMessageMapper&lt;GreetingEvent&gt;
+    {
+        public Message MapToMessage(GreetingEvent request)
+        {
+            var header = new MessageHeader(messageId: request.Id, topic: "greeting.event", messageType: MessageType.MT_EVENT);
+            var body = new MessageBody(JsonConvert.SerializeObject(request));
+            var message = new Message(header, body);
+            return message;
+        }
 
-       public GreetingCommand MapToRequest(Message message)
-       {
-        return JsonConvert.DeserializeObject&lt;GreetingCommand&gt;(message.Body.Value);
-       }
-   }
+        public GreetingEvent MapToRequest(Message message)
+        {
+            var greetingCommand = JsonConvert.DeserializeObject&lt;GreetingEvent&gt;(message.Body.Value);
+
+            return greetingCommand;
+        }
+    }
 }
-        </code></pre>
+</code></pre>
         <p>A message has a header - where we write metadata about the message - and a body - where we write the contents of the message.</p>
-        <p>When mapping to a message, on the header, we set the <strong>Message Type</strong> to <strong>MT_COMMAND</strong> because we want only one handler in the target to receive the message.
-            The topic is used for routing subscribers to the message use the topic to indicate their interest in receiving the message</p>
-        <p>The body of the message is a JSON string representing the GreetingCommand</p>
+        <p>When mapping to a message, on the header, we set the <strong>Message Type</strong> to <strong>MT_EVENT</strong> because we want to allow any number of handlers to handle the message.
+            The topic is used for routing. Subscribers to the message use the topic to indicate their interest in receiving the message</p>
+        <p>The body of the message is a JSON string representing the GreetingEvent</p>
         <p>Because we don't send from this service, we don't need MapToMessage and could simply throw a NotImplemented exception instead.</p>
-        <p>When mapping back to a request we simply serialize the entity body into the Command we want to raise.</p>
+        <p>When mapping back to a request we simply serialize the entity body into the Command/Event we want to raise.</p>
         <h3>Step Eleven</h3>
-        <p>Now we need to add the handler, which actually does the work. Add a new class GreetingCommandHandler to the project</p>
+        <p>Now we need to add the handler, which actually does the work. Add a new class GreetingEventHandler to the project</p>
         <pre><code>
 using System;
 using Greetings.Ports.Commands;
-using Brighter.commandprocessor;
-using Brighter.commandprocessor.Logging;
+using Paramore.Brighter;
 
 namespace Greetings.Ports.CommandHandlers
 {
-    internal class GreetingCommandHandler : RequestHandler&lt;GreetingCommand&gt;
+    internal class GreetingEventHandler : RequestHandler&lt;GreetingEvent&gt;
     {
-        public override GreetingCommand Handle(GreetingCommand command)
+        public override GreetingEvent Handle(GreetingEvent command)
         {
             Console.WriteLine("Received Greeting. Message Follows");
             Console.WriteLine("----------------------------------");
@@ -384,7 +385,7 @@ namespace Greetings.Ports.CommandHandlers
         <p>Amend your app.config file as follows</p>
         <p>Add the following to your configSections, for the RMQ consumer and log4net</p>
         <pre><code>
-&lt;section name=&quot;rmqMessagingGateway&quot; type=&quot;Brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, Brighter.commandprocessor.messaginggateway.rmq&quot; allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot; /&gt;
+&lt;section name=&quot;rmqMessagingGateway&quot; type=&quot;Paramore.Brighter.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, Paramore.Brighter.messaginggateway.rmq&quot; allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot; /&gt;
 &lt;section name=&quot;log4net&quot; type=&quot;log4net.Config.Log4NetConfigurationSectionHandler, log4net&quot; /&gt;
         </code></pre>
         <p>Add the rmwMessagingGateway section and the serviceActivatorConnections, which configures both the AMQP URI for your RabbitMQ server (amend if you are not using defaults) and the channel over which you subscribe
@@ -396,7 +397,7 @@ namespace Greetings.Ports.CommandHandlers
 &lt;/rmqMessagingGateway&gt;
 &lt;serviceActivatorConnections&gt;
     &lt;connections&gt;
-        &lt;add connectionName=&quot;paramore.example.greeting&quot; channelName=&quot;greeting.command&quot; routingKey=&quot;greeting.command&quot; dataType=&quot;Greetings.Ports.Commands.GreetingCommand&quot; timeOutInMilliseconds=&quot;200&quot; /&gt;
+        &lt;add connectionName=&quot;paramore.example.greeting&quot; channelName=&quot;greeting.command&quot; routingKey=&quot;greeting.command&quot; dataType=&quot;Greetings.Ports.Commands.GreetingEvent&quot; timeOutInMilliseconds=&quot;200&quot; /&gt;
     &lt;/connections&gt;
 &lt;/serviceActivatorConnections&gt;
         </code></pre>
@@ -420,7 +421,7 @@ namespace Greetings.Ports.CommandHandlers
 &lt;configuration&gt;
     &lt;configSections&gt;
         &lt;section name=&quot;serviceActivatorConnections&quot; type=&quot;Brighter.serviceactivator.ServiceActivatorConfiguration.ServiceActivatorConfigurationSection, Brighter.serviceactivator&quot; allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot;/&gt;
-        &lt;section name=&quot;rmqMessagingGateway&quot; type=&quot;Brighter.commandprocessor.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, Brighter.commandprocessor.messaginggateway.rmq&quot; allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot; /&gt;
+        &lt;section name=&quot;rmqMessagingGateway&quot; type=&quot;Paramore.Brighter.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, Paramore.Brighter.messaginggateway.rmq&quot; allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot; /&gt;
         &lt;section name=&quot;log4net&quot; type=&quot;log4net.Config.Log4NetConfigurationSectionHandler, log4net&quot; /&gt;
     &lt;/configSections&gt;
     &lt;log4net&gt;
@@ -442,7 +443,7 @@ namespace Greetings.Ports.CommandHandlers
     &lt;/rmqMessagingGateway&gt;
     &lt;serviceActivatorConnections&gt;
         &lt;connections&gt;
-            &lt;add connectionName=&quot;paramore.example.greeting&quot; channelName=&quot;greeting.command&quot; routingKey=&quot;greeting.command&quot; dataType=&quot;Greetings.Ports.Commands.GreetingCommand&quot; timeOutInMilliseconds=&quot;200&quot; /&gt;
+            &lt;add connectionName=&quot;paramore.example.greeting&quot; channelName=&quot;greeting.command&quot; routingKey=&quot;greeting.command&quot; dataType=&quot;Greetings.Ports.Commands.GreetingEvent&quot; timeOutInMilliseconds=&quot;200&quot; /&gt;
         &lt;/connections&gt;
     &lt;/serviceActivatorConnections&gt;
 &lt;/configuration&gt;
