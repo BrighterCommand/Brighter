@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <Import Project="../../build/common.props" />
   <PropertyGroup>
-    <VersionPrefix>1.0.0</VersionPrefix>
     <Description>This is an implementation of the command store used for decoupled invocation of commands by Paramore.Brighter, using Sqlite</Description>
     <AssemblyTitle>Paramore.Brighter.CommandStore.Sqlite</AssemblyTitle>
     <Authors>Ian Cooper</Authors>
@@ -11,21 +10,6 @@
     <AssemblyName>Paramore.Brighter.CommandStore.Sqlite</AssemblyName>
     <PackageId>Paramore.Brighter.CommandStore.Sqlite</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <PackageReleaseNotes>https://github.com/BrighterCommand/Brighter/blob/master/release_notes.md</PackageReleaseNotes>
-    <PackageIconUrl>https://brightercommand.github.io/Brighter//images/brightercanon-nuget.png</PackageIconUrl>
-    <PackageProjectUrl>https://brightercommand.github.io/Brighter/</PackageProjectUrl>
-    <PackageLicenseUrl>http://ianhammondcooper.mit-license.org</PackageLicenseUrl>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/BrighterCommand/Brighter/tree/master/src/Paramore.Brighter.CommandStore.Sqlite</RepositoryUrl>
-    <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
-    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
-    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
-    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
-    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
-    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
-    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
   </PropertyGroup>
 
   <ItemGroup>
