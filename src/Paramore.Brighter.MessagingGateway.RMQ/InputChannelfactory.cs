@@ -33,16 +33,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     public class InputChannelFactory : IAmAChannelFactory
     {
         private readonly RmqMessageConsumerFactory _messageConsumerFactory;
-        private readonly RmqMessageProducerFactory _messageProducerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannelFactory"/> class.
         /// </summary>
         /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>
-        public InputChannelFactory(RmqMessageConsumerFactory messageConsumerFactory, RmqMessageProducerFactory messageProducerFactory)
+        public InputChannelFactory(RmqMessageConsumerFactory messageConsumerFactory)
         {
             _messageConsumerFactory = messageConsumerFactory;
-            _messageProducerFactory = messageProducerFactory;
         }
 
         /// <summary>

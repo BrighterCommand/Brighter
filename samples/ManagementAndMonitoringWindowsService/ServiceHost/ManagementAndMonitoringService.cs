@@ -117,7 +117,7 @@ namespace ManagementAndMonitoringWindowsService.ServiceHost
                     .Build()
                  )
                  .MessageMappers(messageMapperRegistry)
-                 .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                 .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
                  .Connections(connections);
             _dispatcher = builder.Build();
 
@@ -125,7 +125,7 @@ namespace ManagementAndMonitoringWindowsService.ServiceHost
                 .With()
                 .Dispatcher(_dispatcher)
                 .ProducerFactory(rmqMessageProducerFactory)
-                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory)) as ControlBusReceiverBuilder;
+                .ChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory)) as ControlBusReceiverBuilder;
             _controlDispatcher = controlBusBuilder.Build(Environment.MachineName + "." + "ManagementAndMonitoring");
 
             container.Register<IAmAControlBusSender>(new ControlBusSenderFactory().Create(

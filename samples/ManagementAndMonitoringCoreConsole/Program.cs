@@ -90,9 +90,7 @@ namespace ManagementAndMonitoringCoreConsole
                 .Exchange("paramore.brighter.exchange")
                 .DefaultQueues();
 
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqGatewayMessages);
-
-            var inputChannelFactory = new InputChannelFactory(new RmqMessageConsumerFactory(rmqGatewayMessages), rmqMessageProducerFactory);
+            var inputChannelFactory = new InputChannelFactory(new RmqMessageConsumerFactory(rmqGatewayMessages));
             var builder = DispatchBuilder
                 .With()
                 .CommandProcessor(CommandProcessorBuilder.With()
@@ -117,6 +115,7 @@ namespace ManagementAndMonitoringCoreConsole
                  });
             _dispatcher = builder.Build();
 
+            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqGatewayMessages);
             var controlBusBuilder = ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(_dispatcher)

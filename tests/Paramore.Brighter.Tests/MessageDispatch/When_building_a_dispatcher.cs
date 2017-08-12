@@ -67,7 +67,6 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             };
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqConnection);
 
             var commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer())))
@@ -83,7 +82,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _builder = DispatchBuilder.With()
                 .CommandProcessor(commandProcessor)
                 .MessageMappers(messageMapperRegistry)
-                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
                 .Connections(new []
                 {
                     new Connection<MyEvent>(
