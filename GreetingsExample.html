@@ -77,7 +77,7 @@
         <p>Brighter uses <a href="https://github.com/damianh/LibLog">LibLog</a> to abstract the implementation details of a client's logger. Greetings uses log4net as the concrete logger
         so we need to add a NuGet reference to that project too.</p>
         <ul>
-            <li>PM> Install-Package LibLog</li>
+            <li>PM> Install-Package log4net</li>
         </ul>
         <img src="images/log4Net-NuGet.png">
         <h3>Step Six</h3>
@@ -127,6 +127,8 @@ namespace Greetings.Adapters.ServiceHost
 
         public GreetingService()
         {
+            log4net.Config.XmlConfigurator.Configure();
+
             var container = new TinyIoCContainer();
 
             var handlerFactory = new TinyIocHandlerFactory(container);
@@ -385,6 +387,7 @@ namespace Greetings.Ports.CommandHandlers
         <p>Amend your app.config file as follows</p>
         <p>Add the following to your configSections, for the RMQ consumer and log4net</p>
         <pre><code>
+&lt;section name="serviceActivatorConnections" type="Paramore.Brighter.ServiceActivator.ServiceActivatorConfiguration.ServiceActivatorConfigurationSection, Brighter.serviceactivator" allowLocation="true" allowDefinition="Everywhere" /&gt;
 &lt;section name=&quot;rmqMessagingGateway&quot; type=&quot;Paramore.Brighter.messaginggateway.rmq.MessagingGatewayConfiguration.RMQMessagingGatewayConfigurationSection, Paramore.Brighter.messaginggateway.rmq&quot; allowLocation=&quot;true&quot; allowDefinition=&quot;Everywhere&quot; /&gt;
 &lt;section name=&quot;log4net&quot; type=&quot;log4net.Config.Log4NetConfigurationSectionHandler, log4net&quot; /&gt;
         </code></pre>
