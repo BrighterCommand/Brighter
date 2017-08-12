@@ -1,6 +1,9 @@
 Brighter contributors (sorted alphabeticaly)
 ============================================
 
+**[Vicenç García Altés](https://github.com/vgaltes)**
+  * Various fixes 
+
 **[Rudy Alvarez](https://github.com/rudygt)**
   * Various fixes  
 
@@ -81,7 +84,7 @@ Brighter contributors (sorted alphabeticaly)
 **[tmschlot](https://github.com/tmschlot)**
   * Various fixes
   
-** [Tim Seaward](https://github.com/Drawaes)
+** [Tim Seaward](https://github.com/Drawaes)**
  * Fix unecessary allocations
 
 **[Daniel Stockhammer](https://github.com/dstockhammer?tab=activity)** 
