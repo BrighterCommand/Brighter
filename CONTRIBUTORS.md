@@ -51,6 +51,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Eddie Li](https://github.com/xiaodili)**
   * Various fixes   
   
+**[James Morcom](https://github.com/mrmorcs)
+  * Documentation fixes
+  
 **[Henk Mollema](https://github.com/henkmollema)**
   * Documentation fixes 
 
