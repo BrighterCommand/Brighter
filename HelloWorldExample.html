@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html>
 <head>
     <meta charset="utf-8">
@@ -30,16 +30,16 @@
         <h1>Brighter</h1>
         <h2>Tutorial</h2>
         <p>This tutorial takes you building a Hello World project. The walkthrough will build the example availabe in the Examples folder of Brighter
-            available in the public repo at <a href="https://github.com/BrighterCommand/Brighter/tree/master/Brighter/Examples/HelloWorld">Hello World Example</a>
+            available in the public repo at <a href="https://github.com/BrighterCommand/Brighter/tree/master/samples/HelloWorld">Hello World Example</a>
             if you want to follow along there instead of typing in the code.</p>
         <h3>Step One</h3>
         <p>Create a C# Console Application, targeting .NET 4.5. (Note that you can use any kind of host application, a console application is just the
             simplest way to get up and running in an example.</p>
         <img src="images/HelloWorld-Step1-ConsoleProject.png">
         <h3>Step Two</h3>
-        <p>Install the <strong>Brighter.CommandProcessor</strong> package from NuGet</p>
+        <p>Install the <strong>Paramore.Brighter</strong> package from NuGet</p>
         <ul>
-            <li>PM> Install-Package Brighter.CommandProcessor</li>
+            <li>PM> Install-Package Paramore.Brighter</li>
         </ul>
         <img src="images/NuGet-Brighter.png">
         <h3>Step Three</h3>
@@ -50,7 +50,7 @@ var registry = new SubscriberRegistry();
 var builder = CommandProcessorBuilder.With()
     .Handlers(new HandlerConfiguration(
             subscriberRegistry: registry,
-            handlerFactory: new SimpleHandlerFactory(logger)
+            handlerFactory: new SimpleHandlerFactory()
         ))
     .DefaultPolicy()
     .NoTaskQueues()
@@ -82,13 +82,16 @@ var commandProcessor = builder.Build();
             are then done with it.</p>
         <h4>Simple Handler Factory</h4>
         <p>In this case, the handler factory does not need to be implemented using an IoC container. We'll show that in a fuller example, but here it is trivial. For this simple program we just add
-            this it the Program.cs file.</p>
+            this in the Program.cs file.</p>
         <pre><code>
 internal class SimpleHandlerFactory : IAmAHandlerFactory
 {
     public IHandleRequests Create(Type handlerType)
     {
-        //TODO: Create an instance of the request type
+        if (handlerType == typeof(GreetingCommandHandler))
+            return new GreetingCommandHandler();    
+        else
+            return null; // Ignore other handler types for demo
     }
 
     public void Release(IHandleRequests handler)
@@ -171,15 +174,13 @@ class Program
 {
     static void Main(string[] args)
     {
-        var logger = LogProvider.For&lt;Program&gt;();
-
         var registry = new SubscriberRegistry();
         registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
 
         var builder = CommandProcessorBuilder.With()
             .Handlers(new HandlerConfiguration(
                     subscriberRegistry: registry,
-                    handlerFactory: new SimpleHandlerFactory(logger)
+                    handlerFactory: new SimpleHandlerFactory()
                 ))
             .DefaultPolicy()
             .NoTaskQueues()
@@ -194,7 +195,10 @@ class Program
     {
         public IHandleRequests Create(Type handlerType)
         {
-            return new GreetingCommandHandler();
+            if (handlerType == typeof(GreetingCommandHandler))
+                return new GreetingCommandHandler();    
+            else
+                return null; // Ignore other handler types for demo
         }
 
         public void Release(IHandleRequests handler)
