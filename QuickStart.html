@@ -27,19 +27,64 @@
     <section>
         <h1>Brighter</h1>
         <h2>Getting Started</h2>
-        <p>Brighter is intended to be a library and not a framework, so you can use it with ASP.NET MVC or WebAPI, Nancy, OpenRasta, Topshelf etc. You use it to decouple your Invoker and Receiver via
-        a Command without coupling the Invoker to a concrete Command. In addition, you can support orthogonal requirements such as Retry, Timeout, Circuit Breaker and Logging without
-        polluting your domain code. Finally, we let you defer work that does not need synchronous execution to a task queue, using a Broker architectural style so that this is seamless
-        to the invoker.</p>
+        <p>Brighter is a library and not a framework, so you can use it with</p>
+        <ul>
+            <li><a href="https://docs.microsoft.com/en-us/aspnet/core/">ASP.NET MVC</a> or 
+                    <a href="https://docs.microsoft.com/en-us/aspnet/core/#build-web-apis-and-web-ui-using-aspnet-core-mvc">WebAPI</a>,</li>
+            <li><a href="http://nancyfx.org/">Nancy</a>,</li>
+            <li><a href="http://openrasta.org/">OpenRasta</a>,</li>
+            <li><a href="http://topshelf-project.com/">Topshelf</a>, and</li>
+            <li>others.</li>
+        </ul>
+        <p>
+            Brighter's objective is to decouple the Invoker and Receiver by a Command and without coupling the Invoker to a concrete Command.
+            In addition, it can support orthogonal requirements such as 
+        </p>
+        <ul>
+            <li><a href="https://docs.microsoft.com/en-us/azure/architecture/patterns/retry">Retry</a>, </li>
+            <li><a href="https://github.com/App-vNext/Polly/wiki/Timeout">Timeout</a>, </li>
+            <li><a href="https://docs.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker">Circuit Breaker</a>, and </li>
+            <li>Logging </li>
+        </ul>
+        <p>without polluting domain code.</p>
+        <p>
+            Finally, Brighter can defer the work where synchronous execution is not required by using a task queue. The Broker Pattern 
+                architecture allows the tasks to be decoupled and distributed seamlessly to the Invoker.
+        </p>
         <h2>Requirements</h2>
-        <p>Brighter depends on .NET 4.5.</p>
+        <h3>Dependencies</h3>
+        <ul>
+            <li>.NET Framework 4.6.1</li>
+            <li><a href="https://github.com/dotnet/standard/blob/master/docs/versions.md">.NET Standard 1.5</a></li>
+        </ul>
+        <p>While .NET is changing daily this year this section will be fluid until .NET Standard is released. Please review to breaking changes for support. </p>
         <p>It should be possible to support earlier versions once the build process for the project improves from its mostly manual proposition today. It's on the roadmap.</p>
         <p>Brighter uses a number of NuGet packages</p>
+        <ul>
+            <li>Brighter
+                <ul>
+                    <li><a href="https://preview.nuget.org/packages/Paramore.Brighter/">Command Processor</a></li>
+                    <li><a href="https://preview.nuget.org/packages/Paramore.Brighter.ServiceaActivator/">Service Activato</a>r</li>
+                </ul>
+            </li>
+            <li>Message Store
+                <ul>
+                    <li><a href="">RavenDB</a></li>
+                    <li><a href="Paramore.Brighter.CommandStore.MsSql ">Micrsoft SQL Server</a></li>
+                </ul>
+            </li>
+            <li>Messaging Gateway
+                <ul>
+                    <li><a href="https://preview.nuget.org/packages/Paramore.Brighter.MessagingGateway.RMQ/">RabbitMQ</a></li>
+                    <li><a href="https://preview.nuget.org/packages/Paramore.Brighter.MessagingGateway.RESTMS/">RestMS</a></li>
+                </ul>
+            </li>
+        </ul>
         <p>The core package <strong>Brighter.CommandProcessor</strong> depends on:</p>
         <ul>
             <li><a href="https://github.com/damianh/LibLog">LibLog</a></li>
-            <li><a href="http://james.newtonking.com/json">Json.NET</a></li>
-            <li><a href="https://github.com/michael-wolfenden/Polly">Polly</a></li>
+            <li><a href="http://www.newtonsoft.com/json">Json.NET</a></li>
+            <li><a href="https://github.com/App-vNext/Polly">Polly</a></li>
         </ul>
         <p>The major pain point here is the Json.NET dependency as it is likely other projects you depend on will also pull in this project. If you have conflicts,
             try using <a href="https://msdn.microsoft.com/en-us/library/7wd6ex19%28v=vs.110%29.aspx?f=255&MSPPError=-2147217396">Assembly Redirection</a> to resolve.
