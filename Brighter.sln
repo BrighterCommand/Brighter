@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.3
+VisualStudioVersion = 15.0.26430.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
 EndProject
@@ -33,9 +33,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\Greeti
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventSourcing", "samples\EventSourcing\EventSourcing.csproj", "{12C2C3DF-CFDE-4C79-AFF0-D2123EDD3D49}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsCoreConsole", "samples\GreetingsCoreConsole\GreetingsCoreConsole.csproj", "{73287A8F-C4EC-46AD-8C6F-2CDFB7ACA789}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{73287A8F-C4EC-46AD-8C6F-2CDFB7ACA789}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsWindowsService", "samples\GreetingsWindowsService\GreetingsWindowsService.csproj", "{1FCE5320-E949-41A4-A3B9-A8369F2B4AC2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverService", "samples\GreetingsReceiverService\GreetingsReceiverService.csproj", "{1FCE5320-E949-41A4-A3B9-A8369F2B4AC2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloAsyncListeners", "samples\HelloAsyncListeners\HelloAsyncListeners.csproj", "{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}"
 EndProject
@@ -63,6 +63,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{3C6BD639
 	ProjectSection(SolutionItems) = preProject
 		build\common.props = build\common.props
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\GreetingsSender\GreetingsSender.csproj", "{516823C7-A407-4A48-A4F5-8F6D6979EEF3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -386,6 +388,18 @@ Global
 		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|x86.ActiveCfg = Release|Any CPU
 		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|x86.Build.0 = Release|Any CPU
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Debug|Mixed Platforms.ActiveCfg = Debug|Mixed Platforms
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Debug|Mixed Platforms.Build.0 = Debug|Mixed Platforms
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Debug|x86.ActiveCfg = Debug|x86
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Debug|x86.Build.0 = Debug|x86
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Release|Mixed Platforms.ActiveCfg = Release|Mixed Platforms
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Release|Mixed Platforms.Build.0 = Release|Mixed Platforms
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Release|x86.ActiveCfg = Release|x86
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -406,6 +420,7 @@ Global
 		{AF326596-7743-4E5F-B7E2-9F885DD95936} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{90624357-4D6D-4378-854C-5A1133F92D4F} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{9E0E5F11-2777-4789-BB09-C866BC5F800D} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
+		{516823C7-A407-4A48-A4F5-8F6D6979EEF3} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

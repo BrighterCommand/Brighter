@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.IO;
 using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
@@ -34,17 +33,17 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
-using Topshelf;
+using Serilog;
 
-namespace GreetingsWindowsService
+namespace GreetingsReceiverConsole
 {
-    internal class GreetingService : ServiceControl
+    public class Program
     {
-        private Dispatcher _dispatcher;
-
-        public GreetingService()
+        public static void Main(string[] args)
         {
-            log4net.Config.XmlConfigurator.Configure(new FileInfo("log4net.config"));
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.LiterateConsole()
+                .CreateLogger();
 
             var container = new TinyIoCContainer();
 
@@ -90,7 +89,7 @@ namespace GreetingsWindowsService
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
 
-            _dispatcher = DispatchBuilder.With()
+            var dispatcher = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                     .Policies(policyRegistry)
@@ -99,7 +98,7 @@ namespace GreetingsWindowsService
                     .Build())
                 .MessageMappers(messageMapperRegistry)
                 .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
-                .Connections(new []
+                .Connections(new Connection[]
                 {
                     new Connection<GreetingEvent>(
                         new ConnectionName("paramore.example.greeting"),
@@ -107,24 +106,13 @@ namespace GreetingsWindowsService
                         new RoutingKey("greeting.event"),
                         timeoutInMilliseconds: 200)
                 }).Build();
-        }
 
-        public bool Start(HostControl hostControl)
-        {
-            _dispatcher.Receive();
-            return true;
-        }
+            dispatcher.Receive();
 
-        public bool Stop(HostControl hostControl)
-        {
-            _dispatcher.End().Wait();
-            _dispatcher = null;
-            return false;
-        }
+            Console.WriteLine("Press Enter to stop ...");
+            Console.ReadLine();
 
-        public void Shutdown(HostControl hostcontrol)
-        {
-            _dispatcher?.End();
+            dispatcher.End().Wait();
         }
     }
 }
