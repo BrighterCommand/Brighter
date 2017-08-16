@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Paramore by iancooper</title>
+    <title>Brighter - Quick Start: Paramore by iacooper</title>
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
@@ -53,93 +53,116 @@
         </p>
         <h2>Requirements</h2>
         <h3>Dependencies</h3>
+        <p></p>
         <ul>
-            <li>.NET Framework 4.6.1</li>
-            <li><a href="https://github.com/dotnet/standard/blob/master/docs/versions.md">.NET Standard 1.5</a></li>
+            <li><a href="https://www.microsoft.com/net/targeting">.NET Framework 4.6.1</a></li>
+            <li><a href="https://github.com/dotnet/standard/blob/master/docs/versions.md">.NET Standard 1.4-2.0</a></li>
         </ul>
-        <p>While .NET is changing daily this year this section will be fluid until .NET Standard is released. Please review to breaking changes for support. </p>
+        <p>While .NET is changing daily this year, this section will be fluid until <a href="https://github.com/dotnet/standard/blob/master/docs/versions.md">.NET Standard</a> is released. Please review to <a href="https://github.com/Microsoft/dotnet-apiport/blob/master/docs/HowTo/BreakingChanges.md#breaking-changes">breaking changes</a>, <a href="https://github.com/dotnet/standard/blob/master/docs/faq.md">FAQ</a>, and <a href="https://blogs.msdn.microsoft.com/dotnet/">.NET Blog</a> for support. </p>
+        <p>Please use the following tags to locate the version release supported by the following earlier versions</p>
+        <ul>
+            <li>.NET 4.5</li>
+            <li>.NET 4.5.1</li>
+            <li>.NET 4.5.2</li>
+            <li>.NET 4.6</li>
+        </ul>
         <p>It should be possible to support earlier versions once the build process for the project improves from its mostly manual proposition today. It's on the roadmap.</p>
-        <p>Brighter uses a number of NuGet packages</p>
+        <p>Brighter uses a number of <a href="https://nuget.org/packages?q=Paramore.Brighter">NuGet packages</a></p>
         <ul>
-            <li>Brighter
+            <li><a href="https://nuget.org/packages?q=Paramore.Brighter">Brighter</a>
                 <ul>
-                    <li><a href="https://preview.nuget.org/packages/Paramore.Brighter/">Command Processor</a></li>
-                    <li><a href="https://preview.nuget.org/packages/Paramore.Brighter.ServiceaActivator/">Service Activato</a>r</li>
+                    <li><a href="https://nuget.org/packages/Paramore.Brighter/">Command Processor</a></li>
+                    <li><a href="https://nuget.org/packages/Paramore.Brighter.Serviceactivator/">Service Activato</a>r</li>
                 </ul>
             </li>
-            <li>Message Store
+            <li><a href="https://nuget.org/packages?q=Paramore.Brighter.MessageStore">Message Store</a>
                 <ul>
-                    <li><a href="">RavenDB</a></li>
-                    <li><a href="Paramore.Brighter.CommandStore.MsSql ">Micrsoft SQL Server</a></li>
+                    <li><a href="https://nuget.org/packages/Paramore.Brighter.MessageStore.MsSql/">Micrsoft SQL Server</a></li>
+                    <li><a href="https://nuget.org/packages/RavenDB.Database/">RavenDB</a></li>
                 </ul>
             </li>
-            <li>Messaging Gateway
+            <li><a href="https://nuget.org/packages?q=Paramore.Brighter.MessagingGateway">Messaging Gateway</a>
                 <ul>
-                    <li><a href="https://preview.nuget.org/packages/Paramore.Brighter.MessagingGateway.RMQ/">RabbitMQ</a></li>
-                    <li><a href="https://preview.nuget.org/packages/Paramore.Brighter.MessagingGateway.RESTMS/">RestMS</a></li>
+                    <li><a href="https://nuget.org/packages/Paramore.Brighter.MessagingGateway.RMQ/">RabbitMQ</a></li>
+                    <li><a href="https://nuget.org/packages/Paramore.Brighter.MessagingGateway.RESTMS/">RestMS</a></li>
                 </ul>
             </li>
         </ul>
-        <p>The core package <strong>Brighter.CommandProcessor</strong> depends on:</p>
+        <p>The core package <strong><a href="https://nuget.org/packages/Paramore.Brighter/">Brighter.CommandProcessor</a></strong> depends on:</p>
         <ul>
-            <li><a href="https://github.com/damianh/LibLog">LibLog</a></li>
             <li><a href="http://www.newtonsoft.com/json">Json.NET</a></li>
+            <li><a href="https://github.com/damianh/LibLog">LibLog</a></li>
             <li><a href="https://github.com/App-vNext/Polly">Polly</a></li>
         </ul>
-        <p>The major pain point here is the Json.NET dependency as it is likely other projects you depend on will also pull in this project. If you have conflicts,
-            try using <a href="https://msdn.microsoft.com/en-us/library/7wd6ex19%28v=vs.110%29.aspx?f=255&MSPPError=-2147217396">Assembly Redirection</a> to resolve.
-            It is less likely that you will have conflicts with Polly, but again use the strategy above. In a worst case scenario, fork the code, rebuild with the
-            required version, fix any issues, and deploy as a lib not a package.</p>
-        <p>We support LibLog for logging by Brighter.* projects with the namespace <strong>Brighter.commandprocessor.Logging</strong> and the
-            interface <strong>ILog</strong>.</p>
-        <p>The core package <strong>Brighter.ServiceActivator</strong> depends on:</p>
+
+        <h3>Json.NET</h3>
+        <p>
+            A challenge with Json.NET is the possible dependency conflicts with other projects in the solution. If a conflict exists then use 
+            <a href="https://msdn.microsoft.com/en-us/library/7wd6ex19%28v=vs.110%29.aspx?f=255&MSPPError=-2147217396">Assembly Redirection</a> my resolve the problem.
+        </p>
+
+        <h3>LibLog</h3>
+        <p>Logging support is provided by the Brighter.CommandProcessor.Logging namespace and the <strong>ILog</strong> interface.</p>
+
+        <h3>Polly</h3>
+        <p>Conflicts with Polly are rare and suggest using Assembly Redirection my resolve the problem.</p>
+        <h3>Conflict Last Option</h3>
+        <p>If Assembly Redirection does not resolve the issue then try:</p>
+        <ol>
+            <li>Fork the code,</li>
+            <li>Rebuild with the required version, </li>
+            <li>Fix any issues, and</li>
+            <li>Deploy as a library and not a package.</li>
+        </ol>
+                <p>The <strong>Brighter.ServiceActivator</strong> core package depends on:</p>
         <ul>
-             <li><a href="https://github.com/michael-wolfenden/Polly">Polly</a></li>
+             <li><a href="https://nuget.org/packages/Polly/">Polly</a></li>
         </ul>
-        <p>In addition a number of the packages implement interfaces provided by CommandProcessor and depend specific NuGet packages for those implementations.
-        <p> <strong>Brighter.CommandProcessor.MessageStore.RavenDB</strong> depends on</p>
+        <p>A few packages implement interfaces provided by CommandProcessor and depend on specific NuGet packages for those implementations.
+        <p><strong>Brighter.CommandProcessor.MessageStore.RavenDB</strong> depends on</p>
         <ul>
-            <li><a href="http://ravendb.net/">RavenDB Client</a></li>
+            <li><a href="https://nuget.org/packages/RavenDB.Client/">RavenDB Client</a></li>
         </ul>
         <p> <strong>Brighter.CommandProcessor.MessageStore.MSSql</strong> depends on</p>
         <ul>
-            <li><a href="https://www.nuget.org/packages/Microsoft.SqlServer.Compact">Microsoft SQL Server Compact Edition</a></li>
-            <li><a href="http://james.newtonking.com/json">Json.NET</a></li>
+            <li><a href="https://nuget.org/packages/Microsoft.SqlServer.Compact">Microsoft SQL Server Compact Edition</a></li>
+            <li><a href="https://nuget.org/packages/Newtonsoft.Json/">Json.NET</a></li>
         </ul>
         <p><strong>Brighter.CommandProcessor.MessagingGateway.RMQ</strong> depends on</p>
         <ul>
-            <li><a href="http://www.rabbitmq.com/dotnet.html">RabbitMQ.Client</a></li>
-            <li><a href="http://james.newtonking.com/json">Json.NET</a></li>
-            <li><a href="https://github.com/michael-wolfenden/Polly">Polly</a></li>
+            <li><a href="https://nuget.org/packages/RabbitMQ.Client/">RabbitMQ.Client</a></li>
+            <li><a href="https://nuget.org/packages/Newtonsoft.Json/">Json.NET</a></li>
+            <li><a href="https://nuget.org/packages/Polly/">Polly</a></li>
         </ul>
         <p><strong>Brighter.CommandProcessor.MessagingGateway.RestMS</strong> depends on</p>
         <ul>
-            <li><a href="https://github.com/thinktecture">Thinktecture.IdentityModel.Hawk</a></li>
+            <li><a href="https://nuget.org/packages/Thinktecture.IdentityModel.Hawk/">Thinktecture.IdentityModel.Hawk</a></li>
         </ul>
-        <h2>Get the Library</h2>
-        <p>The Brighter packages are available on <a href="http://www.nuget.org/packages?q=brighter">NuGet</a> by searching for Brighter</p>
-        <p>The following packages are currently available:</p>
+        <h2>The Brighter Core Library</h2>
+        <p>The Brighter NuGet packages can be found using <a href="https://nuget.org/packages?q=Paramore.Brighter">"Brighter"</a> and the following packages are available:</p>
         <ul>
             <li><strong>Brighter.CommandProcessor</strong> - the core library, provides a <a href="CommandsCommandDispatcherandProcessor.html">Command Dispatcher and Command Processor</a></li>
-            <li><strong>Brighter.ServiceActivator</strong> - provides consumer support for deferring long-running work to a <a href="https://www.rabbitmq.com/tutorials/tutorial-two-python.html">task/work queue</a>
-                The core library provides support for the producer</li>
-            <li><strong>Brighter.MessagingGateway.RMQ</strong> - provides support for using RabbitMQ as a broker</li>
-            <li><strong>Brighter.MessageStore.RavenDB</strong> - provides support for using RavenDB to replay messages sent to the broker</li>
-            <li><strong>Brighter.MessageStore.MSSQL</strong> - provides support for using MSSql to replay messages sent to the broker</li>
+            <li><strong>Brighter.ServiceActivator</strong> - provides consumer support for deferring long-running work to a <a href="https://www.rabbitmq.com/tutorials/tutorial-two-python.html">task/work queue</a></li>
+        </ul>
+        <p>The core library provides support for the producer, including but not limited to:</p>
+        <ul>
+            <li><strong>Brighter.MessagingGateway.RMQ</strong> - to transmit tasks to the broker for distribution</li>
+            <li><strong>Brighter.MessageStore.RavenDB</strong> - to replay messages sent to the broker</li>
+            <li><strong>Brighter.MessageStore.MSSQL</strong> - to replay messages sent to the broker</li>
         </ul>
         <h2>First Steps</h2>
-        <p>First Steps provides a simple sample to handle a command message synchronously</p>
+        <p>Start with the simple Hello World sample to handle a command message synchronously.</p>
         <ul>
             <li><a href="HelloWorldExample.html">Hello World</a></li>
         </ul>
         <h2>Next Steps</h2>
-        <p>Afterwards Next Steps looks at the examples provided and discusses event publishing, and asynchronous events via a Broker</p>
+        <p>The Greetings and Tasks are asynchronous examples using Publish/Subscribe work queue using RabbitMQ as the broker.</p>
         <ul>
             <li><a href="GreetingsExample.html">Greetings</a></li>
             <li><a href="TasksExample.html">Tasks</a></li>
         </ul>
         <h2>Configuration</h2>
-        <p>As ever with this kind of library, configuration is one of the most painful parts. We try to ease the pain through a fluent interface</p>
+        <p>In the industry, the configuration of the solution during construction and deployment are painful. By providing a fluent interface, Brighter tries to ease the pain.</p>
         <ul>
             <li><a href="http://paramore.readthedocs.io/en/latest/BasicConfiguration.html">Configuration</a></li>
         </ul>
