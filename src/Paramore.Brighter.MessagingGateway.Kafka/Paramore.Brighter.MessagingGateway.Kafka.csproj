@@ -2,12 +2,20 @@
   <Import Project="../../build/common.props" />
 
   <PropertyGroup>
+    <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using Kafka.</Description>
+    <AssemblyTitle>Paramore.Brighter.MessagingGateway.Kafka</AssemblyTitle>
+    <Authors>Wayne Hunsley</Authors>
     <TargetFramework>netstandard1.5</TargetFramework>
     <DefineConstants>$(DefineConstants);LIBLOG_PUBLIC;LIBLOG_PORTABLE</DefineConstants>
+    <DebugType>full</DebugType>
+    <AssemblyName>Paramore.Brighter.MessagingGateway.Kafka</AssemblyName>
+    <PackageId>Paramore.Brighter</PackageId>
+    <PackageTags>Kafka;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Confluent.Kafka" Version="0.11.0" />
+    <PackageReference Include="Polly" Version="5.1.0" />
   </ItemGroup>
 
   <ItemGroup>
