@@ -6,7 +6,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         public IAmAMessageProducer Create()
         {
-            throw new NotImplementedException();
+            return new KafkaMessageProducer();
         }
     }
 }

@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Confluent.Kafka;
+using Paramore.Brighter.MessagingGateway.Kafka.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     class KafkaMessageProducer : IAmAMessageProducerSupportingDelay, IAmAMessageProducerAsync
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
+
         public bool DelaySupported => throw new NotImplementedException();
 
         public void Send(Message message)
