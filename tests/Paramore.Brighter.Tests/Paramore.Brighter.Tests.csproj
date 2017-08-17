@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.MsSql\Paramore.Brighter.CommandStore.MsSql.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.Sqlite\Paramore.Brighter.CommandStore.Sqlite.csproj" />
