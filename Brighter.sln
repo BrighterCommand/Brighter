@@ -42,15 +42,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{3C6BD639
 		build\common.props = build\common.props
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\RMQ Task Queue Samples\Greetings\Greetings.csproj", "{26518A29-501B-4FFE-9C87-EFF69F1DF035}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\RMQTaskQueueSamples\Greetings\Greetings.csproj", "{26518A29-501B-4FFE-9C87-EFF69F1DF035}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RMQ Task Queue Samples", "RMQ Task Queue Samples", "{43C0B333-DFA1-43E6-87C8-0B44BF159046}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\RMQ Task Queue Samples\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{8C5A8F09-CAC9-438D-B78B-34047B709FEE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\RMQTaskQueueSamples\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{8C5A8F09-CAC9-438D-B78B-34047B709FEE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverService", "samples\RMQ Task Queue Samples\GreetingsReceiverService\GreetingsReceiverService.csproj", "{4A0E4791-26C5-453A-8412-9744CEBC8864}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverService", "samples\RMQTaskQueueSamples\GreetingsReceiverService\GreetingsReceiverService.csproj", "{4A0E4791-26C5-453A-8412-9744CEBC8864}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\RMQ Task Queue Samples\GreetingsSender\GreetingsSender.csproj", "{EEEEDE11-6048-4765-BEF1-49B10ED0B57D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\RMQTaskQueueSamples\GreetingsSender\GreetingsSender.csproj", "{EEEEDE11-6048-4765-BEF1-49B10ED0B57D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
