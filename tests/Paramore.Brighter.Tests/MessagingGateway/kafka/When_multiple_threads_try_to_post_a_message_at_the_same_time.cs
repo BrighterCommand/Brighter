@@ -46,8 +46,13 @@ namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
             //    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
             //    Exchange = new Exchange("paramore.brighter.exchange")
             //};
-
-            _messageProducer = new KafkaMessageProducerFactory().Create();
+         
+            _messageProducer = new KafkaMessageProducerFactory(
+                    new KafkaMessagingGatewayConfiguration()
+                    {
+                        Name = "Test",
+                        BootStrapServers = new [] { "localhost:9092" }
+                    }).Create();
         }
 
         [Fact]

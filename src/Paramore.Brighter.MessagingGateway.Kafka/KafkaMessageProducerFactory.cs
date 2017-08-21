@@ -20,15 +20,27 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
+
 using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     public class KafkaMessageProducerFactory : IAmAMessageProducerFactory
     {
+        private readonly KafkaMessagingGatewayConfiguration _config;
+
+        public KafkaMessageProducerFactory(KafkaMessagingGatewayConfiguration config)
+        {
+            _config = config;
+        }
+
         public IAmAMessageProducer Create()
         {
-            return new KafkaMessageProducer();
+            var config = new Dictionary<string, object> {
+                { "bootstrap.servers", string.Join(";", _config.BootStrapServers) }
+            };
+            return new KafkaMessageProducer(config);
         }
     }
 }
