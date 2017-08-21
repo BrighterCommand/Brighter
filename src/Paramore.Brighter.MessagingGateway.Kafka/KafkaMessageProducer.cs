@@ -25,24 +25,30 @@ using System;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Paramore.Brighter.MessagingGateway.Kafka.Logging;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    class KafkaMessageProducer : IAmAMessageProducerSupportingDelay, IAmAMessageProducerAsync
+    class KafkaMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
-        //private readonly Producer<string, string> _producer = new Producer<string, string>(null, null, null);
+        private readonly Producer<string, string> _producer;
 
-        public bool DelaySupported => throw new NotImplementedException();
+        public KafkaMessageProducer(IEnumerable<KeyValuePair<string, object>> config)
+        {
+            _producer = new Producer<string, string>(config, null, null);
+        }
 
         public void Send(Message message)
         {
-            throw new NotImplementedException();
+            SendAsync(message).Wait();
         }
 
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        public Task SendAsync(Message message)
         {
-            throw new NotImplementedException();
+            if (message == null)
+                throw new ArgumentNullException("message");
+            return _producer.ProduceAsync(message.Header.Topic, null, message.Body.Value);
         }
 
         #region IDisposable Support
@@ -77,11 +83,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Dispose(true);
             // TODO: uncomment the following line if the finalizer is overridden above.
             // GC.SuppressFinalize(this);
-        }
-
-        public Task SendAsync(Message message)
-        {
-            throw new NotImplementedException();
         }
         #endregion
     }
