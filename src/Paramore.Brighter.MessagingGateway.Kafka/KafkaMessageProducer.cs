@@ -23,7 +23,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
+using System.Text;
 using Confluent.Kafka;
+using Confluent.Kafka.Serialization;
 using Paramore.Brighter.MessagingGateway.Kafka.Logging;
 using System.Collections.Generic;
 
@@ -32,11 +34,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     class KafkaMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
-        private readonly Producer<string, string> _producer;
+        private readonly Producer<Null, string> _producer;
 
         public KafkaMessageProducer(IEnumerable<KeyValuePair<string, object>> config)
         {
-            _producer = new Producer<string, string>(config, null, null);
+            var serialiser = new StringSerializer(Encoding.UTF8);
+            _producer = new Producer<Null, string>(config, null, serialiser);
         }
 
         public void Send(Message message)
