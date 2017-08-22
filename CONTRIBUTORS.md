@@ -15,7 +15,7 @@ Brighter contributors (sorted alphabeticaly)
 **[Ian Bebbington](https://github.com/ibebbs)** 
  * Documentation fixes
 
-**[Ed Blackurn](https://github.com/edblackburn)** 
+**[Ed Blackburn](https://github.com/edblackburn)** 
  * Documentation fixes
  
 **[Ian Cooper](https://github.com/iancooper)**
@@ -29,7 +29,7 @@ Brighter contributors (sorted alphabeticaly)
   * Various fixes
   * Work on POSTEL messaging approach
   
- **[Scott Hanselman](https://github.com/shanselman)**
+**[Scott Hanselman](https://github.com/shanselman)**
   * Various fixes
 
 **[Toby Henderson](https://github.com/holytshirt)**
@@ -66,6 +66,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Solveig Oskarsdottir](https://github.com/solveigo)**
  * QA of Brighter
  
+**[Parris](https://github.com/GrooveCS)**
+ * Documentation fixes
+ 
 **[Ian Pender](https://github.com/penderi)**
   * Work on Tasks examples
   * Documentation for Tasks examples
@@ -96,6 +99,9 @@ Brighter contributors (sorted alphabeticaly)
   * Various fixes
 
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
+  * Various Fixes
+  
+**[whunsley](https://github.com/whunsley)**
   * Various Fixes
 
 **[Joseph Woodward](https://github.com/JosephWoodward)**  
