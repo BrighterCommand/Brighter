@@ -40,13 +40,6 @@ namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
         public KafkaMessageProducerSupportsMultipleThreadsTests()
         {
             _message = new Message(new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-
-            //var rmqConnection = new RmqMessagingGatewayConnection
-            //{
-            //    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-            //    Exchange = new Exchange("paramore.brighter.exchange")
-            //};
-         
             _messageProducer = new KafkaMessageProducerFactory(
                     new KafkaMessagingGatewayConfiguration()
                     {

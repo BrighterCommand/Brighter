@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <DebugType>full</DebugType>
+    <OutputType>Exe</OutputType>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <StartupObject>KafkaTaskQueueSamples.GreetingsReceiverConsole.Program</StartupObject>
+    <AssemblyName>KafkaTaskQueueSamples.GreetingsReceiverConsole</AssemblyName>
+    <RootNamespace>KafkaTaskQueueSamples.GreetingsReceiverConsole</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="2.4.0" />
+    <PackageReference Include="Serilog.Sinks.Literate" Version="2.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Greetings\Greetings.csproj" />
+  </ItemGroup>
+
+</Project>
