@@ -2,6 +2,11 @@
 {
     public class RedisMessageConsumer : IAmAMessageConsumer
     {
+        public RedisMessageConsumer(RedisMessagingGatewayConfiguration configuration, string queueName, string topic)
+        {
+            throw new System.NotImplementedException();
+        }
+
         public void Dispose()
         {
             throw new System.NotImplementedException();
