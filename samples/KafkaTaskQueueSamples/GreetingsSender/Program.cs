@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2017 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2017 Wayne Hunsley <whunsley@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,6 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using KafkaTaskQueueSamples.Greetings.TinyIoc;
+using KafkaTaskQueueSamples.Greetings.Adapters.ServiceHost;
+using KafkaTaskQueueSamples.Greetings.Ports.Commands;
+using KafkaTaskQueueSamples.Greetings.Ports.Mappers;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
 

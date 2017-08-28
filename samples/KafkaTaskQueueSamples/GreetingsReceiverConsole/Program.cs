@@ -23,11 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Greetings.Adapters.ServiceHost;
-using Greetings.Ports.CommandHandlers;
-using Greetings.Ports.Commands;
-using Greetings.Ports.Mappers;
-using Greetings.TinyIoc;
+using KafkaTaskQueueSamples.Greetings.Adapters.ServiceHost;
+using KafkaTaskQueueSamples.Greetings.Ports.CommandHandlers;
+using KafkaTaskQueueSamples.Greetings.Ports.Commands;
+using KafkaTaskQueueSamples.Greetings.Ports.Mappers;
+using KafkaTaskQueueSamples.Greetings.TinyIoc;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.ServiceActivator;
