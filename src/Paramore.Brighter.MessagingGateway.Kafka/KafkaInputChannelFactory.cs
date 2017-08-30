@@ -20,28 +20,25 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
+
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
+    public class KafkaInputChannelFactory : IAmAChannelFactory
     {
-        private readonly KafkaMessagingGatewayConfiguration _config;
+        private readonly KafkaMessageConsumerFactory _kafkaMessageConsumerFactory;
         
-        public KafkaMessageConsumerFactory(KafkaMessagingGatewayConfiguration config)
+        public KafkaInputChannelFactory(KafkaMessageConsumerFactory kafkaMessageConsumerFactory)
         {
-            _config = config;
+            _kafkaMessageConsumerFactory = kafkaMessageConsumerFactory;
         }
 
-        public IAmAMessageConsumer Create(string channelName, string routingKey, bool isDurable, ushort preFetchSize, bool highAvailability)
+        public IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = false, ushort preFetchSize = 1, bool highAvailability = false)
         {
-            var config = new Dictionary<string, object> {
-                { "bootstrap.servers", string.Join(";", _config.BootStrapServers) },
-                { "group.id", channelName }
-            };
-            return new KafkaMessageConsumer(routingKey, config);
+            return new Channel(channelName, _kafkaMessageConsumerFactory.Create(channelName, routingKey, isDurable, preFetchSize, highAvailability));
         }
     }
 }

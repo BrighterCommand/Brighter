@@ -32,18 +32,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     class KafkaMessageConsumer : IAmAMessageConsumer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageConsumer>);
-        private readonly Consumer<Null, string> _consumer;
+        private Consumer<Null, string> _consumer;
+        private bool _disposedValue = false; 
 
-        public KafkaMessageConsumer()
+        public KafkaMessageConsumer(string topic, IEnumerable<KeyValuePair<string, object>> config)
         {
-            var config = default(IEnumerable<KeyValuePair<string, object>>);
             _consumer = new Consumer<Null, string>(config, null, new StringDeserializer(Encoding.UTF8));
+            _consumer.Assign(new List<TopicPartitionOffset> { new TopicPartitionOffset(topic, 0, 0) });
         }
-        
 
         public void Acknowledge(Message message)
         {
-            throw new NotImplementedException();
+            //TODO: Implement the ack logic for 
+            //kafka
+            //throw new NotImplementedException();
         }
 
         public void Purge()
@@ -53,10 +55,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         public Message Receive(int timeoutInMilliseconds)
         {
-            var msg = new Message();
-            _consumer.Consume(out Message<Null, string> kafkaMsg, timeoutInMilliseconds);
-            return msg;
-
+            if (!_consumer.Consume(out Message<Null, string> kafkaMsg, timeoutInMilliseconds))
+                return new Message();
+            var messageHeader = new MessageHeader(Guid.NewGuid(), kafkaMsg.Topic, MessageType.MT_EVENT); 
+            var messageBody = new MessageBody(kafkaMsg.Value);
+            return new Message(messageHeader, messageBody); 
         }
 
         public void Reject(Message message, bool requeue)
@@ -70,37 +73,30 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!_disposedValue)
             {
                 if (disposing)
                 {
-                    // TODO: dispose managed state (managed objects).
+                    _consumer.Dispose();
+                    _consumer = null;
                 }
 
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
-
-                disposedValue = true;
+                _disposedValue = true;
             }
         }
 
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~KafkaMessageConsumer() {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
+        ~KafkaMessageConsumer()
+        {
+           Dispose(false);
+        }
 
-        // This code added to correctly implement the disposable pattern.
         public void Dispose()
         {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
+            GC.SuppressFinalize(this);
         }
         #endregion
     }

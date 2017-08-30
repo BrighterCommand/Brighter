@@ -80,38 +80,38 @@ namespace KafkaTaskQueueSamples.GreetingsReceiverConsole
             };
 
             //create the gateway
-            //var rmqConnnection = new RmqMessagingGatewayConnection 
-            //{
-            //    AmpqUri  = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-            //    Exchange = new Exchange("paramore.brighter.exchange"),
-            //};
+            var gatewayConFiguration = new KafkaMessagingGatewayConfiguration
+            {
+                 Name = "paramore.brighter",
+                 BootStrapServers = new[] { "localhost:9092" }
+            };
 
-            //var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
+            var messageConsumerFactory = new KafkaMessageConsumerFactory(gatewayConFiguration); 
 
-            //var dispatcher = DispatchBuilder.With()
-            //    .CommandProcessor(CommandProcessorBuilder.With()
-            //        .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-            //        .Policies(policyRegistry)
-            //        .NoTaskQueues()
-            //        .RequestContextFactory(new InMemoryRequestContextFactory())
-            //        .Build())
-            //    .MessageMappers(messageMapperRegistry)
-            //    .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
-            //    .Connections(new Connection[]
-            //    {
-            //        new Connection<GreetingEvent>(
-            //            new ConnectionName("paramore.example.greeting"),
-            //            new ChannelName("greeting.event"),
-            //            new RoutingKey("greeting.event"),
-            //            timeoutInMilliseconds: 200)
-            //    }).Build();
+            var dispatcher = DispatchBuilder.With()
+                .CommandProcessor(CommandProcessorBuilder.With()
+                    .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+                    .Policies(policyRegistry)
+                    .NoTaskQueues()
+                    .RequestContextFactory(new InMemoryRequestContextFactory())
+                    .Build())
+                .MessageMappers(messageMapperRegistry)
+                .DefaultChannelFactory(new KafkaInputChannelFactory(messageConsumerFactory))
+                .Connections(new Connection[]
+                {
+                    new Connection<GreetingEvent>(
+                        new ConnectionName("paramore.example.greeting"),
+                        new ChannelName("greeting.event"),
+                        new RoutingKey("greeting.event"),
+                        timeoutInMilliseconds: 200)
+                }).Build();
 
-            //dispatcher.Receive();
+            dispatcher.Receive();
 
-            //Console.WriteLine("Press Enter to stop ...");
-            //Console.ReadLine();
+            Console.WriteLine("Press Enter to stop ...");
+            Console.ReadLine();
 
-            //dispatcher.End().Wait();
+            dispatcher.End().Wait();
         }
     }
 }
