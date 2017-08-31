@@ -30,38 +30,23 @@ namespace Paramore.Brighter
     /// Class AsyncHandlerFactory
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
-    internal class AsyncHandlerFactory<TRequest> where TRequest : class, IRequest
+    internal static class AsyncHandlerFactory
     {
-        private readonly RequestHandlerAttribute _attribute;
-        private readonly IAmAHandlerFactoryAsync _factory;
-        private readonly Type _messageType;
-        private readonly IRequestContext _requestContext;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncHandlerFactory{TRequest}"/> class.
-        /// </summary>
-        /// <param name="attribute">The attribute.</param>
-        /// <param name="factory">The async handler factory.</param>
-        /// <param name="requestContext">The request context.</param>
-        public AsyncHandlerFactory(RequestHandlerAttribute attribute, IAmAHandlerFactoryAsync factory, IRequestContext requestContext)
-        {
-            _attribute = attribute;
-            _factory = factory;
-            _requestContext = requestContext;
-            _messageType = typeof(TRequest);
-        }
-
         /// <summary>
         /// Creates the async request handler.
         /// </summary>
+        /// <param name="factory">The async handler factory.</param>
+        /// <param name="attribute">The attribute.</param>
+        /// <param name="requestContext">The request context.</param>
         /// <returns><see cref="IHandleRequestsAsync{TRequest}"/>.</returns>
-        public IHandleRequestsAsync<TRequest> CreateAsyncRequestHandler()
+        public static IHandleRequestsAsync<TRequest> CreateAsyncRequestHandler<TRequest>(this IAmAHandlerFactoryAsync factory, RequestHandlerAttribute attribute, IRequestContext requestContext)
+             where TRequest : class, IRequest
         {
-            var handlerType = _attribute.GetHandlerType().MakeGenericType(_messageType);
-            var handler = (IHandleRequestsAsync<TRequest>)_factory.Create(handlerType);
+            var handlerType = attribute.GetHandlerType().MakeGenericType(typeof(TRequest));
+            var handler = (IHandleRequestsAsync<TRequest>)factory.Create(handlerType);
             //Lod the context before the initializer - in case we want to use the context from within the initializer
-            handler.Context = _requestContext;
-            handler.InitializeFromAttributeParams(_attribute.InitializerParams());
+            handler.Context = requestContext;
+            handler.InitializeFromAttributeParams(attribute.InitializerParams());
             return handler;
         }
     }

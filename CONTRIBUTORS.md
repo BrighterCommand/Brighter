@@ -1,6 +1,9 @@
 Brighter contributors (sorted alphabeticaly)
 ============================================
 
+**[Vicenç García Altés](https://github.com/vgaltes)**
+  * Various fixes 
+
 **[Rudy Alvarez](https://github.com/rudygt)**
   * Various fixes  
 
@@ -12,7 +15,7 @@ Brighter contributors (sorted alphabeticaly)
 **[Ian Bebbington](https://github.com/ibebbs)** 
  * Documentation fixes
 
-**[Ed Blackurn](https://github.com/edblackburn)** 
+**[Ed Blackburn](https://github.com/edblackburn)** 
  * Documentation fixes
  
 **[Ian Cooper](https://github.com/iancooper)**
@@ -26,7 +29,7 @@ Brighter contributors (sorted alphabeticaly)
   * Various fixes
   * Work on POSTEL messaging approach
   
- **[Scott Hanselman](https://github.com/shanselman)**
+**[Scott Hanselman](https://github.com/shanselman)**
   * Various fixes
 
 **[Toby Henderson](https://github.com/holytshirt)**
@@ -51,6 +54,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Eddie Li](https://github.com/xiaodili)**
   * Various fixes   
   
+**[James Morcom](https://github.com/mrmorcs)
+  * Documentation fixes
+  
 **[Henk Mollema](https://github.com/henkmollema)**
   * Documentation fixes 
 
@@ -59,6 +65,9 @@ Brighter contributors (sorted alphabeticaly)
    
 **[Solveig Oskarsdottir](https://github.com/solveigo)**
  * QA of Brighter
+ 
+**[Parris](https://github.com/GrooveCS)**
+ * Documentation fixes
  
 **[Ian Pender](https://github.com/penderi)**
   * Work on Tasks examples
@@ -77,6 +86,9 @@ Brighter contributors (sorted alphabeticaly)
 
 **[tmschlot](https://github.com/tmschlot)**
   * Various fixes
+  
+**[Tim Seaward](https://github.com/Drawaes)**
+ * Fix unecessary allocations
 
 **[Daniel Stockhammer](https://github.com/dstockhammer?tab=activity)** 
   * Various fixes
@@ -87,6 +99,9 @@ Brighter contributors (sorted alphabeticaly)
   * Various fixes
 
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
+  * Various Fixes
+  
+**[whunsley](https://github.com/whunsley)**
   * Various Fixes
 
 **[Joseph Woodward](https://github.com/JosephWoodward)**  
