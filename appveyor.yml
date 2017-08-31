@@ -38,17 +38,17 @@ build_script:
   - cmd: dotnet build --configuration %CONFIGURATION%
 
 after_build:
-  - cmd: dotnet pack src\Paramore.Brighter --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.ServiceActivator --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs 
-  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AWSSQS --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AzureServiceBus --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RESTMS --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.ServiceActivator --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs 
+  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.Sqlite --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AWSSQS --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AzureServiceBus --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RESTMS --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
 
 test_script:
   - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj --filter "Category!=MSSQL & Category!=RMQ & Category!=AWS & Category != RESTMS"
