@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.13
+VisualStudioVersion = 15.0.26430.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
 EndProject
@@ -58,6 +58,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DocumentsAndFolders.Sqs.EventsGenerator", "samples\DocumentsAndFolders.Sqs.EventsGenerator\DocumentsAndFolders.Sqs.EventsGenerator.csproj", "{90624357-4D6D-4378-854C-5A1133F92D4F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Tests", "tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj", "{9E0E5F11-2777-4789-BB09-C866BC5F800D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageStore.MySql", "src\Paramore.Brighter.MessageStore.MySql\Paramore.Brighter.MessageStore.MySql.csproj", "{5BB3F6F4-80EB-4D40-A195-9B816D988567}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -381,6 +383,18 @@ Global
 		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|x86.ActiveCfg = Release|Any CPU
 		{9E0E5F11-2777-4789-BB09-C866BC5F800D}.Release|x86.Build.0 = Release|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Debug|x86.Build.0 = Debug|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Release|x86.ActiveCfg = Release|Any CPU
+		{5BB3F6F4-80EB-4D40-A195-9B816D988567}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
