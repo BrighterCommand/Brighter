@@ -33,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MySqlConnector" Version="0.24.2" />
+    <PackageReference Include="MySqlConnector" Version="0.26.0" />
   </ItemGroup>
 
 </Project>
