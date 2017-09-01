@@ -8,7 +8,7 @@ namespace Paramore.Brighter.Tests
     public class MySqlTestHelper
     {
         private string _tableName;
-        private readonly MySqlSettings _mysqlSettings;
+        private MySqlSettings _mysqlSettings;
 
         public MySqlTestHelper()
         {
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Tests
                 connection.Open();
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = @"CREATE DATABASE IF NOT EXISTS `BrighterTests`";
+                    command.CommandText = @"CREATE DATABASE IF NOT EXISTS BrighterTests;";
                     command.ExecuteNonQuery();
                 }
             }

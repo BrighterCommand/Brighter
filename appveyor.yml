@@ -8,10 +8,10 @@ services:
   - mysql
 
 environment:
-  Sql_TestsBrighterConnectionString: (local)\SQL2016;Database=BrighterTests;User ID=sa;Password=Password12!;Application Name=BrighterTests
-  Sql_TestsMasterConnectionString: (local)\SQL2016;Database=master;User ID=sa;Password=Password12!;Application Name=BrighterTests
-  MySql_TestsBrighterConnectionString: Server=localhost;Uid=root;Pwd=Password12!;Database=BrighterTests
-  MySql_TestsMasterConnectionString: Server=localhost;Uid=root;Pwd=Password12!
+  Sql__TestsBrighterConnectionString: Server=(local)\SQL2016;Database=BrighterTests;User ID=sa;Password=Password12!;Application Name=BrighterTests
+  Sql__TestsMasterConnectionString: Server=(local)\SQL2016;Database=master;User ID=sa;Password=Password12!;Application Name=BrighterTests
+  MySql__TestsBrighterConnectionString: Server=localhost;Uid=root;Pwd=Password12!;Database=BrighterTests
+  MySql__TestsMasterConnectionString: Server=localhost;Uid=root;Pwd=Password12!
   
 pull_requests:
   do_not_increment_build_number: true
@@ -73,3 +73,6 @@ notifications:
   on_build_success: true
   on_build_failure: true
   on_build_status_changed: true
+
+#on_finish:
+#  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

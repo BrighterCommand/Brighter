@@ -9,7 +9,7 @@ namespace Paramore.Brighter.Tests
     public class MsSqlTestHelper
     {
         private string _tableName;
-        private readonly SqlSettings _sqlSettings;
+        private SqlSettings _sqlSettings;
 
         public MsSqlTestHelper()
         {
