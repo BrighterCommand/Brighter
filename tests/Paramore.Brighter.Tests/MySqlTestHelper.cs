@@ -22,6 +22,7 @@ namespace Paramore.Brighter.Tests
 
             _mysqlSettings = new MySqlSettings();
             configuration.GetSection("MySql").Bind(_mysqlSettings);
+
             _tableName = $"test_{Guid.NewGuid()}";
         }
 
@@ -83,11 +84,10 @@ namespace Paramore.Brighter.Tests
             }
         }
     }
-      
-    public class MySqlSettings
+
+    internal class MySqlSettings
     {
         public string TestsBrighterConnectionString { get; set; } = "Server=localhost;Uid=root;Pwd=root;Database=BrighterTests";
-
         public string TestsMasterConnectionString { get; set; } = "Server=localhost;Uid=root;Pwd=root;";
     }
 
