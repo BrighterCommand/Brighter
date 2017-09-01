@@ -7,6 +7,11 @@ namespace Paramore.Brighter.Tests
 {
     public class MySqlTestHelper
     {
+        public static string ConnectionString = "Server=localhost;Uid=root;Pwd=root;Database=BrighterTests";
+        
+        private string _tableName;
+        public MySqlTestHelper()
+        {
         private string _tableName;
         private readonly MySqlSettings _mysqlSettings;
 
@@ -24,6 +29,7 @@ namespace Paramore.Brighter.Tests
        public void CreateDatabase()
         {
             using (var connection = new MySqlConnection(_mysqlSettings.TestsMasterConnectionString))
+
             {
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -63,6 +69,7 @@ namespace Paramore.Brighter.Tests
 
         public void CreateMessageStoreTable()
         {
+
             using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"`message_{_tableName}`";
@@ -83,4 +90,5 @@ namespace Paramore.Brighter.Tests
         public string TestsBrighterConnectionString { get; set; } = "Server=localhost;Uid=root;Pwd=root;Database=BrighterTests";
         public string TestsMasterConnectionString { get; set; } = "Server=localhost;Uid=root;Pwd=root;";
     }
+
 }
