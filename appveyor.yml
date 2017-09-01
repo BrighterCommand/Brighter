@@ -3,6 +3,13 @@ configuration: Release
 
 image: Visual Studio 2017
 
+services:
+  - mssql2016
+
+enviroment:
+  Sql_TestsBrighterConnectionString: (local)\SQL2016;Database=BrighterTests;User ID=sa;Password=Password12!;Application Name=BrighterTests
+  Sql_TestsMasterConnectionString: (local)\SQL2016;Database=master;User ID=sa;Password=Password12!;Application Name=BrighterTests
+
 pull_requests:
   do_not_increment_build_number: true
 
@@ -51,7 +58,7 @@ after_build:
   - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
 
 test_script:
-  - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj --filter "Category!=MSSQL & Category!=RMQ & Category!=AWS & Category != RESTMS"
+  - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj --filter "Category!=RMQ & Category!=AWS & Category != RESTMS"
 
 artifacts:
   - path: nupkgs\*.nupkg
