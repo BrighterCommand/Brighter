@@ -20,6 +20,7 @@ pull_requests:
 branches:
   only:
   - master
+  - testappveyor
   # blacklist
   except:
     - gh-pages
