@@ -12,7 +12,6 @@ environment:
   Sql_TestsMasterConnectionString: (local)\SQL2016;Database=master;User ID=sa;Password=Password12!;Application Name=BrighterTests
   MySql_TestsBrighterConnectionString: Server=localhost;Uid=root;Pwd=Password12!;Database=BrighterTests
   MySql_TestsMasterConnectionString: Server=localhost;Uid=root;Pwd=Password12!
-  APPVEYOR_RDP_PASSWORD: brightercommand
   
 pull_requests:
   do_not_increment_build_number: true
@@ -37,9 +36,6 @@ assembly_info:
 nuget:
   project_feed: true
   disable_publish_on_pr: true
-
-on_finish:
-  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 install:
   - ps: Import-Module .\Set-Version.psm1
