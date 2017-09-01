@@ -10,8 +10,8 @@ services:
 environment:
   Sql_TestsBrighterConnectionString: (local)\SQL2016;Database=BrighterTests;User ID=sa;Password=Password12!;Application Name=BrighterTests
   Sql_TestsMasterConnectionString: (local)\SQL2016;Database=master;User ID=sa;Password=Password12!;Application Name=BrighterTests
-  MySql_TestsBrighterConnectionString: Server=localhost;Uid=root;Pwd=Password12!;Database=BrighterTests;
-  MySql_TestsMasterConnectionString: Server=localhost;Uid=root;Pwd=Password12!;
+  MySql_TestsBrighterConnectionString: Server=localhost;Uid=root;Pwd=Password12!;Database=BrighterTests
+  MySql_TestsMasterConnectionString: Server=localhost;Uid=root;Pwd=Password12!
   
 pull_requests:
   do_not_increment_build_number: true
