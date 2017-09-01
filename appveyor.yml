@@ -6,7 +6,7 @@ image: Visual Studio 2017
 services:
   - mssql2016
 
-enviroment:
+environment:
   Sql_TestsBrighterConnectionString: (local)\SQL2016;Database=BrighterTests;User ID=sa;Password=Password12!;Application Name=BrighterTests
   Sql_TestsMasterConnectionString: (local)\SQL2016;Database=master;User ID=sa;Password=Password12!;Application Name=BrighterTests
 
