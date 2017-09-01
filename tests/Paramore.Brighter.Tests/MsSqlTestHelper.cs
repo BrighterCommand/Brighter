@@ -1,5 +1,6 @@
 using System;
 using System.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.CommandStore.MsSql;
 using Paramore.Brighter.MessageStore.MsSql;
 
@@ -7,18 +8,24 @@ namespace Paramore.Brighter.Tests
 {
     public class MsSqlTestHelper
     {
-        private const string ConnectionString = "Server=.;Database=BrighterTests;Integrated Security=True;Application Name=BrighterTests";
-        private const string MasterConnectionString = "Server=.;Database=master;Integrated Security=True;Application Name=BrighterTests";
         private string _tableName;
+        private readonly SqlSettings _sqlSettings;
 
         public MsSqlTestHelper()
         {
+            var builder = new ConfigurationBuilder().AddEnvironmentVariables();
+            var configuration = builder.Build();
+
+            _sqlSettings = new SqlSettings();
+            configuration.GetSection("Sql").Bind(_sqlSettings);
+
             _tableName = $"test_{Guid.NewGuid()}";
+
         }
 
        public void CreateDatabase()
         {
-            using (var connection = new SqlConnection(MasterConnectionString))
+            using (var connection = new SqlConnection(_sqlSettings.TestsMasterConnectionString))
             {
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -45,13 +52,13 @@ namespace Paramore.Brighter.Tests
             CreateCommandStoreTable();
         }
 
-        public MsSqlCommandStoreConfiguration CommandStoreConfiguration => new MsSqlCommandStoreConfiguration(ConnectionString, _tableName);
+        public MsSqlCommandStoreConfiguration CommandStoreConfiguration => new MsSqlCommandStoreConfiguration(_sqlSettings.TestsBrighterConnectionString, _tableName);
 
-        public MsSqlMessageStoreConfiguration MessageStoreConfiguration => new MsSqlMessageStoreConfiguration(ConnectionString, _tableName);
+        public MsSqlMessageStoreConfiguration MessageStoreConfiguration => new MsSqlMessageStoreConfiguration(_sqlSettings.TestsBrighterConnectionString, _tableName);
 
         public void CleanUpDb()
         {
-            using (var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(_sqlSettings.TestsBrighterConnectionString))
             {
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -68,7 +75,7 @@ namespace Paramore.Brighter.Tests
 
         public void CreateMessageStoreTable()
         {
-            using (var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(_sqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"[message_{_tableName}]";
                 var createTableSql = SqlMessageStoreBuilder.GetDDL(_tableName);
@@ -84,7 +91,7 @@ namespace Paramore.Brighter.Tests
 
         public void CreateCommandStoreTable()
         {
-            using (var connection = new SqlConnection(ConnectionString))
+            using (var connection = new SqlConnection(_sqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"[command_{_tableName}]";
                 var createTableSql = SqlCommandStoreBuilder.GetDDL(_tableName);
@@ -97,5 +104,14 @@ namespace Paramore.Brighter.Tests
                 }
             }
         }
+    }
+
+    internal class SqlSettings
+    {
+        public string TestsBrighterConnectionString { get; set; } =
+            "Server=.;Database=BrighterTests;Integrated Security=True;Application Name=BrighterTests";
+
+        public string TestsMasterConnectionString { get; set; } =
+            "Server=.;Database=master;Integrated Security=True;Application Name=BrighterTests";
     }
 }
