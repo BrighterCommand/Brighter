@@ -3,11 +3,8 @@
     <TargetFramework>netcoreapp1.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-<<<<<<< 5d2901acc849b2d33bf0f23fd067d5a01a9d9bcc
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.MySql\Paramore.Brighter.MessageStore.MySql.csproj" />
-=======
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.Redis\Paramore.Brighter.MessagingGateway.Redis.csproj" />
->>>>>>> Adding a new Redis gateway
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.MsSql\Paramore.Brighter.CommandStore.MsSql.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.Sqlite\Paramore.Brighter.CommandStore.Sqlite.csproj" />
