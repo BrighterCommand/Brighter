@@ -35,9 +35,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private Consumer<Null, string> _consumer;
         private bool _disposedValue = false; 
 
-        public KafkaMessageConsumer(string topic, IEnumerable<KeyValuePair<string, object>> config)
+        public KafkaMessageConsumer(string topic, KafkaMessagingGatewayConfiguration config)
         {
-            _consumer = new Consumer<Null, string>(config, null, new StringDeserializer(Encoding.UTF8));
+            _consumer = new Consumer<Null, string>(config.ToConfig(), null, new StringDeserializer(Encoding.UTF8));
             _consumer.Assign(new List<TopicPartitionOffset> { new TopicPartitionOffset(topic, 0, 0) });
         }
 
@@ -72,8 +72,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             throw new NotImplementedException();
         }
 
-        #region IDisposable Support
-
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposedValue)
@@ -98,6 +96,5 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        #endregion
     }
 }

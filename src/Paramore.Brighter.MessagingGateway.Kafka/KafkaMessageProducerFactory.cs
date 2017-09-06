@@ -37,10 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         public IAmAMessageProducer Create()
         {
-            var config = new Dictionary<string, object> {
-                { "bootstrap.servers", string.Join(";", _config.BootStrapServers) }
-            };
-            return new KafkaMessageProducer(config);
+            return new KafkaMessageProducer(_config);
         }
     }
 }

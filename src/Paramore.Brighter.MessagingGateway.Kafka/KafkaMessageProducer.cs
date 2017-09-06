@@ -37,10 +37,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private Producer<Null, string> _producer;
         private bool _disposedValue = false; 
 
-        public KafkaMessageProducer(IEnumerable<KeyValuePair<string, object>> config)
+        public KafkaMessageProducer(KafkaMessagingGatewayConfiguration config)
         {
             var serialiser = new StringSerializer(Encoding.UTF8);
-            _producer = new Producer<Null, string>(config, null, serialiser);
+            _producer = new Producer<Null, string>(config.ToConfig(), null, serialiser);
         }
 
         public void Send(Message message)

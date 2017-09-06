@@ -26,6 +26,10 @@ using System.Text;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
+    /// <inheritdoc />
+    /// <summary>
+    /// Class KafkaMessageConsumerFactory.
+    /// </summary>
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _config;
@@ -35,13 +39,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _config = config;
         }
 
-        public IAmAMessageConsumer Create(string channelName, string routingKey, bool isDurable, ushort preFetchSize, bool highAvailability)
+        public IAmAMessageConsumer Create(string groupId, string topic, bool isDurable, ushort preFetchSize, bool highAvailability)
         {
-            var config = new Dictionary<string, object> {
-                { "bootstrap.servers", string.Join(";", _config.BootStrapServers) },
-                { "group.id", channelName }
-            };
-            return new KafkaMessageConsumer(routingKey, config);
+            return new KafkaMessageConsumer(topic, _config);
         }
     }
 }

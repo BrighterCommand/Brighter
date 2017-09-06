@@ -47,7 +47,7 @@ namespace KafkaTaskQueueSamples.GreetingsSender
             var producer = new KafkaMessageProducerFactory(
                     new KafkaMessagingGatewayConfiguration()
                     {
-                        Name = "paramore.brighter",
+                        Name = "paramore.brighter.greetingsender",
                         BootStrapServers = new[] { "localhost:9092" }
                     }).Create();
 
