@@ -28,16 +28,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     public class KafkaMessageProducerFactory : IAmAMessageProducerFactory
     {
-        private readonly KafkaMessagingGatewayConfiguration _config;
+        private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
+        private readonly KafkaMessagingProducerConfiguration _producerConfiguration;
 
-        public KafkaMessageProducerFactory(KafkaMessagingGatewayConfiguration config)
+        public KafkaMessageProducerFactory(KafkaMessagingGatewayConfiguration globalConfiguration) :
+            this(globalConfiguration, new KafkaMessagingProducerConfiguration())
         {
-            _config = config;
+        }
+
+        public KafkaMessageProducerFactory(KafkaMessagingGatewayConfiguration globalConfiguration, 
+            KafkaMessagingProducerConfiguration producerConfiguration)
+        {
+            _globalConfiguration = globalConfiguration;
+            _producerConfiguration = producerConfiguration;
         }
 
         public IAmAMessageProducer Create()
         {
-            return new KafkaMessageProducer(_config);
+            return new KafkaMessageProducer(_globalConfiguration, _producerConfiguration);
         }
     }
 }

@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Paramore.Brighter.MessagingGateway.Kafka.Logging;
 using Confluent.Kafka;
@@ -35,17 +36,43 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private Consumer<Null, string> _consumer;
         private bool _disposedValue = false; 
 
-        public KafkaMessageConsumer(string topic, KafkaMessagingGatewayConfiguration config)
+        public KafkaMessageConsumer(string groupId, string topic, KafkaMessagingGatewayConfiguration globalConfiguration, KafkaMessagingConsumerConfiguration consumerConfiguration)
         {
-            _consumer = new Consumer<Null, string>(config.ToConfig(), null, new StringDeserializer(Encoding.UTF8));
-            _consumer.Assign(new List<TopicPartitionOffset> { new TopicPartitionOffset(topic, 0, 0) });
+            var config = globalConfiguration.ToConfig();
+            config = config.Concat(consumerConfiguration.ToConfig());
+            config = config.Concat(new[] {new KeyValuePair<string, object>("group.id", groupId)});
+            _consumer = new Consumer<Null, string>(config, null, new StringDeserializer(Encoding.UTF8));
+
+            _consumer.OnPartitionsAssigned += (_, partitions) => OnPartionsAssigned(partitions);
+            _consumer.OnPartitionsRevoked += (_, partitions) => OnPartionsRevoked(partitions);
+
+            if (_logger.Value.IsErrorEnabled())
+            {
+                _consumer.OnError += (_, error) =>
+                    _logger.Value.Error($"Member id: {_consumer.MemberId}, error: {error}");
+            }
+
+            _consumer.Subscribe(new []{ topic });
+        }
+
+        private void OnPartionsAssigned(List<TopicPartition> partitions)
+        {
+            _logger.Value.InfoFormat($"Assigned partitions: [{string.Join(", ", partitions)}], member id: {_consumer.MemberId}");
+            _consumer.Assign(partitions);
+        }
+
+        private void OnPartionsRevoked(List<TopicPartition> partitions)
+        {
+            _logger.Value.InfoFormat($"Revoked partitions: [{string.Join(", ", partitions)}], member id: {_consumer.MemberId}");
+            _consumer.Unassign();
         }
 
         public void Acknowledge(Message message)
         {
-            //TODO: Implement the ack logic for 
-            //kafka
-            //throw new NotImplementedException();
+            if (!message.Header.Bag.TryGetValue("TopicPartitionOffset", out var bagData))
+                return;
+            var topicPartitionOffset = bagData as TopicPartitionOffset;
+            var deliveryReport = _consumer.CommitAsync(new[] {topicPartitionOffset}).Result;
         }
 
         public void Purge()
@@ -57,7 +84,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (!_consumer.Consume(out Message<Null, string> kafkaMsg, timeoutInMilliseconds))
                 return new Message();
-            var messageHeader = new MessageHeader(Guid.NewGuid(), kafkaMsg.Topic, MessageType.MT_EVENT); 
+            var messageHeader =
+                new MessageHeader(Guid.NewGuid(), kafkaMsg.Topic, MessageType.MT_EVENT)
+                {
+                    Bag = {["TopicPartitionOffset"] = kafkaMsg.TopicPartitionOffset}
+                };
             var messageBody = new MessageBody(kafkaMsg.Value);
             return new Message(messageHeader, messageBody); 
         }

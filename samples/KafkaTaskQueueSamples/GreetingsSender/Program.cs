@@ -58,7 +58,7 @@ namespace KafkaTaskQueueSamples.GreetingsSender
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 
             var commandProcessor = builder.Build();
-            commandProcessor.Post(new GreetingEvent("Ian"));
+            commandProcessor.Post(new GreetingEvent("Wayne"));
         }
     }
 }

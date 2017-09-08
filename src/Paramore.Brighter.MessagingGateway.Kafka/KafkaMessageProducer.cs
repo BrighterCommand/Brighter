@@ -28,6 +28,7 @@ using Confluent.Kafka;
 using Confluent.Kafka.Serialization;
 using Paramore.Brighter.MessagingGateway.Kafka.Logging;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -37,10 +38,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private Producer<Null, string> _producer;
         private bool _disposedValue = false; 
 
-        public KafkaMessageProducer(KafkaMessagingGatewayConfiguration config)
+        public KafkaMessageProducer(KafkaMessagingGatewayConfiguration globalConfiguration, KafkaMessagingProducerConfiguration producerConfiguration)
         {
             var serialiser = new StringSerializer(Encoding.UTF8);
-            _producer = new Producer<Null, string>(config.ToConfig(), null, serialiser);
+            var config = globalConfiguration.ToConfig();
+            config = config.Concat(producerConfiguration.ToConfig());
+            _producer = new Producer<Null, string>(config, null, serialiser);
         }
 
         public void Send(Message message)

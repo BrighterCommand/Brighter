@@ -80,13 +80,13 @@ namespace KafkaTaskQueueSamples.GreetingsReceiverConsole
             };
 
             //create the gateway
-            var gatewayConFiguration = new KafkaMessagingGatewayConfiguration
+            var gatewayConfiguration = new KafkaMessagingGatewayConfiguration
             {
                  Name = "paramore.brighter",
                  BootStrapServers = new[] { "localhost:9092" }
             };
 
-            var messageConsumerFactory = new KafkaMessageConsumerFactory(gatewayConFiguration); 
+            var messageConsumerFactory = new KafkaMessageConsumerFactory(gatewayConfiguration); 
 
             var dispatcher = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()

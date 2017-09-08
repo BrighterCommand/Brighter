@@ -23,22 +23,42 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    public class KafkaMessagingGatewayConfiguration
+    public enum AutoResetOffsetEnum
     {
-        public string Name { get; set; }
+        Beginning,
+        End,
+        Error
+    }
 
-        public string[] BootStrapServers { get; set; }
+    public class KafkaMessagingConsumerConfiguration
+    {
+        public bool EnableAutoCommit { get; set; }
+
+        public TimeSpan AutoCommitInterval { get; set; }
+
+        public AutoResetOffsetEnum AutoResetOffset{ get; set; }
+
+        public KafkaMessagingConsumerConfiguration()
+        {
+            EnableAutoCommit = true;
+            AutoCommitInterval = new TimeSpan(0, 0, 0, 0, 5000);
+            AutoResetOffset = AutoResetOffsetEnum.End;
+        }
 
         public IEnumerable<KeyValuePair<string, object>> ToConfig()
         {
             var config = new Dictionary<string, object>()
             {
-                {"client.id", Name },
-                {"bootstrap.servers", string.Join(";", BootStrapServers)}
+                { "enable.auto.commit", EnableAutoCommit },
+                { "auto.commit.interval.ms", AutoCommitInterval.TotalMilliseconds },
+                { "default.topic.config", new Dictionary<string, object>()
+                    {
+                        { "auto.offset.reset", AutoResetOffset.ToString().ToLowerInvariant() }
+                    }
+                }
             };
             return config;
         }

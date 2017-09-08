@@ -21,25 +21,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    public class KafkaMessagingGatewayConfiguration
+    public class KafkaMessagingProducerConfiguration
     {
-        public string Name { get; set; }
+        public int? QueueBufferingMaxMessages { get; set; }
 
-        public string[] BootStrapServers { get; set; }
+        public KafkaMessagingProducerConfiguration()
+        {
+        }
 
         public IEnumerable<KeyValuePair<string, object>> ToConfig()
         {
-            var config = new Dictionary<string, object>()
-            {
-                {"client.id", Name },
-                {"bootstrap.servers", string.Join(";", BootStrapServers)}
-            };
+            var config = new Dictionary<string, object>();
+            if (QueueBufferingMaxMessages.HasValue)
+                config["queue.buffering.max.messages"] = QueueBufferingMaxMessages.Value;
             return config;
         }
     }
