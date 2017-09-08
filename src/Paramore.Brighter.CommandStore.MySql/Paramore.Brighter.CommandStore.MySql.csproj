@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../build/common.props" />
+  
+  <PropertyGroup>
+    <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using MySql</Description>
+    <AssemblyTitle>Paramore.Brighter.CommandStore.MsSql</AssemblyTitle>
+    <Authors>Derek Comartin</Authors>
+    <TargetFramework>netstandard1.5</TargetFramework>
+    <DebugType>full</DebugType>
+    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
+    <AssemblyName>Paramore.Brighter.CommandStore.MySql</AssemblyName>
+    <PackageId>Paramore.Brighter.CommandStore.MySql</PackageId>
+    <PackageTags>MySql;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MySqlConnector" Version="0.26.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+
+</Project>
