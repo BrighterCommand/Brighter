@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Extensions.Configuration;
 using MySql.Data.MySqlClient;
+using Paramore.Brighter.CommandStore.MySql;
 using Paramore.Brighter.MessageStore.MySql;
 
 namespace Paramore.Brighter.Tests
@@ -43,9 +44,11 @@ namespace Paramore.Brighter.Tests
         public void SetupCommandDb()
         {
             CreateDatabase();
-            CreateMessageStoreTable();
+            CreateCommandStoreTable();
         }
-        
+
+        public MySqlCommandStoreConfiguration CommandStoreConfiguration => new MySqlCommandStoreConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
+
         public MySqlMessageStoreConfiguration MessageStoreConfiguration => new MySqlMessageStoreConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
 
         public void CleanUpDb()
@@ -67,6 +70,22 @@ namespace Paramore.Brighter.Tests
             {
                 _tableName = $"`message_{_tableName}`";
                 var createTableSql = MySqlMessageStoreBuilder.GetDDL(_tableName);
+
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = createTableSql;
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public void CreateCommandStoreTable()
+        {
+            using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
+            {
+                _tableName = $"`command_{_tableName}`";
+                var createTableSql = MySqlCommandStoreBuilder.GetDDL(_tableName);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())
