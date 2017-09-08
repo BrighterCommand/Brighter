@@ -24,7 +24,9 @@ Brighter contributors (sorted alphabeticaly)
   * Various fixes
   * Project Technical Lead
   * Committer
-   
+**[Derek Comartin](https://github.com/dcomartin)**
+ * MySQL message store and command store
+  
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
   * Work on POSTEL messaging approach
