@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <TargetFrameworks>netstandard1.5;netstandard2.0</TargetFrameworks>
+    <Authors>Daniel Stockhammer</Authors>
+    <Description>ASP.NET Core integration for Brighter</Description>
+    <PackageProjectUrl>https://github.com/BrighterCommand/Brighter</PackageProjectUrl>
+    <PackageLicenseUrl>https://raw.githubusercontent.com/BrighterCommand/Brighter/master/LICENCE.txt</PackageLicenseUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>git://github.com/BrighterCommand/Brighter</RepositoryUrl>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Paramore.Brighter" Version="7.1.5" />
+  </ItemGroup>
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="1.1.1" />
+  </ItemGroup>
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.0.0" />
+  </ItemGroup>
+</Project>

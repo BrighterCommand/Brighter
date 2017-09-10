@@ -1,0 +1,103 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Code
+*.cs diff=csharp
+
+# Visual Studio
+*.sln text eol=crlf merge=union 
+*.csproj merge=union
+*.vbproj merge=union
+*.fsproj merge=union
+*.dbproj merge=union
+
+# Documents
+*.doc diff=astextplain
+*.DOC diff=astextplain
+*.docx diff=astextplain
+*.DOCX diff=astextplain
+*.dot diff=astextplain
+*.DOT diff=astextplain
+*.pdf diff=astextplain
+*.PDF diff=astextplain
+*.rtf diff=astextplain
+*.RTF diff=astextplain
+*.adoc text
+*.textile text
+*.mustache text
+*.csv text
+*.tab text
+*.tsv text
+*.sql text
+
+# Graphics
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+
+# source code
+*.php text
+*.css text
+*.sass text
+*.scss text
+*.less text
+*.styl text
+*.js text
+*.coffee text
+*.json text
+*.htm text
+*.html text
+*.xml text
+*.txt text
+*.ini text
+*.inc text
+*.pl text
+*.rb text
+*.py text
+*.scm text
+*.sql text
+*.sh text
+*.bat text
+
+# templates
+*.hbt text
+*.jade text
+*.haml text
+*.hbs text
+*.dot text
+*.tmpl text
+*.phtml text
+
+# server config
+.htaccess text
+
+# git config
+.gitattributes text
+.gitignore text
+
+# code analysis config
+.jshintrc text
+.jscsrc text
+.jshintignore text
+.csslintrc text
+
+# misc config
+*.yaml text
+*.yml text
+.editorconfig text
+
+# build config
+*.npmignore text
+*.bowerrc text
+
+# Heroku
+Procfile text
+.slugignore text
+
+# Documentation
+*.md text
+LICENSE text
+AUTHORS text
