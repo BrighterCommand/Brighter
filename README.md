@@ -4,14 +4,14 @@ ASP.NET Core integration for [Brighter](https://github.com/BrighterCommand/Param
 [![NuGet](https://img.shields.io/nuget/v/Paramore.Brighter.AspNetCore.svg)](https://www.nuget.org/packages/Paramore.Brighter.AspNetCore)
 
 ## Usage
-In your `ConfigureServices` method, use `AddDarker` to add Brighter to the container.
+In your `ConfigureServices` method, use `AddBrighter` to add Brighter to the container.
 
 ```csharp
 // This method gets called by the runtime. Use this method to add services to the container.
 public void ConfigureServices(IServiceCollection services)
 {
     // Add Brighter.
-    services.AddDarker()
+    services.AddBrighter()
         .AsyncHandlersFromAssemblies(typeof(CreateFooHandler).Assembly);
 
     // Add framework services.
@@ -26,13 +26,13 @@ You can customize Brighter by configuring `BrighterOptions`:
 public void ConfigureServices(IServiceCollection services)
 {
     // Add Brighter.
-        services.AddBrighter(opts =>
-            {
-                opts.RequestContextFactory = new MyCustomRequestContextFactory();
-                opts.PolicyRegistry = new MyCustomPolicies();
-                opts.MessagingConfiguration = new MyTaskQueues();
-            })
-        .AsyncHandlersFromAssemblies(typeof(CreateFooHandler).Assembly);
+    services.AddBrighter(opts =>
+        {
+            opts.RequestContextFactory = new MyCustomRequestContextFactory();
+            opts.PolicyRegistry = new MyCustomPolicies();
+            opts.MessagingConfiguration = new MyTaskQueues();
+        })
+    .AsyncHandlersFromAssemblies(typeof(CreateFooHandler).Assembly);
 
     // Add framework services.
     services.AddMvc();
