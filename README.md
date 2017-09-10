@@ -1,6 +1,8 @@
 # Paramore.Brighter.AspNetCore
 ASP.NET Core integration for [Brighter](https://github.com/BrighterCommand/Paramore.Brighter).
 
+[![NuGet](https://img.shields.io/nuget/v/Paramore.Brighter.AspNetCore.svg)](https://www.nuget.org/packages/Paramore.Brighter.AspNetCore)
+
 ## Usage
 In your `ConfigureServices` method, use `AddDarker` to add Brighter to the container.
 
