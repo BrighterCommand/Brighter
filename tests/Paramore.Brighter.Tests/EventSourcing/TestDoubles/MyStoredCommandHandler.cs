@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
 {
     internal class MyStoredCommandHandler : RequestHandler<MyCommand>
     {
-        [UseCommandSourcing(1, HandlerTiming.Before)]
+        [UseCommandSourcing(1, onceOnly:true, timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
             return base.Handle(command);

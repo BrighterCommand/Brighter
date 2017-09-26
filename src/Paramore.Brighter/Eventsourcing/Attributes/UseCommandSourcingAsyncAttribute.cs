@@ -36,15 +36,25 @@ namespace Paramore.Brighter.Eventsourcing.Attributes
     /// </summary>
     public class UseCommandSourcingAsyncAttribute : RequestHandlerAttribute
     {
+        public bool OnceOnly { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="UseCommandSourcingAsyncAttribute"/> class.
         /// </summary>
         /// <param name="step">The step.</param>
+        /// <param name="onceOnly">Should we prevent duplicate messages i.e. seen already</param>
         /// <param name="timing">The timing.</param>
-        public UseCommandSourcingAsyncAttribute(int step, HandlerTiming timing = HandlerTiming.Before)
+        public UseCommandSourcingAsyncAttribute(int step, bool onceOnly = false, HandlerTiming timing = HandlerTiming.Before)
             : base(step, timing)
-        { }
+        {
+            OnceOnly = onceOnly;
+        }
 
+        public override object[] InitializerParams()
+        {
+            
+            return new object[]{OnceOnly};
+        }
 
         /// <summary>
         /// Gets the type of the handler.

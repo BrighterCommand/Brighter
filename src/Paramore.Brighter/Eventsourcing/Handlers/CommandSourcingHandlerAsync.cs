@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Eventsourcing.Handlers
@@ -38,11 +39,12 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
     /// approach is typically called Command Sourcing.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class CommandSourcingHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
+    public class CommandSourcingHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest, new()
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<CommandSourcingHandlerAsync<T>>);
 
         private readonly IAmACommandStoreAsync _commandStore;
+        private bool _onceOnly;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandSourcingHandlerAsync{T}" /> class.
@@ -52,6 +54,15 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
         {
             _commandStore = commandStore;
         }
+        
+        
+        public override void InitializeFromAttributeParams(params object[] initializerList)
+        {
+            _onceOnly = (bool) initializerList[0];
+            base.InitializeFromAttributeParams(initializerList);
+        }
+
+  
 
         /// <summary>
         /// Awaitably logs the command we received to the command store.
@@ -61,6 +72,19 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
         public override async Task<T> HandleAsync(T command, CancellationToken cancellationToken = default(CancellationToken))
         {
+            
+            if (_onceOnly)
+            {
+                _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
+                //TODO: We should not use an infinite timeout here - how to configure
+                var existingCommand = await _commandStore.GetAsync<T>(command.Id, -1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                if (existingCommand != null)
+                {
+                    _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
+                    throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
+                }
+            }
+            
             _logger.Value.DebugFormat("Writing command {0} to the Command Store", command.Id);
 
             //TODO: We should not use an infinite timeout here - how to configure
