@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.AspNetCore
 {
@@ -9,10 +10,13 @@ namespace Paramore.Brighter.AspNetCore
     {
         private readonly AspNetSubscriberRegistry _subscriberRegistry;
 
-        public AspNetHandlerBuilder(AspNetSubscriberRegistry subscriberRegistry)
+        public AspNetHandlerBuilder(IServiceCollection services, AspNetSubscriberRegistry subscriberRegistry)
         {
+            Services = services;
             _subscriberRegistry = subscriberRegistry;
         }
+
+        public IServiceCollection Services { get; }
 
         public IBrighterHandlerBuilder Handlers(Action<IAmASubscriberRegistry> registerHandlers)
         {

@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.AspNetCore
 {
@@ -9,5 +10,6 @@ namespace Paramore.Brighter.AspNetCore
         IBrighterHandlerBuilder HandlersFromAssemblies(params Assembly[] assemblies);
         IBrighterHandlerBuilder AsyncHandlers(Action<IAmAnAsyncSubcriberRegistry> registerHandlers);
         IBrighterHandlerBuilder AsyncHandlersFromAssemblies(params Assembly[] assemblies);
+        IServiceCollection Services { get; }
     }
 }
