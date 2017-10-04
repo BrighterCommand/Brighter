@@ -13,7 +13,7 @@ environment:
   Sql__TestsMasterConnectionString: Server=(local)\SQL2016;Database=master;User ID=sa;Password=Password12!;Application Name=BrighterTests
   MySql__TestsBrighterConnectionString: Server=localhost;Uid=root;Pwd=Password12!;Database=BrighterTests
   MySql__TestsMasterConnectionString: Server=localhost;Uid=root;Pwd=Password12!
-  PostgreSql__TestsBrighterConnectionString: Host=localhost;Username=postgres;Password=Password12!;Database=BrighterTests
+  PostgreSql__TestsBrighterConnectionString: Host=localhost;Username=postgres;Password=Password12!;Database=brightertests
   PostgreSql__TestsMasterConnectionString: Host=localhost;Username=postgres;Password=Password12!
   
 pull_requests:
