@@ -153,14 +153,6 @@ internal class SimpleHandlerFactory : IAmAHandlerFactory
 var registry = new SubscriberRegistry();
 registry.Register&lt;GreetingCommand, GreetingCommandHandler&gt;();
         </code></pre>
-        <p>We also need to tell the handler factory how to build an instance of this class on request. We go for a simple implementation here, just to get up and running. This
-        is obviously not production code. replace the TODO in the Handler Factory above with the following code</p>
-        <pre><code>
-public IHandleRequests Create(Type handlerType)
-{
-    return new GreetingCommandHandler();
-}
-        </code></pre>
         <h3>Step Five</h3>
         <p>Now that we have a handler registered, it is time to send it a message. The command processor exposes a send for point-to-point messaging (usually a command would have one
         handler), and publish for broadcast to zero or more handlers (usually an event has zero or more handlers)</p>
