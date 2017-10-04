@@ -49,6 +49,9 @@ Brighter contributors (sorted alphabeticaly)
 
 **[Olivier Kouamé](https://github.com/okouam)**
  * Various fixes
+ 
+**[Rob Lang](https://github.com/brainwipe)**
+ * Various fixes
 
 **[João Lebre](https://github.com/jplebre)**
  * Various fixes
