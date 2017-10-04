@@ -145,7 +145,7 @@ namespace Paramore.Brighter.MessageStore.PostgreSql
                 var ordinal = dr.GetOrdinal("Timestamp");
                 var timeStamp = dr.IsDBNull(ordinal)
                     ? DateTime.MinValue
-                    : dr.GetDateTime(ordinal);
+                    : dr.GetDateTime(ordinal).ToUniversalTime();
                 header = new MessageHeader(id, topic, messageType, timeStamp, 0, 0);
 
                 var i = dr.GetOrdinal("HeaderBag");

@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Tests.MessageStore.PostgreSql
             _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
             _storedMessage.Header.Bag[_key2].Should().Be(_value2);
             //_should_read_the_message_header_timestamp_from_the__sql_message_store
-            _storedMessage.Header.TimeStamp.AddHours(1).AddDays(-1).ToString("yyyy-mm-dd HH:mm:ss").Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-mm-dd hh:mm:ss"));
+            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
             //_should_read_the_message_header_topic_from_the__sql_message_store
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             //_should_read_the_message_header_type_from_the__sql_message_store
