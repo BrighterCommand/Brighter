@@ -34,7 +34,7 @@ namespace Paramore.Brighter.AspNetCore
 
             services.AddSingleton<IAmACommandProcessor>(commandProcessor);
 
-            return new AspNetHandlerBuilder(subscriberRegistry);
+            return new AspNetHandlerBuilder(services, subscriberRegistry);
         }
     }
 }
