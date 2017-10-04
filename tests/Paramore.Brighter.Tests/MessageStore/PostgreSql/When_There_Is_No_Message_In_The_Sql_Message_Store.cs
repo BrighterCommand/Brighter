@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Tests.MessageStore.PostgreSql
         public PostgreSqlMessageStoreEmptyStoreTests()
         {
             _PostgreSqlTestHelper = new PostgreSqlTestHelper();
-            _PostgreSqlTestHelper.CreateMessageStoreTable();
+            _PostgreSqlTestHelper.SetupMessageDb();
 
             _sqlMessageStore = new PostgreSqlMessageStore(_PostgreSqlTestHelper.MessageStoreConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Tests.MessageStore.PostgreSql
 
         public void Dispose()
         {
-            _PostgreSqlTestHelper.CreateMessageStoreTable();
+            _PostgreSqlTestHelper.CleanUpTable();
         }
     }
 }

@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Tests.MessageStore.PostgreSql
         public SqlMessageStoreWritingMessageTests()
         {
             _PostgreSqlTestHelper = new PostgreSqlTestHelper();
-            _PostgreSqlTestHelper.CreateMessageStoreTable();
+            _PostgreSqlTestHelper.SetupMessageDb();
 
             _sqlMessageStore = new PostgreSqlMessageStore(_PostgreSqlTestHelper.MessageStoreConfiguration);
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT, DateTime.UtcNow.AddDays(-1), 5, 5);

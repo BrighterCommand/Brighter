@@ -1,26 +1,65 @@
-﻿using Npgsql;
+﻿using System;
+using Microsoft.Extensions.Configuration;
+using Npgsql;
 using Paramore.Brighter.MessageStore.PostgreSql;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Paramore.Brighter.Tests
 {
-    class PostgreSqlTestHelper
+    internal class PostgreSqlTestHelper
     {
-        //SSPI Authentication is Not allowed, Username and Password should be added to run tests
-        private const string ConnectionString = "Server=localhost;Port=5432;Database=postgres;User Id={username};Password={password};";
+        private readonly PostgreSqlSettings _postgreSqlSettings;
         private string _tableName;
 
         public PostgreSqlTestHelper()
         {
-            _tableName = $"test_{Guid.NewGuid().ToString("N")}";
+            var builder = new ConfigurationBuilder().AddEnvironmentVariables();
+            var configuration = builder.Build();
+
+            _postgreSqlSettings = new PostgreSqlSettings();
+            configuration.GetSection("PostgreSql").Bind(_postgreSqlSettings);
+
+            _tableName = $"test_{Guid.NewGuid():N}";
         }
-        public PostgreSqlMessageStoreConfiguration MessageStoreConfiguration => new PostgreSqlMessageStoreConfiguration(ConnectionString, _tableName);
+
+        public PostgreSqlMessageStoreConfiguration MessageStoreConfiguration => new PostgreSqlMessageStoreConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
+
+        public void SetupMessageDb()
+        {
+            CreateDatabase();
+            CreateMessageStoreTable();
+        }
+
+        private void CreateDatabase()
+        {
+            var createDatabase = false;
+            using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsMasterConnectionString))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "SELECT datname FROM pg_database WHERE datname = 'brightertests';";
+                    var rowsEffected = command.ExecuteReader();
+
+                    if (!rowsEffected.HasRows)
+                        createDatabase = true;
+                }
+            }
+
+            if (createDatabase)
+                using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsMasterConnectionString))
+                {
+                    connection.Open();
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = @"CREATE DATABASE brightertests";
+                        command.ExecuteNonQuery();
+                    }
+                }
+        }
 
         public void CleanUpTable()
         {
-            using (var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
             {
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -31,9 +70,9 @@ namespace Paramore.Brighter.Tests
             }
         }
 
-        public void CreateMessageStoreTable()
+        private void CreateMessageStoreTable()
         {
-            using (var connection = new NpgsqlConnection(ConnectionString))
+            using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"message_{_tableName}";
                 var createTableSql = PostgreSqlMessageStoreBulder.GetDDL(_tableName);
@@ -46,5 +85,13 @@ namespace Paramore.Brighter.Tests
                 }
             }
         }
+    }
+
+
+    internal class PostgreSqlSettings
+    {
+        public string TestsBrighterConnectionString { get; set; } = "Host=localhost;Username=postgres;Password=password;Database=brightertests;";
+
+        public string TestsMasterConnectionString { get; set; } = "Host=localhost;Username=postgres;Password=password;";
     }
 }
