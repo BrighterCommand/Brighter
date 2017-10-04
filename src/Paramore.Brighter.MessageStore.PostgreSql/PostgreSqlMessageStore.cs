@@ -109,7 +109,7 @@ namespace Paramore.Brighter.MessageStore.PostgreSql
                 CreateNpgsqlParameter("MessageId",message.Id),
                 CreateNpgsqlParameter("MessageType", message.Header.MessageType.ToString()),
                 CreateNpgsqlParameter("Topic", message.Header.Topic),
-                CreateNpgsqlParameter("Timestamp", message.Header.TimeStamp),
+                CreateNpgsqlParameter("Timestamp", message.Header.TimeStamp.ToUniversalTime()),
                 CreateNpgsqlParameter("HeaderBag", bagjson),
                 CreateNpgsqlParameter("Body", message.Body.Value)
             };
