@@ -24,12 +24,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Npgsql;
 using Newtonsoft.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Data;
+using NpgsqlTypes;
 using Paramore.Brighter.MessageStore.PostgreSql.Logging;
 
 namespace Paramore.Brighter.MessageStore.PostgreSql
@@ -81,7 +79,7 @@ namespace Paramore.Brighter.MessageStore.PostgreSql
     
         public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
-            var sql = string.Format("Select Id,MessageId,Topic,MessageType,Timestamp at TIME ZONE 'UTC' as Timestamp,HeaderBag,Body FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
+            var sql = string.Format("SELECT Id, MessageId, Topic, MessageType, Timestamp, HeaderBag, Body FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
             var parameters = new[]
             {
                 CreateNpgsqlParameter("MessageId", messageId)
@@ -94,7 +92,7 @@ namespace Paramore.Brighter.MessageStore.PostgreSql
         private NpgsqlCommand InitAddDbCommand(NpgsqlConnection connection, NpgsqlParameter[] parameters)
         {
             var command = connection.CreateCommand();
-            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp::timestamp, @HeaderBag, @Body)",
+            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp::timestamptz, @HeaderBag, @Body)",
                     _configuration.MessageStoreTableName);
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
@@ -109,7 +107,7 @@ namespace Paramore.Brighter.MessageStore.PostgreSql
                 CreateNpgsqlParameter("MessageId",message.Id),
                 CreateNpgsqlParameter("MessageType", message.Header.MessageType.ToString()),
                 CreateNpgsqlParameter("Topic", message.Header.Topic),
-                CreateNpgsqlParameter("Timestamp", message.Header.TimeStamp.ToUniversalTime()),
+                new NpgsqlParameter("Timestamp",NpgsqlDbType.TimestampTZ) {Value =  message.Header.TimeStamp},
                 CreateNpgsqlParameter("HeaderBag", bagjson),
                 CreateNpgsqlParameter("Body", message.Body.Value)
             };
@@ -137,29 +135,22 @@ namespace Paramore.Brighter.MessageStore.PostgreSql
             var messageType = (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
             var topic = dr.GetString(dr.GetOrdinal("Topic"));
 
-            var header = new MessageHeader(id, topic, messageType);
+            var ordinal = dr.GetOrdinal("Timestamp");
+            var timeStamp = (dr.IsDBNull(ordinal) ? DateTime.MinValue : dr.GetDateTime(ordinal)).ToUniversalTime();
 
-            if (dr.FieldCount > 4)
+            var header = new MessageHeader(id, topic, messageType, timeStamp, 0, 0);
+
+            var i = dr.GetOrdinal("HeaderBag");
+            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
+            var dictionaryBag = JsonConvert.DeserializeObject<Dictionary<string, string>>(headerBag);
+            if (dictionaryBag != null)
             {
-                //new schema....we've got the extra header information
-                var ordinal = dr.GetOrdinal("Timestamp");
-                var timeStamp = dr.IsDBNull(ordinal)
-                    ? DateTime.MinValue
-                    : dr.GetDateTime(ordinal).ToUniversalTime();
-                header = new MessageHeader(id, topic, messageType, timeStamp, 0, 0);
-
-                var i = dr.GetOrdinal("HeaderBag");
-                var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-                var dictionaryBag = JsonConvert.DeserializeObject<Dictionary<string, string>>(headerBag);
-                if (dictionaryBag != null)
+                foreach (var key in dictionaryBag.Keys)
                 {
-                    foreach (var key in dictionaryBag.Keys)
-                    {
-                        header.Bag.Add(key, dictionaryBag[key]);
-                    }
+                    header.Bag.Add(key, dictionaryBag[key]);
                 }
             }
-
+            
             var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
             return new Message(header, body);
