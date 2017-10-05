@@ -1,35 +1,16 @@
-﻿using System;
-using StackExchange.Redis;
+﻿using StackExchange.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public class RedisMessageProducer : IAmAMessageProducer
     {
-        private static volatile ConnectionMultiplexer _redis;
-        private static readonly object SyncRoot = new object();
+        private readonly ConnectionMultiplexer _connectionMultiplexer;
+        //private static volatile ConnectionMultiplexer _redis;
+        //private static readonly object SyncRoot = new object();
 
-        public RedisMessageProducer(RedisMessagingGatewayConfiguration configuration)
+        public RedisMessageProducer(ConnectionMultiplexer connectionMultiplexer)
         {
-            //We don't want to recreate this each time, so use a static instance
-            if (_redis == null)
-            {
-                lock (SyncRoot)
-                {
-                    if (_redis  == null)
-                    {
-                        var options = ConfigurationOptions.Parse(configuration.ServerList);
-                        options.AllowAdmin = configuration.AllowAdmin;
-                        options.ConnectRetry = configuration.ConnectRetry;
-                        options.ConnectTimeout = configuration.ConnectTimeout;
-                        options.SyncTimeout = configuration.SyncTimeout;
-                        options.Proxy = configuration.Proxy;
-                        _redis = ConnectionMultiplexer.Connect(options);
-                    }
-                }
-
-            }
-                
-            
+            _connectionMultiplexer = connectionMultiplexer;
         }
 
         public void Dispose()
@@ -38,7 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         public void Send(Message message)
         {
-            var sub =_redis.GetSubscriber();
+            var sub = _connectionMultiplexer.GetSubscriber();
             sub.Publish(message.Header.Topic, BrighterRedisMessage.Write(message));
         }
     }

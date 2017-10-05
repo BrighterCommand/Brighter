@@ -14,12 +14,17 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             //TODO: We need to be wire compatible with Kombu here
             //WriteHeader(message);
             //WriteBody(message);
-            return new RedisValue();
+            return message.Body.Value;
         }
 
         public static async Task<RedisValue> WriteAsync(Message message)
         {
            return "";
+        }
+
+        public static Message Read(RedisValue value)
+        {
+            return new Message(new MessageHeader(),new MessageBody(value));
         }
     }
 }

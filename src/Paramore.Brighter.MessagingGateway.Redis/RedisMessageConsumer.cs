@@ -1,20 +1,44 @@
-﻿namespace Paramore.Brighter.MessagingGateway.Redis
+﻿using System;
+using System.Collections.Concurrent;
+using StackExchange.Redis;
+
+namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public class RedisMessageConsumer : IAmAMessageConsumer
     {
-        public RedisMessageConsumer(RedisMessagingGatewayConfiguration configuration, string queueName, string topic)
+        private readonly ConnectionMultiplexer _connectionMultiplexer;
+        private readonly string _topic;
+
+        private readonly BlockingCollection<Message> _messages = new BlockingCollection<Message>();
+        private ISubscriber _subscriber;
+
+
+        public RedisMessageConsumer(ConnectionMultiplexer connectionMultiplexer, string queueName, string topic)
         {
-            throw new System.NotImplementedException();
+            _connectionMultiplexer = connectionMultiplexer;
+            _topic = topic;
+
+            _subscriber = _connectionMultiplexer.GetSubscriber();
+            _subscriber.Subscribe(_topic, (channel, value) => { _messages.Add(BrighterRedisMessage.Read(value)); });
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _messages?.Dispose();
+            }
         }
 
         public void Dispose()
         {
-            throw new System.NotImplementedException();
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         public Message Receive(int timeoutInMilliseconds)
         {
-            throw new System.NotImplementedException();
+            return _messages.TryTake(out Message message, timeoutInMilliseconds) ? message : new Message();
         }
 
         public void Acknowledge(Message message)
