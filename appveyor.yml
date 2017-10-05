@@ -43,6 +43,9 @@ nuget:
 install:
   - ps: Import-Module .\Set-Version.psm1
   - ps: Set-Version -CsprojPattern "src/*/*.csproj" -Version $env:APPVEYOR_BUILD_VERSION
+  - nuget install redis-64 -ExcludeVersion
+  - redis-64\tools\redis-server.exe --service-install
+  - redis-64\tools\redis-server.exe --service-start
 
 before_build:
   - cmd: dotnet --info
