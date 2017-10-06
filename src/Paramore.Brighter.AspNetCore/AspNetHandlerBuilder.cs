@@ -53,15 +53,14 @@ namespace Paramore.Brighter.AspNetCore
         private void RegisterHandlersFromAssembly(Type interfaceType, IEnumerable<Assembly> assemblies)
         {
             var subscribers =
-                from t in assemblies.SelectMany(a => a.ExportedTypes)
-                let ti = t.GetTypeInfo()
+                from ti in assemblies.SelectMany(a => a.DefinedTypes)
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
-                from i in t.GetTypeInfo().ImplementedInterfaces
+                from i in ti.ImplementedInterfaces
                 where i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == interfaceType
                 select new
                 {
                     RequestType = i.GenericTypeArguments.First(),
-                    HandlerType = t
+                    HandlerType = ti.AsType()
                 };
 
             foreach (var subscriber in subscribers)
