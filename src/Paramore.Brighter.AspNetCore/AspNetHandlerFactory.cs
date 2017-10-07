@@ -5,21 +5,21 @@ namespace Paramore.Brighter.AspNetCore
 {
     internal class AspNetHandlerFactory : IAmAHandlerFactory, IAmAHandlerFactoryAsync
     {
-        private readonly Lazy<IServiceProvider> _serviceProvider;
+        private readonly IServiceCollection _services;
 
         public AspNetHandlerFactory(IServiceCollection services)
         {
-            _serviceProvider = new Lazy<IServiceProvider>(services.BuildServiceProvider);
+            _services = services;
         }
 
         IHandleRequests IAmAHandlerFactory.Create(Type handlerType)
         {
-            return (IHandleRequests)_serviceProvider.Value.GetService(handlerType);
+            return (IHandleRequests)_services.BuildServiceProvider().GetService(handlerType);
         }
 
         IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType)
         {
-            return (IHandleRequestsAsync)_serviceProvider.Value.GetService(handlerType);
+            return (IHandleRequestsAsync)_services.BuildServiceProvider().GetService(handlerType);
         }
 
         public void Release(IHandleRequests handler)
