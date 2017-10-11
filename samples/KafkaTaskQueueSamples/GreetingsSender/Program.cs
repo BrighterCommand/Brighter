@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using KafkaTaskQueueSamples.Greetings.TinyIoc;
 using KafkaTaskQueueSamples.Greetings.Adapters.ServiceHost;
 using KafkaTaskQueueSamples.Greetings.Ports.Commands;
@@ -36,6 +37,32 @@ namespace KafkaTaskQueueSamples.GreetingsSender
     {
         static void Main(string[] args)
         {
+            var kafkaMessagingGatewayConfiguration
+                = new KafkaMessagingGatewayConfiguration()
+                {
+                    Name = "paramore.brighter.greetingsender",
+                    BootStrapServers = new[] {"localhost:9092"}
+                };
+
+            for (var i = 0; i < args.Length; i += 2)
+            {
+                var key = args[i];
+                var val = default(string);
+                if (i + 1 < args.Length)
+                {
+                    val = args[i + 1];
+                }
+
+                switch (key)
+                {
+                    case "--bootstrap-server":
+                        kafkaMessagingGatewayConfiguration.BootStrapServers = new[] {val};
+                        break;
+                    default:
+                        break;
+                }
+            }
+
             var container = new TinyIoCContainer();
             var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
@@ -44,12 +71,8 @@ namespace KafkaTaskQueueSamples.GreetingsSender
             };
 
             var messageStore = new InMemoryMessageStore();
-            var producer = new KafkaMessageProducerFactory(
-                    new KafkaMessagingGatewayConfiguration()
-                    {
-                        Name = "paramore.brighter.greetingsender",
-                        BootStrapServers = new[] { "localhost:9092" }
-                    }).Create();
+            var producer = new KafkaMessageProducerFactory(kafkaMessagingGatewayConfiguration)
+                               .Create();
 
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())

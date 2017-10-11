@@ -30,7 +30,13 @@ using Confluent.Kafka.Serialization;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    class KafkaMessageConsumer : IAmAMessageConsumer
+    /// <inheritdoc />
+    /// <summary>
+    /// Class KafkaMessageConsumer is an implementation of <see cref="IAmAMessageConsumer"/>
+    /// and provides the facilities to consume messages from a Kafka broker for a topic
+    /// in a consumer group.
+    /// </summary>
+    internal class KafkaMessageConsumer : IAmAMessageConsumer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageConsumer>);
         private Consumer<Null, string> _consumer;
@@ -95,7 +101,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         public void Reject(Message message, bool requeue)
         {
-            throw new NotImplementedException();
+            if (!requeue)
+                Acknowledge(message);
         }
 
         public void Requeue(Message message)

@@ -29,9 +29,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     public class KafkaMessagingGatewayConfiguration
     {
+        /// <summary>
+        /// Client identifier.
+        /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// Initial list of brokers as a list of 
+        /// broker host or host:port. "
+        /// </summary>
         public string[] BootStrapServers { get; set; }
+
+        /// <summary>
+        /// Maximum number of in-flight requests the 
+        /// client will send. 
+        /// This setting applies per broker connection.
+        /// </summary>
+        public int? MaxInFlightRequestsPerConnection { get; set; }
 
         public IEnumerable<KeyValuePair<string, object>> ToConfig()
         {
@@ -40,6 +54,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {"client.id", Name },
                 {"bootstrap.servers", string.Join(";", BootStrapServers)}
             };
+
+            if (MaxInFlightRequestsPerConnection.HasValue)
+                config["max.in.flight.requests.per.connection"] = MaxInFlightRequestsPerConnection.Value;
             return config;
         }
     }
