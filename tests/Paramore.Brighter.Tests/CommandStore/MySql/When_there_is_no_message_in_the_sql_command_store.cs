@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,17 +22,42 @@ THE SOFTWARE. */
 
 #endregion
 
-using Paramore.Brighter.Eventsourcing.Attributes;
+using System;
+using FluentAssertions;
+using Xunit;
+using Paramore.Brighter.CommandStore.MySql;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
+namespace Paramore.Brighter.Tests.CommandStore.MySql
 {
-    internal class MyStoredCommandHandler : RequestHandler<MyCommand>
+    [Trait("Category", "MySql")]
+    [Collection("MySql CommandStore")]
+    public class SqlCommandStoreEmptyWhenSearchedTests : IDisposable
     {
-        [UseCommandSourcing(1, onceOnly:true, timing: HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand command)
+        private readonly MySqlTestHelper _mysqlTestHelper;
+        private readonly MySqlCommandStore _mysqlCommandStore;
+        private MyCommand _storedCommand;
+
+        public SqlCommandStoreEmptyWhenSearchedTests()
         {
-            return base.Handle(command);
+            _mysqlTestHelper = new MySqlTestHelper();
+            _mysqlTestHelper.SetupCommandDb();
+
+            _mysqlCommandStore = new MySqlCommandStore(_mysqlTestHelper.CommandStoreConfiguration);
+        }
+
+        [Fact]
+        public void When_There_Is_No_Message_In_The_Sql_Command_Store()
+        {
+            _storedCommand = _mysqlCommandStore.Get<MyCommand>(Guid.NewGuid());
+
+           //_should_return_an_empty_command_on_a_missing_command
+            _storedCommand.Id.Should().Be(Guid.Empty);
+        }
+
+        public void Dispose()
+        {
+            _mysqlTestHelper.CleanUpDb();
         }
     }
 }

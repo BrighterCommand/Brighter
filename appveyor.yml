@@ -3,12 +3,26 @@ configuration: Release
 
 image: Visual Studio 2017
 
+services:
+  - mssql2016
+  - mysql
+  - postgresql
+
+environment:
+  Sql__TestsBrighterConnectionString: Server=(local)\SQL2016;Database=BrighterTests;User ID=sa;Password=Password12!;Application Name=BrighterTests
+  Sql__TestsMasterConnectionString: Server=(local)\SQL2016;Database=master;User ID=sa;Password=Password12!;Application Name=BrighterTests
+  MySql__TestsBrighterConnectionString: Server=localhost;Uid=root;Pwd=Password12!;Database=BrighterTests
+  MySql__TestsMasterConnectionString: Server=localhost;Uid=root;Pwd=Password12!
+  PostgreSql__TestsBrighterConnectionString: Host=localhost;Username=postgres;Password=Password12!;Database=brightertests
+  PostgreSql__TestsMasterConnectionString: Host=localhost;Username=postgres;Password=Password12!
+  
 pull_requests:
   do_not_increment_build_number: true
 
 branches:
   only:
   - master
+  - testappveyor
   # blacklist
   except:
     - gh-pages
@@ -29,6 +43,9 @@ nuget:
 install:
   - ps: Import-Module .\Set-Version.psm1
   - ps: Set-Version -CsprojPattern "src/*/*.csproj" -Version $env:APPVEYOR_BUILD_VERSION
+  - nuget install redis-64 -ExcludeVersion
+  - redis-64\tools\redis-server.exe --service-install
+  - redis-64\tools\redis-server.exe --service-start
 
 before_build:
   - cmd: dotnet --info
@@ -38,20 +55,21 @@ build_script:
   - cmd: dotnet build --configuration %CONFIGURATION%
 
 after_build:
-  - cmd: dotnet pack src\Paramore.Brighter --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.ServiceActivator --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs 
-  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.Sqlite --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AWSSQS --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AzureServiceBus --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RESTMS --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs
+  - cmd: dotnet pack src\Paramore.Brighter --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
+  - cmd: dotnet pack src\Paramore.Brighter.ServiceActivator --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
+  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
+  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MySql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%-beta
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.Sqlite --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AWSSQS --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AzureServiceBus --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RESTMS --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
+  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
 
 test_script:
-  - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj --filter "Category!=MSSQL & Category!=RMQ & Category!=AWS & Category != RESTMS"
+  - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj --filter "Category!=RMQ & Category!=AWS & Category != RESTMS"
 
 artifacts:
   - path: nupkgs\*.nupkg

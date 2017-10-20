@@ -1,6 +1,6 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,17 +22,26 @@ THE SOFTWARE. */
 
 #endregion
 
-using Paramore.Brighter.Eventsourcing.Attributes;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
-
-namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
+namespace Paramore.Brighter.MessageStore.PostgreSql
 {
-    internal class MyStoredCommandHandler : RequestHandler<MyCommand>
+    public class PostgreSqlMessageStoreBulder
     {
-        [UseCommandSourcing(1, onceOnly:true, timing: HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand command)
+        const string MessageStoreDdl = @"
+       CREATE TABLE {0}
+            (
+                Id BIGSERIAL PRIMARY KEY,
+                MessageId UUID UNIQUE NOT NULL,
+                Topic VARCHAR(255) NULL,
+                MessageType VARCHAR(32) NULL,
+                Timestamp timestamptz NULL,
+                HeaderBag TEXT NULL,
+                Body TEXT NULL
+            );
+        ";
+
+        public static string GetDDL(string MessageStoreTableName)
         {
-            return base.Handle(command);
+            return string.Format(MessageStoreDdl, MessageStoreTableName);
         }
     }
 }

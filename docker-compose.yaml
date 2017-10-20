@@ -26,3 +26,30 @@ services:
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=password
+
+  MySql:
+    image: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+  
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  Postgres:
+    image: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: password
+
+  # adminer:
+  #     image: adminer
+  #     restart: always
+  #     ports:
+  #         - 8080:8080

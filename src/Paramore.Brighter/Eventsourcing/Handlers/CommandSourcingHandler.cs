@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Eventsourcing.Handlers
@@ -37,11 +38,12 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
     /// approach is typically called Command Sourcing.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class CommandSourcingHandler<T> : RequestHandler<T> where T: class, IRequest
+    public class CommandSourcingHandler<T> : RequestHandler<T> where T: class, IRequest, new()
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<CommandSourcingHandler<T>>);
 
         private readonly IAmACommandStore _commandStore;
+        private bool _onceOnly;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}" /> class.
@@ -52,13 +54,33 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
             _commandStore = commandStore;
         }
 
+
+        public override void InitializeFromAttributeParams(params object[] initializerList)
+        {
+            _onceOnly = (bool) initializerList[0];
+            base.InitializeFromAttributeParams(initializerList);
+        }
+
         /// <summary>
         /// Logs the command we received to the command store.
+        /// If the Once Only flag is set, it will reject commands that it has already seen from the pipeline
         /// </summary>
         /// <param name="command">The command that we want to store.</param>
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
         public override T Handle(T command) 
         {
+            if (_onceOnly)
+            {
+                 _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
+                var existingCommand = _commandStore.Get<T>(command.Id);
+                if (existingCommand != null)
+                {
+                    _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
+                    throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
+                }
+
+            }
+            
             _logger.Value.DebugFormat("Writing command {0} to the Command Store", command.Id);
 
             _commandStore.Add(command);

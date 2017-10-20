@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,17 +22,26 @@ THE SOFTWARE. */
 
 #endregion
 
-using Paramore.Brighter.Eventsourcing.Attributes;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
-
-namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
+namespace Paramore.Brighter.MessageStore.MySql
 {
-    internal class MyStoredCommandHandler : RequestHandler<MyCommand>
+    public class MySqlMessageStoreBuilder
     {
-        [UseCommandSourcing(1, onceOnly:true, timing: HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand command)
+        const string MessageStoreDdl = @"CREATE TABLE {0} ( 
+	`MessageId` CHAR(36) NOT NULL , 
+	`Topic` VARCHAR(255) NOT NULL , 
+	`MessageType` VARCHAR(32) NOT NULL , 
+	`Timestamp` TIMESTAMP(3) NOT NULL , 
+	`HeaderBag` TEXT NOT NULL , 
+	`Body` TEXT NOT NULL , 
+    `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
+    `CreatedID` INT(11) NOT NULL AUTO_INCREMENT,
+    UNIQUE(`CreatedID`),
+	PRIMARY KEY (`MessageId`)
+) ENGINE = InnoDB;";
+
+        public static string GetDDL(string tableName)
         {
-            return base.Handle(command);
+            return string.Format(MessageStoreDdl, tableName);
         }
     }
 }
