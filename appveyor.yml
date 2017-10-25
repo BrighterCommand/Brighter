@@ -32,17 +32,23 @@ skip_tags: true
 assembly_info:
   patch: true
   file: '**\AssemblyInfo.*'
-  assembly_version: 7.1.0.0
-  assembly_file_version: 7.1.{build}
+  assembly_version: 7.0.0.0
+  assembly_file_version: '{version}'
   assembly_informational_version: '{version}'
+dotnet_csproj:
+  patch: true
+  file: '**\*.csproj;**\*.props'
+  version: '{version}'
+  package_version: '{version}'
+  assembly_version: 7.0.0.0
+  file_version: '{version}'
+  informational_version: '{version}'
 
 nuget:
   project_feed: true
   disable_publish_on_pr: true
 
 install:
-  - ps: Import-Module .\Set-Version.psm1
-  - ps: Set-Version -CsprojPattern "src/*/*.csproj" -Version $env:APPVEYOR_BUILD_VERSION
   - nuget install redis-64 -ExcludeVersion
   - redis-64\tools\redis-server.exe --service-install
   - redis-64\tools\redis-server.exe --service-start
