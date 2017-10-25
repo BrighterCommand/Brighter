@@ -67,7 +67,7 @@ after_build:
   - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
   - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
   - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MySql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%-beta
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MySql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
   - cmd: dotnet pack src\Paramore.Brighter.MessageStore.Sqlite --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
   - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AWSSQS --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
   - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AzureServiceBus --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
