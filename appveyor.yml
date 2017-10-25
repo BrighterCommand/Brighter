@@ -27,6 +27,10 @@ branches:
   except:
     - gh-pages
 
+skip_commits:
+  files:
+    - '**/*.md'
+
 skip_tags: true
 
 assembly_info:
