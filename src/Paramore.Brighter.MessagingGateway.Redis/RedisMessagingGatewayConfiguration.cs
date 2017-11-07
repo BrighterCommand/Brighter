@@ -8,7 +8,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public bool AllowAdmin { get; set; }
         public int ConnectRetry { get; set; }
         public int ConnectTimeout { get; set; }
-       public Proxy Proxy { get; set; }
+        public Proxy Proxy { get; set; }
         public int SyncTimeout { get; set; }
     }
 }
