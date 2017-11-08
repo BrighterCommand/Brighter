@@ -17,6 +17,23 @@ namespace Paramore.Brighter.MessagingGateway.Redis
          Message: String
      And for each consumer
          Message Queue: List
+         
+     But, we don't want to use BRPOP or BLPOP because StackExchange Redis, which is a multiplexed library, and so can't 
+     use these blocking operations. The recommended workaround is using PubSub to signal to workers to read from their 
+     queue. 
+     
+     See: https://stackexchange.github.io/StackExchange.Redis/PipelinesMultiplexers
+     
+     sub.Subscribe(channel, delegate {
+        string work = db.ListRightPop(key);
+        if (work != null) Process(work);
+     });
+        
+     //...
+     db.ListLeftPush(key, newWork, flags: CommandFlags.FireAndForget);
+     sub.Publish(channel, "");
+     
+     So. although we use the pub-sub API, but not to do pub-sub. Make sense?
     */
     public class RedisMessageProducer : IAmAMessageProducer
     {

@@ -37,7 +37,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public Message Receive(int timeoutInMilliseconds)
         {
             EnsureConnection();
-            return ReadMessage()
+            //return ReadMessage()
+            return null;
         }
 
         /*This a 'do nothing operation' untile we have an invalid message queue
