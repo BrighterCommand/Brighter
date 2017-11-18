@@ -1,8 +1,10 @@
-﻿namespace Paramore.Brighter.MessagingGateway.Redis
+﻿using ServiceStack.Redis;
+
+namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public class BrighterMessageFactory
     {
-        public Message Create(string redisMessage)
+        public Message Create(IRedisClient message, string redisMessage)
         {
             //TODO: parse the message for header and body content
             //TODO: Deserialize the header content

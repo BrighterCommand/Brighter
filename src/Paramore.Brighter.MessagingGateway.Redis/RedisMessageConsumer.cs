@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using StackExchange.Redis;
+using ServiceStack.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
@@ -14,10 +13,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private readonly string _queueName;
         private readonly string _topic;
         
-        private static Lazy<ConnectionMultiplexer> _conn;
-        private IDatabase _database;
-        private ISubscriber _subscriber;
-
+        private static Lazy<RedisManagerPool> _pool;
+ 
         public RedisMessageConsumer(
             RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
             string queueName, 
@@ -25,23 +22,16 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             _queueName = queueName;
             _topic = topic;
-            _conn = new Lazy<ConnectionMultiplexer>(() =>
-            {
-                var options = ConfigurationOptions.Parse(redisMessagingGatewayConfiguration.ServerList);
-                options.AllowAdmin = redisMessagingGatewayConfiguration.AllowAdmin;
-                options.ConnectRetry = redisMessagingGatewayConfiguration.ConnectRetry;
-                options.ConnectTimeout = redisMessagingGatewayConfiguration.ConnectTimeout;
-                options.SyncTimeout = redisMessagingGatewayConfiguration.SyncTimeout;
-                options.Proxy = redisMessagingGatewayConfiguration.Proxy;
-                     
-                return ConnectionMultiplexer.Connect(options);
-            });
+            _pool = new Lazy<RedisManagerPool>(() => new RedisManagerPool(
+                redisMessagingGatewayConfiguration.RedisConnectionString, 
+                new RedisPoolConfig() {MaxPoolSize = redisMessagingGatewayConfiguration.MaxPoolSize}
+            ));
         }
 
         private void Dispose(bool disposing)
         {
-            if (_conn.IsValueCreated)
-                _conn.Value.Dispose();
+            if (_pool.IsValueCreated)
+                _pool.Value.Dispose();
         }
 
         public void Dispose()
@@ -64,19 +54,21 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         public void Purge()
         {
-            //This kills the queue, not the messages, which we assume expire
-            _database.ListTrim(_queueName, 0, _database.ListLength(_queueName) - 1);
+            using (var client = _pool.Value.GetClient())
+            {
+                //This kills the queue, not the messages, which we assume expire
+                client.RemoveAllFromList(_queueName);
+            }
         }
 
         public Message Receive(int timeoutInMilliseconds)
         {
-            _database = _conn.Value.GetDatabase();
-            _subscriber = _conn.Value.GetSubscriber();
-  
-            
-            EnsureConnection();
-            var redisMessage = ReadMessage();
-            return new BrighterMessageFactory().Create(redisMessage);
+            using (var client = _pool.Value.GetClient())
+            {
+                EnsureConnection(client);
+                var redisMessage = ReadMessage(client, timeoutInMilliseconds);
+                return new BrighterMessageFactory().Create(client, redisMessage);
+            }
         }
 
        public void Reject(Message message, bool requeue)
@@ -89,32 +81,21 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             //Push the Id onto our own queue
         }
 
-        private void EnsureConnection()
+        private void EnsureConnection(IRedisClient client)
         {
             //what is the queue list key
             var key = _topic + "." + QUEUES;
             //subscribe us 
-            _database.SetAdd(key, _queueName);
+            client.AddItemToSet(key, _queueName);
 
         }
 
-        private string ReadMessage()
+        private string ReadMessage(IRedisClient client, int timeoutInMilliseconds)
         {
             var msg = string.Empty;
-            //TODO: This is a callback which means that we always return an empty message, as the delegate is called
-            //and does not return from this function.
-            _subscriber.Subscribe(_queueName, (channel, message) =>
-            {
-                var expectedId = Convert.ToInt64(message);
-                var latestId = Convert.ToInt64(_database.ListRightPop(_queueName).ToString());
-                if (latestId <= expectedId)
-                {
-                   //TODO: Log this, we want you to know that we didn't get the expected item, probably
-                   //TODO: a benign competing consumer issue 
-                }
-                var key = _topic + "." + latestId.ToString();
-                msg = _database.StringGet(key);
-            });
+            var latestId = client.BlockingDequeueItemFromList(_queueName, TimeSpan.FromMilliseconds(timeoutInMilliseconds));
+            var key = _topic + "." + latestId;
+            msg = client.GetValue(key);
             return msg;
         }
     }

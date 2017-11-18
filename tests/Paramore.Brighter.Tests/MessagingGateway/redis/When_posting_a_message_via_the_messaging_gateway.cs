@@ -1,7 +1,6 @@
 ﻿using System;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Redis;
-using StackExchange.Redis;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.redis
@@ -19,12 +18,9 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
         {
             var configuration = new RedisMessagingGatewayConfiguration
             {
-                ServerList = "localhost",
-                AllowAdmin = false,
-                ConnectRetry = 3,
-                ConnectTimeout = 5000,
-                Proxy = Proxy.None,
-                SyncTimeout = 1000
+                RedisConnectionString = "localhost:6379?connectTimeout=1&sendTImeout=1000&",
+                MaxPoolSize = 10,
+                MessageTimeToLive = TimeSpan.FromMinutes(10)
             };
 
             _messageProducer = new RedisMessageProducer(configuration); 
@@ -36,7 +32,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
         }
         
         
-        [Fact(Skip = "Under construction")]
+        [Fact(Skip = "In progress")]
         public void When_posting_a_message_via_the_messaging_gateway()
         {
             _messageConsumer.Receive(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
