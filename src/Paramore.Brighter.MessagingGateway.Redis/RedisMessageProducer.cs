@@ -1,4 +1,5 @@
-﻿using StackExchange.Redis;
+﻿using System;
+using StackExchange.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
@@ -37,20 +38,85 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     */
     public class RedisMessageProducer : IAmAMessageProducer
     {
-        private readonly ConnectionMultiplexer _connectionMultiplexer;
-        private static volatile ConnectionMultiplexer _redis;
+        private const string NEXT_ID = "";
+        private const string QUEUES = "queues";
+        private static Lazy<ConnectionMultiplexer> _conn;
+        private readonly TimeSpan _messageTimeToLive;
+        private IDatabase _database;
+        private ISubscriber _subscriber;
+        private string _topic;
 
-        public RedisMessageProducer(ConnectionMultiplexer connectionMultiplexer)
+        public RedisMessageProducer(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
         {
-            _connectionMultiplexer = connectionMultiplexer;
+            _messageTimeToLive = redisMessagingGatewayConfiguration.MessageTimeToLive ?? TimeSpan.FromMinutes(10);
+            
+            _conn = new Lazy<ConnectionMultiplexer>(() =>
+            {
+                var options = ConfigurationOptions.Parse(redisMessagingGatewayConfiguration.ServerList);
+                options.AllowAdmin = redisMessagingGatewayConfiguration.AllowAdmin;
+                options.ConnectRetry = redisMessagingGatewayConfiguration.ConnectRetry;
+                options.ConnectTimeout = redisMessagingGatewayConfiguration.ConnectTimeout;
+                options.SyncTimeout = redisMessagingGatewayConfiguration.SyncTimeout;
+                options.Proxy = redisMessagingGatewayConfiguration.Proxy;
+                     
+                return ConnectionMultiplexer.Connect(options);
+            });
+            
         }
 
         public void Dispose()
         {
+            if (_conn.IsValueCreated)
+                _conn.Value.Dispose();
         }
 
         public void Send(Message message)
         {
+            _database = _conn.Value.GetDatabase();
+            _subscriber = _conn.Value.GetSubscriber();
+            _topic = message.Header.Topic;
+            
+            //Convert the message into something we can put out via Redis i.e. a string
+            var redisMessage = RedisMessageFactory.EMPTY_MESSAGE;
+            using (var redisMessageFactory = new RedisMessageFactory())
+            {
+                redisMessage = redisMessageFactory.Create(message);
+            }
+            //increment a counter to get the next message id
+            var nextMsgId = IncrementMessageCounter();
+            //store the message, against that id
+            StoreMessage(redisMessage, nextMsgId);
+            //If there are subscriber queues, push the message to the subscriber queues
+            PushToQueues(nextMsgId);
         }
-    }
+
+        private void PushToQueues(long nextMsgId)
+        {
+            var key = _topic + "." + QUEUES;
+            var queues = _database.SetMembers(key);
+            foreach (var queue in queues)
+            {
+                //First add to the queue itself
+                _database.ListLeftPush(queue.ToString(), nextMsgId, flags: CommandFlags.FireAndForget);
+                //Now signal the consumers that there is work on the queue to read
+                _subscriber.Publish(_topic, nextMsgId, flags:CommandFlags.FireAndForget);
+            }
+        }
+
+        private void StoreMessage(string redisMessage, long nextMsgId)
+        {
+           //we store the message at topic + next msg id
+            var key = _topic + "." + nextMsgId.ToString();
+            _database.StringSet(key, redisMessage, _messageTimeToLive, flags: CommandFlags.FireAndForget);
+        }
+
+        private long IncrementMessageCounter()
+        {
+            //This holds the next id for this topic; we use that to store message contents and signal to queue
+            //that there is a message to read.
+            var key = _topic + "." + NEXT_ID;
+            return _database.StringIncrement(key);
+        }
+
+   }
 }

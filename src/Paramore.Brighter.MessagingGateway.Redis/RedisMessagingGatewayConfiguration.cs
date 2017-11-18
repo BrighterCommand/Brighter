@@ -1,4 +1,6 @@
-﻿using StackExchange.Redis;
+﻿using System;
+using System.Dynamic;
+using StackExchange.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
@@ -10,5 +12,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public int ConnectTimeout { get; set; }
         public Proxy Proxy { get; set; }
         public int SyncTimeout { get; set; }
+        public TimeSpan? MessageTimeToLive { get; set; }
     }
 }
