@@ -67,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 EnsureConnection(client);
                 var redisMessage = ReadMessage(client, timeoutInMilliseconds);
-                return new BrighterMessageFactory().Create(client, redisMessage);
+                return new BrighterMessageFactory().Create(redisMessage);
             }
         }
 
@@ -94,8 +94,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             var msg = string.Empty;
             var latestId = client.BlockingDequeueItemFromList(_queueName, TimeSpan.FromMilliseconds(timeoutInMilliseconds));
-            var key = _topic + "." + latestId;
-            msg = client.GetValue(key);
+            if (latestId != null)
+            {
+                var key = _topic + "." + latestId;
+                msg = client.GetValue(key);
+            }
             return msg;
         }
     }
