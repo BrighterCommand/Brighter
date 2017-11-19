@@ -52,7 +52,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
             }
 
-
             return message;
         }
     }

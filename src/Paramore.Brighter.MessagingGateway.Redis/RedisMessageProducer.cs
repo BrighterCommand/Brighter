@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using ServiceStack.Redis;
+using Paramore.Brighter.MessagingGateway.Redis.LibLog;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
@@ -23,6 +24,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     */
     public class RedisMessageProducer : IAmAMessageProducer
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisMessageProducer>);
         private const string NEXT_ID = "";
         private const string QUEUES = "queues";
         private static Lazy<RedisManagerPool> _pool;
