@@ -34,10 +34,21 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "root"
   
-  redis:
+  redis-master:
     image: redis
     ports:
       - "6379:6379"
+    restart: always
+
+  redis-slave:
+    image: redis
+    command: redis-server --slaveof redis-master 6379
+    restart: always
+
+  redis-sentinel:
+    build: ./samples/containers/redis-sentinel
+    links:
+      - redis-master
     restart: always
 
   Postgres:
@@ -47,9 +58,3 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_PASSWORD: password
-
-  # adminer:
-  #     image: adminer
-  #     restart: always
-  #     ports:
-  #         - 8080:8080

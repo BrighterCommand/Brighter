@@ -1,11 +1,15 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Newtonsoft.Json;
+using Paramore.Brighter.MessagingGateway.Redis.LibLog;
 using ServiceStack;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public class BrighterMessageFactory
     {
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<BrighterMessageFactory>);
+        
         public Message Create(string redisMessage)
         {
             var message = new Message();
@@ -19,7 +23,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 var header = reader.ReadLine();
                 if (header.TrimEnd() != "<HEADER")
                 {
-                    //TODO: Log error
+                    _logger.Value.ErrorFormat("Expected message to begin with <HEADER, but was {0}", redisMessage);
                     return message;
                 }
                 
@@ -28,14 +32,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 header = reader.ReadLine();
                 if (header.TrimStart() != "HEADER/>")
                 {
-                    //TODO: Log error
+                    _logger.Value.ErrorFormat("Expected message to find end of HEADER/>, but was {0}", redisMessage);
                     return message;
                 }
 
                 var body = reader.ReadLine();
                 if (body.TrimEnd() != "<BODY")
                 {
-                     //TODO: Log error
+                    _logger.Value.ErrorFormat("Expected message to have beginning of <BODY, but was {0}", redisMessage);
                     return message;
                 }
                 
@@ -44,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 body = reader.ReadLine();
                 if (body.TrimStart() != "BODY/>")
                 {
-                    //TODO: Log error
+                    _logger.Value.ErrorFormat("Expected message to find end of BODY/>, but was {0}", redisMessage);
                     return message;
                 }
                 

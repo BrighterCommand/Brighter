@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using ServiceStack.Redis;
 using Paramore.Brighter.MessagingGateway.Redis.LibLog;
@@ -55,22 +56,29 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 _topic = message.Header.Topic;
 
+                _logger.Value.DebugFormat("RedisMessageProducer: Preparing to send message");
+  
                 //Convert the message into something we can put out via Redis i.e. a string
                 var redisMessage = RedisMessageFactory.EMPTY_MESSAGE;
                 using (var redisMessageFactory = new RedisMessageFactory())
                 {
                     redisMessage = redisMessageFactory.Create(message);
                 }
+                
+                _logger.Value.DebugFormat("RedisMessageProducer: Publishing message with topic {0} and id {1} and body: {2}", 
+                    message.Header.Topic, message.Id.ToString(), message.Body.Value);
                 //increment a counter to get the next message id
                 var nextMsgId = IncrementMessageCounter(client);
                 //store the message, against that id
                 StoreMessage(client, redisMessage, nextMsgId);
                 //If there are subscriber queues, push the message to the subscriber queues
-                PushToQueues(client, nextMsgId);
-            }
+                var pushedTo = PushToQueues(client, nextMsgId);
+                _logger.Value.DebugFormat("RedisMessageProducer: Published message with topic {0} and id {1} and body: {2} to quues: {3}", 
+                    message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
+             }
         }
 
-        private void PushToQueues(IRedisClient client, long nextMsgId)
+        private IEnumerable<string> PushToQueues(IRedisClient client, long nextMsgId)
         {
             var key = _topic + "." + QUEUES;
             var queues = client.GetAllItemsFromSet(key).ToList();
@@ -79,6 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 //First add to the queue itself
                 client.PushItemToList(queue, nextMsgId.ToString());
             }
+            return queues;
         }
 
         private void StoreMessage(IRedisClient client, string redisMessage, long nextMsgId)

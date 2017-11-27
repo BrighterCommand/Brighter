@@ -10,9 +10,9 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
     {
         private const string QueueName = "test";
         private const string Topic = "test";
-        private RedisMessageProducer _messageProducer;
-        private RedisMessageConsumer _messageConsumer;
-        private Message _message;
+        private readonly RedisMessageProducer _messageProducer;
+        private readonly RedisMessageConsumer _messageConsumer;
+        private readonly Message _message;
 
         public RedisMessageProducerSendTests()
         {
