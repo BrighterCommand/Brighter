@@ -31,13 +31,14 @@ using System.Linq;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    class KafkaMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
+    internal class KafkaMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
         private Producer<Null, string> _producer;
         private bool _disposedValue = false; 
 
-        public KafkaMessageProducer(KafkaMessagingGatewayConfiguration globalConfiguration, KafkaMessagingProducerConfiguration producerConfiguration)
+        public KafkaMessageProducer(KafkaMessagingGatewayConfiguration globalConfiguration, 
+            KafkaMessagingProducerConfiguration producerConfiguration)
         {
             var serialiser = new StringSerializer(Encoding.UTF8);
             var config = globalConfiguration.ToConfig();

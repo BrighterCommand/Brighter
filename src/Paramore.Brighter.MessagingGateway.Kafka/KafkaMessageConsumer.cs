@@ -42,7 +42,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private Consumer<Null, string> _consumer;
         private bool _disposedValue = false; 
 
-        public KafkaMessageConsumer(string groupId, string topic, KafkaMessagingGatewayConfiguration globalConfiguration, KafkaMessagingConsumerConfiguration consumerConfiguration)
+        public KafkaMessageConsumer(string groupId, string topic, 
+            KafkaMessagingGatewayConfiguration globalConfiguration, 
+            KafkaMessagingConsumerConfiguration consumerConfiguration)
         {
             var config = globalConfiguration.ToConfig();
             config = config.Concat(consumerConfiguration.ToConfig());
