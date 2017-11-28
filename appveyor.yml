@@ -27,22 +27,32 @@ branches:
   except:
     - gh-pages
 
+skip_commits:
+  files:
+    - '**/*.md'
+
 skip_tags: true
 
 assembly_info:
   patch: true
   file: '**\AssemblyInfo.*'
-  assembly_version: 7.1.0.0
-  assembly_file_version: 7.1.{build}
+  assembly_version: 7.0.0.0
+  assembly_file_version: '{version}'
   assembly_informational_version: '{version}'
+dotnet_csproj:
+  patch: true
+  file: '**\*.csproj;**\*.props'
+  version: '{version}'
+  package_version: '{version}'
+  assembly_version: 7.0.0.0
+  file_version: '{version}'
+  informational_version: '{version}'
 
 nuget:
   project_feed: true
   disable_publish_on_pr: true
 
 install:
-  - ps: Import-Module .\Set-Version.psm1
-  - ps: Set-Version -CsprojPattern "src/*/*.csproj" -Version $env:APPVEYOR_BUILD_VERSION
   - nuget install redis-64 -ExcludeVersion
   - redis-64\tools\redis-server.exe --service-install
   - redis-64\tools\redis-server.exe --service-start
@@ -61,7 +71,7 @@ after_build:
   - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
   - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
   - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MySql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%-beta
+  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MySql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
   - cmd: dotnet pack src\Paramore.Brighter.MessageStore.Sqlite --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
   - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AWSSQS --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
   - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AzureServiceBus --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%

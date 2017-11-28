@@ -1,14 +1,11 @@
-﻿using StackExchange.Redis;
+﻿using System;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public class RedisMessagingGatewayConfiguration
     {
-        public string ServerList { get; set; }
-        public bool AllowAdmin { get; set; }
-        public int ConnectRetry { get; set; }
-        public int ConnectTimeout { get; set; }
-       public Proxy Proxy { get; set; }
-        public int SyncTimeout { get; set; }
+        public int MaxPoolSize { get; set; }
+        public TimeSpan? MessageTimeToLive { get; set; }
+        public string RedisConnectionString { get; set; }
     }
 }

@@ -30,6 +30,17 @@
 | gh-pages | Documentation for the library|
 | [Other]  | A branch for any work that is not ready to go into master (for example would break CI) or is experimental i.e. we don't know if we intend to ever ship, we are just trying out ideas.  |
 
+## Using Docker Compose to test ##
+We provide a Docker Compose file to allow you to run the test suite, without having to install the pre-requisites, such as brokers or databases locally.
+
+To run it, you will need to scale the redis sentinel to at least 3 nodes, and use at least two redis slaves. For example:
+
+docker-compose up -d --build --scale redis-slave2 --scale redis-sentinel=3
+
+The goal is to allow you to begin working with Brighter as easily as possible for development.
+
+Note that if you have locally installed versions of these services you will either need to stop them, or edit a local version of the docker compose file.
+
 ## How do I get the NuGet packages for the latest build?
 We release the build artefacts (NuGet packages) to [NuGet](http://nuget.org) on a regular basis and we update the release notes on those drops. We also tag the master code line. If you want to take the packages that represent master at any point you can download the packages for the latest good build from [AppVeyor](https://ci.appveyor.com/nuget/paramore-brighter-m289d49fraww). The easiest approach to using those is to download them into a folder that you add to your NuGet sources. 
 

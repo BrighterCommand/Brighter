@@ -1,0 +1,24 @@
+** When you cannot get a connection from a pool?
+The PooledRedisClientManager imposes a maximum connection limit and when its maximum pool size has been reached will instead block 
+on any new connection requests until the next RedisClient is released back into the pool. If no client became available within PoolTimeout, 
+a Pool TimeoutException will be thrown.
+
+** Allow setting of the connection retry interval and maximum retry window
+
+To improve the resilience of client connections, RedisClient will transparently retry failed Redis operations due to 
+Socket and I/O Exceptions in an exponential backoff starting from 10ms up until the RetryTimeout of 10000ms. 
+These defaults can be tweaked with:
+
+    RedisConfig.DefaultRetryTimeout = 10000;
+    RedisConfig.BackOffMultiplier = 10;
+    
+
+** Delay
+To support delay we want to implement a priority queue within Redis
+This may actually help us with the issue of creating a generic priority queue i.e. send to Redis and then later forward 
+via another producer if required. Should be a design goal, allows use of Redis as a 'hangfire' alternative
+
+
+** Request/Response
+We should support this, how? Look at RedisMQ
+    

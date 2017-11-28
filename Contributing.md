@@ -31,7 +31,7 @@ It isn't wise to build something that can be a part of someone's ecosystem witho
 0. Make your tests pass
 0. Try to follow the [Microsoft .NET Framework Design Guidelines] (https://github.com/dotnet/corefx/wiki/Framework-Design-Guidelines-Digest) when writing your code
 	0. Providing [BDD] (http://dannorth.net/introducing-bdd/) style tests should provide for the need to use scenarios to test the design of your API
-	1. Use the coding style from [dotnet/corefx] (https://github.com/dotnet/corefx/wiki/Contributing#c-coding-style)
+	1. Use the coding style from [dotnet/corefx] (https://github.com/dotnet/corefx/blob/master/Documentation/coding-guidelines/coding-style.md)
 	2. You can use [codeformatter] (https://github.com/dotnet/codeformatter) if you can run VS2015 to automatically update your format
 		3. Ensure you update the template for your copyright if using codeformatter 
 0. Commit
