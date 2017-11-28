@@ -21,9 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using System.Collections.Generic;
-
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     public class KafkaMessageProducerFactory : IAmAMessageProducerFactory

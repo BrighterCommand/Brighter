@@ -27,7 +27,6 @@ using System.Text;
 using Confluent.Kafka;
 using Confluent.Kafka.Serialization;
 using Paramore.Brighter.MessagingGateway.Kafka.Logging;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
@@ -54,7 +53,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public Task SendAsync(Message message)
         {
             if (message == null)
-                throw new ArgumentNullException("message");
+                throw new ArgumentNullException(nameof(message));
             return _producer.ProduceAsync(message.Header.Topic, null, message.Body.Value);
         }
 
@@ -77,7 +76,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
            Dispose(false);
         }
 
-        // This code added to correctly implement the disposable pattern.
         public void Dispose()
         {
             Dispose(true);
