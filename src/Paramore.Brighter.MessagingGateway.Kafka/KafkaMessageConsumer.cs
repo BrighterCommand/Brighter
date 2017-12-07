@@ -85,7 +85,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         public void Purge()
         {
-            throw new NotImplementedException();
+            if (!_consumer.Assignment.Any())
+                return;
+
+            var offsets = _consumer.Assignment
+                .Select(topicPartiion => new TopicPartitionOffset(topicPartiion, Offset.End))
+                .ToArray();
+            var deliveryReport = _consumer.CommitAsync(offsets).Result;
         }
 
         public Message Receive(int timeoutInMilliseconds)
