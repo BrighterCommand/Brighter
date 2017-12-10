@@ -88,10 +88,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (!_consumer.Assignment.Any())
                 return;
 
-            var offsets = _consumer.Assignment
-                .Select(topicPartiion => new TopicPartitionOffset(topicPartiion, Offset.End))
-                .ToArray();
-            var deliveryReport = _consumer.CommitAsync(offsets).Result;
+            foreach (var topicPartition in _consumer.Assignment)
+            {
+                _consumer.Seek(new TopicPartitionOffset(topicPartition, Offset.End));
+            }
         }
 
         public Message Receive(int timeoutInMilliseconds)
