@@ -57,7 +57,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (_logger.Value.IsErrorEnabled())
             {
                 _consumer.OnError += (_, error) =>
-                    _logger.Value.Error($"Member id: {_consumer.MemberId}, error: {error}");
+                    _logger.Value.Error($"BrokerError: Member id: {_consumer.MemberId}, error: {error}");
+                _consumer.OnConsumeError += (_, error) =>
+                    _logger.Value.Error($"ConsumeError: Member Id: {_consumer.MemberId}, error: {error}");
             }
 
             _consumer.Subscribe(new []{ topic });
@@ -98,10 +100,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (!_consumer.Consume(out Message<Null, string> kafkaMsg, timeoutInMilliseconds))
                 return new Message();
+
+            var messageType = kafkaMsg.Error.Code == ErrorCode.NoError
+                ? MessageType.MT_EVENT
+                : MessageType.MT_UNACCEPTABLE;
             var messageHeader =
-                new MessageHeader(Guid.NewGuid(), kafkaMsg.Topic, MessageType.MT_EVENT)
+                new MessageHeader(Guid.NewGuid(), kafkaMsg.Topic, messageType)
                 {
-                    Bag = {["TopicPartitionOffset"] = kafkaMsg.TopicPartitionOffset}
+                    Bag =
+                    {
+                        ["TopicPartitionOffset"] = kafkaMsg.TopicPartitionOffset,
+                    }
                 };
             var messageBody = new MessageBody(kafkaMsg.Value);
             return new Message(messageHeader, messageBody); 
