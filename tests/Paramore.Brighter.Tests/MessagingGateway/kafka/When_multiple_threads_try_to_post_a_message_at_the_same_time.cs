@@ -26,51 +26,35 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
 {
-    [Trait("Category", "KAFKA")]
-    public class KafkaMessageProducerSupportsMultipleThreadsTests : IDisposable
+    [Trait("Category", "Kafka")]
+    public class KafkaMessageProducerSupportsMultipleThreadsTests : KafkaIntegrationTestBase
     {
-        private readonly IAmAMessageProducer _messageProducer;
-        private readonly Message _message;
-
-        public KafkaMessageProducerSupportsMultipleThreadsTests()
+        [Theory, MemberData(nameof(ServerParameters))]
+        public void When_multiple_threads_try_to_post_a_message_at_the_same_time(string bootStrapServer)
         {
-            _message = new Message(new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-            _messageProducer = new KafkaMessageProducerFactory(
-                    new KafkaMessagingGatewayConfiguration()
-                    {
-                        Name = "Test",
-                        BootStrapServers = new [] { "localhost:9092" }
-                    }).Create();
-        }
-
-        [Fact]
-        public void When_multiple_threads_try_to_post_a_message_at_the_same_time()
-        {
-            bool exceptionHappened = false;
-            try
+            using (var producer = CreateMessageProducer("TestProducer", bootStrapServer))
             {
-                Parallel.ForEach(Enumerable.Range(0, 10), _ =>
+                bool exceptionHappened = false;
+                var message = CreateMessage("nonexistenttopic", "test content");
+                try
                 {
-                    _messageProducer.Send(_message);
-                });
-            }
-            catch (Exception)
-            {
-                exceptionHappened = true;
-            }
+                    Parallel.ForEach(Enumerable.Range(0, 10), _ =>
+                    {
+                        producer.Send(message);
+                    });
+                }
+                catch (Exception)
+                {
+                    exceptionHappened = true;
+                }
 
-            //_should_not_throw
-            exceptionHappened.Should().BeFalse();
-        }
-
-        public void Dispose()
-        {
-            _messageProducer.Dispose();
+                //_should_not_throw
+                exceptionHappened.Should().BeFalse();
+            }
         }
     }
 }
