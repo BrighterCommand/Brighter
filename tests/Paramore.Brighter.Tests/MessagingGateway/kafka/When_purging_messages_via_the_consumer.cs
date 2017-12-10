@@ -23,40 +23,41 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
 {
     [Trait("Category", "Kafka")]
-    public class KafkaMessageProducerSendTests : KafkaIntegrationTestBase
+    public class KafkaMessageConsumerPurgeTests : KafkaIntegrationTestBase
     {
         private const string Topic = "test";
 
         private string QueueName { get; set; }
 
-        public KafkaMessageProducerSendTests()
+        public KafkaMessageConsumerPurgeTests()
         {
             QueueName = Guid.NewGuid().ToString();
         }
-        
+
         [Theory, MemberData(nameof(ServerParameters))]
-        public void When_posting_a_message_via_the_messaging_gateway(string bootStrapServer)
+        public void When_purging_messages_via_the_messaging_gateway(string bootStrapServer)
         {
-            using (var consumer = this.CreateMessageConsumer("TestConsumer", bootStrapServer, QueueName, Topic))
+            using (var consumer = CreateMessageConsumer("TestConsumer", bootStrapServer, QueueName, Topic))
             using (var producer = CreateMessageProducer("TestProducer", bootStrapServer))
             {
-                var message = CreateMessage(Topic, $"test content [{QueueName}]");
-                consumer.Receive(30000); 
-                producer.Send(message);
-                var receivedMessage = consumer.Receive(30000);
-                var receivedMessageData = receivedMessage.Body.Value;
-
-                consumer.Acknowledge(receivedMessage);
-
-                //_should_send_a_message_via_restms_with_the_matching_body
-                receivedMessageData.Should().Be(message.Body.Value);
-                //_should_have_an_empty_pipe_after_acknowledging_the_message
+                consumer.Receive(30000);
+                var messages = Enumerable.Range(0, 10).Select((i => CreateMessage(Topic, $"test content [{QueueName}] count [{i}]")));
+                foreach (var msg in messages)
+                {
+                    producer.Send(msg);
+                }
+                
+                consumer.Purge();
+                var sentMessage = consumer.Receive(30000);
+                var messageBody = sentMessage.Body.Value;
+                messageBody.Should().Be(string.Empty);
             }
         }
     }
