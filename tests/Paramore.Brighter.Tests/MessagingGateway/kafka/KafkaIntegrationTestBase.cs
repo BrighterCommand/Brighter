@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
             {
                 new object[]
                 {
-                    "localmac:9092"
+                    "localhost:9092"
                 }
             };
         }
