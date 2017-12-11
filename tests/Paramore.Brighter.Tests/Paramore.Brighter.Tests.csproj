@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
@@ -7,6 +7,7 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.MySql\Paramore.Brighter.MessageStore.MySql.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.Redis\Paramore.Brighter.MessagingGateway.Redis.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.PostgreSql\Paramore.Brighter.MessageStore.PostgreSql.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.MsSql\Paramore.Brighter.CommandStore.MsSql.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.Sqlite\Paramore.Brighter.CommandStore.Sqlite.csproj" />

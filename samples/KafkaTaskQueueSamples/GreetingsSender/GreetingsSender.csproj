@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <AssemblyName>KafkaTaskQueueSamples.GreetingsSender</AssemblyName>
+    <RootNamespace>KafkaTaskQueueSamples.GreetingsSender</RootNamespace>
+    <StartupObject>KafkaTaskQueueSamples.GreetingsSender.Program</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Greetings\Greetings.csproj" />
+  </ItemGroup>
+</Project>
