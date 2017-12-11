@@ -8,6 +8,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 ## Master ##
 
   - Added Support for a Redis transport
+  - Added Support for a Kafka transport
 
 ## Release 7.1.0 ##
   - Fixes issue with high CPU when failing to connect to RabbitMQ.
