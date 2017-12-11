@@ -106,7 +106,8 @@ Brighter contributors (sorted alphabeticaly)
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
   * Various Fixes
   
-**[whunsley](https://github.com/whunsley)**
+**[Wayne Hunsley](https://github.com/whunsley)**
+  * Kafka transport
   * Various Fixes
 
 **[Joseph Woodward](https://github.com/JosephWoodward)**  
