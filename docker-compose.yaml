@@ -36,16 +36,33 @@ services:
   
   redis-master:
     image: redis
+    command: redis-server --appendonly yes 
     ports:
       - "6379:6379"
     restart: always
 
   redis-slave:
     image: redis
+    command: redis-server --appendonly yes 
     command: redis-server --slaveof redis-master 6379
     restart: always
 
+  # Instance 1
   redis-sentinel:
+    build: ./samples/containers/redis-sentinel
+    links:
+      - redis-master
+    restart: always
+ 
+  # Instance 2
+  redis-sentinel1:
+    build: ./samples/containers/redis-sentinel
+    links:
+      - redis-master
+    restart: always
+
+  # Instance 3
+  redis-sentinel2:
     build: ./samples/containers/redis-sentinel
     links:
       - redis-master

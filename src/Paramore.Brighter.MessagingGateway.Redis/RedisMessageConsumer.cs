@@ -95,11 +95,17 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             catch (TimeoutException te)
             {
-                _logger.Value.ErrorFormat("Could not connect to redis client within {0} milliseconds", timeoutInMilliseconds.ToString());
+                _logger.Value.ErrorFormat("Could not connect to Redis client within {0} milliseconds", timeoutInMilliseconds.ToString());
                 throw new ChannelFailureException(
-                    string.Format("Could not connect to redis client within {0} milliseconds", timeoutInMilliseconds.ToString()), 
+                    string.Format("Could not connect to Redis client within {0} milliseconds", timeoutInMilliseconds.ToString()),
                     te
-                    );
+                );
+            }
+            catch (RedisException re)
+            {
+                _logger.Value.ErrorFormat($"Could not connect to Redis: {re.Message}");
+                throw new ChannelFailureException(string.Format("Could not connect to Redis client - see inner exception for details" ), re);
+                 
             }
             finally
             {
