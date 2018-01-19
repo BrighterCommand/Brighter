@@ -27,7 +27,7 @@ services:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=password
 
-  MySql:
+  mysql:
     image: mysql
     ports:
       - "3306:3306"
@@ -68,7 +68,7 @@ services:
       - redis-master
     restart: always
 
-  Postgres:
+  postgres:
     image: postgres
     restart: always
     ports:
