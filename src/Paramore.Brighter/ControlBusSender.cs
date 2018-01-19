@@ -81,7 +81,6 @@ namespace Paramore.Brighter
             GC.SuppressFinalize(this);
         }
 
-
         private void Dispose(bool disposing)
         {
             if (_disposed)
@@ -91,6 +90,5 @@ namespace Paramore.Brighter
 
             _disposed = true;
         }
-
     }
 }

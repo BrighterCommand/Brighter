@@ -31,7 +31,8 @@ namespace Paramore.Brighter
     /// <summary>
     /// Class ControlBusSenderFactory. Helper for creating instances of a control bus (which requires messaging, but not subcribers).
     /// </summary>
-    public class ControlBusSenderFactory : IAmAControlBusSenderFactory {
+    public class ControlBusSenderFactory : IAmAControlBusSenderFactory
+    {
         /// <summary>
         /// Creates the specified configuration.
         /// </summary>
