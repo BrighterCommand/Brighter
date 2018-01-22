@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MultipleSender": {
+      "commandName": "Project",
+      "commandLineArgs": "250"
+    }
+  }
+}
