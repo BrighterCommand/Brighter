@@ -6,72 +6,120 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
-    restart: always
+    restart: on-failure
+    volumes:
+      - rabbitmq-home:/var/lib/rabbitmq
+    restart: on-failure
 
   eventstore:
     image: eventstore/eventstore
     ports:
       - "1113:1113" # TCP (default 1113)
       - "2113:2113" # HTTP (default 2113)
+    volumes:
+      - eventstore-data:/var/lib/eventstore
     environment:
       - EVENTSTORE_RUN_PROJECTIONS=ALL
       - EVENTSTORE_START_STANDARD_PROJECTIONS=TRUE
-    restart: always
+    restart: on-failure
     
   # Need to give 4GB of memory to Docker for SQL
   sqlserver:
     image: microsoft/mssql-server-linux
     ports:
       - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=password
-
   mysql:
     image: mysql
     ports:
       - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: "root"
   
   redis-master:
     image: redis
+    volumes:
+      - redis-master-data:/data
     command: redis-server --appendonly yes 
     ports:
       - "6379:6379"
-    restart: always
-
+    restart: on-failure
+   
   redis-slave:
     image: redis
-    command: redis-server --appendonly yes 
-    command: redis-server --slaveof redis-master 6379
-    restart: always
+    volumes:
+      - redis-slave-data:/data
+    command: redis-server --slaveof redis-master 6379 --appendonly yes
+    restart: on-failure
 
-  # Instance 1
+    # Instance 1
   redis-sentinel:
     build: ./samples/containers/redis-sentinel
+    volumes:
+      - redis-s1-data:/redis
     links:
       - redis-master
-    restart: always
- 
+    restart: on-failure
+
   # Instance 2
   redis-sentinel1:
     build: ./samples/containers/redis-sentinel
+    volumes:
+      - redis-s1-data:/redis
     links:
       - redis-master
-    restart: always
+    restart: on-failure
 
   # Instance 3
   redis-sentinel2:
     build: ./samples/containers/redis-sentinel
+    volumes:
+      - redis-s1-data:/redis
     links:
       - redis-master
-    restart: always
+    restart: on-failure
 
   postgres:
     image: postgres
-    restart: always
+    restart: on-failure
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - postgres-config:/etc/postgresql
+      - postgres-logs:/var/log/postgresql
     ports:
       - "5432:5432"
     environment:
       POSTGRES_PASSWORD: password
+
+volumes:
+  rabbitmq-home:
+    driver: local
+  redis-master-data:
+    driver: local
+  redis-slave-data:
+    driver: local
+  eventstore-data:
+    driver: local
+  redis-s1-data:
+    driver: local
+  redis-s2-data:
+    driver: local
+  redis-s3-data:
+    driver: local
+  mysql-data:
+    driver: local
+  sqlserver-data:
+    driver: local
+  postgres-data:
+    driver: local
+  postgres-config:
+    driver: local
+  postgres-logs:
+    driver: local
+  
