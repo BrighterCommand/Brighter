@@ -43,8 +43,6 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
 
             //_should_send_a_message_via_restms_with_the_matching_body
             messageBody.Should().Be(_message.Body.Value);
-            
-            //_should_have_an_empty_pipe_after_acknowledging_the_message
         }
 
         public void Dispose()

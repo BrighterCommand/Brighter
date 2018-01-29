@@ -26,7 +26,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     public class RedisMessageProducer : IAmAMessageProducer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisMessageProducer>);
-        private const string NEXT_ID = "";
+        private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
         private static Lazy<RedisManagerPool> _pool;
         private readonly TimeSpan _messageTimeToLive;
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             foreach (var queue in queues)
             {
                 //First add to the queue itself
-                client.PushItemToList(queue, nextMsgId.ToString());
+                client.AddItemToList(queue, nextMsgId.ToString());
             }
             return queues;
         }

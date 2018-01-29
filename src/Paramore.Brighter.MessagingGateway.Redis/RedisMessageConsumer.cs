@@ -158,7 +158,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private string ReadMessage(IRedisClient client, int timeoutInMilliseconds)
         {
             var msg = string.Empty;
-            var latestId = client.BlockingDequeueItemFromList(_queueName, TimeSpan.FromMilliseconds(timeoutInMilliseconds));
+            var latestId = client.BlockingRemoveStartFromList(_queueName, TimeSpan.FromMilliseconds(timeoutInMilliseconds));
             if (latestId != null)
             {
                 var key = _topic + "." + latestId;
