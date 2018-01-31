@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// The <see cref="RmqMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles connection establishment, request sending and error handling
     /// </summary>
-    public class RmqMessageProducer : MessageGateway, IAmAMessageProducerSupportingDelay
+    public class RmqMessageProducer : MessageGateway, IAmAMessageProducer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
 

@@ -50,6 +50,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             
         }
 
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <returns>Task.</returns>
         public void Send(Message message)
         {
             using (var client = _pool.Value.GetClient())
@@ -77,6 +82,19 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
              }
         }
+        
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">The sending delay</param>
+        /// <returns>Task.</returns>
+         public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        {
+            //No delay support implemented
+            Send(message);
+        }
+ 
 
         private IEnumerable<string> PushToQueues(IRedisClient client, long nextMsgId)
         {

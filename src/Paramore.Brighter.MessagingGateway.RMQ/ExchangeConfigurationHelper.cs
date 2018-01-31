@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Toby Henderson 
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,33 +22,20 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
+using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
-    /// <summary>
-    /// Class RmqMessageProducerFactory.
-    /// </summary>
-    public class RmqMessageProducerFactory : IAmAMessageProducerFactory
+    public static class ExchangeConfigurationHelper
     {
-        private readonly RmqMessagingGatewayConnection  _connection;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RmqMessageProducerFactory"/> class.
-        /// </summary>
-        /// <param name="connection"></param>
-        public RmqMessageProducerFactory(RmqMessagingGatewayConnection connection)
+        public static void DeclareExchangeForConnection(this IModel channel, RmqMessagingGatewayConnection connection)
         {
-            _connection = connection;
-        }
-
-        /// <summary>
-        /// Creates the specified queue name.
-        /// </summary>
-        /// <returns>IAmAMessageProducer.</returns>
-        public IAmAMessageProducer Create()
-        {
-            return new RmqMessageProducer(_connection);
+            if (connection.Exchange.SupportDelay)
+                channel.ExchangeDeclare(connection.Exchange.Name, "x-delayed-message", connection.Exchange.Durable, autoDelete: false, arguments: new Dictionary<string, object> { { "x-delayed-type", connection.Exchange.Type } });
+            else
+                channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable);
         }
     }
 }

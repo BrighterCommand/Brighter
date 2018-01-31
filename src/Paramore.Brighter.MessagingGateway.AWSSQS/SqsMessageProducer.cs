@@ -58,6 +58,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         }
 
         /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">The sending delay</param>
+        /// <returns>Task.</returns>
+        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        {
+            Send(message);
+        }
+        
+        /// <summary>
         /// Ensures the topic. The call to create topic is idempotent and just returns the arn if it already exists. Therefore there is 
         /// no nee to check then create if it does not exist, as this would be extral calls
         /// </summary>

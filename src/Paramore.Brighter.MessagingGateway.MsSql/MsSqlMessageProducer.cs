@@ -23,6 +23,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             _sqlQ.Send(message, topic);
         }
+        
+        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        {
+            //No delay support implemented
+            Send(message);
+        }
+   
 
         public async Task SendAsync(Message message)
         {

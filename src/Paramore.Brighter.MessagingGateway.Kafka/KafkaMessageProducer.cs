@@ -51,6 +51,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             SendAsync(message).Wait();
         }
 
+        
+        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        {
+            //No delay support implemented
+            Send(message);
+        }
+        
+        
         public Task SendAsync(Message message)
         {
             if (message == null)

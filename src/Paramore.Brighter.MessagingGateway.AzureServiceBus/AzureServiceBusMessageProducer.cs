@@ -27,7 +27,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
-    public class AzureServiceBusMessageProducer : MessageGateway, IAmAMessageProducerSupportingDelay
+    public class AzureServiceBusMessageProducer : MessageGateway, IAmAMessageProducer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<AzureServiceBusMessageProducer>);
 
@@ -38,18 +38,29 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
         }
 
-        public void Send(Message message)
-        {
-            SendWithDelay(message);
-        }
-
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <returns>Task.</returns>
+         public void Send(Message message)
         {
             _logger.Value.DebugFormat("AzureServiceBusMessageProducer: Publishing message to topic {0}", message.Header.Topic);
             var messageSender = _pool.GetMessageSender(message.Header.Topic);
             EnsureTopicExists(message.Header.Topic);
             messageSender.Send(new Amqp.Message(message.Body.Value));
-            _logger.Value.DebugFormat("AzureServiceBusMessageProducer: Published message with id {0} to topic '{1}' with a delay of {2}ms and content: {3}", message.Id, message.Header.Topic, delayMilliseconds, JsonConvert.SerializeObject(message));
+            _logger.Value.DebugFormat("AzureServiceBusMessageProducer: Published message with id {0} to topic '{1}' and content: {2}", message.Id, message.Header.Topic, JsonConvert.SerializeObject(message));
+        }
+
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">The sending delay</param>
+        /// <returns>Task.</returns>
+         public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        {
+            Send(message);
         }
 
         public bool DelaySupported => false;

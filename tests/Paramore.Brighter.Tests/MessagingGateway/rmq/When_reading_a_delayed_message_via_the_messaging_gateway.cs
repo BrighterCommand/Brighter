@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
     [Trait("Category", "RMQ")]
     public class RmqMessageProducerDelayedMessageTests : IDisposable
     {
-        private readonly IAmAMessageProducerSupportingDelay _messageProducer;
+        private readonly IAmAMessageProducer _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly Message _message;
         private readonly TestRMQListener _client;

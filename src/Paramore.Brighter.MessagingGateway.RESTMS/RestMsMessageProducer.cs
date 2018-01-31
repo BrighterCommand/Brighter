@@ -79,6 +79,12 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
         }
 
+        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        {
+            //No delay support implemented
+            Send(message);
+        }
+
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>

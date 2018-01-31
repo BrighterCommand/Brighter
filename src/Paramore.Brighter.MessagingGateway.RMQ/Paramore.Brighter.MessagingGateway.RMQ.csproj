@@ -11,14 +11,11 @@
     <PackageId>Paramore.Brighter.MessagingGateway.RMQ</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Polly" Version="5.1.0" />
     <PackageReference Include="RabbitMQ.Client" Version="4.1.3" />
   </ItemGroup>
-
 </Project>
