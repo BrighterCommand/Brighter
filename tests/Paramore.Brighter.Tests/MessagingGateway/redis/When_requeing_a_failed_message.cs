@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
             //now requeue the first message
             _messageConsumer.Requeue(_messageOne, 300);
 
-            //try receiving again; messageTwo choud come first
+            //try receiving again; messageTwo should come first
             var sentMessageTwo = _messageConsumer.Receive(30000);
             sentMessageOne = _messageConsumer.Receive(3000);
 

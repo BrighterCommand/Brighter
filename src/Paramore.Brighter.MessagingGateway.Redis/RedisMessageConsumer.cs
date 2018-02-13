@@ -142,6 +142,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 {
                     var msgId = _inflight[message.Id];
                     client.AddItemToList(_queueName, msgId);
+                    _inflight.Remove(message.Id);
                 }
                 else
                 {
