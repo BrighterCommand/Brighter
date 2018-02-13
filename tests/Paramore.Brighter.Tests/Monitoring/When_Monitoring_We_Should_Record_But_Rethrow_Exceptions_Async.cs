@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.Monitoring.Configuration;

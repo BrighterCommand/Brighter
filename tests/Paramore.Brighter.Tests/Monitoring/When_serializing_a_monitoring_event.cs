@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Newtonsoft.Json;
 using Xunit;
 using Paramore.Brighter.Monitoring.Events;

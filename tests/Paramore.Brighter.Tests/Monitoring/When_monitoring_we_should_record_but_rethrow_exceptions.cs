@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
