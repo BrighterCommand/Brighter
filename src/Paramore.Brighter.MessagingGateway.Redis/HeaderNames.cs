@@ -22,10 +22,19 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.MessagingGateway.RMQ
+namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public class HeaderNames
     {
+        /// <summary>
+        /// The bag for user defined contents
+        /// </summary>
+        public const string BAG = "Bag";
+        /// <summary>
+        /// WHat is in the message body?
+        /// </summary>
+        public const string CONTENT_TYPE = "ContentType";
+
         /// <summary>
         /// The message type
         /// </summary>
@@ -33,7 +42,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// The message identifier
         /// </summary>
-        public const string MESSAGE_ID = "MessageId";
+        public const string MESSAGE_ID = "Id";
         /// <summary>
         /// The correlation id
         /// </summary>
@@ -49,18 +58,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// The milliseconds to delay the message by (requires plugin rabbitmq_delayed_message_exchange)
         /// </summary>
-        public const string DELAY_MILLISECONDS = "x-delay";
+        public const string DELAYED_MILLISECONDS = "DelayedMilliseconds";
         /// <summary>
-        /// The milliseconds the message was instructed to be delayed for (sent as negative) (requires plugin rabbitmq_delayed_message_exchange)
+        /// RPC, who should we reply to 
         /// </summary>
-        public const string DELAYED_MILLISECONDS = "x-delay";
+        public const string REPLY_TO = "ReplyTo";
         /// <summary>
-        /// Indicates the original id of this message given a historic scenario (e.g. re-queueuing).
+        /// The timestamp of the message
         /// </summary>
-        public const string ORIGINAL_MESSAGE_ID = Message.OriginalMessageIdHeaderName;
-        /// <summary>
-        /// Tag used to identify this message in the sequence against its Id (used to perform multiple ack against Id upto Tag).
-        /// </summary>
-        public const string DELIVERY_TAG = Message.DeliveryTagHeaderName;
+        public const string TIMESTAMP = "TimeStamp";
     }
 }

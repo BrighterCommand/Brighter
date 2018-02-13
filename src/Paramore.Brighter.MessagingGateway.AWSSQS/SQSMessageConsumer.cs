@@ -13,6 +13,7 @@
 // ***********************************************************************
 
 using System;
+using System.Threading.Tasks;
 using Amazon.Runtime;
 using Amazon.SQS;
 using Amazon.SQS.Model;
@@ -24,7 +25,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// <summary>
     /// Class SqsMessageConsumer.
     /// </summary>
-    public class SqsMessageConsumer : IAmAMessageConsumerSupportingDelay 
+    public class SqsMessageConsumer : IAmAMessageConsumer 
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageConsumer>);
 
@@ -152,7 +153,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 throw;
             }
         }
-
+        
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>

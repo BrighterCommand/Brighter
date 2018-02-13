@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RESTMS.Exceptions;
 using Paramore.Brighter.MessagingGateway.RESTMS.Logging;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
@@ -169,6 +170,18 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         public void Requeue(Message message)
         {
         }
+
+        /// <summary>
+        /// Requeues the specified message. Not implemented
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        public void Requeue(Message message, int delayMilliseconds)
+        {
+            Task.Delay(delayMilliseconds);
+            Requeue(message);
+        }
+ 
 
         /// <summary>
         /// Rejects the specified message.

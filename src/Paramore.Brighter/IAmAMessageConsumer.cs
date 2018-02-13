@@ -39,30 +39,31 @@ namespace Paramore.Brighter
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
         Message Receive(int timeoutInMilliseconds);
+
         /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         void Acknowledge(Message message);
+
         /// <summary>
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         void Reject(Message message, bool requeue);
+
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
         void Purge();
+
         /// <summary>
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
         void Requeue(Message message);
-    }
 
-    public interface IAmAMessageConsumerSupportingDelay : IAmAMessageConsumer, IAmAMessageGatewaySupportingDelay
-    {
         /// <summary>
         /// Requeues the specified message.
         /// </summary>
@@ -71,3 +72,4 @@ namespace Paramore.Brighter
         void Requeue(Message message, int delayMilliseconds);
     }
 }
+

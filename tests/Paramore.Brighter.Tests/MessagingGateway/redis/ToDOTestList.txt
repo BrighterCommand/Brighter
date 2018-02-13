@@ -3,9 +3,9 @@ The PooledRedisClientManager imposes a maximum connection limit and when its max
 on any new connection requests until the next RedisClient is released back into the pool. If no client became available within PoolTimeout, 
 a Pool TimeoutException will be thrown.
 
-** We can also get a RedisException of various forms
-* RedisResponseException Did not have that type i.e. set list etc.
-* RedisRetryableException Did not have enough bytes of data when read ?
+** We can also get a RedisException of various forms - see RedisClient_Utils.cs
+* RedisResponseException Error writing to Redis, producer not consumer error
+* RedisRetryableException Did not have enough bytes of data when read ? multi command issue not us
 
 ** Allow setting of the connection retry interval and maximum retry window
 
@@ -17,6 +17,22 @@ These defaults can be tweaked with:
     RedisConfig.BackOffMultiplier = 10;
     
 
+** Requeue
+We just need to push the msg id back on to the queue; we can't reuse producer code, which fires at all queues, we just
+need to use our queue. The message is already there, so we don't need to remove
+
+**Acknowledge
+We can do anything as we have already removed item from queue for competing consumers.We don't get to 'lock' a message
+Would it help if we recorded unacked messages somehow i.e. messages that are locked, with a timeout?
+So another queue has locked messages, we check if message is locked, if it is we move on
+Lock has TTL so will fade if not used?
+Might require batching or transaction to acquire and write lock?
+
+
+XXXX WE NEED TESTS NOW ABOUT THE REDIS HEADER PARSING CODE WE MODIFIED FROM RMQ XXXX
+XXXX TODO: WE CANT UPDATE THE HANDLED COUNT, UNLESS WE MODIFY THE MESSAGE STORED IN REDIS XXXXXX
+XXXX LOOKS LIKE THE BAG NEEDS TO BE IN QUOTES TO ALLOW TWO LEVEL PARSING
+
 ** Delay
 To support delay we want to implement a priority queue within Redis
 This may actually help us with the issue of creating a generic priority queue i.e. send to Redis and then later forward 
@@ -25,4 +41,8 @@ via another producer if required. Should be a design goal, allows use of Redis a
 
 ** Request/Response
 We should support this, how? Look at RedisMQ
+
+** Concerns
+Running out of integers for message ids - we could roll over?
+Running out of storage space for messages (TTL?) - code we need to cope with pulling a message that had expired
     

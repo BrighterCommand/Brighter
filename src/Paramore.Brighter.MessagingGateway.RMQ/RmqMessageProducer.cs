@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Paramore.Brighter.MessagingGateway.RMQ.Logging;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
@@ -34,14 +35,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// The <see cref="RmqMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles connection establishment, request sending and error handling
     /// </summary>
-    public class RmqMessageProducer : MessageGateway, IAmAMessageProducer
+    public class RmqMessageProducer : RMQMessageGateway, IAmAMessageProducer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
 
         static readonly object _lock = new object();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MessageGateway" /> class.
+        /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
         /// </summary>
         /// <param name="connection">The connection information needed to talk to RMQ</param>
         public RmqMessageProducer(RmqMessagingGatewayConnection connection) : base(connection)
@@ -71,7 +72,16 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 EnsureChannel();
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name);
                 _logger.Value.DebugFormat("RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and body: {4}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic, message.Id, message.Body.Value, delayMilliseconds);
-                rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
+                if (DelaySupported)
+                {
+                    rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
+                }
+                else
+                {
+                    Task.Delay(delayMilliseconds).Wait();
+                    rmqMessagePublisher.PublishMessage(message, 0);
+                }
+
                 _logger.Value.InfoFormat("RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and message: {4} at {5}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic, message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds);
             }
         }

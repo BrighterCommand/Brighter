@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using ServiceStack.Redis;
 using Paramore.Brighter.MessagingGateway.Redis.LibLog;
@@ -18,6 +20,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private readonly string _topic;
         
         private static Lazy<RedisManagerPool> _pool;
+        private readonly Dictionary<Guid, string> _inflight = new Dictionary<Guid, string>();
  
         /// <summary>
         /// Creates a consumer that reads from a List in Redis via a BLPOP (so will block).
@@ -51,6 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public void Acknowledge(Message message)
         {
             _logger.Value.InfoFormat("RmqMessageConsumer: Acknowledging message {0}", message.Id.ToString());
+            _inflight.Remove(message.Id);
         }
 
         /// <summary>
@@ -90,8 +94,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 client = GetClient();
                 EnsureConnection(client);
-                var redisMessage = ReadMessage(client, timeoutInMilliseconds);
-                message = new BrighterMessageFactory().Create(redisMessage);
+                (string msgId, string rawMsg) redisMessage = ReadMessage(client, timeoutInMilliseconds);
+                message = new RedisMessageCreator().CreateMessage(redisMessage.rawMsg);
+                _inflight.Add(message.Id, redisMessage.msgId);
             }
             catch (TimeoutException te)
             {
@@ -122,6 +127,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="requeue"></param>
         public void Reject(Message message, bool requeue)
         {
+            _inflight.Remove(message.Id);
         }
 
         /// <summary>
@@ -130,8 +136,31 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="message"></param>
         public void Requeue(Message message)
         {
+            using (var client = _pool.Value.GetClient())
+            {
+                if (_inflight.ContainsKey(message.Id))
+                {
+                    var msgId = _inflight[message.Id];
+                    client.AddItemToList(_queueName, msgId);
+                }
+                else
+                {
+                    throw new ChannelFailureException(string.Format("Expected to find message id {0} in-flight but was not", message.Id.ToString()));
+                }
+            }
         }
 
+        /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        public void Requeue(Message message, int delayMilliseconds)
+        {
+            Task.Delay(delayMilliseconds).Wait();
+            Requeue(message);
+        }
+        
         /*Virtual to allow testing to simulate client failure*/
         protected virtual IRedisClient GetClient()
         {
@@ -145,7 +174,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         }
 
 
-         private void EnsureConnection(IRedisClient client)
+        private void EnsureConnection(IRedisClient client)
         {
             _logger.Value.DebugFormat("RedisMessagingGateway: Creating queue {0}", _queueName);
             //what is the queue list key
@@ -155,7 +184,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         }
 
-        private string ReadMessage(IRedisClient client, int timeoutInMilliseconds)
+        private (string msgId, string rawMsg) ReadMessage(IRedisClient client, int timeoutInMilliseconds)
         {
             var msg = string.Empty;
             var latestId = client.BlockingRemoveStartFromList(_queueName, TimeSpan.FromMilliseconds(timeoutInMilliseconds));
@@ -166,7 +195,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 _logger.Value.InfoFormat(
                     "Redis: Received message from queue {0} with routing key {0}, message: {1}",
                     _queueName, _topic, JsonConvert.SerializeObject(msg), Environment.NewLine);
-         }
+            }
             else
             {
                _logger.Value.DebugFormat(
@@ -174,7 +203,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     _queueName, _topic);
   
             }
-            return msg;
+            return (latestId, msg);
         }
     }
 }

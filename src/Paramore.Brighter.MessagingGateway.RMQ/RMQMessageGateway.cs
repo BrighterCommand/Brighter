@@ -42,20 +42,20 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// The <see cref="MessagePump"/> then uses the <see cref="IAmAMessageMapper"/> associated with the configured request type in <see cref="IAmAMessageMapperRegistry"/> to translate between the 
     /// on-the-wire message and the <see cref="Command"/> or <see cref="Event"/>
     /// </summary>
-    public class MessageGateway : IDisposable
+    public class RMQMessageGateway : IDisposable
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MessageGateway>);
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RMQMessageGateway>);
 
         private readonly ConnectionFactory _connectionFactory;
         private readonly Policy _retryPolicy;
         private readonly Policy _circuitBreakerPolicy;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MessageGateway"/> class.
+        /// Initializes a new instance of the <see cref="RMQMessageGateway"/> class.
         /// Use if you need to inject a test logger
         /// <param name="connection">The amqp uri and exchange to connect to</param>
         /// </summary>
-        protected MessageGateway(RmqMessagingGatewayConnection connection)
+        protected RMQMessageGateway(RmqMessagingGatewayConnection connection)
         {
             Connection = connection;
 
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             _connectionFactory = new ConnectionFactory { Uri = Connection.AmpqUri.Uri.ToString(), RequestedHeartbeat = 30 };
 
-            DelaySupported = this is IAmAMessageGatewaySupportingDelay && Connection.Exchange.SupportDelay;
+            DelaySupported = Connection.Exchange.SupportDelay;
         }
 
         /// <summary>
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             if (Channel == null || Channel.IsClosed)
             {
-                var connection = new MessageGatewayConnectionPool().GetConnection(_connectionFactory);
+                var connection = new RMQMessageGatewayConnectionPool().GetConnection(_connectionFactory);
 
                 _logger.Value.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Connection.AmpqUri.GetSanitizedUri());
 
@@ -137,7 +137,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             GC.SuppressFinalize(this);
         }
 
-        ~MessageGateway()
+        ~RMQMessageGateway()
         {
             Dispose(false);
         }

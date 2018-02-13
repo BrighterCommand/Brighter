@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Paramore.Brighter.MessagingGateway.RMQ.Logging;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
@@ -41,7 +42,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// inter-process communication tasks from the server. It handles connection establishment, request reception and dispatching, 
     /// result sending, and error handling.
     /// </summary>
-    public class RmqMessageConsumer : MessageGateway, IAmAMessageConsumerSupportingDelay
+    public class RmqMessageConsumer : RMQMessageGateway, IAmAMessageConsumer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageConsumer>);
 
@@ -54,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private QueueingBasicConsumer _consumer;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MessageGateway" /> class.
+        /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
         /// </summary>
         /// <param name="connection"></param>
         /// <param name="queueName">The queue name.</param>
@@ -123,19 +124,37 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
         }
 
-        public void Requeue(Message message)
+        /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message"></param>
+         public void Requeue(Message message)
         {
             Requeue(message, 0);
         }
 
-        public void Requeue(Message message, int delayMilliseconds)
+        /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+         public void Requeue(Message message, int delayMilliseconds)
         {
             try
             {
                 _logger.Value.DebugFormat("RmqMessageConsumer: Re-queueing message {0} with a delay of {1} milliseconds", message.Id, delayMilliseconds);
                 EnsureChannel(_queueName);
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name);
-                rmqMessagePublisher.RequeueMessage(message, _queueName, delayMilliseconds);
+                if (DelaySupported)
+                {
+                    rmqMessagePublisher.RequeueMessage(message, _queueName, delayMilliseconds);
+                }
+                else
+                {
+                    Task.Delay(delayMilliseconds).Wait();
+                    rmqMessagePublisher.RequeueMessage(message, _queueName, 0);
+                }
+
                 Reject(message, false);
             }
             catch (Exception exception)

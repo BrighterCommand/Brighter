@@ -33,8 +33,8 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
         public void When_a_message_consumer_throws_a_socket_exception_when_connecting_to_the_server()
         {
             _exception = Catch.Exception(() => _messageConsumer.Receive(30000)); 
-            //_should_return_a_channel_failure_exception
             
+            //_should_return_a_channel_failure_exception
             _exception.Should().BeOfType<ChannelFailureException>();
             
             //_should_return_an_explainging_inner_exception

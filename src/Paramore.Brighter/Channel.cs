@@ -30,16 +30,15 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter
 {
     /// <summary>
-    ///     Class Channel.
-    ///     An <see cref="IAmAChannel" /> for reading messages from a
-    ///     <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
-    ///     and acknowledging receipt of those messages
+    ///   Class Channel.
+    ///   An <see cref="IAmAChannel" /> for reading messages from a
+    ///   <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+    ///   and acknowledging receipt of those messages
     /// </summary>
     public class Channel : IAmAChannel
     {
         private readonly string _channelName;
         private readonly IAmAMessageConsumer _messageConsumer;
-        private readonly bool _messageConsumerSupportsDelay;
         private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
 
         /// <summary>
@@ -51,12 +50,10 @@ namespace Paramore.Brighter
         {
             _channelName = channelName;
             _messageConsumer = messageConsumer;
-            _messageConsumerSupportsDelay = _messageConsumer is IAmAMessageConsumerSupportingDelay &&
-                                            (_messageConsumer as IAmAMessageGatewaySupportingDelay).DelaySupported;
         }
 
         /// <summary>
-        ///     Acknowledges the specified message.
+        ///  Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
@@ -80,13 +77,13 @@ namespace Paramore.Brighter
         public int Length { get { return _queue.Count; } }
 
         /// <summary>
-        ///     Gets the name.
+        ///   Gets the name.
         /// </summary>
         /// <value>The name.</value>
         public ChannelName Name { get { return new ChannelName(_channelName); } }
 
         /// <summary>
-        ///     Receives the specified timeout in milliseconds.
+        ///  Receives the specified timeout in milliseconds.
         /// </summary>
         /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
@@ -102,7 +99,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        ///     Rejects the specified message.
+        ///  Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         public void Reject(Message message)
@@ -117,17 +114,11 @@ namespace Paramore.Brighter
         /// <param name="delayMilliseconds">How long should we delay before requeueing</param>
         public void Requeue(Message message, int delayMilliseconds = 0)
         {
-            if (delayMilliseconds > 0 && !_messageConsumerSupportsDelay)
-                Task.Delay(delayMilliseconds).Wait();
-
-            if (_messageConsumerSupportsDelay)
-                (_messageConsumer as IAmAMessageConsumerSupportingDelay).Requeue(message, delayMilliseconds);
-            else
-                _messageConsumer.Requeue(message);
+            _messageConsumer.Requeue(message, delayMilliseconds);
         }
 
         /// <summary>
-        ///     Stops this instance.
+        ///  Stops this instance.
         /// </summary>
         public void Stop()
         {
@@ -135,7 +126,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        ///     Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose()
         {

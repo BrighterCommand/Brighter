@@ -31,14 +31,14 @@ namespace Paramore.Brighter.Tests.MessagingGateway
     public class ChannelRequeueWithoutDelayTest
     {
         private readonly IAmAChannel _channel;
-        private readonly IAmAMessageConsumer _gateway;
+        private readonly IAmAMessageConsumer _consumer;
         private readonly Message _requeueMessage;
 
         public ChannelRequeueWithoutDelayTest()
         {
-            _gateway = A.Fake<IAmAMessageConsumer>();
+            _consumer = A.Fake<IAmAMessageConsumer>();
 
-            _channel = new Channel("test", _gateway);
+            _channel = new Channel("test", _consumer);
 
             _requeueMessage = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
             _channel.Requeue(_requeueMessage);
 
             //_should_call_the_messaging_gateway
-            A.CallTo(() => _gateway.Requeue(_requeueMessage)).MustHaveHappened();
+            A.CallTo(() => _consumer.Requeue(_requeueMessage)).MustHaveHappened();
         }
     }
 }

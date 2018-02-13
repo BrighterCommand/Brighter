@@ -24,6 +24,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Kafka.Logging;
 using Confluent.Kafka;
 using Confluent.Kafka.Serialization;
@@ -77,6 +78,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _consumer.Unassign();
         }
 
+        /// <summary>
+        /// Acknowledges the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
             if (!message.Header.Bag.TryGetValue("TopicPartitionOffset", out var bagData))
@@ -85,6 +90,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var deliveryReport = _consumer.CommitAsync(new[] {topicPartitionOffset}).Result;
         }
 
+        /// <summary>
+        /// Rejects the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         public void Purge()
         {
             if (!_consumer.Assignment.Any())
@@ -96,6 +106,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
+        /// <summary>
+        /// Receives the specified queue name.
+        /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge the processing of those messages or requeue them.
+        /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
+        /// </summary>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <returns>Message.</returns>
         public Message Receive(int timeoutInMilliseconds)
         {
             if (!_consumer.Consume(out Message<Null, string> kafkaMsg, timeoutInMilliseconds))
@@ -116,17 +133,36 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return new Message(messageHeader, messageBody); 
         }
 
-        public void Reject(Message message, bool requeue)
+        /// <summary>
+        /// Rejects the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
+         public void Reject(Message message, bool requeue)
         {
             if (!requeue)
                 Acknowledge(message);
         }
 
+        /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message"></param>
         public void Requeue(Message message)
         {
-            throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        public void Requeue(Message message, int delayMilliseconds)
+        {
+            Task.Delay(delayMilliseconds).Wait();
+            Requeue(message);
+        }
+        
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposedValue)

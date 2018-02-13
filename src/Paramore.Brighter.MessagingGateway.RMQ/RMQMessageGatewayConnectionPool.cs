@@ -32,11 +32,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// <summary>
     /// Class MessageGatewayConnectionPool.
     /// </summary>
-    public class MessageGatewayConnectionPool
+    public class RMQMessageGatewayConnectionPool
     {
         private static readonly Dictionary<string, IConnection> s_connectionPool = new Dictionary<string, IConnection>();
         private static readonly object s_lock = new object();
-        private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<MessageGatewayConnectionPool>);
+        private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RMQMessageGatewayConnectionPool>);
 
         /// <summary>
         /// Return matching RabbitMQ connection if exist (match by amqp scheme)
