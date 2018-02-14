@@ -95,11 +95,11 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets the number of times this message has been seen 
         /// </summary>
-        public int HandledCount { get; private set; }
+        public int HandledCount { get; set; }
         /// <summary>
         /// Gets the number of milliseconds the message was instructed to be delayed for
         /// </summary>
-        public int DelayedMilliseconds { get; private set; }
+        public int DelayedMilliseconds { get; set; }
 
         /// <summary>
         /// Gets or sets the correlation identifier. Used when doing Request-Reply instead of Publish-Subscribe,

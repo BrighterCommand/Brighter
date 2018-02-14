@@ -51,12 +51,10 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
             
             //Now receive, and confirm order off is order on
             var sentMessageOne = _messageConsumer.Receive(30000);
-            var sentMessageTwo = _messageConsumer.Receive(30000);
-             
-            //clear up messages that we have received
             var messageBodyOne = sentMessageOne.Body.Value;
             _messageConsumer.Acknowledge(sentMessageOne);
-
+            
+            var sentMessageTwo = _messageConsumer.Receive(30000);
             var messageBodyTwo = sentMessageTwo.Body.Value;
             _messageConsumer.Acknowledge(sentMessageTwo);
             

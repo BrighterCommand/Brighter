@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -8,7 +9,7 @@ using Paramore.Brighter.MessagingGateway.Redis.LibLog;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
-    public class RedisMessageConsumer : IAmAMessageConsumer
+    public class RedisMessageConsumer : RedisMessageGateway, IAmAMessageConsumer
     {
         
         /* see RedisMessageProducer to understand how we are using a dynamic recipient list model with Redis */
@@ -17,9 +18,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private const string QUEUES = "queues";
         
         private readonly string _queueName;
-        private readonly string _topic;
         
-        private static Lazy<RedisManagerPool> _pool;
         private readonly Dictionary<Guid, string> _inflight = new Dictionary<Guid, string>();
  
         /// <summary>
@@ -32,14 +31,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
             string queueName, 
             string topic)
+            :base(redisMessagingGatewayConfiguration)
         {
             _queueName = queueName;
             _topic = topic;
-            _pool = new Lazy<RedisManagerPool>(() => new RedisManagerPool(
-                redisMessagingGatewayConfiguration.RedisConnectionString, 
-                new RedisPoolConfig() {MaxPoolSize = redisMessagingGatewayConfiguration.MaxPoolSize}
-            ));
-        }
+       }
 
         /// <summary>
         /// This a 'do nothing operation' as with Redis we pop the message from the queue to read;
@@ -63,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
+            DisposePool();
             GC.SuppressFinalize(this);
         }
 
@@ -88,6 +84,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public Message Receive(int timeoutInMilliseconds)
         {
             _logger.Value.DebugFormat("RedisMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName, _topic);
+
+            if (_inflight.Any())
+            {
+                 _logger.Value.ErrorFormat("RedisMessageConsumer: Preparing to retrieve next message from queue {0}, but have unacked or not rejected message ", _queueName);
+                throw new ChannelFailureException(string.Format("Unacked message still in flight with id: {0}", _inflight.Keys.First().ToString()));   
+            }
+            
             var message = new Message();
             IRedisClient client = null;
             try
@@ -96,7 +99,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 EnsureConnection(client);
                 (string msgId, string rawMsg) redisMessage = ReadMessage(client, timeoutInMilliseconds);
                 message = new RedisMessageCreator().CreateMessage(redisMessage.rawMsg);
-                _inflight.Add(message.Id, redisMessage.msgId);
+                
+                if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
+                {
+                    _inflight.Add(message.Id, redisMessage.msgId);
+                }
             }
             catch (TimeoutException te)
             {
@@ -136,12 +143,15 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="message"></param>
         public void Requeue(Message message)
         {
+            message.Header.HandledCount++;
             using (var client = _pool.Value.GetClient())
             {
                 if (_inflight.ContainsKey(message.Id))
                 {
                     var msgId = _inflight[message.Id];
                     client.AddItemToList(_queueName, msgId);
+                    var redisMsg = CreateRedisMessage(message);
+                    StoreMessage(client, redisMsg, long.Parse(msgId));
                     _inflight.Remove(message.Id);
                 }
                 else
@@ -159,6 +169,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public void Requeue(Message message, int delayMilliseconds)
         {
             Task.Delay(delayMilliseconds).Wait();
+            message.Header.DelayedMilliseconds = delayMilliseconds;
             Requeue(message);
         }
         
@@ -166,12 +177,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         protected virtual IRedisClient GetClient()
         {
             return _pool.Value.GetClient();
-        }
-        
-        private void Dispose(bool disposing)
-        {
-            if (_pool.IsValueCreated)
-                _pool.Value.Dispose();
         }
 
 
@@ -206,5 +211,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             return (latestId, msg);
         }
+        
     }
 }

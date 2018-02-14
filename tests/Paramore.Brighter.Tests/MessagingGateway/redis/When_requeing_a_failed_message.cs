@@ -6,7 +6,7 @@ using Xunit;
 namespace Paramore.Brighter.Tests.MessagingGateway.redis
 {
     [Trait("Category", "Redis")]
-    public class RedisRequeueMessageTests
+    public class RedisRequeueMessageTests : IDisposable
     {
         private const string QueueName = "test";
         private const string Topic = "test";
@@ -59,14 +59,13 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
 
             //try receiving again; messageTwo should come first
             var sentMessageTwo = _messageConsumer.Receive(30000);
+            var messageBodyTwo = sentMessageTwo.Body.Value;
+            _messageConsumer.Acknowledge(sentMessageTwo);
+            
             sentMessageOne = _messageConsumer.Receive(3000);
-
-            //clear up received messages
             var messageBodyOne = sentMessageOne.Body.Value;
             _messageConsumer.Acknowledge(sentMessageOne);
 
-            var messageBodyTwo = sentMessageTwo.Body.Value;
-            _messageConsumer.Acknowledge(sentMessageTwo);
 
             //_should_send_a_message_via_restms_with_the_matching_body
             messageBodyOne.Should().Be(_messageOne.Body.Value);

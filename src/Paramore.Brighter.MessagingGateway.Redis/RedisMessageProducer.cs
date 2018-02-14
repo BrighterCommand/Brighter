@@ -23,31 +23,21 @@ namespace Paramore.Brighter.MessagingGateway.Redis
          Message Queue: List
          
     */
-    public class RedisMessageProducer : IAmAMessageProducer
+
+    public class RedisMessageProducer : RedisMessageGateway, IAmAMessageProducer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisMessageProducer>);
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
-        private static Lazy<RedisManagerPool> _pool;
-        private readonly TimeSpan _messageTimeToLive;
-        private string _topic;
 
         public RedisMessageProducer(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
-        {
-            _messageTimeToLive = redisMessagingGatewayConfiguration.MessageTimeToLive ?? TimeSpan.FromMinutes(10);
-            
-            _pool = new Lazy<RedisManagerPool>(() => new RedisManagerPool(
-                redisMessagingGatewayConfiguration.RedisConnectionString, 
-                new RedisPoolConfig() {MaxPoolSize = redisMessagingGatewayConfiguration.MaxPoolSize}
-            ));
-            
-        }
+            : base(redisMessagingGatewayConfiguration)
+        {}
 
         public void Dispose()
         {
-            if (_pool.IsValueCreated)
-                _pool.Value.Dispose();
-            
+            DisposePool();
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
@@ -63,13 +53,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
                 _logger.Value.DebugFormat("RedisMessageProducer: Preparing to send message");
   
-                //Convert the message into something we can put out via Redis i.e. a string
-                var redisMessage = RedisMessagePublisher.EMPTY_MESSAGE;
-                using (var redisMessageFactory = new RedisMessagePublisher())
-                {
-                    redisMessage = redisMessageFactory.Create(message);
-                }
-                
+                var redisMessage = CreateRedisMessage(message);
+
                 _logger.Value.DebugFormat("RedisMessageProducer: Publishing message with topic {0} and id {1} and body: {2}", 
                     message.Header.Topic, message.Id.ToString(), message.Body.Value);
                 //increment a counter to get the next message id
@@ -82,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
              }
         }
-        
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>
@@ -106,13 +91,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 client.AddItemToList(queue, nextMsgId.ToString());
             }
             return queues;
-        }
-
-        private void StoreMessage(IRedisClient client, string redisMessage, long nextMsgId)
-        {
-           //we store the message at topic + next msg id
-            var key = _topic + "." + nextMsgId.ToString();
-            client.SetValue(key, redisMessage, _messageTimeToLive);
         }
 
         private long IncrementMessageCounter(IRedisClient client)
