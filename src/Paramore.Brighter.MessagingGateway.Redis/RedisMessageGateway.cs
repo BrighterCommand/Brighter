@@ -1,29 +1,54 @@
 ﻿using System;
-using ServiceStack;
 using ServiceStack.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public class RedisMessageGateway
     {
-        private TimeSpan _messageTimeToLive;
-        protected static Lazy<RedisManagerPool> _pool;
-        protected string _topic;
+        private readonly TimeSpan _messageTimeToLive;
+        protected static Lazy<RedisManagerPool> Pool;
+        protected string Topic;
 
         protected RedisMessageGateway(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
         {
             _messageTimeToLive = redisMessagingGatewayConfiguration.MessageTimeToLive ?? TimeSpan.FromMinutes(10);
-            _pool = new Lazy<RedisManagerPool>(() => new RedisManagerPool(
-                redisMessagingGatewayConfiguration.RedisConnectionString, 
-                new RedisPoolConfig() {MaxPoolSize = redisMessagingGatewayConfiguration.MaxPoolSize}
-            ));
+            
+            Pool = new Lazy<RedisManagerPool>(() =>
+            {
+                RedisConfig.DefaultConnectTimeout = 1 * 1000;
+                RedisConfig.DefaultSendTimeout = 1 * 1000;
+                RedisConfig.DefaultReceiveTimeout = 1 * 1000;
+                if (redisMessagingGatewayConfiguration.DefaultRetryTimeout.HasValue)
+                {
+                    RedisConfig.DefaultRetryTimeout = redisMessagingGatewayConfiguration.DefaultRetryTimeout.Value;
+                }
+                RedisConfig.DefaultIdleTimeOutSecs = 240;
+                if (redisMessagingGatewayConfiguration.BackoffMultiplier.HasValue)
+                {
+                    RedisConfig.BackOffMultiplier = redisMessagingGatewayConfiguration.BackoffMultiplier.Value;
+                }
+                RedisConfig.BufferLength = 1450;
+                if (redisMessagingGatewayConfiguration.MaxPoolSize.HasValue)
+                {
+                    RedisConfig.DefaultMaxPoolSize = redisMessagingGatewayConfiguration.MaxPoolSize;
+                }
+                RedisConfig.VerifyMasterConnections = true;
+                RedisConfig.HostLookupTimeoutMs = 1000;
+                RedisConfig.DeactivatedClientsExpiry = TimeSpan.FromSeconds(15);
+                RedisConfig.DisableVerboseLogging = false;
+                    
+                 return new RedisManagerPool(
+                    redisMessagingGatewayConfiguration.RedisConnectionString,
+                    new RedisPoolConfig()
+                );
+            });
  
         }
 
         protected void DisposePool()
         {
-            if (_pool.IsValueCreated)
-                _pool.Value.Dispose();
+            if (Pool.IsValueCreated)
+                Pool.Value.Dispose();
         }
 
         /// <summary>
@@ -51,7 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         protected void StoreMessage(IRedisClient client, string redisMessage, long msgId)
         {
             //we store the message at topic + msg id
-            var key = _topic + "." + msgId.ToString();
+            var key = Topic + "." + msgId.ToString();
             client.SetValue(key, redisMessage, _messageTimeToLive);
         }
 

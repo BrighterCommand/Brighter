@@ -47,9 +47,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>Task.</returns>
         public void Send(Message message)
         {
-            using (var client = _pool.Value.GetClient())
+            using (var client = Pool.Value.GetClient())
             {
-                _topic = message.Header.Topic;
+                Topic = message.Header.Topic;
 
                 _logger.Value.DebugFormat("RedisMessageProducer: Preparing to send message");
   
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private IEnumerable<string> PushToQueues(IRedisClient client, long nextMsgId)
         {
-            var key = _topic + "." + QUEUES;
+            var key = Topic + "." + QUEUES;
             var queues = client.GetAllItemsFromSet(key).ToList();
             foreach (var queue in queues)
             {
@@ -97,7 +97,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             //This holds the next id for this topic; we use that to store message contents and signal to queue
             //that there is a message to read.
-            var key = _topic + "." + NEXT_ID;
+            var key = Topic + "." + NEXT_ID;
             return client.IncrementValue(key);
         }
 

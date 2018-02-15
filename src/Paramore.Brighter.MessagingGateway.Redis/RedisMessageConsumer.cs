@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             :base(redisMessagingGatewayConfiguration)
         {
             _queueName = queueName;
-            _topic = topic;
+            Topic = topic;
        }
 
         /// <summary>
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         public void Purge()
         {
-            using (var client = _pool.Value.GetClient())
+            using (var client = Pool.Value.GetClient())
             {
                 _logger.Value.DebugFormat("RmqMessageConsumer: Purging channel {0}", _queueName);
                 //This kills the queue, not the messages, which we assume expire
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>The message read from the list</returns>
         public Message Receive(int timeoutInMilliseconds)
         {
-            _logger.Value.DebugFormat("RedisMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName, _topic);
+            _logger.Value.DebugFormat("RedisMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName, Topic);
 
             if (_inflight.Any())
             {
@@ -144,7 +144,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public void Requeue(Message message)
         {
             message.Header.HandledCount++;
-            using (var client = _pool.Value.GetClient())
+            using (var client = Pool.Value.GetClient())
             {
                 if (_inflight.ContainsKey(message.Id))
                 {
@@ -176,7 +176,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /*Virtual to allow testing to simulate client failure*/
         protected virtual IRedisClient GetClient()
         {
-            return _pool.Value.GetClient();
+            return Pool.Value.GetClient();
         }
 
 
@@ -184,7 +184,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             _logger.Value.DebugFormat("RedisMessagingGateway: Creating queue {0}", _queueName);
             //what is the queue list key
-            var key = _topic + "." + QUEUES;
+            var key = Topic + "." + QUEUES;
             //subscribe us 
             client.AddItemToSet(key, _queueName);
 
@@ -196,17 +196,17 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var latestId = client.BlockingRemoveStartFromList(_queueName, TimeSpan.FromMilliseconds(timeoutInMilliseconds));
             if (latestId != null)
             {
-                var key = _topic + "." + latestId;
+                var key = Topic + "." + latestId;
                 msg = client.GetValue(key);
                 _logger.Value.InfoFormat(
                     "Redis: Received message from queue {0} with routing key {0}, message: {1}",
-                    _queueName, _topic, JsonConvert.SerializeObject(msg), Environment.NewLine);
+                    _queueName, Topic, JsonConvert.SerializeObject(msg), Environment.NewLine);
             }
             else
             {
                _logger.Value.DebugFormat(
                    "RmqMessageConsumer: Time out without receiving message from queue {0} with routing key {1}",
-                    _queueName, _topic);
+                    _queueName, Topic);
   
             }
             return (latestId, msg);
