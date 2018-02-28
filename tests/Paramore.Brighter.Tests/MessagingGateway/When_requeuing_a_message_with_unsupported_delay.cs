@@ -53,14 +53,15 @@ namespace Paramore.Brighter.Tests.MessagingGateway
         [Fact(Skip = "Test currently won't work")]
         public void When_Requeuing_A_Message_With_Unsupported_Delay()
         {
-            _stopWatch.Start();
             _channel.Requeue(_requeueMessage, 1000);
-            _stopWatch.Stop();
 
             //_should_call_the_messaging_gateway
             A.CallTo(() => _consumer.Requeue(_requeueMessage, 1000)).MustHaveHappened();
+<<<<<<< HEAD
             //_should_have_process_delayed_the_call
             _stopWatch.ElapsedMilliseconds.Should().BeGreaterThan(900);
+=======
+>>>>>>> Set the redis config via a parameter over exposing to our client the need to set static variables
         }
     }
 }

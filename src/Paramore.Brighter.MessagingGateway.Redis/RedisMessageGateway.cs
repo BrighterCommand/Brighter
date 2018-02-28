@@ -5,22 +5,21 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public class RedisMessageGateway
     {
-        private readonly TimeSpan _messageTimeToLive;
+        protected TimeSpan MessageTimeToLive;
         protected static Lazy<RedisManagerPool> Pool;
         protected string Topic;
-        private readonly RedisMessagingGatewayConfiguration _gatewayConfiguration;
+        protected readonly RedisMessagingGatewayConfiguration GatewayConfiguration;
 
         protected RedisMessageGateway(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
         {
-            _messageTimeToLive = redisMessagingGatewayConfiguration.MessageTimeToLive ?? TimeSpan.FromMinutes(10);
-            _gatewayConfiguration = redisMessagingGatewayConfiguration;
+            GatewayConfiguration = redisMessagingGatewayConfiguration;
             
             Pool = new Lazy<RedisManagerPool>(() =>
             {
                 OverrideRedisClientDefaults();
 
                 return new RedisManagerPool(
-                    _gatewayConfiguration.RedisConnectionString,
+                    GatewayConfiguration.RedisConnectionString,
                     new RedisPoolConfig()
                 );
             });
@@ -58,58 +57,78 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// A client could also set RedisConfig values directly in their own code, if preferred.
         /// Our preference is to hide the global nature of that config inside this Lazy<T>
         /// </summary>
-        private void OverrideRedisClientDefaults()
+        protected void OverrideRedisClientDefaults()
         {
-            RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration;
-            if (_gatewayConfiguration.DefaultConnectTimeout.HasValue)
+            if (GatewayConfiguration.BackoffMultiplier.HasValue)
             {
-                RedisConfig.DefaultConnectTimeout = _gatewayConfiguration.DefaultConnectTimeout.Value;
+                RedisConfig.BackOffMultiplier = GatewayConfiguration.BackoffMultiplier.Value;
             }
 
-            if (_gatewayConfiguration.DefaultSendTimeout.HasValue)
+            if (GatewayConfiguration.BufferLength.HasValue)
             {
-                RedisConfig.DefaultSendTimeout = _gatewayConfiguration.DefaultSendTimeout.Value;
+                RedisConfig.BufferLength = GatewayConfiguration.BufferLength.Value;
+            }
+            
+            if (GatewayConfiguration.DeactivatedClientsExpiry.HasValue)
+            {
+                RedisConfig.DeactivatedClientsExpiry = GatewayConfiguration.DeactivatedClientsExpiry.Value;
             }
 
-            if (_gatewayConfiguration.DefaultReceiveTimeout.HasValue)
+            if (GatewayConfiguration.DefaultConnectTimeout.HasValue)
             {
-                RedisConfig.DefaultReceiveTimeout = _gatewayConfiguration.DefaultReceiveTimeout.Value;
+                RedisConfig.DefaultConnectTimeout = GatewayConfiguration.DefaultConnectTimeout.Value;
             }
 
-            if (_gatewayConfiguration.DefaultRetryTimeout.HasValue)
+            if (GatewayConfiguration.DefaultIdleTimeOutSecs.HasValue)
             {
-                RedisConfig.DefaultRetryTimeout = _gatewayConfiguration.DefaultRetryTimeout.Value;
+                RedisConfig.DefaultIdleTimeOutSecs = GatewayConfiguration.DefaultIdleTimeOutSecs.Value;
             }
 
-            if (_gatewayConfiguration.DefaultIdleTimeOutSecs.HasValue)
+            if (GatewayConfiguration.DefaultReceiveTimeout.HasValue)
             {
-                RedisConfig.DefaultIdleTimeOutSecs = _gatewayConfiguration.DefaultIdleTimeOutSecs.Value;
+                RedisConfig.DefaultReceiveTimeout = GatewayConfiguration.DefaultReceiveTimeout.Value;
             }
 
-            if (_gatewayConfiguration.BackoffMultiplier.HasValue)
+            if (GatewayConfiguration.DefaultRetryTimeout.HasValue)
             {
-                RedisConfig.BackOffMultiplier = _gatewayConfiguration.BackoffMultiplier.Value;
+                RedisConfig.DefaultRetryTimeout = GatewayConfiguration.DefaultRetryTimeout.Value;
             }
 
-            if (_gatewayConfiguration.BufferLength.HasValue)
+            if (GatewayConfiguration.DefaultSendTimeout.HasValue)
             {
-                RedisConfig.BufferLength = _gatewayConfiguration.BufferLength.Value;
+                RedisConfig.DefaultSendTimeout = GatewayConfiguration.DefaultSendTimeout.Value;
             }
 
-            if (_gatewayConfiguration.MaxPoolSize.HasValue)
+            if (GatewayConfiguration.DisableVerboseLogging.HasValue)
             {
-                RedisConfig.DefaultMaxPoolSize = _gatewayConfiguration.MaxPoolSize;
+                RedisConfig.DisableVerboseLogging = GatewayConfiguration.DisableVerboseLogging.Value;
             }
 
-            if (_gatewayConfiguration.VerifyMasterConnections.HasValue)
+            if (GatewayConfiguration.HostLookupTimeoutMs.HasValue)
             {
-                RedisConfig.VerifyMasterConnections = true;
+                RedisConfig.HostLookupTimeoutMs = GatewayConfiguration.HostLookupTimeoutMs.Value;
             }
 
-            RedisConfig.HostLookupTimeoutMs = 1000;
-            RedisConfig.DeactivatedClientsExpiry = TimeSpan.FromSeconds(15);
-            RedisConfig.DisableVerboseLogging = false;
-        }
+            if (GatewayConfiguration.MaxPoolSize.HasValue)
+            {
+                RedisConfig.DefaultMaxPoolSize = GatewayConfiguration.MaxPoolSize;
+            }
+
+            if (GatewayConfiguration.MessageTimeToLive.HasValue)
+            {
+                MessageTimeToLive = GatewayConfiguration.MessageTimeToLive.Value;
+            }
+            else
+            {
+                MessageTimeToLive = TimeSpan.FromMinutes(10);
+            }
+
+            if (GatewayConfiguration.VerifyMasterConnections.HasValue)
+            {
+                RedisConfig.VerifyMasterConnections = GatewayConfiguration.VerifyMasterConnections.Value;
+            }
+
+      }
         
         /// <summary>
         /// Store the actual message content to Redis - we only want one copy, regardless of number of queues
@@ -121,7 +140,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             //we store the message at topic + msg id
             var key = Topic + "." + msgId.ToString();
-            client.SetValue(key, redisMessage, _messageTimeToLive);
+            client.SetValue(key, redisMessage, MessageTimeToLive);
         }
 
    }
