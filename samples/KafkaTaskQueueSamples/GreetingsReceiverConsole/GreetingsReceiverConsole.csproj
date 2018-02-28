@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <DebugType>full</DebugType>
@@ -10,15 +9,13 @@
     <StartupObject>KafkaTaskQueueSamples.GreetingsReceiverConsole.Program</StartupObject>
     <AssemblyName>KafkaTaskQueueSamples.GreetingsReceiverConsole</AssemblyName>
     <RootNamespace>KafkaTaskQueueSamples.GreetingsReceiverConsole</RootNamespace>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Serilog" Version="2.6.0" />
     <PackageReference Include="Serilog.Sinks.Literate" Version="3.0.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Greetings\Greetings.csproj" />
   </ItemGroup>
-
 </Project>

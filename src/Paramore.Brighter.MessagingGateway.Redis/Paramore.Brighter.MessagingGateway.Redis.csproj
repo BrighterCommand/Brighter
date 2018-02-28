@@ -9,6 +9,7 @@
     <AssemblyName>Paramore.Brighter.MessagingGateway.Redis</AssemblyName>
     <PackageId>Paramore.Brighter.MessagingGateway.Redis</PackageId>
     <PackageTags>Redis;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />

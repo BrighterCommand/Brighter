@@ -1,5 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <DebugType>full</DebugType>
@@ -12,10 +11,9 @@
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
-
 </Project>

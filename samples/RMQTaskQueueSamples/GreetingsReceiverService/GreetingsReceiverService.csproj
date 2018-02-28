@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net462</TargetFramework>
     <DebugType>full</DebugType>
@@ -7,15 +6,13 @@
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Greetings\Greetings.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="Topshelf" Version="4.0.3" />
   </ItemGroup>
-
 </Project>
