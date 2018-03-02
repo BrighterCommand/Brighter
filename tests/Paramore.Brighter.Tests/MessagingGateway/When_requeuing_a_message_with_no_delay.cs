@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
             _channel.Requeue(_requeueMessage);
 
             //_should_call_the_messaging_gateway
-            A.CallTo(() => _consumer.Requeue(_requeueMessage)).MustHaveHappened();
+            A.CallTo(() => _consumer.Requeue(_requeueMessage, 0)).MustHaveHappened();
         }
     }
 }
