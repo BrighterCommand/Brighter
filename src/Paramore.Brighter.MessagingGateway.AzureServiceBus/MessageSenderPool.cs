@@ -75,10 +75,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
         }
 
-        private void Sender_Closed(AmqpObject sender, Amqp.Framing.Error error)
+        private void Sender_Closed(IAmqpObject sender, Amqp.Framing.Error error)
         {
             if (!_closing)
-            {
+            { 
                 var senderLink = (SenderLink) sender;
                 var key =
                     _senders.ToArray().Where(pair => pair.Value == senderLink).Select(pair => pair.Key).FirstOrDefault();

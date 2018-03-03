@@ -72,6 +72,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
             _firstException.InnerException.Should().BeOfType<NotSupportedException>();
         }
 
+        [Fact]
         public void Dispose()
         {
             _receiver.Purge();

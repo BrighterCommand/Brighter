@@ -69,6 +69,8 @@ namespace Paramore.Brighter.Tests.MessageStore.MySql
             //_should_read_the_messages_from_the__message_store
             _retrievedMessages.Should().HaveCount(3);
         }
+
+        [Fact]
         public void Dispose()
         {
             _mySqlTestHelper.CleanUpDb();
