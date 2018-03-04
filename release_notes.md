@@ -5,15 +5,18 @@ When we push a collection of functionality it is available via [nuget.org](http:
 
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter), but not yet deployed to [nuget.org](http://www.nuget.org).
 
-## Master ##
+## Master ##  
+  - Added beta Support for a Redis transport
 
-  - Added Support for a Redis transport
-  - Added Support for a Kafka transport
+## Release 7.2.0 ##
+  - Support for PostgreSql Message Store
+  - Support for MySql Message and Command Stores
+  - Support for Kafka Messaging Gateway - Beta
+  - Support for MSSql Messaging Gateway - Beta
 
 ## Release 7.1.0 ##
   - Fixes issue with high CPU when failing to connect to RabbitMQ.
   - Fixes missing High Availability setting, had to make changes to IAmAChannelFactory.
-
 
 ## Release 7.0.137 - 7.0.143 ##
   - Support for .NET Core (NETSTANDARD 1.5)
