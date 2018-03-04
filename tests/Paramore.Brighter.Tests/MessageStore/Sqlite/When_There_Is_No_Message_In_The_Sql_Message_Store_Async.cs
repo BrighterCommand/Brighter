@@ -60,8 +60,6 @@ namespace Paramore.Brighter.Tests.MessageStore.Sqlite
 
         public void Dispose()
         {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
             _sqliteTestHelper.CleanUpDb();
         }
     }    

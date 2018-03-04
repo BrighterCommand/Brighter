@@ -13,21 +13,20 @@ namespace Paramore.Brighter.Tests
         public string TableName = "test_commands";
         public string TableName_Messages = "test_messages";
         private string connectionStringPath;
-        private SqliteConnection _sqlConnection;
         private string connectionStringPathDir;
 
-        public SqliteConnection SetupCommandDb()
+        public void SetupCommandDb()
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = $"DataSource=\"{connectionStringPath}\"";
-            return CreateDatabaseWithTable(ConnectionString, SqliteCommandStoreBuilder.GetDDL(TableName));
+            CreateDatabaseWithTable(ConnectionString, SqliteCommandStoreBuilder.GetDDL(TableName));
         }
 
-        public SqliteConnection SetupMessageDb()
+        public void SetupMessageDb()
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = $"DataSource=\"{connectionStringPath}\"";
-            return CreateDatabaseWithTable(ConnectionString, SqliteMessageStoreBuilder.GetDDL(TableName_Messages));
+            CreateDatabaseWithTable(ConnectionString, SqliteMessageStoreBuilder.GetDDL(TableName_Messages));
         }
 
         private string GetUniqueTestDbPathAndCreateDir()
@@ -43,10 +42,12 @@ namespace Paramore.Brighter.Tests
         {
             try
             {
-                _sqlConnection?.Close();
-                _sqlConnection?.Dispose();
-                GC.Collect ();  // Otherwise we can find the file handle still in use when we delete the file
-                GC.WaitForPendingFinalizers();
+                //_sqlConnection?.Close();
+                //_sqlConnection?.Dispose();
+                //GC.Collect();  // Otherwise we can find the file handle still in use when we delete the file
+                //GC.WaitForPendingFinalizers();
+                //GC.Collect();
+
                 File.Delete(connectionStringPath);
                 Directory.Delete(connectionStringPathDir, true);
             }
@@ -57,18 +58,18 @@ namespace Paramore.Brighter.Tests
             }
         }
 
-        private SqliteConnection CreateDatabaseWithTable(string dataSourceTestDb, string createTableScript)
+        private void CreateDatabaseWithTable(string dataSourceTestDb, string createTableScript)
         {
-            _sqlConnection = new SqliteConnection(dataSourceTestDb);
-            _sqlConnection.Open();
-
-            using (var command = _sqlConnection.CreateCommand())
+            using (var sqliteConnection = new SqliteConnection(dataSourceTestDb))
             {
-                command.CommandText = createTableScript;
-                command.ExecuteNonQuery();
-            }
+                using (var command = sqliteConnection.CreateCommand())
+                {
+                    command.CommandText = createTableScript;
 
-            return _sqlConnection;
+                    sqliteConnection.Open();
+                    command.ExecuteNonQuery();
+                }
+            }
         }
     }
 }

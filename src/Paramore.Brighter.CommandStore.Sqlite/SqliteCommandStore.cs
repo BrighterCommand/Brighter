@@ -134,7 +134,11 @@ namespace Paramore.Brighter.CommandStore.Sqlite
             };
 
             return await ExecuteCommandAsync(
-                async command => ReadCommand<T>(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)),
+                async command =>
+                {
+                    return ReadCommand<T>(await command.ExecuteReaderAsync(cancellationToken)
+                        .ConfigureAwait(ContinueOnCapturedContext));
+                },
                 sql,
                 timeoutInMilliseconds,
                 parameters,
@@ -213,7 +217,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
             return sqlAdd;
         }
 
-        public DbParameter[] InitAddDbParameters<T>(T command) where T : class, IRequest
+        private DbParameter[] InitAddDbParameters<T>(T command) where T : class, IRequest
         {
             var commandJson = JsonConvert.SerializeObject(command);
             var parameters = new[]
@@ -226,18 +230,23 @@ namespace Paramore.Brighter.CommandStore.Sqlite
             return parameters;
         }
 
-        public TResult ReadCommand<TResult>(IDataReader dr) where TResult : class, IRequest, new()
+        private TResult ReadCommand<TResult>(IDataReader dr) where TResult : class, IRequest, new()
         {
-            if (dr.Read())
+            using (dr)
             {
-                var body = dr.GetString(dr.GetOrdinal("CommandBody"));
-                return JsonConvert.DeserializeObject<TResult>(body);
-            }
+                if (dr.Read())
+                {
+                    var body = dr.GetString(dr.GetOrdinal("CommandBody"));
 
-            return new TResult { Id = Guid.Empty };
+                    dr.Close();
+                    return JsonConvert.DeserializeObject<TResult>(body);
+                }
+
+                return new TResult {Id = Guid.Empty};
+            }
         }
 
-        public void AddParamtersParamArrayToCollection(DbParameter[] parameters, DbCommand command)
+        private void AddParamtersParamArrayToCollection(DbParameter[] parameters, DbCommand command)
         {
             //command.Parameters.AddRange(parameters); used to work... but can't with current Sqlite lib. Iterator issue
             for (var index = 0; index < parameters.Length; index++)

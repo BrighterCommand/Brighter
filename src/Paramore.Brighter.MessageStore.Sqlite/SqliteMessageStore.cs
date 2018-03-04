@@ -317,7 +317,8 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         {
             //var id = dr.GetGuid(dr.GetOrdinal("MessageId"));
             var id = Guid.Parse(dr.GetString(0));
-            var messageType = (MessageType) Enum.Parse(typeof (MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+            var messageType =
+                (MessageType) Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
             var topic = dr.GetString(dr.GetOrdinal("Topic"));
 
             var header = new MessageHeader(id, topic, messageType);
@@ -350,12 +351,15 @@ namespace Paramore.Brighter.MessageStore.Sqlite
 
         private Message MapFunction(IDataReader dr)
         {
-            if (dr.Read())
+            using (dr)
             {
-                return MapAMessage(dr);
-            }
+                if (dr.Read())
+                {
+                    return MapAMessage(dr);
+                }
 
-            return new Message();
+                return new Message();
+            }
         }
 
         private void SetPagingCommandFor(SqliteCommand command, int pageSize, int pageNumber)

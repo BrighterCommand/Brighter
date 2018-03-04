@@ -4,7 +4,7 @@
     <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using Sqlite</Description>
     <AssemblyTitle>Paramore.Brighter.MessageStore.Sqlite</AssemblyTitle>
     <Authors>Francesco Pighi</Authors>
-    <TargetFramework>netstandard1.5</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessageStore.Sqlite</AssemblyName>
@@ -16,15 +16,6 @@
     <PackageLicenseUrl>http://ianhammondcooper.mit-license.org</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/BrighterCommand/Brighter/tree/master/src/Paramore.Brighter.MessageStore.Sqlite</RepositoryUrl>
-    <NetStandardImplicitPackageVersion>1.6.1</NetStandardImplicitPackageVersion>
-    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
-    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
-    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
-    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
-    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
-    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,7 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="1.1.1" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.4.1" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="2.0.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
   </ItemGroup>
 
