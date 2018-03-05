@@ -5,8 +5,8 @@
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using Kafka.</Description>
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.Kafka</AssemblyTitle>
     <Authors>Wayne Hunsley</Authors>
-    <TargetFramework>netstandard1.5</TargetFramework>
-    <DefineConstants>$(DefineConstants);LIBLOG_PUBLIC;LIBLOG_PORTABLE</DefineConstants>
+    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.MessagingGateway.Kafka</AssemblyName>
     <PackageId>Paramore.Brighter.MessagingGateway.Kafka</PackageId>
@@ -16,6 +16,10 @@
   <ItemGroup>
     <PackageReference Include="Confluent.Kafka" Version="0.11.3" />
     <PackageReference Include="Polly" Version="5.8.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
+    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
   <ItemGroup>

@@ -4,7 +4,7 @@
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using awssqs</Description>
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.AWSSQS</AssemblyTitle>
     <Authors>Deniz Kocak</Authors>
-    <TargetFramework>netstandard1.5</TargetFramework>
+    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessagingGateway.AWSSQS</AssemblyName>
@@ -20,7 +20,14 @@
     <PackageReference Include="AWSSDK.Core" Version="3.3.21.15" />
     <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.0.25" />
     <PackageReference Include="AWSSDK.SQS" Version="3.3.3.3" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)'=='netstandard1.5'">
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
+    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
 </Project>
