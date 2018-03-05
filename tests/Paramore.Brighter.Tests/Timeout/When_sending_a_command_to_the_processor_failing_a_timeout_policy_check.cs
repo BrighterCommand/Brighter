@@ -34,7 +34,7 @@ using TinyIoC;
 namespace Paramore.Brighter.Tests.Timeout
 {
     [Collection("Timeout Policy Check")]
-    public class TimeoutHandlerFailsCheckTests
+    public class TimeoutHandlerFailsCheckTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -68,6 +68,11 @@ namespace Paramore.Brighter.Tests.Timeout
             MyFailsDueToTimeoutHandlerStateTracker.WasCancelled.Should().BeTrue();
             //_should_not_run_to_completion
             MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted.Should().BeFalse();
+        }
+
+        public void Dispose()
+        {
+            _commandProcessor?.Dispose();
         }
     }
 }

@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
@@ -31,7 +32,7 @@ using TinyIoC;
 namespace Paramore.Brighter.Tests.Timeout
 {
     [Collection("Timeout Policy Check Async")]
-     public class MyPassesTimeoutHandlerTests
+     public class MyPassesTimeoutHandlerTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -58,6 +59,11 @@ namespace Paramore.Brighter.Tests.Timeout
 
             //_should_complete_the_command_before_an_exception
             MyPassesTimeoutHandler.Shouldreceive(_myCommand);
+        }
+
+        public void Dispose()
+        {
+            _commandProcessor?.Dispose();
         }
     }
 }

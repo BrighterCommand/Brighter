@@ -14,7 +14,7 @@ namespace Paramore.Brighter.Tests.Logging
     {
         private readonly SpyLog _logger;
         private readonly MyCommand _myCommand;
-        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
 
         public CommandProcessorWithLoggingInPipelineTests()
         {
@@ -54,6 +54,7 @@ namespace Paramore.Brighter.Tests.Logging
 
         public void Dispose()
         {
+            _commandProcessor?.Dispose();
             Release();
             GC.SuppressFinalize(this);
         }
