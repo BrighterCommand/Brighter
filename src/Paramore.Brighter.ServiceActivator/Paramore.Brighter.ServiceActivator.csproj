@@ -5,7 +5,7 @@
     <AssemblyTitle>Paramore.Brighter.ServiceActivator</AssemblyTitle>
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
-    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
+    <DefineConstants>$(DefineConstants);LIBLOG_PUBLIC;LIBLOG_PORTABLE</DefineConstants>
     <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.ServiceActivator</AssemblyName>
     <PackageId>Paramore.Brighter.ServiceActivator</PackageId>
