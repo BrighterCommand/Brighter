@@ -83,7 +83,7 @@ after_build:
   - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
 
 test_script:
-  - cmd: cd test\Paramore.Brighter.Tests
+  - cmd: cd tests\Paramore.Brighter.Tests
   - cmd: dotnet xunit -notrait "Category=RMQ" -notrait "Category=AWS" -notrait "Category=RESTMS" -notrait "Category=Kafka" -notrait "Category=Redis"
 
 artifacts:
