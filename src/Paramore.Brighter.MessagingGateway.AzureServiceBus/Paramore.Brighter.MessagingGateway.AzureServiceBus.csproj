@@ -4,30 +4,21 @@
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using azureservicebus</Description>
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.AzureServicebus</AssemblyTitle>
     <Authors>Yiannis Triantafyllopoulos</Authors>
-    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <TargetFramework>netstandard1.5</TargetFramework>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessagingGateway.AzureServiceBus</AssemblyName>
     <PackageId>Paramore.Brighter.MessagingGateway.AzureServiceBus</PackageId>
     <PackageTags>awssqs;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="AMQPNetLite" Version="2.1.1" />
   </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)'=='netstandard1.5'">
+  <ItemGroup>
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
   </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Net.Http" />
-  </ItemGroup>
-
 </Project>

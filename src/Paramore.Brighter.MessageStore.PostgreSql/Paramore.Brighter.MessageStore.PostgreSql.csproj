@@ -1,12 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-
   <PropertyGroup>
-    <VersionPrefix>1.0.0</VersionPrefix>
     <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using PostgreSql</Description>
     <AssemblyTitle>Paramore.Brighter.MessageStore.PostgreSql</AssemblyTitle>
     <Authors>Tarun Pothulapati</Authors>
-    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <TargetFramework>netstandard1.5</TargetFramework>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessageStore.PostgreSql</AssemblyName>
@@ -14,17 +11,10 @@
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <RepositoryUrl>https://github.com/BrighterCommand/Brighter/tree/master/src/Paramore.Brighter.MessageStore.PostgreSql</RepositoryUrl>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Npgsql" Version="3.2.7" />
   </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
-
 </Project>

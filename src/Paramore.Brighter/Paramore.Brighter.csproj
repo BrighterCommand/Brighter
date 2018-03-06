@@ -4,7 +4,7 @@
     <Description>The Command Dispatcher pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers</Description>
     <AssemblyTitle>Paramore.Brighter</AssemblyTitle>
     <Authors>Ian Cooper</Authors>
-    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <TargetFramework>netstandard1.5</TargetFramework>
     <DefineConstants>$(DefineConstants);LIBLOG_PUBLIC;LIBLOG_PORTABLE</DefineConstants>
     <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter</AssemblyName>
@@ -14,8 +14,5 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="11.0.1" />
     <PackageReference Include="Polly" Version="5.8.0" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 </Project>

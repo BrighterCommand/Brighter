@@ -4,31 +4,21 @@
     <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using MS Sql Server</Description>
     <AssemblyTitle>Paramore.Brighter.MessageStore.MsSql</AssemblyTitle>
     <Authors>Francesco Pighi</Authors>
-    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <TargetFramework>netstandard1.5</TargetFramework>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.CommandStore.MsSql</AssemblyName>
     <PackageId>Paramore.Brighter.CommandStore.MsSql</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)'=='netstandard1.5'">
+  <ItemGroup>
     <PackageReference Include="System.Data.SqlClient" Version="4.4.2" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
   </ItemGroup>
-  
-  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data.Common" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.4.2" />
-  </ItemGroup>
-
   <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
     <EmbeddedResource Include=".\DDL Scripts\MSSQL\CommandStore.sql" Exclude="bin\**;obj\**;**\*.xproj;packages\**;@(EmbeddedResource)" />
   </ItemGroup>
-
 </Project>

@@ -1,29 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="../../build/common.props" />
-
   <PropertyGroup>
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using Kafka.</Description>
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.Kafka</AssemblyTitle>
     <Authors>Wayne Hunsley</Authors>
-    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <TargetFramework>netstandard1.5</TargetFramework>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.MessagingGateway.Kafka</AssemblyName>
     <PackageId>Paramore.Brighter.MessagingGateway.Kafka</PackageId>
     <PackageTags>Kafka;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
-
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Confluent.Kafka" Version="0.11.3" />
     <PackageReference Include="Polly" Version="5.8.0" />
   </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
-  </ItemGroup>
-
 </Project>

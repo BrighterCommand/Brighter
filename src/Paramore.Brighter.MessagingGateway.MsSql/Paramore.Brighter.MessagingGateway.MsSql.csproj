@@ -4,7 +4,7 @@
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using MS Sql Server</Description>
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.MsSql</AssemblyTitle>
     <Authors>Fred Hoogduin</Authors>
-    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <TargetFramework>netstandard1.5</TargetFramework>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessagingGateway.MsSql</AssemblyName>
@@ -17,8 +17,5 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="11.0.1" />
     <PackageReference Include="System.Data.SqlClient" Version="4.4.2" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 </Project>

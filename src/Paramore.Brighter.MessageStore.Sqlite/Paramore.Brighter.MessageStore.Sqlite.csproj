@@ -4,28 +4,20 @@
     <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using Sqlite</Description>
     <AssemblyTitle>Paramore.Brighter.MessageStore.Sqlite</AssemblyTitle>
     <Authors>Francesco Pighi</Authors>
-    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessageStore.Sqlite</AssemblyName>
     <PackageId>Paramore.Brighter.MessageStore.Sqlite</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <PackageReleaseNotes>https://github.com/BrighterCommand/Brighter/blob/master/release_notes.md</PackageReleaseNotes>
-    <PackageIconUrl>https://brightercommand.github.io/Brighter//images/brightercanon-nuget.png</PackageIconUrl>
-    <PackageProjectUrl>https://brightercommand.github.io/Brighter/</PackageProjectUrl>
-    <PackageLicenseUrl>http://ianhammondcooper.mit-license.org</PackageLicenseUrl>
-    <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/BrighterCommand/Brighter/tree/master/src/Paramore.Brighter.MessageStore.Sqlite</RepositoryUrl>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.4.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="2.0.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
   </ItemGroup>
-
 </Project>
