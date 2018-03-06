@@ -9,10 +9,10 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
   - Added beta Support for a Redis transport
 
 ## Release 7.2.0 ##
-  - Support for PostgreSql Message Store
-  - Support for MySql Message and Command Stores
-  - Support for Kafka Messaging Gateway - Beta
-  - Support for MSSql Messaging Gateway - Beta
+  - Support for PostgreSql Message Store (Tarun Pothulapati @Pothulapati)
+  - Support for MySql Message and Command Stores (Derek Comartin @dcomartin)
+  - Support for Kafka Messaging Gateway - Beta (Wayne Hunsley @whunsley)
+  - Support for MSSql Messaging Gateway - Beta (Fred Hoogduin @Red-F)
 
 ## Release 7.1.0 ##
   - Fixes issue with high CPU when failing to connect to RabbitMQ.

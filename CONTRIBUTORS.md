@@ -64,7 +64,7 @@ Brighter contributors (sorted alphabeticaly)
 **[Eddie Li](https://github.com/xiaodili)**
   * Various fixes   
   
-**[James Morcom](https://github.com/mrmorcs)
+**[James Morcom](https://github.com/mrmorcs)**
   * Documentation fixes
   
 **[Henk Mollema](https://github.com/henkmollema)**
@@ -82,7 +82,10 @@ Brighter contributors (sorted alphabeticaly)
 **[Ian Pender](https://github.com/penderi)**
   * Work on Tasks examples
   * Documentation for Tasks examples
-  
+
+**[Fred Hoogduin](https://github.com/Red-F)**
+  * MsSql MessagingGateway
+
 **[Petr Houška](https://github.com/petrroll)**
   * Documentation fixes 
  
@@ -93,6 +96,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Francesco Pighi](https://github.com/fpighi)**
   * SQL Message Store
   * Various fixes
+
+**[Tarun Pothulapati](https://github.com/Pothulapati)**
+  * PostgreSQL MessageStore
 
 **[tmschlot](https://github.com/tmschlot)**
   * Various fixes
