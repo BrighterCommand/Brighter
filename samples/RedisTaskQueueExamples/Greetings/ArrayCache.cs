@@ -2,8 +2,8 @@ namespace Greetings
 {
     /// <summary>
     /// A cache for empty arrays.
-      /// Needed for TinyIoC to compile
-   /// </summary>
+    /// Needed for TinyIoC to compile
+    /// </summary>
     public class ArrayCache
     {
         /// <summary>

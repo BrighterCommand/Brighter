@@ -3,4 +3,8 @@
     <TargetFramework>netstandard1.5</TargetFramework>
     <LangVersion>7.2</LangVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.Redis\Paramore.Brighter.MessagingGateway.Redis.csproj" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
 </Project>

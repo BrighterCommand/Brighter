@@ -1,6 +1,6 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Toby Henderson 
+Copyright © 2017 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,34 +22,34 @@ THE SOFTWARE. */
 
 #endregion
 
-using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
-
-namespace Paramore.Brighter.MessagingGateway.RMQ
+namespace Paramore.Brighter.MessagingGateway.Redis
 {
-    public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
+    public class RedisMessageConsumerFactory : IAmAMessageConsumerFactory
     {
-        private readonly RmqMessagingGatewayConnection _connection;
+        private readonly RedisMessagingGatewayConfiguration _configuration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
         /// </summary>
-        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection  connection)
+        public RedisMessageConsumerFactory(RedisMessagingGatewayConfiguration configuration)
         {
-            _connection = connection;
+            _configuration = configuration;
         }
 
+       
         /// <summary>
         /// Creates the specified queue name.
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="routingKey">The routing key.</param>
-        /// <param name="isDurable">Is the consumer target durable i.e. channel stores messages between restarts of consumer</param>
-        /// <param name="preFetchSize">0="Don't send me a new message until I?ve finished",  1= "Send me one message at a time", n = number to grab (take care with competing consumers)</param>
-        /// <param name="highAvailability">Does the queue exist in multiple nodes</param>
+        /// <param name="isDurable">Ignored, depends on Redis persistence of database.</param>
+        /// <param name="preFetchSize"> Always don't send me one message at a time (1) </param>
+        /// <param name="highAvailability">Does the queue exist in multiple nodes (depends on Redis clustering,  not Brighter</param>
         /// <returns>IAmAMessageConsumer.</returns>
-        public IAmAMessageConsumer Create(string queueName, string routingKey, bool isDurable, ushort preFetchSize = 1, bool highAvailability = false)
+        public IAmAMessageConsumer Create(string channelName, string routingKey, bool isDurable, ushort preFetchSize,
+            bool highAvailability)
         {
-            return new RmqMessageConsumer(_connection, queueName, routingKey, isDurable, preFetchSize, highAvailability);
+            return new RedisMessageConsumer(_configuration, channelName, routingKey);
         }
     }
 }
