@@ -172,7 +172,6 @@ namespace Greetings.Adapters.ServiceHost
             };
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
-            var rmqMessageProducerFactory = new RmqMessageProducerFactory(rmqConnnection);
 
             _dispatcher = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
@@ -182,7 +181,7 @@ namespace Greetings.Adapters.ServiceHost
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build())
                 .MessageMappers(messageMapperRegistry)
-                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory, rmqMessageProducerFactory))
+                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
                 .Connections(new[]
                 {
                     new Connection&lt;GreetingEvent&gt;(
