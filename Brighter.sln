@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
+ProjectSection(SolutionItems) = preProject
+	samples\RMQPartitionTesting\README.md = samples\RMQPartitionTesting\README.md
+EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{329736D2-BF92-4D06-A7BF-19F4B6B64EDD}"
 EndProject
@@ -101,6 +104,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\RedisTaskQueueExamples\GreetingsSender\GreetingsSender.csproj", "{DCCED182-1CFE-4184-BA56-EAB98DEF2939}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\RedisTaskQueueExamples\Greetings\Greetings.csproj", "{CDD80D0B-D420-4AB9-B031-44A19819B71F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RMQPartitionTesting", "RMQPartitionTesting", "{AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E}"
+ProjectSection(SolutionItems) = preProject
+	samples\RMQPartitionTesting\docker-compose.yaml = samples\RMQPartitionTesting\docker-compose.yaml
+	samples\RMQPartitionTesting\Handling RMQ Failure.md = samples\RMQPartitionTesting\Handling RMQ Failure.md
+EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsPumper", "samples\RMQPartitionTesting\GreetingsPumper\GreetingsPumper.csproj", "{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -532,6 +543,18 @@ Global
 		{CDD80D0B-D420-4AB9-B031-44A19819B71F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{CDD80D0B-D420-4AB9-B031-44A19819B71F}.Release|x86.ActiveCfg = Release|Any CPU
 		{CDD80D0B-D420-4AB9-B031-44A19819B71F}.Release|x86.Build.0 = Release|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Debug|x86.Build.0 = Debug|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Release|x86.ActiveCfg = Release|Any CPU
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -561,6 +584,8 @@ Global
 		{9456A24E-4CA1-4FC5-A850-B88FE9815B9B} = {1DFC9C79-BA26-41A7-8AE5-89C3FC93134E}
 		{DCCED182-1CFE-4184-BA56-EAB98DEF2939} = {1DFC9C79-BA26-41A7-8AE5-89C3FC93134E}
 		{CDD80D0B-D420-4AB9-B031-44A19819B71F} = {1DFC9C79-BA26-41A7-8AE5-89C3FC93134E}
+		{AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
+		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5} = {AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}
