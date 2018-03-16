@@ -27,7 +27,7 @@ namespace GreetingsPumper
             var messageStore = new InMemoryMessageStore();
             var rmqConnnection = new RmqMessagingGatewayConnection
             {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AmpqUri = new AmqpUriSpecification(new Uri("amqp://myuser:mypass@192.168.99.100:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
             var producer = new RmqMessageProducer(rmqConnnection);
@@ -57,7 +57,7 @@ namespace GreetingsPumper
                 if (loop % 100 == 0)
                 {
                     Console.WriteLine("Pausing for breath...");
-                    Task.Delay(500).Wait();
+                    Task.Delay(4000).Wait();
                 }
             }
         }

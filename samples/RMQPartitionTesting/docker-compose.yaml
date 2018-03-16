@@ -2,7 +2,7 @@ version: '2'
 
 services:
  rabbit1:
-   image: bijukunjummen/rabbitmq-server:3.7.0
+   build: ../containers/rabbit-mq
    hostname: rabbit1
    ports:
      - "5673:5672"
@@ -12,7 +12,7 @@ services:
      - RABBITMQ_DEFAULT_PASS=mypass
 
  rabbit2:
-   image: bijukunjummen/rabbitmq-server:3.7.0
+   build: ../containers/rabbit-mq
    hostname: rabbit2
    links:
      - rabbit1
@@ -25,7 +25,7 @@ services:
      - "15673:15672"
 
  rabbit3:
-   image: bijukunjummen/rabbitmq-server:3.7.0
+   build: ../containers/rabbit-mq
    hostname: rabbit3
    links:
      - rabbit1

@@ -72,6 +72,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             var timeStamp = HeaderResult<DateTime>.Empty();
             var handledCount = HeaderResult<int>.Empty();
             var delayedMilliseconds = HeaderResult<int>.Empty();
+            var redelivered = HeaderResult<bool>.Empty();
+            var deliveryTag = HeaderResult<ulong>.Empty();
+            // message.DeliveryTag = fromQueue.DeliveryTag;
 
             Message message;
             try
@@ -81,6 +84,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
                 handledCount = ReadHandledCount(headers);
                 delayedMilliseconds = ReadDelayedMilliseconds(headers);
+                redelivered = ReadRedeliveredFlag(fromQueue.Redelivered);
+                deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
                 var messageType = ReadMessageType(headers);
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
@@ -97,6 +102,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));
                 }
+
+                if (headers.ContainsKey(HeaderNames.CORRELATION_ID))
+                {
+                    var correlationId = Encoding.UTF8.GetString((byte[])headers[HeaderNames.CORRELATION_ID]);
+                    message.Header.CorrelationId = Guid.Parse(correlationId);
+                }
+
+                message.DeliveryTag = deliveryTag.Result;
+                message.Redelivered = redelivered.Result;
             }
             catch (Exception e)
             {
@@ -104,17 +118,27 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 message = FailureMessage(topic, messageId);
             }
 
-            if (headers.ContainsKey(HeaderNames.CORRELATION_ID))
-            {
-                var correlationId = Encoding.UTF8.GetString((byte[])headers[HeaderNames.CORRELATION_ID]);
-                message.Header.CorrelationId = Guid.Parse(correlationId);
-            }
 
-            message.SetDeliveryTag(fromQueue.DeliveryTag);
+
 
             return message;
         }
 
+
+        private Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
+        {
+            var header = new MessageHeader(
+                messageId.Success ? messageId.Result : Guid.Empty,
+                topic.Success ? topic.Result : string.Empty,
+                MessageType.MT_UNACCEPTABLE);
+            var message = new Message(header, new MessageBody(string.Empty));
+            return message;
+        }
+
+        private HeaderResult<ulong> ReadDeliveryTag(ulong deliveryTag)
+        {
+            return new HeaderResult<ulong>(deliveryTag, true);
+        }
 
         private HeaderResult<DateTime> ReadTimeStamp(IBasicProperties basicProperties)
         {
@@ -124,16 +148,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
 
             return new HeaderResult<DateTime>(DateTime.UtcNow, true);
-        }
-
-        private static Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
-        {
-            var header = new MessageHeader(
-                messageId.Success ? messageId.Result : Guid.Empty,
-                topic.Success ? topic.Result : string.Empty,
-                MessageType.MT_UNACCEPTABLE);
-            var message = new Message(header, new MessageBody(string.Empty));
-            return message;
         }
 
         private HeaderResult<MessageType> ReadMessageType(IDictionary<string, object> headers)
@@ -209,6 +223,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             _logger.Value.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
             return new HeaderResult<Guid>(Guid.Empty, false);
+        }
+
+        private HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)
+        {
+           return new HeaderResult<bool>(redelivered, true); 
         }
 
         private static object ParseHeaderValue(object value)

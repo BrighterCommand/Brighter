@@ -83,7 +83,7 @@ namespace GreetingsReceiverConsole
             //create the gateway
             var rmqConnnection = new RmqMessagingGatewayConnection 
             {
-                AmpqUri  = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AmpqUri  = new AmqpUriSpecification(new Uri("amqp://myuser:mypass@192.168.99.100:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
 
@@ -104,7 +104,9 @@ namespace GreetingsReceiverConsole
                         new ConnectionName("paramore.example.greeting"),
                         new ChannelName("greeting.event"),
                         new RoutingKey("greeting.event"),
-                        timeoutInMilliseconds: 200)
+                        timeoutInMilliseconds: 200,
+                        isDurable: true,
+                        highAvailability: true)
                 }).Build();
 
             dispatcher.Receive();

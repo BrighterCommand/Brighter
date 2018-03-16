@@ -86,7 +86,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
-            var deliveryTag = message.GetDeliveryTag();
+            var deliveryTag = message.DeliveryTag;
             try
             {
                 EnsureChannel(_queueName);
@@ -174,8 +174,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             try
             {
                 EnsureChannel(_queueName);
-                _logger.Value.InfoFormat("RmqMessageConsumer: NoAck message {0} with delivery tag {1}", message.Id, message.GetDeliveryTag());
-                Channel.BasicNack(message.GetDeliveryTag(), false, requeue);
+                _logger.Value.InfoFormat("RmqMessageConsumer: NoAck message {0} with delivery tag {1}", message.Id, message.DeliveryTag);
+                Channel.BasicNack(message.DeliveryTag, false, requeue);
             }
             catch (Exception exception)
             {
