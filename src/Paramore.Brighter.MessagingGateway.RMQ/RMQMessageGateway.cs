@@ -128,6 +128,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
         }
 
+        protected void ResetConnectionToBroker()
+        {
+            new RMQMessageGatewayConnectionPool().ResetConnection(_connectionFactory);
+        }
+
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>

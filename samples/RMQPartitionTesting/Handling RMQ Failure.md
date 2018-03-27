@@ -41,6 +41,9 @@ You can confirm with
 
 blockade -h
 
+### Usage
+Although blockade offers its own docker compose-like syntax for configuring services in a network, its easier to just create the network with docker-compose directly, and then use blockade add to add the containers from that network into the blockade. You are likely to use the command line, or a script anyway, to run blockade partition and blockade join to move nodes in and out of a partition.
+
 ### Analysis
 
 [Draw Diagram]
@@ -71,13 +74,15 @@ Assume that I am not using a durable queue, so the queue is created on a node by
 Assume I have a cluster with three nodes: A,B, C
 Assume that I have a queue, orders, with the master on A and slaves on B and C.
 
-1. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then I get a partition and I cannot talk to A. I have chosen an Ignore strategy.
+1. Assume I connect to Node A. I consume from the master which is on A. (I don't consume from the slave, that is there in case A fails). Then I get a partition and I cannot talk to A. I will get a connection timeout error as I cannot talk to A. I need to stop talking to B and talk to A or C.  We have chosen a strategy of Pause Minority on a partition
+  * RMQ will pause the partioned node
+  * We will timeout on our connection
+  * If we respond to that timeout by
+2. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then I get a partition and I cannot talk to A. I have chosen an Ignore strategy.
   * If we chose a strategy of Ignore, we cannot reach the master and so we will get a connection error. 
-2. Assume I connect to Node A. I consume from the master on A. Then I get a partition and  A cannot talk to B and C. I have chosen an Ignore strategy. 
+3. Assume I connect to Node A. I consume from the master on A. Then I get a partition and  A cannot talk to B and C. I have chosen an Ignore strategy. 
   * B and C will vote to elect a new master. Let us assume B wins. 
   * Now we have two masters. A which we are connected to and B which we are not.
   * If we chose a strategy of Ignore, we cannot reach the master and so we will get a connection error. 
-3. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then I will get a connection error as I cannot talk to A. I need to stop talking to B and talk to A or C.  We have chosen a strategy of Pause Minority on a partition
-  * If we choose Pause Minority, RMQ will stop the partioned node
 
 .
