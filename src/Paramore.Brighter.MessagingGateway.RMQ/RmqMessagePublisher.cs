@@ -84,7 +84,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public void PublishMessage(Message message, int delayMilliseconds)
         {
             var messageId = message.Id;
-            var deliveryTag = message.Header.Bag.ContainsKey(HeaderNames.DELIVERY_TAG) ? message.GetDeliveryTag().ToString() : null;
+            var deliveryTag = message.Header.Bag.ContainsKey(HeaderNames.DELIVERY_TAG) ? message.DeliveryTag.ToString() : null;
 
             var headers = new Dictionary<string, object>
             {

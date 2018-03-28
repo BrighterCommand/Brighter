@@ -1,0 +1,56 @@
+version: '2'
+
+services:
+ rabbit1:
+   build: ../containers/rabbit-mq
+   hostname: rabbit1
+   ports:
+     - "5673:5672"
+     - "15672:15672"
+   environment:
+     - RABBITMQ_DEFAULT_USER=myuser
+     - RABBITMQ_DEFAULT_PASS=mypass
+
+ rabbit2:
+   build: ../containers/rabbit-mq
+   hostname: rabbit2
+   links:
+     - rabbit1
+   environment: 
+     - CLUSTERED=true
+     - CLUSTER_WITH=rabbit1
+     - RAM_NODE=true
+   ports:
+     - "5674:5672"
+     - "15673:15672"
+
+ rabbit3:
+   build: ../containers/rabbit-mq
+   hostname: rabbit3
+   links:
+     - rabbit1
+     - rabbit2
+   environment: 
+    - CLUSTERED=true
+    - CLUSTER_WITH=rabbit1
+   ports:
+    - "5675:5672"
+    - "15674:15672"
+
+ haproxy:
+   build: ../containers/ha-proxy
+   volumes:
+      - ha_proxy:/usr/local/etc/haproxy/
+   depends_on:
+     - rabbit1
+     - rabbit2
+     - rabbit3
+   ports:
+     - 1936:1936
+     - 5672:5672
+
+volumes:
+  ha_proxy: 
+    driver: local
+
+

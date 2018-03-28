@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     {
         private readonly RmqMessageConsumerFactory _messageConsumerFactory;
 
-        /// <summary>
+        /// <summaryedisdids>
         /// Initializes a new instance of the <see cref="InputChannelFactory"/> class.
         /// </summary>
         /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>
@@ -48,9 +48,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         /// <param name="channelName">Name of the channel.</param>
         /// <param name="routingKey">The routing key.</param>
-        /// <param name="isDurable"></param>
-        /// <param name="preFetchSize"></param>
-        /// <param name="highAvailability"></param>
+        /// <param name="isDurable">Is the queue definition persisted</param>
+        /// <param name="preFetchSize">0="Don't send me a new message until I?ve finished",  1= "Send me one message at a time", n = number to grab (take care with competing consumers)</param>
+        /// <param name="highAvailability">Is the queue available on all nodes in a cluster</param>
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = false, ushort preFetchSize = 1, bool highAvailability = false)
         {

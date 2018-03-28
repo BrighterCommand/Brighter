@@ -5,7 +5,10 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.MySql\Paramore.Brighter.CommandStore.MySql.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.EventStore\Paramore.Brighter.MessageStore.EventStore.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.MySql\Paramore.Brighter.MessageStore.MySql.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.Sqlite\Paramore.Brighter.MessageStore.Sqlite.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.MsSql\Paramore.Brighter.MessagingGateway.MsSql.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.Redis\Paramore.Brighter.MessagingGateway.Redis.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.PostgreSql\Paramore.Brighter.MessageStore.PostgreSql.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj" />
@@ -13,7 +16,6 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.MsSql\Paramore.Brighter.CommandStore.MsSql.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.Sqlite\Paramore.Brighter.CommandStore.Sqlite.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.MsSql\Paramore.Brighter.MessageStore.MsSql.csproj" />
-    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.Sqlite\Paramore.Brighter.MessageStore.Sqlite.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AWSSQS\Paramore.Brighter.MessagingGateway.AWSSQS.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.AzureServiceBus\Paramore.Brighter.MessagingGateway.AzureServiceBus.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.RESTMS\Paramore.Brighter.MessagingGateway.RESTMS.csproj" />

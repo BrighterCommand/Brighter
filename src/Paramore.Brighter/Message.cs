@@ -34,6 +34,7 @@ namespace Paramore.Brighter
     {
         public const string OriginalMessageIdHeaderName = "x-original-message-id";
         public const string DeliveryTagHeaderName = "DeliveryTag";
+        public const string RedeliveredHeaderName = "Redelivered";
 
         /// <summary>
         /// Gets the header.
@@ -73,6 +74,41 @@ namespace Paramore.Brighter
         {
             Header = header;
             Body = body;
+        }
+
+        public ulong DeliveryTag
+        {
+            get
+            {
+                if (Header.Bag.ContainsKey(DeliveryTagHeaderName))
+                    return (ulong) Header.Bag[DeliveryTagHeaderName];
+                else
+                    return (ulong) 0;
+            }
+            set { Header.Bag[DeliveryTagHeaderName] = value; }
+        }
+
+        public bool Redelivered
+        {
+            get
+            {
+                if (Header.Bag.ContainsKey(RedeliveredHeaderName))
+                    return (bool) Header.Bag[RedeliveredHeaderName];
+                else
+                {
+                    return false;
+                }
+            }
+            set { Header.Bag[RedeliveredHeaderName] = value; }
+        }
+
+        public void UpdateHandledCount()
+        {
+            Header.UpdateHandledCount();
+        }
+        public bool HandledCountReached(int requeueCount)
+        {
+            return Header.HandledCount >= requeueCount;
         }
 
         public void Execute()
@@ -144,24 +180,6 @@ namespace Paramore.Brighter
             return !Equals(left, right);
         }
 
-        public void UpdateHandledCount()
-        {
-            Header.UpdateHandledCount();
-        }
-        public bool HandledCountReached(int requeueCount)
-        {
-            return Header.HandledCount >= requeueCount;
-        }
-
-        public ulong GetDeliveryTag()
-        {
-            return (ulong)Header.Bag[DeliveryTagHeaderName];
-        }
-
-        public void SetDeliveryTag(ulong deliveryTag)
-        {
-            Header.Bag[DeliveryTagHeaderName] = deliveryTag;
-        }
 
     }
 }

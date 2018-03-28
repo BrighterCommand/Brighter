@@ -40,6 +40,7 @@ Brighter contributors (sorted alphabeticaly)
   * Significant work on RabbitMQ Gateway and Service Activator reliability
   * Build and Packaging
   * Committer
+  * Servicer of pull requests
    
 **[Fred Hoogduin](https://github.com/Red-F)**
   * Various fixes
@@ -64,7 +65,7 @@ Brighter contributors (sorted alphabeticaly)
 **[Eddie Li](https://github.com/xiaodili)**
   * Various fixes   
   
-**[James Morcom](https://github.com/mrmorcs)
+**[James Morcom](https://github.com/mrmorcs)**
   * Documentation fixes
   
 **[Henk Mollema](https://github.com/henkmollema)**
@@ -72,6 +73,10 @@ Brighter contributors (sorted alphabeticaly)
 
 **[Scott McLewin](https://github.com/smclewin)**
   * Binary serialization support for messages 
+  
+** [Jonny Olliff-Lee] (https://github.com/DevJonny)**
+  * Documentation Fixes
+  * Various Code Fixes
    
 **[Solveig Oskarsdottir](https://github.com/solveigo)**
  * QA of Brighter
@@ -82,7 +87,10 @@ Brighter contributors (sorted alphabeticaly)
 **[Ian Pender](https://github.com/penderi)**
   * Work on Tasks examples
   * Documentation for Tasks examples
-  
+
+**[Fred Hoogduin](https://github.com/Red-F)**
+  * MsSql MessagingGateway
+
 **[Petr Houška](https://github.com/petrroll)**
   * Documentation fixes 
  
@@ -93,6 +101,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Francesco Pighi](https://github.com/fpighi)**
   * SQL Message Store
   * Various fixes
+
+**[Tarun Pothulapati](https://github.com/Pothulapati)**
+  * PostgreSQL MessageStore
 
 **[tmschlot](https://github.com/tmschlot)**
   * Various fixes

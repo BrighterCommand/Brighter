@@ -25,8 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Xunit;
 using Paramore.Brighter.CommandStore.Sqlite;
+using Xunit;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.Sqlite

@@ -26,9 +26,6 @@ using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
-    /// <summary>
-    /// Class RmqMessageConsumerFactory.
-    /// </summary>
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly RmqMessagingGatewayConnection _connection;

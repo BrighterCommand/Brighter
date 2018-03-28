@@ -67,6 +67,19 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             return connection;
         }
 
+        public void ResetConnection(ConnectionFactory connectionFactory)
+        {
+            var connectionId = GetConnectionId(connectionFactory);
+            
+            lock (s_lock)
+            {
+                var connection = s_connectionPool[connectionId];
+                connection?.Dispose();
+                s_connectionPool.Remove(connectionId);
+                CreateConnection(connectionFactory);
+            }
+       }
+
         private IConnection CreateConnection(ConnectionFactory connectionFactory)
         {
             var connectionId = GetConnectionId(connectionFactory);
@@ -76,6 +89,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             s_logger.Value.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ endpoint {0}", connectionFactory.Endpoint);
 
             var connection = connectionFactory.CreateConnection();
+            
+            s_logger.Value.DebugFormat("RMQMessagingGateway: new connected to {0} added to pool named {1}", connection.Endpoint, connection.ClientProvidedName);
 
             connection.ConnectionShutdown += delegate { TryRemoveConnection(connectionId); };
 
@@ -86,8 +101,18 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void TryRemoveConnection(string connectionId)
         {
-            if(s_connectionPool.ContainsKey(connectionId))
+            if (s_connectionPool.ContainsKey(connectionId))
+            {
+                var connection = s_connectionPool[connectionId];
+                if (connection != null)
+                {
+                    if (connection.IsOpen)
+                        connection.Close();
+                    connection.Dispose();
+                }
+
                 s_connectionPool.Remove(connectionId);
+            }
         }
 
         private string GetConnectionId(ConnectionFactory connectionFactory)
