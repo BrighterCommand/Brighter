@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ;
@@ -49,19 +50,27 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
             _channel.QueueBind(_channelName, connection.Exchange.Name, _channelName);
         }
 
-        public BasicGetResult Listen(int waitForMilliseconds = 0, bool suppressDisposal = false)
+        public TestRMQListener(RmqMessagingGatewayConnection connection, string channelName, params string[] routingKeys)
+        {
+            _channelName = channelName;
+            _connectionFactory = new ConnectionFactory { Uri = connection.AmpqUri.Uri.ToString() };
+            _connection = _connectionFactory.CreateConnection();
+            _channel = _connection.CreateModel();
+            _channel.DeclareExchangeForConnection(connection);
+            _channel.QueueDeclare(_channelName, false, false, false, null);
+
+            foreach (var routingKey in routingKeys)
+                _channel.QueueBind(_channelName, connection.Exchange.Name, routingKey);
+        }
+
+        public BasicGetResult Listen(int waitForMilliseconds = 0, bool suppressDisposal = false, bool ack = true)
         {
             try
             {
                 if (waitForMilliseconds > 0)
-                    Task.Delay(waitForMilliseconds).Wait();
+                    Task.Delay(waitForMilliseconds).Wait();                
 
-                var result = _channel.BasicGet(_channelName, true);
-                if (result != null)
-                {
-                    _channel.BasicAck(result.DeliveryTag, false);
-                    return result;
-                }
+                return _channel.BasicGet(_channelName, false);
             }
             finally
             {
@@ -73,7 +82,6 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
                     if (_connection.IsOpen) _connection.Dispose();
                 }
             }
-            return null;
         }
     }
 
