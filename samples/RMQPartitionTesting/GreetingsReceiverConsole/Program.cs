@@ -23,27 +23,27 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.IO;
-using Events;
-using Events.Adapters.ServiceHost;
-using Events.Ports.CommandHandlers;
-using Events.Ports.Commands;
-using Events.Ports.Mappers;
+using Greetings.Adapters.ServiceHost;
+using Greetings.Ports.CommandHandlers;
+using Greetings.Ports.Commands;
+using Greetings.Ports.Mappers;
+using Greetings.TinyIoc;
 using Paramore.Brighter;
-using Paramore.Brighter.MessagingGateway.MsSql;
+using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
-using Topshelf;
+using Serilog;
 
-namespace GreetingsReceiverService
+namespace GreetingsReceiverConsole
 {
-    internal class GreetingService : ServiceControl
+    public class Program
     {
-        private Dispatcher _dispatcher;
-
-        public GreetingService()
+        public static void Main(string[] args)
         {
-            log4net.Config.XmlConfigurator.Configure(new FileInfo("log4net.config"));
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.LiterateConsole()
+                .CreateLogger();
 
             var container = new TinyIoCContainer();
 
@@ -81,12 +81,15 @@ namespace GreetingsReceiverService
             };
 
             //create the gateway
-            var messagingConfiguration =
-                new MsSqlMessagingGatewayConfiguration(
-                    @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
-            var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
+            var rmqConnnection = new RmqMessagingGatewayConnection 
+            {
+                AmpqUri  = new AmqpUriSpecification(new Uri("amqp://myuser:mypass@192.168.99.100:5672/%2f")),
+                Exchange = new Exchange("paramore.brighter.exchange"),
+            };
 
-            _dispatcher = DispatchBuilder.With()
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
+
+            var dispatcher = DispatchBuilder.With()
                 .CommandProcessor(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                     .Policies(policyRegistry)
@@ -94,33 +97,24 @@ namespace GreetingsReceiverService
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build())
                 .MessageMappers(messageMapperRegistry)
-                .DefaultChannelFactory(new MsSqlInputChannelFactory(messageConsumerFactory))
-                .Connections(new []
+                .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
+                .Connections(new Connection[]
                 {
                     new Connection<GreetingEvent>(
                         new ConnectionName("paramore.example.greeting"),
                         new ChannelName("greeting.event"),
                         new RoutingKey("greeting.event"),
-                        timeoutInMilliseconds: 200)
+                        timeoutInMilliseconds: 200,
+                        isDurable: true,
+                        highAvailability: true)
                 }).Build();
-        }
 
-        public bool Start(HostControl hostControl)
-        {
-            _dispatcher.Receive();
-            return true;
-        }
+            dispatcher.Receive();
 
-        public bool Stop(HostControl hostControl)
-        {
-            _dispatcher.End().Wait();
-            _dispatcher = null;
-            return true;
-        }
+            Console.WriteLine("Press Enter to stop ...");
+            Console.ReadLine();
 
-        public void Shutdown(HostControl hostcontrol)
-        {
-            _dispatcher?.End();
+            dispatcher.End().Wait();
         }
     }
 }

@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("GreetingsWindowsService")]
+[assembly: AssemblyProduct("GreetingsCoreConsole")]
 [assembly: AssemblyTrademark("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible
@@ -16,4 +16,4 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("1fce5320-e949-41a4-a3b9-a8369f2b4ac2")]
+[assembly: Guid("73287a8f-c4ec-46ad-8c6f-2cdfb7aca789")]
