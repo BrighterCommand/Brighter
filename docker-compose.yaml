@@ -6,10 +6,8 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
-    restart: on-failure
     volumes:
       - rabbitmq-home:/var/lib/rabbitmq
-    restart: on-failure
 
   eventstore:
     image: eventstore/eventstore
@@ -21,7 +19,6 @@ services:
     environment:
       - EVENTSTORE_RUN_PROJECTIONS=ALL
       - EVENTSTORE_START_STANDARD_PROJECTIONS=TRUE
-    restart: on-failure
     
   # Need to give 4GB of memory to Docker for SQL
   sqlserver:
@@ -49,14 +46,12 @@ services:
     command: redis-server --appendonly yes 
     ports:
       - "6379:6379"
-    restart: on-failure
    
   redis-slave:
     image: redis
     volumes:
       - redis-slave-data:/data
     command: redis-server --slaveof redis-master 6379 --appendonly yes
-    restart: on-failure
 
     # Instance 1
   redis-sentinel:
@@ -65,7 +60,6 @@ services:
       - redis-s1-data:/redis
     links:
       - redis-master
-    restart: on-failure
 
   # Instance 2
   redis-sentinel1:
@@ -74,7 +68,6 @@ services:
       - redis-s1-data:/redis
     links:
       - redis-master
-    restart: on-failure
 
   # Instance 3
   redis-sentinel2:
@@ -83,7 +76,6 @@ services:
       - redis-s1-data:/redis
     links:
       - redis-master
-    restart: on-failure
 
   postgres:
     image: postgres
