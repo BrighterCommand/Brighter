@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
@@ -62,7 +63,9 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             _messagePump.Run();
 
             //_should_publish_the_message_via_the_command_processor
+            _commandProcessor.Commands.Count().Should().Equals(2);
             _commandProcessor.Commands[0].Should().Be(CommandType.Publish);
+            _commandProcessor.Commands[1].Should().Be(CommandType.Publish);
         }
 
     }
