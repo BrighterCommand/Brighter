@@ -121,6 +121,11 @@ We have chosen a strategy of Pause Minority on a partition
          * In this case from EnsureConsumer->EnsureChannelBind
          * We should terminate the connection and try to create a new one.
          * But we seem to pause - the Timeout should have become ChannelFailure, we should wait and retry!!
+         * Debugging reveals that we seem to 'freeze' when calling Dispose on the dead connection in ResetConnectionToBroker.
+         * We already have a TryRemoveConnection, that ought to have run when signalled that the connection has closed
+           * Why not just run this?
+           * In addition, if we close, we don't need to Dispose, so just Dipose if Open.
+           * Retest!
 
 4. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then C gets a partition and cannot be seen. I have chosen an Pause Minority strategy.
     * RMQ will pause the partioned node

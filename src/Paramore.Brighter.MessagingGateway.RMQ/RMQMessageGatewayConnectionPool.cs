@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// </summary>
     public class RMQMessageGatewayConnectionPool
     {
-        private static readonly Dictionary<string, IConnection> s_connectionPool = new Dictionary<string, IConnection>();
+        private static readonly Dictionary<string, PooledConnection> s_connectionPool = new Dictionary<string, PooledConnection>();
         private static readonly object s_lock = new object();
         private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RMQMessageGatewayConnectionPool>);
 
@@ -48,23 +48,22 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             var connectionId = GetConnectionId(connectionFactory);
 
-            IConnection connection;
-            var connectionFound = s_connectionPool.TryGetValue(connectionId, out connection);
+            var connectionFound = s_connectionPool.TryGetValue(connectionId, out var pooledConnection);
 
-            if (connectionFound != false && connection.IsOpen != false) 
-                return connection;
+            if (connectionFound != false && pooledConnection.Connection.IsOpen != false) 
+                return pooledConnection.Connection;
 
             lock (s_lock)
             {
-                connectionFound = s_connectionPool.TryGetValue(connectionId, out connection);
+                connectionFound = s_connectionPool.TryGetValue(connectionId, out pooledConnection);
 
-                if (connectionFound == false || connection.IsOpen == false)
+                if (connectionFound == false || pooledConnection.Connection.IsOpen == false)
                 {
-                    connection = CreateConnection(connectionFactory);
+                    pooledConnection = CreateConnection(connectionFactory);
                 }
             }
 
-            return connection;
+            return pooledConnection.Connection;
         }
 
         public void ResetConnection(ConnectionFactory connectionFactory)
@@ -73,14 +72,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             
             lock (s_lock)
             {
-                var connection = s_connectionPool[connectionId];
-                connection?.Dispose();
-                s_connectionPool.Remove(connectionId);
-                CreateConnection(connectionFactory);
+               var connection = s_connectionPool[connectionId];
+               TryRemoveConnection(connectionId);
+               CreateConnection(connectionFactory);
             }
        }
 
-        private IConnection CreateConnection(ConnectionFactory connectionFactory)
+        private PooledConnection CreateConnection(ConnectionFactory connectionFactory)
         {
             var connectionId = GetConnectionId(connectionFactory);
 
@@ -97,23 +95,26 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             
             s_logger.Value.DebugFormat("RMQMessagingGateway: new connected to {0} added to pool named {1}", connection.Endpoint, connection.ClientProvidedName);
 
-            connection.ConnectionShutdown += delegate { TryRemoveConnection(connectionId); };
-
-            s_connectionPool.Add(connectionId, connection);
             
-            return connection;
+            EventHandler<ShutdownEventArgs> ShutdownHandler = delegate { TryRemoveConnection(connectionId); };
+            connection.ConnectionShutdown += ShutdownHandler; 
+
+            var pooledConnection = new PooledConnection{Connection = connection, ShutdownHandler = ShutdownHandler};
+            s_connectionPool.Add(connectionId, pooledConnection);
+            
+            return pooledConnection;
         }
 
         private void TryRemoveConnection(string connectionId)
         {
             if (s_connectionPool.ContainsKey(connectionId))
             {
-                var connection = s_connectionPool[connectionId];
-                if (connection != null)
+                var pooledConnection = s_connectionPool[connectionId];
+                if (pooledConnection != null)
                 {
-                    if (connection.IsOpen)
-                        connection.Close();
-                    connection.Dispose();
+                    pooledConnection.Connection.ConnectionShutdown -= pooledConnection.ShutdownHandler;
+                    if (pooledConnection.Connection.IsOpen)
+                        pooledConnection.Connection.Close();
                 }
 
                 s_connectionPool.Remove(connectionId);
@@ -123,6 +124,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private string GetConnectionId(ConnectionFactory connectionFactory)
         {
             return string.Concat(connectionFactory.UserName, ".", connectionFactory.Password, ".", connectionFactory.HostName, ".", connectionFactory.Port, ".", connectionFactory.VirtualHost).ToLowerInvariant();
+        }
+
+        class PooledConnection
+        {
+            public IConnection Connection { get; set; }
+            public EventHandler<ShutdownEventArgs> ShutdownHandler { get; set; }
         }
     }
 }
