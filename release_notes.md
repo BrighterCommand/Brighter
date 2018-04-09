@@ -8,6 +8,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 ## Master ##  
   - Added beta Support for a Redis transport
   - Support for Binding a channel to multiple topics 
+  - RMQ Transport: Fixed handling of socket timeout where node we are connected to (not master) partitions from cluster and is paused under the pause minority strategy. Now resets connection successfully.
 
 ## Release 7.2.0 ##
   - Support for PostgreSql Message Store (Tarun Pothulapati @Pothulapati)
