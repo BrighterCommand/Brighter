@@ -57,7 +57,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets or sets the name.
         /// </summary>
         /// <value>The name.</value>
-        public ConsumerName Name { get; set; }
+        public ConsumerName Name { get; }
+
+        public ConnectionName ConnectionName { get; set; }
         /// <summary>
         /// Gets the performer.
         /// </summary>
@@ -81,11 +83,13 @@ namespace Paramore.Brighter.ServiceActivator
         /// Initializes a new instance of the <see cref="Consumer"/> class.
         /// </summary>
         /// <param name="name">The name.</param>
+        /// <param name="connectionName">The name of the associated connection.</param>
         /// <param name="channel">The channel.</param>
         /// <param name="messagePump">The message pump.</param>
-        public Consumer(ConsumerName name, IAmAChannel channel, IAmAMessagePump messagePump)
+        public Consumer(ConsumerName name, ConnectionName connectionName, IAmAChannel channel, IAmAMessagePump messagePump)
         {
             Name = name;
+            ConnectionName = connectionName;
             Performer = new Performer(channel, messagePump);
             State = ConsumerState.Shut;
         }
