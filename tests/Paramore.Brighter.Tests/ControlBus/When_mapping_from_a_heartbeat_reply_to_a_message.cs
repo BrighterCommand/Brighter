@@ -43,9 +43,9 @@ namespace Paramore.Brighter.Tests.ControlBus
         {
             _mapper = new HeartbeatReplyCommandMessageMapper();
             _request = new HeartbeatReply("Test.Hostname", new ReplyAddress(TOPIC, _correlationId));
-            var firstConsumer = new RunningConsumer(new ConnectionName("Test.Connection"), ConsumerState.Open);
+            var firstConsumer = new RunningConsumer(new ConsumerName("Test.Consumer1"), ConsumerState.Open);
             _request.Consumers.Add(firstConsumer);
-            var secondConsumer = new RunningConsumer(new ConnectionName("More.Consumers"),ConsumerState.Shut );
+            var secondConsumer = new RunningConsumer(new ConsumerName("More.Consumers2"),ConsumerState.Shut );
             _request.Consumers.Add(secondConsumer);
         }
 

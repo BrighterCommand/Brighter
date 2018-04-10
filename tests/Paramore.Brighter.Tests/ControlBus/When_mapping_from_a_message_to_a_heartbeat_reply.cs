@@ -60,8 +60,8 @@ namespace Paramore.Brighter.Tests.ControlBus
             // _should_set_the_hostName
             _request.HostName.Should().Be("Test.Hostname");
             // _should_contain_the_consumers
-            _request.Consumers.Should().Contain(rc => rc.ConnectionName == "Test.Connection" && rc.State == ConsumerState.Open);
-            _request.Consumers.Should().Contain(rc => rc.ConnectionName == "More.Consumers" && rc.State == ConsumerState.Shut);
+            _request.Consumers.Should().Contain(rc => rc.ConsumerName == "Test.Connection" && rc.State == ConsumerState.Open);
+            _request.Consumers.Should().Contain(rc => rc.ConsumerName == "More.Consumers" && rc.State == ConsumerState.Shut);
         }
    }
 }
