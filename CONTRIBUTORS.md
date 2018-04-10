@@ -77,7 +77,7 @@ Brighter contributors (sorted alphabeticaly)
 **[Domenico Musto](https://github.com/domspektrix?)**
   * Fix issue with multiple performers having name clashes
   
-** [Jonny Olliff-Lee] (https://github.com/DevJonny)**
+**[Jonny Olliff-Lee](https://github.com/DevJonny)**
   * Documentation Fixes
   * Various Code Fixes
    
