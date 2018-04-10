@@ -74,7 +74,7 @@ Brighter contributors (sorted alphabeticaly)
 **[Scott McLewin](https://github.com/smclewin)**
   * Binary serialization support for messages 
   
-** [Jonny Olliff-Lee] (https://github.com/DevJonny)**
+**[Jonny Olliff-Lee] (https://github.com/DevJonny)**
   * Documentation Fixes
   * Various Code Fixes
    
