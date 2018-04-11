@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Paramore.Brighter.AspNetCore
 {
     public sealed class BrighterOptions
@@ -16,5 +18,10 @@ namespace Paramore.Brighter.AspNetCore
         /// Configures task queues. Set to null to not use task queues.
         /// </summary>
         public MessagingConfiguration MessagingConfiguration { get; set; }
+
+        /// <summary>
+        /// Configures how the services are injected. Defaults to Transient.
+        /// </summary>
+        public ServiceLifetime HandlerLifetime { get; set; } = ServiceLifetime.Transient;
     }
 }

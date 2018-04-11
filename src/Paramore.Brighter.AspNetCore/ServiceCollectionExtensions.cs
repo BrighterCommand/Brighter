@@ -13,7 +13,7 @@ namespace Paramore.Brighter.AspNetCore
             var options = new BrighterOptions();
             configure?.Invoke(options);
 
-            var subscriberRegistry = new AspNetSubscriberRegistry(services);
+            var subscriberRegistry = new AspNetSubscriberRegistry(services, options.HandlerLifetime);
             var handlerFactory = new AspNetHandlerFactory(services);
             var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory, handlerFactory);
 
