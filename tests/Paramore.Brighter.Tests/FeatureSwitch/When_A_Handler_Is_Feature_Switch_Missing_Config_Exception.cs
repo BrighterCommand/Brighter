@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
+using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.FeatureSwitch.TestDoubles;
 using TinyIoC;
@@ -32,36 +33,52 @@ using Xunit;
 namespace Paramore.Brighter.Tests.FeatureSwitch
 {
     [Collection("Feature Switch Check")]
-    public class CommandProcessorWithFeatureSwitchOffInPipelineTests : IDisposable
+    public class FeatureSwitchByConfigMissingConfigStrategyExceptionTests : IDisposable
     {
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly SubscriberRegistry _registry;
         private readonly TinyIocHandlerFactory _handlerFactory;
+        private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
 
         private CommandProcessor _commandProcessor;
+        private Exception _exception;
 
-        public CommandProcessorWithFeatureSwitchOffInPipelineTests()
-        {            
+        public FeatureSwitchByConfigMissingConfigStrategyExceptionTests()
+        {
             _registry = new SubscriberRegistry();
-            _registry.Register<MyCommand, MyFeatureSwitchedOffHandler>();
+            _registry.Register<MyCommand, MyFeatureSwitchedConfigHandler>();
 
             var container = new TinyIoCContainer();
             _handlerFactory = new TinyIocHandlerFactory(container);
 
-            container.Register<IHandleRequests<MyCommand>, MyFeatureSwitchedOffHandler>().AsSingleton();                       
-        }
+            container.Register<IHandleRequests<MyCommand>, MyFeatureSwitchedConfigHandler>();
+            
+            _featureSwitchRegistry = new FakeConfigRegistry();
+        }        
 
         [Fact]
-        public void When_Sending_A_Command_To_The_Processor_When_A_Feature_Switch_Is_Off()
+        public void When_Sending_A_Command_To_The_Processor_When_A_Feature_Switch_Has_No_Config_And_Strategy_Is_Exception()
         {
-            _commandProcessor = new CommandProcessor(_registry, _handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-            _commandProcessor.Send(_myCommand);
+            _featureSwitchRegistry.MissingConfigStrategy = MissingConfigStrategy.Exception;
 
-            MyFeatureSwitchedOffHandler.DidReceive(_myCommand).Should().BeFalse();
+            _commandProcessor = new CommandProcessor(_registry, 
+                                                     _handlerFactory, 
+                                                     new InMemoryRequestContextFactory(), 
+                                                     new PolicyRegistry(),
+                                                     _featureSwitchRegistry);
+
+            _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
+
+            _exception.Should().BeOfType<ConfigurationException>();
+            _exception.Should().NotBeNull();
+            _exception.Message.Should().Contain($"Handler of type {typeof(MyFeatureSwitchedConfigHandler).Name} does not have a Feature Switch configuration!");
+
+            MyFeatureSwitchedConfigHandler.DidReceive(_myCommand).Should().BeFalse();            
         }
 
         public void Dispose()
         {
+            MyFeatureSwitchedConfigHandler.CommandReceived = false;
             _commandProcessor?.Dispose();
             GC.SuppressFinalize(this);
         }
