@@ -29,16 +29,18 @@ namespace Paramore.Brighter.FeatureSwitch.Attributes
 {
     public class FeatureSwitchAttribute : RequestHandlerAttribute
     {
+        private readonly Type _handler;
         private readonly FeatureSwitchStatus _status;
 
-        public FeatureSwitchAttribute(FeatureSwitchStatus status, int step, HandlerTiming timing = HandlerTiming.Before) : base(step, timing)
+        public FeatureSwitchAttribute(Type handler, FeatureSwitchStatus status, int step, HandlerTiming timing = HandlerTiming.Before) : base(step, timing)
         {
+            _handler = handler;
             _status = status;
         }
 
         public override object[] InitializerParams()
-        {
-            return new object[] { _status };
+        {           
+            return new object[] { _handler, _status };
         }
 
         public override Type GetHandlerType()

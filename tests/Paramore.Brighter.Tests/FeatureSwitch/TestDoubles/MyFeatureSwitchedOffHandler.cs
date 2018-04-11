@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Tests.FeatureSwitch.TestDoubles
     {
         public static bool CommandReceived { get; set; }
 
-        [FeatureSwitch(FeatureSwitchStatus.Off, 1, HandlerTiming.Before)]
+        [FeatureSwitch(typeof(MyFeatureSwitchedOffHandler), FeatureSwitchStatus.Off, 1, HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand comand)
         {
             CommandReceived = true;

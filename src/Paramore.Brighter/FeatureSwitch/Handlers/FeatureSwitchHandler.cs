@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using Paramore.Brighter.FeatureSwitch.Attributes;
 
 namespace Paramore.Brighter.FeatureSwitch.Handlers
@@ -33,6 +34,7 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
     /// <typeparam name="TRequest">The type of the request</typeparam>
     public class FeatureSwitchHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
+        private Type _handler;
         private FeatureSwitchStatus _status;
 
         /// <summary>
@@ -41,19 +43,22 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
         /// <param name="initializerList">The initializer list.</param>
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
-            _status = (FeatureSwitchStatus) initializerList[0];
+            _handler = (Type) initializerList[0];
+            _status = (FeatureSwitchStatus) initializerList[1];
         }
 
         public override TRequest Handle(TRequest command)
         {
-            if (_status is FeatureSwitchStatus.Off)
-            {
-                return command;
+            var featureEnabled = _status;
+
+            if (featureEnabled is FeatureSwitchStatus.Config)
+            {              
+                featureEnabled = Context.FeatureSwitches.StatusOf(_handler);
             }
 
-            if (_status is FeatureSwitchStatus.Config)
+            if (featureEnabled is FeatureSwitchStatus.Off)
             {
-                // TODO: Check the config handler on the request
+                return command;
             }
 
             return base.Handle(command);
