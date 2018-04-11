@@ -8,11 +8,13 @@ namespace Paramore.Brighter.AspNetCore
     {
         private readonly IServiceCollection _services;
         private readonly SubscriberRegistry _registry;
+        private readonly ServiceLifetime _lifetime;
 
-        public AspNetSubscriberRegistry(IServiceCollection services)
+        public AspNetSubscriberRegistry(IServiceCollection services, ServiceLifetime lifetime)
         {
             _services = services;
             _registry = new SubscriberRegistry();
+            _lifetime = lifetime;
         }
 
         public IEnumerable<Type> Get<T>() where T : class, IRequest
@@ -24,7 +26,8 @@ namespace Paramore.Brighter.AspNetCore
             where TRequest : class, IRequest
             where TImplementation : class, IHandleRequests<TRequest>
         {
-            _services.AddTransient<TImplementation>();
+            _services.Add(new ServiceDescriptor(
+                typeof(TImplementation), typeof(TImplementation), _lifetime));
             _registry.Register<TRequest, TImplementation>();
         }
 
@@ -32,7 +35,8 @@ namespace Paramore.Brighter.AspNetCore
             where TRequest : class, IRequest
             where TImplementation : class, IHandleRequestsAsync<TRequest>
         {
-            _services.AddTransient<TImplementation>();
+            _services.Add(new ServiceDescriptor(
+                typeof(TImplementation), typeof(TImplementation), _lifetime));
             _registry.RegisterAsync<TRequest, TImplementation>();
         }
 
