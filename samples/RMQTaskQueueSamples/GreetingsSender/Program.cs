@@ -50,7 +50,7 @@ namespace GreetingsSender
             var messageStore = new InMemoryMessageStore();
             var rmqConnnection = new RmqMessagingGatewayConnection
             {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
             var producer = new RmqMessageProducer(rmqConnnection);
