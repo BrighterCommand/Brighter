@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using Paramore.Brighter.FeatureSwitch;
 
 namespace Paramore.Brighter
 {
@@ -52,5 +53,9 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The policies.</value>
         public IAmAPolicyRegistry Policies { get; set; }
+        /// <summary>
+        /// Gets the Feature Switches
+        /// </summary>
+        public IAmAFeatureSwitchRegistry FeatureSwitches { get; set; }
     }
 }

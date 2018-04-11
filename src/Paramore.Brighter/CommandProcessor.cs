@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Polly;
 
@@ -50,6 +51,7 @@ namespace Paramore.Brighter
         private readonly int _messageStoreTimeout;
         private readonly IAmAMessageStore<Message> _messageStore;
         private readonly IAmAMessageStoreAsync<Message> _asyncMessageStore;
+        private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         // the following are not readonly to allow setting them to null on dispose
         private IAmAMessageProducer _messageProducer;
         private IAmAMessageProducerAsync _asyncMessageProducer;
@@ -90,18 +92,21 @@ namespace Paramore.Brighter
         /// <param name="asyncHandlerFactory">The async handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry)
+            IAmAPolicyRegistry policyRegistry,
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
         {
             _subscriberRegistry = subscriberRegistry;
             _handlerFactory = handlerFactory;
             _asyncHandlerFactory = asyncHandlerFactory;
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
+            _featureSwitchRegistry = featureSwitchRegistry;
         }
 
         /// <summary>
@@ -112,16 +117,19 @@ namespace Paramore.Brighter
         /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry)
+            IAmAPolicyRegistry policyRegistry,
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
         {
             _subscriberRegistry = subscriberRegistry;
             _handlerFactory = handlerFactory;
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
+            _featureSwitchRegistry = featureSwitchRegistry;
         }
 
         /// <summary>
@@ -132,16 +140,19 @@ namespace Paramore.Brighter
         /// <param name="asyncHandlerFactory">The async handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry)
+            IAmAPolicyRegistry policyRegistry,
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
         {
             _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
+            _featureSwitchRegistry = featureSwitchRegistry;
         }
 
         /// <summary>
@@ -154,13 +165,15 @@ namespace Paramore.Brighter
         /// <param name="messageStore">The message store.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
+        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
-            int messageStoreTimeout = 300)
+            int messageStoreTimeout = 300,
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
@@ -168,6 +181,7 @@ namespace Paramore.Brighter
             _mapperRegistry = mapperRegistry;
             _messageStore = messageStore;
             _messageProducer = messageProducer;
+            _featureSwitchRegistry = featureSwitchRegistry;
         }
 
         /// <summary>
@@ -180,13 +194,15 @@ namespace Paramore.Brighter
         /// <param name="asyncMessageStore">The message store supporting async/await.</param>
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
+        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducerAsync asyncMessageProducer,
-            int messageStoreTimeout = 300)
+            int messageStoreTimeout = 300,
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
@@ -194,6 +210,7 @@ namespace Paramore.Brighter
             _mapperRegistry = mapperRegistry;
             _asyncMessageStore = asyncMessageStore;
             _asyncMessageProducer = asyncMessageProducer;
+            _featureSwitchRegistry = featureSwitchRegistry;
         }
 
         /// <summary>
@@ -208,6 +225,7 @@ namespace Paramore.Brighter
         /// <param name="messageStore">The message store.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
+        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -216,13 +234,15 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
-            int messageStoreTimeout = 300)
+            int messageStoreTimeout = 300,
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _messageStore = messageStore;
             _messageProducer = messageProducer;
             _messageStoreTimeout = messageStoreTimeout;
+            _featureSwitchRegistry = featureSwitchRegistry;
         }
 
         /// <summary>
@@ -237,6 +257,7 @@ namespace Paramore.Brighter
         /// <param name="asyncMessageStore">The message store supporting async/await.</param>
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
+        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
@@ -245,13 +266,15 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducerAsync asyncMessageProducer,
-            int messageStoreTimeout = 300)
-            : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry)
+            int messageStoreTimeout = 300,
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
+            : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _asyncMessageStore = asyncMessageStore;
             _asyncMessageProducer = asyncMessageProducer;
             _messageStoreTimeout = messageStoreTimeout;
+            _featureSwitchRegistry = featureSwitchRegistry;
         }
 
         /// <summary>
@@ -269,6 +292,7 @@ namespace Paramore.Brighter
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
+        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -280,8 +304,9 @@ namespace Paramore.Brighter
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducer messageProducer,
             IAmAMessageProducerAsync asyncMessageProducer,
-            int messageStoreTimeout = 300)
-            : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry)
+            int messageStoreTimeout = 300,
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
+            : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _messageStore = messageStore;
@@ -305,6 +330,7 @@ namespace Paramore.Brighter
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
+            requestContext.FeatureSwitches = _featureSwitchRegistry;
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory))
             {
@@ -332,6 +358,7 @@ namespace Paramore.Brighter
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
+            requestContext.FeatureSwitches = _featureSwitchRegistry;
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory))
             {
@@ -360,6 +387,7 @@ namespace Paramore.Brighter
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
+            requestContext.FeatureSwitches = _featureSwitchRegistry;
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory))
             {
@@ -409,6 +437,7 @@ namespace Paramore.Brighter
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
+            requestContext.FeatureSwitches = _featureSwitchRegistry;
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory))
             {
